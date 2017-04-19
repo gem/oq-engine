@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import block_splitter
 from openquake.hazardlib.stats import compute_stats
 import numpy
 
@@ -203,7 +202,7 @@ class ProbabilityMap(dict):
                     for sid in self:
                         curves_by_imt[sid, idx] = self[sid].array[
                             imtls.slicedic[imt], idx]
-        else:
+        else:  # specified an idx
             curves = numpy.zeros(nsites, imtls.dt)
             for imt in curves.dtype.names:
                 curves_by_imt = curves[imt]
@@ -223,18 +222,6 @@ class ProbabilityMap(dict):
             except KeyError:
                 pass
         return dic
-
-    def split(self, max_weight=10000):
-        """
-        Split the probability map depending on the weight
-        """
-        def weight(sid, w=self.shape_y * self.shape_z):
-            return w
-        for sids in block_splitter(self, max_weight, weight):
-            dic = self.__class__(self.shape_y, self.shape_z)
-            for sid in sids:
-                dic[sid] = self[sid]
-            yield dic
 
     def extract(self, inner_idx):
         """

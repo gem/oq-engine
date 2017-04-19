@@ -284,4 +284,4 @@ def calc_hazard_curves(
                     pmap[sid] += newmap[sid]
                 else:
                     pmap[sid] = newmap[sid]
-    return pmap.convert(imtls, len(sitecol.complete))
+    return pmap.convert(imtls, len(sitecol.complete), idx=0)
