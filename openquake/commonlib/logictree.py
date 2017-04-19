@@ -35,10 +35,10 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 
-from openquake.baselib import node
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
-import openquake.hazardlib
+import openquake.hazardlib.source as ohs
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
@@ -341,7 +341,6 @@ class BranchSet(object):
         Apply filters to ``source`` and return ``True`` if uncertainty should
         be applied to it.
         """
-        ohs = openquake.hazardlib.source
         for key, value in self.filters.items():
             if key == 'applyToTectonicRegionType':
                 if value != source.tectonic_region_type:
@@ -1152,6 +1151,11 @@ class GsimLogicTree(object):
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or node_from_xml(fname).logicTree
         self.all_trts, self.branches = self._build_trts_branches()
+        branchsets = len(self._ltnode)
+        if tectonic_region_types == ['*'] and branchsets > 1:
+            raise InvalidFile(
+                '%s for a scenario calculation must contain a single branchset'
+                ', found %d!' % (fname, branchsets))
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute '

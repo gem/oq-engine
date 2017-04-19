@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<!-- a gsim_logic_tree files with two branchsets is invalid for a scenario -->
+<logicTree logicTreeID='lt1'>
+  <logicTreeBranchingLevel branchingLevelID="bl1">
+    <logicTreeBranchSet uncertaintyType="gmpeModel" 
+                        branchSetID="bs1" 
+                        applyToTectonicRegionType="Active Shallow Crust">
+
+      <logicTreeBranch branchID="b1">
+        <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+        <uncertaintyWeight>1</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+
+  <logicTreeBranchingLevel branchingLevelID="bl2">
+    <logicTreeBranchSet uncertaintyType="gmpeModel" 
+                        branchSetID="bs2" 
+                        applyToTectonicRegionType="Stable Shallow Crust">
+
+      <logicTreeBranch branchID="b2">
+        <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+        <uncertaintyWeight>1</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+</logicTree>
+
+</nrml>
