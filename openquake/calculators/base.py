@@ -633,17 +633,10 @@ class RiskCalculator(HazardCalculator):
                     for assets in reduced_assets:
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
-
-                # collect the hazards into a list of dicts imt -> rlz
-                hdata = [{imt: {} for imt in imtls} for _ in indices]
-                for rlz, hazards_by_imt in hazards_by_rlz.items():
-                    for imt in imtls:
-                        hazards_by_site = hazards_by_imt[imt]
-                        for i, haz in enumerate(hazards_by_site[indices]):
-                            hdata[i][imt][rlz] = haz
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.PoeGetter(0, {None: rlzs}, hdata, list(imtls)),
+                    riskinput.PoeGetter(0, {None: rlzs}, hazards_by_rlz,
+                                        indices, list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
