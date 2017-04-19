@@ -487,11 +487,18 @@ class PoeGetter(object):
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, grp_id, rlzs_by_gsim, hazard_by_site, imts):
+    def __init__(self, grp_id, rlzs_by_gsim, hazards_by_rlz, sids, imts):
         self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.hazard_by_site = hazard_by_site
+        self.hazard_by_site = [{imt: {} for imt in imts} for _ in sids]
         self.imts = imts
+
+        # collect the hazards into a list of dicts imt -> rlz
+        for rlz, hazards_by_imt in hazards_by_rlz.items():
+            for imt in imts:
+                hazards_by_site = hazards_by_imt[imt]
+                for i, haz in enumerate(hazards_by_site[sids]):
+                    self.hazard_by_site[i][imt][rlz] = haz
 
     def get_hazard(self, gsim):
         """
