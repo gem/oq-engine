@@ -487,7 +487,8 @@ class PoeGetter(object):
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, rlzs_by_gsim, hazard_by_site, imts):
+    def __init__(self, grp_id, rlzs_by_gsim, hazard_by_site, imts):
+        self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
         self.hazard_by_site = hazard_by_site
         self.imts = imts
