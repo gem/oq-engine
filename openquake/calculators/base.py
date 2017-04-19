@@ -643,7 +643,7 @@ class RiskCalculator(HazardCalculator):
                             hdata[i][imt][rlz] = haz
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.PoeGetter({None: rlzs}, hdata, list(imtls)),
+                    riskinput.PoeGetter(0, {None: rlzs}, hdata, list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
