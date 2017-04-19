@@ -128,7 +128,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 if rlz is not None:  # can be None if a realization is
                     # missing; this happen in test_case_5
                     curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites, idx=0)
-        self.riskinputs = self.build_riskinputs(curves_by_rlz)
+        with self.monitor('build riskinputs', measuremem=True, autoflush=True):
+            self.riskinputs = self.build_riskinputs(curves_by_rlz)
         self.param = dict(insured_losses=oq.insured_losses,
                           quantile_loss_curves=oq.quantile_loss_curves)
         self.N = len(self.assetcol)
