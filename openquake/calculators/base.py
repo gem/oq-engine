@@ -20,7 +20,6 @@ import os
 import sys
 import abc
 import pdb
-import math
 import socket
 import logging
 import operator
@@ -643,8 +642,8 @@ class RiskCalculator(HazardCalculator):
                         for i, haz in enumerate(hazards_by_site[indices]):
                             hdata[i][imt][rlz] = haz
                 # build the riskinputs
-                ri = self.riskmodel.build_input(
-                    list(imtls), {None: rlzs}, hdata,
+                ri = riskinput.RiskInput(
+                    riskinput.PoeGetter({None: rlzs}, hdata, list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
