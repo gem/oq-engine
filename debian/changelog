@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Raised an error early if the users try to use complex logic tree in scenario
+    calculations
   * Changed the CSV exporter for the loss curves: now it exports all the
     curves for a given site
   * Fixed the save_ruptures procedure when there are more than 256
