@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-hazardlib"
-GEM_DEPENDS="oq-libs|deb"
+GEM_DEPENDS="oq-libs|deb oq-libs-extra|deb"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
