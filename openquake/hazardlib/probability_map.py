@@ -181,22 +181,35 @@ class ProbabilityMap(dict):
         return BYTES_PER_FLOAT * N * L * I
 
     # used when exporting to HDF5
-    def convert(self, imtls, nsites=None, idx=0):
+    def convert(self, imtls, nsites=None, idx=None):
         """
         Convert a probability map into a composite array of length `nsites`
         and dtype `imtls.dt`.
 
-        :param imtls: DictArray instance
-        :param nsites: the total number of sites (or None)
-        :param idx: extract the data corresponding to the given inner index
+        :param imtls:
+            DictArray instance
+        :param nsites:
+            the total number of sites (or None)
+        :param idx:
+            inner index; if None, extract an array of shape (N, Z)
         """
         if nsites is None:
             nsites = len(self)
-        curves = numpy.zeros(nsites, imtls.dt)
-        for imt in curves.dtype.names:
-            curves_by_imt = curves[imt]
-            for sid in self:
-                curves_by_imt[sid] = self[sid].array[imtls.slicedic[imt], idx]
+        if idx is None:
+            curves = numpy.zeros((nsites, self.shape_z), imtls.dt)
+            for imt in curves.dtype.names:
+                curves_by_imt = curves[imt]
+                for idx in range(self.shape_z):
+                    for sid in self:
+                        curves_by_imt[sid, idx] = self[sid].array[
+                            imtls.slicedic[imt], idx]
+        else:
+            curves = numpy.zeros(nsites, imtls.dt)
+            for imt in curves.dtype.names:
+                curves_by_imt = curves[imt]
+                for sid in self:
+                    curves_by_imt[sid] = self[sid].array[
+                        imtls.slicedic[imt], idx]
         return curves
 
     def filter(self, sids):
