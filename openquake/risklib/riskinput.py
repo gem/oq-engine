@@ -413,19 +413,6 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def build_input(self, imts, rlzs_by_gsim, hazards_by_site, assetcol,
-                    eps_dict):
-        """
-        :param imts: a list of IMT strings
-        :param rlzs_by_gsim: a dictionary of realizations by GSIM
-        :param hazards_by_site: an array of hazards per each site
-        :param assetcol: AssetCollection instance
-        :param eps_dict: a dictionary of epsilons
-        :returns: a :class:`RiskInput` instance
-        """
-        return RiskInput(
-            PoeGetter(rlzs_by_gsim, hazards_by_site, imts), assetcol, eps_dict)
-
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
