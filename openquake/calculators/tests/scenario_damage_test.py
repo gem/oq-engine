@@ -56,7 +56,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1h(self):
         # test for consequences with a single asset
-        self.assert_ok(case_1h, 'job_risk.ini', exports='csv', kind='csq')
+        self.assert_ok(case_1h, 'job_risk.ini', exports='csv', kind='losses')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_2(self):
@@ -73,7 +73,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_4b(self):
         self.assert_ok(case_4b, 'job_haz.ini,job_risk.ini', exports='csv',
-                       kind='csq')
+                       kind='losses')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_5(self):

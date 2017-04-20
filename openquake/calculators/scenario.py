@@ -20,7 +20,7 @@ import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.risklib.riskinput import gmv_dt
+from openquake.risklib.riskinput import gmf_data_dt
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
 
@@ -76,27 +76,28 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Compute the GMFs and return a dictionary rlzi -> array gmv_dt
+        Compute the GMFs and return a dictionary gsim -> array gmf_data_dt
         """
         res = collections.defaultdict(list)
         sids = self.sitecol.sids
         self.gmfa = {}
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
-            for i, gsim in enumerate(self.gsims):
+            for gsim in self.gsims:
                 gmfa = self.computer.compute(gsim, n)
                 self.gmfa[gsim] = gmfa
                 for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
-                    res[i].append((sids[sid], eid, imti, gmv))
-            return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
+                    res[gsim].append((0, sids[sid], eid, imti, gmv))
+            return {gsim: numpy.array(res[gsim], gmf_data_dt)
+                    for gsim in res}
 
-    def post_execute(self, gmfa_by_rlzi):
+    def post_execute(self, gmfa_by_gsim):
         """
-        :param gmfa: a dictionary rlzi -> gmfa
+        :param gmfa: a dictionary gsim -> gmfa
         """
         with self.monitor('saving gmfs', autoflush=True):
-            for rlzi, gsim in enumerate(self.gsims):
-                rlzstr = 'gmf_data/grp-00/%04d' % rlzi
-                self.datastore[rlzstr] = gmfa_by_rlzi[rlzi]
+            for gsim in self.gsims:
+                rlzstr = 'gmf_data/grp-00/%s' % gsim
+                self.datastore[rlzstr] = gmfa_by_gsim[gsim]
                 self.datastore.set_attrs(rlzstr, gsim=str(gsim))
             self.datastore.set_nbytes('gmf_data')
