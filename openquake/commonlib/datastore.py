@@ -156,7 +156,15 @@ class DataStore(collections.MutableMapping):
         """
         Return the underlying export directory
         """
-        return self['oqparam'].export_dir
+        edir = getattr(self, '_export_dir', None) or self['oqparam'].export_dir
+        return edir
+
+    @export_dir.setter
+    def export_dir(self, value):
+        """
+        Set the export directory
+        """
+        self._export_dir = value
 
     def ext5(self, mode='r'):
         """
