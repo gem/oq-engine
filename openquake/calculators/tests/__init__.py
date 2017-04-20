@@ -135,7 +135,6 @@ class CalculatorTestCase(unittest.TestCase):
             open(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
-        import pdb; pdb.set_trace()
         expected_lines = make_comparable(open(expected).readlines())
         actual_lines = make_comparable(open(actual).readlines()[:lastline])
         try:
