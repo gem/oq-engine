@@ -19,7 +19,7 @@ from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 
 from nose.plugins.attrib import attr
 
@@ -32,8 +32,9 @@ class UcerfTestCase(CalculatorTestCase):
         # check that we get the expected number of events
         with open(fname) as f:
             self.assertEqual(len(f.readlines()), 36)
-        # check the header and the first 18 events
-        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
+        if REFERENCE_OS:
+            # check the header and the first 18 events
+            self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
