@@ -454,6 +454,7 @@ class HazardCalculator(BaseCalculator):
             pass
         else:
             self.csm_info.gsim_lt.check_imts(self.oqparam.imtls)
+        self.param = {}  # used in the risk calculators
 
     def init(self):
         """
@@ -585,8 +586,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-    extra_args = ()  # to be overridden in subclasses
-
     def check_poes(self, curves_by_trt_gsim):
         """Overridden in ClassicalDamage"""
 
@@ -616,8 +615,7 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        num_tasks = math.ceil((self.oqparam.concurrent_tasks or 1) /
-                              len(imtls))
+        num_tasks = self.oqparam.concurrent_tasks or 1
         rlzs = sorted(hazards_by_rlz)
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
@@ -660,12 +658,10 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
-        self.monitor.oqparam = self.oqparam
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = ((riskinput, self.riskmodel) +
-                    self.extra_args + (self.monitor,)
+        all_args = ((riskinput, self.riskmodel, self.param, self.monitor)
                     for riskinput in self.riskinputs)
         res = Starmap(self.core_task.__func__, all_args).reduce()
         return res
