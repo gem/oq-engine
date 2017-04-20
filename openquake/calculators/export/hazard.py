@@ -503,7 +503,7 @@ def export_hcurves_xml_json(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         curves = dstore[ekey[0] + '/' + kind].convert(
-            oq.imtls, len(sitemesh), idx=0)
+            oq.imtls, len(sitemesh))
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         for imt in oq.imtls:
             imtype, sa_period, sa_damping = from_string(imt)
@@ -535,7 +535,7 @@ def export_hmaps_xml_json(ekey, dstore):
     for kind in dstore['hcurves']:
         hcurves = dstore['hcurves/' + kind]
         hmaps = calc.make_hmap(
-            hcurves, oq.imtls, oq.poes).convert(pdic, nsites, idx=0)
+            hcurves, oq.imtls, oq.poes).convert(pdic, nsites)
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
@@ -579,7 +579,7 @@ def export_hcurves_npz(ekey, dstore):
     dic = dict(imtls=arr[0])
     for dskey in dstore[ekey[0]]:
         curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
-            imtls, len(mesh), idx=0)
+            imtls, len(mesh))
         dic[dskey] = util.compose_arrays(mesh, curves)
     savez(fname, **dic)
     return [fname]
