@@ -1034,7 +1034,8 @@ class CurveBuilder(object):
         for cb in self.cbs:
             losses[cb.loss_type] = [asset.value(cb.loss_type) * cb.ratios
                                     for asset in assets]
-            losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
+            if self.insured_losses:
+                losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
         all_poes = self.build_all_poes(aids, loss_ratios, rlzs)
         loss_maps = self._build_maps(losses, all_poes)
         if len(rlzs) > 1:
@@ -1348,18 +1349,6 @@ def mean_std(fractions):
     i.e. two M-dimensional vectors.
     """
     return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)
-
-
-def loss_map_matrix(poes, curves):
-    """
-    Wrapper around :func:`openquake.risklib.scientific.conditional_loss_ratio`.
-    Return a matrix of shape (num-poes, num-curves). The curves are lists of
-    pairs (loss_ratios, poes).
-    """
-    return numpy.array(
-        [[conditional_loss_ratio(curve[0], curve[1], poe)
-          for curve in curves] for poe in poes]
-    ).reshape((len(poes), len(curves)))
 
 
 def loss_maps(curves, conditional_loss_poes):
