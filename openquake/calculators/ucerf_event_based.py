@@ -718,10 +718,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    if param['save_ruptures']:
-        res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
-                        .to_array(ebruptures)}
-    else:
+    if not param['save_ruptures']:
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
     return res
@@ -802,16 +799,15 @@ class List(list):
     """Trivial container returned by compute_losses"""
 
 
-def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
+def compute_losses(ssm, src_filter, param, riskmodel,
                    imts, trunc_level, correl_model, min_iml, monitor):
     """
     Compute the losses for a single source model. Returns the ruptures
     as an attribute `.ruptures_by_grp` of the list of losses.
 
     :param ssm: CompositeSourceModel containing a single source model
-    :param ses_seeds: a list of pairs (ses_idx, seed)
     :param sitecol: a SiteCollection instance
-    :param assetcol: an AssetCollection instance
+    :param param: a dictionary of parameters
     :param riskmodel: a RiskModel instance
     :param imts: a list of Intensity Measure Types
     :param trunc_level: truncation level
@@ -823,10 +819,8 @@ def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
     [grp] = ssm.src_groups
     res = List()
     gsims = ssm.gsim_lt.values[DEFAULT_TRT]
-    # FIXME: sampling is silently ignored for ucerf_risk
     ruptures_by_grp = compute_ruptures(
-        grp, src_filter, gsims, dict(ses_seeds=ses_seeds, samples=1,
-                                     save_ruptures=False), monitor)
+        grp, src_filter, gsims, param, monitor)
     [(grp_id, ebruptures)] = ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
@@ -835,7 +829,7 @@ def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
         grp_id, rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
         trunc_level, correl_model, rlzs_assoc.samples[grp_id])
     ri = riskinput.RiskInputFromRuptures(getter)
-    res.append(event_based_risk(ri, riskmodel, assetcol, monitor))
+    res.append(event_based_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
@@ -872,21 +866,19 @@ class UCERFRiskCalculator(EbriskCalculator):
         ela_dt, elt_dt = build_el_dtypes(
             self.riskmodel.loss_types, oq.insured_losses)
         for sm in self.csm.source_models:
-            monitor = self.monitor.new(
-                ses_ratio=oq.ses_ratio,
-                ela_dt=ela_dt, elt_dt=elt_dt,
-                loss_ratios=oq.loss_ratios,
-                avg_losses=oq.avg_losses,
-                insured_losses=oq.insured_losses,
-                maximum_distance=oq.maximum_distance,
-                samples=sm.samples,
-                save_ruptures=oq.save_ruptures)
             ssm = self.csm.get_model(sm.ordinal)
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
-                ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
-                yield (ssm, ses_seeds, self.src_filter, self.assetcol,
+                param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx)],
+                             samples=1, assetcol=self.assetcol,
+                             save_ruptures=False,
+                             ses_ratio=oq.ses_ratio,
+                             avg_losses=oq.avg_losses,
+                             loss_ratios=oq.loss_ratios,
+                             ela_dt=ela_dt, elt_dt=elt_dt,
+                             insured_losses=oq.insured_losses)
+                yield (ssm, self.src_filter, param,
                        self.riskmodel, imts, oq.truncation_level,
-                       correl_model, min_iml, monitor)
+                       correl_model, min_iml, self.monitor)
 
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
