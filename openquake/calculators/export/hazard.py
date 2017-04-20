@@ -502,8 +502,7 @@ def export_hcurves_xml_json(ekey, dstore):
         else:
             smlt_path = ''
             gsimlt_path = ''
-        curves = dstore[ekey[0] + '/' + kind].convert(
-            oq.imtls, len(sitemesh))
+        curves = dstore[ekey[0] + '/' + kind].convert(oq.imtls, len(sitemesh))
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         for imt in oq.imtls:
             imtype, sa_period, sa_damping = from_string(imt)
