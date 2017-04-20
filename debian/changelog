@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Used a temporary export directory in the tests, to avoid conflicts
+    in multiuser situations
   * Changed the CSV exporter for the loss curves: now it exports all the
     curves for a given site
   * Fixed the save_ruptures procedure when there are more than 256
