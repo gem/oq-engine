@@ -22,7 +22,8 @@ from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import (
+    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.calculators.export import export
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
@@ -80,9 +81,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                     'expected/%s' % strip_calc_id(fname), fname)
 
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-4)
+        if REFERENCE_OS:
+            for fname in fnames:
+                self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                      fname, delta=1E-5)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
