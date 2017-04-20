@@ -597,26 +597,24 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
         for r in range(R):
             lmaps = loss_maps_lt[:, r]
             for poe in oq.conditional_loss_poes:
-                for insflag in range(oq.insured_losses + 1):
-                    ins = '_ins' if insflag else ''
-                    rlz = rlzs[r]
-                    unit = unit_by_lt[lt]
-                    root = ekey[0][:-5]  # strip -rlzs
-                    name = '%s-%s-poe-%s%s' % (root, lt, poe, ins)
-                    fname = dstore.build_fname(name, rlz, ekey[1])
-                    data = []
-                    poe_str = 'poe-%s' % poe + ins
-                    for ass, stat in zip(assetcol, lmaps[poe_str]):
-                        loc = Location(ass['lon'], ass['lat'])
-                        lm = LossMap(loc, decode(aref[ass['idx']]), stat, None)
-                        data.append(lm)
-                    writer = writercls(
-                        fname, oq.investigation_time, poe=poe, loss_type=lt,
-                        unit=unit,
-                        risk_investigation_time=oq.risk_investigation_time,
-                        **get_paths(rlz))
-                    writer.serialize(data)
-                    fnames.append(fname)
+                rlz = rlzs[r]
+                unit = unit_by_lt[lt[:-4] if lt.endswith('_ins') else lt]
+                root = ekey[0][:-5]  # strip -rlzs
+                name = '%s-%s-poe-%s' % (root, lt, poe)
+                fname = dstore.build_fname(name, rlz, ekey[1])
+                data = []
+                poe_str = 'poe-%s' % poe
+                for ass, stat in zip(assetcol, lmaps[poe_str]):
+                    loc = Location(ass['lon'], ass['lat'])
+                    lm = LossMap(loc, decode(aref[ass['idx']]), stat, None)
+                    data.append(lm)
+                writer = writercls(
+                    fname, oq.investigation_time, poe=poe, loss_type=lt,
+                    unit=unit,
+                    risk_investigation_time=oq.risk_investigation_time,
+                    **get_paths(rlz))
+                writer.serialize(data)
+                fnames.append(fname)
     return sorted(fnames)
 
 
