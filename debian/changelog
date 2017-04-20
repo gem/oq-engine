@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Raised an error early if the users try to use complex logic tree in scenario
+  * Raised an error early when using a complex logic tree in scenario
     calculations
   * Changed the CSV exporter for the loss curves: now it exports all the
     curves for a given site
