@@ -1034,7 +1034,7 @@ class CurveBuilder(object):
         for cb in self.cbs:
             losses[cb.loss_type] = [asset.value(cb.loss_type) * cb.ratios
                                     for asset in assets]
-            if self.insured_losses:
+            if self.I == 2:
                 losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
         all_poes = self.build_all_poes(aids, loss_ratios, rlzs)
         loss_maps = self._build_maps(losses, all_poes)
