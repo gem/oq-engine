@@ -575,4 +575,4 @@ def get_mean_curves(dstore):
         mean = dstore['hcurves/mean']
     elif len(hcurves) == 1:  # there is a single realization
         mean = dstore['hcurves/rlz-0000']
-    return mean.convert(imtls, nsites, idx=0)
+    return mean.convert(imtls, nsites)
