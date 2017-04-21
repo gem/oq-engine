@@ -152,8 +152,8 @@ def export_losses_by_asset_npz(ekey, dstore):
     assets = get_assets(dstore)
     dic = {}
     for rlz in rlzs:
-        losses = losses_by_asset[:, rlz.ordinal].view(loss_dt)  # shape (N, 1)
-        data = compose_arrays(assets, losses[:, 0])
+        losses = losses_by_asset[:, rlz.ordinal].copy().view(loss_dt)
+        data = compose_arrays(assets, losses[:, 0])  # shape (N, 1)
         dic['rlz-%03d' % rlz.ordinal] = data
     fname = dstore.export_path('%s.%s' % ekey)
     savez(fname, **dic)
