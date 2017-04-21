@@ -112,3 +112,8 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         assert fnames  # sanity check
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        # exported the npz, not checking the content
+        for kind in ('rlzs', 'stats'):
+            [fname] = export(('loss_maps-' + kind, 'npz'), self.calc.datastore)
+            print('Generated ' + fname)
