@@ -7,9 +7,15 @@ Both services run on a single "master" node. It is not necessary and not recomme
 Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
 
 ## Initial install
-On all nodes, install the `python-oq-engine` package as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md) or [RedHat](rhel.md).
 
 Note: you have to **restart every celery node** after a configuration change.
+
+### Ubuntu
+On all nodes, install the `python-oq-engine` package as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md).
+
+### RedHat
+For **RedHat** and derivates, install `python-oq-engine-master` package on the **master** node. It provides extra functionalities like _RabbitMQ_.
+On the workers install `python-oq-engine-worker`; it adds _celery_ support on top of the standard `python-oq-engine` package.
 
 ## OpenQuake Engine 'master' node configuration File
 
