@@ -39,7 +39,7 @@ def webui(cmd, hostport='127.0.0.1:8800'):
     """
 
     db_path = os.path.expanduser(config.get('dbserver', 'file'))
-    if not os.access(db_path, os.W_OK):
+    if os.path.isfile(db_path) and not os.access(db_path, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
     if cmd == 'start':
