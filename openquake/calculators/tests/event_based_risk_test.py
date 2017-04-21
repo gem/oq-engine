@@ -171,9 +171,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+        if REFERENCE_OS:
+            for fname in fnames:
+                self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                      fname, delta=1E-5)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
