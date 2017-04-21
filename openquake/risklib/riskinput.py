@@ -412,19 +412,6 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def build_input(self, imts, rlzs_by_gsim, hazards_by_site, assetcol,
-                    eps_dict):
-        """
-        :param imts: a list of IMT strings
-        :param rlzs_by_gsim: a dictionary of realizations by GSIM
-        :param hazards_by_site: an array of hazards per each site
-        :param assetcol: AssetCollection instance
-        :param eps_dict: a dictionary of epsilons
-        :returns: a :class:`RiskInput` instance
-        """
-        return RiskInput(
-            PoeGetter(rlzs_by_gsim, hazards_by_site, imts), assetcol, eps_dict)
-
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
@@ -494,29 +481,36 @@ class PoeGetter(object):
     """
     :param rlzs_by_gsim:
         a dictionary gsim -> realizations for that GSIM
-    :param hazard_by_site:
-        a list of dictionaries imt -> rlz -> poes, one per site
+    :param hazards_by_rlz
+        a nested dictionary rlz -> imt -> rlz -> PoE array
+    :params sids:
+        array of site IDs of interest
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, rlzs_by_gsim, hazard_by_site, imts):
+    def __init__(self, grp_id, rlzs_by_gsim, hazards_by_rlz, sids, imts):
+        self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.hazard_by_site = hazard_by_site
+        self.sids = sids
         self.imts = imts
+        self.data = {}
+        for gsim in rlzs_by_gsim:
+            rlzs = self.rlzs_by_gsim[gsim]
+            self.data[gsim] = datadicts = [{} for _ in rlzs]
+            for r, rlz in enumerate(rlzs):
+                datadict = datadicts[r]
+                hazards_by_imt = hazards_by_rlz[rlz]
+                for imti, imt in enumerate(self.imts):
+                    hazard_by_site = hazards_by_imt[imt][self.sids]
+                    for idx, haz in enumerate(hazard_by_site):
+                        datadict[idx, imti] = haz
 
     def get_hazard(self, gsim):
         """
         :param gsim: a GSIM instance
         :returns: a list of dictionaries (num_sites, num_imts)
         """
-        rlzs = self.rlzs_by_gsim[gsim]
-        out = [{} for _ in rlzs]
-        for gsim in self.rlzs_by_gsim:
-            for r, rlz in enumerate(rlzs):
-                for sid, haz in enumerate(self.hazard_by_site):
-                    for imti, imt in enumerate(self.imts):
-                        out[r][sid, imti] = haz[imt][rlz]
-        return out
+        return self.data[gsim]
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
