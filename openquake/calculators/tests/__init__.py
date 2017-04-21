@@ -64,8 +64,8 @@ def columns(line):
 
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
-    edir = None
-    ok = True
+    edir = None  # will be set to a temporary directory
+    success = True  # will be set to False if the files are different
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -155,7 +155,7 @@ class CalculatorTestCase(unittest.TestCase):
                 open(expected, 'w').write(''.join(actual_lines))
             else:
                 # normally raise an exception
-                self.ok = False
+                self.success = False
                 raise DifferentFiles('%s %s' % (expected, actual))
 
     def assertGot(self, expected_content, fname):
@@ -168,5 +168,5 @@ class CalculatorTestCase(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, 'calc'):
             self.calc.datastore.close()
-        if self.edir and self.ok:  # remove temporary dir only for success
+        if self.edir and self.success:  # remove temporary dir only for success
             shutil.rmtree(self.edir)
