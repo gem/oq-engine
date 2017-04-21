@@ -495,13 +495,14 @@ class PoeGetter(object):
         self.data = {}
         for gsim in rlzs_by_gsim:
             rlzs = self.rlzs_by_gsim[gsim]
-            self.data[gsim] = d = [{} for _ in rlzs]
+            self.data[gsim] = datadicts = [{} for _ in rlzs]
             for r, rlz in enumerate(rlzs):
+                datadict = datadicts[r]
                 hazards_by_imt = hazards_by_rlz[rlz]
                 for imti, imt in enumerate(self.imts):
                     hazard_by_site = hazards_by_imt[imt][self.sids]
                     for idx, haz in enumerate(hazard_by_site):
-                        d[r][idx, imti] = haz
+                        datadict[idx, imti] = haz
 
     def get_hazard(self, gsim):
         """
