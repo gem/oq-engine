@@ -1,6 +1,10 @@
+  [Michele Simionato]
+  * Added an utility method `ProbabilityMap.convert2` to convert a probability
+    map into a two-dimensional array of curves
+
   [Abhineet Gupta, Anirudh Rao]
-  * Implements the Shahjouei & Pezeshk (2016) GMPE
-  
+  * Implemented the Shahjouei & Pezeshk (2016) GMPE
+
   [Michele Simionato]
   * Experimental support for the Grid Engine
   * Fixed the serialization to HDF5 of nonparametric ruptures

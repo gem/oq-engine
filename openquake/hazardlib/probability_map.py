@@ -180,22 +180,52 @@ class ProbabilityMap(dict):
         return BYTES_PER_FLOAT * N * L * I
 
     # used when exporting to HDF5
-    def convert(self, imtls, nsites=None, idx=0):
+    def convert(self, imtls, nsites, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
         and dtype `imtls.dt`.
 
-        :param imtls: DictArray instance
-        :param nsites: the total number of sites (or None)
-        :param idx: extract the data corresponding to the given inner index
+        :param imtls:
+            DictArray instance
+        :param nsites:
+            the total number of sites
+        :param idx:
+            index on the z-axis (default 0)
         """
-        if nsites is None:
-            nsites = len(self)
         curves = numpy.zeros(nsites, imtls.dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
-                curves_by_imt[sid] = self[sid].array[imtls.slicedic[imt], idx]
+                curves_by_imt[sid] = self[sid].array[
+                    imtls.slicedic[imt], idx]
+        return curves
+
+    def convert2(self, imtls, sids):
+        """
+        Convert a probability map into a composite array of shape (N, Z)
+        and dtype `imtls.dt`.
+
+        :param imtls:
+            DictArray instance
+        :param sids:
+            the IDs of the sites we are interested in
+        :returns:
+            an array of curves of shape (N, Z)
+        """
+        if sids is None:
+            sids = numpy.array(sorted(self), numpy.float32)
+        curves = numpy.zeros((len(sids), self.shape_z), imtls.dt)
+        for imt in curves.dtype.names:
+            curves_by_imt = curves[imt]
+            for idx in range(self.shape_z):
+                for i, sid in numpy.ndenumerate(sids):
+                    try:
+                        pcurve = self[sid]
+                    except KeyError:
+                        pass  # the poes will be zeros
+                    else:
+                        curves_by_imt[i, idx] = pcurve.array[
+                            imtls.slicedic[imt], idx]
         return curves
 
     def filter(self, sids):
