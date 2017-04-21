@@ -126,7 +126,7 @@ class DataStore(collections.MutableMapping):
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
     def __init__(self, calc_id=None, datadir=DATADIR,
-                 export_dir='.', params=(), mode=None):
+                 params=(), mode=None):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
@@ -143,7 +143,6 @@ class DataStore(collections.MutableMapping):
         self.parent = ()  # can be set later
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
-        self.export_dir = export_dir
         self.hdf5path = self.calc_dir + '.hdf5'
         self.ext5path = self.calc_dir + '.ext5'
         mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
@@ -151,6 +150,21 @@ class DataStore(collections.MutableMapping):
         self.attrs = self.hdf5.attrs
         for name, value in params:
             self.attrs[name] = value
+
+    @property
+    def export_dir(self):
+        """
+        Return the underlying export directory
+        """
+        edir = getattr(self, '_export_dir', None) or self['oqparam'].export_dir
+        return edir
+
+    @export_dir.setter
+    def export_dir(self, value):
+        """
+        Set the export directory
+        """
+        self._export_dir = value
 
     def ext5(self, mode='r'):
         """

@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
 import unittest
 import numpy
@@ -94,12 +95,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_1g.__file__, 'job.ini')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/avg_losses.txt', fname)
+        os.remove(fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         self.assert_stats_ok(case_2, 'job.ini', individual_curves='true')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
+        os.remove(fname)
 
         # test the composite_risk_model keys (i.e. slash escaping)
         crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
@@ -196,10 +199,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
+        os.remove(fname)
 
         # check ruptures are stored correctly
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
+        os.remove(fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
@@ -212,6 +217,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_loss.txt', fname, delta=1E-5)
+        os.remove(fname)
 
     # now a couple of hazard tests
 
