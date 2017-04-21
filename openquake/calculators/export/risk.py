@@ -22,11 +22,11 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import AccumDict, get_array, group_array
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
-from openquake.calculators.export import export
-from openquake.calculators.export.hazard import get_grp_id_eid, savez
+from openquake.calculators.export import export, loss_curves
+from openquake.calculators.export.hazard import savez
 from openquake.commonlib import writers, risk_writers, calc
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -151,6 +151,7 @@ def export_losses_by_asset_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     savez(fname, **dic)
     return [fname]
+
 
 def _compact(array):
     # convert an array of shape (a, e) into an array of shape (a,)
@@ -277,62 +278,6 @@ def get_etags_years_serials(events_by_grp, eids):
     return numpy.array(etags), numpy.array(years), numpy.array(serials)
 
 
-# this is used by event_based_risk
-@export.add(('all_loss_ratios', 'csv'))
-def export_all_loss_ratios(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    name, ext = export.keyfunc(ekey)
-    assetcol = dstore['assetcol']
-    oq = dstore['oqparam']
-    dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32),
-              ('aid', U32)] + oq.loss_dt_list()
-    elt_dt = numpy.dtype(dtlist)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    grp_id, eid = get_grp_id_eid(ekey[0])
-    if grp_id is None:
-        return []
-    grp_id, eid = int(grp_id), int(eid)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    rlzs = rlzs_assoc.get_rlzs_by_grp_id()[grp_id]
-    events = dstore['events/grp-%02d' % grp_id]
-    ok_events = events[events['eid'] == eid]
-    if len(ok_events) == 0:
-        return []
-    [event_tag] = calc.build_etags(ok_events, grp_id)
-    for rlz in rlzs:
-        exportname = 'losses-grp=%02d-eid=%d' % (grp_id, eid)
-        dest = dstore.build_fname(exportname, rlz, 'csv')
-        losses_by_aid = AccumDict()
-        rlzname = 'rlz-%03d' % rlz.ordinal
-        with dstore.ext5() as ext5:
-            ass_losses = ext5['all_loss_ratios'][rlzname].value
-        data = get_array(ass_losses, eid=eid)
-        losses_by_aid = group_array(data, 'aid')
-        elt = numpy.zeros(len(losses_by_aid), elt_dt)
-        elt['event_tag'] = event_tag
-        elt['year'] = ok_events[0]['year']
-        elt['aid'] = sorted(losses_by_aid)
-        for i, aid in numpy.ndenumerate(elt['aid']):
-            # there is a single eid
-            losses = losses_by_aid[aid]['loss'][0, :, :]  # shape (L, I)
-            for l, loss_type in enumerate(loss_types):
-                value = assetcol[int(aid)].value(loss_type, oq.time_event)
-                loss = value * losses[l]
-                if oq.insured_losses:
-                    elt[loss_type][i] = loss[0]
-                    elt[loss_type + '_ins'][i] = loss[1]
-                else:
-                    elt[loss_type][i] = loss
-
-        elt.sort(order='event_tag')
-        writer.save(elt, dest)
-    return writer.getsaved()
-
-
 @export.add(('rcurves-rlzs', 'csv'))
 def export_rcurves(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
@@ -349,20 +294,12 @@ def export_rcurves(ekey, dstore):
 
 
 # this is used by classical_risk
-@export.add(('loss_curves-rlzs', 'csv'))
+@export.add(('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    assets = get_assets(dstore)
-    curves = dstore[ekey[0]]
-    name = ekey[0].split('-')[0]
-    writer = writers.CsvWriter(fmt='%9.6E')
-    for rlz in rlzs:
-        for ltype in loss_types:
-            array = compose_arrays(assets, curves[ltype][:, rlz.ordinal])
-            path = dstore.build_fname('%s-%s' % (name, ltype), rlz, 'csv')
-            writer.save(array, path)
-    return writer.getsaved()
+    if '/' not in ekey[0]:  # full loss curves are not exportable
+        return []
+    what = ekey[0].split('/', 1)[1]
+    return loss_curves.LossCurveExporter(dstore).export('csv', what)
 
 
 @export.add(('dmg_by_asset', 'xml'))

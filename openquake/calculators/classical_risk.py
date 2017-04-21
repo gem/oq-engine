@@ -139,22 +139,15 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
     def post_execute(self, result):
         """
-        Save the losses in a compact form.
-        """
-        loss_ratios = {cb.loss_type: cb.curve_resolution
-                       for cb in self.riskmodel.curve_builders
-                       if cb.user_provided}
-        self.loss_curve_dt, self.loss_maps_dt = scientific.build_loss_dtypes(
-            loss_ratios, self.oqparam.conditional_loss_poes, self.I)
-
-        self.save_loss_curves(result)
-
-    def save_loss_curves(self, result):
-        """
         Saving loss curves in the datastore.
 
         :param result: aggregated result of the task classical_risk
         """
+        loss_ratios = {cb.loss_type: cb.curve_resolution
+                       for cb in self.riskmodel.curve_builders
+                       if cb.user_provided}
+        self.loss_curve_dt, _ = scientific.build_loss_dtypes(
+            loss_ratios, self.oqparam.conditional_loss_poes, self.I)
         ltypes = self.riskmodel.loss_types
         loss_curves = numpy.zeros((self.N, self.R), self.loss_curve_dt)
         for l, r, aid, lcurve in result['loss_curves']:
@@ -165,6 +158,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 else:  # 'losses', 'poes'
                     base.set_array(loss_curves_lt[name][aid, r], lcurve[i])
         self.datastore['loss_curves-rlzs'] = loss_curves
+        self.datastore.set_nbytes('loss_curves-rlzs')
 
         # loss curves stats
         if self.R > 1:
@@ -176,3 +170,4 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     base.set_array(stat_curves_lt['poes'][aid, s], statpoes[s])
                     base.set_array(stat_curves_lt['losses'][aid, s], losses)
             self.datastore['loss_curves-stats'] = stat_curves
+            self.datastore.set_nbytes('loss_curves-stats')
