@@ -658,9 +658,9 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
         ins = '_ins' if insflag else ''
         if ltype not in loss_maps.dtype.names:
             continue
-        array = loss_maps[ltype][:, s]
+        array = loss_maps[ltype + ins][:, s]
         curves = []
-        poe_str = 'poe-%s' % poe + ins
+        poe_str = 'poe-%s' % poe
         for ass, val in zip(assetcol, array[poe_str]):
             loc = Location(ass['lon'], ass['lat'])
             curve = LossMap(loc, decode(aref[ass['idx']]), val, None)
