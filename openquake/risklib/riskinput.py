@@ -482,8 +482,10 @@ class PoeGetter(object):
     """
     :param rlzs_by_gsim:
         a dictionary gsim -> realizations for that GSIM
-    :param hazard_by_site:
-        a list of dictionaries imt -> rlz -> poes, one per site
+    :param hazards_by_rlz
+        a nested dictionary rlz -> imt -> rlz -> PoE array
+    :params sids:
+        array of site IDs of interest
     :param imts:
         a list of IMT strings
     """
