@@ -207,7 +207,7 @@ class OqParam(valid.ParamSet):
                                  'remove them for the .ini file')
             if self.conditional_loss_poes:
                 raise ValueError('conditional_loss_poes are not defined '
-                                 'for classical_damage calculations'
+                                 'for classical_damage calculations: '
                                  'remove them for the .ini file')
         
         # checks for event_based_risk
