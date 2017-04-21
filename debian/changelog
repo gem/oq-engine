@@ -1,6 +1,9 @@
   [Michele Simionato]
+  * The loss curves are now computed on the fly for a given asset
+    even for the event based risk calculator. The loss ratios are now stored
+    in the datastore and not in an external .ext5 file.
   * Changed the CSV exporter for the loss curves: now it exports all the
-    curves for a given site
+    curves for a given site for the classical_risk calculator
   * Fixed the save_ruptures procedure when there are more than 256
     surfaces in the MultiSurface;
   * Renamed the `csq_` outputs of the scenario_damage to `losses_`
