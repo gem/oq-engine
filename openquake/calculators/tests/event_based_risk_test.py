@@ -189,9 +189,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         assert fnames
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+        if REFERENCE_OS:
+            for fname in fnames:
+                self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                      fname, delta=1E-5)
 
         fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
         assert fnames
