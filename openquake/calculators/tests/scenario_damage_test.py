@@ -17,13 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
 from nose.plugins.attrib import attr
 
+from openquake.hazardlib import InvalidFile
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7)
-
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -74,6 +73,13 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_4b(self):
         self.assert_ok(case_4b, 'job_haz.ini,job_risk.ini', exports='csv',
                        kind='losses')
+
+    @attr('qa', 'risk', 'scenario_damage')
+    def test_wrong_gsim_lt(self):
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(os.path.dirname(case_4b.__file__), 'job_err.ini')
+        self.assertIn('must contain a single branchset, found 2!',
+                      str(ctx.exception))
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_5(self):
