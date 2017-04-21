@@ -173,9 +173,9 @@ class RlzsAssoc(collections.Mapping):
 
     def get_rlzs_by_gsim(self, grp_id):
         """
-        Returns a dictionary gsim > rlzs for the given grp_id
+        Returns an orderd dictionary gsim > rlzs for the given grp_id
         """
-        rlzs_by_gsim = {}
+        rlzs_by_gsim = collections.OrderedDict()
         for gid, gsim in sorted(self.rlzs_assoc):
             if gid == grp_id:
                 rlzs_by_gsim[gsim] = self[gid, gsim]
