@@ -200,7 +200,7 @@ class ProbabilityMap(dict):
                     imtls.slicedic[imt], idx]
         return curves
 
-    def convert2(self, imtls, sids=None):
+    def convert2(self, imtls, sids):
         """
         Convert a probability map into a composite array of shape (N, Z)
         and dtype `imtls.dt`.
@@ -208,7 +208,7 @@ class ProbabilityMap(dict):
         :param imtls:
             DictArray instance
         :param sids:
-            the IDs of the sites we are interested in (default None, all sites)
+            the IDs of the sites we are interested in
         :returns:
             an array of curves of shape (N, Z)
         """
@@ -219,8 +219,13 @@ class ProbabilityMap(dict):
             curves_by_imt = curves[imt]
             for idx in range(self.shape_z):
                 for i, sid in numpy.ndenumerate(sids):
-                    curves_by_imt[i, idx] = self[sid].array[
-                        imtls.slicedic[imt], idx]
+                    try:
+                        pcurve = self[sid]
+                    except KeyError:
+                        pass  # the poes will be zeros
+                    else:
+                        curves_by_imt[i, idx] = pcurve.array[
+                            imtls.slicedic[imt], idx]
         return curves
 
     def filter(self, sids):
