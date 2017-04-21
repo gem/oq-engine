@@ -669,9 +669,7 @@ def logscale(x_min, x_max, n):
         raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
                          (x_max, x_min))
     delta = numpy.log(x_max / x_min)
-    # NB: I am multiplying by .999999999999 to avoid going outside of the range
-    # due to numerical approximations
-    return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min * .999999999999
+    return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
 
 
 def dictionary(value):
