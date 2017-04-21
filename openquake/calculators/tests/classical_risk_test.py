@@ -111,6 +111,8 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini')
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         assert fnames  # sanity check
+        # FIXME: on macOS the generation of loss maps stats is terribly wrong,
+        # the number of losses do not match, this must be investigated
         if REFERENCE_OS:
             for fname in fnames:
                 self.assertEqualFiles(
