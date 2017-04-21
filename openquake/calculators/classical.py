@@ -357,7 +357,7 @@ class PSHACalculator(base.HazardCalculator):
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
-                    key = 'poes/%04d' % grp_id
+                    key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=grp_trt[grp_id])
             if 'poes' in self.datastore:
@@ -438,8 +438,8 @@ class ClassicalCalculator(PSHACalculator):
         logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
             pmap_by_grp = {
-                int(group_id): self.datastore['poes/' + group_id]
-                for group_id in self.datastore['poes']}
+                int(grp[4:]): self.datastore['poes/' + grp]
+                for grp in self.datastore['poes']}
             res = parallel.Starmap(
                 build_hcurves_and_stats,
                 list(self.gen_args(pmap_by_grp))).submit_all()
