@@ -22,7 +22,6 @@ import mock
 import shutil
 import tempfile
 import unittest
-import shapefile
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import writetmp
