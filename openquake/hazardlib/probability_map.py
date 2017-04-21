@@ -180,7 +180,7 @@ class ProbabilityMap(dict):
         return BYTES_PER_FLOAT * N * L * I
 
     # used when exporting to HDF5
-    def convert(self, imtls, nsites=None, idx=0):
+    def convert(self, imtls, nsites, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
         and dtype `imtls.dt`.
@@ -188,12 +188,10 @@ class ProbabilityMap(dict):
         :param imtls:
             DictArray instance
         :param nsites:
-            the total number of sites (or None)
+            the total number of sites
         :param idx:
-            inner index (default 0)
+            index on the z-axis (default 0)
         """
-        if nsites is None:
-            nsites = len(self)
         curves = numpy.zeros(nsites, imtls.dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
@@ -202,26 +200,26 @@ class ProbabilityMap(dict):
                     imtls.slicedic[imt], idx]
         return curves
 
-    def convert2(self, imtls, nsites=None):
+    def convert2(self, imtls, sids=None):
         """
-        Convert a probability map into a composite array of length `nsites`
+        Convert a probability map into a composite array of shape (N, Z)
         and dtype `imtls.dt`.
 
         :param imtls:
             DictArray instance
-        :param nsites:
-            the total number of sites (or None)
+        :param sids:
+            the IDs of the sites we are interested in (default None, all sites)
         :returns:
             an array of curves of shape (N, Z)
         """
-        if nsites is None:
-            nsites = len(self)
-        curves = numpy.zeros((nsites, self.shape_z), imtls.dt)
+        if sids is None:
+            sids = numpy.array(sorted(self), numpy.float32)
+        curves = numpy.zeros((len(sids), self.shape_z), imtls.dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for idx in range(self.shape_z):
-                for sid in self:
-                    curves_by_imt[sid, idx] = self[sid].array[
+                for i, sid in numpy.ndenumerate(sids):
+                    curves_by_imt[i, idx] = self[sid].array[
                         imtls.slicedic[imt], idx]
         return curves
 
