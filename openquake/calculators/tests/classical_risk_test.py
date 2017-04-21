@@ -21,7 +21,7 @@ from nose.plugins.attrib import attr
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4, case_5, case_master)
 from openquake.baselib.general import writetmp
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.commonlib.writers import scientificformat
 from openquake.calculators.export import export
 from openquake.calculators.views import view
@@ -108,4 +108,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_risk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
-        # TODO: check the expected mean/quantiles curves
+        fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
+        assert fnames  # sanity check
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
