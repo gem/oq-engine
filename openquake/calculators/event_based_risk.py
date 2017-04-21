@@ -285,7 +285,9 @@ class EbrPostCalculator(base.RiskCalculator):
         cb_inputs = self.cb_inputs('agg_loss_table')
         I = oq.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
-        result = parallel.Starmap.apply(
+        # NB: using the Processmap since celery is hanging; the computation
+        # is fast anyway and this part will likely be removed in the future
+        result = parallel.Processmap.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros((I, R), loss_curve_dt)
