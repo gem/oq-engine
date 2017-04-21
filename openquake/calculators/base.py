@@ -20,7 +20,6 @@ import os
 import sys
 import abc
 import pdb
-import math
 import socket
 import logging
 import operator
@@ -544,7 +543,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
             if haz_sitecol is not None and haz_sitecol != self.sitecol:
-                with self.monitor('assoc_assets_sites'):
+                with self.monitor('assoc_assets_sites', autoflush=True):
                     self.sitecol, self.assetcol = \
                         self.assoc_assets_sites(haz_sitecol.complete)
                 ok_assets = self.count_assets()
@@ -633,17 +632,10 @@ class RiskCalculator(HazardCalculator):
                     for assets in reduced_assets:
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
-
-                # collect the hazards into a list of dicts imt -> rlz
-                hdata = [{imt: {} for imt in imtls} for _ in indices]
-                for rlz, hazards_by_imt in hazards_by_rlz.items():
-                    for imt in imtls:
-                        hazards_by_site = hazards_by_imt[imt]
-                        for i, haz in enumerate(hazards_by_site[indices]):
-                            hdata[i][imt][rlz] = haz
                 # build the riskinputs
-                ri = self.riskmodel.build_input(
-                    list(imtls), {None: rlzs}, hdata,
+                ri = riskinput.RiskInput(
+                    riskinput.PoeGetter(0, {None: rlzs}, hazards_by_rlz,
+                                        indices, list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
