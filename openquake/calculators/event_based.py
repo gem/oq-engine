@@ -483,10 +483,13 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        ruptures_by_grp = (self.precalc.result if self.precalc
-                           else get_ruptures_by_grp(self.datastore.parent))
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
+
+        with self.monitor('reading ruptures', autoflush=True):
+            ruptures_by_grp = (self.precalc.result if self.precalc
+                               else get_ruptures_by_grp(self.datastore.parent))
+
         self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)

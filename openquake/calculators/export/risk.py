@@ -562,31 +562,16 @@ def get_loss_maps(dstore, kind):
     :param kind: 'rlzs' or 'stats'
     """
     oq = dstore['oqparam']
-    name = 'rcurves-%s' % kind
+    name = 'loss_maps-%s' % kind
     if name in dstore:  # event_based risk
-        values = dstore['assetcol'].values()
-        _, loss_maps_dt = scientific.build_loss_dtypes(
-            {lt: len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
-            oq.conditional_loss_poes, oq.insured_losses)
-        rcurves = dstore[name].value  # to support Ubuntu 14
-        A, R, I = rcurves.shape
-        ins = ['', '_ins']
-        loss_maps = numpy.zeros((A, R), loss_maps_dt)
-        for ltype, lratios in oq.loss_ratios.items():
-            for (a, r, i) in indices(A, R, I):
-                rcurve = rcurves[ltype][a, r, i]
-                losses = numpy.array(lratios) * values[ltype][a]
-                tup = tuple(
-                    scientific.conditional_loss_ratio(losses, rcurve, poe)
-                    for poe in oq.conditional_loss_poes)
-                loss_maps[ltype + ins[i]][a, r] = tup
-        return loss_maps
+        return dstore[name].value
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
         loss_curves = dstore[name]
-    loss_maps = scientific.broadcast(
-        scientific.loss_maps, loss_curves, oq.conditional_loss_poes)
-    return loss_maps
+        loss_maps = scientific.broadcast(
+            scientific.loss_maps, loss_curves, oq.conditional_loss_poes)
+        return loss_maps
+    raise KeyError('loss_maps/loss_curves missing in %s' % dstore)
 
 
 # used by event_based_risk and classical_risk
@@ -612,26 +597,24 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
         for r in range(R):
             lmaps = loss_maps_lt[:, r]
             for poe in oq.conditional_loss_poes:
-                for insflag in range(oq.insured_losses + 1):
-                    ins = '_ins' if insflag else ''
-                    rlz = rlzs[r]
-                    unit = unit_by_lt[lt]
-                    root = ekey[0][:-5]  # strip -rlzs
-                    name = '%s-%s-poe-%s%s' % (root, lt, poe, ins)
-                    fname = dstore.build_fname(name, rlz, ekey[1])
-                    data = []
-                    poe_str = 'poe-%s' % poe + ins
-                    for ass, stat in zip(assetcol, lmaps[poe_str]):
-                        loc = Location(ass['lon'], ass['lat'])
-                        lm = LossMap(loc, decode(aref[ass['idx']]), stat, None)
-                        data.append(lm)
-                    writer = writercls(
-                        fname, oq.investigation_time, poe=poe, loss_type=lt,
-                        unit=unit,
-                        risk_investigation_time=oq.risk_investigation_time,
-                        **get_paths(rlz))
-                    writer.serialize(data)
-                    fnames.append(fname)
+                rlz = rlzs[r]
+                unit = unit_by_lt[lt[:-4] if lt.endswith('_ins') else lt]
+                root = ekey[0][:-5]  # strip -rlzs
+                name = '%s-%s-poe-%s' % (root, lt, poe)
+                fname = dstore.build_fname(name, rlz, ekey[1])
+                data = []
+                poe_str = 'poe-%s' % poe
+                for ass, stat in zip(assetcol, lmaps[poe_str]):
+                    loc = Location(ass['lon'], ass['lat'])
+                    lm = LossMap(loc, decode(aref[ass['idx']]), stat, None)
+                    data.append(lm)
+                writer = writercls(
+                    fname, oq.investigation_time, poe=poe, loss_type=lt,
+                    unit=unit,
+                    risk_investigation_time=oq.risk_investigation_time,
+                    **get_paths(rlz))
+                writer.serialize(data)
+                fnames.append(fname)
     return sorted(fnames)
 
 
