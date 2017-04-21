@@ -145,7 +145,8 @@ def export_losses_by_asset_npz(ekey, dstore):
     assets = get_assets(dstore)
     dic = {}
     for rlz in rlzs:
-        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()
+        # I am exporting the 'mean' and ignoring the 'stddev'
+        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
         data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
         dic['rlz-%03d' % rlz.ordinal] = data
     fname = dstore.export_path('%s.%s' % ekey)
@@ -415,6 +416,26 @@ def export_loss_maps_csv(ekey, dstore):
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
+
+
+# used by classical_risk and event_based_risk
+@export.add(('loss_maps-rlzs', 'npz'), ('loss_maps-stats', 'npz'))
+def export_loss_maps_npz(ekey, dstore):
+    kind = ekey[0].split('-')[1]  # rlzs or stats
+    assets = get_assets(dstore)
+    value = get_loss_maps(dstore, kind)
+    R = len(dstore['realizations'])
+    if kind == 'rlzs':
+        tags = ['rlz-%03d' % r for r in range(R)]
+    else:
+        oq = dstore['oqparam']
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    fname = dstore.export_path('%s.%s' % ekey)
+    dic = {}
+    for tag, values in zip(tags, value.T):
+        dic[tag] = compose_arrays(assets, values)
+    savez(fname, **dic)
+    return [fname]
 
 
 @export.add(('damages-rlzs', 'csv'))
