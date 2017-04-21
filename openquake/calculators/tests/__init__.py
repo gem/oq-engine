@@ -18,6 +18,7 @@
 
 import os
 import re
+import shutil
 import logging
 import tempfile
 import unittest
@@ -63,6 +64,8 @@ def columns(line):
 
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
+    edir = None  # will be set to a temporary directory
+    success = True  # will be set to False if the files are different
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -89,15 +92,15 @@ class CalculatorTestCase(unittest.TestCase):
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
         self.calc = self.get_calc(testfile, inis[0], **kw)
-        edir = tempfile.mkdtemp()
+        self.edir = tempfile.mkdtemp()
         with self.calc.monitor:
-            result = self.calc.run(export_dir=edir)
+            result = self.calc.run(export_dir=self.edir)
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             with self.calc.monitor:
-                result.update(self.calc.run(export_dir=edir))
+                result.update(self.calc.run(export_dir=self.edir))
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
@@ -152,6 +155,7 @@ class CalculatorTestCase(unittest.TestCase):
                 open(expected, 'w').write(''.join(actual_lines))
             else:
                 # normally raise an exception
+                self.success = False
                 raise DifferentFiles('%s %s' % (expected, actual))
 
     def assertGot(self, expected_content, fname):
@@ -164,3 +168,5 @@ class CalculatorTestCase(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, 'calc'):
             self.calc.datastore.close()
+        if self.edir and self.success:  # remove temporary dir only for success
+            shutil.rmtree(self.edir)
