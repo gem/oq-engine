@@ -105,8 +105,7 @@ def expose_outputs(dstore):
         dskeys.add('avg_losses-stats')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
-            if len(rlzs) > 1:
-                dskeys.add('loss_maps-rlzs')
+            dskeys.add('loss_maps-rlzs')
         if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
             if len(rlzs) > 1:
                 dskeys.add('loss_maps-stats')
