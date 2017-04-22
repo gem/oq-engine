@@ -24,7 +24,7 @@ from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
@@ -162,14 +162,24 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         self._file_type, self._risk_files = get_risk_files(self.inputs)
 
-        # check the IMTs vs the GSIMs
+        # check the gsim_logic_tree
         if 'gsim_logic_tree' in self.inputs:
             if self.gsim:
                 raise ValueError('If `gsim_logic_tree_file` is set, there '
                                  'must be no `gsim` key')
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            self._gsims_by_trt = logictree.GsimLogicTree(path, ['*']).values
+            gsim_lt = logictree.GsimLogicTree(path, ['*'])
+
+            # check the number of branchsets
+            branchsets = len(gsim_lt._ltnode)
+            if 'scenario' in self.calculation_mode and branchsets > 1:
+                raise InvalidFile(
+                    '%s for a scenario calculation must contain a single '
+                    'branchset, found %d!' % (path, branchsets))
+
+            # check the IMTs vs the GSIMs
+            self._gsims_by_trt = gsim_lt.values
             for gsims in self._gsims_by_trt.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
