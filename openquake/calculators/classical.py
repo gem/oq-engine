@@ -380,15 +380,14 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
         return {}
     rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
-        pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
+        pmaps = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
     pmap_by_kind = {}
     if len(rlzs) > 1:
         with monitor('compute stats'):
-            pmap_by_kind.update(
-                pstats.compute(sids, [pmap_by_rlz[rlz] for rlz in rlzs]))
+            pmap_by_kind.update(pstats.compute(sids, pmaps))
     if monitor.individual_curves:
-        for rlz in rlzs:
-            pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap_by_rlz[rlz]
+        for rlz, pmap in zip(rlzs, pmaps):
+            pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap
     return pmap_by_kind
 
 
