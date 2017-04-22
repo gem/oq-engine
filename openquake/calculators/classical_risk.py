@@ -126,11 +126,12 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 for grp in self.datastore['poes']:
                     grp_id = int(grp[4:])  # strip grp-
                     pmaps[grp_id] = self.datastore['poes/' + grp]
-                pmap_by_rlz = calc.combine_pmaps(self.rlzs_assoc, pmaps)
+                pmaps = calc.combine_pmaps(self.rlzs_assoc, pmaps)
                 nsites = len(self.sitecol.complete)
+                rlzs = self.rlzs_assoc.realizations
                 curves_by_rlz = {
-                    rlz: pmap_by_rlz[rlz].convert(oq.imtls, nsites)
-                    for rlz in pmap_by_rlz}
+                    rlz: pmap.convert(oq.imtls, nsites)
+                    for rlz, pmap in zip(rlzs, pmaps)}
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
             self.riskinputs = self.build_riskinputs(curves_by_rlz)
         self.param = dict(insured_losses=oq.insured_losses,
