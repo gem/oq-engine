@@ -23,7 +23,7 @@ import numpy
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, source
+from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
 
 
@@ -117,17 +117,20 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             curves_by_rlz = {rlz: haz_curves}
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
-            logging.info('Preparing the risk input')
-            curves_by_rlz = {}
-            nsites = len(self.sitecol.complete)
             if 'hcurves' not in self.datastore:  # when building short report
                 return
-            for key in self.datastore['hcurves']:
-                pmap = self.datastore['hcurves/' + key]
-                rlz = self.rlzs_assoc.get_rlz(key)
-                if rlz is not None:  # can be None if a realization is
-                    # missing; this happen in test_case_5
-                    curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
+            logging.info('Combining the hazard curves')
+            with self.monitor(
+                    'combining hcurves', measuremem=True, autoflush=True):
+                pmaps = {}
+                for grp in self.datastore['poes']:
+                    grp_id = int(grp[4:])  # strip grp-
+                    pmaps[grp_id] = self.datastore['poes/' + grp]
+                pmap_by_rlz = calc.combine_pmaps(self.rlzs_assoc, pmaps)
+                nsites = len(self.sitecol.complete)
+                curves_by_rlz = {
+                    rlz: pmap_by_rlz[rlz].convert(oq.imtls, nsites)
+                    for rlz in pmap_by_rlz}
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
             self.riskinputs = self.build_riskinputs(curves_by_rlz)
         self.param = dict(insured_losses=oq.insured_losses,
