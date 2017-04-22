@@ -145,7 +145,8 @@ def export_losses_by_asset_npz(ekey, dstore):
     assets = get_assets(dstore)
     dic = {}
     for rlz in rlzs:
-        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()
+        # I am exporting the 'mean' and ignoring the 'stddev'
+        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
         data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
         dic['rlz-%03d' % rlz.ordinal] = data
     fname = dstore.export_path('%s.%s' % ekey)
@@ -417,6 +418,26 @@ def export_loss_maps_csv(ekey, dstore):
     return writer.getsaved()
 
 
+# used by classical_risk and event_based_risk
+@export.add(('loss_maps-rlzs', 'npz'), ('loss_maps-stats', 'npz'))
+def export_loss_maps_npz(ekey, dstore):
+    kind = ekey[0].split('-')[1]  # rlzs or stats
+    assets = get_assets(dstore)
+    value = get_loss_maps(dstore, kind)
+    R = len(dstore['realizations'])
+    if kind == 'rlzs':
+        tags = ['rlz-%03d' % r for r in range(R)]
+    else:
+        oq = dstore['oqparam']
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    fname = dstore.export_path('%s.%s' % ekey)
+    dic = {}
+    for tag, values in zip(tags, value.T):
+        dic[tag] = compose_arrays(assets, values)
+    savez(fname, **dic)
+    return [fname]
+
+
 @export.add(('damages-rlzs', 'csv'))
 def export_rlzs_by_asset_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
@@ -637,9 +658,9 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
         ins = '_ins' if insflag else ''
         if ltype not in loss_maps.dtype.names:
             continue
-        array = loss_maps[ltype][:, s]
+        array = loss_maps[ltype + ins][:, s]
         curves = []
-        poe_str = 'poe-%s' % poe + ins
+        poe_str = 'poe-%s' % poe
         for ass, val in zip(assetcol, array[poe_str]):
             loc = Location(ass['lon'], ass['lat'])
             curve = LossMap(loc, decode(aref[ass['idx']]), val, None)
