@@ -79,46 +79,44 @@ def max_curve(values, weights=None):
 
 
 # NB: this is a function linear in the array argument
-def compute_stats(array, quantiles, weights):
+def compute_stats(array, stats, weights):
     """
     :param array:
         an array of R elements (which can be arrays)
-    :param quantiles:
-        a list of Q quantiles
+    :param stats:
+        a record of S statistic functions
     :param weights:
         a list of R weights
     :returns:
-        an array of Q + 1 elements (which can be arrays)
+        an array of S elements (which can be arrays)
     """
-    result = numpy.zeros((len(quantiles) + 1,) + array.shape[1:], array.dtype)
-    result[0] = apply_stat(mean_curve, array, weights)
-    for i, q in enumerate(quantiles, 1):
-        result[i] = apply_stat(quantile_curve, array, q, weights)
+    result = numpy.zeros((len(stats),) + array.shape[1:], array.dtype)
+    for i, func in enumerate(stats):
+        result[i] = apply_stat(func, array, weights)
     return result
 
 
 # like compute_stats, but on a matrix of shape (N, R)
-def compute_stats2(arrayNR, quantiles, weights):
+def compute_stats2(arrayNR, stats, weights):
     """
     :param arrayNR:
         an array of (N, R) elements
-    :param quantiles:
-        a list of Q quantiles
+    :param stats:
+        a record of S statistic functions
     :param weights:
         a list of R weights
     :returns:
-        an array of (N, Q + 1) elements
+        an array of (N, S) elements
     """
     newshape = list(arrayNR.shape)
     if newshape[1] != len(weights):
         raise ValueError('Got %d weights but %d values!' %
                          (len(weights), newshape[1]))
-    newshape[1] = len(quantiles) + 1  # number of statistical outputs
+    newshape[1] = len(stats)  # number of statistical outputs
     newarray = numpy.zeros(newshape, arrayNR.dtype)
     data = [arrayNR[:, i] for i in range(len(weights))]
-    newarray[:, 0] = apply_stat(mean_curve, data, weights)
-    for i, q in enumerate(quantiles, 1):
-        newarray[:, i] = apply_stat(quantile_curve, data, q, weights)
+    for i, func in enumerate(stats):
+        newarray[:, i] = apply_stat(func, data, weights)
     return newarray
 
 
