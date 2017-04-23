@@ -70,8 +70,8 @@ class DataStoreTestCase(unittest.TestCase):
         self.assertTrue('a/b' in self.dstore)
 
     def test_export_path(self):
-        path = self.dstore.export_path('hello.txt')
-        mo = re.match('\./hello_\d+', path)
+        path = self.dstore.export_path('hello.txt', tempfile.mkdtemp())
+        mo = re.search('hello_\d+', path)
         self.assertIsNotNone(mo)
 
     def test_read(self):

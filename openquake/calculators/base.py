@@ -148,7 +148,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore = datastore.DataStore(calc_id)
         self.monitor.calc_id = self.datastore.calc_id
         self.monitor.hdf5path = self.datastore.hdf5path
-        self.datastore.export_dir = oqparam.export_dir
         self.oqparam = oqparam
 
     def save_params(self, **kw):
