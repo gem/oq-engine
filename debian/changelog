@@ -6,9 +6,6 @@
   * The engine outputs are now streamed by the WebUI
   * Used a temporary export directory in the tests, to avoid conflicts
     in multiuser situations
-  * The engine outputs are now streamed by the WebUI
-  * Used a temporary export directory in the tests, to avoid conflicts
-    in multiuser situations
   * Added an .npz exporter for the loss maps
   * Raised an error early when using a complex logic tree in scenario
     calculations
