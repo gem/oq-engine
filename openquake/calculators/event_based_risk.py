@@ -233,7 +233,7 @@ class EbrPostCalculator(base.RiskCalculator):
         if ('all_loss_ratios' in self.datastore
                  and self.oqparam.conditional_loss_poes):
             rlzs = self.rlzs_assoc.realizations
-            quantiles = self.oqparam.quantile_loss_curves
+            stats = self.oqparam.risk_stats()
             builder = self.riskmodel.curve_builder
             getter = riskinput.LossRatiosGetter(self.datastore)
             A = len(self.assetcol)
@@ -243,9 +243,8 @@ class EbrPostCalculator(base.RiskCalculator):
             self.datastore.create_dset(
                 'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
             if R > 1:
-                S = len(quantiles) + 1
                 self.datastore.create_dset(
-                    'loss_maps-stats', builder.loss_maps_dt, (A, S),
+                    'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             # close the datastore, process the loss maps, then reopen it
             # NB: we must fork after closing the datastore and not before,
@@ -257,7 +256,7 @@ class EbrPostCalculator(base.RiskCalculator):
             self.datastore.close()
             parallel.Processmap.apply(
                 build_loss_maps,
-                (self.assetcol, builder, getter, rlzs, quantiles, self.monitor)
+                (self.assetcol, builder, getter, rlzs, stats, self.monitor)
             ).reduce(self.save_loss_maps)
             self.datastore.open()
 
@@ -296,20 +295,19 @@ class EbrPostCalculator(base.RiskCalculator):
         self.datastore['agg_curve-rlzs'] = agg_curve
 
         if R > 1:  # save stats too
+            stats = oq.risk_stats()
             weights = self.datastore['realizations']['weight']
-            Q1 = len(oq.quantile_loss_curves) + 1
-            agg_curve_stats = numpy.zeros((I, Q1), agg_curve.dtype)
+            agg_curve_stats = numpy.zeros((I, len(stats)), agg_curve.dtype)
             for l, loss_type in enumerate(agg_curve.dtype.names):
                 acs = agg_curve_stats[loss_type]
                 data = agg_curve[loss_type]
                 for i in range(I):
+                    avg = data['avg'][i]
                     losses, all_poes = scientific.normalize_curves_eb(
                         [(c['losses'], c['poes']) for c in data[i]])
                     acs['losses'][i] = losses
-                    acs['poes'][i] = compute_stats(
-                        all_poes, oq.quantile_loss_curves, weights)
-                    acs['avg'][i] = compute_stats(
-                        data['avg'][i], oq.quantile_loss_curves, weights)
+                    acs['poes'][i] = compute_stats(all_poes, stats, weights)
+                    acs['avg'][i] = compute_stats(avg, stats, weights)
 
             self.datastore['agg_curve-stats'] = agg_curve_stats
 
