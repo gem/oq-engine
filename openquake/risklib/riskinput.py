@@ -808,6 +808,7 @@ class LossRatiosGetter(object):
         :param rlzi: None or a realization ordinal
         :returns: a dictionary aid, rlzi -> loss ratios
         """
+        print(aids)
         data = self.dset['all_loss_ratios/data']
         indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
         dic = collections.defaultdict(list)  # (aid, rlzi) -> ratios
