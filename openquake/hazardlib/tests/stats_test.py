@@ -1,6 +1,5 @@
 import unittest
 import numpy
-from scipy.stats import mstats
 from openquake.hazardlib.stats import mean_curve, quantile_curve
 
 aaae = numpy.testing.assert_array_almost_equal
@@ -82,7 +81,7 @@ class QuantileCurveTestCase(unittest.TestCase):
              4.2766000e-02, 1.9643000e-02, 8.1923000e-03, 2.9157000e-03,
              7.9955000e-04, 1.5233000e-04, 1.5582000e-05],
         ]
-        actual_curve = quantile_curve(curves, quantile)
+        actual_curve = quantile_curve(quantile, curves)
         numpy.testing.assert_allclose(expected_curve, actual_curve, atol=0.005)
 
     def test_compute_weighted_quantile_curve_case1(self):
@@ -97,7 +96,7 @@ class QuantileCurveTestCase(unittest.TestCase):
         ]
         weights = [0.5, 0.3, 0.2]
 
-        actual_curve = quantile_curve(curves, quantile, weights)
+        actual_curve = quantile_curve(quantile, curves, weights)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
 
@@ -113,6 +112,6 @@ class QuantileCurveTestCase(unittest.TestCase):
         ]
         weights = [0.2, 0.3, 0.5]
 
-        actual_curve = quantile_curve(curves, quantile, weights)
+        actual_curve = quantile_curve(quantile, curves, weights)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
