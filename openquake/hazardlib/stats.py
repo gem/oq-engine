@@ -66,6 +66,18 @@ def quantile_curve(curves, quantile, weights=None):
     return result
 
 
+def max_curve(values, weights=None):
+    """
+    Compute the maximum curve by taking the upper limits of the values;
+    the weights are ignored and present only for API compatibility.
+    The values can be arrays and then the maximum is taken pointwise:
+
+    >>> max_curve([numpy.array([.3, .2]), numpy.array([.1, .4])])
+    array([ 0.3,  0.4])
+    """
+    return numpy.max(values, axis=0)
+
+
 # NB: this is a function linear in the array argument
 def compute_stats(array, quantiles, weights):
     """
