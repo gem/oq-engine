@@ -163,6 +163,24 @@ class DataStore(collections.MutableMapping):
         """
         Return the underlying export directory
         """
+        try:
+            return self._export_dir
+        except AttributeError:
+            self._export_dir = self['oqparam'].export_dir
+            return self._export_dir
+
+    @export_dir.setter
+    def export_dir(self, value):
+        """
+        Set the export directory
+        """
+        self._export_dir = value
+
+    @property
+    def export_dir(self):
+        """
+        Return the underlying export directory
+        """
         edir = getattr(self, '_export_dir', None) or self['oqparam'].export_dir
         return edir
 
@@ -388,8 +406,7 @@ class DataStore(collections.MutableMapping):
 
     def __getstate__(self):
         # make the datastore pickleable
-        return dict(export_dir=self.export_dir,
-                    mode='r',
+        return dict(mode='r',
                     parent=self.parent,
                     calc_id=self.calc_id,
                     hdf5=None,
