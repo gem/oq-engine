@@ -33,14 +33,14 @@ def mean_curve(values, weights=None):
     return sum(value * weight for value, weight in zip(values, weights))
 
 
-def quantile_curve(curves, quantile, weights=None):
+def quantile_curve(quantile, curves, weights=None):
     """
     Compute the weighted quantile aggregate of a set of curves.
 
-    :param curves:
-        Array of R PoEs (possibly arrays)
     :param quantile:
         Quantile value to calculate. Should be in the range [0.0, 1.0].
+    :param curves:
+        Array of R PoEs (possibly arrays)
     :param weights:
         Array-like of weights, 1 for each input curve, or None
     :returns:
