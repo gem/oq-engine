@@ -581,25 +581,6 @@ class InsuredLossCurveTestCase(unittest.TestCase):
             scientific.insured_loss_curve(curve, 0.1, 0.5))
 
 
-class LossMapMatrixTest(unittest.TestCase):
-    def setUp(self):
-        losses = numpy.linspace(0, 10, 11)
-        poes = numpy.linspace(1, 0, 11)
-        self.curves = [(losses, poes), (losses * 2, poes)]
-
-    def test_no_poes(self):
-        self.assertEqual(0, scientific.loss_map_matrix([], self.curves).size)
-
-    def test_one_poe(self):
-        numpy.testing.assert_allclose(
-            [[3.5, 7]], scientific.loss_map_matrix([0.65], self.curves))
-
-    def test_more_poes(self):
-        numpy.testing.assert_allclose(
-            [[4.5, 9], [5, 10]],
-            scientific.loss_map_matrix([0.55, 0.5], self.curves))
-
-
 class ClassicalDamageTestCase(unittest.TestCase):
     def test_discrete(self):
         hazard_imls = [0.05, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4]

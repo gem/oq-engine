@@ -382,7 +382,7 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     with monitor('combine pmaps'):
         pmaps = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
     pmap_by_kind = {}
-    if len(rlzs) > 1:
+    if len(rlzs) > 1 and pstats.stats:
         with monitor('compute stats'):
             pmap_by_kind.update(pstats.compute(sids, pmaps))
     if monitor.individual_curves:
@@ -450,9 +450,8 @@ class ClassicalCalculator(PSHACalculator):
         monitor = self.monitor.new(
             'build_hcurves_and_stats',
             individual_curves=self.oqparam.individual_curves)
-        weights = (None if self.oqparam.number_of_logic_tree_samples
-                   else [rlz.weight for rlz in self.rlzs_assoc.realizations])
-        pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        pstats = PmapStats(self.oqparam.hazard_stats(), weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
             pg = {}
