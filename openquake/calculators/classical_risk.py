@@ -122,11 +122,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             logging.info('Combining the hazard curves')
             with self.monitor(
                     'combining hcurves', measuremem=True, autoflush=True):
-                pmaps = {}
-                for grp in self.datastore['poes']:
-                    grp_id = int(grp[4:])  # strip grp-
-                    pmaps[grp_id] = self.datastore['poes/' + grp]
-                pmaps = calc.combine_pmaps(self.rlzs_assoc, pmaps)
+                pmap_by_grp = {grp: self.datastore['poes/' + grp]
+                               for grp in self.datastore['poes']}
+                pmaps = calc.combine_pmaps(self.rlzs_assoc, pmap_by_grp)
                 nsites = len(self.sitecol.complete)
                 rlzs = self.rlzs_assoc.realizations
                 curves_by_rlz = {

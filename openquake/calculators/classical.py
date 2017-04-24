@@ -436,16 +436,13 @@ class ClassicalCalculator(PSHACalculator):
 
         logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
-            pmap_by_grp = {
-                int(grp[4:]): self.datastore['poes/' + grp]
-                for grp in self.datastore['poes']}
             res = parallel.Starmap(
                 build_hcurves_and_stats,
-                list(self.gen_args(pmap_by_grp))).submit_all()
+                list(self.gen_args())).submit_all()
         nbytes = reduce(self.save_hcurves, res, AccumDict())
         return nbytes
 
-    def gen_args(self, pmap_by_grp):
+    def gen_args(self):
         """
         :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
         :yields: arguments for the function build_hcurves_and_stats
@@ -458,8 +455,9 @@ class ClassicalCalculator(PSHACalculator):
         pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
-            pg = {grp_id: pmap_by_grp[grp_id].filter(block.sids)
-                  for grp_id in pmap_by_grp}
+            pg = {}
+            for grp in self.datastore['poes']:
+                pg[grp] = self.datastore['poes/' + grp].filter(block.sids)
             yield pg, block.sids, pstats, self.rlzs_assoc, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
