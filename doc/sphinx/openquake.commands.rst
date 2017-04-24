@@ -49,10 +49,10 @@ info command
     :undoc-members:
     :show-inheritance:
 
-normalize command
+extract_sites command
 -----------------------------------
 
-.. automodule:: openquake.commands.normalize
+.. automodule:: openquake.commands.extract_sites
     :members:
     :undoc-members:
     :show-inheritance:
