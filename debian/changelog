@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Raised an error if the user specifies `quantile_loss_curves`
+    or `conditional_loss_poes` in a classical_damage calculation
+  * Added a CSV exporter for the benefit-cost-ratio calculator
   * The classical_risk calculator now reads directly the probability maps,
     not the hazard curves
   * The loss curves are now computed on the fly for a given asset
