@@ -768,16 +768,9 @@ def get_sitecol_assetcol(oqparam, exposure):
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
     assets_by_site = []
-    idxs = []
-    ordinal = 0
     for lonlat in zip(sitecol.lons, sitecol.lats):
-        assets = sorted(assets_by_loc[lonlat], key=operator.attrgetter('idx'))
-        assets_by_site.append(assets)
-        for asset in assets:
-            idxs.append(asset.idx)
-            #asset.idx = ordinal
-            ordinal += 1
-    exposure.asset_refs[:] = [exposure.asset_refs[idx] for idx in idxs]
+        assets = assets_by_loc[lonlat]
+        assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = riskinput.AssetCollection(
         assets_by_site, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
