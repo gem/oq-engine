@@ -128,7 +128,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 if rlz is not None:  # can be None if a realization is
                     # missing; this happen in test_case_5
                     curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
-        self.riskinputs = self.build_riskinputs(curves_by_rlz)
+        with self.monitor('build riskinputs', measuremem=True, autoflush=True):
+            self.riskinputs = self.build_riskinputs(curves_by_rlz)
         self.param = dict(insured_losses=oq.insured_losses,
                           quantile_loss_curves=oq.quantile_loss_curves)
         self.N = len(self.assetcol)
@@ -144,7 +145,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         :param result: aggregated result of the task classical_risk
         """
         loss_ratios = {cb.loss_type: cb.curve_resolution
-                       for cb in self.riskmodel.curve_builders
+                       for cb in self.riskmodel.curve_builder
                        if cb.user_provided}
         self.loss_curve_dt, _ = scientific.build_loss_dtypes(
             loss_ratios, self.oqparam.conditional_loss_poes, self.I)
