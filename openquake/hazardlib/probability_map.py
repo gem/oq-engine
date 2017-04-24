@@ -315,6 +315,24 @@ def get_shape(pmaps):
     return (len(pmap),) + pmap[sid].array.shape
 
 
+# it would be nice to replace the class below with a numpy record; however
+# in doing so there is a mysterious error when transferring the statistical
+# functions to the workers:
+# concurrent.futures.process.BrokenProcessPool: A process in the
+# process pool was terminated abruptly while the future was running
+# or pending.
+# looks like a bug in multiprocessing, since the numpy record is
+# pickleable
+class Stats(list):
+    """
+    A container with statistical functions and their names, i.e. string
+    like 'mean', 'quantile-0.1', 'max'.
+    """
+    def __init__(self, names, funcs):
+        self.names = names
+        self.extend(funcs)
+
+
 class PmapStats(object):
     """
     A class to perform statistics on ProbabilityMaps.
@@ -329,7 +347,7 @@ class PmapStats(object):
     >>> pm2 = ProbabilityMap.build(3, 1, sids=[0],
     ...                            initvalue=0.8)
     >>> stats_dt = numpy.dtype([('mean', object)])
-    >>> [stats] = numpy.array([(s.mean_curve,)], stats_dt)
+    >>> stats = Stats(['mean'], [s.mean_curve])
     >>> PmapStats(stats).compute(sids=[0, 1], pmaps=[pm1, pm2])
     [('mean', {0: <ProbabilityCurve
     [[ 0.9]
