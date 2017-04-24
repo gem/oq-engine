@@ -129,7 +129,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     # missing; this happen in test_case_5
                     curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs(curves_by_rlz)
+            self.riskinputs = self.build_riskinputs('poe', curves_by_rlz)
         self.param = dict(insured_losses=oq.insured_losses,
                           quantile_loss_curves=oq.quantile_loss_curves)
         self.N = len(self.assetcol)

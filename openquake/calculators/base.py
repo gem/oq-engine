@@ -603,8 +603,10 @@ class RiskCalculator(HazardCalculator):
         """
         return {t: i for i, t in enumerate(sorted(self.assetcol.taxonomies))}
 
-    def build_riskinputs(self, hazards_by_rlz, eps=numpy.zeros(0)):
+    def build_riskinputs(self, kind, hazards_by_rlz, eps=numpy.zeros(0)):
         """
+        :param kind:
+            kind of hazard getter, can be 'poe' or 'gmf'
         :param hazards_by_rlz:
             a dictionary rlz -> IMT -> array of length num_sites
         :param eps:
@@ -640,7 +642,7 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.PoeGetter(0, {None: rlzs}, hazards_by_rlz,
+                    riskinput.HazardGetter(kind, 0, {None: rlzs}, hazards_by_rlz,
                                         indices, list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:

@@ -157,10 +157,11 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    riskinput.hazard_getter.init()
     assetcol = param['assetcol']
     A = len(assetcol)
     I = param['insured_losses'] + 1
-    eids = riskinput.eids
+    eids = riskinput.hazard_getter.eids
     E = len(eids)
     L = len(riskmodel.lti)
     taxid = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
