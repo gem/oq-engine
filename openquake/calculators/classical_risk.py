@@ -145,7 +145,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         :param result: aggregated result of the task classical_risk
         """
         loss_ratios = {cb.loss_type: cb.curve_resolution
-                       for cb in self.riskmodel.curve_builders
+                       for cb in self.riskmodel.curve_builder
                        if cb.user_provided}
         self.loss_curve_dt, _ = scientific.build_loss_dtypes(
             loss_ratios, self.oqparam.conditional_loss_poes, self.I)
