@@ -826,15 +826,21 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, etags, gmf array
+        sitecol, etags, gmf array of shape (N, I, E)
     """
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.txt'):
-        return get_gmfs_from_txt(oqparam, fname)
+        sitecol, etags, gmfs_by_imt = get_gmfs_from_txt(oqparam, fname)
     elif fname.endswith('.xml'):
-        return get_scenario_from_nrml(oqparam, fname)
+        sitecol, etags, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
     else:
         raise NotImplemented('Reading from %s' % fname)
+    N, E = gmfs_by_imt.shape
+    I = len(oqparam.imtls)
+    gmfs = numpy.zeros((N, I, E), F32)
+    for imti, imtstr in enumerate(oqparam.imtls):
+        gmfs[:, imti, :] = gmfs_by_imt[imtstr]
+    return sitecol, etags, gmfs
 
 
 def get_hcurves(oqparam):

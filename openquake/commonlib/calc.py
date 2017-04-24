@@ -261,14 +261,9 @@ def get_gmfs(dstore, precalc=None):
     oq = dstore['oqparam']
     if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        sitecol, etags, gmfs_by_imt = readinput.get_gmfs(oq)
-
-        # reduce the gmfs matrices to the filtered sites
-        for imt in oq.imtls:
-            gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
-
-        logging.info('Preparing the risk input')
-        return etags, [gmfs_by_imt]
+        sitecol, etags, gmfa = readinput.get_gmfs(oq)
+        # reduce the gmfa matrix to the filtered sites
+        return etags, [gmfa[sitecol.indices]]
 
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol']
@@ -278,27 +273,27 @@ def get_gmfs(dstore, precalc=None):
         haz_sitecol = sitecol  # N sites
     S = len(haz_sitecol)
     N = len(haz_sitecol.complete)
-    imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
+    I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
     etags = numpy.array(sorted(b'scenario-%010d~ses=1' % i for i in range(E)))
-    gmfs = numpy.zeros((len(rlzs_assoc), N, E), imt_dt)
+    gmfs = numpy.zeros((len(rlzs_assoc), N, I, E))
     if precalc:
-        for i, gsim in enumerate(precalc.gsims):
-            for imti, imt in enumerate(oq.imtls):
-                gmfs[imt][i, sitecol.sids] = precalc.gmfa[gsim][imti]
+        for g, gsim in enumerate(precalc.gsims):
+            gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
         return etags, gmfs
 
     # else read from the datastore
     gsims = sorted(dstore['gmf_data/grp-00'])
+    imtis = range(len(oq.imtls))
     for i, gsim in enumerate(gsims):
         dset = dstore['gmf_data/grp-00/' + gsim]
         for s, sid in enumerate(haz_sitecol.sids):
-            for imti, imt in enumerate(oq.imtls):
+            for imti in imtis:
                 idx = E * (S * imti + s)
                 array = dset[idx: idx + E]
                 if numpy.unique(array['sid']) != [sid]:  # sanity check
                     raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[imt][i, sid] = array['gmv']
+                gmfs[i, sid, imti] = array['gmv']
     return etags, gmfs
 
 

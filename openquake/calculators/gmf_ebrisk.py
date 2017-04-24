@@ -17,11 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-
 import numpy
 
-from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict
 from openquake.commonlib import calc
 from openquake.calculators import base, event_based_risk as ebr
 
@@ -31,63 +28,12 @@ F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def gmf_ebrisk(riskinput, riskmodel, taxid, monitor):
-    """
-    Core function for a scenario computation.
-
-    :param riskinput:
-        a of :class:`openquake.risklib.riskinput.RiskInput` object
-    :param riskmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param taxid:
-        dictionary taxonomy string -> taxonomy id
-    :param monitor:
-        :class:`openquake.baselib.performance.Monitor` instance
-    """
-    I = monitor.insured_losses + 1
-    eids = riskinput.eids
-    aids = []
-    for assets in riskinput.assets_by_site:
-        for asset in assets:
-            aids.append(asset.ordinal)
-    A = len(aids)
-    E = len(eids)
-    L = len(riskmodel.lti)
-    T = len(taxid)
-    R = sum(len(rlzs)
-            for gsim, rlzs in riskinput.hazard_getter.rlzs_by_gsim.items())
-    idx = dict(zip(eids, range(E)))
-    agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
-    ass = AccumDict(accum=[])
-    result = dict(agglosses=AccumDict(), asslosses=AccumDict(),
-                  losses_by_taxon=numpy.zeros((T, R, L * I), F32),
-                  aids=numpy.array(aids, U16))
-    if monitor.avg_losses:
-        result['avglosses'] = AccumDict(accum=numpy.zeros(A, F32))
-    else:
-        result['avglosses'] = {}
-    outputs = riskmodel.gen_outputs(riskinput, monitor)
-    ebr._aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, monitor)
-    for r in sorted(agg):
-        records = [(eids[i], loss) for i, loss in enumerate(agg[r])
-                   if loss.sum() > 0]
-        if records:
-            result['agglosses'][r] = numpy.array(records, monitor.elt_dt)
-    for r in ass:
-        if ass[r]:
-            result['asslosses'][r] = numpy.concatenate(ass[r])
-
-    # store info about the GMFs
-    result['gmdata'] = riskinput.gmdata
-    return result
-
-
 @base.calculators.add('gmf_ebrisk')
 class GmfEbRiskCalculator(base.RiskCalculator):
     """
     Run an event based risk calculation starting from precomputed GMFs
     """
-    core_task = gmf_ebrisk
+    core_task = ebr.event_based_risk
     pre_calculator = None
     is_stochastic = True
 
@@ -105,7 +51,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
                          for rlz in self.rlzs_assoc.realizations}
         self.riskinputs = self.build_riskinputs(hazard_by_rlz, eps)
-        self.extra_args = (self.make_taxid(),)
+        self.param['assetcol'] = self.assetcol
+        self.param['insured_losses'] = self.oqparam.insured_losses
+        self.param['avg_losses'] = self.oqparam.avg_losses
 
     def post_execute(self, result):
         self.L = len(self.riskmodel.lti)
