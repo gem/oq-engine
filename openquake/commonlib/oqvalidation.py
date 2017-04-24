@@ -24,31 +24,13 @@ import numpy
 from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats
+from openquake.hazardlib import correlation, stats, probability_map
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
-
-
-# it would be nice to replace the class below with a numpy record; however
-# in doing so there is a mysterious error when transferring the statistical
-# functions to the workers:
-# concurrent.futures.process.BrokenProcessPool: A process in the
-# process pool was terminated abruptly while the future was running
-# or pending.
-# looks like a bug in multiprocessing, since the numpy record is
-# pickleable
-class Stats(list):
-    """
-    A container with statistical functions and their names, i.e. string
-    like 'mean', 'quantile-0.1', 'max'.
-    """
-    def __init__(self, names, funcs):
-        self.names = names
-        self.extend(funcs)
 
 
 class OqParam(valid.ParamSet):
@@ -389,7 +371,7 @@ class OqParam(valid.ParamSet):
         if self.max_hazard_curves:
             names.append('max')
             funcs.append(stats.max_curve)
-        return Stats(names, funcs)
+        return probability_map.Stats(names, funcs)
 
     def risk_stats(self):
         """
@@ -407,7 +389,7 @@ class OqParam(valid.ParamSet):
         if self.max_loss_curves:
             names.append('max')
             funcs.append(stats.max_curve)
-        return Stats(names, funcs)
+        return probability_map.Stats(names, funcs)
 
     @property
     def job_type(self):
