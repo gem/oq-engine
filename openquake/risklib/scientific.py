@@ -883,7 +883,7 @@ class LossTypeCurveBuilder(object):
     The usage is something like this::
 
       builder = LossTypeCurveBuilder(loss_type, loss_ratios, ses_ratio,
-                             user_provided=True)
+                                     user_provided=True)
       counts = builder.build_counts(loss_matrix)
     """
     def __init__(self, loss_type, curve_resolution, loss_ratios, ses_ratio,
@@ -1020,6 +1020,8 @@ class CurveBuilder(object):
             a list of realizations
         :param stats:
             a record of statistic functions
+        :param mon:
+            a :class:`openquake.baselib.performance.Monitor` instance
         :returns:
             aids, loss_maps, loss_maps_stats
         """
