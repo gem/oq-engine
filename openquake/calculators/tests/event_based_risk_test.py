@@ -23,7 +23,8 @@ from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import (
+    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.calculators.export import export
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
@@ -74,20 +75,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini',
                       exports='csv', individual_curves='false')
-        ekeys = [
-            ('rcurves-stats', 'xml'),
-            ('rcurves-stats', 'geojson'),
-
-            ('loss_maps-stats', 'csv'),
-            ('loss_maps-stats', 'xml'),
-            ('loss_maps-stats', 'geojson'),
-
-            ('agg_curve-stats', 'xml'),
-        ]
+        ekeys = [('agg_curve-stats', 'xml')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
                     'expected/%s' % strip_calc_id(fname), fname)
+
+        fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
+        assert fnames
+        if REFERENCE_OS:
+            for fname in fnames:
+                self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                      fname, delta=1E-5)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
@@ -173,7 +172,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                  out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname, delta=1E-5)
+
+        fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
+        assert fnames, 'loss_maps-rlzs not exported?'
+        if REFERENCE_OS:
+            for fname in fnames:
+                self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                      fname, delta=1E-5)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
@@ -182,16 +189,19 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini',
                       exports='csv', individual_curves='false')
         fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
-
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+        assert fnames, 'loss_maps-rlzs not exported?'
+        if REFERENCE_OS:
+            for fname in fnames:
+                self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                      fname, delta=1E-5)
 
         fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'losses_by_taxon-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
