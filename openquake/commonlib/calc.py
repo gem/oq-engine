@@ -59,21 +59,21 @@ BaseRupture.init()  # initialize rupture codes
 
 
 # used in classical and event_based calculators
-def combine_pmaps(rlzs_assoc, results):
+def combine_pmaps(rlzs_assoc, pmap_by_grp):
     """
     :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
-    :param results: dictionary src_group_id -> probability map
-    :returns: a dictionary rlz -> aggregate probability map
+    :param pmap_by_grp: dictionary group string -> probability map
+    :returns: a list of probability maps, one per realization
     """
-    num_levels = get_shape(results.values())[1]
-    acc = {rlz: ProbabilityMap(num_levels, 1)
-           for rlz in rlzs_assoc.realizations}
-    for grp_id in results:
+    num_levels = get_shape(pmap_by_grp.values())[1]
+    acc = [ProbabilityMap(num_levels, 1)
+           for rlz in rlzs_assoc.realizations]
+    for grp in pmap_by_grp:
+        grp_id = int(grp[4:])  # strip grp-
         for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
-            pmap = results[grp_id].extract(i)
+            pmap = pmap_by_grp[grp].extract(i)
             for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
-                if rlz in acc:
-                    acc[rlz] |= pmap
+                acc[rlz.ordinal] |= pmap
     return acc
 
 # ######################### hazard maps ################################### #

@@ -1,6 +1,8 @@
   [Michele Simionato]
   * Raised an error if the user specifies `quantile_loss_curves`
     or `conditional_loss_poes` in a classical_damage calculation
+  * The classical_risk calculator now reads directly the probability maps,
+    not the hazard curves
   * The loss curves are now computed on the fly for a given asset
     for the event based risk calculator.
   * The loss ratios are now stored in the datastore and not in an
