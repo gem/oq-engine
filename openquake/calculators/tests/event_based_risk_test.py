@@ -82,6 +82,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                     'expected/%s' % strip_calc_id(fname), fname)
 
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
+        assert fnames
         if REFERENCE_OS:
             for fname in fnames:
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
@@ -171,9 +172,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                  out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname, delta=1E-5)
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
+        assert fnames, 'loss_maps-rlzs not exported?'
         if REFERENCE_OS:
             for fname in fnames:
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
@@ -186,19 +189,19 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini',
                       exports='csv', individual_curves='false')
         fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        assert fnames
+        assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
-        assert fnames
+        assert fnames, 'loss_maps-rlzs not exported?'
         if REFERENCE_OS:
             for fname in fnames:
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
         fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
-        assert fnames
+        assert fnames, 'losses_by_taxon-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 

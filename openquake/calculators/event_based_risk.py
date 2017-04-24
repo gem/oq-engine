@@ -556,7 +556,8 @@ class EbriskCalculator(base.RiskCalculator):
         Save the event loss tables incrementally.
 
         :param dic:
-            dictionary with agglosses, assratios, losses_by_taxon, avglosses
+            dictionary with agglosses, assratios, losses_by_taxon, avglosses,
+            lrs_idx
         :param offset:
             realization offset
         """
