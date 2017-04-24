@@ -62,15 +62,16 @@ BaseRupture.init()  # initialize rupture codes
 def combine_pmaps(rlzs_assoc, pmap_by_grp):
     """
     :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
-    :param pmap_by_grp: dictionary src_group_id -> probability map
+    :param pmap_by_grp: dictionary group string -> probability map
     :returns: a list of probability maps, one per realization
     """
     num_levels = get_shape(pmap_by_grp.values())[1]
     acc = [ProbabilityMap(num_levels, 1)
            for rlz in rlzs_assoc.realizations]
-    for grp_id in pmap_by_grp:
+    for grp in pmap_by_grp:
+        grp_id = int(grp[4:])  # strip grp-
         for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
-            pmap = pmap_by_grp[grp_id].extract(i)
+            pmap = pmap_by_grp[grp].extract(i)
             for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
                 acc[rlz.ordinal] |= pmap
     return acc
