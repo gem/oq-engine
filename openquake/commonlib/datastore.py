@@ -126,7 +126,7 @@ class DataStore(collections.MutableMapping):
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
     def __init__(self, calc_id=None, datadir=DATADIR,
-                 export_dir='.', params=(), mode=None):
+                 params=(), mode=None):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
@@ -140,7 +140,6 @@ class DataStore(collections.MutableMapping):
                                  'retrieve the %s' % (len(calc_ids), calc_id))
         else:  # use the given datastore
             self.calc_id = calc_id
-        self.export_dir = export_dir
         self.params = params
         self.mode = mode
         self.parent = ()  # can be set later
@@ -158,6 +157,39 @@ class DataStore(collections.MutableMapping):
         self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
         if self.parent != () and self.parent.hdf5 is None:
             self.parent.open()
+
+    @property
+    def export_dir(self):
+        """
+        Return the underlying export directory
+        """
+        try:
+            return self._export_dir
+        except AttributeError:
+            self._export_dir = self['oqparam'].export_dir
+            return self._export_dir
+
+    @export_dir.setter
+    def export_dir(self, value):
+        """
+        Set the export directory
+        """
+        self._export_dir = value
+
+    @property
+    def export_dir(self):
+        """
+        Return the underlying export directory
+        """
+        edir = getattr(self, '_export_dir', None) or self['oqparam'].export_dir
+        return edir
+
+    @export_dir.setter
+    def export_dir(self, value):
+        """
+        Set the export directory
+        """
+        self._export_dir = value
 
     def ext5(self, mode='r'):
         """
@@ -374,8 +406,7 @@ class DataStore(collections.MutableMapping):
 
     def __getstate__(self):
         # make the datastore pickleable
-        return dict(export_dir=self.export_dir,
-                    mode='r',
+        return dict(mode='r',
                     parent=self.parent,
                     calc_id=self.calc_id,
                     hdf5=None,
