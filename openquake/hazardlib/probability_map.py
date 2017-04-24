@@ -381,5 +381,5 @@ class PmapStats(object):
             a list of pairs [('mean', ...), ('quantile-XXX', ...), ...]
         """
         stats = self.compute_pmap(sids, pmaps)
-        names = self.stats.dtype.names
+        names = self.stats.names
         return [(name, stats.extract(i)) for i, name in enumerate(names)]

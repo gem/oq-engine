@@ -84,7 +84,7 @@ def compute_stats(array, stats, weights):
     :param array:
         an array of R elements (which can be arrays)
     :param stats:
-        a record of S statistic functions
+        a sequence of S statistic functions
     :param weights:
         a list of R weights
     :returns:
@@ -102,7 +102,7 @@ def compute_stats2(arrayNR, stats, weights):
     :param arrayNR:
         an array of (N, R) elements
     :param stats:
-        a record of S statistic functions
+        a sequence of S statistic functions
     :param weights:
         a list of R weights
     :returns:
