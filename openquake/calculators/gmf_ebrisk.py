@@ -50,12 +50,13 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             self.datastore, self.precalc)
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
                          for rlz in self.rlzs_assoc.realizations}
-        self.riskinputs = self.build_riskinputs(hazard_by_rlz, eps)
+        self.riskinputs = self.build_riskinputs('gmf', hazard_by_rlz, eps)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['avg_losses'] = self.oqparam.avg_losses
-
-    def post_execute(self, result):
+        self.taskno = 0
+        self.start = 0
+        self.R = len(hazard_by_rlz)
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
@@ -67,9 +68,12 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
 
+    def post_execute(self, result):
+        pass
+
     def combine(self, dummy, res):
         """
         :param dummy: unused parameter
         :param res: a result dictionary
         """
-        self.save_losses(res)
+        ebr.EbriskCalculator.save_losses(self, res, self.taskno)

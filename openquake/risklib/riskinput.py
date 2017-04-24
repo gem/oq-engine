@@ -501,9 +501,10 @@ class HazardGetter(object):
         self.data = {}
         for gsim in rlzs_by_gsim:
             rlzs = self.rlzs_by_gsim[gsim]
-            self.data[gsim] = datadicts = [{} for _ in rlzs]
+            self.data[gsim] = []
             for r, rlz in enumerate(rlzs):
-                datadict = datadicts[r]
+                datadict = collections.defaultdict(list)
+                self.data[gsim].append(datadict)
                 hazards_by_imt = hazards_by_rlz[rlz]
                 for imti, imt in enumerate(self.imts):
                     if kind == 'poe':
@@ -520,6 +521,9 @@ class HazardGetter(object):
             self.eids = numpy.arange(num_events, dtype=F32)
             # dictionary rlzi -> array(imts, events, nbytes)
             self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
+
+    def init(self):  # for API compatibility
+        pass
 
     def get_hazard(self, gsim):
         """
