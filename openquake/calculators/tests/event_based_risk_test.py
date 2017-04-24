@@ -171,9 +171,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                  out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname, delta=1E-5)
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
+        assert fnames
         if REFERENCE_OS:
             for fname in fnames:
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
