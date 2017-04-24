@@ -33,6 +33,24 @@ GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
 
 
+# it would be nice to replace the class below with a numpy record; however
+# in doing so there is a mysterious error when transferring the statistical
+# functions to the workers:
+# concurrent.futures.process.BrokenProcessPool: A process in the
+# process pool was terminated abruptly while the future was running
+# or pending.
+# looks like a bug in multiprocessing, since the numpy record is
+# pickleable
+class Stats(list):
+    """
+    A container with statistical functions and their names, i.e. string
+    like 'mean', 'quantile-0.1', 'max'.
+    """
+    def __init__(self, names, funcs):
+        self.names = names
+        self.extend(funcs)
+
+
 class OqParam(valid.ParamSet):
     siteparam = dict(
         vs30measured='reference_vs30_type',
@@ -371,10 +389,7 @@ class OqParam(valid.ParamSet):
         if self.max_hazard_curves:
             names.append('max')
             funcs.append(stats.max_curve)
-        if not names:
-            return ()
-        stats_dt = numpy.dtype([(name, object) for name in names])
-        return numpy.array([tuple(funcs)], stats_dt)[0]
+        return Stats(names, funcs)
 
     def risk_stats(self):
         """
@@ -392,10 +407,7 @@ class OqParam(valid.ParamSet):
         if self.max_loss_curves:
             names.append('max')
             funcs.append(stats.max_curve)
-        if not names:
-            return ()
-        stats_dt = numpy.dtype([(name, object) for name in names])
-        return numpy.array([tuple(funcs)], stats_dt)[0]
+        return Stats(names, funcs)
 
     @property
     def job_type(self):
