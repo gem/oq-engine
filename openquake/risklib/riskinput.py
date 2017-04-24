@@ -94,9 +94,8 @@ class AssetCollection(object):
         """
         :returns: numpy array of lists with the assets by each site
         """
-        assetcol = self.array
         assets_by_site = [[] for sid in range(self.tot_sites)]
-        for i, ass in enumerate(assetcol):
+        for i, ass in enumerate(self.array):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
@@ -313,11 +312,10 @@ class CompositeRiskModel(collections.Mapping):
         self.init(oqparam)
 
     def init(self, oqparam):
-        self.loss_types = []
-        self.curve_builders = []
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.loss_types = self.make_curve_builders(oqparam)
+        self.curve_builder = self.make_curve_builder(oqparam)
+        self.loss_types = [cb.loss_type for cb in self.curve_builder]
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
@@ -341,10 +339,9 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    def make_curve_builders(self, oqparam):
-        """
-        Populate the inner lists .loss_types, .curve_builders.
-        """
+    def make_curve_builder(self, oqparam):
+        # NB: populate the inner lists .loss_types too
+        cbs = []
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
@@ -364,34 +361,35 @@ class CompositeRiskModel(collections.Mapping):
                 if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
-                cb = scientific.CurveBuilder(
+                cb = scientific.LossTypeCurveBuilder(
                     loss_type, max(curve_resolutions), ratios, ses_ratio,
                     True, oqparam.conditional_loss_poes,
                     oqparam.insured_losses)
             elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
-                cb = scientific.CurveBuilder(
+                cb = scientific.LossTypeCurveBuilder(
                     loss_type, oqparam.loss_curve_resolution,
                     oqparam.loss_ratios[loss_type], ses_ratio, True,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             else:  # no loss_ratios provided
-                cb = scientific.CurveBuilder(
+                cb = scientific.LossTypeCurveBuilder(
                     loss_type, oqparam.loss_curve_resolution,
                     default_loss_ratios, ses_ratio, False,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
-            self.curve_builders.append(cb)
+            cbs.append(cb)
             cb.index = l
             self.lti[loss_type] = l
-        return loss_types
+        return scientific.CurveBuilder(
+            cbs, oqparam.insured_losses, oqparam.conditional_loss_poes)
 
     def get_loss_ratios(self):
         """
         :returns: a 1-dimensional composite array with loss ratios by loss type
         """
         lst = [('user_provided', numpy.bool)]
-        for cb in self.curve_builders:
+        for cb in self.curve_builder:
             lst.append((cb.loss_type, F32, len(cb.ratios)))
         loss_ratios = numpy.zeros(1, numpy.dtype(lst))
-        for cb in self.curve_builders:
+        for cb in self.curve_builder:
             loss_ratios['user_provided'] = cb.user_provided
             loss_ratios[cb.loss_type] = tuple(cb.ratios)
         return loss_ratios
@@ -413,19 +411,6 @@ class CompositeRiskModel(collections.Mapping):
 
     def __len__(self):
         return len(self._riskmodels)
-
-    def build_input(self, imts, rlzs_by_gsim, hazards_by_site, assetcol,
-                    eps_dict):
-        """
-        :param imts: a list of IMT strings
-        :param rlzs_by_gsim: a dictionary of realizations by GSIM
-        :param hazards_by_site: an array of hazards per each site
-        :param assetcol: AssetCollection instance
-        :param eps_dict: a dictionary of epsilons
-        :returns: a :class:`RiskInput` instance
-        """
-        return RiskInput(
-            PoeGetter(rlzs_by_gsim, hazards_by_site, imts), assetcol, eps_dict)
 
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
@@ -496,29 +481,36 @@ class PoeGetter(object):
     """
     :param rlzs_by_gsim:
         a dictionary gsim -> realizations for that GSIM
-    :param hazard_by_site:
-        a list of dictionaries imt -> rlz -> poes, one per site
+    :param hazards_by_rlz
+        a nested dictionary rlz -> imt -> rlz -> PoE array
+    :params sids:
+        array of site IDs of interest
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, rlzs_by_gsim, hazard_by_site, imts):
+    def __init__(self, grp_id, rlzs_by_gsim, hazards_by_rlz, sids, imts):
+        self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.hazard_by_site = hazard_by_site
+        self.sids = sids
         self.imts = imts
+        self.data = {}
+        for gsim in rlzs_by_gsim:
+            rlzs = self.rlzs_by_gsim[gsim]
+            self.data[gsim] = datadicts = [{} for _ in rlzs]
+            for r, rlz in enumerate(rlzs):
+                datadict = datadicts[r]
+                hazards_by_imt = hazards_by_rlz[rlz]
+                for imti, imt in enumerate(self.imts):
+                    hazard_by_site = hazards_by_imt[imt][self.sids]
+                    for idx, haz in enumerate(hazard_by_site):
+                        datadict[idx, imti] = haz
 
     def get_hazard(self, gsim):
         """
         :param gsim: a GSIM instance
         :returns: a list of dictionaries (num_sites, num_imts)
         """
-        rlzs = self.rlzs_by_gsim[gsim]
-        out = [{} for _ in rlzs]
-        for gsim in self.rlzs_by_gsim:
-            for r, rlz in enumerate(rlzs):
-                for sid, haz in enumerate(self.hazard_by_site):
-                    for imti, imt in enumerate(self.imts):
-                        out[r][sid, imti] = haz[imt][rlz]
-        return out
+        return self.data[gsim]
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
@@ -798,3 +790,44 @@ def rsi2str(rlzi, sid, imt):
     'rlz-XXXX/sid-YYYY/ZZZ'
     """
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
+
+
+class LossRatiosGetter(object):
+    """
+    Read loss ratios from the datastore for all realizations or for a specific
+    realization.
+
+    :param dstore: a DataStore instance
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+
+    def get(self, aids, rlzi=None):
+        """
+        :param aids: a list of A asset ordinals
+        :param rlzi: None or a realization ordinal
+        :returns: a dictionary aid, rlzi -> loss ratios
+        """
+        data = self.dset['all_loss_ratios/data']
+        indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
+        dic = collections.defaultdict(list)  # (aid, rlzi) -> ratios
+        for aid, idxs in zip(aids, indices):
+            for idx in idxs:
+                for rec in data[idx[0]: idx[1]]:
+                    if rlzi is None or rlzi == rec['rlzi']:
+                        dic[aid, rec['rlzi']].append(rec['ratios'])
+        return dic
+
+    def get_all(self, aids):
+        """
+        :param aids: a list of A asset ordinals
+        :returns: a list of A composite arrays of dtype `lrs_dt`
+        """
+        with self.dstore as ds:
+            data = ds['all_loss_ratios/data']
+            indices = ds['all_loss_ratios/indices'][aids]  # (A, T, 2)
+            loss_ratio_data = []
+            for aid, idxs in zip(aids, indices):
+                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+                loss_ratio_data.append(arr)
+        return loss_ratio_data
