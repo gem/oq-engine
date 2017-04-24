@@ -85,25 +85,25 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_3.__file__)
 
-    @attr('qa', 'hazard', 'classical')  # a bit slow
+    @attr('qa', 'hazard', 'classical')
     def test_case_4(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_4.__file__)
 
-    @attr('qa', 'hazard', 'classical', 'slow')
+    @attr('qa', 'hazard', 'classical')
     def test_case_5(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_5.__file__)
 
-    @attr('qa', 'hazard', 'classical', 'slow')
+    @attr('qa', 'hazard', 'classical')
     def test_case_6(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_6.__file__)
 
-    @attr('qa', 'hazard', 'classical', 'slow')
+    @attr('qa', 'hazard', 'classical')
     def test_case_7(self):
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
