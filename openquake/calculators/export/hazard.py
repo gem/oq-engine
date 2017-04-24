@@ -751,11 +751,9 @@ def export_gmf_data_csv(ekey, dstore):
         etags, gmfs_ = calc.get_gmfs(dstore)
         sitemesh = get_mesh(dstore['sitecol'])
         writer = writers.CsvWriter(fmt='%.5f')
-        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E)
-            for imt in imtls:
-                gmfs = numpy.zeros(len(gmfa), dt)
-                for i in range(len(gmfa)):
-                    gmfs[i] = tuple(gmfa[imt][i])
+        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, I, E)
+            for imti, imt in enumerate(imtls):
+                gmfs = gmfa[:, imti].copy().view(dt)[:, 0]  # shape (N, 1)
                 dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)
