@@ -436,10 +436,9 @@ class ClassicalCalculator(PSHACalculator):
 
         logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
-            res = parallel.Starmap(
-                build_hcurves_and_stats,
-                list(self.gen_args())).submit_all()
-        nbytes = reduce(self.save_hcurves, res, AccumDict())
+            nbytes = parallel.Processmap(
+                self.core_task.__func__, list(self.gen_args())
+            ).reduce(self.save_hcurves)
         return nbytes
 
     def gen_args(self):
@@ -468,10 +467,7 @@ class ClassicalCalculator(PSHACalculator):
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
         with self.monitor('saving hcurves and stats', autoflush=True):
-            oq = self.oqparam
             for kind in pmap_by_kind:
-                if kind == 'mean' and not oq.mean_hazard_curves:
-                    continue  # do not save the mean curves
                 pmap = pmap_by_kind[kind]
                 if pmap:
                     key = 'hcurves/' + kind
