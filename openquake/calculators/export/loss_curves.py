@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
+from openquake.risklib import riskinput
 
 
 class LossCurveExporter(object):
@@ -114,8 +115,17 @@ class LossCurveExporter(object):
                 rlzi = int(key[4:])
                 return {key: data[:, rlzi]}
             return {'rlz-%03d' % rlzi: data[:, rlzi] for rlzi in range(self.R)}
+
         # otherwise event_based
-        raise NotImplementedError
+        builder = self.dstore['riskmodel'].curve_builder
+        assets = [self.assetcol[aid] for aid in aids]
+        rlzi = int(key[4:]) if key else None  # strip rlz-
+        ratios = riskinput.LossRatiosGetter(self.dstore).get(aids, rlzi)
+        if rlzi:
+            return {rlzi: builder.build_curves(assets, ratios, rlzi)}
+        # return a dictionary will all realizations
+        return {'rlz-%03d' % rlzi: builder.build_curves(assets, ratios, rlzi)
+                for rlzi in range(self.R)}
 
     def export_curves_stats(self, aids, key):
         """
@@ -131,6 +141,5 @@ class LossCurveExporter(object):
                 return {stat: data[:, s] for s, stat in enumerate(stats)}
             else:  # a specific statistics
                 return {key: data[stat2idx[key]]}
-
         # otherwise event_based
         raise NotImplementedError
