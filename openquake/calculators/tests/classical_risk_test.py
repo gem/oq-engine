@@ -21,7 +21,8 @@ from nose.plugins.attrib import attr
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4, case_5, case_master)
 from openquake.baselib.general import writetmp
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import (
+    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.commonlib.writers import scientificformat
 from openquake.calculators.export import export
 from openquake.calculators.views import view
@@ -63,27 +64,32 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_3(self):
-        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        [fname] = out['loss_curves-rlzs', 'csv']
+        self.run_calc(case_3.__file__, 'job.ini', exports='csv')
+        [fname] = export(('loss_curves/sid-0/', 'csv'),
+                         self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-000.csv', fname)
+        [fname] = export(('loss_curves/ref-a8/', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-ref-a8-000.csv', fname)
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_4(self):
-        out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv,xml')
+        self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
+                      exports='csv,xml')
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])
 
-        fnames = out['loss_curves-rlzs', 'csv']
+        fnames = export(('loss_curves/sid-0/', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
         [fname] = export(('loss_maps-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-mean-structural.xml', fname)
 
-        [fname] = out['loss_curves-stats', 'xml']
-        self.assertEqualFiles('expected/loss_curves-mean-structural.xml',
+        [fname] = export(('loss_curves/sid-1/stats', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-sid-1-mean.csv',
                               fname)
 
     # test with 1 hazard site and 2 risk sites using assoc_assets_sites
@@ -103,4 +109,16 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_risk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
-        # TODO: check the expected mean/quantiles curves
+        fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
+        assert fnames  # sanity check
+        # FIXME: on macOS the generation of loss maps stats is terribly wrong,
+        # the number of losses do not match, this must be investigated
+        if REFERENCE_OS:
+            for fname in fnames:
+                self.assertEqualFiles(
+                    'expected/' + strip_calc_id(fname), fname)
+
+        # exported the npz, not checking the content
+        for kind in ('rlzs', 'stats'):
+            [fname] = export(('loss_maps-' + kind, 'npz'), self.calc.datastore)
+            print('Generated ' + fname)

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import os
 import re
 import copy
 import math
@@ -173,9 +174,9 @@ class RlzsAssoc(collections.Mapping):
 
     def get_rlzs_by_gsim(self, grp_id):
         """
-        Returns a dictionary gsim > rlzs for the given grp_id
+        Returns an orderd dictionary gsim > rlzs for the given grp_id
         """
-        rlzs_by_gsim = {}
+        rlzs_by_gsim = collections.OrderedDict()
         for gid, gsim in sorted(self.rlzs_assoc):
             if gid == grp_id:
                 rlzs_by_gsim[gsim] = self[gid, gsim]
@@ -335,6 +336,7 @@ class CompositionInfo(object):
                      tot_weight=self.tot_weight))
 
     def __fromh5__(self, dic, attrs):
+        # TODO: this is called more times than needed, maybe we should cache it
         sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
@@ -370,6 +372,10 @@ class CompositionInfo(object):
                 rec['name'], rec['weight'], path, srcgroups,
                 num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
+        try:
+            os.remove(tmp)  # gsim_lt file
+        except NameError:  # tmp is defined only in the regular case, see above
+            pass
 
     def get_num_rlzs(self, source_model=None):
         """
