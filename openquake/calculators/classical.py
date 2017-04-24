@@ -436,7 +436,7 @@ class ClassicalCalculator(PSHACalculator):
 
         logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
-            nbytes = parallel.Processmap(
+            nbytes = parallel.Starmap(
                 self.core_task.__func__, list(self.gen_args())
             ).reduce(self.save_hcurves)
         return nbytes
