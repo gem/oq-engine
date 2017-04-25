@@ -235,12 +235,14 @@ class EbrPostCalculator(base.RiskCalculator):
             rlzs = self.rlzs_assoc.realizations
             quantiles = self.oqparam.quantile_loss_curves
             builder = self.riskmodel.curve_builder
-            lrgetter = riskinput.LossRatiosGetter(self.datastore)
             A = len(assetcol)
             R = len(self.datastore['realizations'])
 
             if self.oqparam.hazard_calculation_id is None:
+                lrgetter = riskinput.LossRatiosGetter(self.datastore)
                 self.new_calculation()  # increase calc_id
+            else:
+                lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
 
             # create loss_maps datasets
             self.datastore.create_dset(
