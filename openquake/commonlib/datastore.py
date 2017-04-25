@@ -223,7 +223,13 @@ class DataStore(collections.MutableMapping):
         :param name: name of the attribute
         :param default: value to return if the attribute is missing
         """
-        obj = h5py.File.__getitem__(self.hdf5, key)
+        try:
+            obj = h5py.File.__getitem__(self.hdf5, key)
+        except KeyError:
+            if self.parent != ():
+                return self.parent.get_attr(key, name, default)
+            else:
+                raise
         try:
             return obj.attrs[name]
         except KeyError:
@@ -359,12 +365,12 @@ class DataStore(collections.MutableMapping):
         try:
             val = self.hdf5[key]
         except KeyError:
-            if self.parent:
+            if self.parent != ():
                 try:
-                    val = self.parent.hdf5[key]
+                    val = self.parent[key]
                 except KeyError:
                     raise KeyError(
-                        'No %r found in %s' % (key, [self, self.parent]))
+                        'No %r found in %s and ancestors' % (key, self))
             else:
                 raise KeyError('No %r found in %s' % (key, self))
         try:
