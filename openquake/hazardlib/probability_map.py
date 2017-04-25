@@ -315,29 +315,11 @@ def get_shape(pmaps):
     return (len(pmap),) + pmap[sid].array.shape
 
 
-# it would be nice to replace the class below with a numpy record; however
-# in doing so there is a mysterious error when transferring the statistical
-# functions to the workers:
-# concurrent.futures.process.BrokenProcessPool: A process in the
-# process pool was terminated abruptly while the future was running
-# or pending.
-# looks like a bug in multiprocessing, since the numpy record is
-# pickleable
-class Stats(list):
-    """
-    A container with statistical functions and their names, i.e. string
-    like 'mean', 'quantile-0.1', 'max'.
-    """
-    def __init__(self, names, funcs):
-        self.names = names
-        self.extend(funcs)
-
-
 class PmapStats(object):
     """
     A class to perform statistics on ProbabilityMaps.
 
-    :param stats: a record of statistical functions func(values, weights)
+    :param stats: pairs (name, statistical function(values, weights))
     :param weights: a list of weights
 
     Here is an example:
@@ -346,9 +328,8 @@ class PmapStats(object):
     ...                            initvalue=1.0)
     >>> pm2 = ProbabilityMap.build(3, 1, sids=[0],
     ...                            initvalue=0.8)
-    >>> stats_dt = numpy.dtype([('mean', object)])
-    >>> stats = Stats(['mean'], [s.mean_curve])
-    >>> PmapStats(stats).compute(sids=[0, 1], pmaps=[pm1, pm2])
+    >>> pstats = PmapStats([('mean', s.mean_curve)])
+    >>> pstats.compute(sids=[0, 1], pmaps=[pm1, pm2])
     [('mean', {0: <ProbabilityCurve
     [[ 0.9]
      [ 0.9]
@@ -358,7 +339,7 @@ class PmapStats(object):
      [ 0.5]]>})]
     """
     def __init__(self, stats, weights=None):
-        self.stats = stats
+        self.names, self.funcs = zip(*stats) if stats else ([], [])
         self.weights = weights
 
     # the tests are in the engine
@@ -376,14 +357,14 @@ class PmapStats(object):
         elif sum(len(pmap) for pmap in pmaps) == 0:  # all empty pmaps
             raise ValueError('All empty probability maps!')
         N, L, I = get_shape(pmaps)
-        nstats = len(self.stats)
+        nstats = len(self.funcs)
         stats = ProbabilityMap.build(L, nstats, sids)
         curves_by_rlz = numpy.zeros((len(pmaps), len(sids), L), numpy.float64)
         for i, pmap in enumerate(pmaps):
             for j, sid in enumerate(sids):
                 if sid in pmap:
                     curves_by_rlz[i][j] = pmap[sid].array[:, 0]
-        mq = s.compute_stats(curves_by_rlz, self.stats, self.weights)
+        mq = s.compute_stats(curves_by_rlz, self.funcs, self.weights)
         for i, array in enumerate(mq):
             for j, sid in numpy.ndenumerate(sids):
                 stats[sid].array[:, i] = array[j]
@@ -399,5 +380,4 @@ class PmapStats(object):
             a list of pairs [('mean', ...), ('quantile-XXX', ...), ...]
         """
         stats = self.compute_pmap(sids, pmaps)
-        names = self.stats.names
-        return [(name, stats.extract(i)) for i, name in enumerate(names)]
+        return [(name, stats.extract(i)) for i, name in enumerate(self.names)]
