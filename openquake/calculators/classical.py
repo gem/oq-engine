@@ -382,7 +382,7 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     with monitor('combine pmaps'):
         pmaps = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
     pmap_by_kind = {}
-    if len(rlzs) > 1 and pstats.stats:
+    if len(rlzs) > 1 and pstats.names:
         with monitor('compute stats'):
             pmap_by_kind.update(pstats.compute(sids, pmaps))
     if monitor.individual_curves:
