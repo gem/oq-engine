@@ -239,7 +239,9 @@ class EbrPostCalculator(base.RiskCalculator):
             A = len(assetcol)
             R = len(self.datastore['realizations'])
 
-            self.new_calculation()  # increase calc_id
+            if self.oqparam.hazard_calculation_id is None:
+                self.new_calculation()  # increase calc_id
+
             # create loss_maps datasets
             self.datastore.create_dset(
                 'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
