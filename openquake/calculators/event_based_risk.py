@@ -220,25 +220,26 @@ class EbrPostCalculator(base.RiskCalculator):
         Save the loss maps by opening and closing the datastore and
         return the total number of stored bytes.
         """
-        with self.datastore as dstore:
-            for key in res:
-                if key.startswith('loss_maps'):
-                    acc += {key: res[key].nbytes}
-                    dstore[key][res['aids']] = res[key]
-                    dstore.set_attrs(key, nbytes=acc[key])
+        for key in res:
+            if key.startswith('loss_maps'):
+                acc += {key: res[key].nbytes}
+                self.datastore[key][res['aids']] = res[key]
+                self.datastore.set_attrs(key, nbytes=acc[key])
         return acc
 
     def execute(self):
         # build loss maps
         if ('all_loss_ratios' in self.datastore
                  and self.oqparam.conditional_loss_poes):
+            assetcol = self.assetcol
             rlzs = self.rlzs_assoc.realizations
             quantiles = self.oqparam.quantile_loss_curves
             builder = self.riskmodel.curve_builder
             getter = riskinput.LossRatiosGetter(self.datastore)
-            A = len(self.assetcol)
+            A = len(assetcol)
             R = len(self.datastore['realizations'])
 
+            self.new_calculation()  # increase calc_id
             # create loss_maps datasets
             self.datastore.create_dset(
                 'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
@@ -247,19 +248,16 @@ class EbrPostCalculator(base.RiskCalculator):
                 self.datastore.create_dset(
                     'loss_maps-stats', builder.loss_maps_dt, (A, S),
                     fillvalue=None)
-            # close the datastore, process the loss maps, then reopen it
-            # NB: we must fork after closing the datastore and not before,
+            # NB: we must fork here and not before,
             # otherwise the 'all_loss_ratios' dataset is not seen by the
             # children; this is why the regular Starmap would not work here;
             # also, in this way everything is local and there is no need
             # to use a shared directory; the calculation is fast enough
             # (minutes) even for the largest event based I ever saw
-            self.datastore.close()
             parallel.Processmap.apply(
                 build_loss_maps,
-                (self.assetcol, builder, getter, rlzs, quantiles, self.monitor)
+                (assetcol, builder, getter, rlzs, quantiles, self.monitor)
             ).reduce(self.save_loss_maps)
-            self.datastore.open()
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
