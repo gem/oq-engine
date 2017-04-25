@@ -235,7 +235,7 @@ class EbrPostCalculator(base.RiskCalculator):
             rlzs = self.rlzs_assoc.realizations
             quantiles = self.oqparam.quantile_loss_curves
             builder = self.riskmodel.curve_builder
-            getter = riskinput.LossRatiosGetter(self.datastore)
+            lrgetter = riskinput.LossRatiosGetter(self.datastore)
             A = len(assetcol)
             R = len(self.datastore['realizations'])
 
@@ -254,10 +254,12 @@ class EbrPostCalculator(base.RiskCalculator):
             # also, in this way everything is local and there is no need
             # to use a shared directory; the calculation is fast enough
             # (minutes) even for the largest event based I ever saw
+            lrgetter.dstore.close()  # this is essential on the cluster
             parallel.Processmap.apply(
                 build_loss_maps,
-                (assetcol, builder, getter, rlzs, quantiles, self.monitor)
+                (assetcol, builder, lrgetter, rlzs, quantiles, self.monitor)
             ).reduce(self.save_loss_maps)
+            lrgetter.dstore.open()
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
