@@ -365,6 +365,15 @@ class HazardCalculator(BaseCalculator):
         """
         return len(self.assetcol)
 
+    def new_calculation(self):
+        parent = self.datastore
+        self.oqparam.hazard_calculation_id = parent.calc_id
+        self.__init__(self.oqparam)  # build a new datastore
+        self.datastore.parent = parent
+        self.datastore.open()
+        self.datastore['oqparam'] = self.oqparam
+        self.set_log_format()
+
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
