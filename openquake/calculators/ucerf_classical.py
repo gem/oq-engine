@@ -159,7 +159,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor.new(self.core_task.__name__)
+        monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq = self.oqparam
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         acc = AccumDict({

@@ -762,7 +762,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-        self.monitor.save_info(dict(hostname=socket.gethostname()))
+        self._monitor.save_info(dict(hostname=socket.gethostname()))
         self.csm = get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))

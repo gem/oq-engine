@@ -259,9 +259,10 @@ class EbrPostCalculator(base.RiskCalculator):
             # to use a shared directory; the calculation is fast enough
             # (minutes) even for the largest event based I ever saw
             lrgetter.dstore.close()  # this is essential on the cluster
+            mon = self.monitor('loss maps')
             parallel.Processmap.apply(
                 build_loss_maps,
-                (assetcol, builder, lrgetter, rlzs, quantiles, self.monitor)
+                (assetcol, builder, lrgetter, rlzs, quantiles, mon)
             ).reduce(self.save_loss_maps)
             lrgetter.dstore.open()
 
@@ -455,6 +456,7 @@ class EbriskCalculator(base.RiskCalculator):
         ela_dt, elt_dt = build_el_dtypes(
             self.riskmodel.loss_types, oq.insured_losses)
         csm_info = self.datastore['csm_info']
+        mon = self.monitor('risk')
         for sm in csm_info.source_models:
             param = dict(
                 assetcol=self.assetcol,
@@ -469,7 +471,7 @@ class EbriskCalculator(base.RiskCalculator):
                 seed=self.oqparam.random_seed)
             yield (sm.ordinal, ruptures_by_grp, self.sitecol.complete,
                    param, self.riskmodel, imts, oq.truncation_level,
-                   correl_model, min_iml, self.monitor)
+                   correl_model, min_iml, mon)
 
     def execute(self):
         """
