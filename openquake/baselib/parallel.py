@@ -399,6 +399,7 @@ class IterResult(object):
                 val, etype, mon = result.unpickle()
             else:
                 val, etype, mon = result
+                self.received.append(len(Pickled(result)))
             if etype:
                 raise RuntimeError(val)
             if self.num_tasks:
@@ -406,6 +407,7 @@ class IterResult(object):
             if not self.name.startswith('_'):  # no info for private tasks
                 self.save_task_data(mon)
             yield val
+
         if self.received:
             tot = sum(self.received)
             max_per_task = max(self.received)
