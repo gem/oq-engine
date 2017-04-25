@@ -551,7 +551,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
             # one could also set oq.number_of_logic_tree_samples = 0
-            self.cl = ClassicalCalculator(oq, self.monitor)
+            self.cl = ClassicalCalculator(oq, self.monitor('classical'))
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
