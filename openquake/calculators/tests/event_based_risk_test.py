@@ -218,8 +218,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check job_info is stored
         job_info = dict(self.calc.datastore['job_info'])
-        self.assertIn('build_loss_maps.sent', job_info)
-        self.assertIn('build_loss_maps.received', job_info)
+        self.assertIn(b'build_loss_maps.sent', job_info)
+        self.assertIn(b'build_loss_maps.received', job_info)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
