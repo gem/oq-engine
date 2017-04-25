@@ -403,7 +403,8 @@ class IterResult(object):
                 raise RuntimeError(val)
             if self.num_tasks:
                 next(self.log_percent)
-            self.save_task_data(mon)
+            if not self.name.startswith('_'):  # no info for private tasks
+                self.save_task_data(mon)
             yield val
         if self.received:
             tot = sum(self.received)
@@ -767,7 +768,13 @@ class BaseStarmap(object):
     def __init__(self, func, iterargs, poolsize=None):
         self.pool = self.poolfactory(poolsize)
         self.func = func
-        allargs = list(iterargs)
+        allargs = []
+        for task_no, args in enumerate(iterargs):
+            if isinstance(args[-1], Monitor):
+                # add incremental task number and task weight
+                args[-1].task_no = task_no
+                args[-1].weight = getattr(args[0], 'weight', 1.)
+            allargs.append(args)
         self.num_tasks = len(allargs)
         logging.info('Starting %d tasks', self.num_tasks)
         self.imap = self.pool.imap_unordered(
