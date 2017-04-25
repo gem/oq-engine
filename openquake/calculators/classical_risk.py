@@ -65,8 +65,8 @@ def classical_risk(riskinput, riskmodel, param, monitor):
 
     # compute statistics
     rlzs = riskinput.rlzs
-    if len(rlzs) > 1:
-        stats = param['stats']
+    if len(rlzs) > 1 and param['stats']:
+        statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
         for assets, rows in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():

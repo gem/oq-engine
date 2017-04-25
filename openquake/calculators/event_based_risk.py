@@ -191,14 +191,14 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     return result
 
 
-def build_loss_maps(assets, builder, getter, rlzs, quantiles, monitor):
+def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
     """
     Thin wrapper over :meth:
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
     aids, loss_maps, loss_maps_stats = builder.build_maps(
-        assets, getter, rlzs, quantiles, monitor)
+        assets, getter, rlzs, stats, monitor)
     res = {'aids': aids, 'loss_maps-rlzs': loss_maps}
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
@@ -262,8 +262,7 @@ class EbrPostCalculator(base.RiskCalculator):
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
-            with self.monitor('building agg_curve'):
-                self.build_agg_curve()
+            self.build_agg_curve()
 
     def post_execute(self):
         # override the base class method to avoid doing bad stuff
@@ -295,7 +294,7 @@ class EbrPostCalculator(base.RiskCalculator):
         self.datastore['agg_curve-rlzs'] = agg_curve
 
         if R > 1:  # save stats too
-            stats = oq.risk_stats()
+            statnames, stats = zip(*oq.risk_stats())
             weights = self.datastore['realizations']['weight']
             agg_curve_stats = numpy.zeros((I, len(stats)), agg_curve.dtype)
             for l, loss_type in enumerate(agg_curve.dtype.names):

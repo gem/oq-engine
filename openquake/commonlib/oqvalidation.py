@@ -357,7 +357,7 @@ class OqParam(valid.ParamSet):
 
     def hazard_stats(self):
         """
-        Return a numpy record with the statistical functions defined for the
+        Return a list of item with the statistical functions defined for the
         hazard calculation
         """
         names = []  # name of statistical functions
@@ -371,11 +371,11 @@ class OqParam(valid.ParamSet):
         if self.max_hazard_curves:
             names.append('max')
             funcs.append(stats.max_curve)
-        return probability_map.Stats(names, funcs)
+        return list(zip(names, funcs))
 
     def risk_stats(self):
         """
-        Return a numpy record with the statistical functions defined for the
+        Return a list of items with the statistical functions defined for the
         risk calculation
         """
         names = []  # name of statistical functions
@@ -389,7 +389,7 @@ class OqParam(valid.ParamSet):
         if self.max_loss_curves:
             names.append('max')
             funcs.append(stats.max_curve)
-        return probability_map.Stats(names, funcs)
+        return list(zip(names, funcs))
 
     @property
     def job_type(self):
