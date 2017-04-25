@@ -20,7 +20,6 @@ import os
 import sys
 import abc
 import pdb
-import socket
 import logging
 import operator
 import traceback
@@ -153,7 +152,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Return a new Monitor instance
         """
         mon = self._monitor(operation, hdf5path=self.datastore.hdf5path)
-        mon.calc_id = self.datastore.calc_id
+        self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
 
@@ -458,7 +457,6 @@ class HazardCalculator(BaseCalculator):
             if 'source' in self.oqparam.inputs:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
-        job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
         self._monitor.save_info(job_info)
