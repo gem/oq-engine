@@ -385,7 +385,7 @@ class HazardCalculator(BaseCalculator):
         self.datastore.new = True
         self.datastore.parent = parent
         self.datastore.open()
-        self.datastore['oqparam'] = oq
+        self.save_params()
         self.set_log_format()
 
     def compute_previous(self):
