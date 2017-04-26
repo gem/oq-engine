@@ -260,8 +260,12 @@ class EbrPostCalculator(base.RiskCalculator):
             # to use a shared directory; the calculation is fast enough
             # (minutes) even for the largest event based I ever saw
             lrgetter.dstore.close()  # this is essential on the cluster
-            time.sleep(.1)  # it seems to help against IOError:
+
+            # we sleep a bit to fight against IOError:
             # Can't read data (Wrong b-tree signature)
+            # that seems to happen only with Python 2
+            time.sleep(.1)
+
             mon = self.monitor('loss maps')
             parallel.Processmap.apply(
                 build_loss_maps,
