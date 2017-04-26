@@ -23,3 +23,13 @@ http://ftp.openquake.org/wheelhouse/macos/py/six-1.10.0-py2.py3-none-any.whl
 ## Extra ##
 
 ### Rtree wheel is not currently available for macOS ###
+
+### Plotting ###
+# comment the following lines to skip installation
+# of the plotting libraries (optional feature)
+http://ftp.openquake.org/wheelhouse/macos/py35/matplotlib-1.5.3-cp35-cp35m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.1.10-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.6.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/cycler-0.10.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/macos/py35/pyproj-1.9.5.1-cp35-cp35m-macosx_10_6_intel.whl
+http://ftp.openquake.org/wheelhouse/macos/py35/basemap-1.1.0-cp35-cp35m-macosx_10_6_intel.whl
