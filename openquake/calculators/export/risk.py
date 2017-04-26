@@ -954,4 +954,31 @@ def export_bcr_map_rlzs(ekey, dstore):
             fnames.append(path)
     return sorted(fnames)
 
+
+@export.add(('bcr-rlzs', 'csv'))
+def export_bcr_map(ekey, dstore):
+    assetcol = dstore['assetcol/array'].value
+    aref = dstore['asset_refs'].value
+    bcr_data = dstore['bcr-rlzs']
+    N, R = bcr_data.shape
+    realizations = dstore['csm_info'].get_rlzs_assoc().realizations
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    fnames = []
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for rlz in realizations:
+        for l, loss_type in enumerate(loss_types):
+            rlz_data = bcr_data[loss_type][:, rlz.ordinal]
+            path = dstore.build_fname('bcr-%s' % loss_type, rlz, 'csv')
+            data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
+                     'average_annual_loss_retrofitted', 'bcr']]
+            for ass, value in zip(assetcol, rlz_data):
+                data.append((ass['lon'], ass['lat'],
+                             decode(aref[ass['idx']]),
+                             value['annual_loss_orig'],
+                             value['annual_loss_retro'],
+                             value['bcr']))
+            writer.save(data, path)
+            fnames.append(path)
+    return writer.getsaved()
+
 # TODO: add export_bcr_map_stats
