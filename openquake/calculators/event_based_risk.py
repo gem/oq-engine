@@ -20,6 +20,7 @@ import logging
 import operator
 import itertools
 import collections
+import time
 import numpy
 
 from openquake.baselib.python3compat import zip
@@ -259,6 +260,8 @@ class EbrPostCalculator(base.RiskCalculator):
             # to use a shared directory; the calculation is fast enough
             # (minutes) even for the largest event based I ever saw
             lrgetter.dstore.close()  # this is essential on the cluster
+            time.sleep(.1)  # it seems to help against IOError:
+            # Can't read data (Wrong b-tree signature)
             mon = self.monitor('loss maps')
             parallel.Processmap.apply(
                 build_loss_maps,
