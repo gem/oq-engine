@@ -160,7 +160,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         tectonic region type.
         """
         monitor = self.monitor(self.core_task.__name__)
-        monitor.save_info(dict(hostname=socket.gethostname()))
         monitor.oqparam = oq = self.oqparam
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         acc = AccumDict({
