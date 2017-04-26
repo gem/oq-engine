@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import time
+import socket
 from datetime import datetime
 from multiprocessing.connection import Client
 
@@ -180,6 +181,8 @@ class Monitor(object):
         Save (name, value) information in the associated hdf5path
         """
         if self.hdf5path:
+            if 'hostname' not in dic:
+                dic['hostname'] = socket.gethostname()
             data = numpy.array(
                 _pairs(dic.items()),
                 [('par_name', hdf5.vstr), ('par_value', hdf5.vstr)])

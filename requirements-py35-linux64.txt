@@ -4,7 +4,7 @@
 
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
-# h5py, Shapely and psutil
+# h5py, Shapely, psutil, Rtree, PyYAML, Basemap
 
 http://ftp.openquake.org/wheelhouse/linux/py/setuptools-28.8.0-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py35/pkgconfig-1.1.0-py3-none-any.whl
@@ -20,6 +20,7 @@ http://ftp.openquake.org/wheelhouse/linux/py/decorator-4.0.11-py2.py3-none-any.w
 http://ftp.openquake.org/wheelhouse/linux/py/funcsigs-1.0.2-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py/pbr-1.8.0-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py/six-1.10.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py35/PyYAML-3.12-cp35-cp35m-manylinux1_x86_64.whl
 
 ## Extra ##
 
@@ -27,3 +28,13 @@ http://ftp.openquake.org/wheelhouse/linux/py/six-1.10.0-py2.py3-none-any.whl
 # comment the following lines to skip installation
 # of Rtree (experimental wheel, optional feature)
 http://ftp.openquake.org/wheelhouse/linux/py35/Rtree-0.8.2-cp35-cp35m-manylinux1_x86_64.whl
+
+### Plotting ###
+# comment the following lines to skip installation
+# of the plotting libraries (optional feature)
+http://ftp.openquake.org/wheelhouse/linux/py35/matplotlib-1.5.3-cp35-cp35m-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.1.10-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.6.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/cycler-0.10.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py35/pyproj-1.9.5.1-cp35-cp35m-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py35/basemap-1.1.0-cp35-cp35m-manylinux1_x86_64.whl
