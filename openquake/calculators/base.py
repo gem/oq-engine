@@ -20,7 +20,6 @@ import os
 import sys
 import abc
 import pdb
-import socket
 import getpass
 import logging
 import operator
@@ -146,11 +145,18 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         return self.datastore['assetcol/taxonomies'].value
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
-        self.monitor = monitor
+        self._monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
-        self.monitor.calc_id = self.datastore.calc_id
-        self.monitor.hdf5path = self.datastore.hdf5path
         self.oqparam = oqparam
+
+    def monitor(self, operation, **kw):
+        """
+        Return a new Monitor instance
+        """
+        mon = self._monitor(operation, hdf5path=self.datastore.hdf5path)
+        self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
+        vars(mon).update(kw)
+        return mon
 
     def save_params(self, **kw):
         """
@@ -465,10 +471,9 @@ class HazardCalculator(BaseCalculator):
             if 'source' in self.oqparam.inputs:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
-        job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        self.monitor.save_info(job_info)
+        self._monitor.save_info(job_info)
         try:
             self.csm_info = self.datastore['csm_info']
         except KeyError:
@@ -675,7 +680,8 @@ class RiskCalculator(HazardCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = [(riskinput, self.riskmodel, self.param, self.monitor)
+        mon = self.monitor('risk')
+        all_args = [(riskinput, self.riskmodel, self.param, mon)
                     for riskinput in self.riskinputs]
         res = Starmap(self.core_task.__func__, all_args).reduce()
         return res
