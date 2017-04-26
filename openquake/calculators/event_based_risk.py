@@ -260,7 +260,7 @@ class EbrPostCalculator(base.RiskCalculator):
             lrgetter.dstore.close()  # this is essential on the cluster
             parallel.Processmap.apply(
                 build_loss_maps,
-                (assetcol, builder, getter, rlzs, stats, self.monitor)
+                (assetcol, builder, lrgetter, rlzs, stats, self.monitor)
             ).reduce(self.save_loss_maps)
             lrgetter.dstore.open()
 
