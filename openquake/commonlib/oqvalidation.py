@@ -203,6 +203,17 @@ class OqParam(valid.ParamSet):
                     'iml_disagg=%s will not be computed from poes_disagg=%s',
                     str(self.iml_disagg), self.poes_disagg)
 
+        # checks for classical_damage
+        if self.calculation_mode == 'classical_damage':
+            if self.quantile_loss_curves:
+                raise ValueError('quantile_loss_curves are not defined '
+                                 'for classical_damage calculations: '
+                                 'remove them for the .ini file')
+            if self.conditional_loss_poes:
+                raise ValueError('conditional_loss_poes are not defined '
+                                 'for classical_damage calculations: '
+                                 'remove them for the .ini file')
+        
         # checks for event_based_risk
         if (self.calculation_mode == 'event_based_risk'
                 and self.asset_correlation not in (0, 1)):

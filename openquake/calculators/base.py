@@ -21,6 +21,7 @@ import sys
 import abc
 import pdb
 import socket
+import getpass
 import logging
 import operator
 import traceback
@@ -34,7 +35,7 @@ from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib import riskinput, __version__ as engine_version
-from openquake.commonlib import readinput, datastore, source, calc
+from openquake.commonlib import readinput, datastore, source, calc, logs
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -132,6 +133,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
+    from_engine = False  # set by engine.run_calc
     sitecol = datastore.persistent_attribute('sitecol')
     assetcol = datastore.persistent_attribute('assetcol')
     performance = datastore.persistent_attribute('performance')
@@ -364,6 +366,27 @@ class HazardCalculator(BaseCalculator):
         Count how many assets are taken into consideration by the calculator
         """
         return len(self.assetcol)
+
+    def new_calculation(self):
+        """
+        Build a child of the current calculation and change the datastore
+        to the child's one.
+        """
+        oq = self.oqparam
+        parent = self.datastore
+        oq.hazard_calculation_id = parent.calc_id
+        if self.from_engine:  # build a new job_id
+            new_id = logs.dbcmd(
+                'create_job', oq.calculation_mode, oq.description,
+                getpass.getuser(), datastore.DATADIR, oq.hazard_calculation_id)
+        else:
+            new_id = None
+        self.__init__(self.oqparam, calc_id=new_id)  # build a new datastore
+        self.datastore.new = True
+        self.datastore.parent = parent
+        self.datastore.open()
+        self.save_params()
+        self.set_log_format()
 
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
