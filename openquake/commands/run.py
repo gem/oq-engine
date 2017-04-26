@@ -75,13 +75,13 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
     Run both hazard and risk, one after the other
     """
     hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
-    with hcalc.monitor:
+    with monitor:
         hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                   exports=exports, **params)
         hc_id = hcalc.datastore.calc_id
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq, monitor)
-    with rcalc.monitor:
+    with monitor:
         rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
                   hazard_calculation_id=hc_id, **params)
     return rcalc
@@ -110,7 +110,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
                     'There are %d old calculations, cannot '
                     'retrieve the %s' % (len(calc_ids), hc_id))
         calc = base.calculators(oqparam, monitor)
-        with calc.monitor:
+        with calc._monitor:
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
                      rlz_ids=rlz_ids, **params)
