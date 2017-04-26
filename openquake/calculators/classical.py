@@ -20,7 +20,7 @@ from __future__ import division
 import logging
 import operator
 import collections
-from functools import partial, reduce
+from functools import partial
 import numpy
 
 from openquake.baselib import parallel
@@ -293,8 +293,9 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            smap = parallel.Starmap(self.core_task.__func__, iterargs)
-        acc = smap.reduce(self.agg_dicts, self.zerodict())
+            ires = parallel.Starmap(
+                self.core_task.__func__, iterargs).submit_all()
+        acc = ires.reduce(self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
