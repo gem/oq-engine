@@ -205,9 +205,10 @@ def build_loss_maps(assets, builder, getter, rlzs, quantiles, monitor):
     return res
 
 
-@base.calculators.add('event_based_risk')
+@base.calculators.add('ebrisk_postproc')
 class EbrPostCalculator(base.RiskCalculator):
-    pre_calculator = 'ebrisk'
+    pre_calculator = 'event_based_risk'
+    post_processor = True
 
     def cb_inputs(self, table):
         loss_table = self.datastore[table]
@@ -237,12 +238,7 @@ class EbrPostCalculator(base.RiskCalculator):
             builder = self.riskmodel.curve_builder
             A = len(assetcol)
             R = len(self.datastore['realizations'])
-
-            if self.oqparam.hazard_calculation_id is None:
-                lrgetter = riskinput.LossRatiosGetter(self.datastore)
-                self.new_calculation()  # increase calc_id
-            else:
-                lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
+            lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
 
             # create loss_maps datasets
             self.datastore.create_dset(
@@ -373,7 +369,7 @@ class EpsilonMatrix1(object):
         return self.eps[item[1]]
 
 
-@base.calculators.add('ebrisk')
+@base.calculators.add('event_based_risk')
 class EbriskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the total losses by taxonomy
