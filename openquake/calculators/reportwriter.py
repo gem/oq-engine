@@ -93,8 +93,11 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
-        info = {decode(k): decode(v)
-                for k, v in dict(dstore['job_info']).items()}
+        try:
+            info = {decode(k): decode(v)
+                    for k, v in dict(dstore['job_info']).items()}
+        except KeyError:  # job_info not in the datastore (scenario hazard)
+            info = dict(hostname='localhost')
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
         host = '%s:%s' % (info['hostname'], decode(dpath))
