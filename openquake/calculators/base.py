@@ -76,11 +76,11 @@ PRECALC_MAP = dict(
     classical_risk=['classical'],
     classical_bcr=['classical'],
     classical_damage=['classical'],
-    ebrisk=['event_based', 'event_based_rupture', 'ucerf_rupture',
-            'ebrisk', 'event_based_risk'],
     event_based=['event_based', 'event_based_rupture', 'ebrisk',
                  'event_based_risk', 'ucerf_rupture'],
-    event_based_risk=['ebrisk', 'event_based_risk'],
+    event_based_risk=['event_based', 'event_based_rupture', 'ucerf_rupture',
+                      'event_based_risk'],
+    ebrisk_postproc=['event_based_risk'],
     ucerf_classical=['ucerf_psha'],
     ucerf_hazard=['ucerf_rupture'])
 
@@ -138,6 +138,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
+    post_processor = False
 
     @property
     def taxonomies(self):
@@ -365,15 +366,6 @@ class HazardCalculator(BaseCalculator):
         """
         return len(self.assetcol)
 
-    def new_calculation(self):
-        parent = self.datastore
-        self.oqparam.hazard_calculation_id = parent.calc_id
-        self.__init__(self.oqparam)  # build a new datastore
-        self.datastore.parent = parent
-        self.datastore.open()
-        self.datastore['oqparam'] = self.oqparam
-        self.set_log_format()
-
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
@@ -437,11 +429,14 @@ class HazardCalculator(BaseCalculator):
         If yes, read the inputs by invoking the precalculator or by retrieving
         the previous calculation; if not, read the inputs directly.
         """
+        precalc_id = self.oqparam.hazard_calculation_id
+        if self.post_processor and precalc_id is None:
+            raise RuntimeError('%s requires a --hazard_calculation_id!' %
+                               self.__class__.__name__)
         job_info = {}
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
-            precalc_id = self.oqparam.hazard_calculation_id
             self.precalc = (self.compute_previous() if precalc_id is None
                             else self.read_previous(precalc_id))
             self.init()

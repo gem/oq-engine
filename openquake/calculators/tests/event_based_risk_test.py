@@ -73,8 +73,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
+        self.run_calc(case_1.__file__, 'job.ini')
+        hc_id = self.calc.datastore.calc_id
         self.run_calc(case_1.__file__, 'job.ini',
-                      exports='csv', individual_curves='false')
+                      exports='csv', individual_curves='false',
+                      hazard_calculation_id=str(hc_id),
+                      calculation_mode='ebrisk_postproc')
         ekeys = [('agg_curve-stats', 'xml')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
@@ -143,6 +147,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(grp02, 545)
         self.assertEqual(grp03, 218)
 
+        hc_id = self.calc.datastore.calc_id
+        self.run_calc(case_3.__file__, 'job.ini',
+                      exports='xml', individual_curves='false',
+                      hazard_calculation_id=str(hc_id),
+                      calculation_mode='ebrisk_postproc')
         [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -159,15 +168,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        # this is a case without loss_ratios in the .ini file
-        # we check that no risk curves are generated
-        self.assertNotIn('rcurves-rlzs', self.calc.datastore)
-        self.assertNotIn('rcurves-stats', self.calc.datastore)
-
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
+        self.run_calc(occupants.__file__, 'job.ini',
+                      exports='xml', individual_curves='true')
+        hc_id = self.calc.datastore.calc_id
         out = self.run_calc(occupants.__file__, 'job.ini',
-                            exports='xml', individual_curves='true')
+                            exports='xml', individual_curves='false',
+                            hazard_calculation_id=str(hc_id),
+                            calculation_mode='ebrisk_postproc')
         fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore) + \
                  out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
@@ -193,12 +202,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
-        fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
-        assert fnames, 'loss_maps-rlzs not exported?'
-        if REFERENCE_OS:
-            for fname in fnames:
-                self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                      fname, delta=1E-5)
 
         fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
         assert fnames, 'losses_by_taxon-stats not exported?'
@@ -215,6 +218,17 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
+
+        hc_id = self.calc.datastore.calc_id
+        self.run_calc(case_master.__file__, 'job.ini',
+                      exports='csv', hazard_calculation_id=str(hc_id),
+                      calculation_mode='ebrisk_postproc')
+        fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
+        assert fnames, 'loss_maps-rlzs not exported?'
+        if REFERENCE_OS:
+            for fname in fnames:
+                self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                      fname, delta=1E-5)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
