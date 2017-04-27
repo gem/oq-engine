@@ -26,10 +26,6 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 |       :---:        |         :---:        |
 | [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/) | [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine) |
 
-Jenkins (Python 2): 
-
-Travis CI (Python 3): 
-
 ### Current stable
 
 Current stable version is the **OpenQuake Engine 2.3** 'Degenkolb'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.3#openquake-engine.
