@@ -85,6 +85,11 @@ class DbServer(object):
             listener.close()
 
 
+def different_paths(path1, path2):
+    # don't care about the extension (it may be .py or .pyc)
+    return os.path.splitext(path1)[0] != os.path.splitext(path2)[0]
+
+
 def get_status(address=None):
     """
     Check if the DbServer is up.
@@ -106,8 +111,7 @@ def check_foreign():
     """
     if not config.flag_set('dbserver', 'multi_user'):
         remote_server_path = logs.dbcmd('get_path')
-        # don't care about the extension (it may be .py or .pyc)
-        if server_path.split('.')[-2] != remote_server_path.split('.')[-2]:
+        if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
                    + ' instance (%s)\n' % remote_server_path
                    + 'Check the configuration or stop the foreign'
