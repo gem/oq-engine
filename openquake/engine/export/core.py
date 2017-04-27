@@ -53,7 +53,7 @@ def check_version(dstore):
     :returns:
         a message if the stored version is different from the current version
     """
-    ds_version = dstore.attrs['engine_version']
+    ds_version = dstore.hdf5.attrs['engine_version']
     if ds_version != __version__:
         return (': the datastore is at version %s, but the exporter at '
                 'version %s' % (ds_version, __version__))

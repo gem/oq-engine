@@ -69,18 +69,9 @@ class DataStoreTestCase(unittest.TestCase):
         self.dstore['a/b'] = 42
         self.assertTrue('a/b' in self.dstore)
 
-    def test_parent(self):
-        # copy the attributes of the parent datastore on the child datastore,
-        # without overriding the attributes with the same name
-        self.dstore.attrs['a'] = 2
-        parent = DataStore(params=[('a', 1), ('b', 2)])
-        self.dstore.set_parent(parent)
-        attrs = sorted(self.dstore.attrs.items())
-        self.assertEqual(attrs, [('a', 2), ('b', 2)])
-
     def test_export_path(self):
-        path = self.dstore.export_path('hello.txt')
-        mo = re.match('\./hello_\d+', path)
+        path = self.dstore.export_path('hello.txt', tempfile.mkdtemp())
+        mo = re.search('hello_\d+', path)
         self.assertIsNotNone(mo)
 
     def test_read(self):

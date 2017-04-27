@@ -1,9 +1,21 @@
   [Michele Simionato]
+  * Raised an error if the user specifies `quantile_loss_curves`
+    or `conditional_loss_poes` in a classical_damage calculation
+  * Added a CSV exporter for the benefit-cost-ratio calculator
+  * The classical_risk calculator now reads directly the probability maps,
+    not the hazard curves
+  * The loss curves are now computed on the fly for a given asset
+    for the event based risk calculator.
+  * The loss ratios are now stored in the datastore and not in an
+    external .ext5 file.
+  * The engine outputs are now streamed by the WebUI
+  * Used a temporary export directory in the tests, to avoid conflicts
+    in multiuser situations
   * Added an .npz exporter for the loss maps
   * Raised an error early when using a complex logic tree in scenario
     calculations
   * Changed the CSV exporter for the loss curves: now it exports all the
-    curves for a given site
+    curves for a given site for the classical_risk calculator
   * Fixed the save_ruptures procedure when there are more than 256
     surfaces in the MultiSurface;
   * Renamed the `csq_` outputs of the scenario_damage to `losses_`

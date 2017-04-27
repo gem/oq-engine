@@ -8,7 +8,12 @@
 
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                    <uncertaintyWeight>0.9</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+                    <uncertaintyWeight>0.1</uncertaintyWeight>
                 </logicTreeBranch>
 
             </logicTreeBranchSet>

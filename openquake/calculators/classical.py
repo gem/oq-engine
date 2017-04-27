@@ -20,7 +20,7 @@ from __future__ import division
 import logging
 import operator
 import collections
-from functools import partial, reduce
+from functools import partial
 import numpy
 
 from openquake.baselib import parallel
@@ -278,7 +278,7 @@ class PSHACalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        monitor = self.monitor.new(
+        monitor = self.monitor(
             self.core_task.__name__,
             truncation_level=oq.truncation_level,
             imtls=oq.imtls,
@@ -293,9 +293,9 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            res = parallel.Starmap(
+            ires = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
-        acc = reduce(self.agg_dicts, res, self.zerodict())
+        acc = ires.reduce(self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
@@ -380,15 +380,14 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
         return {}
     rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
-        pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
+        pmaps = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
     pmap_by_kind = {}
     if len(rlzs) > 1:
         with monitor('compute stats'):
-            pmap_by_kind.update(
-                pstats.compute(sids, [pmap_by_rlz[rlz] for rlz in rlzs]))
+            pmap_by_kind.update(pstats.compute(sids, pmaps))
     if monitor.individual_curves:
-        for rlz in rlzs:
-            pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap_by_rlz[rlz]
+        for rlz, pmap in zip(rlzs, pmaps):
+            pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap
     return pmap_by_kind
 
 
@@ -437,21 +436,17 @@ class ClassicalCalculator(PSHACalculator):
 
         logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
-            pmap_by_grp = {
-                int(grp[4:]): self.datastore['poes/' + grp]
-                for grp in self.datastore['poes']}
-            res = parallel.Starmap(
-                build_hcurves_and_stats,
-                list(self.gen_args(pmap_by_grp))).submit_all()
-        nbytes = reduce(self.save_hcurves, res, AccumDict())
+            nbytes = parallel.Starmap(
+                build_hcurves_and_stats, list(self.gen_args())
+            ).reduce(self.save_hcurves)
         return nbytes
 
-    def gen_args(self, pmap_by_grp):
+    def gen_args(self):
         """
         :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
         :yields: arguments for the function build_hcurves_and_stats
         """
-        monitor = self.monitor.new(
+        monitor = self.monitor(
             'build_hcurves_and_stats',
             individual_curves=self.oqparam.individual_curves)
         weights = (None if self.oqparam.number_of_logic_tree_samples
@@ -459,8 +454,9 @@ class ClassicalCalculator(PSHACalculator):
         pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
-            pg = {grp_id: pmap_by_grp[grp_id].filter(block.sids)
-                  for grp_id in pmap_by_grp}
+            pg = {}
+            for grp in self.datastore['poes']:
+                pg[grp] = self.datastore['poes/' + grp].filter(block.sids)
             yield pg, block.sids, pstats, self.rlzs_assoc, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):

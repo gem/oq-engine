@@ -18,7 +18,9 @@
 
 import os
 import re
+import shutil
 import logging
+import tempfile
 import unittest
 import platform
 
@@ -62,6 +64,8 @@ def columns(line):
 
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
+    edir = None  # will be set to a temporary directory
+    success = True  # will be set to False if the files are different
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -88,17 +92,17 @@ class CalculatorTestCase(unittest.TestCase):
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
         self.calc = self.get_calc(testfile, inis[0], **kw)
-        with self.calc.monitor:
-            result = self.calc.run()
+        self.edir = tempfile.mkdtemp()
+        with self.calc._monitor:
+            result = self.calc.run(export_dir=self.edir)
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
-            with self.calc.monitor:
-                result.update(self.calc.run())
+            with self.calc._monitor:
+                result.update(self.calc.run(export_dir=self.edir))
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
-        dstore.export_dir = dstore['oqparam'].export_dir
         self.calc.datastore = dstore
         return result
 
@@ -129,10 +133,11 @@ class CalculatorTestCase(unittest.TestCase):
         but in some tests a sorting function is passed, because some
         files can be equal only up to the ordering.
         """
-        expected = os.path.join(self.testdir, fname1)
+        expected = os.path.abspath(os.path.join(self.testdir, fname1))
         if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
             open(expected, 'w').write('')
-        actual = os.path.join(self.calc.oqparam.export_dir, fname2)
+        actual = os.path.abspath(
+            os.path.join(self.calc.oqparam.export_dir, fname2))
         expected_lines = make_comparable(open(expected).readlines())
         actual_lines = make_comparable(open(actual).readlines()[:lastline])
         try:
@@ -150,6 +155,7 @@ class CalculatorTestCase(unittest.TestCase):
                 open(expected, 'w').write(''.join(actual_lines))
             else:
                 # normally raise an exception
+                self.success = False
                 raise DifferentFiles('%s %s' % (expected, actual))
 
     def assertGot(self, expected_content, fname):
@@ -162,3 +168,5 @@ class CalculatorTestCase(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, 'calc'):
             self.calc.datastore.close()
+        if self.edir and self.success:  # remove temporary dir only for success
+            shutil.rmtree(self.edir)

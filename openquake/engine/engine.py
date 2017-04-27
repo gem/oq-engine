@@ -191,16 +191,20 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         if USE_CELERY and os.environ.get('OQ_DISTRIBUTE') == 'celery':
             set_concurrent_tasks_default()
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
+        calc.from_engine = True
         tb = 'None\n'
         try:
             logs.dbcmd('set_status', job_id, 'executing')
             _do_run_calc(calc, exports, hazard_calculation_id, **kw)
+            if hasattr(calc.datastore, 'new'):  # build in new_calculation
+                expose_outputs(calc.datastore.parent)
+                logs.dbcmd('finish', calc.datastore.parent.calc_id, 'complete')
             expose_outputs(calc.datastore)
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
             calc.datastore.close()
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                          job_id, calc.monitor.duration)
+                          job_id, calc._monitor.duration)
             logs.dbcmd('finish', job_id, 'complete')
         except:
             tb = traceback.format_exc()
@@ -225,6 +229,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
 
 
 def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
-    with calc.monitor:
+    with calc._monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
                  close=False, **kw)  # don't close the datastore too soon

@@ -554,9 +554,8 @@ def get_result(request, result_id):
             bname = bname[1:]
         fname = 'output-%s-%s' % (result_id, bname)
         # 'b' is needed when running the WebUI on Windows
-        data = open(exported, 'rb').read()
-        response = HttpResponse(data, content_type=content_type)
-        response['Content-Length'] = len(data)
+        stream = FileWrapper(open(exported, 'rb'))
+        response = FileResponse(stream, content_type=content_type)
         response['Content-Disposition'] = (
             'attachment; filename=%s' % os.path.basename(fname))
         return response
