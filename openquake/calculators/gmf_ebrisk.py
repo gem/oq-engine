@@ -76,4 +76,4 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         :param dummy: unused parameter
         :param res: a result dictionary
         """
-        ebr.EbriskCalculator.save_losses(self, res, self.taskno)
+        ebr.EbriskCalculator.__dict__['save_losses'](self, res, self.taskno)
