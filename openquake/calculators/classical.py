@@ -382,7 +382,7 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     with monitor('combine pmaps'):
         pmaps = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
     pmap_by_kind = {}
-    if len(rlzs) > 1:
+    if len(rlzs) > 1 and pstats.names:
         with monitor('compute stats'):
             pmap_by_kind.update(pstats.compute(sids, pmaps))
     if monitor.individual_curves:
@@ -449,9 +449,8 @@ class ClassicalCalculator(PSHACalculator):
         monitor = self.monitor(
             'build_hcurves_and_stats',
             individual_curves=self.oqparam.individual_curves)
-        weights = (None if self.oqparam.number_of_logic_tree_samples
-                   else [rlz.weight for rlz in self.rlzs_assoc.realizations])
-        pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        pstats = PmapStats(self.oqparam.hazard_stats(), weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
             pg = {}
@@ -468,10 +467,7 @@ class ClassicalCalculator(PSHACalculator):
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
         with self.monitor('saving hcurves and stats', autoflush=True):
-            oq = self.oqparam
             for kind in pmap_by_kind:
-                if kind == 'mean' and not oq.mean_hazard_curves:
-                    continue  # do not save the mean curves
                 pmap = pmap_by_kind[kind]
                 if pmap:
                     key = 'hcurves/' + kind
