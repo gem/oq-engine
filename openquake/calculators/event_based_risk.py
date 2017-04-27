@@ -258,9 +258,14 @@ class EbrPostCalculator(base.RiskCalculator):
             mon = self.monitor('loss maps')
             # NB: a regular Starmap does not work on a single machine since
             # the 'all_loss_ratios' dataset is not seen by the
-            # children (looks like a bug in hdf5); we use a Processmap instead
-            Starmap = (parallel.Processmap
-                       if parallel.oq_distribute() == 'futures'
+            # children (looks like a bug in hdf5); we may use a Processmap
+            # instead, but sometimes it breaks on Jenkins; so we use
+            # the safest choice, Sequential
+            # an alternative would be to force
+            # self.oqparam.hazard_calculation_id not None
+            Starmap = (parallel.Sequential
+                       if hasattr(self.datastore, 'new') and
+                       parallel.oq_distribute() == 'futures'
                        else parallel.Starmap)
             self.datastore.close()  # this is essential
             Starmap.apply(
