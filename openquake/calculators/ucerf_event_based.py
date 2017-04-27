@@ -829,7 +829,7 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     ri = riskinput.RiskInputFromRuptures(getter)
     res.append(event_based_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
-    res.num_events = len(ri.eids)
+    res.num_events = len(ri.hazard_getter.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
     res.events_by_grp = ruptures_by_grp.events_by_grp
