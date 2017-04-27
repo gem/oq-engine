@@ -626,12 +626,6 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def make_taxid(self):
-        """
-        :returns: a dictionary taxonomy string -> taxonomy index
-        """
-        return {t: i for i, t in enumerate(sorted(self.assetcol.taxonomies))}
-
     def build_riskinputs(self, kind, hazards_by_rlz, eps=numpy.zeros(0)):
         """
         :param kind:
