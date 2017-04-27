@@ -193,14 +193,14 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     return result
 
 
-def build_loss_maps(assets, builder, getter, rlzs, quantiles, monitor):
+def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
     """
     Thin wrapper over :meth:
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
     aids, loss_maps, loss_maps_stats = builder.build_maps(
-        assets, getter, rlzs, quantiles, monitor)
+        assets, getter, rlzs, stats, monitor)
     res = {'aids': aids, 'loss_maps-rlzs': loss_maps}
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
@@ -237,7 +237,7 @@ class EbrPostCalculator(base.RiskCalculator):
                  and self.oqparam.conditional_loss_poes):
             assetcol = self.assetcol
             rlzs = self.rlzs_assoc.realizations
-            quantiles = self.oqparam.quantile_loss_curves
+            stats = self.oqparam.risk_stats()
             builder = self.riskmodel.curve_builder
             A = len(assetcol)
             R = len(self.datastore['realizations'])
@@ -252,29 +252,32 @@ class EbrPostCalculator(base.RiskCalculator):
             self.datastore.create_dset(
                 'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
             if R > 1:
-                S = len(quantiles) + 1
                 self.datastore.create_dset(
-                    'loss_maps-stats', builder.loss_maps_dt, (A, S),
+                    'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
             # NB: a regular Starmap does not work on a single machine since
             # the 'all_loss_ratios' dataset is not seen by the
-            # children (looks like a bug in hdf5); we use a Processmap instead
-            Starmap = (parallel.Processmap
-                       if parallel.oq_distribute() == 'futures'
+            # children (looks like a bug in hdf5); we may use a Processmap
+            # instead, but sometimes it breaks on Jenkins; so we use
+            # the safest choice, Sequential
+            # an alternative would be to force
+            # self.oqparam.hazard_calculation_id not None
+            Starmap = (parallel.Sequential
+                       if hasattr(self.datastore, 'new') and
+                       parallel.oq_distribute() == 'futures'
                        else parallel.Starmap)
             self.datastore.close()  # this is essential
             Starmap.apply(
                 build_loss_maps,
-                (assetcol, builder, lrgetter, rlzs, quantiles, mon),
+                (assetcol, builder, lrgetter, rlzs, stats, mon),
                 self.oqparam.concurrent_tasks
             ).reduce(self.save_loss_maps)
             self.datastore.open()
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
-            with self.monitor('building agg_curve'):
-                self.build_agg_curve()
+            self.build_agg_curve()
 
     def post_execute(self):
         # override the base class method to avoid doing bad stuff
@@ -306,20 +309,19 @@ class EbrPostCalculator(base.RiskCalculator):
         self.datastore['agg_curve-rlzs'] = agg_curve
 
         if R > 1:  # save stats too
+            statnames, stats = zip(*oq.risk_stats())
             weights = self.datastore['realizations']['weight']
-            Q1 = len(oq.quantile_loss_curves) + 1
-            agg_curve_stats = numpy.zeros((I, Q1), agg_curve.dtype)
+            agg_curve_stats = numpy.zeros((I, len(stats)), agg_curve.dtype)
             for l, loss_type in enumerate(agg_curve.dtype.names):
                 acs = agg_curve_stats[loss_type]
                 data = agg_curve[loss_type]
                 for i in range(I):
+                    avg = data['avg'][i]
                     losses, all_poes = scientific.normalize_curves_eb(
                         [(c['losses'], c['poes']) for c in data[i]])
                     acs['losses'][i] = losses
-                    acs['poes'][i] = compute_stats(
-                        all_poes, oq.quantile_loss_curves, weights)
-                    acs['avg'][i] = compute_stats(
-                        data['avg'][i], oq.quantile_loss_curves, weights)
+                    acs['poes'][i] = compute_stats(all_poes, stats, weights)
+                    acs['avg'][i] = compute_stats(avg, stats, weights)
 
             self.datastore['agg_curve-stats'] = agg_curve_stats
 
