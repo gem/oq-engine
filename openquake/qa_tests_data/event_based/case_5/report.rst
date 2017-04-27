@@ -1,11 +1,11 @@
 Germany_SHARE Combined Model event_based
 ========================================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85590.hdf5 Tue Feb 14 15:48:58 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_7631.hdf5 Wed Apr 26 15:56:31 2017
+engine_version                                  2.4.0-git9336bd0        
+hazardlib_version                               0.24.0-gita895d4c       
+=============================================== ========================
 
 num_sites = 100, sitecol = 6.03 KB
 
@@ -23,7 +23,7 @@ complex_fault_mesh_spacing      5.0
 width_of_mfd_bin                0.1              
 area_source_discretization      10.0             
 ground_motion_correlation_model None             
-random_seed                     23               
+random_seed                     42               
 master_seed                     0                
 =============================== =================
 
@@ -46,9 +46,9 @@ Composite source model
 ========= ====== ================================================================================================ ================ ================
 smlt_path weight source_model_file                                                                                gsim_logic_tree  num_realizations
 ========= ====== ================================================================================================ ================ ================
-b1        0.500  `source_models/as_model.xml <source_models/as_model.xml>`_                                       complex(1,4,5,2) 1/1             
-b2        0.200  `source_models/fs_bg_source_model.xml <source_models/fs_bg_source_model.xml>`_                   complex(1,4,5,2) 5/5             
-b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/ss_model_final_250km_Buffer.xml>`_ complex(1,4,5,2) 0/0             
+b1        0.500  `source_models/as_model.xml <source_models/as_model.xml>`_                                       complex(5,4,1,2) 1/1             
+b2        0.200  `source_models/fs_bg_source_model.xml <source_models/fs_bg_source_model.xml>`_                   complex(5,4,1,2) 5/5             
+b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/ss_model_final_250km_Buffer.xml>`_ complex(5,4,1,2) 0/0             
 ========= ====== ================================================================================================ ================ ================
 
 Required parameters per tectonic region type
@@ -56,8 +56,8 @@ Required parameters per tectonic region type
 ====== ================================================================================================ ================= ======================= =================
 grp_id gsims                                                                                            distances         siteparams              ruptparams       
 ====== ================================================================================================ ================= ======================= =================
-1      FaccioliEtAl2010()                                                                               rrup              vs30                    mag rake         
-4      AkkarBommer2010() Campbell2003SHARE() CauzziFaccioli2008() ChiouYoungs2008() ToroEtAl2002SHARE() rrup rjb rx rhypo vs30 z1pt0 vs30measured mag dip rake ztor
+1      FaccioliEtAl2010()                                                                               rrup              vs30                    rake mag         
+4      AkkarBommer2010() Campbell2003SHARE() CauzziFaccioli2008() ChiouYoungs2008() ToroEtAl2002SHARE() rx rjb rhypo rrup vs30 vs30measured z1pt0 dip ztor rake mag
 ====== ================================================================================================ ================= ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -92,58 +92,45 @@ source_models/fs_bg_source_model.xml 4      Stable Shallow Crust 43          3  
 
 Informational data
 ------------------
-========================================= ============
-compute_ruptures_max_received_per_task    21,354      
-compute_ruptures_num_tasks                19          
-compute_ruptures_sent.gsims               6,931       
-compute_ruptures_sent.monitor             18,962      
-compute_ruptures_sent.sources             3,287,636   
-compute_ruptures_sent.src_filter          66,386      
-compute_ruptures_tot_received             145,626     
-hazard.input_weight                       34,282      
-hazard.n_imts                             1           
-hazard.n_levels                           1           
-hazard.n_realizations                     120         
-hazard.n_sites                            100         
-hazard.n_sources                          85          
-hazard.output_weight                      3,600       
-hostname                                  gem-tstation
-require_epsilons                          False       
-========================================= ============
-
-Specific information for event based
-------------------------------------
-======================== =====
-Total number of ruptures 5    
-Total number of events   5    
-Rupture multiplicity     1.000
-======================== =====
+============================ ====================================================================================
+compute_ruptures.received    tot 127.94 KB, max_per_task 20.02 KB                                                
+compute_ruptures.sent        sources 3.14 MB, src_filter 64.35 KB, monitor 14.73 KB, gsims 6.77 KB, param 1.21 KB
+hazard.input_weight          34,282                                                                              
+hazard.n_imts                1 B                                                                                 
+hazard.n_levels              1 B                                                                                 
+hazard.n_realizations        120 B                                                                               
+hazard.n_sites               100 B                                                                               
+hazard.n_sources             85 B                                                                                
+hazard.output_weight         3,600                                                                               
+hostname                     tstation.gem.lan                                                                    
+require_epsilons             0 B                                                                                 
+============================ ====================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-4      247       AreaSource        564          0.0       13        0        
-4      267       AreaSource        2,268        0.0       5         0        
-7      330061    PointSource       18           0.0       5         0        
-1      2         AreaSource        42           0.0       8         0        
-7      330073    PointSource       14           0.0       8         0        
+7      330056    PointSource       12           0.0       9         0        
+7      330054    PointSource       30           0.0       8         0        
+7      330050    PointSource       28           0.0       8         0        
+4      263       AreaSource        3,430        0.0       6         0        
+4      259       AreaSource        348          0.0       11        0        
+4      322       AreaSource        12,288       0.0       5         0        
+4      256       AreaSource        11,064       0.0       10        0        
+7      330078    PointSource       12           0.0       12        0        
 4      340       AreaSource        574          0.0       17        0        
+4      19        SimpleFaultSource 349          0.0       9         0        
+4      266       AreaSource        2,268        0.0       6         0        
+7      330080    PointSource       12           0.0       9         0        
+4      316       AreaSource        17,964       0.0       40        0        
+4      320       AreaSource        516          0.0       8         0        
+4      318       AreaSource        17,964       0.0       40        0        
+7      330047    PointSource       26           0.0       8         0        
+7      330057    PointSource       14           0.0       9         0        
+1      1         AreaSource        42           0.0       8         0        
 4      333       AreaSource        1,572        0.0       7         0        
 7      330064    PointSource       14           0.0       9         0        
-7      330069    PointSource       12           0.0       12        0        
-7      330045    PointSource       22           0.0       7         0        
-4      246       AreaSource        564          0.0       14        0        
-4      331       AreaSource        2,256        0.0       1         0        
-4      248       AreaSource        1,236        0.0       8         0        
-4      22        SimpleFaultSource 34           0.0       1         0        
-7      330053    PointSource       28           0.0       6         0        
-4      21        SimpleFaultSource 7            0.0       9         0        
-4      316       AreaSource        17,964       0.0       40        0        
-7      330067    PointSource       16           0.0       5         0        
-7      330070    PointSource       12           0.0       10        0        
-4      263       AreaSource        3,430        0.0       6         0        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -160,7 +147,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   2.761 1.864  0.010 5.160 19       
+compute_ruptures   2.654 1.785  0.010 4.918 19       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -168,13 +155,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           52        0.770     19    
-managing sources                 13        0.0       1     
-reading composite source model   10        0.0       1     
-filtering composite source model 0.126     0.0       1     
-saving ruptures                  0.005     0.0       19    
+total compute_ruptures           50        3.344     19    
+reading composite source model   9.515     0.0       1     
+filtering composite source model 0.124     0.0       1     
+saving ruptures                  0.007     0.0       19    
 setting event years              0.004     0.0       1     
-filtering ruptures               0.003     0.0       8     
+filtering ruptures               0.002     0.0       8     
 store source_info                0.002     0.0       1     
-reading site collection          6.242E-04 0.0       1     
+reading site collection          6.366E-04 0.0       1     
+managing sources                 1.044E-04 0.0       1     
 ================================ ========= ========= ======
