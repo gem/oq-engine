@@ -959,7 +959,7 @@ builddoc_run () {
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
-        if [ "$dep_type" = "deb" ]; then
+        if [ "$dep_type" != "src" ]; then
             continue
         fi
         found=0
