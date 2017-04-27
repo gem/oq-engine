@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib.stats import compute_stats
+from openquake.hazardlib import stats as s
 import numpy
 
 F64 = numpy.float64
@@ -319,8 +319,8 @@ class PmapStats(object):
     """
     A class to perform statistics on ProbabilityMaps.
 
+    :param stats: pairs (name, statistical function(values, weights))
     :param weights: a list of weights
-    :param quantiles: a list of floats in the range 0..1
 
     Here is an example:
 
@@ -328,7 +328,8 @@ class PmapStats(object):
     ...                            initvalue=1.0)
     >>> pm2 = ProbabilityMap.build(3, 1, sids=[0],
     ...                            initvalue=0.8)
-    >>> PmapStats(quantiles=[]).compute(sids=[0, 1], pmaps=[pm1, pm2])
+    >>> pstats = PmapStats([('mean', s.mean_curve)])
+    >>> pstats.compute(sids=[0, 1], pmaps=[pm1, pm2])
     [('mean', {0: <ProbabilityCurve
     [[ 0.9]
      [ 0.9]
@@ -337,8 +338,8 @@ class PmapStats(object):
      [ 0.5]
      [ 0.5]]>})]
     """
-    def __init__(self, quantiles, weights=None):
-        self.quantiles = quantiles
+    def __init__(self, stats, weights=None):
+        self.names, self.funcs = zip(*stats) if stats else ([], [])
         self.weights = weights
 
     # the tests are in the engine
@@ -356,14 +357,14 @@ class PmapStats(object):
         elif sum(len(pmap) for pmap in pmaps) == 0:  # all empty pmaps
             raise ValueError('All empty probability maps!')
         N, L, I = get_shape(pmaps)
-        nstats = len(self.quantiles) + 1
+        nstats = len(self.funcs)
         stats = ProbabilityMap.build(L, nstats, sids)
         curves_by_rlz = numpy.zeros((len(pmaps), len(sids), L), numpy.float64)
         for i, pmap in enumerate(pmaps):
             for j, sid in enumerate(sids):
                 if sid in pmap:
                     curves_by_rlz[i][j] = pmap[sid].array[:, 0]
-        mq = compute_stats(curves_by_rlz, self.quantiles, self.weights)
+        mq = s.compute_stats(curves_by_rlz, self.funcs, self.weights)
         for i, array in enumerate(mq):
             for j, sid in numpy.ndenumerate(sids):
                 stats[sid].array[:, i] = array[j]
@@ -379,5 +380,4 @@ class PmapStats(object):
             a list of pairs [('mean', ...), ('quantile-XXX', ...), ...]
         """
         stats = self.compute_pmap(sids, pmaps)
-        names = ['mean'] + ['quantile-%s' % q for q in self.quantiles]
-        return [(name, stats.extract(i)) for i, name in enumerate(names)]
+        return [(name, stats.extract(i)) for i, name in enumerate(self.names)]
