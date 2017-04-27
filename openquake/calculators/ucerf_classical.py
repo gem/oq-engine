@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import copy
 import time
+import socket
 import logging
 import functools
 from datetime import datetime
@@ -159,7 +159,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor.new(self.core_task.__name__)
+        monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq = self.oqparam
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         acc = AccumDict({
