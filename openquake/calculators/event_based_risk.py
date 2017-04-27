@@ -265,7 +265,8 @@ class EbrPostCalculator(base.RiskCalculator):
             self.datastore.close()  # this is essential
             Starmap.apply(
                 build_loss_maps,
-                (assetcol, builder, lrgetter, rlzs, quantiles, mon)
+                (assetcol, builder, lrgetter, rlzs, quantiles, mon),
+                self.oqparam.concurrent_tasks
             ).reduce(self.save_loss_maps)
             self.datastore.open()
 
