@@ -18,12 +18,13 @@
 
 import os
 import logging
+import functools
 import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation
+from openquake.hazardlib import correlation, stats, probability_map
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
@@ -88,7 +89,10 @@ class OqParam(valid.ParamSet):
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
+    max_hazard_curves = valid.Param(valid.boolean, False)
     mean_hazard_curves = valid.Param(valid.boolean, False)
+    max_loss_curves = valid.Param(valid.boolean, False)
+    mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
@@ -361,6 +365,42 @@ class OqParam(valid.ParamSet):
         correl_model_cls = getattr(
             correlation, '%sCorrelationModel' % correl_name)
         return correl_model_cls(**self.ground_motion_correlation_params)
+
+    def hazard_stats(self):
+        """
+        Return a list of item with the statistical functions defined for the
+        hazard calculation
+        """
+        names = []  # name of statistical functions
+        funcs = []  # statistical functions of kind func(values, weights)
+        if self.mean_hazard_curves:
+            names.append('mean')
+            funcs.append(stats.mean_curve)
+        for q in self.quantile_hazard_curves:
+            names.append('quantile-%s' % q)
+            funcs.append(functools.partial(stats.quantile_curve, q))
+        if self.max_hazard_curves:
+            names.append('max')
+            funcs.append(stats.max_curve)
+        return list(zip(names, funcs))
+
+    def risk_stats(self):
+        """
+        Return a list of items with the statistical functions defined for the
+        risk calculation
+        """
+        names = []  # name of statistical functions
+        funcs = []  # statistical functions of kind func(values, weights)
+        if self.mean_loss_curves:
+            names.append('mean')
+            funcs.append(stats.mean_curve)
+        for q in self.quantile_loss_curves:
+            names.append('quantile-%s' % q)
+            funcs.append(functools.partial(stats.quantile_curve, q))
+        if self.max_loss_curves:
+            names.append('max')
+            funcs.append(stats.max_curve)
+        return list(zip(names, funcs))
 
     @property
     def job_type(self):
