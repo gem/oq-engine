@@ -387,6 +387,7 @@ class HazardCalculator(BaseCalculator):
                 getpass.getuser(), datastore.DATADIR, oq.hazard_calculation_id)
         else:
             new_id = None
+        self.datastore.close()
         self.__init__(self.oqparam, calc_id=new_id)  # build a new datastore
         self.datastore.new = True
         self.datastore.parent = parent
