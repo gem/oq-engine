@@ -81,9 +81,9 @@ def export_avg_losses(ekey, dstore):
     name, kind = ekey[0].split('-')
     value = dstore[name + '-rlzs'].value  # shape (A, R, L')
     if kind == 'stats':
-        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
         weights = dstore['realizations']['weight']
-        value = compute_stats2(value, oq.quantile_loss_curves, weights)
+        tags, stats = zip(*oq.risk_stats())
+        value = compute_stats2(value, stats, weights)
     else:  # rlzs
         tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
@@ -875,9 +875,9 @@ def export_losses_by_taxon_csv(ekey, dstore):
     key, kind = ekey[0].split('-')
     value = dstore[key + '-rlzs'].value
     if kind == 'stats':
-        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
         weights = dstore['realizations']['weight']
-        value = compute_stats2(value, oq.quantile_loss_curves, weights)
+        tags, stats = zip(*oq.risk_stats())
+        value = compute_stats2(value, stats, weights)
     else:  # rlzs
         tags = rlzs
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)

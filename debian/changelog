@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a `max_curve` functionality to compute the upper limit of the
+    hazard curves amongst realizations
   * Raised an error if the user specifies `quantile_loss_curves`
     or `conditional_loss_poes` in a classical_damage calculation
   * Added a CSV exporter for the benefit-cost-ratio calculator

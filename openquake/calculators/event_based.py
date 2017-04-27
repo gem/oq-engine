@@ -535,14 +535,13 @@ class EventBasedCalculator(ClassicalCalculator):
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations
             # involves a "small" number of sites (<= 65,536)
-            weights = (None if self.oqparam.number_of_logic_tree_samples
-                       else [rlz.weight for rlz in rlzs])
-            pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
-            for kind, stat in pstats.compute(
-                    self.sitecol.sids, list(result.values())):
-                if kind == 'mean' and not self.oqparam.mean_hazard_curves:
-                    continue
-                self.datastore['hcurves/' + kind] = stat
+            weights = [rlz.weight for rlz in rlzs]
+            hstats = self.oqparam.hazard_stats()
+            if len(hstats) and len(rlzs) > 1:
+                pstats = PmapStats(hstats, weights)
+                for kind, stat in pstats.compute(
+                        self.sitecol.sids, list(result.values())):
+                    self.datastore['hcurves/' + kind] = stat
         if os.path.exists(self.datastore.ext5path):
             self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
