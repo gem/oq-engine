@@ -182,6 +182,8 @@ def pmap_from_grp(
         group = sources
         sources = group.sources
         trt = sources[0].tectonic_region_type
+        mutex_weight = {src.source_id: weight for src, weight in
+                        zip(group.sources, group.srcs_weights)}
     else:  # list of sources
         trt = sources[0].tectonic_region_type
         group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
@@ -207,9 +209,10 @@ def pmap_from_grp(
             if src_indep:  # usual composition of probabilities
                 pmap |= poemap
             else:  # mutually exclusive probabilities
-                weight = float(group.srcs_weights[src.source_id])
+                weight = mutex_weight[src.source_id]
                 for sid in poemap:
-                    pmap[sid] += poemap[sid] * weight
+                    pcurve = pmap.setdefault(sid, 0)
+                    pcurve += poemap[sid] * weight
             pmap.calc_times.append(
                 (src.source_id, len(s_sites), time.time() - t0))
         # storing the number of contributing ruptures too
@@ -267,21 +270,8 @@ def calc_hazard_curves(
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     for group in groups:
-        if group.src_interdep == 'indep':
-            pmap |= apply(
-                pmap_from_grp,
-                (group, ss_filter, imtls, gsim_by_trt, truncation_level),
-                weight=operator.attrgetter('weight')).reduce(operator.or_)
-        else:
-            # since in this case the probability for each source have
-            # been already accounted, we use a weight equal to unity
-            newmap = apply(
-                pmap_from_grp,
-                (group, ss_filter, imtls, gsim_by_trt, truncation_level),
-                weight=operator.attrgetter('weight')).reduce(operator.or_)
-            for sid in newmap:
-                if sid in pmap:
-                    pmap[sid] += newmap[sid]
-                else:
-                    pmap[sid] = newmap[sid]
+        pmap |= apply(
+            pmap_from_grp,
+            (group, ss_filter, imtls, gsim_by_trt, truncation_level),
+            weight=operator.attrgetter('weight')).reduce(operator.or_)
     return pmap.convert(imtls, len(sitecol.complete))
