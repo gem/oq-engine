@@ -58,8 +58,11 @@ def do_build_reports(directory):
         for f in sorted(files):
             if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
-                print(job_ini)
-                reportwriter.build_report(job_ini, cwd)
+                logging.info(job_ini)
+                try:
+                    reportwriter.build_report(job_ini, cwd)
+                except Exception as e:
+                    logging.error(str(e))
 
 
 # the documentation about how to use this feature can be found
