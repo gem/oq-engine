@@ -1,11 +1,11 @@
 Event Based Risk Lisbon
 =======================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85545.hdf5 Tue Feb 14 15:37:10 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_7585.hdf5 Wed Apr 26 15:54:33 2017
+engine_version                                  2.4.0-git9336bd0        
+hazardlib_version                               0.24.0-gita895d4c       
+=============================================== ========================
 
 num_sites = 1, sitecol = 809 B
 
@@ -56,9 +56,9 @@ Required parameters per tectonic region type
 ====== ===================================== ========= ========== ==========
 grp_id gsims                                 distances siteparams ruptparams
 ====== ===================================== ========= ========== ==========
-0      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       mag rake  
-2      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       mag rake  
-3      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       mag rake  
+0      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       rake mag  
+2      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       rake mag  
+3      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       rake mag  
 ====== ===================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -79,47 +79,34 @@ Number of ruptures per tectonic region type
 =================== ====== ==================== =========== ============ ============
 source_model        grp_id trt                  num_sources eff_ruptures tot_ruptures
 =================== ====== ==================== =========== ============ ============
-SA_RA_CATAL1_00.xml 0      Active Shallow Crust 3           4            48,521      
-SA_RA_CATAL2_00.xml 2      Active Shallow Crust 3           6            48,521      
-SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 8           3            21,381      
+SA_RA_CATAL1_00.xml 0      Active Shallow Crust 3           5            48,521      
+SA_RA_CATAL2_00.xml 2      Active Shallow Crust 3           5            48,521      
+SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 8           2            21,381      
 =================== ====== ==================== =========== ============ ============
 
 ============= =======
 #TRT models   3      
 #sources      14     
-#eff_ruptures 13     
+#eff_ruptures 12     
 #tot_ruptures 118,423
 #tot_weight   13,980 
 ============= =======
 
 Informational data
 ------------------
-========================================= ============
-compute_ruptures_max_received_per_task    7,740       
-compute_ruptures_num_tasks                18          
-compute_ruptures_sent.gsims               3,222       
-compute_ruptures_sent.monitor             24,498      
-compute_ruptures_sent.sources             1,012,310   
-compute_ruptures_sent.src_filter          12,780      
-compute_ruptures_tot_received             80,714      
-hazard.input_weight                       13,980      
-hazard.n_imts                             1           
-hazard.n_levels                           40          
-hazard.n_realizations                     8           
-hazard.n_sites                            1           
-hazard.n_sources                          22          
-hazard.output_weight                      320         
-hostname                                  gem-tstation
-require_epsilons                          False       
-========================================= ============
-
-Specific information for event based
-------------------------------------
-======================== =====
-Total number of ruptures 13   
-Total number of events   13   
-Rupture multiplicity     1.000
-======================== =====
+============================ ======================================================================================
+compute_ruptures.received    tot 64.01 KB, max_per_task 6.68 KB                                                    
+compute_ruptures.sent        sources 988.58 KB, monitor 20.34 KB, src_filter 12.02 KB, gsims 3.15 KB, param 1.14 KB
+hazard.input_weight          13,980                                                                                
+hazard.n_imts                1 B                                                                                   
+hazard.n_levels              40 B                                                                                  
+hazard.n_realizations        8 B                                                                                   
+hazard.n_sites               1 B                                                                                   
+hazard.n_sources             22 B                                                                                  
+hazard.output_weight         320                                                                                   
+hostname                     tstation.gem.lan                                                                      
+require_epsilons             0 B                                                                                   
+============================ ======================================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -144,26 +131,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      10        AreaSource   4,482        0.0       1         0        
-1      3         AreaSource   3,509        0.0       1         0        
-3      5         AreaSource   2,349        0.0       1         0        
-0      0         AreaSource   24,435       0.0       1         0        
+3      9         AreaSource   2,508        0.0       1         0        
+2      1         AreaSource   4,163        0.0       1         0        
 1      5         AreaSource   2,349        0.0       1         0        
-3      8         AreaSource   1,440        0.0       1         0        
-1      8         AreaSource   1,440        0.0       1         0        
-3      4         AreaSource   1,280        0.0       1         0        
-3      10        AreaSource   4,482        0.0       1         0        
-1      4         AreaSource   1,280        0.0       1         0        
 2      2         AreaSource   19,923       0.0       1         0        
 1      6         AreaSource   4,123        0.0       1         0        
-0      1         AreaSource   4,163        0.0       1         0        
-3      9         AreaSource   2,508        0.0       1         0        
+1      3         AreaSource   3,509        0.0       1         0        
+3      7         AreaSource   1,690        0.0       1         0        
+1      7         AreaSource   1,690        0.0       1         0        
+3      5         AreaSource   2,349        0.0       1         0        
+1      10        AreaSource   4,482        0.0       1         0        
+3      3         AreaSource   3,509        0.0       1         0        
+3      6         AreaSource   4,123        0.0       1         0        
+3      8         AreaSource   1,440        0.0       1         0        
+1      4         AreaSource   1,280        0.0       1         0        
 1      9         AreaSource   2,508        0.0       1         0        
 0      2         AreaSource   19,923       0.0       1         0        
-3      3         AreaSource   3,509        0.0       1         0        
-2      1         AreaSource   4,163        0.0       1         0        
-1      7         AreaSource   1,690        0.0       1         0        
-2      0         AreaSource   24,435       0.0       1         0        
+0      0         AreaSource   24,435       0.0       1         0        
+3      10        AreaSource   4,482        0.0       1         0        
+1      8         AreaSource   1,440        0.0       1         0        
+0      1         AreaSource   4,163        0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -178,7 +165,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.683 0.739  0.319 2.753 18       
+compute_ruptures   1.603 0.691  0.329 2.571 18       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -186,14 +173,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           30        0.695     18    
-managing sources                 2.151     0.0       1     
-reading composite source model   1.136     0.0       1     
-saving ruptures                  0.085     0.0       18    
+total compute_ruptures           28        0.734     18    
+reading composite source model   0.944     0.0       1     
+saving ruptures                  0.029     0.0       18    
 filtering composite source model 0.011     0.0       1     
-filtering ruptures               0.004     0.0       14    
-setting event years              0.004     0.0       1     
-reading exposure                 0.003     0.0       1     
+setting event years              0.006     0.0       1     
+building site collection         0.005     0.0       1     
+filtering ruptures               0.003     0.0       12    
+reading exposure                 0.002     0.0       1     
 store source_info                0.001     0.0       1     
-reading site collection          9.775E-06 0.0       1     
+managing sources                 8.059E-05 0.0       1     
+reading site collection          6.914E-06 0.0       1     
 ================================ ========= ========= ======

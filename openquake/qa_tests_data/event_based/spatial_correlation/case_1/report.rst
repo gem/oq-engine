@@ -1,11 +1,11 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85583.hdf5 Tue Feb 14 15:48:18 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_7624.hdf5 Wed Apr 26 15:55:53 2017
+engine_version                                  2.4.0-git9336bd0        
+hazardlib_version                               0.24.0-gita895d4c       
+=============================================== ========================
 
 num_sites = 2, sitecol = 863 B
 
@@ -23,7 +23,7 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
 ground_motion_correlation_model 'JB2009'          
-random_seed                     123456789         
+random_seed                     42                
 master_seed                     0                 
 =============================== ==================
 
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== =================== ========= ========== ==========
 grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
+0      BooreAtkinson2008() rjb       vs30       rake mag  
 ====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -72,32 +72,19 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 
 Informational data
 ------------------
-========================================= ============
-compute_ruptures_max_received_per_task    303,993     
-compute_ruptures_num_tasks                1           
-compute_ruptures_sent.gsims               102         
-compute_ruptures_sent.monitor             990         
-compute_ruptures_sent.sources             1,319       
-compute_ruptures_sent.src_filter          738         
-compute_ruptures_tot_received             303,993     
-hazard.input_weight                       0.100       
-hazard.n_imts                             1           
-hazard.n_levels                           1           
-hazard.n_realizations                     1           
-hazard.n_sites                            2           
-hazard.n_sources                          1           
-hazard.output_weight                      125         
-hostname                                  gem-tstation
-require_epsilons                          False       
-========================================= ============
-
-Specific information for event based
-------------------------------------
-======================== ======
-Total number of ruptures 1     
-Total number of events   18,773
-Rupture multiplicity     18,773
-======================== ======
+============================ =========================================================================
+compute_ruptures.received    tot 369.45 KB, max_per_task 369.45 KB                                    
+compute_ruptures.sent        sources 1.29 KB, monitor 786 B, src_filter 712 B, gsims 102 B, param 68 B
+hazard.input_weight          0.100                                                                    
+hazard.n_imts                1 B                                                                      
+hazard.n_levels              1 B                                                                      
+hazard.n_realizations        1 B                                                                      
+hazard.n_sites               2 B                                                                      
+hazard.n_sources             1 B                                                                      
+hazard.output_weight         125                                                                      
+hostname                     tstation.gem.lan                                                         
+require_epsilons             0 B                                                                      
+============================ =========================================================================
 
 Slowest sources
 ---------------
@@ -119,7 +106,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.018 NaN    0.018 0.018 1        
+compute_ruptures   0.020 NaN    0.020 0.020 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -127,13 +114,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-setting event years              0.270     0.0       1     
-saving ruptures                  0.080     0.0       1     
-total compute_ruptures           0.018     0.254     1     
-reading composite source model   0.003     0.0       1     
-managing sources                 0.002     0.0       1     
-filtering composite source model 0.002     0.0       1     
-store source_info                5.667E-04 0.0       1     
-filtering ruptures               5.395E-04 0.0       1     
-reading site collection          4.196E-05 0.0       1     
+setting event years              0.175     0.0       1     
+saving ruptures                  0.054     0.0       1     
+total compute_ruptures           0.020     0.496     1     
+reading composite source model   0.002     0.0       1     
+filtering composite source model 9.251E-04 0.0       1     
+filtering ruptures               5.646E-04 0.0       1     
+store source_info                5.178E-04 0.0       1     
+managing sources                 1.180E-04 0.0       1     
+reading site collection          4.554E-05 0.0       1     
 ================================ ========= ========= ======
