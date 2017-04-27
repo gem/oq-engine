@@ -38,6 +38,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
     is_stochastic = True
 
     def pre_execute(self):
+        logging.warn('%s is still experimental', self.__class__.__name__)
         base.RiskCalculator.pre_execute(self)
         logging.info('Building the epsilons')
         A = len(self.assetcol)
