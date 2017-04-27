@@ -25,6 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.stats import compute_stats
+from openquake.commonlib import config
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -204,6 +205,7 @@ def build_loss_maps(assets, builder, getter, rlzs, quantiles, monitor):
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
     return res
+build_loss_maps.shared_dir_on = config.SHARED_DIR_ON
 
 
 @base.calculators.add('event_based_risk')
@@ -221,11 +223,12 @@ class EbrPostCalculator(base.RiskCalculator):
         Save the loss maps by opening and closing the datastore and
         return the total number of stored bytes.
         """
-        for key in res:
-            if key.startswith('loss_maps'):
-                acc += {key: res[key].nbytes}
-                self.datastore[key][res['aids']] = res[key]
-                self.datastore.set_attrs(key, nbytes=acc[key])
+        with self.datastore:
+            for key in res:
+                if key.startswith('loss_maps'):
+                    acc += {key: res[key].nbytes}
+                    self.datastore[key][res['aids']] = res[key]
+                    self.datastore.set_attrs(key, nbytes=acc[key])
         return acc
 
     def execute(self):
@@ -253,18 +256,20 @@ class EbrPostCalculator(base.RiskCalculator):
                 self.datastore.create_dset(
                     'loss_maps-stats', builder.loss_maps_dt, (A, S),
                     fillvalue=None)
-            # NB: we must fork here and not before,
-            # otherwise the 'all_loss_ratios' dataset is not seen by the
-            # children; this is why the regular Starmap would not work here;
-            # also, in this way everything is local and there is no need
-            # to use a shared directory; the calculation is fast enough
-            # (minutes) even for the largest event based I ever saw
-            lrgetter.dstore.close()  # this is essential on the cluster
-            parallel.Processmap.apply(
+            mon = self.monitor('loss maps')
+            # NB: a regular Starmap does not work on a single machine since
+            # the 'all_loss_ratios' dataset is not seen by the
+            # children (looks like a bug in hdf5); we use a Processmap instead
+            Starmap = (parallel.Processmap
+                       if parallel.oq_distribute() == 'futures'
+                       else parallel.Starmap)
+            self.datastore.close()  # this is essential
+            Starmap.apply(
                 build_loss_maps,
-                (assetcol, builder, lrgetter, rlzs, quantiles, self.monitor)
+                (assetcol, builder, lrgetter, rlzs, quantiles, mon),
+                self.oqparam.concurrent_tasks
             ).reduce(self.save_loss_maps)
-            lrgetter.dstore.open()
+            self.datastore.open()
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -456,6 +461,7 @@ class EbriskCalculator(base.RiskCalculator):
         ela_dt, elt_dt = build_el_dtypes(
             self.riskmodel.loss_types, oq.insured_losses)
         csm_info = self.datastore['csm_info']
+        mon = self.monitor('risk')
         for sm in csm_info.source_models:
             param = dict(
                 assetcol=self.assetcol,
@@ -470,7 +476,7 @@ class EbriskCalculator(base.RiskCalculator):
                 seed=self.oqparam.random_seed)
             yield (sm.ordinal, ruptures_by_grp, self.sitecol.complete,
                    param, self.riskmodel, imts, oq.truncation_level,
-                   correl_model, min_iml, self.monitor)
+                   correl_model, min_iml, mon)
 
     def execute(self):
         """

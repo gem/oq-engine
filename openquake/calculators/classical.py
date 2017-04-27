@@ -20,7 +20,7 @@ from __future__ import division
 import logging
 import operator
 import collections
-from functools import partial, reduce
+from functools import partial
 import numpy
 
 from openquake.baselib import parallel
@@ -278,7 +278,7 @@ class PSHACalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        monitor = self.monitor.new(
+        monitor = self.monitor(
             self.core_task.__name__,
             truncation_level=oq.truncation_level,
             imtls=oq.imtls,
@@ -293,9 +293,9 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            res = parallel.Starmap(
+            ires = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
-        acc = reduce(self.agg_dicts, res, self.zerodict())
+        acc = ires.reduce(self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
@@ -436,10 +436,9 @@ class ClassicalCalculator(PSHACalculator):
 
         logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
-            res = parallel.Starmap(
-                build_hcurves_and_stats,
-                list(self.gen_args())).submit_all()
-        nbytes = reduce(self.save_hcurves, res, AccumDict())
+            nbytes = parallel.Starmap(
+                build_hcurves_and_stats, list(self.gen_args())
+            ).reduce(self.save_hcurves)
         return nbytes
 
     def gen_args(self):
@@ -447,7 +446,7 @@ class ClassicalCalculator(PSHACalculator):
         :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
         :yields: arguments for the function build_hcurves_and_stats
         """
-        monitor = self.monitor.new(
+        monitor = self.monitor(
             'build_hcurves_and_stats',
             individual_curves=self.oqparam.individual_curves)
         weights = (None if self.oqparam.number_of_logic_tree_samples
