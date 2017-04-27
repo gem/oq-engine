@@ -6,36 +6,36 @@
 # We also provide pre-compiled manylinux1 wheels for
 # h5py, Shapely, psutil, Rtree, PyYAML, Basemap
 
-http://ftp.openquake.org/wheelhouse/linux/py/setuptools-28.8.0-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/pkgconfig-1.1.0-cp27-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py/mock-1.3.0-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/h5py-2.7.0-cp27-cp27mu-manylinux1_x86_64.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/nose-1.3.7-py2-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/numpy-1.11.1-cp27-cp27mu-manylinux1_x86_64.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/scipy-0.17.1-cp27-cp27mu-manylinux1_x86_64.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/psutil-3.4.2-cp27-cp27mu-manylinux1_x86_64.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/Shapely-1.5.13-cp27-cp27mu-manylinux1_x86_64.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/docutils-0.12-cp27-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py/decorator-4.0.11-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py/funcsigs-1.0.2-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py/pbr-1.8.0-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py/six-1.10.0-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/futures-3.0.5-py2-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/PyYAML-3.12-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/setuptools-28.8.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/pkgconfig-1.1.0-cp27-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/mock-1.3.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/h5py-2.7.0-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/nose-1.3.7-py2-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/numpy-1.11.1-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/scipy-0.17.1-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/psutil-3.4.2-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/Shapely-1.5.13-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/docutils-0.12-cp27-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/decorator-4.0.11-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/funcsigs-1.0.2-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/pbr-1.8.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/six-1.10.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/futures-3.0.5-py2-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/PyYAML-3.12-cp27-cp27mu-manylinux1_x86_64.whl
 
 ## Extra ##
 
 ### Rtree ###
 # comment the following lines to skip installation
 # of Rtree (experimental wheel, optional feature)
-http://ftp.openquake.org/wheelhouse/linux/py27/Rtree-0.8.2-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/Rtree-0.8.2-cp27-cp27mu-manylinux1_x86_64.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)
-http://ftp.openquake.org/wheelhouse/linux/py27/matplotlib-1.5.3-cp27-cp27mu-manylinux1_x86_64.whl
-http://ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.1.10-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.6.0-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py/cycler-0.10.0-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/pyproj-1.9.5.1-cp27-cp27mu-manylinux1_x86_64.whl
-http://ftp.openquake.org/wheelhouse/linux/py27/basemap-1.1.0-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/matplotlib-1.5.3-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.1.10-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.6.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/cycler-0.10.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/pyproj-1.9.5.1-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/basemap-1.1.0-cp27-cp27mu-manylinux1_x86_64.whl
