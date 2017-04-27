@@ -1,11 +1,11 @@
 Scenario QA Test for occupants
 ==============================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85595.hdf5 Tue Feb 14 15:49:00 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_7636.hdf5 Wed Apr 26 15:56:32 2017
+engine_version                           2.4.0-git9336bd0        
+hazardlib_version                        0.24.0-gita895d4c       
+======================================== ========================
 
 num_sites = 3, sitecol = 917 B
 
@@ -65,10 +65,11 @@ W        1.000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-filtering sites         0.006     0.0       1     
-reading exposure        0.003     0.0       1     
-reading site collection 7.153E-06 0.0       1     
-======================= ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+filtering sites          0.006     0.0       1     
+building site collection 0.005     0.0       1     
+reading exposure         0.001     0.0       1     
+reading site collection  8.583E-06 0.0       1     
+======================== ========= ========= ======
