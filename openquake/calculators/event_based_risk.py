@@ -118,7 +118,7 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                 for i in range(I):
                     losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
 
-                if param['loss_ratios']:
+                if param['asset_loss_table']:
                     for i in range(I):
                         li = l + L * i
                         for eid, ratio in zip(eids, ratios[:, i]):
@@ -469,7 +469,7 @@ class EbriskCalculator(base.RiskCalculator):
                 assetcol=self.assetcol,
                 ses_ratio=oq.ses_ratio,
                 loss_dt=oq.loss_dt(), elt_dt=elt_dt,
-                loss_ratios=oq.loss_ratios,
+                asset_loss_table=bool(oq.asset_loss_table or oq.loss_ratios),
                 avg_losses=oq.avg_losses,
                 insured_losses=oq.insured_losses,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
