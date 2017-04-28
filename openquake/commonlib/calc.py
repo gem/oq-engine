@@ -64,24 +64,22 @@ class HazardCurveGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore, rlzs_assoc=None):
+    def __init__(self, dstore, imtls, rlzs_assoc):
         self.dstore = dstore
-        self.imtls = dstore['oqparam'].imtls
-        self.rlzs_assoc = (rlzs_assoc if rlzs_assoc
-                           else dstore['csm_info'].get_rlzs_assoc())
+        self.imtls = imtls
+        self.rlzs_assoc = rlzs_assoc
         self._pmap_by_grp = None  # cache
         self.sids = None  # sids associated to the cache
+        self.nbytes = 0
 
     def new(self, sids):
         """
         :param sids: an array of S site IDs
         :returns: a new instance of the getter, with the cache populated
         """
-        newgetter = self.__class__(self.dstore, self.rlzs_assoc)
+        newgetter = self.__class__(self.dstore, self.imtls, self.rlzs_assoc)
         newgetter.sids = sids
-        newgetter.nbytes = sum(
-            pmap.nbytes for pmap in newgetter.get_pmap_by_grp(sids).values())
-        # the loop above populates the cache too
+        newgetter.get_pmap_by_grp(sids)  # populate the cache
         return newgetter
 
     @property
@@ -108,7 +106,7 @@ class HazardCurveGetter(object):
         """
         :param sids: an array of S site IDs
         :param rlzi: a realization index
-        :returns: the probability map for the given realization
+        :returns: the hazard curves for the given realization
         """
         pmap_by_grp = self.get_pmap_by_grp(sids)
         num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
@@ -120,7 +118,7 @@ class HazardCurveGetter(object):
                     if rlz.ordinal == rlzi:
                         pmap |= pmap_by_grp[grp].extract(i)
                         break
-        return pmap
+        return pmap.convert(self.imtls, len(sids))
 
     def get_all(self, sids):  # used in classical_risk
         """
@@ -158,6 +156,7 @@ class HazardCurveGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.sids = sids  # store the sids used in the cache
+                self.nbytes += pmap.nbytes
         else:
             # make sure the cache refer to the right sids
             assert (sids == self.sids).all()
