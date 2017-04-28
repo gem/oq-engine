@@ -450,9 +450,9 @@ class ClassicalCalculator(PSHACalculator):
         pstats = PmapStats(self.oqparam.hazard_stats(), weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
-            getter = hcgetter.new(block.sids)  # read the probability maps
-            if getter.nbytes > 0:  # at least some probability map is nonzero
-                yield getter, pstats, monitor
+            newgetter = hcgetter.new(block.sids)  # read the probability maps
+            if newgetter.nbytes > 0:  # some probability map is nonzero
+                yield newgetter, pstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
