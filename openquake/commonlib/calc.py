@@ -88,6 +88,19 @@ class HazardCurveGetter(object):
         self.imtls = dstore['oqparam'].imtls
         self.rlzs_assoc = (rlzs_assoc if rlzs_assoc
                            else dstore['csm_info'].get_rlzs_assoc())
+        self._pmap_by_grp = None  # cache
+
+    def new(self, sids):
+        """
+        :param sids: an array of S site IDs
+        :returns: a new instance of the getter, with the cache populated
+        """
+        newgetter = self.__class__(self.dstore, self.rlzs_assoc)
+        newgetter.sids = sids
+        newgetter.nbytes = sum(
+            pmap.nbytes for pmap in newgetter.get_pmap_by_grp(sids).values())
+        # the loop above populates the cache too
+        return newgetter
 
     @property
     def rlzs(self):
@@ -114,20 +127,21 @@ class HazardCurveGetter(object):
         :param sids: an array of site IDs
         :returns: a dictionary of probability maps by source group
         """
-        pmap_by_grp = {}
-        for grp, dset in self.dstore['poes'].items():
-            sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
-            L, I = dset.shape[1:]
-            pmap = probability_map.ProbabilityMap(L, I)
-            for sid in sids:
-                try:
-                    idx = sid2idx[sid]
-                except KeyError:
-                    continue
-                else:
-                    pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
-            pmap_by_grp[grp] = pmap
-        return pmap_by_grp
+        if self._pmap_by_grp is None:  # populate the cache
+            self._pmap_by_grp = {}
+            for grp, dset in self.dstore['poes'].items():
+                sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
+                L, I = dset.shape[1:]
+                pmap = probability_map.ProbabilityMap(L, I)
+                for sid in sids:
+                    try:
+                        idx = sid2idx[sid]
+                    except KeyError:
+                        continue
+                    else:
+                        pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
+                self._pmap_by_grp[grp] = pmap
+        return self._pmap_by_grp
 
 # ######################### hazard maps ################################### #
 
