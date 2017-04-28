@@ -639,6 +639,13 @@ class CompositeSourceModel(collections.Sequence):
         ct = concurrent_tasks or 1
         return max(math.ceil(self.weight / ct), MAXWEIGHT)
 
+    def add_infos(self, sources):
+        """
+        Populate the .infos dictionary (grp_id, src_id) -> <SourceInfo>
+        """
+        for src in sources:
+            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
+
     def split_sources(self, sources, src_filter, maxweight=MAXWEIGHT):
         """
         Split a set of sources of the same source group; light sources
@@ -650,14 +657,13 @@ class CompositeSourceModel(collections.Sequence):
         :yields: blocks of sources of weight around maxweight
         """
         light = [src for src in sources if src.weight <= maxweight]
-        for src in light:
-            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
+        self.add_infos(light)
         for block in block_splitter(
                 light, maxweight, weight=operator.attrgetter('weight')):
             yield block
         heavy = [src for src in sources if src.weight > maxweight]
+        self.add_infos(heavy)
         for src in heavy:
-            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
             srcs = sourceconverter.split_filter_source(src, src_filter)
             if len(srcs) > 1:
                 logging.info(
