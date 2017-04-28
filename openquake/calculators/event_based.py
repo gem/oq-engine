@@ -498,7 +498,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.core_task.__func__, self.gen_args(ruptures_by_grp)
         ).submit_all()
         self.gmdata = {}
-        acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
+        acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
             rlz.ordinal: ProbabilityMap(L, 1) for rlz in rlzs})
         save_gmdata(self, len(rlzs))
         return acc
