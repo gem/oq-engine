@@ -320,7 +320,7 @@ def get_shape(pmaps):
             sid = next(iter(pmap))
             break
     else:
-        raise AllEmptyProbabilityMaps()
+        raise AllEmptyProbabilityMaps(pmaps)
     return (len(pmap),) + pmap[sid].array.shape
 
 
