@@ -120,7 +120,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             if 'poes' not in self.datastore:  # when building short report
                 return
             logging.info('Combining the hazard curves')
-            hcgetter = calc.HazardCurveGetter(self.datastore, self.rlzs_assoc)
+            hcgetter = calc.HazardCurveGetter(
+                self.datastore, oq.imtls, self.rlzs_assoc)
             sids = self.sitecol.complete.sids
             with self.monitor(
                     'combining hcurves', measuremem=True, autoflush=True):
