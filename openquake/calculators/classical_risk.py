@@ -114,20 +114,19 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
             [rlz] = self.rlzs_assoc.realizations
-            curves_by_rlz = {rlz: haz_curves}
+            curves = {rlz: haz_curves}
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
-            if 'hcurves' not in self.datastore:  # when building short report
+            if 'poes' not in self.datastore:  # when building short report
                 return
             logging.info('Combining the hazard curves')
+            hcgetter = calc.HazardCurveGetter(self.datastore, self.rlzs_assoc)
+            sids = self.sitecol.complete.sids
             with self.monitor(
                     'combining hcurves', measuremem=True, autoflush=True):
-                hcgetter = calc.HazardCurveGetter(
-                    self.datastore, self.rlzs_assoc)
-                sids = self.sitecol.complete.sids
-                curves_by_rlz = dict(zip(hcgetter.rlzs, hcgetter.get(sids)))
+                curves = dict(zip(hcgetter.rlzs, hcgetter.get_all(sids)))
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs('poe', curves_by_rlz)
+            self.riskinputs = self.build_riskinputs('poe', curves)
         self.param = dict(insured_losses=oq.insured_losses,
                           stats=oq.risk_stats())
         self.N = len(self.assetcol)
