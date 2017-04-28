@@ -28,8 +28,7 @@ from openquake.hazardlib.geo.mesh import (
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, calc
-from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
+from openquake.hazardlib import geo, calc, probability_map
 from openquake.commonlib import readinput, util
 
 TWO16 = 2 ** 16
@@ -65,8 +64,8 @@ def combine_pmaps(rlzs_assoc, pmap_by_grp):
     :param pmap_by_grp: dictionary group string -> probability map
     :returns: a list of probability maps, one per realization
     """
-    num_levels = get_shape(pmap_by_grp.values())[1]
-    acc = [ProbabilityMap(num_levels, 1)
+    num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
+    acc = [probability_map.ProbabilityMap(num_levels, 1)
            for rlz in rlzs_assoc.realizations]
     for grp in pmap_by_grp:
         grp_id = int(grp[4:])  # strip grp-
@@ -75,6 +74,60 @@ def combine_pmaps(rlzs_assoc, pmap_by_grp):
             for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
                 acc[rlz.ordinal] |= pmap
     return acc
+
+
+class HazardCurveGetter(object):
+    """
+    Read hazard curves from the datastore for all realizations or for a
+    specific realization.
+
+    :param dstore: a DataStore instance
+    """
+    def __init__(self, dstore, rlzs_assoc=None):
+        self.dstore = dstore
+        self.imtls = dstore['oqparam'].imtls
+        self.rlzs_assoc = (rlzs_assoc if rlzs_assoc
+                           else dstore['csm_info'].get_rlzs_assoc())
+
+    @property
+    def rlzs(self):
+        return self.rlzs_assoc.realizations
+
+    def get(self, sids):
+        """
+        :param sids: an array of S site IDs
+        :returns: a composite array of hazard curves of shape (R, S)
+        """
+        n = len(sids)
+        return numpy.array([pmap.convert(self.imtls, n)
+                            for pmap in self.get_pmaps(sids)])
+
+    def get_pmaps(self, sids):
+        """
+        :param sids: an array of S site IDs
+        :returns: a list of R probability maps
+        """
+        return combine_pmaps(self.rlzs_assoc, self.get_pmap_by_grp(sids))
+
+    def get_pmap_by_grp(self, sids):
+        """
+        :param sids: an array of site IDs
+        :returns: a dictionary of probability maps by source group
+        """
+        pmap_by_grp = {}
+        for grp, dset in self.dstore['poes'].items():
+            sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
+            L, I = dset.shape[1:]
+            pmap = probability_map.ProbabilityMap(L, I)
+            for sid in sids:
+                try:
+                    idx = sid2idx[sid]
+                except KeyError:
+                    continue
+                else:
+                    pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
+            pmap_by_grp[grp] = pmap
+        return pmap_by_grp
 
 # ######################### hazard maps ################################### #
 
@@ -211,7 +264,7 @@ def make_hmap(pmap, imtls, poes):
     :returns: a ProbabilityMap with size (N, I * P, 1)
     """
     I, P = len(imtls), len(poes)
-    hmap = ProbabilityMap.build(I * P, 1, pmap)
+    hmap = probability_map.ProbabilityMap.build(I * P, 1, pmap)
     for i, imt in enumerate(imtls):
         curves = numpy.array([pmap[sid].array[imtls.slicedic[imt], 0]
                               for sid in pmap.sids])
