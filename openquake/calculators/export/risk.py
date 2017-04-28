@@ -68,7 +68,7 @@ def copy_to(elt, rup_data, rupserials):
 
 
 # this is used by event_based_risk
-@export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
+@export.add(('losses_by_asset-rlzs', 'csv'), ('losses_by_asset-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -133,6 +133,7 @@ def export_losses_by_event(ekey, dstore):
     return writer.getsaved()
 
 
+# TODO: export the statistics
 @export.add(('losses_by_asset', 'npz'))
 def export_losses_by_asset_npz(ekey, dstore):
     """
@@ -140,14 +141,19 @@ def export_losses_by_asset_npz(ekey, dstore):
     :param dstore: datastore object
     """
     loss_dt = dstore['oqparam'].loss_dt()
-    losses_by_asset = dstore[ekey[0]].value
+    if 'losses_by_asset' in dstore:  # scenario_risk
+        # I am exporting the 'mean' and ignoring the 'stddev'
+        losses_by_asset = dstore['losses_by_asset']['mean']
+    elif 'losses_by_asset-rlzs' in dstore:  # event_based_risk
+        losses_by_asset = dstore['losses_by_asset-rlzs'].value
+    else:
+        raise KeyError('losses_by_asset not in the datastore')
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     dic = {}
     for rlz in rlzs:
-        # I am exporting the 'mean' and ignoring the 'stddev'
-        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
-        data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
+        losses = losses_by_asset[:, rlz.ordinal].copy().view(loss_dt)
+        data = compose_arrays(assets, losses[:, 0])  # shape (N, 1)
         dic['rlz-%03d' % rlz.ordinal] = data
     fname = dstore.export_path('%s.%s' % ekey)
     savez(fname, **dic)

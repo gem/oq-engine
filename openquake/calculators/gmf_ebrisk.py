@@ -67,7 +67,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
+                'losses_by_asset-rlzs', F32, (self.A, self.R, self.L * I))
 
     def post_execute(self, result):
         pass
