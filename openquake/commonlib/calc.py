@@ -70,6 +70,7 @@ class HazardCurveGetter(object):
         self.rlzs_assoc = (rlzs_assoc if rlzs_assoc
                            else dstore['csm_info'].get_rlzs_assoc())
         self._pmap_by_grp = None  # cache
+        self.sids = None  # sids associated to the cache
 
     def new(self, sids):
         """
@@ -156,6 +157,10 @@ class HazardCurveGetter(object):
                     else:
                         pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
                 self._pmap_by_grp[grp] = pmap
+                self.sids = sids  # store the sids used in the cache
+        else:
+            # make sure the cache refer to the right sids
+            assert (sids == self.sids).all()
         return self._pmap_by_grp
 
 # ######################### hazard maps ################################### #
