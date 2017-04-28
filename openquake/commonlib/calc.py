@@ -57,25 +57,6 @@ BaseRupture.init()  # initialize rupture codes
 # ############## utilities for the classical calculator ############### #
 
 
-# used in classical and event_based calculators
-def combine_pmaps(rlzs_assoc, pmap_by_grp):
-    """
-    :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
-    :param pmap_by_grp: dictionary group string -> probability map
-    :returns: a list of probability maps, one per realization
-    """
-    num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
-    acc = [probability_map.ProbabilityMap(num_levels, 1)
-           for rlz in rlzs_assoc.realizations]
-    for grp in pmap_by_grp:
-        grp_id = int(grp[4:])  # strip grp-
-        for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
-            pmap = pmap_by_grp[grp].extract(i)
-            for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
-                acc[rlz.ordinal] |= pmap
-    return acc
-
-
 class HazardCurveGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
@@ -106,7 +87,41 @@ class HazardCurveGetter(object):
     def rlzs(self):
         return self.rlzs_assoc.realizations
 
-    def get(self, sids):
+    def combine_pmaps(self, pmap_by_grp):
+        """
+        :param pmap_by_grp: dictionary group string -> probability map
+        :returns: a list of probability maps, one per realization
+        """
+        num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
+        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
+                 for rlz in self.rlzs]
+        for grp in pmap_by_grp:
+            grp_id = int(grp[4:])  # strip grp-
+            for i, gsim in enumerate(self.rlzs_assoc.gsims_by_grp_id[grp_id]):
+                pmap = pmap_by_grp[grp].extract(i)
+                for rlz in self.rlzs_assoc.rlzs_assoc[grp_id, gsim]:
+                    pmaps[rlz.ordinal] |= pmap
+        return pmaps
+
+    def get(self, sids, rlzi):
+        """
+        :param sids: an array of S site IDs
+        :param rlzi: a realization index
+        :returns: the probability map for the given realization
+        """
+        pmap_by_grp = self.get_pmap_by_grp(sids)
+        num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
+        pmap = probability_map.ProbabilityMap(num_levels, 1)
+        for grp in pmap_by_grp:
+            grp_id = int(grp[4:])  # strip grp-
+            for i, gsim in enumerate(self.rlzs_assoc.gsims_by_grp_id[grp_id]):
+                for rlz in self.rlzs_assoc.rlzs_assoc[grp_id, gsim]:
+                    if rlz.ordinal == rlzi:
+                        pmap |= pmap_by_grp[grp].extract(i)
+                        break
+        return pmap
+
+    def get_all(self, sids):  # used in classical_risk
         """
         :param sids: an array of S site IDs
         :returns: a composite array of hazard curves of shape (R, S)
@@ -115,12 +130,12 @@ class HazardCurveGetter(object):
         return numpy.array([pmap.convert(self.imtls, n)
                             for pmap in self.get_pmaps(sids)])
 
-    def get_pmaps(self, sids):
+    def get_pmaps(self, sids):  # used in classical
         """
         :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
-        return combine_pmaps(self.rlzs_assoc, self.get_pmap_by_grp(sids))
+        return self.combine_pmaps(self.get_pmap_by_grp(sids))
 
     def get_pmap_by_grp(self, sids):
         """
