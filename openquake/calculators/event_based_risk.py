@@ -40,23 +40,6 @@ U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
 
 
-def build_el_dtypes(loss_types, insured_losses):
-    """
-    :param loss_types:
-        list of loss type strings
-    :param bool insured_losses:
-        job.ini configuration parameter
-    :returns:
-        ela_dt and elt_dt i.e. the data types for event loss assets and
-        event loss table respectively
-    """
-    I = insured_losses + 1
-    L = len(loss_types)
-    ela_list = [('eid', U64), ('aid', U32), ('loss', (F32, (L, I)))]
-    elt_list = [('eid', U64), ('loss', (F32, (L, I)))]
-    return numpy.dtype(ela_list), numpy.dtype(elt_list)
-
-
 def build_agg_curve(cb_inputs, monitor):
     """
     Build the aggregate loss curve in parallel for each loss type
@@ -457,11 +440,12 @@ class EbriskCalculator(base.RiskCalculator):
         source models, the asset collection, the riskmodel and others.
         """
         oq = self.oqparam
+        self.L = len(self.riskmodel.lti)
+        self.I = oq.insured_losses + 1
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
-        ela_dt, elt_dt = build_el_dtypes(
-            self.riskmodel.loss_types, oq.insured_losses)
+        elt_dt = numpy.dtype([('eid', U64), ('loss', (F32, (self.L, self.I)))])
         csm_info = self.datastore['csm_info']
         mon = self.monitor('risk')
         for sm in csm_info.source_models:
@@ -524,13 +508,11 @@ class EbriskCalculator(base.RiskCalculator):
         :param num_rlzs: the total number of realizations
         :returns: the total number of events
         """
-        self.L = len(self.riskmodel.lti)
         self.R = num_rlzs
         self.A = len(self.assetcol)
-        self.I = I = self.oqparam.insured_losses + 1
         num_tax = len(self.assetcol.taxonomies)
         self.datastore.create_dset('losses_by_taxon-rlzs', F32,
-                                   (num_tax, self.R, self.L * I))
+                                   (num_tax, self.R, self.L * self.I))
 
         if self.oqparam.loss_ratios:  # save all_loss_ratios
             self.T = sum(ires.num_tasks for ires in allres)
@@ -541,7 +523,7 @@ class EbriskCalculator(base.RiskCalculator):
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
+                'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
 
         num_events = collections.Counter()
         self.gmdata = {}
