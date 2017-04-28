@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Saved *a lot* of memory in the computation of the hazard curves and stats
   * Renamed the parameter `all_losses` to `asset_loss_table`
   * Added an experimental version of the event based risk calculator which
     is able to use GMFs imported from an external file

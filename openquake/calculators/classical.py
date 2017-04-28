@@ -368,29 +368,24 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
+def build_hcurves_and_stats(hcgetter, pstats, monitor):
     """
-    :param pmap_by_grp: dictionary of probability maps by source group ID
-    :param sids: array of site IDs
+    :param hcgetter: an :class:`openquake.commonlib.calc.HazardCurveGetter`
     :param pstats: instance of PmapStats
-    :param rlzs_assoc: instance of RlzsAssoc
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    if sum(len(pmap) for pmap in pmap_by_grp.values()) == 0:  # all empty
-        return {}
-    rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
-        pmaps = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
+        pmaps = hcgetter.get_pmaps(hcgetter.sids)
     pmap_by_kind = {}
-    if len(rlzs) > 1 and pstats.names:
+    if len(hcgetter.rlzs) > 1 and pstats.names:
         with monitor('compute stats'):
-            pmap_by_kind.update(pstats.compute(sids, pmaps))
+            pmap_by_kind.update(pstats.compute(hcgetter.sids, pmaps))
     if monitor.individual_curves:
-        for rlz, pmap in zip(rlzs, pmaps):
+        for rlz, pmap in zip(hcgetter.rlzs, pmaps):
             pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap
     return pmap_by_kind
 
@@ -436,10 +431,9 @@ class ClassicalCalculator(PSHACalculator):
         self.datastore.flush()
 
         logging.info('Building hazard curves')
-        with self.monitor('submitting poes', autoflush=True):
-            nbytes = parallel.Starmap(
-                build_hcurves_and_stats, list(self.gen_args())
-            ).reduce(self.save_hcurves)
+        nbytes = parallel.Starmap(
+            self.core_task.__func__, list(self.gen_args())
+        ).reduce(self.save_hcurves)
         return nbytes
 
     def gen_args(self):
@@ -450,14 +444,15 @@ class ClassicalCalculator(PSHACalculator):
         monitor = self.monitor(
             'build_hcurves_and_stats',
             individual_curves=self.oqparam.individual_curves)
+        hcgetter = calc.HazardCurveGetter(
+            self.datastore, self.oqparam.imtls, self.rlzs_assoc)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         pstats = PmapStats(self.oqparam.hazard_stats(), weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
-            pg = {}
-            for grp in self.datastore['poes']:
-                pg[grp] = self.datastore['poes/' + grp].filter(block.sids)
-            yield pg, block.sids, pstats, self.rlzs_assoc, monitor
+            newgetter = hcgetter.new(block.sids)  # read the probability maps
+            if newgetter.nbytes > 0:  # some probability map is nonzero
+                yield newgetter, pstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
