@@ -158,10 +158,11 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    riskinput.hazard_getter.init()
     assetcol = param['assetcol']
     A = len(assetcol)
     I = param['insured_losses'] + 1
-    eids = riskinput.eids
+    eids = riskinput.hazard_getter.eids
     E = len(eids)
     L = len(riskmodel.lti)
     taxid = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
@@ -544,14 +545,13 @@ class EbriskCalculator(base.RiskCalculator):
 
         num_events = collections.Counter()
         self.gmdata = {}
-        taskno = 0
+        self.taskno = 0
         self.start = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
                 self.gmdata += dic.pop('gmdata')
-                self.save_losses(dic, taskno, start)
-                taskno += 1
+                self.save_losses(dic, start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
@@ -565,7 +565,7 @@ class EbriskCalculator(base.RiskCalculator):
         event_based.save_gmdata(self, num_rlzs)
         return num_events
 
-    def save_losses(self, dic, taskno, offset=0):
+    def save_losses(self, dic, offset=0):
         """
         Save the event loss tables incrementally.
 
@@ -590,7 +590,8 @@ class EbriskCalculator(base.RiskCalculator):
             with self.monitor('saving loss ratios', autoflush=True):
                 lrs_idx += self.start
                 self.start += len(assratios)
-                self.datastore['all_loss_ratios/indices'][:, taskno] = lrs_idx
+                self.datastore['all_loss_ratios/indices'][
+                    :, self.taskno] = lrs_idx
                 assratios['rlzi'] += offset
                 self.datastore.extend('all_loss_ratios/data', assratios)
                 self.alr_nbytes += assratios.nbytes
@@ -611,6 +612,7 @@ class EbriskCalculator(base.RiskCalculator):
                     self.dset[:, r + offset, li] += ratios * vs
                 else:
                     self.dset[aids, r + offset, li] += ratios * vs
+        self.taskno += 1
 
     def post_execute(self, num_events):
         """

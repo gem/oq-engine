@@ -626,8 +626,10 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, hazards_by_rlz, eps=numpy.zeros(0)):
+    def build_riskinputs(self, kind, hazards_by_rlz, eps=numpy.zeros(0)):
         """
+        :param kind:
+            kind of hazard getter, can be 'poe' or 'gmf'
         :param hazards_by_rlz:
             a dictionary rlz -> IMT -> array of length num_sites
         :param eps:
@@ -663,8 +665,9 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.PoeGetter(0, {None: rlzs}, hazards_by_rlz,
-                                        indices, list(imtls)),
+                    riskinput.HazardGetter(
+                        kind, 0, {None: rlzs},
+                        hazards_by_rlz, indices, list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
@@ -684,5 +687,8 @@ class RiskCalculator(HazardCalculator):
         mon = self.monitor('risk')
         all_args = [(riskinput, self.riskmodel, self.param, mon)
                     for riskinput in self.riskinputs]
-        res = Starmap(self.core_task.__func__, all_args).reduce()
+        res = Starmap(self.core_task.__func__, all_args).reduce(self.combine)
         return res
+
+    def combine(self, acc, res):
+        return acc + res

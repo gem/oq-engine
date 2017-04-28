@@ -131,7 +131,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     rlz: pmap.convert(oq.imtls, nsites)
                     for rlz, pmap in zip(rlzs, pmaps)}
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs(curves_by_rlz)
+            self.riskinputs = self.build_riskinputs('poe', curves_by_rlz)
         self.param = dict(insured_losses=oq.insured_losses,
                           stats=oq.risk_stats())
         self.N = len(self.assetcol)
