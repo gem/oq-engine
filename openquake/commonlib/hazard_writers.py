@@ -81,8 +81,8 @@ def _validate_hazard_metadata(md):
 
     if md.get('statistics') is not None:
         # make sure only valid statistics types are specified
-        if md.get('statistics') not in ('mean', 'quantile'):
-            raise ValueError('`statistics` must be either `mean` or '
+        if md.get('statistics') not in ('mean', 'max', 'quantile'):
+            raise ValueError('`statistics` must be either `mean`, `max`, or '
                              '`quantile`')
     else:
         # must specify both logic tree paths
