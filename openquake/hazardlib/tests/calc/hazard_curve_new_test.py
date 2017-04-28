@@ -111,10 +111,10 @@ class HazardCurvesTestCase01(unittest.TestCase):
         # Test back-compatibility
         # Classical case i.e. independent sources in a list instance
         curves = calc_hazard_curves([self.src2],
-                                        self.sites,
-                                        self.imtls,
-                                        self.gsim_by_trt,
-                                        truncation_level=None)
+                                    self.sites,
+                                    self.imtls,
+                                    self.gsim_by_trt,
+                                    truncation_level=None)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.30000, 0.27855, 0.08912]),
                                 crv, decimal=4)
@@ -125,10 +125,10 @@ class HazardCurvesTestCase01(unittest.TestCase):
             TRT.ACTIVE_SHALLOW_CRUST, [self.src2], 'test', 'indep', 'indep')
         groups = [group]
         curves = calc_hazard_curves(groups,
-                                        self.sites,
-                                        self.imtls,
-                                        self.gsim_by_trt,
-                                        truncation_level=None)
+                                    self.sites,
+                                    self.imtls,
+                                    self.gsim_by_trt,
+                                    truncation_level=None)
         npt.assert_almost_equal(numpy.array([0.30000, 0.27855, 0.08912]),
                                 curves[0][0], decimal=4)
 
@@ -164,10 +164,10 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
     def test_hazard_curve_A(self):
         # Test classical case i.e. independent sources in a list instance
         curves = calc_hazard_curves([self.src1],
-                                        self.sites,
-                                        self.imtls,
-                                        self.gsim_by_trt,
-                                        truncation_level=None)
+                                    self.sites,
+                                    self.imtls,
+                                    self.gsim_by_trt,
+                                    truncation_level=None)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.40000, 0.36088, 0.07703]),
                                 crv, decimal=4)
@@ -175,10 +175,10 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
     def test_hazard_curve_B(self):
         # Test classical case i.e. independent sources in a list instance
         curves = calc_hazard_curves([self.src1, self.src2],
-                                        self.sites,
-                                        self.imtls,
-                                        self.gsim_by_trt,
-                                        truncation_level=None)
+                                    self.sites,
+                                    self.imtls,
+                                    self.gsim_by_trt,
+                                    truncation_level=None)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.58000, 0.53891, 0.15929]),
                                 crv, decimal=4)
