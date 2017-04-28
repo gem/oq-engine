@@ -417,10 +417,11 @@ class ClassicalCalculator(PSHACalculator):
                     'hcurves/rlz-%03d' % rlz.ordinal, F32,
                     (N, L, 1),  attrs=attrs)
                 totbytes += nbytes
-        for name, stat in oq.hazard_stats():
-            self.datastore.create_dset(
-                'hcurves/' + name, F32, (N, L, 1), attrs=attrs)
-            totbytes += nbytes
+        if len(rlzs) > 1:
+            for name, stat in oq.hazard_stats():
+                self.datastore.create_dset(
+                    'hcurves/' + name, F32, (N, L, 1), attrs=attrs)
+                totbytes += nbytes
         if 'hcurves' in self.datastore:
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
