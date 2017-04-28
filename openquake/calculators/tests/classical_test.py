@@ -26,7 +26,7 @@ from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
-    case_26)
+    case_26, case_27)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -332,3 +332,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     def test_case_26(self):  # split YoungsCoppersmith1985MFD
         self.assert_curves_ok(['hazard_curve-rlz-000.csv'],
                               case_26.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_27(self):  # Nankai mutex model
+        self.assert_curves_ok(['hazard_curve.csv'],
+                              case_27.__file__)
