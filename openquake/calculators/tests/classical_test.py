@@ -175,6 +175,7 @@ class ClassicalTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_15(self):  # full enumeration
         self.assert_curves_ok('''\
+hazard_curve-max.csv
 hazard_curve-mean.csv
 hazard_curve-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_curve-smltp_SM1-gsimltp_BA2008_T2002.csv
@@ -184,6 +185,7 @@ hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
 hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
 hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
 hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv
+hazard_uhs-max.csv
 hazard_uhs-mean.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
