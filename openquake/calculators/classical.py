@@ -325,9 +325,13 @@ class PSHACalculator(base.HazardCalculator):
                 param = dict(
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-                for block in self.csm.split_sources(
-                        sg.sources, self.src_filter, maxweight):
-                    yield block, self.src_filter, gsims, param, monitor
+                if sg.src_interdep == 'mutex':  # do not split the group
+                    self.csm.add_infos(sg.sources)
+                    yield sg, self.src_filter, gsims, param, monitor
+                else:
+                    for block in self.csm.split_sources(
+                            sg.sources, self.src_filter, maxweight):
+                        yield block, self.src_filter, gsims, param, monitor
 
     def store_source_info(self, infos):
         # save the calculation times per each source
