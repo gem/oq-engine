@@ -23,6 +23,12 @@ F64 = numpy.float64
 BYTES_PER_FLOAT = 8
 
 
+class AllEmptyProbabilityMaps(ValueError):
+    """
+    Raised by get_shape(pmaps) if all passed probability maps are empty
+    """
+
+
 class ProbabilityCurve(object):
     """
     This class is a small wrapper over an array of PoEs associated to
@@ -176,7 +182,10 @@ class ProbabilityMap(dict):
     @property
     def nbytes(self):
         """The size of the underlying array"""
-        N, L, I = get_shape([self])
+        try:
+            N, L, I = get_shape([self])
+        except AllEmptyProbabilityMaps:
+            return 0
         return BYTES_PER_FLOAT * N * L * I
 
     # used when exporting to HDF5
@@ -311,7 +320,7 @@ def get_shape(pmaps):
             sid = next(iter(pmap))
             break
     else:
-        raise ValueError('All probability maps where empty!')
+        raise AllEmptyProbabilityMaps(pmaps)
     return (len(pmap),) + pmap[sid].array.shape
 
 
@@ -354,8 +363,6 @@ class PmapStats(object):
         elif len(pmaps) == 1:  # the mean is the only pmap
             assert not self.quantiles, self.quantiles
             return pmaps[0]
-        elif sum(len(pmap) for pmap in pmaps) == 0:  # all empty pmaps
-            raise ValueError('All empty probability maps!')
         N, L, I = get_shape(pmaps)
         nstats = len(self.funcs)
         stats = ProbabilityMap.build(L, nstats, sids)
