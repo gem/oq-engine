@@ -101,8 +101,8 @@ def expose_outputs(dstore):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-rlzs' in dstore and rlzs:
-        dskeys.add('avg_losses-stats')
+    if 'losses_by_asset-rlzs' in dstore and rlzs:
+        dskeys.add('losses_by_asset-stats')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
             dskeys.add('loss_maps-rlzs')

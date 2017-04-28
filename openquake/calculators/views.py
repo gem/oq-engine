@@ -426,9 +426,9 @@ def sum_table(records):
 def view_mean_avg_losses(token, dstore):
     dt = dstore['oqparam'].multiloss_dt()
     try:
-        array = dstore['avg_losses-stats']  # shape (N, S)
+        array = dstore['losses_by_asset-stats']  # shape (N, S)
     except KeyError:
-        array = dstore['avg_losses-rlzs']  # shape (N, R)
+        array = dstore['losses_by_asset-rlzs']  # shape (N, R)
     data = numpy.array([tuple(row) for row in array], dt)
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)

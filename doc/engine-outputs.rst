@@ -27,7 +27,7 @@ event_based:
   gmf_data, hcurves
 
 ebrisk:
-  avg_losses-rlzs, agg_loss_table, all_loss_ratios
+  losses_by_asset-rlzs, agg_loss_table, all_loss_ratios
 
 event_based_risk:
   rcurves-rlzs, rcurves-stats, agg_curve-rlzs, agg_curve-stats

@@ -151,8 +151,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job.ini',
                             exports='csv', individual_curves='true')
-        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
+        [fname] = export(('losses_by_asset-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_asset-mean.csv', fname)
 
         fnames = out['agg_loss_table', 'csv']
         assert fnames, 'No agg_losses exported??'
@@ -188,8 +188,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             raise unittest.SkipTest('MacOSX')
         self.run_calc(case_master.__file__, 'job.ini',
                       exports='csv', individual_curves='false')
-        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'avg_losses-stats not exported?'
+        fnames = export(('losses_by_asset-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'losses_by_asset-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)

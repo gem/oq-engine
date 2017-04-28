@@ -68,7 +68,7 @@ def copy_to(elt, rup_data, rupserials):
 
 
 # this is used by event_based_risk
-@export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
+@export.add(('losses_by_asset-rlzs', 'csv'), ('losses_by_asset-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -144,8 +144,8 @@ def export_losses_by_asset_npz(ekey, dstore):
     if 'losses_by_asset' in dstore:  # scenario_risk
         # I am exporting the 'mean' and ignoring the 'stddev'
         losses_by_asset = dstore['losses_by_asset']['mean']
-    elif 'avg_losses-rlzs' in dstore:  # event_based_risk
-        losses_by_asset = dstore['avg_losses-rlzs'].value
+    elif 'losses_by_asset-rlzs' in dstore:  # event_based_risk
+        losses_by_asset = dstore['losses_by_asset-rlzs'].value
     else:
         raise KeyError('losses_by_asset not in the datastore')
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations

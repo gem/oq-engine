@@ -540,7 +540,7 @@ class EbriskCalculator(base.RiskCalculator):
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
+                'losses_by_asset-rlzs', F32, (self.A, self.R, self.L * I))
 
         num_events = collections.Counter()
         self.gmdata = {}
@@ -603,7 +603,7 @@ class EbriskCalculator(base.RiskCalculator):
             else:
                 dset[aids, r + offset, :] += losses_by_taxon[:, r, :]
 
-        with self.monitor('saving avg_losses-rlzs'):
+        with self.monitor('saving losses_by_asset-rlzs'):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
