@@ -48,9 +48,11 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
     """
     if shape[0] is None:  # extendable dataset
         dset = hdf5.create_dataset(
-            name, (0,) + shape[1:], dtype, chunks=True, maxshape=shape)
+            name, (0,) + shape[1:], dtype, chunks=True, maxshape=shape,
+            compression=compression)
     else:  # fixed-shape dataset
-        dset = hdf5.create_dataset(name, shape, dtype, fillvalue=fillvalue)
+        dset = hdf5.create_dataset(name, shape, dtype, fillvalue=fillvalue,
+                                   compression=compression)
     if attrs:
         for k, v in attrs.items():
             dset.attrs[k] = v
