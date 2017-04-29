@@ -67,7 +67,7 @@ class OqParamTestCase(unittest.TestCase):
             OqParam(calculation_mode='disaggregation',
                     hazard_calculation_id=None, hazard_output_id=None,
                     inputs=dict(site_model=''), maximum_distance='10',
-                    sites='',
+                    sites='', individual_curves='true',
                     intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                     truncation_level=None).validate()
 
@@ -338,6 +338,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 poes='0.2',
                 maximum_distance='400',
+                individual_curves='true',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1')
         self.assertIn("poes_disagg or iml_disagg must be set",
