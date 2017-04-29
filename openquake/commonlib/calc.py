@@ -64,9 +64,8 @@ class HazardCurveGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore, imtls, rlzs_assoc):
+    def __init__(self, dstore, rlzs_assoc):
         self.dstore = dstore
-        self.imtls = imtls
         self.rlzs_assoc = rlzs_assoc
         self._pmap_by_grp = None  # cache
         self.sids = None  # sids associated to the cache
@@ -77,7 +76,7 @@ class HazardCurveGetter(object):
         :param sids: an array of S site IDs
         :returns: a new instance of the getter, with the cache populated
         """
-        newgetter = self.__class__(self.dstore, self.imtls, self.rlzs_assoc)
+        newgetter = self.__class__(self.dstore, self.rlzs_assoc)
         newgetter.sids = sids
         newgetter.get_pmap_by_grp(sids)  # populate the cache
         return newgetter
@@ -118,16 +117,7 @@ class HazardCurveGetter(object):
                     if rlz.ordinal == rlzi:
                         pmap |= pmap_by_grp[grp].extract(i)
                         break
-        return pmap.convert(self.imtls, len(sids))
-
-    def get_all(self, sids):  # used in classical_risk
-        """
-        :param sids: an array of S site IDs
-        :returns: a composite array of hazard curves of shape (R, S)
-        """
-        n = len(sids)
-        return numpy.array([pmap.convert(self.imtls, n)
-                            for pmap in self.get_pmaps(sids)])
+        return pmap
 
     def get_pmaps(self, sids):  # used in classical
         """
