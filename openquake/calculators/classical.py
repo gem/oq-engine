@@ -368,9 +368,9 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-def build_hcurves_and_stats(hcgetter, pstats, param, monitor):
+def build_hcurves_and_stats(pgetter, pstats, param, monitor):
     """
-    :param hcgetter: an :class:`openquake.commonlib.calc.HazardCurveGetter`
+    :param pgetter: an :class:`openquake.commonlib.calc.PoesGetter`
     :param pstats: instance of PmapStats
     :param param: dictionary of extra parameters
     :param monitor: instance of Monitor
@@ -380,13 +380,13 @@ def build_hcurves_and_stats(hcgetter, pstats, param, monitor):
     used to specify the kind of output.
     """
     with monitor('combine pmaps'):
-        pmaps = hcgetter.get_pmaps(hcgetter.sids)
+        pmaps = pgetter.get_pmaps(pgetter.sids)
     pmap_by_kind = {}
-    if len(hcgetter.rlzs) > 1 and pstats.names:
+    if len(pgetter.rlzs) > 1 and pstats.names:
         with monitor('compute stats'):
-            pmap_by_kind.update(pstats.compute(hcgetter.sids, pmaps))
+            pmap_by_kind.update(pstats.compute(pgetter.sids, pmaps))
     if param['individual_curves']:
-        for rlz, pmap in zip(hcgetter.rlzs, pmaps):
+        for rlz, pmap in zip(pgetter.rlzs, pmaps):
             pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap
     return pmap_by_kind
 
@@ -445,14 +445,14 @@ class ClassicalCalculator(PSHACalculator):
         oq = self.oqparam
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
-        hcgetter = calc.HazardCurveGetter(self.datastore, self.rlzs_assoc)
+        pgetter = calc.PoesGetter(self.datastore, self.rlzs_assoc)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         one_rlz = len(weights) == 1
         param = dict(individual_curves=oq.individual_curves or one_rlz)
         pstats = PmapStats(hstats, weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
-            newgetter = hcgetter.new(block.sids)  # read the probability maps
+            newgetter = pgetter.new(block.sids)  # read the probability maps
             if newgetter.nbytes > 0:  # some probability map is nonzero
                 yield newgetter, pstats, param, monitor
 

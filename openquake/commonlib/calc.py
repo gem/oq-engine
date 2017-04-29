@@ -57,7 +57,7 @@ BaseRupture.init()  # initialize rupture codes
 # ############## utilities for the classical calculator ############### #
 
 
-class HazardCurveGetter(object):
+class PoesGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
