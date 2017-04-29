@@ -21,10 +21,8 @@ import os
 import logging
 import operator
 import collections
-import multiprocessing
 
 import numpy
-import h5py
 
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
@@ -375,44 +373,6 @@ def _comment(rlzs_assoc, kind, investigation_time):
             'source_model_tree_path=%s,gsim_tree_path=%s,'
             'investigation_time=%s' % (
                 rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time))
-
-
-def build_hcurves(getter):
-    return getter.sids, getter.get_all(getter.sids).T
-
-
-@export.add(('hcurves-rlzs', 'hdf5'))
-def export_hcurves_rlzs(ekey, dstore):
-    """
-    Export all hazard curves in a single compressed .hdf5 file. This will be
-    very slow for large computations and it not recommended. The
-    recommended way to postprocess large computation is to instantiate
-    the HazardCurveGetter and to work one block of sites at the time.
-    """
-    oq = dstore['oqparam']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    sitecol = dstore['sitecol']
-    hcgetter = calc.HazardCurveGetter(dstore, oq.imtls, rlzs_assoc)
-    N = len(sitecol)
-    R = len(rlzs_assoc.realizations)
-    fname = dstore.export_path('%s.%s' % ekey)
-    getters = [hcgetter.new(tile.sids) for tile in sitecol.split_in_tiles(R)]
-    '''
-    with h5py.File(fname, 'w') as f:
-        dset = f.create_dataset('hcurves-rlzs', (N, R), oq.imtls.dt,
-                                compression='gzip')
-        with multiprocessing.Pool() as pool:
-            for sids, allcurves in pool.imap_unordered(build_hcurves, getters):
-                for sid, curves in zip(sids, allcurves):
-                    dset[sid] = curves
-    '''
-    with h5py.File(fname, 'w') as f:
-        dset = f.create_dataset('hcurves-rlzs', (N, R), oq.imtls.dt,
-                                compression='gzip')
-        for sids, allcurves in map(build_hcurves, getters):
-            for sid, curves in zip(sids, allcurves):
-                dset[sid] = curves
-    return [fname]
 
 
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
