@@ -63,7 +63,7 @@ def columns(line):
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = False
+    OVERWRITE_EXPECTED = True
     edir = None  # will be set to a temporary directory
     success = True  # will be set to False if the files are different
 

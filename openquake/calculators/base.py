@@ -278,9 +278,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 keys = set(ext5) | set(self.datastore)
         else:
             keys = set(self.datastore)
-        has_hcurves = 'hcurves' in self.datastore
-        # NB: this is False in the classical precalculator
-
+        has_hcurves = 'poes' in self.datastore
+        if has_hcurves:
+            keys.add('hcurves')
         for fmt in fmts:
             if not fmt:
                 continue
