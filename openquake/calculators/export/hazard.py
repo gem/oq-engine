@@ -21,11 +21,10 @@ import os
 import logging
 import operator
 import collections
-import multiprocessing
 
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
@@ -377,17 +376,31 @@ def _comment(rlzs_assoc, kind, investigation_time):
                 rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time))
 
 
-def build_hcurves(getter):
-    return getter.get_pmaps(getter.sids)
+def build_hcurves(getter, imtls, monitor):
+    pmaps = getter.get_pmaps(getter.sids)
+    idx = dict(zip(getter.sids, range(len(getter.sids))))
+    curves = numpy.zeros((len(getter.sids), len(pmaps)), imtls.dt)
+    for r, pmap in enumerate(pmaps):
+        for sid in pmap:
+            curves[idx[sid], r] = pmap[sid].convert(imtls)
+    return getter.sids, curves
 
 
 @export.add(('hcurves-rlzs', 'hdf5'))
 def export_hcurves_rlzs(ekey, dstore):
     """
-    Export all hazard curves in a single compressed .hdf5 file. This will be
-    very slow for large computations and it not recommended. The
-    recommended way to postprocess large computation is to instantiate
-    the HazardCurveGetter and to work one block of sites at the time.
+    Export all hazard curves in a single .hdf5 file. This is not
+    recommended, even if this exporter is parallel and very efficient.
+    I was able to export 6 GB of curves per minute. However for large
+    calculations it is then impossible to view the .hdf5 file with the
+    hdfviewer because you will run out of memory. Also, compression is not
+    enabled, otherwise all the time will be spent in the compression phase
+    in the controller node with the workers doing nothing.
+    The  recommended way to postprocess large computations is to instantiate
+    the HazardCurveGetter and to work one block of sites at the time,
+    discarding what it is not needed. The exporter here is meant for
+    small/medium calculation and as an example of what you should
+    implement yourself if you need to postprocess the hazard curves.
     """
     oq = dstore['oqparam']
     imtls = oq.imtls
@@ -397,20 +410,19 @@ def export_hcurves_rlzs(ekey, dstore):
     N = len(sitecol)
     R = len(rlzs_assoc.realizations)
     fname = dstore.export_path('%s.%s' % ekey)
+    monitor = performance.Monitor(ekey[0], fname)
     size = humansize(dstore.get_attr('poes', 'nbytes'))
     logging.info('Reading %s of probability maps', size)
-    getters = [hcgetter.new(tile.sids) for tile in sitecol.split_in_tiles(R)]
+    allargs = [(hcgetter.new(tile.sids), imtls, monitor)
+               for tile in sitecol.split_in_tiles(R)]
     with hdf5.File(fname, 'w') as f:
         f['imtls'] = imtls
-        dset = f.create_dataset('hcurves-rlzs', (N, R), imtls.dt,
-                                compression='gzip')
+        dset = f.create_dataset('hcurves-rlzs', (N, R), imtls.dt)
         dset.attrs['investigation_time'] = oq.investigation_time
         logging.info('Building the hazard curves for %d sites, %d rlzs', N, R)
-        with multiprocessing.Pool() as pool:
-            for pmaps in pool.imap_unordered(build_hcurves, getters):
-                for r, pmap in enumerate(pmaps):
-                    for sid in pmap:
-                        dset[sid, r] = pmap[sid].convert(imtls)
+        for sids, allcurves in parallel.Processmap(build_hcurves, allargs):
+            for sid, curves in zip(sids, allcurves):
+                dset[sid] = curves
     return [fname]
 
 
