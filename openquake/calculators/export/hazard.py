@@ -397,7 +397,7 @@ def export_hcurves_rlzs(ekey, dstore):
     enabled, otherwise all the time will be spent in the compression phase
     in the controller node with the workers doing nothing.
     The  recommended way to postprocess large computations is to instantiate
-    the HazardCurveGetter and to work one block of sites at the time,
+    the PoesGetter and to work one block of sites at the time,
     discarding what it is not needed. The exporter here is meant for
     small/medium calculation and as an example of what you should
     implement yourself if you need to postprocess the hazard curves.
@@ -406,14 +406,14 @@ def export_hcurves_rlzs(ekey, dstore):
     imtls = oq.imtls
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol']
-    hcgetter = calc.HazardCurveGetter(dstore, rlzs_assoc)
+    pgetter = calc.PoesGetter(dstore, rlzs_assoc)
     N = len(sitecol)
     R = len(rlzs_assoc.realizations)
     fname = dstore.export_path('%s.%s' % ekey)
     monitor = performance.Monitor(ekey[0], fname)
     size = humansize(dstore.get_attr('poes', 'nbytes'))
     logging.info('Reading %s of probability maps', size)
-    allargs = [(hcgetter.new(tile.sids), imtls, monitor)
+    allargs = [(pgetter.new(tile.sids), imtls, monitor)
                for tile in sitecol.split_in_tiles(R)]
     with hdf5.File(fname, 'w') as f:
         f['imtls'] = imtls
