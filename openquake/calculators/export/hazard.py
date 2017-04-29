@@ -426,6 +426,18 @@ def export_hcurves_rlzs(ekey, dstore):
     return [fname]
 
 
+def gen_hcurves(dstore, sitecol, rlzs_assoc, individual_curves):
+    # generate hcurves (actually probability maps)
+    getter = calc.PoesGetter(dstore, rlzs_assoc)
+    if individual_curves or len(getter.rlzs) == 1:
+        for rlz in getter.rlzs:
+            hcurves = getter.get(sitecol.sids, rlz.ordinal)
+            yield 'rlz-%03d' % rlz.ordinal, hcurves
+    if 'hcurves' in dstore:
+        for kind in sorted(dstore['hcurves']):
+            yield kind, dstore['hcurves/' + kind]
+
+
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
 def export_hcurves_csv(ekey, dstore):
     """
@@ -442,8 +454,8 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    for kind in sorted(dstore['hcurves']):
-        hcurves = dstore['hcurves/' + kind]
+    for kind, hcurves in gen_hcurves(
+            dstore, sitecol, rlzs_assoc, oq.individual_curves):
         fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs':
@@ -539,12 +551,12 @@ def export_hcurves_xml_json(ekey, dstore):
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    hcurves = dstore[ekey[0]]
     fnames = []
     writercls = (hazard_writers.HazardCurveGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardCurveXMLWriter)
-    for kind in hcurves:
+    for kind, hcurves in gen_hcurves(
+            dstore, dstore['sitecol'], rlzs_assoc, oq.individual_curves):
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
