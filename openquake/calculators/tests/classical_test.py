@@ -330,10 +330,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
 
     @attr('qa', 'hazard', 'classical')
     def test_case_26(self):  # split YoungsCoppersmith1985MFD
-        self.assert_curves_ok(['hazard_curve-rlz-000.csv'],
-                              case_26.__file__)
+        self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_27(self):  # Nankai mutex model
-        self.assert_curves_ok(['hazard_curve.csv'],
-                              case_27.__file__)
+        self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
