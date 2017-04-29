@@ -259,8 +259,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
         :returns: dictionary output_key -> sorted list of exported paths
         """
+        num_rlzs = len(self.datastore['realizations'])
         exported = {}
-        individual_curves = self.oqparam.individual_curves
+        individual_curves = self.oqparam.individual_curves or num_rlzs == 1
         if isinstance(exports, tuple):
             fmts = exports
         elif exports:  # is a string
