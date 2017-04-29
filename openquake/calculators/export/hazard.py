@@ -21,9 +21,11 @@ import os
 import logging
 import operator
 import collections
+import multiprocessing
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
@@ -373,6 +375,40 @@ def _comment(rlzs_assoc, kind, investigation_time):
             'source_model_tree_path=%s,gsim_tree_path=%s,'
             'investigation_time=%s' % (
                 rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time))
+
+
+def build_hcurves(getter):
+    return getter.get_pmaps(getter.sids)
+
+
+@export.add(('hcurves-rlzs', 'hdf5'))
+def export_hcurves_rlzs(ekey, dstore):
+    """
+    Export all hazard curves in a single compressed .hdf5 file. This will be
+    very slow for large computations and it not recommended. The
+    recommended way to postprocess large computation is to instantiate
+    the HazardCurveGetter and to work one block of sites at the time.
+    """
+    oq = dstore['oqparam']
+    imtls = oq.imtls
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    sitecol = dstore['sitecol']
+    hcgetter = calc.HazardCurveGetter(dstore, rlzs_assoc)
+    N = len(sitecol)
+    R = len(rlzs_assoc.realizations)
+    fname = dstore.export_path('%s.%s' % ekey)
+    getters = [hcgetter.new(tile.sids) for tile in sitecol.split_in_tiles(R)]
+    with hdf5.File(fname, 'w') as f:
+        f['imtls'] = imtls
+        dset = f.create_dataset('hcurves-rlzs', (N, R), imtls.dt,
+                                compression='gzip')
+        dset.attrs['investigation_time'] = oq.investigation_time
+        with multiprocessing.Pool() as pool:
+            for pmaps in pool.imap_unordered(build_hcurves, getters):
+                for r, pmap in enumerate(pmaps):
+                    for sid in pmap:
+                        dset[sid, r] = pmap[sid].convert(imtls)
+    return [fname]
 
 
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
