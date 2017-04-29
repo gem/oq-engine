@@ -368,10 +368,11 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-def build_hcurves_and_stats(hcgetter, pstats, monitor):
+def build_hcurves_and_stats(hcgetter, pstats, param, monitor):
     """
     :param hcgetter: an :class:`openquake.commonlib.calc.HazardCurveGetter`
     :param pstats: instance of PmapStats
+    :param param: dictionary of extra parameters
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
@@ -384,7 +385,7 @@ def build_hcurves_and_stats(hcgetter, pstats, monitor):
     if len(hcgetter.rlzs) > 1 and pstats.names:
         with monitor('compute stats'):
             pmap_by_kind.update(pstats.compute(hcgetter.sids, pmaps))
-    if monitor.individual_curves:
+    if param['individual_curves']:
         for rlz, pmap in zip(hcgetter.rlzs, pmaps):
             pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap
     return pmap_by_kind
@@ -415,7 +416,7 @@ class ClassicalCalculator(PSHACalculator):
             sids=numpy.arange(N, dtype=numpy.uint32))
         nbytes = N * L * 4  # bytes per realization (32 bit floats)
         totbytes = 0
-        if oq.individual_curves:
+        if oq.individual_curves or len(rlzs) == 1:
             for rlz in rlzs:
                 self.datastore.create_dset(
                     'hcurves/rlz-%03d' % rlz.ordinal, F32,
@@ -441,18 +442,20 @@ class ClassicalCalculator(PSHACalculator):
         :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
         :yields: arguments for the function build_hcurves_and_stats
         """
-        monitor = self.monitor(
-            'build_hcurves_and_stats',
-            individual_curves=self.oqparam.individual_curves)
+        oq = self.oqparam
+        monitor = self.monitor('build_hcurves_and_stats')
+        hstats = self.oqparam.hazard_stats()
         hcgetter = calc.HazardCurveGetter(
             self.datastore, self.oqparam.imtls, self.rlzs_assoc)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        pstats = PmapStats(self.oqparam.hazard_stats(), weights)
+        one_rlz = len(weights) == 1
+        param = dict(individual_curves=oq.individual_curves or one_rlz)
+        pstats = PmapStats(hstats, weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
             newgetter = hcgetter.new(block.sids)  # read the probability maps
             if newgetter.nbytes > 0:  # some probability map is nonzero
-                yield newgetter, pstats, monitor
+                yield newgetter, pstats, param, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
