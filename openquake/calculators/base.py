@@ -256,6 +256,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     def export(self, exports=None):
         """
         Export all the outputs in the datastore in the given export formats.
+        By default individual outputs are not exported if there are more than
+        one realization; this is determined by the configuration flag
+        `individual_curves` which is false.
 
         :returns: dictionary output_key -> sorted list of exported paths
         """
