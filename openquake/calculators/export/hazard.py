@@ -397,12 +397,15 @@ def export_hcurves_rlzs(ekey, dstore):
     N = len(sitecol)
     R = len(rlzs_assoc.realizations)
     fname = dstore.export_path('%s.%s' % ekey)
+    size = humansize(dstore.get_attr('poes', 'nbytes'))
+    logging.info('Reading %s of probability maps', size)
     getters = [hcgetter.new(tile.sids) for tile in sitecol.split_in_tiles(R)]
     with hdf5.File(fname, 'w') as f:
         f['imtls'] = imtls
         dset = f.create_dataset('hcurves-rlzs', (N, R), imtls.dt,
                                 compression='gzip')
         dset.attrs['investigation_time'] = oq.investigation_time
+        logging.info('Building the hazard curves for %d sites, %d rlzs', N, R)
         with multiprocessing.Pool() as pool:
             for pmaps in pool.imap_unordered(build_hcurves, getters):
                 for r, pmap in enumerate(pmaps):
