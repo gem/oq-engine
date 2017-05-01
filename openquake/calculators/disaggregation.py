@@ -30,6 +30,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.baselib import parallel
 from openquake.hazardlib import sourceconverter
+from openquake.commonlib import calc
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
@@ -137,15 +138,18 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         """
         dic = {}
         imtls = self.oqparam.imtls
+        pgetter = calc.PoesGetter(self.datastore, self.rlzs_assoc)
         for rlz in self.rlzs_assoc.realizations:
-            pmap = self.datastore['hcurves/rlz-%03d' % rlz.ordinal]
-            if sid in pmap:
-                poes = pmap[sid].convert(imtls)
-            else:
+            try:
+                pmap = pgetter.get(numpy.array([sid]), rlz.ordinal)
+            except ValueError:  # empty pmaps
                 logging.info(
                     'hazard curve contains all zero probabilities; '
                     'skipping site %d, rlz=%d', sid, rlz.ordinal)
                 continue
+            if sid not in pmap:
+                continue
+            poes = pmap[sid].convert(imtls)
             for imt_str in imtls:
                 if all(x == 0.0 for x in poes[imt_str]):
                     logging.info(
