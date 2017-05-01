@@ -70,8 +70,7 @@ def plot(calc_id, other_id=None, sites='0'):
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
     if other is None:
         curves_by_rlz, mean_curves = get_hcurves_and_means(haz)
-        single_curve = len(curves_by_rlz) == 1 or not getattr(
-            oq, 'individual_curves', True)
+        single_curve = len(curves_by_rlz) == 1
         plt = make_figure(valid, oq.imtls, mean_curves,
                           {} if single_curve else curves_by_rlz, 'mean')
     else:

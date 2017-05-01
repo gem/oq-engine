@@ -74,7 +74,6 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
@@ -191,11 +190,7 @@ class OqParam(valid.ParamSet):
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
-            if not self.individual_curves:
-                raise ValueError(
-                    'For disaggregation the flag `individual_curves` '
-                    'must be true')
-            elif not self.poes_disagg and not self.iml_disagg:
+            if not self.poes_disagg and not self.iml_disagg:
                 raise ValueError('poes_disagg or iml_disagg must be set '
                                  'in the job.ini file')
             elif self.poes_disagg and self.iml_disagg:
