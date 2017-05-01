@@ -426,16 +426,23 @@ def export_hcurves_rlzs(ekey, dstore):
     return [fname]
 
 
-def gen_hcurves(dstore, sitecol, rlzs_assoc, individual_curves):
+def gen_hcurves(dstore, sitecol, rlzs_assoc, kind=''):
+    """
+    Extract the hazard curves from the datastore, possibly generating
+    on the fly the ones corresponding to the individual realizations
+    if kind == 'all'.
+    """
+    if 'hcurves' in dstore:
+        for k in sorted(dstore['hcurves']):
+            yield k, dstore['hcurves/' + k]
+
     # generate hcurves (actually probability maps)
-    getter = calc.PoesGetter(dstore, rlzs_assoc)
-    if individual_curves or len(getter.rlzs) == 1:
+    if 'poes' in dstore and (
+            kind == 'all' or len(rlzs_assoc.realizations) == 1):
+        getter = calc.PoesGetter(dstore, rlzs_assoc)
         for rlz in getter.rlzs:
             hcurves = getter.get(sitecol.sids, rlz.ordinal)
             yield 'rlz-%03d' % rlz.ordinal, hcurves
-    if 'hcurves' in dstore:
-        for kind in sorted(dstore['hcurves']):
-            yield kind, dstore['hcurves/' + kind]
 
 
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
@@ -451,25 +458,30 @@ def export_hcurves_csv(ekey, dstore):
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
     key, fmt = ekey
+    if '/' in key:
+        key, kind = key.rsplit('/', 1)
+        ekey = (key, fmt)
+    else:
+        kind = ''
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     for kind, hcurves in gen_hcurves(
-            dstore, sitecol, rlzs_assoc, oq.individual_curves):
+            dstore, sitecol, rlzs_assoc, kind):
         fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
-        if key == 'uhs':
+        if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
             uhs_curves = calc.make_uhs(
                 hcurves, oq.imtls, oq.poes, len(sitemesh))
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment)
             fnames.append(fname)
-        elif key == 'hmaps':
+        elif key == 'hmaps' and oq.poes and oq.hazard_maps:
             hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
             fnames.extend(
                 export_hazard_csv(ekey, fname, sitemesh, hmap, pdic, comment))
-        else:
+        elif key == 'hcurves':
             if export.from_db:  # called by export_from_db
                 fnames.extend(
                     export_hcurves_by_imt_csv(
@@ -556,7 +568,7 @@ def export_hcurves_xml_json(ekey, dstore):
                  if export_type == 'geojson' else
                  hazard_writers.HazardCurveXMLWriter)
     for kind, hcurves in gen_hcurves(
-            dstore, dstore['sitecol'], rlzs_assoc, oq.individual_curves):
+            dstore, dstore['sitecol'], rlzs_assoc):
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
