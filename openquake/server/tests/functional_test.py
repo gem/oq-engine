@@ -180,7 +180,7 @@ class EngineServerTestCase(unittest.TestCase):
         # remove output ID digits from the filename
         contentdisp = re.sub(r'\d', '', resp.headers['Content-Disposition'])
         self.assertEqual(
-            contentdisp, 'attachment; filename=output--hmaps-csv.zip')
+            contentdisp, 'attachment; filename=output--hazard_map-mean_.csv')
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
