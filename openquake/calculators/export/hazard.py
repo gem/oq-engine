@@ -597,7 +597,8 @@ def export_hcurves_xml_json(ekey, dstore):
 def export_hmaps_xml_json(ekey, dstore):
     export_type = ekey[1]
     oq = dstore['oqparam']
-    sitemesh = get_mesh(dstore['sitecol'])
+    sitecol = dstore['sitecol']
+    sitemesh = get_mesh(sitecol)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
     writercls = (hazard_writers.HazardMapGeoJSONWriter
@@ -605,7 +606,7 @@ def export_hmaps_xml_json(ekey, dstore):
                  hazard_writers.HazardMapXMLWriter)
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     nsites = len(sitemesh)
-    for kind in dstore['hcurves']:
+    for kind, hcurves in gen_hcurves(dstore, sitecol, rlzs_assoc):
         hcurves = dstore['hcurves/' + kind]
         hmaps = calc.make_hmap(
             hcurves, oq.imtls, oq.poes).convert(pdic, nsites)
