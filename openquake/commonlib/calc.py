@@ -64,9 +64,9 @@ class PoesGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore, rlzs_assoc):
+    def __init__(self, dstore, rlzs_assoc=None):
         self.dstore = dstore
-        self.rlzs_assoc = rlzs_assoc
+        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self._pmap_by_grp = None  # cache
         self.sids = None  # sids associated to the cache
         self.nbytes = 0
