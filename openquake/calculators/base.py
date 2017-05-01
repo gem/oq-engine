@@ -256,15 +256,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     def export(self, exports=None):
         """
         Export all the outputs in the datastore in the given export formats.
-        By default individual outputs are not exported if there are multiple
-        realizations; this is determined by the configuration flag
-        `individual_curves` (default false).
+        Individual outputs are not exported if there are multiple realizations.
 
         :returns: dictionary output_key -> sorted list of exported paths
         """
         num_rlzs = len(self.datastore['realizations'])
         exported = {}
-        individual_curves = self.oqparam.individual_curves or num_rlzs == 1
         if isinstance(exports, tuple):
             fmts = exports
         elif exports:  # is a string
@@ -278,14 +275,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 keys = set(ext5) | set(self.datastore)
         else:
             keys = set(self.datastore)
-        has_hcurves = 'poes' in self.datastore
+        has_hcurves = 'hcurves' in self.datastore or 'poes' in self.datastore
         if has_hcurves:
             keys.add('hcurves')
         for fmt in fmts:
             if not fmt:
                 continue
             for key in sorted(keys):  # top level keys
-                if 'rlzs' in key and not individual_curves:
+                if 'rlzs' in key and num_rlzs > 1:
                     continue  # skip individual curves
                 self._export((key, fmt), exported)
             if has_hcurves and self.oqparam.hazard_maps:

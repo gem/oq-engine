@@ -126,7 +126,7 @@ class PoesGetter(object):
         """
         return self.combine_pmaps(self.get_pmap_by_grp(sids))
 
-    def get_pmap_by_grp(self, sids):
+    def get_pmap_by_grp(self, sids=None):
         """
         :param sids: an array of site IDs
         :returns: a dictionary of probability maps by source group
@@ -149,7 +149,7 @@ class PoesGetter(object):
                 self.nbytes += pmap.nbytes
         else:
             # make sure the cache refer to the right sids
-            assert (sids == self.sids).all()
+            assert sids is None or (sids == self.sids).all()
         return self._pmap_by_grp
 
 # ######################### hazard maps ################################### #
