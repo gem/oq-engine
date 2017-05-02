@@ -1,11 +1,11 @@
 QA test for disaggregation case_2
 =================================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85603.hdf5 Tue Feb 14 15:49:02 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_7645.hdf5 Wed Apr 26 15:56:34 2017
+engine_version                                  2.4.0-git9336bd0        
+hazardlib_version                               0.24.0-gita895d4c       
+=============================================== ========================
 
 num_sites = 2, sitecol = 863 B
 
@@ -44,8 +44,8 @@ Composite source model
 ============== ====== ========================================== =============== ================
 smlt_path      weight source_model_file                          gsim_logic_tree num_realizations
 ============== ====== ========================================== =============== ================
-source_model_1 0.500  `source_model_1.xml <source_model_1.xml>`_ simple(2,1)     2/2             
-source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(2,1)     2/2             
+source_model_1 0.500  `source_model_1.xml <source_model_1.xml>`_ simple(1,2)     2/2             
+source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(1,2)     2/2             
 ============== ====== ========================================== =============== ================
 
 Required parameters per tectonic region type
@@ -54,8 +54,8 @@ Required parameters per tectonic region type
 grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
 0      YoungsEtAl1997SSlab()                 rrup        vs30                    hypo_depth mag   
-1      BooreAtkinson2008() ChiouYoungs2008() rrup rjb rx vs30 z1pt0 vs30measured mag dip rake ztor
-2      BooreAtkinson2008() ChiouYoungs2008() rrup rjb rx vs30 z1pt0 vs30measured mag dip rake ztor
+1      BooreAtkinson2008() ChiouYoungs2008() rjb rx rrup vs30 vs30measured z1pt0 dip ztor rake mag
+2      BooreAtkinson2008() ChiouYoungs2008() rjb rx rrup vs30 vs30measured z1pt0 dip ztor rake mag
 ====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -90,34 +90,29 @@ source_model_2.xml 2      Active Shallow Crust 1           1420         1,420
 
 Informational data
 ------------------
-=========================================== ============
-count_eff_ruptures_max_received_per_task    1,434       
-count_eff_ruptures_num_tasks                14          
-count_eff_ruptures_sent.gsims               2,423       
-count_eff_ruptures_sent.monitor             16,954      
-count_eff_ruptures_sent.sources             17,923      
-count_eff_ruptures_sent.srcfilter           10,332      
-count_eff_ruptures_tot_received             20,065      
-hazard.input_weight                         1,964       
-hazard.n_imts                               1           
-hazard.n_levels                             19          
-hazard.n_realizations                       4           
-hazard.n_sites                              2           
-hazard.n_sources                            4           
-hazard.output_weight                        152         
-hostname                                    gem-tstation
-require_epsilons                            False       
-=========================================== ============
+============================== =================================================================================
+count_eff_ruptures.received    tot 16.81 KB, max_per_task 1.2 KB                                                
+count_eff_ruptures.sent        sources 46.35 KB, monitor 13.77 KB, srcfilter 9.73 KB, gsims 2.37 KB, param 910 B
+hazard.input_weight            1,964                                                                            
+hazard.n_imts                  1 B                                                                              
+hazard.n_levels                19 B                                                                             
+hazard.n_realizations          4 B                                                                              
+hazard.n_sites                 2 B                                                                              
+hazard.n_sources               4 B                                                                              
+hazard.output_weight           152                                                                              
+hostname                       tstation.gem.lan                                                                 
+require_epsilons               0 B                                                                              
+============================== =================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      2         AreaSource        1,815        0.0       1         0        
-1      3         AreaSource        1,815        0.0       1         0        
 1      1         AreaSource        1,815        0.0       1         0        
 2      1         SimpleFaultSource 1,420        0.0       1         0        
+1      3         AreaSource        1,815        0.0       1         0        
+0      2         AreaSource        1,815        0.0       1         0        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -133,7 +128,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.320 0.352  0.092 0.970 14       
+count_eff_ruptures 0.231 0.357  0.021 0.897 14       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -141,12 +136,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         4.474     0.0       14    
-managing sources                 0.112     0.0       1     
-reading composite source model   0.067     0.0       1     
-filtering composite source model 0.004     0.0       1     
+total count_eff_ruptures         3.235     0.0       14    
+reading composite source model   0.038     0.0       1     
+filtering composite source model 0.003     0.0       1     
 store source_info                0.001     0.0       1     
-aggregate curves                 2.842E-04 0.0       14    
-saving probability maps          4.601E-05 0.0       1     
-reading site collection          3.123E-05 0.0       1     
+aggregate curves                 2.942E-04 0.0       14    
+managing sources                 8.535E-05 0.0       1     
+saving probability maps          4.506E-05 0.0       1     
+reading site collection          3.147E-05 0.0       1     
 ================================ ========= ========= ======
