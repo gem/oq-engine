@@ -1,11 +1,11 @@
 Event Based from NonParametric source
 =====================================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85585.hdf5 Tue Feb 14 15:48:18 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_7626.hdf5 Wed Apr 26 15:55:53 2017
+engine_version                           2.4.0-git9336bd0        
+hazardlib_version                        0.24.0-gita895d4c       
+======================================== ========================
 
 num_sites = 3, sitecol = 917 B
 
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rrup rjb rx vs30 z1pt0 vs30measured ztor mag rake dip
+0      ChiouYoungs2008() rjb rx rrup vs30 vs30measured z1pt0 dip rake ztor mag
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -62,26 +62,12 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008(): ['<0,b1~b1,w=1.0>']>
 
-Informational data
-------------------
-====================== ============
-hazard.input_weight    4.000       
-hazard.n_imts          1           
-hazard.n_levels        7           
-hazard.n_realizations  1           
-hazard.n_sites         3           
-hazard.n_sources       1           
-hazard.output_weight   21          
-hostname               gem-tstation
-require_epsilons       False       
-====================== ============
-
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.081     0.0       1     
-filtering composite source model 0.002     0.0       1     
-reading site collection          4.768E-05 0.0       1     
+reading composite source model   0.036     0.0       1     
+filtering composite source model 0.001     0.0       1     
+reading site collection          3.457E-05 0.0       1     
 ================================ ========= ========= ======

@@ -498,7 +498,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.core_task.__func__, self.gen_args(ruptures_by_grp)
         ).submit_all()
         self.gmdata = {}
-        acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
+        acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
             rlz.ordinal: ProbabilityMap(L, 1) for rlz in rlzs})
         save_gmdata(self, len(rlzs))
         return acc
@@ -535,14 +535,13 @@ class EventBasedCalculator(ClassicalCalculator):
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations
             # involves a "small" number of sites (<= 65,536)
-            weights = (None if self.oqparam.number_of_logic_tree_samples
-                       else [rlz.weight for rlz in rlzs])
-            pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
-            for kind, stat in pstats.compute(
-                    self.sitecol.sids, list(result.values())):
-                if kind == 'mean' and not self.oqparam.mean_hazard_curves:
-                    continue
-                self.datastore['hcurves/' + kind] = stat
+            weights = [rlz.weight for rlz in rlzs]
+            hstats = self.oqparam.hazard_stats()
+            if len(hstats) and len(rlzs) > 1:
+                pstats = PmapStats(hstats, weights)
+                for kind, stat in pstats.compute(
+                        self.sitecol.sids, list(result.values())):
+                    self.datastore['hcurves/' + kind] = stat
         if os.path.exists(self.datastore.ext5path):
             self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
@@ -551,7 +550,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
             # one could also set oq.number_of_logic_tree_samples = 0
-            self.cl = ClassicalCalculator(oq, self.monitor)
+            self.cl = ClassicalCalculator(oq, self.monitor('classical'))
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
