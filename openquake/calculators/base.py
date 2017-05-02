@@ -137,7 +137,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
-    post_processor = False
 
     @property
     def taxonomies(self):
@@ -436,9 +435,6 @@ class HazardCalculator(BaseCalculator):
         the previous calculation; if not, read the inputs directly.
         """
         precalc_id = self.oqparam.hazard_calculation_id
-        if self.post_processor and precalc_id is None:
-            raise RuntimeError('%s requires a --hazard_calculation_id!' %
-                               self.__class__.__name__)
         job_info = {}
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
