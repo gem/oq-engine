@@ -58,7 +58,7 @@ def run_precalc(pkgfile, job_ini):
     job_ini = os.path.join(os.path.dirname(pkgfile), job_ini)
     out = subprocess.check_output(
         [sys.executable, '-m', 'openquake.commands', 'run', job_ini])
-    return re.search('calc_(\d+)\.hdf5', out).group(1)
+    return re.search(b'calc_(\d+)\.hdf5', out).group(1)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
