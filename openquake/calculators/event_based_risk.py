@@ -637,3 +637,5 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.set_attrs(
                     'all_loss_ratios/' + name,
                     nbytes=nbytes, bytes_per_asset=nbytes / self.A)
+            logging.warn('To get the loss maps run again the calculation '
+                         'with --hc=%s', self.datastore.calc_id)
