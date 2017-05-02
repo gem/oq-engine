@@ -210,7 +210,6 @@ build_loss_maps.shared_dir_on = config.SHARED_DIR_ON
 
 class EbrPostCalculator(base.RiskCalculator):
     pre_calculator = 'event_based_risk'
-    post_processor = True
 
     def cb_inputs(self, table):
         loss_table = self.datastore[table]
