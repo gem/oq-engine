@@ -166,11 +166,11 @@ class PoesGetter(object):
         if self.sids is None:
             self.sids = self.dstore['sitecol'].sids
         if not kind:  # use default
-            if len(rlzs) == 1:
-                yield 'rlz-000', self.get(self.sids, 0)
-            elif 'hcurves' in self.dstore:
+            if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
                     yield k, self.dstore['hcurves/' + k]
+            elif len(rlzs) == 1:
+                yield 'rlz-000', self.get(self.sids, 0)
             return
         if 'poes' in self.dstore and kind in ('rlzs', 'all'):
             for rlz in rlzs:
