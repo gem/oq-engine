@@ -259,11 +259,14 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
+            self.datastore.parent.close()  # this is essential to avoid
+            # OSError: Can't read data (Wrong b-tree signature)
             parallel.Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
                 self.oqparam.concurrent_tasks
             ).reduce(self.save_loss_maps)
+            self.datastore.parent.open()
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
