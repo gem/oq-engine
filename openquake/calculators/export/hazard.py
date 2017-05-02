@@ -357,13 +357,10 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
     key, fmt = ekey
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
               'uhs': 'hazard_uhs'}[key]
-    if kind.startswith(('rlz-', 'mean')):
-        fname = dstore.build_fname(prefix, kind, fmt)
-    elif kind.startswith('quantile-'):
-        # strip the 7 characters 'hazard_'
+    if kind.startswith('quantile-'):  # strip the 7 characters 'hazard_'
         fname = dstore.build_fname('quantile_' + prefix[7:], kind[9:], fmt)
     else:
-        raise ValueError('Unknown kind of hazard curve: %s' % kind)
+        fname = dstore.build_fname(prefix, kind, fmt)
     return fname
 
 
@@ -443,6 +440,8 @@ def get_metadata(realizations, kind):
         metadata['quantile_value'] = float(kind[9:])
     elif kind == 'mean':
         metadata['statistics'] = 'mean'
+    elif kind == 'max':
+        metadata['statistics'] = 'max'
     return metadata
 
 
@@ -751,11 +750,11 @@ def export_gmf_data_csv(ekey, dstore):
         etags, gmfs_ = calc.get_gmfs(dstore)
         sitemesh = get_mesh(dstore['sitecol'])
         writer = writers.CsvWriter(fmt='%.5f')
-        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E)
-            for imt in imtls:
+        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, I, E)
+            for imti, imt in enumerate(imtls):
                 gmfs = numpy.zeros(len(gmfa), dt)
-                for i in range(len(gmfa)):
-                    gmfs[i] = tuple(gmfa[imt][i])
+                for e, event in enumerate(dt.names):
+                    gmfs[event] = gmfa[:, imti, e]
                 dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)

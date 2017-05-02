@@ -21,9 +21,10 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 +## Documentation
 -## Documentation (master tree)
 -->
-Jenkins (Python 2): [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
 
-Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
+| Jenkins (Python 2) | Travis CI (Python 3) |
+|       :---:        |         :---:        |
+| [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/) | [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine) |
 
 ### Current stable
 

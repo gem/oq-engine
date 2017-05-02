@@ -20,7 +20,7 @@ import os
 import sys
 import abc
 import pdb
-import socket
+import getpass
 import logging
 import operator
 import traceback
@@ -34,7 +34,7 @@ from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib import riskinput, __version__ as engine_version
-from openquake.commonlib import readinput, datastore, source, calc
+from openquake.commonlib import readinput, datastore, source, calc, logs
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -132,6 +132,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
+    from_engine = False  # set by engine.run_calc
     sitecol = datastore.persistent_attribute('sitecol')
     assetcol = datastore.persistent_attribute('assetcol')
     performance = datastore.persistent_attribute('performance')
@@ -145,11 +146,18 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         return self.datastore['assetcol/taxonomies'].value
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
-        self.monitor = monitor
+        self._monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
-        self.monitor.calc_id = self.datastore.calc_id
-        self.monitor.hdf5path = self.datastore.hdf5path
         self.oqparam = oqparam
+
+    def monitor(self, operation, **kw):
+        """
+        Return a new Monitor instance
+        """
+        mon = self._monitor(operation, hdf5path=self.datastore.hdf5path)
+        self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
+        vars(mon).update(kw)
+        return mon
 
     def save_params(self, **kw):
         """
@@ -366,6 +374,19 @@ class HazardCalculator(BaseCalculator):
         """
         return len(self.assetcol)
 
+        """
+        Build a child of the current calculation and change the datastore
+        to the child's one.
+        """
+        oq = self.oqparam
+            new_id = logs.dbcmd(
+                'create_job', oq.calculation_mode, oq.description,
+                getpass.getuser(), datastore.DATADIR, oq.hazard_calculation_id)
+        else:
+            new_id = None
+        self.datastore.close()
+        self.__init__(self.oqparam, calc_id=new_id)  # build a new datastore
+        self.datastore.new = True
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
@@ -446,10 +467,9 @@ class HazardCalculator(BaseCalculator):
             if 'source' in self.oqparam.inputs:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
-        job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        self.monitor.save_info(job_info)
+        self._monitor.save_info(job_info)
         try:
             self.csm_info = self.datastore['csm_info']
         except KeyError:
@@ -601,8 +621,10 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, hazards_by_rlz, eps=numpy.zeros(0)):
+    def build_riskinputs(self, kind, hazards_by_rlz, eps=numpy.zeros(0)):
         """
+        :param kind:
+            kind of hazard getter, can be 'poe' or 'gmf'
         :param hazards_by_rlz:
             a dictionary rlz -> IMT -> array of length num_sites
         :param eps:
@@ -638,8 +660,9 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.PoeGetter(0, {None: rlzs}, hazards_by_rlz,
-                                        indices, list(imtls)),
+                    riskinput.HazardGetter(
+                        kind, 0, {None: rlzs},
+                        hazards_by_rlz, indices, list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
@@ -656,7 +679,11 @@ class RiskCalculator(HazardCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = ((riskinput, self.riskmodel, self.param, self.monitor)
-                    for riskinput in self.riskinputs)
-        res = Starmap(self.core_task.__func__, all_args).reduce()
+        mon = self.monitor('risk')
+        all_args = [(riskinput, self.riskmodel, self.param, mon)
+                    for riskinput in self.riskinputs]
+        res = Starmap(self.core_task.__func__, all_args).reduce(self.combine)
         return res
+
+    def combine(self, acc, res):
+        return acc + res

@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Saved *a lot* of memory in the computation of the hazard curves and stats
+  * Renamed the parameter `all_losses` to `asset_loss_table`
+  * Added an experimental version of the event based risk calculator which
+    is able to use GMFs imported from an external file
+  * Added a `max_curve` functionality to compute the upper limit of the
+    hazard curves amongst realizations
   * Raised an error if the user specifies `quantile_loss_curves`
     or `conditional_loss_poes` in a classical_damage calculation
   * Added a CSV exporter for the benefit-cost-ratio calculator
