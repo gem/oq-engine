@@ -208,7 +208,6 @@ def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
 build_loss_maps.shared_dir_on = config.SHARED_DIR_ON
 
 
-@base.calculators.add('ebrisk_postproc')
 class EbrPostCalculator(base.RiskCalculator):
     pre_calculator = 'event_based_risk'
     post_processor = True
@@ -252,19 +251,8 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
-            # NB: a regular Starmap does not work on a single machine since
-            # the 'all_loss_ratios' dataset is not seen by the
-            # children (looks like a bug in hdf5); we may use a Processmap
-            # instead, but sometimes it breaks on Jenkins; so we use
-            # the safest choice, Sequential
-            # an alternative would be to force
-            # self.oqparam.hazard_calculation_id not None
-            Starmap = (parallel.Sequential
-                       if hasattr(self.datastore, 'new') and
-                       parallel.oq_distribute() == 'futures'
-                       else parallel.Starmap)
             self.datastore.close()  # this is essential
-            Starmap.apply(
+            parallel.Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
                 self.oqparam.concurrent_tasks
@@ -489,6 +477,14 @@ class EbriskCalculator(base.RiskCalculator):
         if self.oqparam.hazard_curves_from_gmfs:
             logging.warn('To compute the hazard curves change '
                          'calculation_mode = event_based')
+
+        if (self.oqparam.hazard_calculation_id and 'all_loss_ratios' in
+                self.datastore.parent):
+            EbrPostCalculator(
+                self.oqparam, self._monitor, calc_id=self.datastore.calc_id
+            ).run()
+            return
+
         with self.monitor('reading ruptures', autoflush=True):
             ruptures_by_grp = (
                 self.precalc.result if self.precalc
