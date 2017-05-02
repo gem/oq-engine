@@ -150,7 +150,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore, self.precalc)
         rlzs = self.csm_info.get_rlzs_assoc().realizations
         self.riskinputs = self.build_riskinputs(
-            {rlz: gmf for rlz, gmf in zip(rlzs, gmfs)})
+            'gmf', {rlz: gmf for rlz, gmf in zip(rlzs, gmfs)})
         self.param['taxonomies'] = sorted(self.taxonomies)
 
     def post_execute(self, result):

@@ -57,7 +57,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     L = len(riskmodel.loss_types)
     R = len(riskinput.rlzs)
     I = param['insured_losses'] + 1
-    all_losses = param['all_losses']
+    asset_loss_table = param['asset_loss_table']
     lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
                   losses_by_taxon=lbt, all_losses=AccumDict(accum={}))
@@ -77,7 +77,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
             agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
                 result['agg'][:, r, l + L * i] += agglosses[:, i]
-            if all_losses:
+            if asset_loss_table:
                 aids = [asset.ordinal for asset in outputs.assets]
                 result['all_losses'][l, r] += AccumDict(zip(aids, losses))
     return result
@@ -112,10 +112,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore, self.precalc)
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
                          for rlz in self.rlzs_assoc.realizations}
-        self.riskinputs = self.build_riskinputs(hazard_by_rlz, eps)
+        self.riskinputs = self.build_riskinputs('gmf', hazard_by_rlz, eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
-        self.param['all_losses'] = self.oqparam.all_losses
+        self.param['asset_loss_table'] = self.oqparam.asset_loss_table
 
     def post_execute(self, result):
         """
@@ -156,7 +156,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             # losses by event
             self.datastore['losses_by_event'] = res  # shape (E, R, LI)
 
-            if self.oqparam.all_losses:
+            if self.oqparam.asset_loss_table:
                 array = numpy.zeros((A, E, R), loss_dt)
                 for (l, r), losses_by_aid in result['all_losses'].items():
                     for aid in losses_by_aid:

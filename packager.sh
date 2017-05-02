@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_DEPENDS="oq-libs|deb oq-hazardlib|src"
+GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub oq-hazardlib|src"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -346,6 +346,8 @@ _devtest_innervm_run () {
 
             add_local_pkg_repo "$dep"
             ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+        elif [ "$dep_type" = "sub" ]; then
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -464,6 +466,8 @@ _builddoc_innervm_run () {
 
             add_local_pkg_repo "$dep"
             ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+        elif [ "$dep_type" = "sub" ]; then
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -531,6 +535,10 @@ _pkgtest_innervm_run () {
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        # if the deb is a subpackage we skip source check
+        if [ "$dep_type" == "sub" ]; then
+            continue
+        fi
 
         add_local_pkg_repo "$dep"
     done
@@ -844,6 +852,10 @@ devtest_run () {
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        # if the deb is a subpackage we skip source check
+        if [ "$dep_type" == "sub" ]; then
+            continue
+        fi
         found=0
         branch_cur="$branch"
         for repo in $repos; do
@@ -947,7 +959,7 @@ builddoc_run () {
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
-        if [ "$dep_type" = "deb" ]; then
+        if [ "$dep_type" != "src" ]; then
             continue
         fi
         found=0

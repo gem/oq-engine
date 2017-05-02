@@ -1,11 +1,11 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85568.hdf5 Tue Feb 14 15:43:02 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_7610.hdf5 Wed Apr 26 15:55:36 2017
+engine_version                                  2.4.0-git9336bd0        
+hazardlib_version                               0.24.0-gita895d4c       
+=============================================== ========================
 
 num_sites = 3, sitecol = 917 B
 
@@ -75,24 +75,19 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2430         2
 
 Informational data
 ------------------
-=========================================== ============
-count_eff_ruptures_max_received_per_task    1,687       
-count_eff_ruptures_num_tasks                2           
-count_eff_ruptures_sent.gsims               319,800     
-count_eff_ruptures_sent.monitor             2,928       
-count_eff_ruptures_sent.sources             9,268       
-count_eff_ruptures_sent.srcfilter           1,532       
-count_eff_ruptures_tot_received             3,374       
-hazard.input_weight                         243         
-hazard.n_imts                               3           
-hazard.n_levels                             36          
-hazard.n_realizations                       3           
-hazard.n_sites                              3           
-hazard.n_sources                            1           
-hazard.output_weight                        324         
-hostname                                    gem-tstation
-require_epsilons                            False       
-=========================================== ============
+============================== =================================================================================
+count_eff_ruptures.received    tot 2.9 KB, max_per_task 1.45 KB                                                 
+count_eff_ruptures.sent        gsims 312.3 KB, sources 19.72 KB, monitor 2.46 KB, srcfilter 1.45 KB, param 130 B
+hazard.input_weight            243                                                                              
+hazard.n_imts                  3 B                                                                              
+hazard.n_levels                36 B                                                                             
+hazard.n_realizations          3 B                                                                              
+hazard.n_sites                 3 B                                                                              
+hazard.n_sources               1 B                                                                              
+hazard.output_weight           324                                                                              
+hostname                       tstation.gem.lan                                                                 
+require_epsilons               0 B                                                                              
+============================== =================================================================================
 
 Slowest sources
 ---------------
@@ -114,7 +109,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.757 0.582  0.345 1.169 2        
+count_eff_ruptures 0.591 0.407  0.303 0.879 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -122,12 +117,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         1.514     0.0       2     
-reading composite source model   0.040     0.0       1     
-managing sources                 0.040     0.0       1     
-filtering composite source model 0.002     0.0       1     
+total count_eff_ruptures         1.182     0.0       2     
+reading composite source model   0.022     0.0       1     
 store source_info                0.001     0.0       1     
-reading site collection          2.108E-04 0.0       1     
-aggregate curves                 6.127E-05 0.0       2     
-saving probability maps          4.649E-05 0.0       1     
+filtering composite source model 9.725E-04 0.0       1     
+reading site collection          2.017E-04 0.0       1     
+managing sources                 1.323E-04 0.0       1     
+saving probability maps          4.792E-05 0.0       1     
+aggregate curves                 4.721E-05 0.0       2     
 ================================ ========= ========= ======

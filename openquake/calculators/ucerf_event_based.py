@@ -22,7 +22,6 @@ import time
 import math
 import os.path
 import logging
-import socket
 import collections
 import h5py
 import numpy
@@ -762,7 +761,6 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-        self.monitor.save_info(dict(hostname=socket.gethostname()))
         self.csm = get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
@@ -831,7 +829,7 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     ri = riskinput.RiskInputFromRuptures(getter)
     res.append(event_based_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
-    res.num_events = len(ri.eids)
+    res.num_events = len(ri.hazard_getter.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
     res.events_by_grp = ruptures_by_grp.events_by_grp
@@ -865,6 +863,7 @@ class UCERFRiskCalculator(EbriskCalculator):
         imts = list(oq.imtls)
         ela_dt, elt_dt = build_el_dtypes(
             self.riskmodel.loss_types, oq.insured_losses)
+        monitor = self.monitor('compute_losses')
         for sm in self.csm.source_models:
             ssm = self.csm.get_model(sm.ordinal)
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
@@ -878,7 +877,7 @@ class UCERFRiskCalculator(EbriskCalculator):
                              insured_losses=oq.insured_losses)
                 yield (ssm, self.src_filter, param,
                        self.riskmodel, imts, oq.truncation_level,
-                       correl_model, min_iml, self.monitor)
+                       correl_model, min_iml, monitor)
 
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)

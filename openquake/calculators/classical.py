@@ -20,7 +20,7 @@ from __future__ import division
 import logging
 import operator
 import collections
-from functools import partial, reduce
+from functools import partial
 import numpy
 
 from openquake.baselib import parallel
@@ -278,7 +278,7 @@ class PSHACalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        monitor = self.monitor.new(
+        monitor = self.monitor(
             self.core_task.__name__,
             truncation_level=oq.truncation_level,
             imtls=oq.imtls,
@@ -293,9 +293,9 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            res = parallel.Starmap(
+            ires = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
-        acc = reduce(self.agg_dicts, res, self.zerodict())
+        acc = ires.reduce(self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
@@ -325,9 +325,13 @@ class PSHACalculator(base.HazardCalculator):
                 param = dict(
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-                for block in self.csm.split_sources(
-                        sg.sources, self.src_filter, maxweight):
-                    yield block, self.src_filter, gsims, param, monitor
+                if sg.src_interdep == 'mutex':  # do not split the group
+                    self.csm.add_infos(sg.sources)
+                    yield sg, self.src_filter, gsims, param, monitor
+                else:
+                    for block in self.csm.split_sources(
+                            sg.sources, self.src_filter, maxweight):
+                        yield block, self.src_filter, gsims, param, monitor
 
     def store_source_info(self, infos):
         # save the calculation times per each source
@@ -364,29 +368,24 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
+def build_hcurves_and_stats(hcgetter, pstats, monitor):
     """
-    :param pmap_by_grp: dictionary of probability maps by source group ID
-    :param sids: array of site IDs
+    :param hcgetter: an :class:`openquake.commonlib.calc.HazardCurveGetter`
     :param pstats: instance of PmapStats
-    :param rlzs_assoc: instance of RlzsAssoc
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    if sum(len(pmap) for pmap in pmap_by_grp.values()) == 0:  # all empty
-        return {}
-    rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
-        pmaps = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
+        pmaps = hcgetter.get_pmaps(hcgetter.sids)
     pmap_by_kind = {}
-    if len(rlzs) > 1:
+    if len(hcgetter.rlzs) > 1 and pstats.names:
         with monitor('compute stats'):
-            pmap_by_kind.update(pstats.compute(sids, pmaps))
+            pmap_by_kind.update(pstats.compute(hcgetter.sids, pmaps))
     if monitor.individual_curves:
-        for rlz, pmap in zip(rlzs, pmaps):
+        for rlz, pmap in zip(hcgetter.rlzs, pmaps):
             pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap
     return pmap_by_kind
 
@@ -422,24 +421,19 @@ class ClassicalCalculator(PSHACalculator):
                     'hcurves/rlz-%03d' % rlz.ordinal, F32,
                     (N, L, 1),  attrs=attrs)
                 totbytes += nbytes
-        if oq.mean_hazard_curves and len(rlzs) > 1:
-            self.datastore.create_dset(
-                'hcurves/mean', F32, (N, L, 1), attrs=attrs)
-            totbytes += nbytes
-        for q in oq.quantile_hazard_curves:
-            self.datastore.create_dset(
-                'hcurves/quantile-%s' % q, F32, (N, L, 1), attrs=attrs)
-            totbytes += nbytes
+        if len(rlzs) > 1:
+            for name, stat in oq.hazard_stats():
+                self.datastore.create_dset(
+                    'hcurves/' + name, F32, (N, L, 1), attrs=attrs)
+                totbytes += nbytes
         if 'hcurves' in self.datastore:
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
 
         logging.info('Building hazard curves')
-        with self.monitor('submitting poes', autoflush=True):
-            res = parallel.Starmap(
-                build_hcurves_and_stats,
-                list(self.gen_args())).submit_all()
-        nbytes = reduce(self.save_hcurves, res, AccumDict())
+        nbytes = parallel.Starmap(
+            self.core_task.__func__, list(self.gen_args())
+        ).reduce(self.save_hcurves)
         return nbytes
 
     def gen_args(self):
@@ -447,18 +441,18 @@ class ClassicalCalculator(PSHACalculator):
         :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
         :yields: arguments for the function build_hcurves_and_stats
         """
-        monitor = self.monitor.new(
+        monitor = self.monitor(
             'build_hcurves_and_stats',
             individual_curves=self.oqparam.individual_curves)
-        weights = (None if self.oqparam.number_of_logic_tree_samples
-                   else [rlz.weight for rlz in self.rlzs_assoc.realizations])
-        pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
+        hcgetter = calc.HazardCurveGetter(
+            self.datastore, self.oqparam.imtls, self.rlzs_assoc)
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        pstats = PmapStats(self.oqparam.hazard_stats(), weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
-            pg = {}
-            for grp in self.datastore['poes']:
-                pg[grp] = self.datastore['poes/' + grp].filter(block.sids)
-            yield pg, block.sids, pstats, self.rlzs_assoc, monitor
+            newgetter = hcgetter.new(block.sids)  # read the probability maps
+            if newgetter.nbytes > 0:  # some probability map is nonzero
+                yield newgetter, pstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
@@ -469,10 +463,7 @@ class ClassicalCalculator(PSHACalculator):
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
         with self.monitor('saving hcurves and stats', autoflush=True):
-            oq = self.oqparam
             for kind in pmap_by_kind:
-                if kind == 'mean' and not oq.mean_hazard_curves:
-                    continue  # do not save the mean curves
                 pmap = pmap_by_kind[kind]
                 if pmap:
                     key = 'hcurves/' + kind
