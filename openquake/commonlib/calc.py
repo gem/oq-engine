@@ -68,7 +68,7 @@ class PoesGetter(object):
         self.dstore = dstore
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self._pmap_by_grp = None  # cache
-        self.sids = None  # sids associated to the cache
+        self.sids = None  # to be set
         self.nbytes = 0
 
     def new(self, sids):
@@ -151,6 +151,35 @@ class PoesGetter(object):
             # make sure the cache refer to the right sids
             assert sids is None or (sids == self.sids).all()
         return self._pmap_by_grp
+
+    def items(self, kind=''):
+        """
+        Extract probability maps from the datastore, possibly generating
+        on the fly the ones corresponding to the individual realizations.
+        Yields pairs (tag, pmap).
+
+        :param kind:
+            the kind of PoEs to extract; if not given, returns the realization
+            if there is only one or the statistics otherwise.
+        """
+        rlzs = self.rlzs
+        if self.sids is None:
+            self.sids = self.dstore['sitecol'].sids
+        if not kind:  # use default
+            if len(rlzs) == 1:
+                yield 'rlz-000', self.get(self.sids, 0)
+            elif 'hcurves' in self.dstore:
+                for k in sorted(self.dstore['hcurves']):
+                    yield k, self.dstore['hcurves/' + k]
+            return
+        if 'poes' in self.dstore and kind in ('rlzs', 'all'):
+            for rlz in rlzs:
+                hcurves = self.get(self.sids, rlz.ordinal)
+                yield 'rlz-%03d' % rlz.ordinal, hcurves
+        if 'hcurves' in self.dstore and kind in ('stats', 'all'):
+            for k in sorted(self.dstore['hcurves']):
+                yield k, self.dstore['hcurves/' + k]
+
 
 # ######################### hazard maps ################################### #
 
