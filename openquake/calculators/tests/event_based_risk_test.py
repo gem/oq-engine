@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import unittest
+import subprocess
 import numpy
 from nose.plugins.attrib import attr
 
@@ -49,6 +51,16 @@ def check_agg_loss_table(dstore, loss_dt):
     numpy.testing.assert_allclose(data1, data2, 1E-6)
 
 
+def run_precalc(pkgfile, job_ini):
+    """
+    Returns the parent calculation ID as a string
+    """
+    job_ini = os.path.join(os.path.dirname(pkgfile), job_ini)
+    out = subprocess.check_output(
+        [sys.executable, '-m', 'openquake.commands', 'run', job_ini])
+    return re.search('calc_(\d+)\.hdf5', out).group(1)
+
+
 class EventBasedRiskTestCase(CalculatorTestCase):
 
     def assert_stats_ok(self, pkg, job_ini, individual_curves='false'):
@@ -73,12 +85,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini')
-        hc_id = self.calc.datastore.calc_id
+        parent_id = run_precalc(case_1.__file__, 'job.ini')
         self.run_calc(case_1.__file__, 'job.ini',
                       exports='csv', individual_curves='false',
-                      hazard_calculation_id=str(hc_id),
-                      calculation_mode='ebrisk_postproc')
+                      hazard_calculation_id=parent_id)
         ekeys = [('agg_curve-stats', 'xml')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
@@ -150,8 +160,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='xml', individual_curves='false',
-                      hazard_calculation_id=str(hc_id),
-                      calculation_mode='ebrisk_postproc')
+                      hazard_calculation_id=str(hc_id))
         [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -170,15 +179,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
+        parent_id = run_precalc(occupants.__file__, 'job.ini')
         self.run_calc(occupants.__file__, 'job.ini',
-                      exports='xml', individual_curves='true')
-        hc_id = self.calc.datastore.calc_id
-        out = self.run_calc(occupants.__file__, 'job.ini',
-                            exports='xml', individual_curves='false',
-                            hazard_calculation_id=str(hc_id),
-                            calculation_mode='ebrisk_postproc')
+                      hazard_calculation_id=parent_id)
         fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore) + \
-                 out['agg_curve-rlzs', 'xml']
+                 export(('agg_curve-rlzs', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
@@ -221,8 +226,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_master.__file__, 'job.ini',
-                      exports='csv', hazard_calculation_id=str(hc_id),
-                      calculation_mode='ebrisk_postproc')
+                      exports='csv', hazard_calculation_id=str(hc_id))
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         assert fnames, 'loss_maps-rlzs not exported?'
         if REFERENCE_OS:
