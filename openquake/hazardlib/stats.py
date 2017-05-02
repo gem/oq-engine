@@ -78,6 +78,38 @@ def max_curve(values, weights=None):
     return numpy.max(values, axis=0)
 
 
+def compute_pmap_stats(pmaps, stats, weights):
+    """
+    :param pmaps:
+        a list of R probability maps
+    :param stats:
+        a sequence of S statistic functions
+    :param weights:
+        a list of R weights
+    :returns:
+        a probability map with S internal values
+    """
+    sids = set()
+    L = pmaps[0].shape_y
+    for pmap in pmaps:
+        sids.update(pmap)
+        assert pmap.shape_y == L, (pmap.shape_y, L)
+    if len(sids) == 0:
+        raise ValueError('All empty probability maps!')
+    sids = numpy.array(sorted(sids), numpy.float32)
+    nstats = len(stats)
+    pmap = pmaps[0].__class__.build(L, nstats, sids)
+    curves = numpy.zeros((len(pmaps), len(sids), L), numpy.float64)
+    for i, pmap in enumerate(pmaps):
+        for j, sid in enumerate(sids):
+            if sid in pmap:
+                curves[i][j] = pmap[sid].array[:, 0]
+    for i, array in enumerate(compute_stats(curves, stats, weights)):
+        for j, sid in numpy.ndenumerate(sids):
+            pmap[sid].array[:, i] = array[j]
+    return pmap
+
+
 # NB: this is a function linear in the array argument
 def compute_stats(array, stats, weights):
     """
