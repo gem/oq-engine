@@ -60,6 +60,9 @@ class ClassicalTestCase(CalculatorTestCase):
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
 
+        # check npz export
+        export(('hcurves', 'npz'), self.calc.datastore)
+
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -221,6 +224,10 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
             'expected/hazard_map-mean-0.2-PGA.geojson', fnames[4])
         self.assertEqualFiles(
             'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
+
+        # npz exports
+        export(('hmaps', 'npz'), self.calc.datastore)
+        export(('uhs', 'npz'), self.calc.datastore)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
