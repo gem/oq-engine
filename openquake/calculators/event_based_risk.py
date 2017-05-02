@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.stats import compute_stats
-from openquake.commonlib import config
+from openquake.commonlib import config, datastore
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -209,7 +209,14 @@ build_loss_maps.shared_dir_on = config.SHARED_DIR_ON
 
 
 class EbrPostCalculator(base.RiskCalculator):
-    pre_calculator = 'event_based_risk'
+    def __init__(self, precalc):
+        self.datastore = precalc.datastore
+        self.oqparam = precalc.oqparam
+        self._monitor = precalc._monitor
+        self.riskmodel = precalc.riskmodel
+        self.rlzs_assoc = precalc.rlzs_assoc
+        self.datastore.parent = datastore.read(
+            self.oqparam.hazard_calculation_id)
 
     def cb_inputs(self, table):
         loss_table = self.datastore[table]
@@ -222,13 +229,15 @@ class EbrPostCalculator(base.RiskCalculator):
         Save the loss maps by opening and closing the datastore and
         return the total number of stored bytes.
         """
-        with self.datastore:
-            for key in res:
-                if key.startswith('loss_maps'):
-                    acc += {key: res[key].nbytes}
-                    self.datastore[key][res['aids']] = res[key]
-                    self.datastore.set_attrs(key, nbytes=acc[key])
+        for key in res:
+            if key.startswith('loss_maps'):
+                acc += {key: res[key].nbytes}
+                self.datastore[key][res['aids']] = res[key]
+                self.datastore.set_attrs(key, nbytes=acc[key])
         return acc
+
+    def pre_execute(self):
+        pass
 
     def execute(self):
         # build loss maps
@@ -250,13 +259,11 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
-            self.datastore.close()  # this is essential
             parallel.Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
                 self.oqparam.concurrent_tasks
             ).reduce(self.save_loss_maps)
-            self.datastore.open()
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -479,9 +486,7 @@ class EbriskCalculator(base.RiskCalculator):
 
         if (self.oqparam.hazard_calculation_id and 'all_loss_ratios' in
                 self.datastore.parent):
-            EbrPostCalculator(
-                self.oqparam, self._monitor, calc_id=self.datastore.calc_id
-            ).run()
+            EbrPostCalculator(self).run(close=False)
             return
 
         with self.monitor('reading ruptures', autoflush=True):
