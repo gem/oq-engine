@@ -823,20 +823,20 @@ class LossRatiosGetter(object):
     def __init__(self, dstore):
         self.dstore = dstore
 
-    def get(self, aids, rlzi=None):
+    def get(self, aids, rlzi):
         """
         :param aids: a list of A asset ordinals
-        :param rlzi: None or a realization ordinal
-        :returns: a dictionary aid, rlzi -> loss ratios
+        :param rlzi: a realization ordinal
+        :returns: a dictionary aid -> loss ratios
         """
         data = self.dset['all_loss_ratios/data']
         indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
-        dic = collections.defaultdict(list)  # (aid, rlzi) -> ratios
+        dic = collections.defaultdict(list)  # aid -> ratios
         for aid, idxs in zip(aids, indices):
             for idx in idxs:
                 for rec in data[idx[0]: idx[1]]:
-                    if rlzi is None or rlzi == rec['rlzi']:
-                        dic[aid, rec['rlzi']].append(rec['ratios'])
+                    if rlzi == rec['rlzi']:
+                        dic[aid].append(rec['ratios'])
         return dic
 
     def get_all(self, aids):
