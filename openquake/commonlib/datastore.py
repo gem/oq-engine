@@ -146,7 +146,6 @@ class DataStore(collections.MutableMapping):
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.hdf5path = self.calc_dir + '.hdf5'
-        self.ext5path = self.calc_dir + '.ext5'
         self.open()
 
     def open(self):
@@ -190,12 +189,6 @@ class DataStore(collections.MutableMapping):
         Set the export directory
         """
         self._export_dir = value
-
-    def ext5(self, mode='r'):
-        """
-        Return the calc_XXX.ext5 file
-        """
-        return hdf5.File(self.ext5path, mode)
 
     def getitem(self, name):
         """

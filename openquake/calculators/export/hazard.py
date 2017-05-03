@@ -678,10 +678,7 @@ def export_gmf(ekey, dstore):
     if n_gmfs:
         etags = numpy.array(
             sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
-    try:
-        gmf_data = dstore['gmf_data']  # for scenario
-    except KeyError:
-        gmf_data = dstore.ext5()['gmf_data']   # for event based
+    gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
@@ -811,10 +808,9 @@ def export_gmf_data_csv(ekey, dstore):
         return writer.getsaved()
     else:  # event based
         eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-        with dstore.ext5() as ext5:
-            gmfa = numpy.fromiter(
-                GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid),
-                gmf_data_dt)
+        gmfa = numpy.fromiter(
+            GmfDataGetter.gen_gmfs(dstore['gmf_data'], rlzs_assoc, eid),
+            gmf_data_dt)
         if eid is None:  # new format
             fname = dstore.build_fname('gmf', 'data', 'csv')
             writers.write_csv(fname, gmfa)
@@ -876,11 +872,10 @@ def export_gmf_scenario_npz(ekey, dstore):
             dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
     elif 'event_based' in oq.calculation_mode:
         dic['sitemesh'] = get_mesh(dstore['sitecol'])
-        with dstore.ext5() as ext5:
-            for grp in sorted(ext5['gmf_data']):
-                for rlzno in sorted(ext5['gmf_data/' + grp]):
-                    dic['rlz-' + rlzno] = ext5[
-                        'gmf_data/%s/%s' % (grp, rlzno)].value
+        for grp in sorted(dstore['gmf_data']):
+            for rlzno in sorted(dstore['gmf_data/' + grp]):
+                dic['rlz-' + rlzno] = dstore[
+                    'gmf_data/%s/%s' % (grp, rlzno)].value
     else:  # nothing to export
         return []
     savez(fname, **dic)
