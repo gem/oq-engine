@@ -436,7 +436,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 for (grp_id, gsim), array in res['gmfcoll'].items():
                     if len(array):
                         key = 'gmf_data/grp-%02d/%s' % (grp_id, gsim)
-                        hdf5.extend3(self.datastore.ext5path, key, array)
+                        hdf5.extend3(self.datastore.hdf5path, key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
@@ -504,13 +504,13 @@ class EventBasedCalculator(ClassicalCalculator):
 
     def save_gmf_bytes(self):
         """Save the attribute nbytes in the gmf_data datasets"""
-        with self.datastore.ext5('r+') as ext5:
-            for sm_id in ext5['gmf_data']:
-                for rlzno in ext5['gmf_data/' + sm_id]:
-                    ext5.set_nbytes('gmf_data/%s/%s' % (sm_id, rlzno))
-            ext5['gmf_data'].attrs['num_sites'] = len(self.sitecol.complete)
-            ext5['gmf_data'].attrs['num_imts'] = len(self.oqparam.imtls)
-            ext5.set_nbytes('gmf_data')
+        ds = self.datastore
+        for sm_id in ds['gmf_data']:
+            for rlzno in ds['gmf_data/' + sm_id]:
+                ds.set_nbytes('gmf_data/%s/%s' % (sm_id, rlzno))
+            ds['gmf_data'].attrs['num_sites'] = len(self.sitecol.complete)
+            ds['gmf_data'].attrs['num_imts'] = len(self.oqparam.imtls)
+            ds.set_nbytes('gmf_data')
 
     def post_execute(self, result):
         """
@@ -540,7 +540,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 for kind, stat in pstats.compute(
                         self.sitecol.sids, list(result.values())):
                     self.datastore['hcurves/' + kind] = stat
-        if os.path.exists(self.datastore.ext5path):
+        if 'gmf_data' in self.datastore:
             self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
