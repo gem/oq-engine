@@ -41,9 +41,10 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         base.RiskCalculator.pre_execute(self)
         logging.info('Building the epsilons')
+        oq = self.oqparam
         A = len(self.assetcol)
-        E = self.oqparam.number_of_ground_motion_fields
-        if self.oqparam.ignore_covs:
+        E = oq.number_of_ground_motion_fields
+        if oq.ignore_covs:
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
@@ -53,8 +54,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                          for rlz in self.rlzs_assoc.realizations}
         self.riskinputs = self.build_riskinputs('gmf', hazard_by_rlz, eps)
         self.param['assetcol'] = self.assetcol
-        self.param['insured_losses'] = self.oqparam.insured_losses
-        self.param['avg_losses'] = self.oqparam.avg_losses
+        self.param['insured_losses'] = oq.insured_losses
+        self.param['avg_losses'] = oq.avg_losses
+        self.param['asset_loss_table'] = oq.asset_loss_table or oq.loss_ratios
         self.taskno = 0
         self.start = 0
         self.R = len(hazard_by_rlz)
