@@ -164,7 +164,7 @@ class PoesGetter(object):
         """
         rlzs = self.rlzs
         if self.sids is None:
-            self.sids = self.dstore['sitecol'].sids
+            self.sids = self.dstore['sitecol'].complete.sids
         if not kind:  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
@@ -346,7 +346,10 @@ def make_uhs(pmap, imtls, poes, nsites):
     """
     P = len(poes)
     imts, _ = get_imts_periods(imtls)
-    array = make_hmap(pmap, imtls, poes).array  # size (N, I x P, 1)
+    hmap = make_hmap(pmap, imtls, poes)
+    for sid in range(nsites):  # fill empty positions if any
+        hmap.setdefault(sid, 0)
+    array = hmap.array
     imts_dt = numpy.dtype([(str(imt), F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)
