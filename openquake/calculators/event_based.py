@@ -28,7 +28,8 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
-from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
+from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.risklib.riskinput import (
     GmfGetter, str2rsi, rsi2str, gmf_data_dt)
@@ -536,10 +537,9 @@ class EventBasedCalculator(ClassicalCalculator):
             weights = [rlz.weight for rlz in rlzs]
             hstats = self.oqparam.hazard_stats()
             if len(hstats) and len(rlzs) > 1:
-                pstats = PmapStats(hstats, weights)
-                for kind, stat in pstats.compute(
-                        self.sitecol.sids, list(result.values())):
-                    self.datastore['hcurves/' + kind] = stat
+                for kind, stat in hstats:
+                    pmap = compute_pmap_stats(result.values(), [stat], weights)
+                    self.datastore['hcurves/' + kind] = pmap
         if 'gmf_data' in self.datastore:
             self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
