@@ -370,7 +370,7 @@ class PSHACalculator(base.HazardCalculator):
 
 def build_hcurves_and_stats(pgetter, pstats, monitor):
     """
-    :param pgetter: an :class:`openquake.commonlib.calc.PoesGetter`
+    :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
     :param pstats: instance of PmapStats
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
@@ -434,7 +434,7 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
-        pgetter = calc.PoesGetter(self.datastore, self.rlzs_assoc)
+        pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         pstats = PmapStats(hstats, weights)
         num_rlzs = len(self.rlzs_assoc.realizations)

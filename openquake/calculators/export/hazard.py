@@ -397,7 +397,7 @@ def export_hcurves_rlzs(ekey, dstore):
     enabled, otherwise all the time will be spent in the compression phase
     in the controller node with the workers doing nothing.
     The  recommended way to postprocess large computations is to instantiate
-    the PoesGetter and to work one block of sites at the time,
+    the PmapGetter and to work one block of sites at the time,
     discarding what it is not needed. The exporter here is meant for
     small/medium calculation and as an example of what you should
     implement yourself if you need to postprocess the hazard curves.
@@ -406,7 +406,7 @@ def export_hcurves_rlzs(ekey, dstore):
     imtls = oq.imtls
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol']
-    pgetter = calc.PoesGetter(dstore, rlzs_assoc)
+    pgetter = calc.PmapGetter(dstore, rlzs_assoc)
     N = len(sitecol)
     R = len(rlzs_assoc.realizations)
     fname = dstore.export_path('%s.%s' % ekey)
@@ -447,7 +447,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    for kind, hcurves in calc.PoesGetter(dstore).items(kind):
+    for kind, hcurves in calc.PmapGetter(dstore).items(kind):
         fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
@@ -503,7 +503,7 @@ def get_metadata(realizations, kind):
 @export.add(('uhs', 'xml'))
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
-    pgetter = calc.PoesGetter(dstore)
+    pgetter = calc.PmapGetter(dstore)
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, fmt = ekey
     fnames = []
@@ -546,7 +546,7 @@ def export_hcurves_xml_json(ekey, dstore):
     writercls = (hazard_writers.HazardCurveGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardCurveXMLWriter)
-    for kind, hcurves in calc.PoesGetter(dstore).items():
+    for kind, hcurves in calc.PmapGetter(dstore).items():
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
@@ -584,7 +584,7 @@ def export_hmaps_xml_json(ekey, dstore):
                  hazard_writers.HazardMapXMLWriter)
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     nsites = len(sitemesh)
-    for kind, hcurves in calc.PoesGetter(dstore).items():
+    for kind, hcurves in calc.PmapGetter(dstore).items():
         hmaps = calc.make_hmap(
             hcurves, oq.imtls, oq.poes).convert(pdic, nsites)
         if kind.startswith('rlz-'):
@@ -628,7 +628,7 @@ def export_hcurves_npz(ekey, dstore):
     for imt in imtls:
         arr[imt] = imtls[imt]
     dic = dict(imtls=arr[0])
-    for kind, hcurves in calc.PoesGetter(dstore).items():
+    for kind, hcurves in calc.PmapGetter(dstore).items():
         curves = hcurves.convert(imtls, len(mesh))
         dic[kind] = util.compose_arrays(mesh, curves)
     savez(fname, **dic)
@@ -641,7 +641,7 @@ def export_uhs_npz(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     fname = dstore.export_path('%s.%s' % ekey)
     dic = {}
-    for kind, hcurves in calc.PoesGetter(dstore).items():
+    for kind, hcurves in calc.PmapGetter(dstore).items():
         uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
         dic[kind] = util.compose_arrays(mesh, uhs_curves)
     savez(fname, **dic)
@@ -655,7 +655,7 @@ def export_hmaps_npz(ekey, dstore):
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     fname = dstore.export_path('%s.%s' % ekey)
     dic = {}
-    for kind, hcurves in calc.PoesGetter(dstore).items():
+    for kind, hcurves in calc.PmapGetter(dstore).items():
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
         dic[kind] = convert_to_array(hmap, mesh, pdic)
     savez(fname, **dic)
