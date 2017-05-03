@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced a "grp_probability" attribute to SourceGroups, for use in
+    the Japan mutex model
   * Added an utility method `ProbabilityMap.convert2` to convert a probability
     map into a two-dimensional array of curves
 
