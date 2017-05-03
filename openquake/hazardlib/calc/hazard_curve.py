@@ -184,7 +184,8 @@ def pmap_from_grp(
         trt = sources[0].tectonic_region_type
         mutex_weight = {src.source_id: weight for src, weight in
                         zip(group.sources, group.srcs_weights)}
-        grp_probability = group.grp_probability
+        grp_probability = (group.grp_probability
+                           if group.grp_probability is not None else 1)
     else:  # list of sources
         trt = sources[0].tectonic_region_type
         group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
