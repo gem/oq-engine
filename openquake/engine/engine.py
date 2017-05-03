@@ -90,8 +90,7 @@ def expose_outputs(dstore):
         rlzs = []
     # expose gmf_data only if < 10 MB
     if oq.ground_motion_fields and calcmode == 'event_based':
-        with dstore.ext5() as ext5:
-            nbytes = ext5['gmf_data'].attrs['nbytes']
+        nbytes = dstore['gmf_data'].attrs['nbytes']
         if nbytes < 10 * 1024 ** 2:
             dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
