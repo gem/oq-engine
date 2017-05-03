@@ -21,11 +21,11 @@ import io
 import os
 import getpass
 import logging
+import numpy
 
-from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.baselib import sap
 from openquake.hazardlib import valid, stats
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, calc
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
 from openquake.commonlib import config
@@ -49,19 +49,10 @@ def get_hcurves_and_means(dstore):
 
     :returns: curves_by_rlz, mean_curves
     """
-    oq = dstore['oqparam']
-    hcurves = dstore['hcurves']
-    realizations = dstore['csm_info'].get_rlzs_assoc().realizations
-    weights = [rlz.weight for rlz in realizations]
-    curves_by_rlz = {rlz: hcurves['rlz-%03d' % rlz.ordinal]
-                     for rlz in realizations}
-    N = len(dstore['sitecol'])
-    mean_curves = zero_curves(N, oq.imtls)
-    for imt in oq.imtls:
-        mean_curves[imt] = stats.mean_curve(
-            [curves_by_rlz[rlz][imt] for rlz in sorted(curves_by_rlz)],
-            weights)
-    return curves_by_rlz, mean_curves
+    getter = calc.PmapGetter(dstore)
+    sitecol = dstore['sitecol']
+    pmaps = getter.get_pmaps(sitecol.sids)
+    return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']
 
 
 @sap.Script
@@ -93,13 +84,16 @@ def show(what, calc_id=-1):
     ds = read(calc_id)
 
     # this part is experimental
-    if what == 'rlzs' and 'hcurves' in ds:
+    if what == 'rlzs' and 'poes' in ds:
         min_value = 0.01  # used in rmsep
-        curves_by_rlz, mean_curves = get_hcurves_and_means(ds)
+        getter = calc.PmapGetter(ds)
+        sitecol = ds['sitecol']
+        pmaps = getter.get_pmaps(sitecol.sids)
+        weights = [rlz.weight for rlz in getter.rlzs]
+        mean = stats.compute_pmap_stats(pmaps, [numpy.mean], weights)
         dists = []
-        for rlz, curves in curves_by_rlz.items():
-            dist = sum(rmsep(mean_curves[imt], curves[imt], min_value)
-                       for imt in mean_curves.dtype.fields)
+        for rlz, pmap in zip(getter.rlzs, pmaps):
+            dist = rmsep(mean.array, pmap.array, min_value)
             dists.append((dist, rlz))
         print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):

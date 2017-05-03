@@ -205,12 +205,8 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_show_attrs(self):
         with Print.patch() as p:
-            show_attrs('hcurve', self.calc_id)
-        self.assertEqual("'hcurve' is not in <DataStore %d>" %
-                         self.calc_id, str(p))
-        with Print.patch() as p:
-            show_attrs('hcurves', self.calc_id)
-        self.assertEqual("nbytes 24", str(p))
+            show_attrs('poes', self.calc_id)
+        self.assertEqual('nbytes 48', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
