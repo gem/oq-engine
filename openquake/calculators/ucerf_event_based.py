@@ -34,7 +34,7 @@ from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, config
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
-    EbriskCalculator, build_el_dtypes, event_based_risk)
+    EbriskCalculator, event_based_risk)
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
@@ -55,6 +55,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 
 # DEFAULT VALUES FOR UCERF BACKGROUND MODELS
@@ -858,11 +859,12 @@ class UCERFRiskCalculator(EbriskCalculator):
         source models, the asset collection, the riskmodel and others.
         """
         oq = self.oqparam
+        self.L = len(self.riskmodel.lti)
+        self.I = oq.insured_losses + 1
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
-        ela_dt, elt_dt = build_el_dtypes(
-            self.riskmodel.loss_types, oq.insured_losses)
+        elt_dt = numpy.dtype([('eid', U64), ('loss', (F32, (self.L, self.I)))])
         monitor = self.monitor('compute_losses')
         for sm in self.csm.source_models:
             ssm = self.csm.get_model(sm.ordinal)
@@ -873,7 +875,8 @@ class UCERFRiskCalculator(EbriskCalculator):
                              ses_ratio=oq.ses_ratio,
                              avg_losses=oq.avg_losses,
                              loss_ratios=oq.loss_ratios,
-                             ela_dt=ela_dt, elt_dt=elt_dt,
+                             elt_dt=elt_dt,
+                             asset_loss_table=False,
                              insured_losses=oq.insured_losses)
                 yield (ssm, self.src_filter, param,
                        self.riskmodel, imts, oq.truncation_level,

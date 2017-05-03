@@ -53,9 +53,8 @@ def check_agg_loss_table(dstore, loss_dt):
 
 class EventBasedRiskTestCase(CalculatorTestCase):
 
-    def assert_stats_ok(self, pkg, job_ini, individual_curves='false'):
+    def assert_stats_ok(self, pkg, job_ini):
         out = self.run_calc(pkg.__file__, job_ini, exports='csv',
-                            individual_curves=individual_curves,
                             concurrent_tasks='4')
         # NB: it is important to use concurrent_tasks > 1 to test the
         # complications of concurrency (for instance the noncommutativity of
@@ -63,7 +62,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         all_csv = []
         for fnames in out.values():
             for fname in fnames:
-                if 'rlz' in fname and individual_curves == 'false':
+                if 'rlz' in fname:
                     continue
                 elif fname.endswith('.csv') and any(x in fname for x in (
                         'loss_curve', 'loss_map', 'agg_loss', 'avg_loss')):
@@ -104,7 +103,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        self.assert_stats_ok(case_2, 'job.ini', individual_curves='true')
+        self.run_calc(case_2.__file__, 'job.ini')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
         os.remove(fname)
@@ -138,8 +137,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
         self.run_calc(case_3.__file__, 'job.ini',
-                      exports='xml', individual_curves='false',
-                      concurrent_tasks='4')
+                      exports='xml', concurrent_tasks='4')
 
         # test the number of bytes saved in the rupture records
         grp00 = self.calc.datastore.get_attr('ruptures/grp-00', 'nbytes')
@@ -159,8 +157,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # Turkey with SHARE logic tree
-        out = self.run_calc(case_4.__file__, 'job.ini',
-                            exports='csv', individual_curves='true')
+        out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
 
@@ -193,8 +190,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.run_calc(case_master.__file__, 'job.ini',
-                      exports='csv', individual_curves='false')
+        self.run_calc(case_master.__file__, 'job.ini', exports='csv')
         fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
@@ -253,13 +249,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_4.__file__, 'job.ini',
                             calculation_mode='event_based',
                             ground_motion_fields='false', exports='csv')
-        [fname] = out['hcurves', 'csv']
+        [fname] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
-        [fname] = out['hmaps', 'csv']
+        [fname] = [f for f in out['hmaps', 'csv'] if 'mean' in f]
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
         fnames = export(('hmaps', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
+        self.assertEqual(len(fnames), 20)  # 2 IMT x 2 poes + 16 files
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):

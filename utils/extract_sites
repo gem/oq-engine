@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -23,7 +24,7 @@ from openquake.hazardlib import valid
 
 
 @sap.Script
-def normalize(file_csv, sites_csv):
+def extract_sites(file_csv, sites_csv):
     """
     Produce a good `sites_csv` file from a generic CSV with fields longitude
     and latitude, by truncating to 5 digits and discarding duplicate sites.
@@ -59,5 +60,8 @@ def normalize(file_csv, sites_csv):
         print('Found %d duplicated sites!' % (nrows - len(points)))
 
 
-normalize.arg('file_csv', 'CSV file with lon and lat in the header')
-normalize.arg('sites_csv', 'name of the normalized sites.csv file')
+extract_sites.arg('file_csv', 'CSV file with lon and lat in the header')
+extract_sites.arg('sites_csv', 'name of the normalized sites.csv file')
+
+if __name__ == '__main__':
+    extract_sites.callfunc()
