@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the `individual_curves` flag: now by default only the statistical
+    hazard outputs are exported
   * Saved *a lot* of memory in the computation of the hazard curves and stats
   * Renamed the parameter `all_losses` to `asset_loss_table`
   * Added an experimental version of the event based risk calculator which
