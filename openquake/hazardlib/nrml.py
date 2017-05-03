@@ -231,6 +231,7 @@ validators = {
     'gmv': valid.positivefloat,
     'spacing': valid.positivefloat,
     'srcs_weights': valid.positivefloats,
+    'grp_probability': valid.probability,
 }
 
 
