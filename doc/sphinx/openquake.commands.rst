@@ -49,14 +49,6 @@ info command
     :undoc-members:
     :show-inheritance:
 
-extract_sites command
------------------------------------
-
-.. automodule:: openquake.commands.extract_sites
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 plot_agg_curve command
 ----------------------------------------
 
