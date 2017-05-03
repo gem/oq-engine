@@ -20,7 +20,6 @@ import time
 import os.path
 import operator
 import logging
-import functools
 import collections
 
 import numpy
@@ -525,13 +524,12 @@ class EventBasedCalculator(ClassicalCalculator):
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
             # save individual curves
-            if self.oqparam.individual_curves:
-                for i in sorted(result):
-                    key = 'hcurves/rlz-%03d' % i
-                    if result[i]:
-                        self.datastore[key] = result[i]
-                    else:
-                        logging.info('Zero curves for %s', key)
+            for i in sorted(result):
+                key = 'hcurves/rlz-%03d' % i
+                if result[i]:
+                    self.datastore[key] = result[i]
+                else:
+                    logging.info('Zero curves for %s', key)
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations
             # involves a "small" number of sites (<= 65,536)
