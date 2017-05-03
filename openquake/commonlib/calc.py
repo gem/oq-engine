@@ -57,19 +57,18 @@ BaseRupture.init()  # initialize rupture codes
 # ############## utilities for the classical calculator ############### #
 
 
-class HazardCurveGetter(object):
+class PmapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore, imtls, rlzs_assoc):
+    def __init__(self, dstore, rlzs_assoc=None):
         self.dstore = dstore
-        self.imtls = imtls
-        self.rlzs_assoc = rlzs_assoc
+        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self._pmap_by_grp = None  # cache
-        self.sids = None  # sids associated to the cache
+        self.sids = None  # to be set
         self.nbytes = 0
 
     def new(self, sids):
@@ -77,7 +76,7 @@ class HazardCurveGetter(object):
         :param sids: an array of S site IDs
         :returns: a new instance of the getter, with the cache populated
         """
-        newgetter = self.__class__(self.dstore, self.imtls, self.rlzs_assoc)
+        newgetter = self.__class__(self.dstore, self.rlzs_assoc)
         newgetter.sids = sids
         newgetter.get_pmap_by_grp(sids)  # populate the cache
         return newgetter
@@ -118,16 +117,7 @@ class HazardCurveGetter(object):
                     if rlz.ordinal == rlzi:
                         pmap |= pmap_by_grp[grp].extract(i)
                         break
-        return pmap.convert(self.imtls, len(sids))
-
-    def get_all(self, sids):  # used in classical_risk
-        """
-        :param sids: an array of S site IDs
-        :returns: a composite array of hazard curves of shape (R, S)
-        """
-        n = len(sids)
-        return numpy.array([pmap.convert(self.imtls, n)
-                            for pmap in self.get_pmaps(sids)])
+        return pmap
 
     def get_pmaps(self, sids):  # used in classical
         """
@@ -136,7 +126,7 @@ class HazardCurveGetter(object):
         """
         return self.combine_pmaps(self.get_pmap_by_grp(sids))
 
-    def get_pmap_by_grp(self, sids):
+    def get_pmap_by_grp(self, sids=None):
         """
         :param sids: an array of site IDs
         :returns: a dictionary of probability maps by source group
@@ -159,8 +149,37 @@ class HazardCurveGetter(object):
                 self.nbytes += pmap.nbytes
         else:
             # make sure the cache refer to the right sids
-            assert (sids == self.sids).all()
+            assert sids is None or (sids == self.sids).all()
         return self._pmap_by_grp
+
+    def items(self, kind=''):
+        """
+        Extract probability maps from the datastore, possibly generating
+        on the fly the ones corresponding to the individual realizations.
+        Yields pairs (tag, pmap).
+
+        :param kind:
+            the kind of PoEs to extract; if not given, returns the realization
+            if there is only one or the statistics otherwise.
+        """
+        rlzs = self.rlzs
+        if self.sids is None:
+            self.sids = self.dstore['sitecol'].complete.sids
+        if not kind:  # use default
+            if 'hcurves' in self.dstore:
+                for k in sorted(self.dstore['hcurves']):
+                    yield k, self.dstore['hcurves/' + k]
+            elif len(rlzs) == 1:
+                yield 'rlz-000', self.get(self.sids, 0)
+            return
+        if 'poes' in self.dstore and kind in ('rlzs', 'all'):
+            for rlz in rlzs:
+                hcurves = self.get(self.sids, rlz.ordinal)
+                yield 'rlz-%03d' % rlz.ordinal, hcurves
+        if 'hcurves' in self.dstore and kind in ('stats', 'all'):
+            for k in sorted(self.dstore['hcurves']):
+                yield k, self.dstore['hcurves/' + k]
+
 
 # ######################### hazard maps ################################### #
 
@@ -327,7 +346,10 @@ def make_uhs(pmap, imtls, poes, nsites):
     """
     P = len(poes)
     imts, _ = get_imts_periods(imtls)
-    array = make_hmap(pmap, imtls, poes).array  # size (N, I x P, 1)
+    hmap = make_hmap(pmap, imtls, poes)
+    for sid in range(nsites):  # fill empty positions if any
+        hmap.setdefault(sid, 0)
+    array = hmap.array
     imts_dt = numpy.dtype([(str(imt), F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)
