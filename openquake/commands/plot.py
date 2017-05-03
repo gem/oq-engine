@@ -57,7 +57,7 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
 
 
 def get_pmaps(dstore, indices):
-    getter = calc.PoesGetter(dstore)
+    getter = calc.PmapGetter(dstore)
     pmaps = getter.get_pmaps(indices)
     weights = [rlz.weight for rlz in getter.rlzs]
     mean = compute_pmap_stats(pmaps, [mean_curve], weights)
