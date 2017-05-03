@@ -112,9 +112,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_6a(self):
         # case with two gsims
-        out = self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv')
-        f1, f2 = out['agglosses-rlzs', 'csv']
+        self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
+                      exports='csv')
+        f1, f2 = export(('agglosses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg-gsimltp_b1_structural.csv', f1)
         self.assertEqualFiles('expected/agg-gsimltp_b2_structural.csv', f2)
 
