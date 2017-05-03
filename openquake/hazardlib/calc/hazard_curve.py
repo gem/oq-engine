@@ -184,9 +184,11 @@ def pmap_from_grp(
         trt = sources[0].tectonic_region_type
         mutex_weight = {src.source_id: weight for src, weight in
                         zip(group.sources, group.srcs_weights)}
+        grp_probability = group.grp_probability
     else:  # list of sources
         trt = sources[0].tectonic_region_type
         group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
+        grp_probability = 1
     maxdist = source_site_filter.integration_distance
     if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
         gsims = [gsims[trt]]
@@ -217,7 +219,7 @@ def pmap_from_grp(
                 (src.source_id, len(s_sites), time.time() - t0))
         # storing the number of contributing ruptures too
         pmap.eff_ruptures = {pmap.grp_id: pne_mons[0].counts}
-        return pmap
+        return pmap * grp_probability
 
 
 def calc_hazard_curves(
