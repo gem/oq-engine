@@ -386,7 +386,6 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
             weights = [rlz.weight for rlz in pgetter.rlzs]
             for kind, stat in hstats:
                 pmap = compute_pmap_stats(pmaps, [stat], weights)
-                print(kind, stat, weights, pmap)
                 pmap_by_kind[kind] = pmap
     return pmap_by_kind
 
