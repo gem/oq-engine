@@ -90,7 +90,8 @@ def compute_pmap_stats(pmaps, stats, weights):
         a probability map with S internal values
     """
     sids = set()
-    L = next(iter(pmaps)).shape_y
+    p0 = next(iter(pmaps))
+    L = p0.shape_y
     for pmap in pmaps:
         sids.update(pmap)
         assert pmap.shape_y == L, (pmap.shape_y, L)
@@ -103,11 +104,11 @@ def compute_pmap_stats(pmaps, stats, weights):
         for j, sid in enumerate(sids):
             if sid in pmap:
                 curves[i][j] = pmap[sid].array[:, 0]
-    pmap = pmaps[0].__class__.build(L, nstats, sids)
+    out = p0.__class__.build(L, nstats, sids)
     for i, array in enumerate(compute_stats(curves, stats, weights)):
         for j, sid in numpy.ndenumerate(sids):
-            pmap[sid].array[:, i] = array[j]
-    return pmap
+            out[sid].array[:, i] = array[j]
+    return out
 
 
 # NB: this is a function linear in the array argument
