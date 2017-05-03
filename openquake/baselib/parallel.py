@@ -764,7 +764,9 @@ class BaseStarmap(object):
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
               weight=lambda item: 1, key=lambda item: 'Unspecified'):
-        chunks = split_in_blocks(args[0], concurrent_tasks, weight, key)
+        chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
+        if concurrent_tasks == 0:
+            cls = Sequential
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
     def __init__(self, func, iterargs, poolsize=None):
