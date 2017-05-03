@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, deprecated
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.export import export, loss_curves
@@ -38,6 +38,9 @@ F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
+
+
+depr = deprecated('Use the csv exporter instead')
 
 
 def add_quotes(values):
@@ -303,6 +306,7 @@ def export_loss_curves(ekey, dstore):
     return loss_curves.LossCurveExporter(dstore).export('csv', what)
 
 
+@depr
 @export.add(('dmg_by_asset', 'xml'))
 def export_damage(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
@@ -343,6 +347,7 @@ def export_damage(ekey, dstore):
     return sorted(fnames)
 
 
+@depr
 @export.add(('dmg_by_taxon', 'xml'))
 def export_damage_taxon(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
@@ -374,6 +379,7 @@ def export_damage_taxon(ekey, dstore):
     return sorted(fnames)
 
 
+@depr
 @export.add(('dmg_total', 'xml'))
 def export_damage_total(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
@@ -596,6 +602,7 @@ def get_loss_maps(dstore, kind):
 
 
 # used by event_based_risk and classical_risk
+@depr
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
 def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     oq = dstore['oqparam']
@@ -642,6 +649,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
 # used by classical_risk and event_based_risk
 # NB: loss_maps-stats are NOT computed as stats of loss_maps-rlzs,
 # instead they are extracted directly from loss_maps-stats
+@depr
 @export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     loss_maps = get_loss_maps(dstore, 'stats')
@@ -783,6 +791,7 @@ def export_agg_curve_rlzs(ekey, dstore):
 
 
 # this is used by classical risk
+@depr
 @export.add(('loss_curves-stats', 'xml'),
             ('loss_curves-stats', 'geojson'))
 def export_loss_curves_stats(ekey, dstore):
@@ -814,6 +823,7 @@ def export_loss_curves_stats(ekey, dstore):
 
 
 # this is used by event_based_risk to export loss curves
+@depr
 @export.add(('rcurves-rlzs', 'xml'),
             ('rcurves-rlzs', 'geojson'),
             ('rcurves-stats', 'xml'),
@@ -887,6 +897,7 @@ def export_losses_by_taxon_csv(ekey, dstore):
 
 
 # this is used by classical_risk
+@depr
 @export.add(('loss_curves-rlzs', 'xml'),
             ('loss_curves-rlzs', 'geojson'))
 def export_loss_curves_rlzs(ekey, dstore):
@@ -925,6 +936,7 @@ BcrData = collections.namedtuple(
 
 
 # this is used by classical_bcr
+@depr
 @export.add(('bcr-rlzs', 'xml'))
 def export_bcr_map_rlzs(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
