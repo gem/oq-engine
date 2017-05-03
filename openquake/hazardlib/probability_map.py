@@ -285,6 +285,7 @@ class ProbabilityMap(dict):
             sids = set(self) | set(other)
         except AttributeError:  # no .get method, assume a float
             is_pmap = False
+            assert 0. <= other <= 1., other  # must be a probability
             sids = set(self)
         new = self.__class__(self.shape_y, self.shape_z)
         for sid in sids:
