@@ -31,7 +31,7 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
-from openquake.hazardlib.probability_map import PmapStats
+from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import datastore, source, calc
 from openquake.calculators import base
 
@@ -368,10 +368,10 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-def build_hcurves_and_stats(pgetter, pstats, monitor):
+def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
-    :param pstats: instance of PmapStats
+    :param hstats: a list of pairs (statname, statfunc)
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
@@ -381,9 +381,13 @@ def build_hcurves_and_stats(pgetter, pstats, monitor):
     with monitor('combine pmaps'):
         pmaps = pgetter.get_pmaps(pgetter.sids)
     pmap_by_kind = {}
-    if len(pgetter.rlzs) > 1 and pstats.names:
+    if len(pgetter.rlzs) > 1 and hstats:
         with monitor('compute stats'):
-            pmap_by_kind.update(pstats.compute(pgetter.sids, pmaps))
+            weights = [rlz.weight for rlz in pgetter.rlzs]
+            for kind, stat in hstats:
+                pmap = compute_pmap_stats(pmaps, [stat], weights)
+                print(kind, stat, weights, pmap)
+                pmap_by_kind[kind] = pmap
     return pmap_by_kind
 
 
@@ -435,13 +439,11 @@ class ClassicalCalculator(PSHACalculator):
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
         pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        pstats = PmapStats(hstats, weights)
         num_rlzs = len(self.rlzs_assoc.realizations)
         for block in self.sitecol.split_in_tiles(num_rlzs):
             newgetter = pgetter.new(block.sids)  # read the probability maps
             if newgetter.nbytes > 0:  # some probability map is nonzero
-                yield newgetter, pstats, monitor
+                yield newgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
