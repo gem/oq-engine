@@ -483,7 +483,7 @@ class HazardGetter(object):
         source group ID
     :param rlzs_by_gsim:
         a dictionary gsim -> realizations for that GSIM
-    :param hazards_by_rlz
+    :param hazards_by_rlz:
         a nested dictionary rlz -> imt -> PoE array or a flat dictionary
         rlz -> GMF array of shape (N, I, E)
     :params sids:
