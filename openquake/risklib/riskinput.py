@@ -643,7 +643,7 @@ gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
 class GmfDataGetter(GmfGetter):
     """
-    Extracts a dictionary of GMVs from the underlying .ext5 file
+    Extracts a dictionary of GMVs from the datastore
     """
     def __init__(self, gmf_data, grp_id, rlzs_by_gsim, start=0, stop=None):
         self.gmf_data = gmf_data
