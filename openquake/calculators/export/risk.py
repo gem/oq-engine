@@ -282,21 +282,6 @@ def get_etags_years_serials(events_by_grp, eids):
     return numpy.array(etags), numpy.array(years), numpy.array(serials)
 
 
-@export.add(('rcurves-rlzs', 'csv'))
-def export_rcurves(ekey, dstore):
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    assets = get_assets(dstore)
-    curves = dstore[ekey[0]].value
-    name = ekey[0].split('-')[0]
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        # FIXME: export insured values too
-        array = compose_arrays(assets, curves[:, rlz.ordinal, 0])
-        path = dstore.build_fname(name, rlz, 'csv')
-        writer.save(array, path)
-    return writer.getsaved()
-
-
 # this is used by classical_risk
 @export.add(('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
@@ -306,8 +291,8 @@ def export_loss_curves(ekey, dstore):
     return loss_curves.LossCurveExporter(dstore).export('csv', what)
 
 
-@depr
 @export.add(('dmg_by_asset', 'xml'))
+@depr
 def export_damage(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
@@ -347,8 +332,8 @@ def export_damage(ekey, dstore):
     return sorted(fnames)
 
 
-@depr
 @export.add(('dmg_by_taxon', 'xml'))
+@depr
 def export_damage_taxon(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
@@ -379,8 +364,8 @@ def export_damage_taxon(ekey, dstore):
     return sorted(fnames)
 
 
-@depr
 @export.add(('dmg_total', 'xml'))
+@depr
 def export_damage_total(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
@@ -602,8 +587,8 @@ def get_loss_maps(dstore, kind):
 
 
 # used by event_based_risk and classical_risk
-@depr
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
+@depr
 def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     oq = dstore['oqparam']
     cc = dstore['assetcol/cost_calculator']
@@ -649,8 +634,8 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
 # used by classical_risk and event_based_risk
 # NB: loss_maps-stats are NOT computed as stats of loss_maps-rlzs,
 # instead they are extracted directly from loss_maps-stats
-@depr
 @export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
+@depr
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     loss_maps = get_loss_maps(dstore, 'stats')
     N, S = loss_maps.shape
@@ -791,9 +776,9 @@ def export_agg_curve_rlzs(ekey, dstore):
 
 
 # this is used by classical risk
-@depr
 @export.add(('loss_curves-stats', 'xml'),
             ('loss_curves-stats', 'geojson'))
+@depr
 def export_loss_curves_stats(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
@@ -823,11 +808,11 @@ def export_loss_curves_stats(ekey, dstore):
 
 
 # this is used by event_based_risk to export loss curves
-@depr
 @export.add(('rcurves-rlzs', 'xml'),
             ('rcurves-rlzs', 'geojson'),
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'))
+@depr
 def export_rcurves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     aref = dstore['asset_refs'].value
@@ -897,9 +882,9 @@ def export_losses_by_taxon_csv(ekey, dstore):
 
 
 # this is used by classical_risk
-@depr
 @export.add(('loss_curves-rlzs', 'xml'),
             ('loss_curves-rlzs', 'geojson'))
+@depr
 def export_loss_curves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
@@ -936,8 +921,8 @@ BcrData = collections.namedtuple(
 
 
 # this is used by classical_bcr
-@depr
 @export.add(('bcr-rlzs', 'xml'))
+@depr
 def export_bcr_map_rlzs(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
