@@ -98,12 +98,12 @@ def compute_pmap_stats(pmaps, stats, weights):
         raise ValueError('All empty probability maps!')
     sids = numpy.array(sorted(sids), numpy.float32)
     nstats = len(stats)
-    pmap = pmaps[0].__class__.build(L, nstats, sids)
     curves = numpy.zeros((len(pmaps), len(sids), L), numpy.float64)
     for i, pmap in enumerate(pmaps):
         for j, sid in enumerate(sids):
             if sid in pmap:
                 curves[i][j] = pmap[sid].array[:, 0]
+    pmap = pmaps[0].__class__.build(L, nstats, sids)
     for i, array in enumerate(compute_stats(curves, stats, weights)):
         for j, sid in numpy.ndenumerate(sids):
             pmap[sid].array[:, i] = array[j]
