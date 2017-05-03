@@ -90,7 +90,7 @@ def compute_pmap_stats(pmaps, stats, weights):
         a probability map with S internal values
     """
     sids = set()
-    L = pmaps[0].shape_y
+    L = next(iter(pmaps)).shape_y
     for pmap in pmaps:
         sids.update(pmap)
         assert pmap.shape_y == L, (pmap.shape_y, L)
