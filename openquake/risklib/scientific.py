@@ -981,7 +981,7 @@ class CurveBuilder(object):
         return len(self.cbs)
 
     def build_curves(self, assets, loss_ratios, rlzi):
-        """"
+        """
         :param assets: a list of assets
         :param loss_ratios: a list of dictionaries rlzi -> loss ratios
         :param rlzi: a realization index
@@ -1011,7 +1011,7 @@ class CurveBuilder(object):
         return curves
 
     def build_maps(self, assets, getter, rlzs, stats, mon):
-        """"
+        """
         :param assets:
             a list of assets
         :param getter:
