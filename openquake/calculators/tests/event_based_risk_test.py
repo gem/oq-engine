@@ -51,16 +51,6 @@ def check_agg_loss_table(dstore, loss_dt):
     numpy.testing.assert_allclose(data1, data2, 1E-6)
 
 
-def run_precalc(pkgfile, job_ini):
-    """
-    Returns the parent calculation ID as a string
-    """
-    job_ini = os.path.join(os.path.dirname(pkgfile), job_ini)
-    out = subprocess.check_output(
-        [sys.executable, '-m', 'openquake.commands', 'run', job_ini])
-    return re.search(b'calc_(\d+)\.hdf5', out).group(1)
-
-
 class EventBasedRiskTestCase(CalculatorTestCase):
 
     def assert_stats_ok(self, pkg, job_ini, individual_curves='false'):
@@ -85,8 +75,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        parent_id = run_precalc(case_1.__file__, 'job.ini')
+        self.run_calc(case_1.__file__, 'job.ini')
+        parent_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_1.__file__, 'job.ini',
+                      concurrent_tasks='0',  # sequential postprocessing
                       exports='csv', individual_curves='false',
                       hazard_calculation_id=parent_id)
         ekeys = [('agg_curve-stats', 'xml')]
@@ -179,7 +171,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
-        parent_id = run_precalc(occupants.__file__, 'job.ini')
+        self.run_calc(occupants.__file__, 'job.ini')
+        parent_id = str(self.calc.datastore.calc_id)
         self.run_calc(occupants.__file__, 'job.ini',
                       hazard_calculation_id=parent_id)
         fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore) + \
