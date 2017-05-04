@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Loss maps and aggregate losses are computed in parallel or sequentially
     depending if the calculation is a postprocessing calculation or not
+  * Deprecated the XML risk exporters
   * Removed the .ext5 file
   * Restored the parameter `asset_loss_table` in the event based calculators
   * Added a full .hdf5 exporter for `hcurves-rlzs`
