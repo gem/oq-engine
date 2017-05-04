@@ -22,7 +22,7 @@ import collections
 import numpy
 from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import AccumDict, split_in_blocks
+from openquake.baselib.general import AccumDict, split_in_blocks, deprecated
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
@@ -39,6 +39,9 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
+
+
+deprecated = deprecated('Use the csv exporter instead')
 
 
 def add_quotes(values):
@@ -280,21 +283,6 @@ def get_etags_years_serials(events_by_grp, eids):
     return numpy.array(etags), numpy.array(years), numpy.array(serials)
 
 
-@export.add(('rcurves-rlzs', 'csv'))
-def export_rcurves(ekey, dstore):
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    assets = get_assets(dstore)
-    curves = dstore[ekey[0]].value
-    name = ekey[0].split('-')[0]
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        # FIXME: export insured values too
-        array = compose_arrays(assets, curves[:, rlz.ordinal, 0])
-        path = dstore.build_fname(name, rlz, 'csv')
-        writer.save(array, path)
-    return writer.getsaved()
-
-
 # this is used by classical_risk
 @export.add(('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
@@ -305,6 +293,7 @@ def export_loss_curves(ekey, dstore):
 
 
 @export.add(('dmg_by_asset', 'xml'))
+@deprecated
 def export_damage(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
@@ -345,6 +334,7 @@ def export_damage(ekey, dstore):
 
 
 @export.add(('dmg_by_taxon', 'xml'))
+@deprecated
 def export_damage_taxon(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
@@ -376,6 +366,7 @@ def export_damage_taxon(ekey, dstore):
 
 
 @export.add(('dmg_total', 'xml'))
+@deprecated
 def export_damage_total(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
@@ -598,6 +589,7 @@ def get_loss_maps(dstore, kind):
 
 # used by event_based_risk and classical_risk
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
+@deprecated
 def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     oq = dstore['oqparam']
     cc = dstore['assetcol/cost_calculator']
@@ -644,6 +636,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
 # NB: loss_maps-stats are NOT computed as stats of loss_maps-rlzs,
 # instead they are extracted directly from loss_maps-stats
 @export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
+@deprecated
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     loss_maps = get_loss_maps(dstore, 'stats')
     N, S = loss_maps.shape
@@ -786,6 +779,7 @@ def export_agg_curve_rlzs(ekey, dstore):
 # this is used by classical risk
 @export.add(('loss_curves-stats', 'xml'),
             ('loss_curves-stats', 'geojson'))
+@deprecated
 def export_loss_curves_stats(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
@@ -819,6 +813,7 @@ def export_loss_curves_stats(ekey, dstore):
             ('rcurves-rlzs', 'geojson'),
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'))
+@deprecated
 def export_rcurves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     aref = dstore['asset_refs'].value
@@ -890,6 +885,7 @@ def export_losses_by_taxon_csv(ekey, dstore):
 # this is used by classical_risk
 @export.add(('loss_curves-rlzs', 'xml'),
             ('loss_curves-rlzs', 'geojson'))
+@deprecated
 def export_loss_curves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
@@ -927,6 +923,7 @@ BcrData = collections.namedtuple(
 
 # this is used by classical_bcr
 @export.add(('bcr-rlzs', 'xml'))
+@deprecated
 def export_bcr_map_rlzs(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
