@@ -240,14 +240,15 @@ class EbrPostCalculator(base.RiskCalculator):
                     fillvalue=None)
             mon = self.monitor('loss maps')
             if self.oqparam.hazard_calculation_id:
+                Starmap = parallel.Starmap  # we can parallelize fully
                 lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
                 # avoid OSError: Can't read data (Wrong b-tree signature)
                 self.datastore.parent.close()
-            else:
+            else:  # there is a single datastore
+                # we cannot read from it in parallel while writing
+                Starmap = parallel.Sequential
                 lrgetter = riskinput.LossRatiosGetter(self.datastore)
-                # avoid KeyError: "No 'all_loss_ratios/data' found
-                parallel.Starmap.restart()
-            parallel.Starmap.apply(
+            Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
                 self.oqparam.concurrent_tasks
