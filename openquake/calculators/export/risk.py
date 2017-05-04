@@ -20,11 +20,11 @@ import itertools
 import collections
 
 import numpy
-
+from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib import writers, risk_writers, calc
@@ -36,6 +36,7 @@ from openquake.commonlib.risk_writers import (
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
 F64 = numpy.float64
+U16 = numpy.uint16
 U32 = numpy.uint32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
@@ -982,3 +983,36 @@ def export_bcr_map(ekey, dstore):
     return writer.getsaved()
 
 # TODO: add export_bcr_map_stats
+
+
+def get_loss_ratios(lrgetter, aids, monitor):
+    with lrgetter.dstore:
+        loss_ratios = lrgetter.get_all(aids)  # list of arrays of dtype lrs_dt
+    return zip(aids, loss_ratios)
+
+
+@export.add(('asset_loss_table', 'hdf5'))
+def export_asset_loss_table(ekey, dstore):
+    key, fmt = ekey
+    oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    arefs = dstore['asset_refs'].value
+    avals = assetcol.values()
+    lrs_dt = numpy.dtype([('rlzi', U16), ('ratios', oq.loss_dt())])
+    fname = dstore.export_path('%s.%s' % ekey)
+    monitor = performance.Monitor(key, fname)
+    lrgetter = riskinput.LossRatiosGetter(dstore)
+    aids = range(len(assetcol))
+    allargs = [(lrgetter, list(block), monitor)
+               for block in split_in_blocks(aids, oq.concurrent_tasks)]
+    dstore.close()  # avoid OSError: Can't read data (Wrong b-tree signature)
+    for pairs in parallel.Processmap(get_loss_ratios, allargs):
+        with hdf5.File(fname, 'w') as f:
+            for aid, data in pairs:
+                asset = assetcol[aid]
+                for l, name in enumerate(avals.dtype.names):
+                    data['ratios'][l] *= avals[aid][name]
+                    # TODO: insured_losses
+                aref = arefs[asset.idx]
+                f[b'asset_loss_table/' + aref] = data.view(lrs_dt)
+    return [fname]
