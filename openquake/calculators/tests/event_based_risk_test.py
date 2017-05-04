@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import unittest
+import subprocess
 import numpy
 from nose.plugins.attrib import attr
 
@@ -72,8 +74,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini',
-                      exports='csv')
+        self.run_calc(case_1.__file__, 'job.ini')
         ekeys = [('agg_curve-stats', 'xml')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
@@ -141,6 +142,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(grp02, 545)
         self.assertEqual(grp03, 218)
 
+        hc_id = self.calc.datastore.calc_id
+        self.run_calc(case_3.__file__, 'job.ini',
+                      exports='xml', individual_curves='false',
+                      hazard_calculation_id=str(hc_id))
         [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -156,16 +161,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        # this is a case without loss_ratios in the .ini file
-        # we check that no risk curves are generated
-        self.assertNotIn('rcurves-rlzs', self.calc.datastore)
-        self.assertNotIn('rcurves-stats', self.calc.datastore)
-
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
-        out = self.run_calc(occupants.__file__, 'job.ini', exports='xml')
+        self.run_calc(occupants.__file__, 'job.ini')
         fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore) + \
-                 out['agg_curve-rlzs', 'xml']
+                 export(('agg_curve-rlzs', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
@@ -188,6 +188,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
+
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         assert fnames, 'loss_maps-rlzs not exported?'
         if REFERENCE_OS:

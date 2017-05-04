@@ -357,7 +357,7 @@ class Classical(RiskModel):
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
-              'ebrisk', 'ucerf_rupture', 'ucerf_risk', 'gmf_ebrisk')
+              'ucerf_rupture', 'ucerf_risk', 'gmf_ebrisk')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel.

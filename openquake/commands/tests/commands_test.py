@@ -334,4 +334,4 @@ class EngineRunJobTestCase(unittest.TestCase):
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
             run_job(job_ini, log_level='error')
-        self.assertIn('Outputs of calculation', str(p))
+        self.assertIn('id | name', str(p))
