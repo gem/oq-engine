@@ -625,6 +625,9 @@ class EbriskCalculator(base.RiskCalculator):
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
         if 'all_loss_ratios' in self.datastore:
+            self.datastore.set_attrs(
+                'all_loss_ratios',
+                loss_types=' '.join(self.riskmodel.loss_types))
             for name in ('indices', 'data'):
                 dset = self.datastore['all_loss_ratios/' + name]
                 nbytes = dset.size * dset.dtype.itemsize

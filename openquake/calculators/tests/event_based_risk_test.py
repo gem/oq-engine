@@ -16,11 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import re
 import sys
 import unittest
-import subprocess
 import numpy
+import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
@@ -216,6 +215,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         job_info = dict(self.calc.datastore['job_info'])
         self.assertIn(b'build_loss_maps.sent', job_info)
         self.assertIn(b'build_loss_maps.received', job_info)
+
+        # test the asset_loss_table exporter
+        [fname] = export(('asset_loss_table', 'hdf5'), self.calc.datastore)
+        print('Generating %s' % fname)
+        with h5py.File(fname) as f:
+            num_assets = len(f['asset_loss_table'])
+        self.assertEqual(num_assets, 7)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
