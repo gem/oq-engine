@@ -8,7 +8,7 @@ User=openquake
 Group=openquake
 Environment=PYTHONPATH=/opt/openquake/lib/python2.7/site-packages
 WorkingDirectory=/usr/share/openquake/engine
-ExecStart=python -m celery worker --config openquake.engine.celeryconfig --purge -Ofair
+ExecStart=/usr/bin/env python -m celery worker --config openquake.engine.celeryconfig --purge -Ofair
 Restart=always
 RestartSec=30
 KillMode=control-group
