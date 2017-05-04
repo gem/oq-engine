@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an .hdf5 exporter for the asset loss table
   * Loss maps and aggregate losses are computed in parallel or sequentially
     depending if the calculation is a postprocessing calculation or not
   * Deprecated the XML risk exporters
