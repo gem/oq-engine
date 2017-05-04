@@ -820,7 +820,7 @@ class Sequential(BaseStarmap):
         self.func = func
         allargs = list(iterargs)
         self.num_tasks = len(allargs)
-        logging.info('Starting %d tasks', self.num_tasks)
+        logging.info('Starting %d sequential tasks', self.num_tasks)
         self.imap = [safely_call(func, args) for args in allargs]
 
 
