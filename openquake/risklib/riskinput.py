@@ -844,11 +844,10 @@ class LossRatiosGetter(object):
         :param aids: a list of A asset ordinals
         :returns: a list of A composite arrays of dtype `lrs_dt`
         """
-        with self.dstore as ds:
-            data = ds['all_loss_ratios/data']
-            indices = ds['all_loss_ratios/indices'][aids]  # (A, T, 2)
-            loss_ratio_data = []
-            for aid, idxs in zip(aids, indices):
-                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
-                loss_ratio_data.append(arr)
+        data = self.dstore['all_loss_ratios/data']
+        indices = self.dstore['all_loss_ratios/indices'][aids]  # (A, T, 2)
+        loss_ratio_data = []
+        for aid, idxs in zip(aids, indices):
+            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+            loss_ratio_data.append(arr)
         return loss_ratio_data
