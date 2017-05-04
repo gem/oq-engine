@@ -316,6 +316,7 @@ class CompositeRiskModel(collections.Mapping):
         self.covs = 0  # number of coefficients of variation
         self.curve_builder = self.make_curve_builder(oqparam)
         self.loss_types = [cb.loss_type for cb in self.curve_builder]
+        self.insured_losses = oqparam.insured_losses
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():

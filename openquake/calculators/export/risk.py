@@ -995,7 +995,12 @@ def export_asset_loss_table(ekey, dstore):
     assetcol = dstore['assetcol']
     arefs = dstore['asset_refs'].value
     avals = assetcol.values()
-    lrs_dt = numpy.dtype([('rlzi', U16), ('ratios', oq.loss_dt())])
+    loss_types = dstore.get_attr('all_loss_ratios', 'loss_types').split()
+    dtlist = [(lt, F32) for lt in loss_types]
+    if oq.insured_losses:
+        for lt in loss_types:
+            dtlist.append((lt + '_ins', F32))
+    lrs_dt = numpy.dtype([('rlzi', U16), ('losses', dtlist)])
     fname = dstore.export_path('%s.%s' % ekey)
     monitor = performance.Monitor(key, fname)
     lrgetter = riskinput.LossRatiosGetter(dstore)
@@ -1003,13 +1008,16 @@ def export_asset_loss_table(ekey, dstore):
     allargs = [(lrgetter, list(block), monitor)
                for block in split_in_blocks(aids, oq.concurrent_tasks)]
     dstore.close()  # avoid OSError: Can't read data (Wrong b-tree signature)
-    for pairs in parallel.Processmap(get_loss_ratios, allargs):
-        with hdf5.File(fname, 'w') as f:
+    L = len(loss_types)
+    with hdf5.File(fname, 'w') as f:
+        for pairs in parallel.Processmap(get_loss_ratios, allargs):
             for aid, data in pairs:
                 asset = assetcol[aid]
-                for l, name in enumerate(avals.dtype.names):
-                    data['ratios'][l] *= avals[aid][name]
-                    # TODO: insured_losses
+                avalue = avals[aid]
+                for l, lt in enumerate(loss_types):
+                    aval = avalue[lt]
+                    for i in range(oq.insured_losses + 1):
+                        data['ratios'][:, l + L * i] *= aval
                 aref = arefs[asset.idx]
                 f[b'asset_loss_table/' + aref] = data.view(lrs_dt)
     return [fname]
