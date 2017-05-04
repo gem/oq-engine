@@ -268,11 +268,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             fmts = self.oqparam.exports
         else:  # is a string
             fmts = self.oqparam.exports.split(',')
-        if os.path.exists(self.datastore.ext5path):
-            with self.datastore.ext5() as ext5:
-                keys = set(ext5) | set(self.datastore)
-        else:
-            keys = set(self.datastore)
+        keys = set(self.datastore)
         has_hcurves = 'hcurves' in self.datastore or 'poes' in self.datastore
         if has_hcurves:
             keys.add('hcurves')
