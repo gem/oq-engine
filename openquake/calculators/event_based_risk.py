@@ -182,7 +182,7 @@ def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
-    getter.dstore.open()
+    getter.dstore.open()  # if not already open
     aids, loss_maps, loss_maps_stats = builder.build_maps(
         assets, getter, rlzs, stats, monitor)
     res = {'aids': aids, 'loss_maps-rlzs': loss_maps}
@@ -241,19 +241,17 @@ class EbrPostCalculator(base.RiskCalculator):
             mon = self.monitor('loss maps')
             if self.oqparam.hazard_calculation_id:
                 lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
-                Starmap = parallel.Starmap
-                self.datastore.parent.close()  # this is essential to avoid
-                # the dreaded OSError: Can't read data (Wrong b-tree signature)
+                # avoid OSError: Can't read data (Wrong b-tree signature)
+                self.datastore.parent.close()
             else:
                 lrgetter = riskinput.LossRatiosGetter(self.datastore)
-                Starmap = parallel.Sequential
-            Starmap.apply(
+                # avoid KeyError: "No 'all_loss_ratios/data' found
+                parallel.Starmap.restart()
+            parallel.Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
                 self.oqparam.concurrent_tasks
             ).reduce(self.save_loss_maps)
-            if not self.datastore.hdf5:
-                self.datastore.open()
             if self.oqparam.hazard_calculation_id:
                 self.datastore.parent.open()
 
