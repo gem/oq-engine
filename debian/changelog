@@ -1,7 +1,10 @@
   [Michele Simionato]
+  * Loss maps and aggregate losses are computed in parallel or sequentially
+    depending if the calculation is a postprocessing calculation or not
   * Deprecated the XML risk exporters
   * Removed the .ext5 file
   * Restored the parameter `asset_loss_table` in the event based calculators
+  * Added a full .hdf5 exporter for `hcurves-rlzs`
   * Removed the `individual_curves` flag: now by default only the statistical
     hazard outputs are exported
   * Saved *a lot* of memory in the computation of the hazard curves and stats
@@ -15,10 +18,10 @@
   * Added a CSV exporter for the benefit-cost-ratio calculator
   * The classical_risk calculator now reads directly the probability maps,
     not the hazard curves
-  * The loss curves are now computed on the fly for a given asset
-    for the event based risk calculator.
+  * Turned the loss curves into on-demand outputs
+    for the event based risk calculator
   * The loss ratios are now stored in the datastore and not in an
-    external .ext5 file.
+    external .ext5 file
   * The engine outputs are now streamed by the WebUI
   * Used a temporary export directory in the tests, to avoid conflicts
     in multiuser situations
@@ -28,7 +31,7 @@
   * Changed the CSV exporter for the loss curves: now it exports all the
     curves for a given site for the classical_risk calculator
   * Fixed the save_ruptures procedure when there are more than 256
-    surfaces in the MultiSurface;
+    surfaces in the MultiSurface
   * Renamed the `csq_` outputs of the scenario_damage to `losses_`
   * Changed the way scenario_damage are stored internally to be more
     consistent with the other calculators
