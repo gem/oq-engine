@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.stats import compute_stats
-from openquake.commonlib import config, datastore
+from openquake.commonlib import config
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -182,6 +182,7 @@ def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
+    getter.dstore.open()
     aids, loss_maps, loss_maps_stats = builder.build_maps(
         assets, getter, rlzs, stats, monitor)
     res = {'aids': aids, 'loss_maps-rlzs': loss_maps}
@@ -251,6 +252,8 @@ class EbrPostCalculator(base.RiskCalculator):
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
                 self.oqparam.concurrent_tasks
             ).reduce(self.save_loss_maps)
+            if not self.datastore.hdf5:
+                self.datastore.open()
             if self.oqparam.hazard_calculation_id:
                 self.datastore.parent.open()
 
