@@ -146,16 +146,18 @@ class DataStore(collections.MutableMapping):
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.hdf5path = self.calc_dir + '.hdf5'
+        self.hdf5 = None
         self.open()
 
     def open(self):
         """
         Open the underlying .hdf5 file and the parent, if any
         """
-        mode = self.mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
-        self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
-        if self.parent != () and self.parent.hdf5 is None:
-            self.parent.open()
+        if self.hdf5 is None:  # not already open
+            mode = self.mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
+            self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
+            if self.parent != () and self.parent.hdf5 is None:
+                self.parent.open()
 
     @property
     def export_dir(self):
