@@ -35,16 +35,10 @@ $ python -m openquake.server.manage createsuperuser
 ```
 
 #### Authentication using PAM
-Authentication can rely on system users through `PAM`, the [Pluggable Authentication Module](https://en.wikipedia.org/wiki/Pluggable_authentication_module). To use this feature the [django-pam](https://github.com/tehmaze/django-pam) extension must be installed and activated
+Authentication can rely on system users through `PAM`, the [Pluggable Authentication Module](https://en.wikipedia.org/wiki/Pluggable_authentication_module). To use this feature [python-pam](https://github.com/FirefighterBlu3/python-pam) and [django-pam](https://github.com/cnobile2012/django-pam) extensions must be installed and activated
 
-To `openquake/server/local_settings.py` add:
+Copy `openquake/server/local_settings.py.pam` to `openquake/server/local_settings.py` add:
 
-```python
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-    'dpam.backends.PAMBackend',
-)
-```
 The WebUI process owner must be member of the `shadow` group.
 
 ## Running in production
