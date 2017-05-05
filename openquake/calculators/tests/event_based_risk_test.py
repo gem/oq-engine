@@ -31,7 +31,7 @@ from openquake.calculators.tests import (
 from openquake.calculators.export import export
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
-    occupants, case_1g)
+    occupants, case_1g, case_7a)
 
 
 # used for a sanity check
@@ -247,7 +247,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
 
-    # now a couple of hazard tests
+    @attr('qa', 'risk', 'case_7a')
+    def test_case_7a(self):
+        # case with  <insuranceLimit isAbsolute="false"/>
+        self.run_calc(case_7a.__file__,  'job_h.ini')
+        self.run_calc(case_7a.__file__,  'job_r.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_losses.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
