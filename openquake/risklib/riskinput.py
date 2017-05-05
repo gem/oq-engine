@@ -103,7 +103,7 @@ class AssetCollection(object):
         """
         :returns: a composite array of asset values by loss type
         """
-        loss_dt = numpy.dtype([(str(lt), float) for lt in self.loss_types])
+        loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
         vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
         for assets in self.assets_by_site():
             for asset in assets:
@@ -316,6 +316,7 @@ class CompositeRiskModel(collections.Mapping):
         self.covs = 0  # number of coefficients of variation
         self.curve_builder = self.make_curve_builder(oqparam)
         self.loss_types = [cb.loss_type for cb in self.curve_builder]
+        self.insured_losses = oqparam.insured_losses
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
