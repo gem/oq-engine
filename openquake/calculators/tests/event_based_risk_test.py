@@ -16,14 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import re
 import sys
+import mock
 import unittest
-import subprocess
 import numpy
+import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
+from openquake.baselib.parallel import Sequential
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
@@ -34,7 +35,7 @@ from openquake.qa_tests_data.event_based_risk import (
 
 
 # used for a sanity check
-def check_agg_loss_table(dstore, loss_dt):
+def check_total_losses(dstore, total, loss_dt):
     L1 = len(loss_dt.names)
     L = L1 // 2
     data1 = numpy.zeros(L1, numpy.float32)
@@ -49,6 +50,9 @@ def check_agg_loss_table(dstore, loss_dt):
     for l in range(L1):
         data2[l] += lbt[:, :, l].sum()
     numpy.testing.assert_allclose(data1, data2, 1E-6)
+
+    # check the sums are consistent with the ones coming from asset_loss_table
+    numpy.testing.assert_allclose(data1, total, 1E-6)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -201,8 +205,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        check_agg_loss_table(self.calc.datastore, self.calc.oqparam.loss_dt())
-
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
@@ -216,6 +218,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         job_info = dict(self.calc.datastore['job_info'])
         self.assertIn(b'build_loss_maps.sent', job_info)
         self.assertIn(b'build_loss_maps.received', job_info)
+
+        # test the asset_loss_table exporter; notice that I need to disable
+        # the parallelism to avoid reading bogus data: this is the usual
+        # heisenbug when reading in parallel an .hdf5 generated in process
+        with mock.patch('openquake.baselib.parallel.Processmap', Sequential):
+            [fname] = export(('asset_loss_table', 'hdf5'), self.calc.datastore)
+        print('Generating %s' % fname)
+        with h5py.File(fname) as f:
+            total = f['asset_loss_table'].attrs['total']
+        self.calc.datastore.open()
+        check_total_losses(
+            self.calc.datastore, total, self.calc.oqparam.loss_dt())
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
