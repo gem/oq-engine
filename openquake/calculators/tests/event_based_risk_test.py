@@ -56,7 +56,7 @@ def check_total_losses(calc):
     # test the asset_loss_table exporter; notice that I need to disable
     # the parallelism to avoid reading bogus data: this is the usual
     # heisenbug when reading in parallel an .hdf5 generated in process
-    with mock.patch('openquake.baselib.parallel.Processmap', Sequential):
+    with mock.patch('openquake.baselib.parallel.Starmap', Sequential):
         [fname] = export(('asset_loss_table', 'hdf5'), dstore)
     print('Generating %s' % fname)
     with h5py.File(fname) as f:
