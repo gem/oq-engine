@@ -20,6 +20,7 @@ from __future__ import division
 import logging
 import numpy
 from openquake.baselib.python3compat import decode
+from openquake.commonlib import config
 
 F32 = numpy.float32
 
@@ -167,3 +168,19 @@ class Rupture(object):
         self.etag = etag
         self.indices = indices
         self.ses_idx = get_ses_idx(etag)
+
+
+def shared_dir_on():
+    """
+    :returns: True if a shared_dir has been set in openquake.cfg, else False
+    """
+    return config.SHARED_DIR_ON
+
+
+def require_reading(func):
+    """
+    Decorator used to mark functions that require read access to the
+    file system. It simply adds a thunk `shared_dir_on` to the function.
+    """
+    func.shared_dir_on = shared_dir_on
+    return func
