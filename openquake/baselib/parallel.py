@@ -186,7 +186,7 @@ def oq_distribute(task=None):
     """
     env = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
     if hasattr(task, 'shared_dir_on'):
-        if env == 'celery' and not task.shared_dir_on:
+        if env == 'celery' and not task.shared_dir_on():
             logging.warn(
                 'Task `%s` will be run on the controller node only, since '
                 'no `shared_dir` has been specified' % task.__name__)
