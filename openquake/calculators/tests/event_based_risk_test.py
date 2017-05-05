@@ -35,7 +35,9 @@ from openquake.qa_tests_data.event_based_risk import (
 
 
 # used for a sanity check
-def check_total_losses(dstore, total, loss_dt):
+def check_total_losses(calc):
+    dstore = calc.datastore
+    loss_dt = calc.oqparam.loss_dt()
     L1 = len(loss_dt.names)
     L = L1 // 2
     data1 = numpy.zeros(L1, numpy.float32)
@@ -50,6 +52,15 @@ def check_total_losses(dstore, total, loss_dt):
     for l in range(L1):
         data2[l] += lbt[:, :, l].sum()
     numpy.testing.assert_allclose(data1, data2, 1E-6)
+
+    # test the asset_loss_table exporter; notice that I need to disable
+    # the parallelism to avoid reading bogus data: this is the usual
+    # heisenbug when reading in parallel an .hdf5 generated in process
+    with mock.patch('openquake.baselib.parallel.Processmap', Sequential):
+        [fname] = export(('asset_loss_table', 'hdf5'), dstore)
+    print('Generating %s' % fname)
+    with h5py.File(fname) as f:
+        total = f['asset_loss_table'].attrs['total']
 
     # check the sums are consistent with the ones coming from asset_loss_table
     numpy.testing.assert_allclose(data1, total, 1E-6)
@@ -125,6 +136,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             asset_correlation=1.0)
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles('expected/agg_losses.csv', fname)
+
+        check_total_losses(self.calc)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
@@ -219,17 +232,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertIn(b'build_loss_maps.sent', job_info)
         self.assertIn(b'build_loss_maps.received', job_info)
 
-        # test the asset_loss_table exporter; notice that I need to disable
-        # the parallelism to avoid reading bogus data: this is the usual
-        # heisenbug when reading in parallel an .hdf5 generated in process
-        with mock.patch('openquake.baselib.parallel.Processmap', Sequential):
-            [fname] = export(('asset_loss_table', 'hdf5'), self.calc.datastore)
-        print('Generating %s' % fname)
-        with h5py.File(fname) as f:
-            total = f['asset_loss_table'].attrs['total']
-        self.calc.datastore.open()
-        check_total_losses(
-            self.calc.datastore, total, self.calc.oqparam.loss_dt())
+        check_total_losses(self.calc)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
