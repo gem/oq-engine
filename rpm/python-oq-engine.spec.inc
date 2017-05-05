@@ -27,7 +27,8 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
-Patch1: openquake.cfg.patch
+Patch1: oq.patch
+Patch2: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
@@ -75,6 +76,7 @@ Copyright (C) 2010-2017 GEM Foundation
 %setup -n %{oqformat}
 
 %patch1 -p1
+%patch2 -p1
 
 %build
 python setup.py build

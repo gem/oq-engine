@@ -83,7 +83,7 @@ else
     sed -i "s/##_release_##/git${SHA}/g" build-rpm/SPECS/python-${REPO}.spec
     OUT=python-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm
 fi
-cp debian/patches/openquake.cfg.patch build-rpm/SOURCES
+cp debian/patches/*.patch build-rpm/SOURCES
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
 if [ "$BUILD" == "1" ]; then
