@@ -163,8 +163,8 @@ class CalculatorTestCase(unittest.TestCase):
         with open(os.path.join(self.calc.oqparam.export_dir, fname)) as actual:
             self.assertEqual(expected_content, actual.read())
 
-    def runTest(self):
-        res = unittest.TestCase.runTest(self)
+    def run(self, result=None):
+        res = super(CalculatorTestCase, self).run(result)
         # remove temporary dir only for success
         if self.edir:
             shutil.rmtree(self.edir)
