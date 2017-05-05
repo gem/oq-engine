@@ -990,6 +990,16 @@ def get_loss_ratios(lrgetter, aids, monitor):
 
 @export.add(('asset_loss_table', 'hdf5'))
 def export_asset_loss_table(ekey, dstore):
+    """
+    Export in parallel the asset loss table from the datastore.
+
+    NB1: for large calculation this may run out of memory
+    NB2: due to an heisenbug in the parallel reading of .hdf5 files this works
+    reliably only if the datastore has been created by a different process
+
+    The recommendation is: *do not use this exporter*: rather, study its source
+    code and write what you need. Every postprocessing is different.
+    """
     key, fmt = ekey
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
