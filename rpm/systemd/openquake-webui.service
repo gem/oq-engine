@@ -8,7 +8,7 @@ Requires=openquake-dbserver.service
 User=openquake
 Group=openquake
 WorkingDirectory=/usr/share/openquake/engine
-ExecStart=/opt/openquake/bin/python2 -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
+ExecStart=/opt/openquake/bin/python -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
 # Using gunicorn (Nginx or another webserver is needed for static content)
 # ExecStart=/opt/openquake/bin/gunicorn -w 2 openquake.server.wsgi:application
 Restart=always
