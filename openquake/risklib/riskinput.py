@@ -103,7 +103,7 @@ class AssetCollection(object):
         """
         :returns: a composite array of asset values by loss type
         """
-        loss_dt = numpy.dtype([(str(lt), float) for lt in self.loss_types])
+        loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
         vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
         for assets in self.assets_by_site():
             for asset in assets:
