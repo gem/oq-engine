@@ -1022,7 +1022,7 @@ def export_asset_loss_table(ekey, dstore):
     with hdf5.File(fname, 'w') as f:
         nbytes = 0
         total = numpy.zeros(len(dtlist), F32)
-        for pairs in parallel.Processmap(get_loss_ratios, allargs):
+        for pairs in parallel.Starmap(get_loss_ratios, allargs):
             for aid, data in pairs:
                 asset = assetcol[aid]
                 avalue = avals[aid]
