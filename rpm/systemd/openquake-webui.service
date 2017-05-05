@@ -2,6 +2,7 @@
 Description=The OpenQuake Engine WebUI
 Documentation=https://github.com/gem/oq-engine/wiki
 After=network.target openquake-dbserver.service
+Requires=openquake-dbserver.service
 
 [Service]
 User=openquake
