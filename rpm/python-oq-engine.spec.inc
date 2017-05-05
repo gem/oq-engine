@@ -27,6 +27,7 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
+# We patch bin/oq to avoid having python-oq-libs as a build dep
 Patch1: oq.patch
 Patch2: openquake.cfg.patch
 
