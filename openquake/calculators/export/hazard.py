@@ -376,6 +376,7 @@ def _comment(rlzs_assoc, kind, investigation_time):
                 rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time))
 
 
+@util.require_reading
 def build_hcurves(getter, imtls, monitor):
     pmaps = getter.get_pmaps(getter.sids)
     idx = dict(zip(getter.sids, range(len(getter.sids))))
