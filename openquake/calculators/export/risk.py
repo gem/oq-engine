@@ -1010,6 +1010,8 @@ def export_asset_loss_table(ekey, dstore):
     dstore.close()  # avoid OSError: Can't read data (Wrong b-tree signature)
     L = len(loss_types)
     with hdf5.File(fname, 'w') as f:
+        nbytes = 0
+        total = numpy.zeros(len(dtlist), F32)
         for pairs in parallel.Processmap(get_loss_ratios, allargs):
             for aid, data in pairs:
                 asset = assetcol[aid]
@@ -1020,4 +1022,9 @@ def export_asset_loss_table(ekey, dstore):
                         data['ratios'][:, l + L * i] *= aval
                 aref = arefs[asset.idx]
                 f[b'asset_loss_table/' + aref] = data.view(lrs_dt)
+                total += data['ratios'].sum(axis=0)
+                nbytes += data.nbytes
+        f['asset_loss_table'].attrs['loss_types'] = ' '.join(loss_types)
+        f['asset_loss_table'].attrs['total'] = total
+        f['asset_loss_table'].attrs['nbytes'] = nbytes
     return [fname]

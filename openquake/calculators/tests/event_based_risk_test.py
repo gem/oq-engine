@@ -17,12 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
+import mock
 import unittest
 import numpy
 import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
+from openquake.baselib.parallel import Sequential
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
@@ -33,7 +35,7 @@ from openquake.qa_tests_data.event_based_risk import (
 
 
 # used for a sanity check
-def check_total_losses(dstore, alt, loss_dt):
+def check_total_losses(dstore, total, loss_dt):
     L1 = len(loss_dt.names)
     L = L1 // 2
     data1 = numpy.zeros(L1, numpy.float32)
@@ -50,10 +52,7 @@ def check_total_losses(dstore, alt, loss_dt):
     numpy.testing.assert_allclose(data1, data2, 1E-6)
 
     # check the sums are consistent with the ones coming from asset_loss_table
-    data3 = numpy.zeros(L1, numpy.float32)
-    for l, lt in enumerate(loss_dt.names):
-        data3[l] += alt[lt].sum()
-    numpy.testing.assert_allclose(data1, data3, 1E-6)
+    numpy.testing.assert_allclose(data1, total, 1E-6)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -220,18 +219,17 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertIn(b'build_loss_maps.sent', job_info)
         self.assertIn(b'build_loss_maps.received', job_info)
 
-        # test the asset_loss_table exporter
-        [fname] = export(('asset_loss_table', 'hdf5'), self.calc.datastore)
+        # test the asset_loss_table exporter; notice that I need to disable
+        # the parallelism to avoid reading bogus data: this is the usual
+        # heisenbug when reading in parallel an .hdf5 generated in process
+        with mock.patch('openquake.baselib.parallel.Processmap', Sequential):
+            [fname] = export(('asset_loss_table', 'hdf5'), self.calc.datastore)
         print('Generating %s' % fname)
         with h5py.File(fname) as f:
-            alt = f['asset_loss_table']
-            all_losses = [alt[aref]['losses'] for aref in alt]
-        self.assertEqual(len(all_losses), 7)  # number of assets
+            total = f['asset_loss_table'].attrs['total']
         self.calc.datastore.open()
         check_total_losses(
-            self.calc.datastore,
-            numpy.concatenate(all_losses),
-            self.calc.oqparam.loss_dt())
+            self.calc.datastore, total, self.calc.oqparam.loss_dt())
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
