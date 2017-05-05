@@ -517,7 +517,8 @@ class EbriskCalculator(base.RiskCalculator):
         self.datastore.create_dset('losses_by_taxon-rlzs', F32,
                                    (num_tax, self.R, self.L * self.I))
 
-        if self.oqparam.loss_ratios:  # save all_loss_ratios
+        if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
+            # save all_loss_ratios
             self.T = sum(ires.num_tasks for ires in allres)
             self.alr_nbytes = 0
             self.datastore.create_dset(
@@ -571,7 +572,7 @@ class EbriskCalculator(base.RiskCalculator):
                 key = 'agg_loss_table/rlz-%03d' % (r + offset)
                 self.datastore.extend(key, agglosses[r])
 
-        if self.oqparam.loss_ratios:
+        if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
             with self.monitor('saving loss ratios', autoflush=True):
                 lrs_idx += self.start
                 self.start += len(assratios)
@@ -625,6 +626,9 @@ class EbriskCalculator(base.RiskCalculator):
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
         if 'all_loss_ratios' in self.datastore:
+            self.datastore.set_attrs(
+                'all_loss_ratios',
+                loss_types=' '.join(self.riskmodel.loss_types))
             for name in ('indices', 'data'):
                 dset = self.datastore['all_loss_ratios/' + name]
                 nbytes = dset.size * dset.dtype.itemsize
