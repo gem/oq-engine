@@ -1,4 +1,4 @@
-event_tag,year,magnitude,centroid_lon,centroid_lat,centroid_depth,structural
+event_id,year,magnitude,centroid_lon,centroid_lat,centroid_depth,structural
 grp=00~ses=0001~rup=297176-01,1,6.05,-122.2,37.7,7.50,2.63933E+10
 grp=00~ses=0001~rup=92276-01,2,6.05,-120.6,39.4,17.20,3.10979E+06
 grp=00~ses=0001~rup=342752-01,2,5.55,-121.4,36.8,2.15,7.87414E+07
