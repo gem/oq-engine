@@ -43,7 +43,7 @@ def check_total_losses(calc):
     data1 = numpy.zeros(L1, numpy.float32)
     for dset in dstore['agg_loss_table'].values():
         for l, lt in enumerate(loss_dt.names):
-            i = lt.endswith('_ins')
+            i = int(lt.endswith('_ins'))  # the cast avoids a numpy warning
             data1[l] += dset['loss'][:, l - L * i, i].sum()
 
     # check the sums are consistent with the ones coming from losses_by_taxon
