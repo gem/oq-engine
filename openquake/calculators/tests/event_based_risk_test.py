@@ -275,7 +275,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
-                            exports='txt')
-        [fname] = out['gmf_data', 'txt']
-        self.assertEqualFiles(
-            'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)
+                            exports='csv')
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', fname)

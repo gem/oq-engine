@@ -82,6 +82,11 @@ class HeaderTranslator(object):
         return names
 
 htranslator = HeaderTranslator(
+    '(rlzi):uint16',
+    '(sid):uint32',
+    '(eid):uint64',
+    '(imti):uint8',
+    '(gmv):float32',
     '(aid):uint32',
     '(boundary):object',
     '(tectonic_region_type):object',

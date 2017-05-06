@@ -165,7 +165,11 @@ class CalculatorTestCase(unittest.TestCase):
 
     def run(self, result=None):
         res = super(CalculatorTestCase, self).run(result)
+        if res is not None:  # for Python 3
+            issues = len(res.errors) + len(res.failures)
+        else:
+            issues = 0  # this is bad, but Python 2 will die soon or later
         # remove temporary dir only for success
-        if self.edir:
+        if self.edir and not issues:
             shutil.rmtree(self.edir)
         return res
