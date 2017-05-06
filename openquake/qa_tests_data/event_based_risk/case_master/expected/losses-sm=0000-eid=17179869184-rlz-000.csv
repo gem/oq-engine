@@ -1,4 +1,4 @@
-event_tag,year,aid,business_interruption,contents,nonstructural,occupants,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins,structural_ins
+event_id,year,aid,business_interruption,contents,nonstructural,occupants,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins,structural_ins
 grp=01~ses=0001~rup=486-01,1,0,2.37597E+01,1.23540E+02,1.85311E+02,4.75194E-04,0.00000E+00,7.00000E-01,7.00000E-01,7.00000E-01,0.00000E+00,0.00000E+00
 grp=01~ses=0001~rup=486-01,1,1,3.65652E+01,1.49139E+02,2.23709E+02,7.31304E-04,0.00000E+00,7.00000E-01,7.00000E-01,7.00000E-01,0.00000E+00,0.00000E+00
 grp=01~ses=0001~rup=486-01,1,3,2.85185E+01,1.24946E+02,2.15161E+02,5.70369E-04,0.00000E+00,7.00000E-01,7.00000E-01,7.00000E-01,0.00000E+00,0.00000E+00

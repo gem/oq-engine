@@ -1,4 +1,4 @@
-event_tag,site_indices,PGA
+event_id,site_indices,PGA
 scenario-0000000000~ses=1,0,5.742015E-01
 scenario-0000000001~ses=1,0,7.351461E-01
 scenario-0000000002~ses=1,0,4.735880E-01
