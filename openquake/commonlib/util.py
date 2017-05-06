@@ -143,27 +143,15 @@ def get_ses_idx(etag):
 
 class Rupture(object):
     """
-    Simplified Rupture class with attributes etag, indices, ses_idx,
+    Simplified Rupture class with attributes eid, indices, ses_idx,
     used in export.
 
     :param grp_id: source group ID
-    :param eid: event ID
-    :param etag: tag associated to the event
+    :param event: event record
     :param indices: site indices
     """
-    def __init__(self, grp_id, eid, etag, indices=None):
+    def __init__(self, grp_id, event, indices=None):
         self.grp_id = grp_id
-        self.eid = eid
-        if isinstance(etag, int):  # scenario
-            self.etag = 'scenario-%010d' % etag
-            self.indices = indices
-            self.ses_idx = 1
-            return
-        # event based
-        if len(etag) > 100:
-            logging.error(
-                'The etag %s is long %d characters, it will be truncated '
-                'to 100 characters in the /etags array', etag, len(etag))
-        self.etag = etag
+        self.eid = event['eid']
         self.indices = indices
-        self.ses_idx = get_ses_idx(etag)
+        self.ses_idx = event['ses']
