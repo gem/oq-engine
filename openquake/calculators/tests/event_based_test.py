@@ -148,7 +148,7 @@ class EventBasedTestCase(CalculatorTestCase):
                             minimum_intensity='0.4')
 
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/gmf-data.csv', fname)
+        self.assertEqualFiles('expected/mininim-intensity-gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
@@ -256,8 +256,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_13(self):
         out = self.run_calc(case_13.__file__, 'job.ini', exports='csv')
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/0-BooreAtkinson2008.csv',
-                              fname, sorted)
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles(
@@ -284,15 +283,10 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
-        expected = [
-            'gmf-smltp_b1-gsimltp_AB-ltr_0.csv',
-            'gmf-smltp_b1-gsimltp_AB-ltr_1.csv',
-            'gmf-smltp_b1-gsimltp_CF-ltr_2.csv',
-        ]
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
-        fnames = out['gmf_data', 'csv']
-        for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted, delta=1E-6)
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-6)
 
     @attr('qa', 'hazard', 'event_based')
     def test_overflow(self):
