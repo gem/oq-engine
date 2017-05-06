@@ -674,7 +674,6 @@ def export_gmf(ekey, dstore):
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     fmt = ekey[-1]
-    n_gmfs = getattr(oq, 'number_of_ground_motion_fields', None)
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
