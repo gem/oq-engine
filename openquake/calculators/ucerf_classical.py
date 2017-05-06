@@ -75,7 +75,7 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-@util.require_reading
+@util.reader
 def ucerf_classical(
         rupset_idx, ucerf_source, src_filter, gsims, monitor):
     """

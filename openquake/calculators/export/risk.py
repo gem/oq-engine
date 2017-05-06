@@ -29,7 +29,7 @@ from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib import writers, risk_writers, calc
 from openquake.commonlib.util import (
-    get_assets, compose_arrays, require_reading)
+    get_assets, compose_arrays, reader)
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -983,7 +983,7 @@ def export_bcr_map(ekey, dstore):
 # TODO: add export_bcr_map_stats
 
 
-@require_reading
+@reader
 def get_loss_ratios(lrgetter, aids, monitor):
     with lrgetter.dstore:
         loss_ratios = lrgetter.get_all(aids)  # list of arrays of dtype lrs_dt
