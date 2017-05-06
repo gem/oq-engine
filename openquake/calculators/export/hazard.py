@@ -675,9 +675,6 @@ def export_gmf(ekey, dstore):
                           else oq.investigation_time)
     fmt = ekey[-1]
     n_gmfs = getattr(oq, 'number_of_ground_motion_fields', None)
-    if n_gmfs:
-        etags = numpy.array(
-            sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
@@ -687,12 +684,11 @@ def export_gmf(ekey, dstore):
     ruptures_by_rlz = collections.defaultdict(list)
     for grp_id, gsim in rlzs_assoc:
         key = 'grp-%02d' % grp_id
-        if not n_gmfs:  # event based
-            try:
-                events = dstore['events/' + key]
-            except KeyError:  # source model producing zero ruptures
-                continue
-            eventdict = dict(zip(events['eid'], events))
+        try:
+            events = dstore['events/' + key]
+        except KeyError:  # source model producing zero ruptures
+            continue
+        eventdict = dict(zip(events['eid'], events))
         try:
             data = gmf_data['%s/%s' % (key, gsim)].value
         except KeyError:  # no GMFs for the given realization
