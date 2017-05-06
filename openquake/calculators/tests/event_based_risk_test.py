@@ -241,7 +241,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
-                              fname)
+                              fname, delta=1E-5)
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_loss.txt', fname, delta=1E-5)
