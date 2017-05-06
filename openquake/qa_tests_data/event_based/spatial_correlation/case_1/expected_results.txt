@@ -1,7 +1,0 @@
-This test is expected to compare the theoretically derived joint
-probabilities of occurrence of a set of ground motion levels at the
-two sites of interest with those derived by processing the entire set
-of GMFs produced by the calculation.
-
-For PGA = 0.5, the joint probability of occurrence is 0.99
-For PGA = 1.0, the joint probability of occurrence is 0.41
