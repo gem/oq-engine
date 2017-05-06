@@ -605,7 +605,7 @@ class EBRupture(object):
         """
         rupture = self.rupture
         for event in self.events:
-            new = util.Rupture(sm_by_grp[self.grp_id], event, self.sids)
+            new = util.Rupture(event, self.sids)
             new.mesh = mesh[self.sids]
             new.rupture = new
             new.is_from_fault_source = iffs = isinstance(
