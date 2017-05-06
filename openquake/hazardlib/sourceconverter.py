@@ -92,7 +92,7 @@ class SourceGroup(collections.Sequence):
         return self._srcs_weights
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
-                 rup_interdep='indep', srcs_weights=None,
+                 rup_interdep='indep', srcs_weights=None, grp_probability=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
         # checks
         self.trt = trt
@@ -103,6 +103,7 @@ class SourceGroup(collections.Sequence):
         self.src_interdep = src_interdep
         self.rup_interdep = rup_interdep
         self._srcs_weights = srcs_weights
+        self.grp_probability = grp_probability
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.id = id
@@ -848,6 +849,7 @@ class SourceConverter(RuptureConverter):
         """
         trt = node['tectonicRegion']
         srcs_weights = node.attrib.get('srcs_weights')
+        grp_probability = node.attrib.get('grp_probability')
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
@@ -858,6 +860,8 @@ class SourceConverter(RuptureConverter):
             for attr, value in grp_attrs.items():
                 if attr == 'tectonicRegion':
                     src.tectonic_region_type = value
+                elif attr == 'grp_probability':
+                    pass  # do not transmit
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
             srcs.append(src)
@@ -870,6 +874,7 @@ class SourceConverter(RuptureConverter):
         sg.src_interdep = node.attrib.get('src_interdep')
         sg.rup_interdep = node.attrib.get('rup_interdep')
         sg._srcs_weights = srcs_weights
+        sg.grp_probability = grp_probability
         return sg
 
 

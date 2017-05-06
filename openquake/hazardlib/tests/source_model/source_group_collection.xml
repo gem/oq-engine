@@ -7,6 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
     name="Test Source Model"
     >
         <sourceGroup
+        grp_probability="0.5"
         name="group1"
         rup_interdep="mutex"
         src_interdep="indep"

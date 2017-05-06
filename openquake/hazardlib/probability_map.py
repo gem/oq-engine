@@ -279,10 +279,18 @@ class ProbabilityMap(dict):
     __ror__ = __or__
 
     def __mul__(self, other):
-        sids = set(self) | set(other)
+        try:
+            other.get
+            is_pmap = True
+            sids = set(self) | set(other)
+        except AttributeError:  # no .get method, assume a float
+            is_pmap = False
+            assert 0. <= other <= 1., other  # must be a probability
+            sids = set(self)
         new = self.__class__(self.shape_y, self.shape_z)
         for sid in sids:
-            new[sid] = self.get(sid, 1) * other.get(sid, 1)
+            prob = other.get(sid, 1) if is_pmap else other
+            new[sid] = self.get(sid, 1) * prob
         return new
 
     def __invert__(self):
