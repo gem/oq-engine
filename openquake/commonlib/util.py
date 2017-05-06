@@ -177,7 +177,7 @@ def shared_dir_on():
     return config.SHARED_DIR_ON
 
 
-def require_reading(func):
+def reader(func):
     """
     Decorator used to mark functions that require read access to the
     file system. It simply adds a thunk `shared_dir_on` to the function.

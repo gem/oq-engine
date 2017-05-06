@@ -669,7 +669,7 @@ def build_idx_set(branch_id, start_date):
 # #################################################################### #
 
 
-@util.require_reading
+@util.reader
 def compute_ruptures(sources, src_filter, gsims, param, monitor):
     """
     :param sources: a list with a single UCERF source
@@ -798,7 +798,7 @@ class List(list):
     """Trivial container returned by compute_losses"""
 
 
-@util.require_reading
+@util.reader
 def compute_losses(ssm, src_filter, param, riskmodel,
                    imts, trunc_level, correl_model, min_iml, monitor):
     """

@@ -176,7 +176,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     return result
 
 
-@util.require_reading
+@util.reader
 def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
     """
     Thin wrapper over :meth:
