@@ -269,5 +269,4 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
                             exports='csv')
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles(
-            'expected/gmf-smltp_b1-gsimltp_b1.csv', fname)
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
