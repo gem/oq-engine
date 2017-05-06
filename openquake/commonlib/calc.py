@@ -383,7 +383,7 @@ def get_gmfs(dstore, precalc=None):
     N = len(haz_sitecol.complete)
     I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
-    etags = numpy.array(sorted(b'scenario-%010d~ses=1' % i for i in range(E)))
+    etags = numpy.arange(E)
     gmfs = numpy.zeros((len(rlzs_assoc), N, I, E))
     if precalc:
         for g, gsim in enumerate(precalc.gsims):
