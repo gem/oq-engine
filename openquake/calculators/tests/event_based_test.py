@@ -112,23 +112,20 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='3', exports='csv')
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
-                              fname, sorted)
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         # here the <AreaSource 1> is heavy and split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='4', exports='csv')
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
-                              fname, sorted)
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles(
-            'expected/0-SadighEtAl1997.csv', fname, sorted)
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
@@ -151,15 +148,13 @@ class EventBasedTestCase(CalculatorTestCase):
                             minimum_intensity='0.4')
 
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles(
-            'expected/minimum-intensity-SadighEtAl1997.csv', fname, sorted)
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles(
-            'expected/SadighEtAl1997.csv', fname, sorted)
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles(
@@ -196,13 +191,6 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
-        expected = '''\
-gmf-smltp_b2-gsimltp_@_b2_1_@_@.csv
-gmf-smltp_b2-gsimltp_@_b2_2_@_@.csv
-gmf-smltp_b2-gsimltp_@_b2_3_@_@.csv
-gmf-smltp_b2-gsimltp_@_b2_4_@_@.csv
-gmf-smltp_b2-gsimltp_@_b2_5_@_@.csv
-gmf-smltp_b3-gsimltp_@_@_@_b4_1.csv'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
