@@ -254,7 +254,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
+        if REFERENCE_OS:
+            self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
