@@ -696,8 +696,7 @@ def export_gmf(ekey, dstore):
             ruptures = ruptures_by_rlz[rlz]
             gmf_arr = get_array(data, rlzi=rlzi)
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                rup = util.Rupture(grp_id, eventdict[eid],
-                                   sorted(set(gmfa['sid'])))
+                rup = util.Rupture(eventdict[eid], sorted(set(gmfa['sid'])))
                 rup.gmfa = gmfa
                 ruptures.append(rup)
     for rlz in sorted(ruptures_by_rlz):

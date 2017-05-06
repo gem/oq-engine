@@ -133,14 +133,6 @@ def get_assets(dstore):
     return numpy.array(asset_data, asset_dt)
 
 
-def get_ses_idx(etag):
-    """
-    >>> get_ses_idx("grp=00~ses=0007~rup=018-01")
-    7
-    """
-    return int(decode(etag).split('~')[1][4:])
-
-
 class Rupture(object):
     """
     Simplified Rupture class with attributes eid, indices, ses_idx,
@@ -150,8 +142,7 @@ class Rupture(object):
     :param event: event record
     :param indices: site indices
     """
-    def __init__(self, grp_id, event, indices=None):
-        self.grp_id = grp_id
+    def __init__(self, event, indices=None):
         self.eid = event['eid']
         self.indices = indices
         self.ses_idx = event['ses']
