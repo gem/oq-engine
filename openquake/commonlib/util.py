@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import logging
 import numpy
-from openquake.baselib.python3compat import decode
 
 F32 = numpy.float32
 
@@ -142,7 +140,8 @@ class Rupture(object):
     :param event: event record
     :param indices: site indices
     """
-    def __init__(self, event, indices=None):
-        self.eid = event['eid']
+    def __init__(self, rupserial, ses_idx, events, indices=None):
+        self.rupid = rupserial
+        self.eids = events['eid']
         self.indices = indices
-        self.ses_idx = event['ses']
+        self.ses_idx = ses_idx

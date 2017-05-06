@@ -74,7 +74,7 @@ class SES(object):
     # exported XML file and the schema constraints the number to be
     # nonzero
     def __init__(self, ruptures, investigation_time, ordinal=1):
-        self.ruptures = sorted(ruptures, key=operator.attrgetter('eid'))
+        self.ruptures = sorted(ruptures, key=operator.attrgetter('rupid'))
         self.investigation_time = investigation_time
         self.ordinal = ordinal
 
@@ -696,8 +696,8 @@ def export_gmf(ekey, dstore):
             ruptures = ruptures_by_rlz[rlz]
             gmf_arr = get_array(data, rlzi=rlzi)
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                rup = util.Rupture(eventdict[eid], sorted(set(gmfa['sid'])))
-                rup.gmfa = gmfa
+                ses_idx = eventdict[eid]['ses']
+                rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
                 ruptures.append(rup)
     for rlz in sorted(ruptures_by_rlz):
         ruptures_by_rlz[rlz].sort(key=operator.attrgetter('eid'))
@@ -707,6 +707,9 @@ def export_gmf(ekey, dstore):
             ('gmf', fmt), fname, sitecol, oq.imtls, ruptures_by_rlz[rlz],
             rlz, investigation_time)
     return fnames
+
+
+Rup = collections.namedtuple('Rup', ['eid', 'ses_idx', 'indices', 'gmfa'])
 
 
 def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
