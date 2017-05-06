@@ -164,7 +164,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
         [fname] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
-        self.assertEqualFiles('expected/gmf-data.csv', fname)
+        self.assertEqualFiles('expected/gmf-data-bis.csv', fname)
 
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',

@@ -662,7 +662,7 @@ def export_hmaps_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('gmf_data', 'xml'), ('gmf_data', 'txt'))
+@export.add(('gmf_data', 'xml'))
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -768,6 +768,7 @@ def export_gmf_data_csv(ekey, dstore):
             gmf_data_dt)
         if eid is None:  # new format
             fname = dstore.build_fname('gmf', 'data', 'csv')
+            gmfa.sort(order=['rlzi', 'sid', 'eid', 'imti'])
             writers.write_csv(fname, gmfa)
             return [fname]
         # old format for single eid
