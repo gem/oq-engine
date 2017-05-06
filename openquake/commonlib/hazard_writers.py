@@ -365,7 +365,7 @@ def rupture_to_element(rupture, parent=None):
     Convert a rupture object into an Element object.
 
     :param rupture:
-        must have attributes .rupture, .eid and .seed
+        must have attributes .rupture, .rupid and .seed
     :param parent:
         if None a new element is created, otherwise a sub element is
         attached to the parent.
@@ -376,7 +376,7 @@ def rupture_to_element(rupture, parent=None):
         rup_elem = et.SubElement(parent, 'rupture')
 
     rup = rupture.rupture
-    rup_elem.set('id', rupture.eid)
+    rup_elem.set('id', rupture.rupid)
     rup_elem.set('magnitude', str(rup.magnitude))
     rup_elem.set('strike', str(rup.strike))
     rup_elem.set('dip', str(rup.dip))

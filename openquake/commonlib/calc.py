@@ -21,7 +21,7 @@ import logging
 import numpy
 import h5py
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.geo.mesh import (
     surface_to_mesh, point3d, RectangularMesh)
@@ -604,8 +604,10 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for event in self.events:
-            new = util.Rupture(event, self.sids)
+        events_by_ses = general.group_array(self.events, 'ses')
+        for ses_idx in events_by_ses:
+            new = util.Rupture(
+                self.serial, ses_idx, events_by_ses[ses_idx], self.sids)
             new.mesh = mesh[self.sids]
             new.rupture = new
             new.is_from_fault_source = iffs = isinstance(
