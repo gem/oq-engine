@@ -438,9 +438,8 @@ class ClassicalCalculator(PSHACalculator):
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
         pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
-        num_rlzs = len(self.rlzs_assoc.realizations)
-        for block in self.sitecol.split_in_tiles(num_rlzs):
-            newgetter = pgetter.new(block.sids)  # read the probability maps
+        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
+            newgetter = pgetter.new(tile.sids)  # read the probability maps
             if newgetter.nbytes > 0:  # some probability map is nonzero
                 yield newgetter, hstats, monitor
 
