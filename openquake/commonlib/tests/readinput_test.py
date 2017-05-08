@@ -663,12 +663,7 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
 0.000000E+00,0.000000E+00
 0.000000E+00,1.000000E-01
 0.000000E+00,2.000000E-01''')
-        self.assertEqual(b'\n'.join(etags), b'''\
-scenario-0000000000
-scenario-0000000001
-scenario-0000000002
-scenario-0000000003
-scenario-0000000004''')
+        assert_allclose(etags, range(5))
         self.assertEqual(
             writers.write_csv(StringIO(), gmfa), '''\
 PGA:float32,PGV:float32
@@ -681,7 +676,7 @@ PGA:float32,PGV:float32
         fname = os.path.join(DATADIR,  'gmfdata_err.xml')
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Found a missing etag 'scenario-0000000001'",
+        self.assertIn("Found a missing etag '0000000001'",
                       str(ctx.exception))
 
     def test_err2(self):
@@ -699,7 +694,7 @@ PGA:float32,PGV:float32
       xmlns:gml="http://www.opengis.net/gml">
 <gmfCollection gsimTreePath="" sourceModelTreePath="">
   <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="scenario-0">
+    <gmf IMT="PGA" ruptureId="0">
       <node gmv="0.0124783118478" lon="12.1244171" lat="43.58248037"/>
       <node gmv="0.0126515007046" lon="12.12477995" lat="43.58217888"/>
       <node gmv="0.0124056290492" lon="12.12478193" lat="43.58120146"/>
@@ -724,7 +719,7 @@ PGA:float32,PGV:float32
       xmlns:gml="http://www.opengis.net/gml">
 <gmfCollection gsimTreePath="" sourceModelTreePath="">
   <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="scenario-0">
+    <gmf IMT="PGA" ruptureId="0">
       <node gmv="0.0126515007046" lon="12.12477995" lat="43.5812"/>
       <node gmv="0.0124056290492" lon="12.12478193" lat="43.5812"/>
     </gmf>
