@@ -91,7 +91,7 @@ htranslator = HeaderTranslator(
     '(boundary):object',
     '(tectonic_region_type):object',
     '(asset_ref):\|S100',
-    '(event_id):\|S100',
+    '(event_id):uint64',
     '(event_set):uint32',
     '(eid):uint32',
     '(year):uint32',
