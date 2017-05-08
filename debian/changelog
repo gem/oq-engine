@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Removed the .txt exporter for the GMFs, used internally in the tests
+  * Fixed a bug with relative costs which affected master for a long time,
+    but not the release 2.3. The insured losses were wrong in that case.
   * Added an .hdf5 exporter for the asset loss table
   * Loss maps and aggregate losses are computed in parallel or sequentially
     depending if the calculation is a postprocessing calculation or not
