@@ -980,7 +980,7 @@ def _extract_etags_sitecounts(gmfset):
         etags.add(gmf['ruptureId'])
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
-    return numpy.array(sorted(etags), '|S100'), counter
+    return numpy.array(sorted(etags), numpy.uint64), counter
 
 
 def get_scenario_from_nrml(oqparam, fname):
