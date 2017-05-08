@@ -400,7 +400,7 @@ class ClassicalCalculator(PSHACalculator):
 
     def execute(self):
         """
-        Builds hcurves and stats from the stored PoEs
+        Build statistical hazard curves from the stored PoEs
         """
         if 'poes' not in self.datastore:  # for short report
             return
@@ -428,6 +428,7 @@ class ClassicalCalculator(PSHACalculator):
             ires = parallel.Starmap(
                 self.core_task.__func__, self.gen_args()
             ).submit_all()
+        logging.info('Saving the statistical hazard curves')
         return ires.reduce(self.save_hcurves)  # nbytes
 
     def gen_args(self):
