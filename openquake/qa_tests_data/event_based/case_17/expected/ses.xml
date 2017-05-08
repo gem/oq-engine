@@ -10,6 +10,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
+            eids="281483566645248 281483566645249"
             id="44"
             magnitude="5.8"
             rake="0.0"
@@ -25,6 +26,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
+            eids="281483566645257"
             id="45"
             magnitude="6.05"
             rake="0.0"
@@ -40,6 +42,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
+            eids="281483566645263 281483566645265 281483566645266"
             id="46"
             magnitude="6.3"
             rake="0.0"
@@ -60,6 +63,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
+            eids="281483566645250 281483566645252 281483566645254 281483566645255"
             id="44"
             magnitude="5.8"
             rake="0.0"
@@ -75,6 +79,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
+            eids="281483566645258 281483566645259 281483566645260"
             id="45"
             magnitude="6.05"
             rake="0.0"
@@ -90,6 +95,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
+            eids="281483566645268"
             id="46"
             magnitude="6.3"
             rake="0.0"
@@ -110,6 +116,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
+            eids="281483566645251 281483566645253 281483566645256"
             id="44"
             magnitude="5.8"
             rake="0.0"
@@ -125,6 +132,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
+            eids="281483566645261 281483566645262"
             id="45"
             magnitude="6.05"
             rake="0.0"
@@ -140,6 +148,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
+            eids="281483566645264 281483566645267 281483566645269 281483566645270"
             id="46"
             magnitude="6.3"
             rake="0.0"

@@ -377,6 +377,7 @@ def rupture_to_element(rupture, parent=None):
 
     rup = rupture.rupture
     rup_elem.set('id', rupture.rupid)
+    rup_elem.set('eids', rupture.eids)
     rup_elem.set('magnitude', str(rup.magnitude))
     rup_elem.set('strike', str(rup.strike))
     rup_elem.set('dip', str(rup.dip))
