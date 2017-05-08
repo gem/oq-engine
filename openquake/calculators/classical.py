@@ -382,11 +382,11 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
         pmaps = pgetter.get_pmaps(pgetter.sids)
     pmap_by_kind = {}
     if len(pgetter.rlzs) > 1 and hstats:
-        with monitor('compute stats'):
-            weights = [rlz.weight for rlz in pgetter.rlzs]
-            for kind, stat in hstats:
+        weights = [rlz.weight for rlz in pgetter.rlzs]
+        for kind, stat in hstats:
+            with monitor('compute ' + kind):
                 pmap = compute_pmap_stats(pmaps, [stat], weights)
-                pmap_by_kind[kind] = pmap
+            pmap_by_kind[kind] = pmap
     return pmap_by_kind
 
 
