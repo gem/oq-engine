@@ -77,9 +77,9 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
         out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance='0.1', exports='txt')
+                            maximum_distance='0.1', exports='csv')
         self.assertEqualFiles(
-            'BooreAtkinson2008_gmf.txt', out['gmf_data', 'txt'][0])
+            'BooreAtkinson2008_gmf.csv', out['gmf_data', 'csv'][0])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_2(self):
@@ -134,10 +134,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
-        out = self.run_calc(case_9.__file__, 'job.ini', exports='txt,csv,npz')
-        f1, f2 = out['gmf_data', 'txt']
-        self.assertEqualFiles('LinLee2008SSlab_gmf.txt', f1)
-        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.txt', f2)
+        out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
+        f1, f2 = out['gmf_data', 'csv']
+        self.assertEqualFiles('LinLee2008SSlab_gmf.csv', f1)
+        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.csv', f2)
 
         f1, f2 = out['gmf_data', 'csv']
         self.assertEqualFiles('gmf-LinLee2008SSlab-PGA.csv', f1)
