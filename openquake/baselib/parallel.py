@@ -427,11 +427,10 @@ class IterResult(object):
         mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
+        if acc is None:
+            acc = AccumDict()
         for result in self:
-            if acc is None:  # first time
-                acc = result
-            else:
-                acc = agg(acc, result)
+            acc = agg(acc, result)
         return acc
 
     @classmethod
@@ -635,11 +634,7 @@ class Starmap(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
-        if acc is None:
-            acc = AccumDict()
-        iter_result = self.submit_all()
-        for res in iter_result:
-            acc = agg(acc, res)
+        acc = self.submit_all().reduce(agg, acc or AccumDict())
         self.results = []
         return acc
 
