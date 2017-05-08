@@ -224,7 +224,7 @@ def pmap_from_grp(
 
 def calc_hazard_curves(
         groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
-        apply_=Sequential.apply):
+        apply=Sequential.apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per
@@ -276,7 +276,7 @@ def calc_hazard_curves(
             pmap |= pmap_from_grp(
                 group, ss_filter, imtls, gsim_by_trt, truncation_level)
         else:  # split the group and apply `pmap_from_grp` in parallel
-            pmap |= apply_(
+            pmap |= apply(
                 pmap_from_grp,
                 (group, ss_filter, imtls, gsim_by_trt, truncation_level),
                 weight=operator.attrgetter('weight')).reduce(operator.or_)
