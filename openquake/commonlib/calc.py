@@ -64,9 +64,12 @@ class PmapGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore, rlzs_assoc=None):
+    def __init__(self, dstore):
         self.dstore = dstore
-        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+        self.assoc_by_grp = rlzs_assoc.get_assoc_by_grp()
+        self.weights = numpy.array(
+            [rlz.weight for rlz in rlzs_assoc.realizations], F32)
         self._pmap_by_grp = None  # cache
         self.sids = None  # to be set
         self.nbytes = 0
@@ -76,14 +79,11 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a new instance of the getter, with the cache populated
         """
-        newgetter = self.__class__(self.dstore, self.rlzs_assoc)
+        newgetter = object.__new__(self.__class__, self.dstore)
+        vars(newgetter).update(vars(self))
         newgetter.sids = sids
         newgetter.get_pmap_by_grp(sids)  # populate the cache
         return newgetter
-
-    @property
-    def rlzs(self):
-        return self.rlzs_assoc.realizations
 
     def combine_pmaps(self, pmap_by_grp):
         """
@@ -92,13 +92,13 @@ class PmapGetter(object):
         """
         num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
         pmaps = [probability_map.ProbabilityMap(num_levels, 1)
-                 for rlz in self.rlzs]
+                 for _ in self.weights]
         for grp in pmap_by_grp:
             grp_id = int(grp[4:])  # strip grp-
-            for i, gsim in enumerate(self.rlzs_assoc.gsims_by_grp_id[grp_id]):
+            for i, rlzis in enumerate(self.assoc_by_grp[grp_id]):
                 pmap = pmap_by_grp[grp].extract(i)
-                for rlz in self.rlzs_assoc.rlzs_assoc[grp_id, gsim]:
-                    pmaps[rlz.ordinal] |= pmap
+                for rlzi in rlzis:
+                    pmaps[rlzi] |= pmap
         return pmaps
 
     def get(self, sids, rlzi):
@@ -112,9 +112,9 @@ class PmapGetter(object):
         pmap = probability_map.ProbabilityMap(num_levels, 1)
         for grp in pmap_by_grp:
             grp_id = int(grp[4:])  # strip grp-
-            for i, gsim in enumerate(self.rlzs_assoc.gsims_by_grp_id[grp_id]):
-                for rlz in self.rlzs_assoc.rlzs_assoc[grp_id, gsim]:
-                    if rlz.ordinal == rlzi:
+            for i, rlzis in enumerate(self.assoc_by_grp[grp_id]):
+                for r in rlzis:
+                    if r == rlzi:
                         pmap |= pmap_by_grp[grp].extract(i)
                         break
         return pmap
@@ -162,20 +162,20 @@ class PmapGetter(object):
             the kind of PoEs to extract; if not given, returns the realization
             if there is only one or the statistics otherwise.
         """
-        rlzs = self.rlzs
+        num_rlzs = len(self.weights)
         if self.sids is None:
             self.sids = self.dstore['sitecol'].complete.sids
         if not kind:  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
                     yield k, self.dstore['hcurves/' + k]
-            elif len(rlzs) == 1:
+            elif num_rlzs == 1:
                 yield 'rlz-000', self.get(self.sids, 0)
             return
         if 'poes' in self.dstore and kind in ('rlzs', 'all'):
-            for rlz in rlzs:
-                hcurves = self.get(self.sids, rlz.ordinal)
-                yield 'rlz-%03d' % rlz.ordinal, hcurves
+            for rlzi in range(num_rlzs):
+                hcurves = self.get(self.sids, rlzi)
+                yield 'rlz-%03d' % rlzi, hcurves
         if 'hcurves' in self.dstore and kind in ('stats', 'all'):
             for k in sorted(self.dstore['hcurves']):
                 yield k, self.dstore['hcurves/' + k]

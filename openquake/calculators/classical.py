@@ -382,11 +382,10 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     with monitor('combine pmaps'):
         pmaps = pgetter.get_pmaps(pgetter.sids)
     pmap_by_kind = {}
-    if len(pgetter.rlzs) > 1 and hstats:
-        weights = [rlz.weight for rlz in pgetter.rlzs]
+    if len(pgetter.weights) > 1 and hstats:
         for kind, stat in hstats:
             with monitor('compute ' + kind):
-                pmap = compute_pmap_stats(pmaps, [stat], weights)
+                pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
             pmap_by_kind[kind] = pmap
     return pmap_by_kind
 
@@ -438,7 +437,7 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
-        pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
+        pgetter = calc.PmapGetter(self.datastore)
         for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
             newgetter = pgetter.new(tile.sids)  # read the probability maps
             if newgetter.nbytes > 0:  # some probability map is nonzero
