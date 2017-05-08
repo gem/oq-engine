@@ -148,7 +148,7 @@ class EventBasedTestCase(CalculatorTestCase):
                             minimum_intensity='0.4')
 
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/mininim-intensity-gmf-data.csv', fname)
+        self.assertEqualFiles('expected/minimum-intensity-gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
