@@ -662,7 +662,7 @@ def export_hmaps_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('gmf_data', 'xml'), ('gmf_data', 'txt'))
+@export.add(('gmf_data', 'xml'))
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -739,51 +739,6 @@ def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
     return {key: [dest]}
 
 
-def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
-                   investigation_time):
-    """
-    :param key: output_type and export_type
-    :param dest: name of the exported file
-    :param sitecol: the full site collection
-    :param imts: the list of intensity measure types
-    :param ruptures: an ordered list of ruptures
-    :param rlz: a realization object
-    :param investigation_time: investigation time (None for scenario)
-    """
-    # the csv file has the form
-    # etag,indices,gmvs_imt_1,...,gmvs_imt_N
-    rows = []
-    header = ['event_tag', 'site_indices'] + [str(imt) for imt in imts]
-    for rupture in ruptures:
-        indices = rupture.indices
-        gmvs = [F64(a['gmv'])
-                for a in group_array(rupture.gmfa, 'imti').values()]
-        row = [rupture.etag, ' '.join(map(str, indices))] + gmvs
-        rows.append(row)
-    writers.write_csv(dest, rows, header=header)
-    return {key: [dest]}
-
-
-def get_grp_id_eid(key):
-    """
-    Extracts grp_id and eid from the export key.
-
-    >>> get_grp_id_eid('gmf/1/2')
-    ['1', '2']
-    >>> get_grp_id_eid('gmf/3')
-    ['0', '3']
-    >>> get_grp_id_eid('gmf')
-    [None, None]
-    """
-    n = key.count('/')
-    if n == 1:  # passed the eid, grp_id assumed to be zero
-        return ['0', key.split('/')[1]]
-    elif n == 2:  # passed both eid and grp_id
-        return key.split('/')[1:]
-    else:  # eid and grp_id both unspecified, exporting nothing
-        return [None, None]
-
-
 @export.add(('gmf_data', 'csv'))
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
@@ -813,6 +768,7 @@ def export_gmf_data_csv(ekey, dstore):
             gmf_data_dt)
         if eid is None:  # new format
             fname = dstore.build_fname('gmf', 'data', 'csv')
+            gmfa.sort(order=['rlzi', 'sid', 'eid', 'imti'])
             writers.write_csv(fname, gmfa)
             return [fname]
         # old format for single eid
