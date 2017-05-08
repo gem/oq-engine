@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.stats import compute_stats
-from openquake.commonlib import config
+from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -176,6 +176,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     return result
 
 
+@util.reader
 def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
     """
     Thin wrapper over :meth:
@@ -189,7 +190,6 @@ def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
     return res
-build_loss_maps.shared_dir_on = config.SHARED_DIR_ON
 
 
 class EbrPostCalculator(base.RiskCalculator):
