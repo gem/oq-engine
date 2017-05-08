@@ -64,9 +64,9 @@ class PmapGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore):
+    def __init__(self, dstore, rlzs_assoc=None):
         self.dstore = dstore
-        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+        rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.assoc_by_grp = rlzs_assoc.get_assoc_by_grp()
         self.weights = numpy.array(
             [rlz.weight for rlz in rlzs_assoc.realizations], F32)
