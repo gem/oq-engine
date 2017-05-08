@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.hazard_curve import pmap_from_grp, poe_map
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import valid
-from openquake.commonlib import source, readinput, config
+from openquake.commonlib import source, readinput, util
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
@@ -75,6 +75,7 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
+@util.reader
 def ucerf_classical(
         rupset_idx, ucerf_source, src_filter, gsims, monitor):
     """
@@ -130,8 +131,6 @@ def ucerf_classical(
     pmap.grp_id = ucerf_source.src_group_id
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
     return pmap
-
-ucerf_classical.shared_dir_on = config.SHARED_DIR_ON
 
 
 @base.calculators.add('ucerf_psha')

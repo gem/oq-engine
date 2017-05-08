@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Replaced the event tags with numeric event IDs
+  * Added a `@reader` decorator to mark tasks reading directly from the
+    file system
   * Removed the .txt exporter for the GMFs, used internally in the tests
   * Fixed a bug with relative costs which affected master for a long time,
     but not the release 2.3. The insured losses were wrong in that case.
