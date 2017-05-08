@@ -424,11 +424,11 @@ class ClassicalCalculator(PSHACalculator):
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
 
-        with self.monitor('postprocessing', autoflush=True, measuremem=True):
-            nbytes = parallel.Starmap(
+        with self.monitor('sending pmaps', autoflush=True, measuremem=True):
+            ires = parallel.Starmap(
                 self.core_task.__func__, self.gen_args()
-            ).reduce(self.save_hcurves)
-        return nbytes
+            ).submit_all()
+        return ires.reduce(self.save_hcurves)  # nbytes
 
     def gen_args(self):
         """
