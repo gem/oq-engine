@@ -193,8 +193,9 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-6)
+        if REFERENCE_OS:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         if REFERENCE_OS:
