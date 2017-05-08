@@ -32,7 +32,7 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.commonlib import datastore, source, calc
+from openquake.commonlib import datastore, source, calc, util
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -368,6 +368,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
+@util.reader
 def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
