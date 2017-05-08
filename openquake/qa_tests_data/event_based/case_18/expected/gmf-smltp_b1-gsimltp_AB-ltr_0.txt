@@ -1,2 +1,0 @@
-event_tag,site_indices,PGA
-grp=00~ses=0328~rup=1123-01,0,1.930945E-01
