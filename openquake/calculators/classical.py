@@ -428,7 +428,7 @@ class ClassicalCalculator(PSHACalculator):
             ires = parallel.Starmap(
                 self.core_task.__func__, self.gen_args()
             ).submit_all()
-        logging.info('Saving the statistical hazard curves')
+        logging.info('Collect/save statistical hazard curves')
         return ires.reduce(self.save_hcurves)  # nbytes
 
     def gen_args(self):
@@ -452,7 +452,7 @@ class ClassicalCalculator(PSHACalculator):
         :param acc: dictionary kind -> nbytes
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
-        with self.monitor('saving hcurves and stats', autoflush=True):
+        with self.monitor('saving statistical hcurves', autoflush=True):
             for kind in pmap_by_kind:
                 pmap = pmap_by_kind[kind]
                 if pmap:
