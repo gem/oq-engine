@@ -8,7 +8,7 @@ User=openquake
 Group=openquake
 Environment=PYTHONPATH=/opt/openquake/lib/python2.7/site-packages
 WorkingDirectory=/usr/share/openquake/engine
-ExecStart=/usr/bin/env python openquake.server.manage runserver 127.0.0.1:8800 --noreload
+ExecStart=/usr/bin/env python -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
 # Using gunicorn (Nginx or another webserver is needed for static content)
 # ExecStart=/usr/bin/env gunicorn -w 2 openquake.server.wsgi:application
 Restart=always

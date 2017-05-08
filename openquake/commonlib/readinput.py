@@ -605,8 +605,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
-    insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True),
-    deductible_is_absolute = deductible.attrib.get('isAbsolute', True),
+    insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True)
+    deductible_is_absolute = deductible.attrib.get('isAbsolute', True)
     time_events = set()
     cc = riskmodels.CostCalculator(
         {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute)

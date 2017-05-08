@@ -383,11 +383,11 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
         pmaps = pgetter.get_pmaps(pgetter.sids)
     pmap_by_kind = {}
     if len(pgetter.rlzs) > 1 and hstats:
-        with monitor('compute stats'):
-            weights = [rlz.weight for rlz in pgetter.rlzs]
-            for kind, stat in hstats:
+        weights = [rlz.weight for rlz in pgetter.rlzs]
+        for kind, stat in hstats:
+            with monitor('compute ' + kind):
                 pmap = compute_pmap_stats(pmaps, [stat], weights)
-                pmap_by_kind[kind] = pmap
+            pmap_by_kind[kind] = pmap
     return pmap_by_kind
 
 
@@ -425,10 +425,10 @@ class ClassicalCalculator(PSHACalculator):
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
 
-        logging.info('Building hazard curves')
-        nbytes = parallel.Starmap(
-            self.core_task.__func__, list(self.gen_args())
-        ).reduce(self.save_hcurves)
+        with self.monitor('postprocessing', autoflush=True, measuremem=True):
+            nbytes = parallel.Starmap(
+                self.core_task.__func__, self.gen_args()
+            ).reduce(self.save_hcurves)
         return nbytes
 
     def gen_args(self):
@@ -439,9 +439,8 @@ class ClassicalCalculator(PSHACalculator):
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
         pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
-        num_rlzs = len(self.rlzs_assoc.realizations)
-        for block in self.sitecol.split_in_tiles(num_rlzs):
-            newgetter = pgetter.new(block.sids)  # read the probability maps
+        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
+            newgetter = pgetter.new(tile.sids)  # read the probability maps
             if newgetter.nbytes > 0:  # some probability map is nonzero
                 yield newgetter, hstats, monitor
 
