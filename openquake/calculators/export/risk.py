@@ -38,6 +38,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
@@ -219,9 +220,7 @@ def export_agg_losses_ebr(ekey, dstore):
                   ('centroid_lat', F64),
                   ('centroid_depth', F64)] if has_rup_data else []
     oq = dstore['oqparam']
-    dtlist = [('event_id', (numpy.string_, 100)),
-              ('year', U32),
-              ] + extra_list + oq.loss_dt_list()
+    dtlist = [('event_id', U64), ('year', U32)] + extra_list + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
