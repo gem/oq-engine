@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Replaced the event tags with numeric event IDs
+  * Improved the help message of the command `oq purge`
   * Added a `@reader` decorator to mark tasks reading directly from the
     file system
   * Removed the .txt exporter for the GMFs, used internally in the tests
