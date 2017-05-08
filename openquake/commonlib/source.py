@@ -230,6 +230,20 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
+    def get_assoc_by_grp(self):
+        """
+        :returns: grp_id -> [rlzis first gsim, ..., rlzis last gsim]
+        """
+        dic = {}
+        for grp_id, gsims in self.gsims_by_grp_id.items():
+            dic[grp_id] = []
+            for i, gsim in enumerate(gsims):
+                rlzis = numpy.array(
+                    [rlz.ordinal for rlz in self.rlzs_assoc[grp_id, gsim]],
+                    U16)
+                dic[grp_id].append(rlzis)
+        return dic
+
     def __iter__(self):
         return iter(self.rlzs_assoc)
 
