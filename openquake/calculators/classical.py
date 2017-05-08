@@ -424,10 +424,10 @@ class ClassicalCalculator(PSHACalculator):
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
 
-        logging.info('Building hazard curves')
-        nbytes = parallel.Starmap(
-            self.core_task.__func__, list(self.gen_args())
-        ).reduce(self.save_hcurves)
+        with self.monitor('postprocessing', autoflush=True, measuremem=True):
+            nbytes = parallel.Starmap(
+                self.core_task.__func__, self.gen_args()
+            ).reduce(self.save_hcurves)
         return nbytes
 
     def gen_args(self):
