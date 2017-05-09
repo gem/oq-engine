@@ -21,7 +21,7 @@ import logging
 import numpy
 import h5py
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.geo.mesh import (
     surface_to_mesh, point3d, RectangularMesh)
@@ -64,10 +64,9 @@ class PmapGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore, rlzs_assoc=None):
+    def __init__(self, dstore):
         self.dstore = dstore
-        rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
-        self.assoc_by_grp = rlzs_assoc.get_assoc_by_grp()
+        self.assoc_by_grp = dstore['csm_info/assoc_by_grp'].value
         self.weights = self.dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
@@ -94,12 +93,11 @@ class PmapGetter(object):
         """
         pmaps = [probability_map.ProbabilityMap(self.num_levels, 1)
                  for _ in self.weights]
-        for grp in pmap_by_grp:
-            grp_id = int(grp[4:])  # strip grp-
-            for i, rlzis in enumerate(self.assoc_by_grp[grp_id]):
-                pmap = pmap_by_grp[grp].extract(i)
-                for rlzi in rlzis:
-                    pmaps[rlzi] |= pmap
+        for rec in self.assoc_by_grp:
+            grp = 'grp-%02d' % rec['grp_id']
+            pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
+            for rlzi in rec['rlzis']:
+                pmaps[rlzi] |= pmap
         return pmaps
 
     def get(self, sids, rlzi):
@@ -110,13 +108,12 @@ class PmapGetter(object):
         """
         pmap_by_grp = self.get_pmap_by_grp(sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        for grp in pmap_by_grp:
-            grp_id = int(grp[4:])  # strip grp-
-            for i, rlzis in enumerate(self.assoc_by_grp[grp_id]):
-                for r in rlzis:
-                    if r == rlzi:
-                        pmap |= pmap_by_grp[grp].extract(i)
-                        break
+        for rec in self.assoc_by_grp:
+            grp = 'grp-%02d' % rec['grp_id']
+            for r in rec['rlzis']:
+                if r == rlzi:
+                    pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
+                    break
         return pmap
 
     def get_pmaps(self, sids):  # used in classical
