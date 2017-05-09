@@ -430,7 +430,12 @@ class ClassicalCalculator(PSHACalculator):
             ires = parallel.Starmap(
                 self.core_task.__func__, self.gen_args()
             ).submit_all()
-        return ires.reduce(self.save_hcurves)  # nbytes
+        if self.datastore.parent != ():  # essential
+            self.datastore.parent.close()
+        nbytes = ires.reduce(self.save_hcurves)
+        if self.datastore.parent != ():  # essential
+            self.datastore.parent.open()
+        return nbytes
 
     def gen_args(self):
         """
