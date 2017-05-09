@@ -440,9 +440,16 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
-        pgetter = calc.PmapGetter(self.datastore)
+        if self.datastore.parent != ():
+            dstore = self.datastore.parent
+            lazy = True
+            logging.warning('Reading pmaps lazily')
+        else:
+            dstore = self.datastore
+            lazy = False
+        pgetter = calc.PmapGetter(dstore)
         for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            newgetter = pgetter.new(tile.sids)  # read the probability maps
+            newgetter = pgetter.new(tile.sids, lazy)
             yield newgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
