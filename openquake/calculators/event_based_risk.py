@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.stats import compute_stats
-from openquake.commonlib import config
+from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -152,7 +152,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     T = len(taxid)
     R = sum(len(rlzs)
             for gsim, rlzs in riskinput.hazard_getter.rlzs_by_gsim.items())
-    param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, L * I))])
+    param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
     result = dict(agglosses=AccumDict(), assratios=[],
@@ -176,24 +176,29 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     return result
 
 
+@util.reader
 def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
     """
     Thin wrapper over :meth:
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
+    getter.dstore.open()  # if not already open
     aids, loss_maps, loss_maps_stats = builder.build_maps(
         assets, getter, rlzs, stats, monitor)
     res = {'aids': aids, 'loss_maps-rlzs': loss_maps}
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
     return res
-build_loss_maps.shared_dir_on = config.SHARED_DIR_ON
 
 
-@base.calculators.add('event_based_risk')
 class EbrPostCalculator(base.RiskCalculator):
-    pre_calculator = 'ebrisk'
+    def __init__(self, calc):
+        self.datastore = calc.datastore
+        self.oqparam = calc.oqparam
+        self._monitor = calc._monitor
+        self.riskmodel = calc.riskmodel
+        self.rlzs_assoc = calc.rlzs_assoc
 
     def cb_inputs(self, table):
         loss_table = self.datastore[table]
@@ -206,13 +211,15 @@ class EbrPostCalculator(base.RiskCalculator):
         Save the loss maps by opening and closing the datastore and
         return the total number of stored bytes.
         """
-        with self.datastore:
-            for key in res:
-                if key.startswith('loss_maps'):
-                    acc += {key: res[key].nbytes}
-                    self.datastore[key][res['aids']] = res[key]
-                    self.datastore.set_attrs(key, nbytes=acc[key])
+        for key in res:
+            if key.startswith('loss_maps'):
+                acc += {key: res[key].nbytes}
+                self.datastore[key][res['aids']] = res[key]
+                self.datastore.set_attrs(key, nbytes=acc[key])
         return acc
+
+    def pre_execute(self):
+        pass
 
     def execute(self):
         # build loss maps
@@ -224,13 +231,6 @@ class EbrPostCalculator(base.RiskCalculator):
             builder = self.riskmodel.curve_builder
             A = len(assetcol)
             R = len(self.datastore['realizations'])
-
-            if self.oqparam.hazard_calculation_id is None:
-                lrgetter = riskinput.LossRatiosGetter(self.datastore)
-                self.new_calculation()  # increase calc_id
-            else:
-                lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
-
             # create loss_maps datasets
             self.datastore.create_dset(
                 'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
@@ -239,24 +239,22 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
-            # NB: a regular Starmap does not work on a single machine since
-            # the 'all_loss_ratios' dataset is not seen by the
-            # children (looks like a bug in hdf5); we may use a Processmap
-            # instead, but sometimes it breaks on Jenkins; so we use
-            # the safest choice, Sequential
-            # an alternative would be to force
-            # self.oqparam.hazard_calculation_id not None
-            Starmap = (parallel.Sequential
-                       if hasattr(self.datastore, 'new') and
-                       parallel.oq_distribute() == 'futures'
-                       else parallel.Starmap)
-            self.datastore.close()  # this is essential
+            if self.oqparam.hazard_calculation_id:
+                Starmap = parallel.Starmap  # we can parallelize fully
+                lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
+                # avoid OSError: Can't read data (Wrong b-tree signature)
+                self.datastore.parent.close()
+            else:  # there is a single datastore
+                # we cannot read from it in parallel while writing
+                Starmap = parallel.Sequential
+                lrgetter = riskinput.LossRatiosGetter(self.datastore)
             Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
                 self.oqparam.concurrent_tasks
             ).reduce(self.save_loss_maps)
-            self.datastore.open()
+            if self.oqparam.hazard_calculation_id:
+                self.datastore.parent.open()
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -364,7 +362,7 @@ class EpsilonMatrix1(object):
         return self.eps[item[1]]
 
 
-@base.calculators.add('ebrisk')
+@base.calculators.add('event_based_risk')
 class EbriskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the total losses by taxonomy
@@ -477,6 +475,11 @@ class EbriskCalculator(base.RiskCalculator):
         if self.oqparam.hazard_curves_from_gmfs:
             logging.warn('To compute the hazard curves change '
                          'calculation_mode = event_based')
+
+        if 'all_loss_ratios' in self.datastore:
+            EbrPostCalculator(self).run(close=False)
+            return
+
         with self.monitor('reading ruptures', autoflush=True):
             ruptures_by_grp = (
                 self.precalc.result if self.precalc
@@ -514,7 +517,8 @@ class EbriskCalculator(base.RiskCalculator):
         self.datastore.create_dset('losses_by_taxon-rlzs', F32,
                                    (num_tax, self.R, self.L * self.I))
 
-        if self.oqparam.loss_ratios:  # save all_loss_ratios
+        if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
+            # save all_loss_ratios
             self.T = sum(ires.num_tasks for ires in allres)
             self.alr_nbytes = 0
             self.datastore.create_dset(
@@ -568,7 +572,7 @@ class EbriskCalculator(base.RiskCalculator):
                 key = 'agg_loss_table/rlz-%03d' % (r + offset)
                 self.datastore.extend(key, agglosses[r])
 
-        if self.oqparam.loss_ratios:
+        if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
             with self.monitor('saving loss ratios', autoflush=True):
                 lrs_idx += self.start
                 self.start += len(assratios)
@@ -598,7 +602,7 @@ class EbriskCalculator(base.RiskCalculator):
 
     def post_execute(self, num_events):
         """
-        Save risk data
+        Save risk data and possibly execute the EbrPostCalculator
         """
         event_based.EventBasedRuptureCalculator.__dict__['post_execute'](
             self, num_events)
@@ -622,9 +626,13 @@ class EbriskCalculator(base.RiskCalculator):
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
         if 'all_loss_ratios' in self.datastore:
+            self.datastore.set_attrs(
+                'all_loss_ratios',
+                loss_types=' '.join(self.riskmodel.loss_types))
             for name in ('indices', 'data'):
                 dset = self.datastore['all_loss_ratios/' + name]
                 nbytes = dset.size * dset.dtype.itemsize
                 self.datastore.set_attrs(
                     'all_loss_ratios/' + name,
                     nbytes=nbytes, bytes_per_asset=nbytes / self.A)
+            EbrPostCalculator(self).run(close=False)

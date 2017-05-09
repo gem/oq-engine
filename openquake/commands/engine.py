@@ -66,10 +66,6 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
     calc._monitor.flush()
     for line in logs.dbcmd('list_outputs', job_id, False):
         safeprint(line)
-    if hasattr(calc.datastore, 'new'):  # generated in .new_calculation
-        safeprint('Outputs of calculation %d' % calc.datastore.calc_id)
-        for line in logs.dbcmd('list_outputs', calc.datastore.calc_id, False):
-            safeprint(line)
     return job_id
 
 

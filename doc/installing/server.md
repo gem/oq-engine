@@ -15,6 +15,15 @@ Upgrade the database to host users and sessions:
 
 ```bash
 # Django < 1.8
+$ oq webui syncdb 
+# Django >= 1.8
+$ oq webui migrate 
+```
+
+if, for any reason, the `oq` command isn't available in the path you can use the following syntax:
+
+```bash
+# Django < 1.8
 $ python -m openquake.server.manage syncdb 
 # Django >= 1.8
 $ python -m openquake.server.manage migrate 
@@ -26,17 +35,9 @@ $ python -m openquake.server.manage createsuperuser
 ```
 
 #### Authentication using PAM
-Authentication can rely on system users through `PAM`, the [Pluggable Authentication Module](https://en.wikipedia.org/wiki/Pluggable_authentication_module). To use this feature the [django-pam](https://github.com/tehmaze/django-pam) extension must be installed and activated
+Authentication can rely on system users through `PAM`, the [Pluggable Authentication Module](https://en.wikipedia.org/wiki/Pluggable_authentication_module). To use this feature [python-pam](https://github.com/FirefighterBlu3/python-pam) and [django-pam](https://github.com/cnobile2012/django-pam) extensions must be installed and activated. To activate them copy `openquake/server/local_settings.py.pam` to `openquake/server/local_settings.py` and restart the `WebUI` service.
 
-To `openquake/server/local_settings.py` add:
-
-```python
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-    'dpam.backends.PAMBackend',
-)
-```
-The WebUI process owner must be member of the `shadow` group.
+This feature is available on _Linux only_ and the WebUI process owner must be member of the `shadow` group.
 
 ## Running in production
 
