@@ -365,7 +365,7 @@ def rupture_to_element(rupture, parent=None):
     Convert a rupture object into an Element object.
 
     :param rupture:
-        must have attributes .rupture, .rupid and .seed
+        must have attributes .rupture, .rupid, .events_by_ses and .seed
     :param parent:
         if None a new element is created, otherwise a sub element is
         attached to the parent.
@@ -376,8 +376,11 @@ def rupture_to_element(rupture, parent=None):
         rup_elem = et.SubElement(parent, 'rupture')
 
     rup = rupture.rupture
+    for ses in rupture.events_by_ses:
+        eids = rupture.events_by_ses[ses]['eid']
+        ses_elem = et.SubElement(rup_elem, 'SES', id=ses)
+        ses_elem.text = ' '.join(str(eid) for eid in eids)
     rup_elem.set('id', rupture.rupid)
-    rup_elem.set('eids', rupture.eids)
     rup_elem.set('magnitude', str(rup.magnitude))
     rup_elem.set('strike', str(rup.strike))
     rup_elem.set('dip', str(rup.dip))
@@ -480,20 +483,16 @@ class SESXMLWriter(object):
     def __init__(self, dest):
         self.dest = dest
 
-    def serialize(self, data):
+    def serialize(self, data, investigation_time):
         """
         Serialize a collection of stochastic event sets to XML.
 
         :param data:
-            An iterable of "SES" ("Stochastic Event Set") objects.
-            Each "SES" object should:
+            An iterable of :class:`openquake.commonlib.calc.Rupture` objects.
+            Each Rupture should have the following attributes:
 
-            * have an `investigation_time` attribute
-            * have an `ordinal` attribute
-            * be iterable, yielding a sequence of "rupture" objects
-
-            Each rupture" should have the following attributes:
-            * `eid`
+            * `rupid`
+            * `events_by_ses`
             * `magnitude`
             * `strike`
             * `dip`
@@ -540,16 +539,9 @@ class SESXMLWriter(object):
             root = et.Element('nrml')
             ses_container = et.SubElement(
                 root, 'stochasticEventSetCollection')
-            for ses in data:
-                ruptures = list(ses)
-                if not ruptures:  # empty SES, don't export it
-                    continue
-                ses_elem = et.SubElement(
-                    ses_container, 'stochasticEventSet')
-                ses_elem.set('id', str(ses.ordinal or 1))
-                ses_elem.set('investigationTime', str(ses.investigation_time))
-                for rupture in ruptures:
-                    rupture_to_element(rupture, ses_elem)
+            ses_container.set('investigationTime', str(investigation_time))
+            for rupture in data:
+                rupture_to_element(rupture, ses_container)
             nrml.write(list(root), fh)
 
 
