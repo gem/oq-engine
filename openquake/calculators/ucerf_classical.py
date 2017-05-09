@@ -170,7 +170,11 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
         for sm in self.csm.source_models:  # one branch at the time
             grp_id = sm.ordinal
-            gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+            try:
+                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+            except KeyError:
+                raise KeyError('Missing %d in %s' %
+                               (grp_id, list(self.rlzs_assoc.gsims_by_grp_id)))
             [[ucerf_source]] = sm.src_groups
             ucerf_source.nsites = len(self.sitecol)
             self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
