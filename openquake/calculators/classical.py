@@ -368,7 +368,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-# @util.reader  # this will become a reader
+@util.reader
 def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
@@ -427,22 +427,27 @@ class ClassicalCalculator(PSHACalculator):
         self.datastore.flush()
 
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
+            if self.datastore.parent:
+                allargs = list(self.gen_args(lazy=True))
+                self.datastore.close()
+            else:
+                allargs = self.gen_args(lazy=False)
             ires = parallel.Starmap(
-                self.core_task.__func__, self.gen_args()
-            ).submit_all()
+                self.core_task.__func__, allargs).submit_all()
+        self.datastore.open()  # if closed
         nbytes = ires.reduce(self.save_hcurves)
         return nbytes
 
-    def gen_args(self):
+    def gen_args(self, lazy):
         """
-        :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
+        :param lazy: if True read the probability maps on the workers
         :yields: arguments for the function build_hcurves_and_stats
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
         pgetter = calc.PmapGetter(self.datastore)
         for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            newgetter = pgetter.new(tile.sids)
+            newgetter = pgetter.new(tile.sids, lazy)
             yield newgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
