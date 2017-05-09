@@ -266,6 +266,7 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling and save_ruptures
         expected = [
+            'hazard_curve-mean.csv',
             'hazard_curve-rlz-001.csv',
             'hazard_curve-rlz-002.csv',
             'hazard_curve-rlz-003.csv',
