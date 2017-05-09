@@ -80,9 +80,9 @@ class PmapGetter(object):
             self.dstore.__enter__()
         return self
 
-    def __exit__(self):
+    def __exit__(self, *args):
         if self.lazy:
-            self.dstore.__exit__()
+            self.dstore.__exit__(*args)
 
     def new(self, sids):
         """
