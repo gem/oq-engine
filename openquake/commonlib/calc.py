@@ -390,7 +390,7 @@ def get_gmfs(dstore, precalc=None):
     N = len(haz_sitecol.complete)
     I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
-    etags = numpy.array(sorted(b'scenario-%010d~ses=1' % i for i in range(E)))
+    etags = numpy.arange(E)
     gmfs = numpy.zeros((len(rlzs_assoc), N, I, E))
     if precalc:
         for g, gsim in enumerate(precalc.gsims):
@@ -611,10 +611,9 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for eid, etag in zip(self.eids, build_etags(self.events, self.grp_id)):
-            new = util.Rupture(sm_by_grp[self.grp_id], eid, etag, self.sids)
+        for event in self.events:
+            new = util.Rupture(sm_by_grp[self.grp_id], event, self.sids)
             new.mesh = mesh[self.sids]
-            new.etag = etag
             new.rupture = new
             new.is_from_fault_source = iffs = isinstance(
                 rupture.surface, (geo.ComplexFaultSurface,
@@ -639,21 +638,6 @@ class EBRupture(object):
             new.bottom_right_corner = None if iffs or ims else (
                 new.lons[3], new.lats[3], new.depths[3])
             yield new
-
-
-def build_etags(events, grp_id):
-    """
-    An array of tags for the underlying seismic events
-    """
-    tags = []
-    for ev in events:
-        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
-            grp_id, ev['ses'], ev['rupserial'], ev['occ'])
-        sampleid = ev['sample']
-        if sampleid > 0:
-            tag += '~sample=%d' % sampleid
-        tags.append(tag)
-    return numpy.array(tags)
 
 
 class RuptureSerializer(object):
