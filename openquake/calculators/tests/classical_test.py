@@ -162,10 +162,12 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-mean.csv', 'hazard_map-mean.csv'],
             case_13.__file__)
 
-        # test recomputing the hazard maps
+        # test recomputing the hazard maps, i.e. with --hc
+        # must be run sequentially to avoid the usual heisenbug
         self.run_calc(
             case_13.__file__, 'job.ini', exports='csv', poes='0.2',
-            hazard_calculation_id=str(self.calc.datastore.calc_id))
+            hazard_calculation_id=str(self.calc.datastore.calc_id),
+            concurrent_tasks='0')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
