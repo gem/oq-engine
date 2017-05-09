@@ -52,7 +52,7 @@ class Print(object):
     def __init__(self):
         self.lst = []
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kw):
         self.lst.append(b' '.join(encode(str(a)) for a in args))
 
     def __str__(self):
