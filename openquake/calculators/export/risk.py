@@ -221,7 +221,8 @@ def export_agg_losses_ebr(ekey, dstore):
                   ('centroid_lat', F64),
                   ('centroid_depth', F64)] if has_rup_data else []
     oq = dstore['oqparam']
-    dtlist = [('event_id', U64), ('year', U32)] + extra_list + oq.loss_dt_list()
+    dtlist = ([('event_id', U64), ('year', U32)] +
+              extra_list + oq.loss_dt_list())
     elt_dt = numpy.dtype(dtlist)
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
