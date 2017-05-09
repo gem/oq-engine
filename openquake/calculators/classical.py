@@ -430,7 +430,6 @@ class ClassicalCalculator(PSHACalculator):
             ires = parallel.Starmap(
                 self.core_task.__func__, self.gen_args()
             ).submit_all()
-        logging.info('Collect/save statistical hazard curves')
         return ires.reduce(self.save_hcurves)  # nbytes
 
     def gen_args(self):
