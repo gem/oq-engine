@@ -383,7 +383,7 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('combine pmaps'), pgetter.dstore:
+    with monitor('combine pmaps'), pgetter:
         pmaps = pgetter.get_pmaps(pgetter.sids)
     if sum(len(pmap) for pmap in pmaps) == 0:  # no data
         return {}
@@ -449,9 +449,9 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
-        pgetter = calc.PmapGetter(self.datastore)
+        pgetter = calc.PmapGetter(self.datastore, lazy)
         for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            newgetter = pgetter.new(tile.sids, lazy)
+            newgetter = pgetter.new(tile.sids)
             yield newgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):

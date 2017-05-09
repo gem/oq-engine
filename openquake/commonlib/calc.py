@@ -63,9 +63,11 @@ class PmapGetter(object):
     specific realization.
 
     :param dstore: a DataStore instance
+    :param lazy: if True, read directly from the datastore, else from the cache
     """
-    def __init__(self, dstore):
+    def __init__(self, dstore, lazy=False):
         self.dstore = dstore
+        self.lazy = lazy
         self.assoc_by_grp = dstore['csm_info/assoc_by_grp'].value
         self.weights = self.dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
@@ -73,16 +75,24 @@ class PmapGetter(object):
         self.sids = None  # to be set
         self.nbytes = 0
 
-    def new(self, sids, lazy=False):
+    def __enter__(self):
+        if self.lazy:
+            self.dstore.__enter__()
+        return self
+
+    def __exit__(self):
+        if self.lazy:
+            self.dstore.__exit__()
+
+    def new(self, sids):
         """
         :param sids: an array of S site IDs
-        :param lazy: if False, read the data immediately
         :returns: a new instance of the getter, with the cache populated
         """
         newgetter = object.__new__(self.__class__, self.dstore)
         vars(newgetter).update(vars(self))
         newgetter.sids = sids
-        if not lazy:  # populate the cache
+        if not self.lazy:  # populate the cache
             newgetter.get_pmap_by_grp(sids)
         return newgetter
 
