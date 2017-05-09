@@ -43,7 +43,7 @@ def check_total_losses(calc):
     data1 = numpy.zeros(L1, numpy.float32)
     for dset in dstore['agg_loss_table'].values():
         for l, lt in enumerate(loss_dt.names):
-            i = lt.endswith('_ins')
+            i = int(lt.endswith('_ins'))  # the cast avoids a numpy warning
             data1[l] += dset['loss'][:, l - L * i, i].sum()
 
     # check the sums are consistent with the ones coming from losses_by_taxon
@@ -238,10 +238,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
         out = self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
-
         [fname] = out['agg_loss_table', 'csv']
-        self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
-                              fname)
+        if REFERENCE_OS:
+            self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
+                                  fname, delta=1E-5)
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_loss.txt', fname, delta=1E-5)

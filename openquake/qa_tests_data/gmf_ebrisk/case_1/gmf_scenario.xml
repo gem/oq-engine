@@ -13,7 +13,7 @@ xmlns:gml="http://www.opengis.net/gml"
 
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000000"
+    ruptureId="0000000000"
     >
         <node gmv="1.711104467E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="3.051275714E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -21,7 +21,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000001"
+    ruptureId="0000000001"
     >
         <node gmv="3.091294489E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="2.670311789E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -29,7 +29,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000002"
+    ruptureId="0000000002"
     >
         <node gmv="1.576919285E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="1.594338071E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -37,7 +37,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000003"
+    ruptureId="0000000003"
     >
         <node gmv="3.341874573E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="2.361640051E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -45,7 +45,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000004"
+    ruptureId="0000000004"
     >
         <node gmv="1.744414801E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="2.885030736E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -53,7 +53,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000005"
+    ruptureId="0000000005"
     >
         <node gmv="2.918260789E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="2.448080882E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -61,7 +61,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000006"
+    ruptureId="0000000006"
     >
         <node gmv="1.611556043E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="1.615706611E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -69,7 +69,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000007"
+    ruptureId="0000000007"
     >
         <node gmv="2.822499832E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="2.395727775E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -77,7 +77,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000008"
+    ruptureId="0000000008"
     >
         <node gmv="2.275394713E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="4.791639979E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
@@ -85,7 +85,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
     <gmf
     IMT="PGA"
-    ruptureId="scenario-0000000009"
+    ruptureId="0000000009"
     >
         <node gmv="2.900247584E-01" lat="3.809000000E+01" lon="1.548000000E+01"/>
         <node gmv="3.863024133E-01" lat="3.825000000E+01" lon="1.548000000E+01"/>
