@@ -39,6 +39,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
@@ -220,9 +221,7 @@ def export_agg_losses_ebr(ekey, dstore):
                   ('centroid_lat', F64),
                   ('centroid_depth', F64)] if has_rup_data else []
     oq = dstore['oqparam']
-    dtlist = [('event_tag', (numpy.string_, 100)),
-              ('year', U32),
-              ] + extra_list + oq.loss_dt_list()
+    dtlist = [('event_id', U64), ('year', U32)] + extra_list + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
@@ -250,9 +249,9 @@ def export_agg_losses_ebr(ekey, dstore):
             data = agg_losses[rlzname].value
             eids = data['eid']
             losses = data['loss']
-            etags, years, serials = get_etags_years_serials(event_by_grp, eids)
+            eids_, years, serials = get_eids_years_serials(event_by_grp, eids)
             elt = numpy.zeros(len(eids), elt_dt)
-            elt['event_tag'] = etags
+            elt['event_id'] = eids_
             elt['year'] = years
             if rup_data:
                 copy_to(elt, rup_data, serials)
@@ -260,13 +259,13 @@ def export_agg_losses_ebr(ekey, dstore):
                     ['', '_ins'] if oq.insured_losses else ['']):
                 for l, loss_type in enumerate(loss_types):
                     elt[loss_type + ins][:] = losses[:, l, i]
-            elt.sort(order=['year', 'event_tag'])
+            elt.sort(order=['year', 'event_id'])
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             writer.save(elt, dest)
     return writer.getsaved()
 
 
-def get_etags_years_serials(events_by_grp, eids):
+def get_eids_years_serials(events_by_grp, eids):
     etags = []
     years = []
     serials = []
@@ -277,7 +276,7 @@ def get_etags_years_serials(events_by_grp, eids):
             except KeyError:
                 continue
             else:
-                etags.extend(calc.build_etags([event], grp_id))
+                etags.append(event['eid'])
                 years.append(event['year'])
                 serials.append(event['rupserial'])
                 break
