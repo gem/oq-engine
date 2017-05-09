@@ -68,8 +68,7 @@ class PmapGetter(object):
         self.dstore = dstore
         rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.assoc_by_grp = rlzs_assoc.get_assoc_by_grp()
-        self.weights = numpy.array(
-            [rlz.weight for rlz in rlzs_assoc.realizations], F32)
+        self.weights = self.dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
         self._num_levels = None
         self.sids = None  # to be set
