@@ -26,6 +26,7 @@ import operator
 import collections
 import random
 
+import h5py
 import numpy
 
 from openquake.baselib import hdf5, node
@@ -43,6 +44,11 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+
+assoc_by_grp_dt = numpy.dtype(
+    [('grp_id', U16),
+     ('gsim_idx', U16),
+     ('rlzis', h5py.special_dtype(vlen=U16))])
 
 
 class LtRealization(object):
@@ -232,17 +238,16 @@ class RlzsAssoc(collections.Mapping):
 
     def get_assoc_by_grp(self):
         """
-        :returns: grp_id -> [rlzis first gsim, ..., rlzis last gsim]
+        :returns: a numpy array of dtype assoc_by_grp_dt
         """
-        dic = {}
+        lst = []
         for grp_id, gsims in self.gsims_by_grp_id.items():
-            dic[grp_id] = []
-            for i, gsim in enumerate(gsims):
+            for gsim_idx, gsim in enumerate(gsims):
                 rlzis = numpy.array(
                     [rlz.ordinal for rlz in self.rlzs_assoc[grp_id, gsim]],
                     U16)
-                dic[grp_id].append(rlzis)
-        return dic
+                lst.append((grp_id, gsim_idx, rlzis))
+        return numpy.array(lst, assoc_by_grp_dt)
 
     def __iter__(self):
         return iter(self.rlzs_assoc)
