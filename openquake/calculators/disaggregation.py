@@ -138,7 +138,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         """
         dic = {}
         imtls = self.oqparam.imtls
-        pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
+        pgetter = calc.PmapGetter(self.datastore)
         for rlz in self.rlzs_assoc.realizations:
             try:
                 pmap = pgetter.get(numpy.array([sid]), rlz.ordinal)

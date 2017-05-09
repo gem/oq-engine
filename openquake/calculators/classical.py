@@ -301,6 +301,10 @@ class PSHACalculator(base.HazardCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
+        self.datastore['csm_info/assoc_by_grp'] = array = (
+            self.rlzs_assoc.get_assoc_by_grp())
+        nbytes = len(array) * source.assoc_by_grp_dt.itemsize
+        self.datastore.set_attrs('csm_info/assoc_by_grp', nbytes=nbytes)
         return acc
 
     def gen_args(self, csm, monitor):
