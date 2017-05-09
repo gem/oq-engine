@@ -89,7 +89,7 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
-    mean_hazard_curves = valid.Param(valid.boolean, False)
+    mean_hazard_curves = valid.Param(valid.boolean, True)
     max_loss_curves = valid.Param(valid.boolean, False)
     mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
@@ -522,16 +522,6 @@ class OqParam(valid.ParamSet):
             return False
         else:
             return True
-
-    def is_valid_hazard_curves(self):
-        """
-        You must set `hazard_curves_from_gmfs` if `mean_hazard_curves`
-        or `quantile_hazard_curves` are set.
-        """
-        if self.calculation_mode == 'event_based' and (
-           self.mean_hazard_curves or self.quantile_hazard_curves):
-            return self.hazard_curves_from_gmfs
-        return True
 
     def is_valid_export_dir(self):
         """

@@ -161,16 +161,6 @@ class OqParamTestCase(unittest.TestCase):
         oq.validate()
         self.assertEqual(list(oq.imtls.keys()), ['PGA'])
 
-    def test_missing_hazard_curves_from_gmfs(self):
-        with self.assertRaises(ValueError) as ctx:
-            OqParam(
-                calculation_mode='event_based', inputs={},
-                intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
-                mean_hazard_curves='true', sites='0.1 0.2',
-                maximum_distance='400').validate()
-        self.assertIn('You must set `hazard_curves_from_gmfs`',
-                      str(ctx.exception))
-
     def test_create_export_dir(self):
         if os.environ.get('TRAVIS'):
             # this fails only when --with-doctest is set
