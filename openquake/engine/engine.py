@@ -90,8 +90,7 @@ def expose_outputs(dstore):
         rlzs = []
     # expose gmf_data only if < 10 MB
     if oq.ground_motion_fields and calcmode == 'event_based':
-        with dstore.ext5() as ext5:
-            nbytes = ext5['gmf_data'].attrs['nbytes']
+        nbytes = dstore['gmf_data'].attrs['nbytes']
         if nbytes < 10 * 1024 ** 2:
             dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
@@ -197,9 +196,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         try:
             logs.dbcmd('set_status', job_id, 'executing')
             _do_run_calc(calc, exports, hazard_calculation_id, **kw)
-            if hasattr(calc.datastore, 'new'):  # build in new_calculation
-                expose_outputs(calc.datastore.parent)
-                logs.dbcmd('finish', calc.datastore.parent.calc_id, 'complete')
             expose_outputs(calc.datastore)
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)

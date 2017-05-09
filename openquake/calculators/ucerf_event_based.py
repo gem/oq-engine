@@ -31,7 +31,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib import nrml
 from openquake.risklib import riskinput
-from openquake.commonlib import readinput, source, calc, config
+from openquake.commonlib import readinput, source, calc, util
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
     EbriskCalculator, event_based_risk)
@@ -669,6 +669,7 @@ def build_idx_set(branch_id, start_date):
 # #################################################################### #
 
 
+@util.reader
 def compute_ruptures(sources, src_filter, gsims, param, monitor):
     """
     :param sources: a list with a single UCERF source
@@ -722,7 +723,6 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
     return res
-compute_ruptures.shared_dir_on = config.SHARED_DIR_ON
 
 
 def get_composite_source_model(oq):
@@ -798,6 +798,7 @@ class List(list):
     """Trivial container returned by compute_losses"""
 
 
+@util.reader
 def compute_losses(ssm, src_filter, param, riskmodel,
                    imts, trunc_level, correl_model, min_iml, monitor):
     """
@@ -835,7 +836,6 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     res.rlz_slice = slice(start, start + num_rlzs)
     res.events_by_grp = ruptures_by_grp.events_by_grp
     return res
-compute_losses.shared_dir_on = config.SHARED_DIR_ON
 
 
 @base.calculators.add('ucerf_hazard')
