@@ -71,18 +71,30 @@ class PmapGetter(object):
         self.weights = numpy.array(
             [rlz.weight for rlz in rlzs_assoc.realizations], F32)
         self._pmap_by_grp = None  # cache
+        self._num_levels = None
         self.sids = None  # to be set
         self.nbytes = 0
 
-    def new(self, sids):
+    @property
+    def num_levels(self):
+        """
+        Read the number of levels in the hazard curves form the datastore
+        """
+        if self._num_levels is None:
+            self._num_levels = len(self.dstore['oqparam'].imtls.array)
+        return self._num_levels
+
+    def new(self, sids, lazy=False):
         """
         :param sids: an array of S site IDs
+        :param lazy: if False, read the data immediately
         :returns: a new instance of the getter, with the cache populated
         """
         newgetter = object.__new__(self.__class__, self.dstore)
         vars(newgetter).update(vars(self))
         newgetter.sids = sids
-        newgetter.get_pmap_by_grp(sids)  # populate the cache
+        if not lazy:  # populate the cache
+            newgetter.get_pmap_by_grp(sids)
         return newgetter
 
     def combine_pmaps(self, pmap_by_grp):
@@ -90,8 +102,7 @@ class PmapGetter(object):
         :param pmap_by_grp: dictionary group string -> probability map
         :returns: a list of probability maps, one per realization
         """
-        num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
-        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
+        pmaps = [probability_map.ProbabilityMap(self.num_levels, 1)
                  for _ in self.weights]
         for grp in pmap_by_grp:
             grp_id = int(grp[4:])  # strip grp-
@@ -108,8 +119,7 @@ class PmapGetter(object):
         :returns: the hazard curves for the given realization
         """
         pmap_by_grp = self.get_pmap_by_grp(sids)
-        num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
-        pmap = probability_map.ProbabilityMap(num_levels, 1)
+        pmap = probability_map.ProbabilityMap(self.num_levels, 1)
         for grp in pmap_by_grp:
             grp_id = int(grp[4:])  # strip grp-
             for i, rlzis in enumerate(self.assoc_by_grp[grp_id]):
