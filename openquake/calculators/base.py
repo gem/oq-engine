@@ -304,6 +304,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Collect the realizations and set the attributes nbytes
         """
+        self.datastore.open()  # if closed
         sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
             self.rlzs_assoc.realizations) or collections.defaultdict(
                 lambda: 'NA')
