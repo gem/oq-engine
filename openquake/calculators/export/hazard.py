@@ -814,7 +814,7 @@ def export_gmf_scenario_npz(ekey, dstore):
         computer = gmf.GmfComputer(
             ebrupture, dstore['sitecol'], oq.imtls,
             gsims, oq.truncation_level, correl_model)
-        gmf_dt = numpy.dtype([(imt, (F32, E)) for imt in oq.imtls])
+        gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in oq.imtls])
         imts = list(oq.imtls)
         for gsim in gsims:
             arr = computer.compute(gsim, E, oq.random_seed)
