@@ -29,7 +29,7 @@ from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, calc, probability_map
-from openquake.commonlib import readinput, util
+from openquake.commonlib import readinput
 
 TWO16 = 2 ** 16
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -563,6 +563,21 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     return lons, lats, depths
 
 
+class Rupture(object):
+    """
+    Simplified Rupture class with attributes rupid, events_by_ses, indices
+    and others, used in export.
+
+    :param rupid: rupture serial ID
+    :param events_by_ses: dictionary ses_idx -> event records
+    :param indices: site indices
+    """
+    def __init__(self, rupid, events_by_ses, indices=None):
+        self.rupid = rupid
+        self.events_by_ses = events_by_ses
+        self.indices = indices
+
+
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
@@ -600,39 +615,37 @@ class EBRupture(object):
 
     def export(self, mesh, sm_by_grp):
         """
-        Yield :class:`openquake.commonlib.util.Rupture` objects, with all the
+        Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
         events_by_ses = general.group_array(self.events, 'ses')
-        for ses_idx in events_by_ses:
-            new = util.Rupture(
-                self.serial, ses_idx, events_by_ses[ses_idx], self.sids)
-            new.mesh = mesh[self.sids]
-            new.rupture = new
-            new.is_from_fault_source = iffs = isinstance(
-                rupture.surface, (geo.ComplexFaultSurface,
-                                  geo.SimpleFaultSurface))
-            new.is_multi_surface = ims = isinstance(
-                rupture.surface, geo.MultiSurface)
-            new.lons, new.lats, new.depths = get_geom(
-                rupture.surface, iffs, ims)
-            new.surface = rupture.surface
-            new.strike = rupture.surface.get_strike()
-            new.dip = rupture.surface.get_dip()
-            new.rake = rupture.rake
-            new.hypocenter = rupture.hypocenter
-            new.tectonic_region_type = rupture.tectonic_region_type
-            new.magnitude = new.mag = rupture.mag
-            new.top_left_corner = None if iffs or ims else (
-                new.lons[0], new.lats[0], new.depths[0])
-            new.top_right_corner = None if iffs or ims else (
-                new.lons[1], new.lats[1], new.depths[1])
-            new.bottom_left_corner = None if iffs or ims else (
-                new.lons[2], new.lats[2], new.depths[2])
-            new.bottom_right_corner = None if iffs or ims else (
-                new.lons[3], new.lats[3], new.depths[3])
-            yield new
+        new = Rupture(self.serial, events_by_ses, self.sids)
+        new.mesh = mesh[self.sids]
+        new.rupture = new
+        new.is_from_fault_source = iffs = isinstance(
+            rupture.surface, (geo.ComplexFaultSurface,
+                              geo.SimpleFaultSurface))
+        new.is_multi_surface = ims = isinstance(
+            rupture.surface, geo.MultiSurface)
+        new.lons, new.lats, new.depths = get_geom(
+            rupture.surface, iffs, ims)
+        new.surface = rupture.surface
+        new.strike = rupture.surface.get_strike()
+        new.dip = rupture.surface.get_dip()
+        new.rake = rupture.rake
+        new.hypocenter = rupture.hypocenter
+        new.tectonic_region_type = rupture.tectonic_region_type
+        new.magnitude = new.mag = rupture.mag
+        new.top_left_corner = None if iffs or ims else (
+            new.lons[0], new.lats[0], new.depths[0])
+        new.top_right_corner = None if iffs or ims else (
+            new.lons[1], new.lats[1], new.depths[1])
+        new.bottom_left_corner = None if iffs or ims else (
+            new.lons[2], new.lats[2], new.depths[2])
+        new.bottom_right_corner = None if iffs or ims else (
+            new.lons[3], new.lats[3], new.depths[3])
+        return new
 
 
 class RuptureSerializer(object):
