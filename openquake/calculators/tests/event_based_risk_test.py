@@ -239,9 +239,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # this is a case with a grid and asset-hazard association
         out = self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
         [fname] = out['agg_loss_table', 'csv']
-        if REFERENCE_OS:
-            self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
-                                  fname, delta=1E-5)
+        self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
+                              fname, delta=1E-5)
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_loss.txt', fname, delta=1E-5)
