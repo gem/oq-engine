@@ -103,7 +103,7 @@ class AssetCollection(object):
         """
         :returns: a composite array of asset values by loss type
         """
-        loss_dt = numpy.dtype([(str(lt), float) for lt in self.loss_types])
+        loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
         vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
         for assets in self.assets_by_site():
             for asset in assets:
@@ -316,6 +316,7 @@ class CompositeRiskModel(collections.Mapping):
         self.covs = 0  # number of coefficients of variation
         self.curve_builder = self.make_curve_builder(oqparam)
         self.loss_types = [cb.loss_type for cb in self.curve_builder]
+        self.insured_losses = oqparam.insured_losses
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
@@ -643,7 +644,7 @@ gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
 class GmfDataGetter(GmfGetter):
     """
-    Extracts a dictionary of GMVs from the underlying .ext5 file
+    Extracts a dictionary of GMVs from the datastore
     """
     def __init__(self, gmf_data, grp_id, rlzs_by_gsim, start=0, stop=None):
         self.gmf_data = gmf_data
@@ -844,11 +845,10 @@ class LossRatiosGetter(object):
         :param aids: a list of A asset ordinals
         :returns: a list of A composite arrays of dtype `lrs_dt`
         """
-        with self.dstore as ds:
-            data = ds['all_loss_ratios/data']
-            indices = ds['all_loss_ratios/indices'][aids]  # (A, T, 2)
-            loss_ratio_data = []
-            for aid, idxs in zip(aids, indices):
-                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
-                loss_ratio_data.append(arr)
+        data = self.dstore['all_loss_ratios/data']
+        indices = self.dstore['all_loss_ratios/indices'][aids]  # (A, T, 2)
+        loss_ratio_data = []
+        for aid, idxs in zip(aids, indices):
+            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+            loss_ratio_data.append(arr)
         return loss_ratio_data
