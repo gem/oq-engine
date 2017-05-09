@@ -74,7 +74,7 @@ class SES(object):
     # exported XML file and the schema constraints the number to be
     # nonzero
     def __init__(self, ruptures, investigation_time, ordinal=1):
-        self.ruptures = sorted(ruptures, key=operator.attrgetter('etag'))
+        self.ruptures = sorted(ruptures, key=operator.attrgetter('eid'))
         self.investigation_time = investigation_time
         self.ordinal = ordinal
 
@@ -255,7 +255,7 @@ class GmfCollection(object):
                          for gmv, loc in zip(gmf, mesh))
                 gmfset[rupture.ses_idx].append(
                     GroundMotionField(
-                        imt, sa_period, sa_damping, rupture.etag, nodes))
+                        imt, sa_period, sa_damping, rupture.eid, nodes))
         for ses_idx in sorted(gmfset):
             yield GmfSet(gmfset[ses_idx], self.investigation_time, ses_idx)
 
@@ -675,10 +675,6 @@ def export_gmf(ekey, dstore):
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     fmt = ekey[-1]
-    n_gmfs = getattr(oq, 'number_of_ground_motion_fields', None)
-    if n_gmfs:
-        etags = numpy.array(
-            sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
@@ -688,12 +684,11 @@ def export_gmf(ekey, dstore):
     ruptures_by_rlz = collections.defaultdict(list)
     for grp_id, gsim in rlzs_assoc:
         key = 'grp-%02d' % grp_id
-        if not n_gmfs:  # event based
-            try:
-                events = dstore['events/' + key]
-            except KeyError:  # source model producing zero ruptures
-                continue
-            etags = dict(zip(events['eid'], calc.build_etags(events, grp_id)))
+        try:
+            events = dstore['events/' + key]
+        except KeyError:  # source model producing zero ruptures
+            continue
+        eventdict = dict(zip(events['eid'], events))
         try:
             data = gmf_data['%s/%s' % (key, gsim)].value
         except KeyError:  # no GMFs for the given realization
@@ -702,12 +697,12 @@ def export_gmf(ekey, dstore):
             ruptures = ruptures_by_rlz[rlz]
             gmf_arr = get_array(data, rlzi=rlzi)
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                rup = util.Rupture(grp_id, eid, etags[eid],
+                rup = util.Rupture(grp_id, eventdict[eid],
                                    sorted(set(gmfa['sid'])))
                 rup.gmfa = gmfa
                 ruptures.append(rup)
     for rlz in sorted(ruptures_by_rlz):
-        ruptures_by_rlz[rlz].sort(key=operator.attrgetter('etag'))
+        ruptures_by_rlz[rlz].sort(key=operator.attrgetter('eid'))
         fname = dstore.build_fname('gmf', rlz, fmt)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
