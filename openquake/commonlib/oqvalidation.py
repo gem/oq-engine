@@ -324,14 +324,6 @@ class OqParam(valid.ParamSet):
         """
         return numpy.dtype(self.loss_dt_list(dtype))
 
-    def multiloss_dt(self, dtype=numpy.float32):
-        """
-        Return a composite dtype based on the loss types, including occupants
-        """
-        I = self.insured_losses + 1
-        return numpy.dtype([(str(lt), (dtype, I))
-                            for lt in self.all_cost_types])
-
     def loss_dt_list(self, dtype=numpy.float32):
         """
         Return a data type list [(loss_name, dtype), ...]

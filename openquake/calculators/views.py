@@ -30,7 +30,7 @@ from openquake.baselib.general import (
     humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, stats as hstats
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
@@ -424,12 +424,14 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
-    dt = dstore['oqparam'].multiloss_dt()
-    try:
-        array = dstore['avg_losses-stats']  # shape (N, S)
-    except KeyError:
-        array = dstore['avg_losses-rlzs']  # shape (N, R)
-    data = numpy.array([tuple(row) for row in array], dt)
+    dt = dstore['oqparam'].loss_dt()
+    weights = dstore['realizations']['weight']
+    array = dstore['avg_losses-rlzs'].value  # shape (N, R)
+    if len(weights) == 1:  # one realization
+        mean = array[:, 0]
+    else:
+        mean = hstats.compute_stats2(array, [hstats.mean_curve], weights)[:, 0]
+    data = numpy.array([tuple(row) for row in mean], dt)
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
