@@ -368,7 +368,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-@util.reader
+# @util.reader  # this will become a reader
 def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
@@ -430,11 +430,7 @@ class ClassicalCalculator(PSHACalculator):
             ires = parallel.Starmap(
                 self.core_task.__func__, self.gen_args()
             ).submit_all()
-        if self.datastore.parent != ():  # essential
-            self.datastore.parent.close()
         nbytes = ires.reduce(self.save_hcurves)
-        if self.datastore.parent != ():  # essential
-            self.datastore.parent.open()
         return nbytes
 
     def gen_args(self):
@@ -444,16 +440,9 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
-        if self.datastore.parent != ():
-            dstore = self.datastore.parent
-            lazy = True
-            logging.warning('Reading pmaps lazily')
-        else:
-            dstore = self.datastore
-            lazy = False
-        pgetter = calc.PmapGetter(dstore)
+        pgetter = calc.PmapGetter(self.datastore)
         for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            newgetter = pgetter.new(tile.sids, lazy)
+            newgetter = pgetter.new(tile.sids)
             yield newgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
