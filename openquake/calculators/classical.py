@@ -404,6 +404,17 @@ class ClassicalCalculator(PSHACalculator):
     pre_calculator = 'psha'
     core_task = build_hcurves_and_stats
 
+    def gen_args(self, pgetter):
+        """
+        :param lazy: if True read the probability maps on the workers
+        :yields: arguments for the function build_hcurves_and_stats
+        """
+        monitor = self.monitor('build_hcurves_and_stats')
+        hstats = self.oqparam.hazard_stats()
+        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
+            newgetter = pgetter.new(tile.sids)
+            yield newgetter, hstats, monitor
+
     def execute(self):
         """
         Build statistical hazard curves from the stored PoEs
@@ -431,28 +442,21 @@ class ClassicalCalculator(PSHACalculator):
         self.datastore.flush()
 
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
-            if self.datastore.parent:
-                allargs = list(self.gen_args(lazy=True))
-                self.datastore.close()
+            if self.datastore.parent != ():
+                # workers read from the parent datastore
+                pgetter = calc.PmapGetter(self.datastore.parent, lazy=True)
+                allargs = list(self.gen_args(pgetter))
+                self.datastore.parent.close()
             else:
-                allargs = self.gen_args(lazy=False)
+                # workers read from the cache
+                pgetter = calc.PmapGetter(self.datastore)
+                allargs = self.gen_args(pgetter)
             ires = parallel.Starmap(
                 self.core_task.__func__, allargs).submit_all()
-        self.datastore.open()  # if closed
+        if self.datastore.parent != ():
+            self.datastore.parent.open()  # if closed
         nbytes = ires.reduce(self.save_hcurves)
         return nbytes
-
-    def gen_args(self, lazy):
-        """
-        :param lazy: if True read the probability maps on the workers
-        :yields: arguments for the function build_hcurves_and_stats
-        """
-        monitor = self.monitor('build_hcurves_and_stats')
-        hstats = self.oqparam.hazard_stats()
-        pgetter = calc.PmapGetter(self.datastore, lazy)
-        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            newgetter = pgetter.new(tile.sids)
-            yield newgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
