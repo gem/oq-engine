@@ -297,14 +297,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.core_task.__func__, iterargs).submit_all()
         acc = ires.reduce(self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, acc))
-        self.datastore['csm_info'] = self.csm.info
-        self.datastore['csm_info/assoc_by_grp'] = array = (
-            self.rlzs_assoc.get_assoc_by_grp())
-        nbytes = len(array) * source.assoc_by_grp_dt.itemsize
-        self.datastore.set_attrs('csm_info/assoc_by_grp', nbytes=nbytes)
+            self.store_source_info(self.csm.infos, acc)
         return acc
 
     def gen_args(self, csm, monitor):
@@ -337,7 +330,7 @@ class PSHACalculator(base.HazardCalculator):
                             sg.sources, self.src_filter, maxweight):
                         yield block, self.src_filter, gsims, param, monitor
 
-    def store_source_info(self, infos):
+    def store_source_info(self, infos, acc):
         # save the calculation times per each source
         if infos:
             rows = sorted(
@@ -350,6 +343,13 @@ class PSHACalculator(base.HazardCalculator):
                     array[i][name] = getattr(row, name)
             self.source_info = array
             infos.clear()
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+            partial(self.count_eff_ruptures, acc))
+        self.datastore['csm_info'] = self.csm.info
+        self.datastore['csm_info/assoc_by_grp'] = array = (
+            self.rlzs_assoc.get_assoc_by_grp())
+        nbytes = len(array) * source.assoc_by_grp_dt.itemsize
+        self.datastore.set_attrs('csm_info/assoc_by_grp', nbytes=nbytes)
         self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
