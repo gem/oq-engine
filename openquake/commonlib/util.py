@@ -132,22 +132,6 @@ def get_assets(dstore):
     return numpy.array(asset_data, asset_dt)
 
 
-class Rupture(object):
-    """
-    Simplified Rupture class with attributes eid, indices, ses_idx,
-    used in export.
-
-    :param grp_id: source group ID
-    :param event: event record
-    :param indices: site indices
-    """
-    def __init__(self, rupserial, ses_idx, events, indices=None):
-        self.rupid = rupserial
-        self.eids = events['eid']
-        self.indices = indices
-        self.ses_idx = ses_idx
-
-
 def shared_dir_on():
     """
     :returns: True if a shared_dir has been set in openquake.cfg, else False
