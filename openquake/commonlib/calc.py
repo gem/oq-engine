@@ -70,18 +70,9 @@ class PmapGetter(object):
         self.assoc_by_grp = rlzs_assoc.get_assoc_by_grp()
         self.weights = self.dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
-        self._num_levels = None
+        self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = None  # to be set
         self.nbytes = 0
-
-    @property
-    def num_levels(self):
-        """
-        Read the number of levels in the hazard curves form the datastore
-        """
-        if self._num_levels is None:
-            self._num_levels = len(self.dstore['oqparam'].imtls.array)
-        return self._num_levels
 
     def new(self, sids, lazy=False):
         """
