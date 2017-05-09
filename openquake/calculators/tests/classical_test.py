@@ -231,6 +231,21 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         export(('hmaps', 'npz'), self.calc.datastore)
         export(('uhs', 'npz'), self.calc.datastore)
 
+        # check the size of assoc_by_grp for a complex logic tree
+        # grp_id gsim_idx rlzis
+        # 0	0	 {0, 1}
+        # 0	1	 {2, 3}
+        # 1	0	 {0, 2}
+        # 1	1	 {1, 3}
+        # 2	0	 {4}
+        # 2	1	 {5}
+        # 3	0	 {6}
+        # 3	1	 {7}
+        # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
+        nbytes = self.calc.datastore.get_attr(
+            'csm_info/assoc_by_grp', 'nbytes')
+        self.assertEqual(nbytes, 120)
+
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
         self.assert_curves_ok(

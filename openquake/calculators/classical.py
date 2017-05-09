@@ -348,7 +348,8 @@ class PSHACalculator(base.HazardCalculator):
         self.datastore['csm_info'] = self.csm.info
         self.datastore['csm_info/assoc_by_grp'] = array = (
             self.rlzs_assoc.get_assoc_by_grp())
-        nbytes = len(array) * source.assoc_by_grp_dt.itemsize
+        # computing properly the length in bytes of a variable length array
+        nbytes = array.nbytes + sum(rec['rlzis'].nbytes for rec in array)
         self.datastore.set_attrs('csm_info/assoc_by_grp', nbytes=nbytes)
         self.datastore.flush()
 
