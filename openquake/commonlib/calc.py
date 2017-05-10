@@ -647,6 +647,10 @@ class EBRupture(object):
             new.lons[3], new.lats[3], new.depths[3])
         return new
 
+    def __repr__(self):
+        return '<%s %d%s>' % (
+            self.__class__.__name__, self.serial, self.events['eid'])
+
 
 class RuptureSerializer(object):
     """
