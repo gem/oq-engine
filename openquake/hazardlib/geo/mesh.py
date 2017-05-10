@@ -751,14 +751,14 @@ class RectangularMesh(Mesh):
         top = along_azimuth[:-1]
         left = updip[:, :-1]
         tl_area = geo_utils.triangle_area(top, left, diag)
-        top_length = sqrt(numpy.sum(top * top, axis=-1))
-        left_length = sqrt(numpy.sum(left * left, axis=-1))
+        top_length = numpy.sqrt(numpy.sum(top * top, axis=-1))
+        left_length = numpy.sqrt(numpy.sum(left * left, axis=-1))
 
         bottom = along_azimuth[1:]
         right = updip[:, 1:]
         br_area = geo_utils.triangle_area(bottom, right, diag)
-        bottom_length = sqrt(numpy.sum(bottom * bottom, axis=-1))
-        right_length = sqrt(numpy.sum(right * right, axis=-1))
+        bottom_length = numpy.sqrt(numpy.sum(bottom * bottom, axis=-1))
+        right_length = numpy.sqrt(numpy.sum(right * right, axis=-1))
 
         cell_area = tl_area + br_area
 
