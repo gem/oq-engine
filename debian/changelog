@@ -1,8 +1,9 @@
   [Michele Simionato]
-  * Change the event loss table exporter: now it exports an additional
+  * Improved the readibility of the CSV export `dmg_total`
+  * Removed the column `eid` from the CSV export `ruptures`; also
+    renamed the field `serial` to `rup_id` and reordered the fields
+  * Changed the event loss table exporter: now it exports an additional
     column with the `rup_id`
-  * Changed the SES csv exporter: removed the field `eid` and renamed
-    `serial` -> `rup_id`
   * Changed scenario npz export to export also the GMFs outside the maximum
     distance
   * Fixed scenario npz export when there is a single event
