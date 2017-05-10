@@ -311,8 +311,7 @@ def set_random_years(dstore, events_sm, investigation_time):
     SES ordinal and the investigation time.
     """
     events = dstore[events_sm].value
-    events.sort(order='eid')
-    eids = events['eid']
+    eids = numpy.sort(events['eid'])
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(eids, years))
     for event in events:
