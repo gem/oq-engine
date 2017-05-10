@@ -140,7 +140,7 @@ def export_ses_csv(ekey, dstore):
             calc.get_ruptures(dstore, grp_id))
         for r in rup_data:
             rows.append(
-                (r['rupserial'], r['multiplicity'], r['mag'],
+                (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
                  trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
