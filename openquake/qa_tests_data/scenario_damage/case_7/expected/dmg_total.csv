@@ -1,4 +1,4 @@
-loss_type,damage_kind,damage_value
+loss_type,damage_state,damage_value
 contents,no_damage_mean,1.411244E-01
 contents,no_damage_stdv,9.308699E-02
 contents,ds1_mean,1.538588E-01
