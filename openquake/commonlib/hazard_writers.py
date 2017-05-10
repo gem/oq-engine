@@ -360,12 +360,12 @@ class EventBasedGMFXMLWriter(object):
             nrml.write([gmf_container], dest, fmt)
 
 
-def rupture_to_element(rupture, parent=None):
+def rupture_to_element(rup, parent=None):
     """
     Convert a rupture object into an Element object.
 
-    :param rupture:
-        must have attributes .rupture, .rupid, .events_by_ses and .seed
+    :param rup:
+        must have attributes .rupid, .events_by_ses and .seed
     :param parent:
         if None a new element is created, otherwise a sub element is
         attached to the parent.
@@ -375,12 +375,13 @@ def rupture_to_element(rupture, parent=None):
     else:
         rup_elem = et.SubElement(parent, 'rupture')
 
-    rup = rupture.rupture
-    for ses in rupture.events_by_ses:
-        eids = rupture.events_by_ses[ses]['eid']
-        ses_elem = et.SubElement(rup_elem, 'SES', id=ses)
+    elem = et.SubElement(rup_elem, 'stochasticEventSets')
+    for ses in rup.events_by_ses:
+        eids = rup.events_by_ses[ses]['eid']
+        ses_elem = et.SubElement(elem, 'SES', id=ses)
         ses_elem.text = ' '.join(str(eid) for eid in eids)
-    rup_elem.set('id', rupture.rupid)
+    rup_elem.set('id', rup.rupid)
+    rup_elem.set('multiplicity', str(rup.multiplicity))
     rup_elem.set('magnitude', str(rup.magnitude))
     rup_elem.set('strike', str(rup.strike))
     rup_elem.set('dip', str(rup.dip))
@@ -537,8 +538,7 @@ class SESXMLWriter(object):
         """
         with open(self.dest, 'wb') as fh:
             root = et.Element('nrml')
-            ses_container = et.SubElement(
-                root, 'stochasticEventSetCollection')
+            ses_container = et.SubElement(root, 'ruptureCollection')
             ses_container.set('investigationTime', str(investigation_time))
             for rupture in data:
                 rupture_to_element(rupture, ses_container)
