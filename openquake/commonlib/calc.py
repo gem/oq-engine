@@ -47,7 +47,7 @@ F64 = numpy.float64
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rupserial', U32), ('year', U32),
+    ('eid', U64), ('rup_id', U32), ('year', U32),
     ('ses', U32), ('occ', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
@@ -465,7 +465,7 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rupserial', U32), ('multiplicity', U16), ('eidx', U32),
+            ('rup_id', U32), ('multiplicity', U16), ('eidx', U32),
             ('numsites', U32), ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
