@@ -59,14 +59,15 @@ def get_rup_data(ebruptures):
     return dic
 
 
-def copy_to(elt, rup_data, rupserials):
+def copy_to(elt, rup_data, rup_ids):
     """
     Copy information from the ruptures into the elt array for
     the given rupture serials.
     """
-    assert len(elt) == len(rupserials), (len(elt), len(rupserials))
-    for i, serial in numpy.ndenumerate(rupserials):
+    assert len(elt) == len(rup_ids), (len(elt), len(rup_ids))
+    for i, serial in numpy.ndenumerate(rup_ids):
         rec = elt[i]
+        rec['rup_id'] = serial
         (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
          rec['centroid_depth']) = rup_data[serial]
 
@@ -216,12 +217,12 @@ def export_agg_losses_ebr(ekey, dstore):
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     has_rup_data = 'ruptures' in dstore
-    extra_list = [('magnitude', F64),
-                  ('centroid_lon', F64),
-                  ('centroid_lat', F64),
-                  ('centroid_depth', F64)] if has_rup_data else []
+    extra_list = [('magnitude', F32),
+                  ('centroid_lon', F32),
+                  ('centroid_lat', F32),
+                  ('centroid_depth', F32)] if has_rup_data else []
     oq = dstore['oqparam']
-    dtlist = ([('event_id', U64), ('year', U32)] +
+    dtlist = ([('event_id', U64), ('rup_id', U32), ('year', U32)] +
               extra_list + oq.loss_dt_list())
     elt_dt = numpy.dtype(dtlist)
     csm_info = dstore['csm_info']
@@ -279,7 +280,7 @@ def get_eids_years_serials(events_by_grp, eids):
             else:
                 etags.append(event['eid'])
                 years.append(event['year'])
-                serials.append(event['rupserial'])
+                serials.append(event['rup_id'])
                 break
     return numpy.array(etags), numpy.array(years), numpy.array(serials)
 
