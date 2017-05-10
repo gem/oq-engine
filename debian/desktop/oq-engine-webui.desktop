@@ -7,4 +7,4 @@ Comment=The OpenQuake Engine web interface
 Exec=xdg-open http://localhost:8800
 Icon=openquake
 Terminal=false
-Categories=Science;
+Categories=Education;Science;Geoscience;
