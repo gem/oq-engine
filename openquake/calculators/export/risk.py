@@ -520,12 +520,17 @@ def export_dmg_by_taxon_csv(ekey, dstore):
 def export_dmg_totalcsv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    data = dstore[ekey[0]]
+    dset = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
-        dmg_total = build_damage_array(data[rlz.ordinal], damage_dt)
+        dmg_total = build_damage_array(dset[rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        writer.save(dmg_total, fname)
+        data = [['loss_type', 'damage_kind', 'damage_value']]
+        for loss_type in dmg_total.dtype.names:
+            tot = dmg_total[loss_type]
+            for name in tot.dtype.names:
+                data.append((loss_type, name, tot[name]))
+        writer.save(data, fname)
     return writer.getsaved()
 
 
