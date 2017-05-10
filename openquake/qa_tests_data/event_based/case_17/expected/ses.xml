@@ -3,32 +3,35 @@
 xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
-    <stochasticEventSetCollection
+    <ruptureCollection
     investigationTime="1.0"
     >
         <rupture
         dip="90.0"
         id="44"
         magnitude="5.8"
+        multiplicity="9"
         rake="0.0"
         strike="0.0"
         tectonicRegion="active shallow crust"
         >
-            <SES
-            id="1"
-            >
-                281483566645248 281483566645249
-            </SES>
-            <SES
-            id="2"
-            >
-                281483566645250 281483566645252 281483566645254 281483566645255
-            </SES>
-            <SES
-            id="3"
-            >
-                281483566645251 281483566645253 281483566645256
-            </SES>
+            <stochasticEventSets>
+                <SES
+                id="1"
+                >
+                    281483566645248 281483566645249
+                </SES>
+                <SES
+                id="2"
+                >
+                    281483566645250 281483566645252 281483566645254 281483566645255
+                </SES>
+                <SES
+                id="3"
+                >
+                    281483566645251 281483566645253 281483566645256
+                </SES>
+            </stochasticEventSets>
             <planarSurface>
                 <topLeft depth="17.2283592224" lat="-0.0357178263366" lon="0.0"/>
                 <topRight depth="17.2283592224" lat="0.0357178263366" lon="0.0"/>
@@ -40,25 +43,28 @@ xmlns:gml="http://www.opengis.net/gml"
         dip="90.0"
         id="45"
         magnitude="6.05"
+        multiplicity="6"
         rake="0.0"
         strike="0.0"
         tectonicRegion="active shallow crust"
         >
-            <SES
-            id="1"
-            >
-                281483566645257
-            </SES>
-            <SES
-            id="2"
-            >
-                281483566645258 281483566645259 281483566645260
-            </SES>
-            <SES
-            id="3"
-            >
-                281483566645261 281483566645262
-            </SES>
+            <stochasticEventSets>
+                <SES
+                id="1"
+                >
+                    281483566645257
+                </SES>
+                <SES
+                id="2"
+                >
+                    281483566645258 281483566645259 281483566645260
+                </SES>
+                <SES
+                id="3"
+                >
+                    281483566645261 281483566645262
+                </SES>
+            </stochasticEventSets>
             <planarSurface>
                 <topLeft depth="16.0539970398" lat="-0.0462791137397" lon="0.0"/>
                 <topRight depth="16.0539970398" lat="0.0462791137397" lon="0.0"/>
@@ -70,25 +76,28 @@ xmlns:gml="http://www.opengis.net/gml"
         dip="90.0"
         id="46"
         magnitude="6.3"
+        multiplicity="8"
         rake="0.0"
         strike="0.0"
         tectonicRegion="active shallow crust"
         >
-            <SES
-            id="1"
-            >
-                281483566645263 281483566645265 281483566645266
-            </SES>
-            <SES
-            id="2"
-            >
-                281483566645268
-            </SES>
-            <SES
-            id="3"
-            >
-                281483566645264 281483566645267 281483566645269 281483566645270
-            </SES>
+            <stochasticEventSets>
+                <SES
+                id="1"
+                >
+                    281483566645263 281483566645265 281483566645266
+                </SES>
+                <SES
+                id="2"
+                >
+                    281483566645268
+                </SES>
+                <SES
+                id="3"
+                >
+                    281483566645264 281483566645267 281483566645269 281483566645270
+                </SES>
+            </stochasticEventSets>
             <planarSurface>
                 <topLeft depth="14.5323925018" lat="-0.0599632300436" lon="0.0"/>
                 <topRight depth="14.5323925018" lat="0.0599632300436" lon="0.0"/>
@@ -96,5 +105,5 @@ xmlns:gml="http://www.opengis.net/gml"
                 <bottomRight depth="27.8676071167" lat="0.0599632300436" lon="0.0"/>
             </planarSurface>
         </rupture>
-    </stochasticEventSetCollection>
+    </ruptureCollection>
 </nrml>

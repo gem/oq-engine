@@ -622,7 +622,7 @@ class EBRupture(object):
         events_by_ses = general.group_array(self.events, 'ses')
         new = Rupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]
-        new.rupture = new
+        new.multiplicity = self.multiplicity
         new.is_from_fault_source = iffs = isinstance(
             rupture.surface, (geo.ComplexFaultSurface,
                               geo.SimpleFaultSurface))
