@@ -129,8 +129,8 @@ def export_ses_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('serial mag centroid_lon centroid_lat centroid_depth trt '
-              'strike dip rake eid multiplicity boundary').split()
+    header = ('rupid multiplicity mag centroid_lon centroid_lat centroid_depth'
+              ' trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
     gsims = csm_info.get_rlzs_assoc().gsims_by_grp_id
@@ -138,13 +138,12 @@ def export_ses_csv(ekey, dstore):
     for grp_id, trt in sorted(grp_trt.items()):
         rup_data = calc.RuptureData(trt, gsims[grp_id]).to_array(
             calc.get_ruptures(dstore, grp_id))
-        events = dstore['events/grp-%02d' % grp_id]
         for r in rup_data:
-            event = events[r['eidx']]
             rows.append(
-                (r['rupserial'], r['mag'], r['lon'], r['lat'], r['depth'],
-                 trt, r['strike'], r['dip'], r['rake'], event['eid'],
-                 r['multiplicity'], r['boundary']))
+                (r['rup_id'], r['multiplicity'], r['mag'],
+                 r['lon'], r['lat'], r['depth'],
+                 trt, r['strike'], r['dip'], r['rake'],
+                 r['boundary']))
     rows.sort()  # by rupture serial
     writers.write_csv(dest, rows, header=header, sep='\t')
     return [dest]
@@ -805,14 +804,21 @@ def export_gmf_scenario_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     if 'scenario' in oq.calculation_mode:
         # compute the GMFs on the fly from the stored rupture
-        sitemesh = get_mesh(dstore['sitecol'], complete=False)
+        # NB: for visualization purposes we want to export the full mesh
+        # of points, including the ones outside the maximum distance
+        # NB2: in the future, I want to add a sitecol output, then the
+        # visualization of the mesh will be possibile even without the GMFs;
+        # in the future, here we will change
+        # sitemesh = get_mesh(dstore['sitecol'], complete=False)
+        sitecol = dstore['sitecol'].complete
+        sitemesh = get_mesh(sitecol)
         rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
         E = oq.number_of_ground_motion_fields
         correl_model = oq.get_correl_model()
         [ebrupture] = calc.get_ruptures(dstore, 0)
         computer = gmf.GmfComputer(
-            ebrupture, dstore['sitecol'], oq.imtls,
+            ebrupture, sitecol, oq.imtls,
             gsims, oq.truncation_level, correl_model)
         gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in oq.imtls])
         imts = list(oq.imtls)
