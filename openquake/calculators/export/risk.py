@@ -525,7 +525,7 @@ def export_dmg_totalcsv(ekey, dstore):
     for rlz in rlzs:
         dmg_total = build_damage_array(dset[rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        data = [['loss_type', 'damage_kind', 'damage_value']]
+        data = [['loss_type', 'damage_state', 'damage_value']]
         for loss_type in dmg_total.dtype.names:
             tot = dmg_total[loss_type]
             for name in tot.dtype.names:
