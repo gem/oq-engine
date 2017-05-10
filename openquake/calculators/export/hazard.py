@@ -773,14 +773,21 @@ def export_gmf_scenario_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     if 'scenario' in oq.calculation_mode:
         # compute the GMFs on the fly from the stored rupture
-        sitemesh = get_mesh(dstore['sitecol'], complete=False)
+        # NB: for visualization purposes we want to export the full mesh
+        # of points, including the ones outside the maximum distance
+        # NB2: in the future, I want to add a sitecol output, then the
+        # visualization of the mesh will be possibile even without the GMFs;
+        # in the future, here we will change
+        # sitemesh = get_mesh(dstore['sitecol'], complete=False)
+        sitecol = dstore['sitecol'].complete
+        sitemesh = get_mesh(sitecol)
         rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
         E = oq.number_of_ground_motion_fields
         correl_model = oq.get_correl_model()
         [ebrupture] = calc.get_ruptures(dstore, 0)
         computer = gmf.GmfComputer(
-            ebrupture, dstore['sitecol'], oq.imtls,
+            ebrupture, sitecol, oq.imtls,
             gsims, oq.truncation_level, correl_model)
         gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in oq.imtls])
         imts = list(oq.imtls)
