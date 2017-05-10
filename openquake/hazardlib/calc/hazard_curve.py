@@ -272,8 +272,12 @@ def calc_hazard_curves(
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     for group in groups:
-        pmap |= apply(
-            pmap_from_grp,
-            (group, ss_filter, imtls, gsim_by_trt, truncation_level),
-            weight=operator.attrgetter('weight')).reduce(operator.or_)
+        if group.src_interdep == 'mutex':  # do not split the group
+            pmap |= pmap_from_grp(
+                group, ss_filter, imtls, gsim_by_trt, truncation_level)
+        else:  # split the group and apply `pmap_from_grp` in parallel
+            pmap |= apply(
+                pmap_from_grp,
+                (group, ss_filter, imtls, gsim_by_trt, truncation_level),
+                weight=operator.attrgetter('weight')).reduce(operator.or_)
     return pmap.convert(imtls, len(sitecol.complete))

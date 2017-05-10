@@ -195,5 +195,6 @@ class NankaiTestCase(unittest.TestCase):
         imtls = DictArray({'PGV': [20, 40, 80]})
         gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
         hcurves = calc_hazard_curves(groups, s_filter, imtls, gsim_by_trt)
-        npt.assert_almost_equal([0.91149953, 0.12548556, 0.00177583],
-                                hcurves['PGV'][0])
+        npt.assert_almost_equal(
+            [1.11315443e-01, 3.92180097e-03, 3.02064427e-05],
+            hcurves['PGV'][0])
