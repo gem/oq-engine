@@ -6,17 +6,13 @@ xmlns:gml="http://www.opengis.net/gml"
     <ruptureCollection
     investigationTime="1.0"
     >
-        <sourceGroup
+        <ruptureGroup
         id="1"
+        tectonicRegion="active shallow crust"
         >
-            <rupture
-            dip="90.0"
+            <singlePlaneRupture
             id="44"
-            magnitude="5.8"
             multiplicity="9"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
             >
                 <stochasticEventSets>
                     <SES
@@ -35,21 +31,29 @@ xmlns:gml="http://www.opengis.net/gml"
                         281483566645251 281483566645253 281483566645256
                     </SES>
                 </stochasticEventSets>
+                <magnitude>
+                    5.8
+                </magnitude>
+                <strike>
+                    0.0
+                </strike>
+                <dip>
+                    90.0
+                </dip>
+                <rake>
+                    0.0
+                </rake>
+                <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
                     <topLeft depth="17.2283592224" lat="-0.0357178263366" lon="0.0"/>
                     <topRight depth="17.2283592224" lat="0.0357178263366" lon="0.0"/>
                     <bottomLeft depth="25.1716403961" lat="-0.0357178263366" lon="0.0"/>
                     <bottomRight depth="25.1716403961" lat="0.0357178263366" lon="0.0"/>
                 </planarSurface>
-            </rupture>
-            <rupture
-            dip="90.0"
+            </singlePlaneRupture>
+            <singlePlaneRupture
             id="45"
-            magnitude="6.05"
             multiplicity="6"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
             >
                 <stochasticEventSets>
                     <SES
@@ -68,21 +72,29 @@ xmlns:gml="http://www.opengis.net/gml"
                         281483566645261 281483566645262
                     </SES>
                 </stochasticEventSets>
+                <magnitude>
+                    6.05
+                </magnitude>
+                <strike>
+                    0.0
+                </strike>
+                <dip>
+                    90.0
+                </dip>
+                <rake>
+                    0.0
+                </rake>
+                <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
                     <topLeft depth="16.0539970398" lat="-0.0462791137397" lon="0.0"/>
                     <topRight depth="16.0539970398" lat="0.0462791137397" lon="0.0"/>
                     <bottomLeft depth="26.3460025787" lat="-0.0462791137397" lon="0.0"/>
                     <bottomRight depth="26.3460025787" lat="0.0462791137397" lon="0.0"/>
                 </planarSurface>
-            </rupture>
-            <rupture
-            dip="90.0"
+            </singlePlaneRupture>
+            <singlePlaneRupture
             id="46"
-            magnitude="6.3"
             multiplicity="8"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
             >
                 <stochasticEventSets>
                     <SES
@@ -101,13 +113,26 @@ xmlns:gml="http://www.opengis.net/gml"
                         281483566645264 281483566645267 281483566645269 281483566645270
                     </SES>
                 </stochasticEventSets>
+                <magnitude>
+                    6.3
+                </magnitude>
+                <strike>
+                    0.0
+                </strike>
+                <dip>
+                    90.0
+                </dip>
+                <rake>
+                    0.0
+                </rake>
+                <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
                     <topLeft depth="14.5323925018" lat="-0.0599632300436" lon="0.0"/>
                     <topRight depth="14.5323925018" lat="0.0599632300436" lon="0.0"/>
                     <bottomLeft depth="27.8676071167" lat="-0.0599632300436" lon="0.0"/>
                     <bottomRight depth="27.8676071167" lat="0.0599632300436" lon="0.0"/>
                 </planarSurface>
-            </rupture>
-        </sourceGroup>
+            </singlePlaneRupture>
+        </ruptureGroup>
     </ruptureCollection>
 </nrml>
