@@ -283,14 +283,13 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        if hasattr(self, 'rupser'):
-            self.rupser.close()
-            with self.monitor('setting event years', measuremem=True,
-                              autoflush=True):
-                inv_time = int(self.oqparam.investigation_time)
-                numpy.random.seed(self.oqparam.ses_seed)
-                for sm in sorted(self.datastore['events']):
-                    set_random_years(self.datastore, 'events/' + sm, inv_time)
+        self.rupser.close()
+        with self.monitor('setting event years', measuremem=True,
+                          autoflush=True):
+            inv_time = int(self.oqparam.investigation_time)
+            numpy.random.seed(self.oqparam.ses_seed)
+            for sm in sorted(self.datastore['events']):
+                set_random_years(self.datastore, 'events/' + sm, inv_time)
         num_events = sum(_count(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
