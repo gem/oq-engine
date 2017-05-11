@@ -179,10 +179,10 @@ def _build_eb_ruptures(
         events = []
         for (sampleid, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
-            for occ_no in range(1, num_occ + 1):
+            for occ_no in range(num_occ):
                 # NB: the 0 below is a placeholder; the right eid will be
                 # set a bit later, in set_eids
-                events.append((0, ses_idx, occ_no, sampleid))
+                events.append((0, ses_idx, sampleid))
         if events:
             yield calc.EBRupture(
                 rup, r_sites.indices,
@@ -204,7 +204,7 @@ def get_events(ebruptures):
     year = 0  # to be set later
     for ebr in ebruptures:
         for event in ebr.events:
-            rec = (event['eid'], ebr.serial, year, event['ses'], event['occ'],
+            rec = (event['eid'], ebr.serial, year, event['ses'],
                    event['sample'])
             events.append(rec)
     return numpy.array(events, calc.stored_event_dt)
