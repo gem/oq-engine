@@ -382,6 +382,14 @@ class RuptureConverter(object):
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
 
+    def get_mag_rake_hypo(self, node):
+        with context(self.fname, node):
+            mag = ~node.magnitude
+            rake = ~node.rake
+            h = node.hypocenter
+            hypocenter = geo.Point(h['lon'], h['lat'], h['depth'])
+        return mag, rake, hypocenter
+
     def convert_node(self, node):
         """
         Convert the given rupture node into a hazardlib rupture, depending
@@ -389,18 +397,8 @@ class RuptureConverter(object):
 
         :param node: a node representing a rupture
         """
-        with context(self.fname, node):
-            typology = striptag(node.tag)
-            # simpleFaultRupture, complexFaultRupture, singlePlaneRupture,
-            # multiPlanesRupture, griddedRupture
-            convert_rupture = getattr(self, 'convert_' + typology)
-            mag = ~node.magnitude
-            rake = ~node.rake
-            h = node.hypocenter
-            hypocenter = geo.Point(h['lon'], h['lat'], h['depth'])
-        rup = convert_rupture(node, mag, rake, hypocenter)
-        rup.typology = typology
-        return rup
+        convert = getattr(self, 'convert_' + striptag(node.tag))
+        return convert(node)
 
     def geo_line(self, edge):
         """
@@ -484,15 +482,13 @@ class RuptureConverter(object):
             surface = geo.MultiSurface(planar_surfaces)
         return surface
 
-    def convert_simpleFaultRupture(self, node, mag, rake, hypocenter):
+    def convert_simpleFaultRupture(self, node):
         """
         Convert a simpleFaultRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = [node.simpleFaultGeometry]
         rupt = source.rupture.BaseRupture(
@@ -502,15 +498,13 @@ class RuptureConverter(object):
             source_typology=source.SimpleFaultSource)
         return rupt
 
-    def convert_complexFaultRupture(self, node, mag, rake, hypocenter):
+    def convert_complexFaultRupture(self, node):
         """
         Convert a complexFaultRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = [node.complexFaultGeometry]
         rupt = source.rupture.BaseRupture(
@@ -520,15 +514,13 @@ class RuptureConverter(object):
             source_typology=source.ComplexFaultSource)
         return rupt
 
-    def convert_singlePlaneRupture(self, node, mag, rake, hypocenter):
+    def convert_singlePlaneRupture(self, node):
         """
         Convert a singlePlaneRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = [node.planarSurface]
         rupt = source.rupture.BaseRupture(
@@ -539,15 +531,13 @@ class RuptureConverter(object):
             source_typology=source.NonParametricSeismicSource)
         return rupt
 
-    def convert_multiPlanesRupture(self, node, mag, rake, hypocenter):
+    def convert_multiPlanesRupture(self, node):
         """
         Convert a multiPlanesRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
         rupt = source.rupture.BaseRupture(
@@ -558,15 +548,13 @@ class RuptureConverter(object):
             source_typology=source.NonParametricSeismicSource)
         return rupt
 
-    def convert_griddedRupture(self, node, mag, rake, hypocenter):
+    def convert_griddedRupture(self, node):
         """
         Convert a griddedRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = [node.griddedSurface]
         rupt = source.rupture.BaseRupture(
@@ -602,17 +590,6 @@ class SourceConverter(RuptureConverter):
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
         self.tom = PoissonTOM(investigation_time)
-
-    def convert_node(self, node):
-        """
-        Convert the given node into a hazardlib source, depending
-        on the node tag.
-
-        :param node: a node representing a source
-        """
-        with context(self.fname, node):
-            convert_source = getattr(self, 'convert_' + striptag(node.tag))
-        return convert_source(node)
 
     def convert_mfdist(self, node):
         """
