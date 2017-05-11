@@ -360,21 +360,21 @@ class EventBasedGMFXMLWriter(object):
             nrml.write([gmf_container], dest, fmt)
 
 
-def rupture_to_element(rup, parent=None):
+def sub_elems(elem, rup, *names):
+    for name in names:
+        et.SubElement(elem, name).text = str(getattr(rup, name))
+
+
+def rupture_to_element(rup, parent):
     """
     Convert a rupture object into an Element object.
 
     :param rup:
         must have attributes .rupid, .events_by_ses and .seed
     :param parent:
-        if None a new element is created, otherwise a sub element is
-        attached to the parent.
+         parent of the returned element
     """
-    if parent is None:
-        rup_elem = et.Element('rupture')
-    else:
-        rup_elem = et.SubElement(parent, 'rupture')
-
+    rup_elem = et.SubElement(parent, rup.typology)
     elem = et.SubElement(rup_elem, 'stochasticEventSets')
     for ses in rup.events_by_ses:
         eids = rup.events_by_ses[ses]['eid']
@@ -382,12 +382,9 @@ def rupture_to_element(rup, parent=None):
         ses_elem.text = ' '.join(str(eid) for eid in eids)
     rup_elem.set('id', rup.rupid)
     rup_elem.set('multiplicity', str(rup.multiplicity))
-    rup_elem.set('magnitude', str(rup.magnitude))
-    rup_elem.set('strike', str(rup.strike))
-    rup_elem.set('dip', str(rup.dip))
-    rup_elem.set('rake', str(rup.rake))
-    rup_elem.set('tectonicRegion', str(rup.tectonic_region_type))
-
+    sub_elems(rup_elem, rup, 'magnitude',  'strike', 'dip', 'rake')
+    h = rup.hypocenter
+    et.SubElement(rup_elem, 'hypocenter', dict(lon=h.x, lat=h.y, depth=h.z))
     if rup.is_from_fault_source:
         # rup is from a simple or complex fault source
         # the rup geometry is represented by a mesh of 3D
@@ -542,8 +539,10 @@ class SESXMLWriter(object):
             ses_container = et.SubElement(root, 'ruptureCollection')
             ses_container.set('investigationTime', str(investigation_time))
             for grp_id in sorted(data):
-                sg = et.SubElement(
-                    ses_container, 'sourceGroup', {'id': grp_id})
+                attrs = dict(
+                    id=grp_id,
+                    tectonicRegion=data[grp_id][0].tectonic_region_type)
+                sg = et.SubElement(ses_container, 'ruptureGroup', attrs)
                 for rupture in data[grp_id]:
                     rupture_to_element(rupture, sg)
             nrml.write(list(root), fh)
