@@ -623,6 +623,16 @@ class EBRupture(object):
         new = Rupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]
         new.multiplicity = self.multiplicity
+        if isinstance(rupture.surface, geo.ComplexFaultSurface):
+            new.typology = 'complexFaultsurface'
+        elif isinstance(rupture.surface, geo.SimpleFaultSurface):
+            new.typology = 'simpleFaultsurface'
+        elif isinstance(rupture.surface, geo.GriddedSurface):
+            new.typology = 'griddedRupture'
+        elif isinstance(rupture.surface, geo.MultiSurface):
+            new.typology = 'multiPlanesRupture'
+        else:
+            new.typology = 'singlePlaneRupture'
         new.is_from_fault_source = iffs = isinstance(
             rupture.surface, (geo.ComplexFaultSurface,
                               geo.SimpleFaultSurface))
