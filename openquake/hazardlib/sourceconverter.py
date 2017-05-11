@@ -573,7 +573,10 @@ class RuptureConverter(object):
         coll = {}
         for grpnode in node:
             grp_id = int(grpnode['id'])
-            coll[grp_id] = [self.convert_node(node) for node in grpnode]
+            coll[grp_id] = rups = []
+            for node in grpnode:
+                rup = self.convert_node(node)
+                rups.append(rup)
         return coll
 
 
