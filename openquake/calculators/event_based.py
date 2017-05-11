@@ -179,7 +179,7 @@ def _build_eb_ruptures(
         events = []
         for (sampleid, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
-            for occ_no in range(num_occ):
+            for _ in range(num_occ):
                 # NB: the 0 below is a placeholder; the right eid will be
                 # set a bit later, in set_eids
                 events.append((0, ses_idx, sampleid))
