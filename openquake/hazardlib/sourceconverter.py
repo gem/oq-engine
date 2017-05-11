@@ -390,12 +390,17 @@ class RuptureConverter(object):
         :param node: a node representing a rupture
         """
         with context(self.fname, node):
-            convert_rupture = getattr(self, 'convert_' + striptag(node.tag))
+            typology = striptag(node.tag)
+            # simpleFaultRupture, complexFaultRupture, singlePlaneRupture,
+            # multiPlanesRupture, griddedRupture
+            convert_rupture = getattr(self, 'convert_' + typology)
             mag = ~node.magnitude
             rake = ~node.rake
             h = node.hypocenter
             hypocenter = geo.Point(h['lon'], h['lat'], h['depth'])
-        return convert_rupture(node, mag, rake, hypocenter)
+        rup = convert_rupture(node, mag, rake, hypocenter)
+        rup.typology = typology
+        return rup
 
     def geo_line(self, edge):
         """
@@ -571,6 +576,17 @@ class RuptureConverter(object):
             surface=self.convert_surfaces(surfaces),
             source_typology=source.NonParametricSeismicSource)
         return rupt
+
+    def convert_ruptureCollection(self, node):
+        """
+        :param node: a ruptureCollection node
+        :returns: a dictionary grp_id -> ruptures
+        """
+        coll = {}
+        for grpnode in node:
+            grp_id = int(grpnode['id'])
+            coll[grp_id] = [self.convert_node(node) for node in grpnode]
+        return coll
 
 
 class SourceConverter(RuptureConverter):
