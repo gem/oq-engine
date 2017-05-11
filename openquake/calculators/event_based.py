@@ -284,18 +284,18 @@ class EventBasedRuptureCalculator(PSHACalculator):
         Save the SES collection
         """
         self.rupser.close()
-        with self.monitor('setting event years', measuremem=True,
-                          autoflush=True):
-            inv_time = int(self.oqparam.investigation_time)
-            numpy.random.seed(self.oqparam.ses_seed)
-            for sm in sorted(self.datastore['events']):
-                set_random_years(self.datastore, 'events/' + sm, inv_time)
         num_events = sum(_count(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
                 'small or the maximum_distance is too small')
         logging.info('Setting %d event years', num_events)
+        with self.monitor('setting event years', measuremem=True,
+                          autoflush=True):
+            inv_time = int(self.oqparam.investigation_time)
+            numpy.random.seed(self.oqparam.ses_seed)
+            for sm in sorted(self.datastore['events']):
+                set_random_years(self.datastore, 'events/' + sm, inv_time)
         h5 = self.datastore.hdf5
         if 'ruptures' in h5:
             self.datastore.set_nbytes('ruptures')
