@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 =================================================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_7595.hdf5 Wed Apr 26 15:54:49 2017
-engine_version                                  2.4.0-git9336bd0        
-hazardlib_version                               0.24.0-gita895d4c       
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21319.hdf5 Fri May 12 10:45:45 2017
+engine_version                                   2.4.0-git59713b5        
+hazardlib_version                                0.24.0-git0596dd3       
+================================================ ========================
 
 num_sites = 6, sitecol = 1.05 KB
 
@@ -74,8 +74,8 @@ source_model.xml 0      Volcanic 1           440          440
 Informational data
 ------------------
 ============================== ========================================================================
-count_eff_ruptures.received    tot 1.05 KB, max_per_task 1.05 KB                                       
-count_eff_ruptures.sent        sources 3.78 KB, monitor 851 B, srcfilter 824 B, gsims 101 B, param 65 B
+count_eff_ruptures.received    tot 1.07 KB, max_per_task 1.07 KB                                       
+count_eff_ruptures.sent        sources 1.97 KB, monitor 852 B, srcfilter 824 B, gsims 101 B, param 65 B
 hazard.input_weight            44                                                                      
 hazard.n_imts                  1 B                                                                     
 hazard.n_levels                3 B                                                                     
@@ -92,7 +92,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   440          0.0       6         0        
+0      1         AreaSource   440          0.001     6         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -100,14 +100,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.0       1     
+AreaSource   0.001     1     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.264 NaN    0.264 0.264 1        
+count_eff_ruptures 0.002 NaN    0.002 0.002 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -115,12 +115,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         0.264     0.0       1     
 reading composite source model   0.009     0.0       1     
-filtering composite source model 0.001     0.0       1     
-store source_info                9.058E-04 0.0       1     
-reading site collection          1.996E-04 0.0       1     
-managing sources                 1.094E-04 0.0       1     
-saving probability maps          4.196E-05 0.0       1     
-aggregate curves                 2.742E-05 0.0       1     
+total count_eff_ruptures         0.002     0.0       1     
+managing sources                 0.001     0.0       1     
+store source_info                6.263E-04 0.0       1     
+reading site collection          1.757E-04 0.0       1     
+filtering composite source model 4.864E-05 0.0       1     
+saving probability maps          3.052E-05 0.0       1     
+aggregate curves                 2.527E-05 0.0       1     
 ================================ ========= ========= ======
