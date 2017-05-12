@@ -20,12 +20,62 @@
 Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
+import operator
+import rtree
 import numpy
 import shapely.geometry
 
 from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo.geodetic import EARTH_RADIUS
+from openquake.hazardlib.geo.geodetic import (
+    EARTH_RADIUS, geodetic_distance, min_idx_dst)
 from openquake.baselib.slots import with_slots
+
+
+class GeographicObjects(object):
+    """
+    Store a collection of geographic objects, i.e. objects with longitudes
+    and latitudes. By default extracts the coordinates from the attributes
+    .lon and .lat, but you can provide your own getters. It is possible
+    to extract the closest object to a given location by calling the
+    method .get_closest(lon, lat).
+    """
+    def __init__(self, objects, getlon=operator.attrgetter('lon'),
+                 getlat=operator.attrgetter('lat')):
+        self.objects = list(objects)
+        lons, lats = [], []
+        for i, obj in enumerate(self.objects):
+            lon, lat = getlon(obj), getlat(obj)
+            lons.append(lon)
+            lats.append(lat)
+        self.lons, self.lats = numpy.array(lons), numpy.array(lats)
+        if rtree:
+            self.index = rtree.index.Index()
+            self.proj = OrthographicProjection.from_lons_lats(lons, lats)
+            xs, ys = self.proj(self.lons, self.lats)
+            for i, (x, y) in enumerate(zip(xs, ys)):
+                self.index.insert(i, (x, y, x, y))
+
+    def get_closest(self, lon, lat, max_distance=None):
+        """
+        Get the closest object to the given longitude and latitude
+        and its distance. If the `max_distance` is given and all objects
+        are farther than the maximum distance, returns (None, None).
+
+        :param lon: longitude in degrees
+        :param lat: latitude in degrees
+        :param max_distance: distance in km (or None)
+        """
+        if rtree:
+            x, y = self.proj(lon, lat)
+            idx = list(self.index.nearest((x, y, x, y), 1))[0]
+            min_dist = geodetic_distance(
+                lon, lat, self.lons[idx], self.lats[idx])
+        else:
+            zeros = numpy.zeros_like(self.lons)
+            idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
+        if max_distance is not None and min_dist > max_distance:
+            return None, None
+        return self.objects[idx], min_dist
 
 
 def clean_points(points):
@@ -138,6 +188,10 @@ class OrthographicProjection(object):
     """
     _slots_ = ('west east north south lambda0 phi0 '
                'cos_phi0 sin_phi0 sin_pi_over_4').split()
+
+    @classmethod
+    def from_lons_lats(cls, lons, lats):
+        return cls(*get_spherical_bounding_box(lons, lats))
 
     def __init__(self, west, east, north, south):
         self.west = west

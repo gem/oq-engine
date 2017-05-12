@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import collections
 
 import numpy
 import shapely.geometry
@@ -21,6 +22,7 @@ import shapely.geometry
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
 
+Point = collections.namedtuple("Point",  'lon lat')
 
 class CleanPointTestCase(unittest.TestCase):
     def test_exact_duplicates(self):
@@ -418,3 +420,30 @@ class PlaneFit(unittest.TestCase):
         pnt, par = utils.plane_fit(self.points)
         numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-3, atol=0)
         self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)
+
+
+class GeographicObjectsTest(unittest.TestCase):
+    def setUp(self):
+        p1 = Point(0.0, 0.1)
+        p2 = Point(0.0, 0.2)
+        p3 = Point(0.0, 0.3)
+        self.points = utils.GeographicObjects([p1, p2, p3])
+
+    def test_closest(self):
+        point, dist = self.points.get_closest(0.0, 0.21)
+        self.assertEqual(point, Point(0.0, 0.2))
+        point, dist = self.points.get_closest(0.0, 0.29)
+        self.assertEqual(point, Point(0.0, 0.3))
+
+    def test_exact_point(self):
+        point, dist = self.points.get_closest(0.0, 0.2)
+        self.assertEqual(point, Point(0.0, 0.2))
+
+    def test_max_distance(self):
+        point, dist = self.points.get_closest(
+            0.0, 0.21, max_distance=100)  # close
+        self.assertEqual(point, Point(0.0, 0.2))
+        point, dist = self.points.get_closest(
+            0.0, 0.21, max_distance=0.1)  # far
+        self.assertIsNone(point)
+

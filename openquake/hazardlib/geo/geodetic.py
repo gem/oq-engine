@@ -39,50 +39,6 @@ EARTH_RADIUS = 6371.0
 EARTH_ELEVATION = -8.848
 
 
-class GeographicObjects(object):
-    """
-    Store a collection of geographic objects, i.e. objects with longitudes
-    and latitudes. By default extracts the coordinates from the attributes
-    .lon and .lat, but you can provide your own getters. It is possible
-    to extract the closest object to a given location by calling the
-    method .get_closest(lon, lat).
-    """
-    def __init__(self, objects, getlon=operator.attrgetter('lon'),
-                 getlat=operator.attrgetter('lat')):
-        self.objects = list(objects)
-        lons, lats = [], []
-        if rtree:
-            self.index = rtree.index.Index()
-        for i, obj in enumerate(self.objects):
-            lon, lat = getlon(obj), getlat(obj)
-            lons.append(lon)
-            lats.append(lat)
-            if rtree:
-                self.index.insert(i, (lon, lat, lon, lat))
-        self.lons, self.lats = numpy.array(lons), numpy.array(lats)
-
-    def get_closest(self, lon, lat, max_distance=None):
-        """
-        Get the closest object to the given longitude and latitude
-        and its distance. If the `max_distance` is given and all objects
-        are farther than the maximum distance, returns (None, None).
-
-        :param lon: longitude in degrees
-        :param lat: latitude in degrees
-        :param max_distance: distance in km (or None)
-        """
-        if rtree:
-            idx = list(self.index.nearest((lon, lat, lon, lat), 1))[0]
-            min_dist = geodetic_distance(
-                lon, lat, self.lons[idx], self.lats[idx])
-        else:
-            zeros = numpy.zeros_like(self.lons)
-            idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
-        if max_distance is not None and min_dist > max_distance:
-            return None, None
-        return self.objects[idx], min_dist
-
-
 def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     """
     Calculate the geodetic distance between two points or two collections
