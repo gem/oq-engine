@@ -2,8 +2,8 @@ Classical PSHA with NZ NSHM
 ===========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20770.hdf5 Fri May 12 07:08:15 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20877.hdf5 Fri May 12 07:20:45 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ====================================================================== ================ ================
 smlt_path weight source_model_file                                                      gsim_logic_tree  num_realizations
 ========= ====== ====================================================================== ================ ================
-b1        1.000  `NSHM_source_model-editedbkgd.xml <NSHM_source_model-editedbkgd.xml>`_ trivial(0,1,0,1) 1/1             
+b1        1.000  `NSHM_source_model-editedbkgd.xml <NSHM_source_model-editedbkgd.xml>`_ trivial(1,0,0,1) 1/1             
 ========= ====== ====================================================================== ================ ================
 
 Required parameters per tectonic region type
@@ -102,9 +102,9 @@ Slowest sources
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-1      21444     CharacteristicFaultSource 1            0.002     1         1        
-0      1         PointSource               20           2.248E-04 1         1        
-0      2         PointSource               20           1.519E-04 1         1        
+1      21444     CharacteristicFaultSource 1            0.003     1         1        
+0      1         PointSource               20           3.059E-04 1         1        
+0      2         PointSource               20           2.186E-04 1         1        
 1      21445     CharacteristicFaultSource 1            0.0       0         0        
 ====== ========= ========================= ============ ========= ========= =========
 
@@ -113,15 +113,15 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.002     2     
-PointSource               3.767E-04 2     
+CharacteristicFaultSource 0.003     2     
+PointSource               5.245E-04 2     
 ========================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 0.003  0.001 0.005 2        
+count_eff_ruptures 0.004 0.004  0.001 0.007 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -129,12 +129,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.181     0.0       1     
-total count_eff_ruptures         0.006     0.0       2     
+reading composite source model   0.221     0.0       1     
+total count_eff_ruptures         0.008     0.0       2     
 managing sources                 0.002     0.0       1     
-store source_info                5.600E-04 0.0       1     
+store source_info                6.187E-04 0.0       1     
+filtering composite source model 4.554E-05 0.0       1     
 aggregate curves                 4.292E-05 0.0       2     
-reading site collection          3.290E-05 0.0       1     
-saving probability maps          2.599E-05 0.0       1     
-filtering composite source model 2.575E-05 0.0       1     
+reading site collection          4.005E-05 0.0       1     
+saving probability maps          2.623E-05 0.0       1     
 ================================ ========= ========= ======

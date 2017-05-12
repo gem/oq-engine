@@ -2,8 +2,8 @@ Classical Hazard QA Test, Case 10
 =================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20750.hdf5 Fri May 12 07:08:03 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20857.hdf5 Fri May 12 07:20:33 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -87,7 +87,7 @@ source_model.xml 1      Active Shallow Crust 1           3000         3,000
 Informational data
 ------------------
 ============================== =============================================================================
-count_eff_ruptures.received    tot 2.15 KB, max_per_task 1.08 KB                                            
+count_eff_ruptures.received    tot 2.16 KB, max_per_task 1.08 KB                                            
 count_eff_ruptures.sent        sources 2.27 KB, monitor 1.68 KB, srcfilter 1.34 KB, gsims 182 B, param 130 B
 hazard.input_weight            600                                                                          
 hazard.n_imts                  1 B                                                                          
@@ -105,8 +105,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      1         PointSource  3,000        0.063     1         1        
-0      1         PointSource  3,000        0.010     1         1        
+0      1         PointSource  3,000        0.070     1         1        
+1      1         PointSource  3,000        0.070     1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -114,27 +114,27 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.073     2     
+PointSource  0.140     2     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.037 0.038  0.011 0.064 2        
-================== ===== ====== ===== ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_eff_ruptures 0.071 5.093E-04 0.070 0.071 2        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         0.075     1.434     2     
-reading composite source model   0.011     0.0       1     
+total count_eff_ruptures         0.141     1.484     2     
+reading composite source model   0.013     0.0       1     
 managing sources                 0.002     0.0       1     
 store source_info                0.001     0.0       1     
-aggregate curves                 6.104E-05 0.0       2     
-saving probability maps          5.436E-05 0.0       1     
-reading site collection          4.029E-05 0.0       1     
-filtering composite source model 3.219E-05 0.0       1     
+aggregate curves                 1.018E-04 0.0       2     
+saving probability maps          6.127E-05 0.0       1     
+filtering composite source model 5.841E-05 0.0       1     
+reading site collection          4.888E-05 0.0       1     
 ================================ ========= ========= ======

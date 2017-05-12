@@ -2,8 +2,8 @@ Scenario QA Test for occupants
 ==============================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20791.hdf5 Fri May 12 07:09:01 2017
-engine_version                            2.4.0-git7dc35c5        
+localhost:/mnt/ssd/oqdata/calc_20898.hdf5 Fri May 12 07:21:31 2017
+engine_version                            2.4.0-git85daf7a        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
@@ -70,5 +70,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.006     0.0       1     
 filtering sites         0.005     0.0       1     
-reading site collection 6.437E-06 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======

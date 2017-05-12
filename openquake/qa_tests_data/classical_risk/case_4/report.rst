@@ -2,8 +2,8 @@ Classical Hazard-Risk QA test 4
 ===============================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20698.hdf5 Fri May 12 07:07:33 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20805.hdf5 Fri May 12 07:20:03 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -76,8 +76,8 @@ source_model.xml 0      Active Shallow Crust 39          6405         91,021
 Informational data
 ------------------
 ============================== ====================================================================================
-count_eff_ruptures.received    tot 23.56 KB, max_per_task 1.2 KB                                                   
-count_eff_ruptures.sent        sources 53.13 KB, monitor 19.18 KB, srcfilter 16.09 KB, gsims 3.42 KB, param 1.27 KB
+count_eff_ruptures.received    tot 23.57 KB, max_per_task 1.2 KB                                                   
+count_eff_ruptures.sent        sources 53.12 KB, monitor 19.18 KB, srcfilter 16.09 KB, gsims 3.42 KB, param 1.27 KB
 hazard.input_weight            9,102                                                                               
 hazard.n_imts                  1 B                                                                                 
 hazard.n_levels                19 B                                                                                
@@ -110,26 +110,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      376       AreaSource   2,220        0.002     1         1        
-0      231       AreaSource   4,185        0.002     6         1        
-0      28        AreaSource   2,548        0.0       0         0        
-0      89        AreaSource   810          0.0       0         0        
-0      127       AreaSource   2,940        0.0       0         0        
-0      68        AreaSource   1,899        0.0       0         0        
+0      231       AreaSource   4,185        0.001     6         1        
+0      376       AreaSource   2,220        9.184E-04 1         1        
 0      137       AreaSource   2,072        0.0       0         0        
+0      20        AreaSource   1,256        0.0       0         0        
 0      225       AreaSource   520          0.0       0         0        
-0      208       AreaSource   760          0.0       0         0        
-0      325       AreaSource   3,934        0.0       0         0        
-0      95        AreaSource   1,176        0.0       0         0        
-0      177       AreaSource   846          0.0       0         0        
-0      161       AreaSource   552          0.0       0         0        
-0      101       AreaSource   559          0.0       0         0        
-0      90        AreaSource   285          0.0       0         0        
-0      166       AreaSource   559          0.0       0         0        
-0      42        AreaSource   1,755        0.0       0         0        
+0      132       AreaSource   4,131        0.0       0         0        
+0      298       AreaSource   2,744        0.0       0         0        
 0      198       AreaSource   760          0.0       0         0        
 0      299       AreaSource   710          0.0       0         0        
-0      395       AreaSource   2,720        0.0       0         0        
+0      325       AreaSource   3,934        0.0       0         0        
+0      10        AreaSource   1,920        0.0       0         0        
+0      288       AreaSource   2,430        0.0       0         0        
+0      101       AreaSource   559          0.0       0         0        
+0      8         AreaSource   4,832        0.0       0         0        
+0      369       AreaSource   826          0.0       0         0        
+0      42        AreaSource   1,755        0.0       0         0        
+0      90        AreaSource   285          0.0       0         0        
+0      95        AreaSource   1,176        0.0       0         0        
+0      257       AreaSource   2,850        0.0       0         0        
+0      343       AreaSource   2,926        0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -137,14 +137,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.004     39    
+AreaSource   0.002     39    
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.005 0.002  0.003 0.010 20       
+count_eff_ruptures 0.003 0.001  0.001 0.007 20       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -152,13 +152,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   2.167     0.0       1     
-total count_eff_ruptures         0.091     3.773     20    
-managing sources                 0.020     0.0       1     
+reading composite source model   2.135     0.0       1     
+total count_eff_ruptures         0.065     0.137     20    
+managing sources                 0.029     0.0       1     
 reading exposure                 0.007     0.0       1     
-store source_info                7.164E-04 0.0       1     
-aggregate curves                 2.327E-04 0.0       20    
-filtering composite source model 2.670E-05 0.0       1     
-saving probability maps          2.646E-05 0.0       1     
+store source_info                0.001     0.0       1     
+aggregate curves                 4.094E-04 0.0       20    
+filtering composite source model 5.865E-05 0.0       1     
+saving probability maps          3.839E-05 0.0       1     
 reading site collection          6.914E-06 0.0       1     
 ================================ ========= ========= ======

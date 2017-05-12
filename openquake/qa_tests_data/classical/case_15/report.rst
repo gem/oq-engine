@@ -2,8 +2,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20748.hdf5 Fri May 12 07:08:03 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20855.hdf5 Fri May 12 07:20:33 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -99,7 +99,7 @@ source_model_2.xml 3      Active Shallow Crust     1           240          240
 Informational data
 ------------------
 ============================== =============================================================================
-count_eff_ruptures.received    tot 4.98 KB, max_per_task 1.25 KB                                            
+count_eff_ruptures.received    tot 4.99 KB, max_per_task 1.25 KB                                            
 count_eff_ruptures.sent        sources 5.96 KB, monitor 4.05 KB, srcfilter 2.89 KB, gsims 730 B, param 260 B
 hazard.input_weight            51                                                                           
 hazard.n_imts                  2 B                                                                          
@@ -117,10 +117,10 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-2      1         AreaSource   240          0.001     3         1        
-3      1         AreaSource   240          9.198E-04 3         1        
-0      1         PointSource  15           3.450E-04 3         1        
-1      2         PointSource  15           3.042E-04 3         1        
+2      1         AreaSource   240          0.002     3         1        
+3      1         AreaSource   240          0.001     3         1        
+1      2         PointSource  15           3.052E-04 3         1        
+0      1         PointSource  15           2.840E-04 3         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -128,15 +128,15 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.002     2     
-PointSource  6.492E-04 2     
+AreaSource   0.003     2     
+PointSource  5.891E-04 2     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 4.264E-04 0.001 0.002 4        
+count_eff_ruptures 0.002 8.116E-04 0.001 0.003 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -144,12 +144,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.009     0.0       1     
-total count_eff_ruptures         0.006     0.0       4     
+reading composite source model   0.010     0.0       1     
+total count_eff_ruptures         0.007     0.086     4     
 managing sources                 0.004     0.0       1     
-store source_info                0.001     0.0       1     
-aggregate curves                 1.504E-04 0.0       4     
-saving probability maps          5.579E-05 0.0       1     
-reading site collection          4.125E-05 0.0       1     
-filtering composite source model 3.242E-05 0.0       1     
+store source_info                6.547E-04 0.0       1     
+aggregate curves                 9.418E-05 0.0       4     
+filtering composite source model 6.151E-05 0.0       1     
+reading site collection          4.268E-05 0.0       1     
+saving probability maps          3.123E-05 0.0       1     
 ================================ ========= ========= ======

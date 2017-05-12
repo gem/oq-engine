@@ -2,8 +2,8 @@ Scenario Damage
 ===============
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20702.hdf5 Fri May 12 07:07:33 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20809.hdf5 Fri May 12 07:20:03 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -73,11 +73,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
-reading exposure        0.005     0.0       1     
-assoc_assets_sites      0.005     0.0       1     
+filtering sites         0.008     0.0       1     
+reading exposure        0.007     0.0       1     
+assoc_assets_sites      0.006     0.0       1     
 computing gmfs          0.002     0.0       1     
-saving gmfs             0.001     0.0       1     
-reading site collection 1.361E-04 0.0       1     
-building riskinputs     1.173E-04 0.0       1     
+saving gmfs             0.002     0.0       1     
+reading site collection 2.232E-04 0.0       1     
+building riskinputs     1.667E-04 0.0       1     
 ======================= ========= ========= ======
