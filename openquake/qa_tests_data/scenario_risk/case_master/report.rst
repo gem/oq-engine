@@ -2,8 +2,8 @@ scenario risk
 =============
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20902.hdf5 Fri May 12 07:21:31 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21365.hdf5 Fri May 12 10:46:43 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -82,11 +82,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.028     0.0       1     
-filtering sites         0.007     0.0       1     
+computing gmfs          0.027     0.0       1     
 reading exposure        0.007     0.0       1     
+filtering sites         0.007     0.0       1     
 saving gmfs             0.002     0.0       1     
-building riskinputs     5.875E-04 0.0       1     
-building epsilons       3.557E-04 0.0       1     
-reading site collection 4.768E-06 0.0       1     
+building riskinputs     5.763E-04 0.0       1     
+building epsilons       3.421E-04 0.0       1     
+reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======

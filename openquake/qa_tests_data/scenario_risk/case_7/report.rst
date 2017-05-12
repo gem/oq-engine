@@ -2,8 +2,8 @@ Scenario Risk Test
 ==================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20904.hdf5 Fri May 12 07:21:31 2017
-engine_version                            2.4.0-git85daf7a        
+localhost:/mnt/ssd/oqdata/calc_21367.hdf5 Fri May 12 10:46:43 2017
+engine_version                            2.4.0-git59713b5        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
@@ -70,9 +70,9 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.007     0.0       1     
 assoc_assets_sites      0.007     0.0       1     
+reading exposure        0.007     0.0       1     
 reading site collection 0.002     0.0       1     
 building riskinputs     0.001     0.0       1     
-building epsilons       4.902E-04 0.0       1     
+building epsilons       4.890E-04 0.0       1     
 ======================= ========= ========= ======

@@ -2,8 +2,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20863.hdf5 Fri May 12 07:20:37 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21326.hdf5 Fri May 12 10:45:49 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -52,7 +52,7 @@ Required parameters per tectonic region type
 ====== ==================================================================================================== ========= ========== ============
 grp_id gsims                                                                                                distances siteparams ruptparams  
 ====== ==================================================================================================== ========= ========== ============
-0      AbrahamsonSilva1997() BooreEtAl1997GeometricMean() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() rrup rjb  vs30       dip mag rake
+0      AbrahamsonSilva1997() BooreEtAl1997GeometricMean() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() rjb rrup  vs30       dip mag rake
 ====== ==================================================================================================== ========= ========== ============
 
 Realizations per (TRT, GSIM)
@@ -77,7 +77,7 @@ Alaska_asc_grid_NSHMP2007.xml 0      Active Shallow Crust 14          276       
 Informational data
 ------------------
 ============================== =============================================================================
-count_eff_ruptures.received    max_per_task 2.33 KB, tot 2.33 KB                                            
+count_eff_ruptures.received    tot 2.33 KB, max_per_task 2.33 KB                                            
 count_eff_ruptures.sent        sources 10.18 KB, monitor 2.05 KB, srcfilter 1.21 KB, gsims 353 B, param 65 B
 hazard.input_weight            126                                                                          
 hazard.n_imts                  6 B                                                                          
@@ -95,18 +95,18 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      70088     PointSource  92           1.676E-04 1         1        
-0      6736      PointSource  92           1.507E-04 1         1        
-0      8878      PointSource  92           1.493E-04 2         1        
-0      428       PointSource  80           0.0       0         0        
+0      6736      PointSource  92           1.903E-04 1         1        
+0      70088     PointSource  92           1.886E-04 1         1        
+0      8878      PointSource  92           1.824E-04 2         1        
 0      98725     PointSource  92           0.0       0         0        
+0      428       PointSource  80           0.0       0         0        
 0      106150    PointSource  92           0.0       0         0        
-0      23947     PointSource  92           0.0       0         0        
-0      44535     PointSource  92           0.0       0         0        
-0      22285     PointSource  92           0.0       0         0        
-0      15999     PointSource  92           0.0       0         0        
 0      102588    PointSource  92           0.0       0         0        
 0      41060     PointSource  92           0.0       0         0        
+0      44535     PointSource  92           0.0       0         0        
+0      23947     PointSource  92           0.0       0         0        
+0      22285     PointSource  92           0.0       0         0        
+0      15999     PointSource  92           0.0       0         0        
 0      98979     PointSource  92           0.0       0         0        
 0      3802      PointSource  80           0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
@@ -116,14 +116,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  4.675E-04 14    
+PointSource  5.612E-04 14    
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 NaN    0.003 0.003 1        
+count_eff_ruptures 0.004 NaN    0.004 0.004 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -131,12 +131,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.012     0.0       1     
-total count_eff_ruptures         0.003     0.0       1     
-managing sources                 0.001     0.0       1     
-store source_info                7.691E-04 0.0       1     
-reading site collection          2.472E-04 0.0       1     
-filtering composite source model 5.913E-05 0.0       1     
-saving probability maps          3.195E-05 0.0       1     
-aggregate curves                 2.861E-05 0.0       1     
+reading composite source model   0.016     0.0       1     
+total count_eff_ruptures         0.004     0.0       1     
+managing sources                 0.002     0.0       1     
+store source_info                9.325E-04 0.0       1     
+reading site collection          3.548E-04 0.0       1     
+filtering composite source model 8.225E-05 0.0       1     
+saving probability maps          3.958E-05 0.0       1     
+aggregate curves                 3.791E-05 0.0       1     
 ================================ ========= ========= ======

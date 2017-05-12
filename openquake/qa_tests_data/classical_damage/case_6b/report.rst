@@ -2,8 +2,8 @@ Classical PSHA-Based Hazard
 ===========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20830.hdf5 Fri May 12 07:20:05 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21293.hdf5 Fri May 12 10:45:17 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -75,7 +75,7 @@ source_model.xml 0      Active Shallow Crust 1           1694         1,694
 Informational data
 ------------------
 ============================== =========================================================================
-count_eff_ruptures.received    max_per_task 1.26 KB, tot 1.26 KB                                        
+count_eff_ruptures.received    tot 1.26 KB, max_per_task 1.26 KB                                        
 count_eff_ruptures.sent        sources 1.06 KB, monitor 1.03 KB, srcfilter 852 B, gsims 91 B, param 65 B
 hazard.input_weight            1,694                                                                    
 hazard.n_imts                  1 B                                                                      
@@ -133,10 +133,10 @@ operation                        time_sec  memory_mb counts
 reading composite source model   0.005     0.0       1     
 reading exposure                 0.005     0.0       1     
 total count_eff_ruptures         0.004     0.0       1     
-managing sources                 8.712E-04 0.0       1     
-store source_info                4.511E-04 0.0       1     
-filtering composite source model 3.958E-05 0.0       1     
-saving probability maps          2.527E-05 0.0       1     
-aggregate curves                 1.860E-05 0.0       1     
-reading site collection          4.768E-06 0.0       1     
+managing sources                 7.143E-04 0.0       1     
+store source_info                4.354E-04 0.0       1     
+filtering composite source model 3.648E-05 0.0       1     
+saving probability maps          2.360E-05 0.0       1     
+aggregate curves                 1.907E-05 0.0       1     
+reading site collection          5.007E-06 0.0       1     
 ================================ ========= ========= ======

@@ -2,8 +2,8 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20878.hdf5 Fri May 12 07:20:50 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21341.hdf5 Fri May 12 10:46:01 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ============================================================== ====================== ================
 smlt_path weight source_model_file                                              gsim_logic_tree        num_realizations
 ========= ====== ============================================================== ====================== ================
-b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(0,4,1,4,5,2,0) 4/4             
+b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(0,4,5,2,0,1,4) 4/4             
 ========= ====== ============================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -95,23 +95,23 @@ Slowest sources
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
 4      s46       AreaSource         7,770        0.002     1         1        
-4      s72       AreaSource         17,871       0.0       0         0        
-2      sh13      AreaSource         41,952       0.0       0         0        
-3      scr299    AreaSource         1,572        0.0       0         0        
-2      sh14      AreaSource         41,952       0.0       0         0        
-3      scr301    AreaSource         17,268       0.0       0         0        
-1      v1        AreaSource         42           0.0       0         0        
-0      i17       ComplexFaultSource 33,383       0.0       0         0        
 4      s40       AreaSource         12,327       0.0       0         0        
-4      s34       AreaSource         12,327       0.0       0         0        
 3      scr293    AreaSource         61,740       0.0       0         0        
+2      sh13      AreaSource         41,952       0.0       0         0        
+1      v4        AreaSource         168          0.0       0         0        
+1      v1        AreaSource         42           0.0       0         0        
+3      scr304    AreaSource         574          0.0       0         0        
+0      i20       ComplexFaultSource 9,241        0.0       0         0        
+3      scr299    AreaSource         1,572        0.0       0         0        
+0      i17       ComplexFaultSource 33,383       0.0       0         0        
 2      sh6       AreaSource         12,900       0.0       0         0        
-4      s13       AreaSource         12,726       0.0       0         0        
+4      s72       AreaSource         17,871       0.0       0         0        
+2      sh14      AreaSource         41,952       0.0       0         0        
 4      s35       AreaSource         12,327       0.0       0         0        
 4      s70       AreaSource         17,871       0.0       0         0        
-0      i20       ComplexFaultSource 9,241        0.0       0         0        
-1      v4        AreaSource         168          0.0       0         0        
-3      scr304    AreaSource         574          0.0       0         0        
+4      s34       AreaSource         12,327       0.0       0         0        
+3      scr301    AreaSource         17,268       0.0       0         0        
+4      s13       AreaSource         12,726       0.0       0         0        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -127,7 +127,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.006 0.002  0.003 0.009 9        
+count_eff_ruptures 0.007 0.003  0.003 0.011 9        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,12 +135,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   4.619     0.0       1     
-total count_eff_ruptures         0.051     0.0       9     
-managing sources                 0.014     0.0       1     
-store source_info                0.001     0.0       1     
-aggregate curves                 2.308E-04 0.0       9     
-filtering composite source model 6.151E-05 0.0       1     
-saving probability maps          4.268E-05 0.0       1     
-reading site collection          3.481E-05 0.0       1     
+reading composite source model   4.632     0.0       1     
+total count_eff_ruptures         0.059     0.020     9     
+managing sources                 0.010     0.0       1     
+store source_info                6.247E-04 0.0       1     
+aggregate curves                 1.175E-04 0.0       9     
+filtering composite source model 6.008E-05 0.0       1     
+reading site collection          3.242E-05 0.0       1     
+saving probability maps          2.456E-05 0.0       1     
 ================================ ========= ========= ======

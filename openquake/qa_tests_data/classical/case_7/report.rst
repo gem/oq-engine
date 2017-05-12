@@ -2,8 +2,8 @@ Classical Hazard QA Test, Case 7
 ================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20873.hdf5 Fri May 12 07:20:44 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21336.hdf5 Fri May 12 10:45:55 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -104,9 +104,9 @@ Slowest sources
 ====== ========= ================== ============ ========= ========= =========
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
-1      1         SimpleFaultSource  91           0.003     1         1        
 0      2         ComplexFaultSource 49           0.003     1         1        
-0      1         SimpleFaultSource  91           0.003     1         1        
+1      1         SimpleFaultSource  91           0.002     1         1        
+0      1         SimpleFaultSource  91           0.001     1         1        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -115,14 +115,14 @@ Computation times by source typology
 source_class       calc_time counts
 ================== ========= ======
 ComplexFaultSource 0.003     1     
-SimpleFaultSource  0.005     2     
+SimpleFaultSource  0.003     2     
 ================== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.003 3.141E-04 0.003 0.004 3        
+count_eff_ruptures 0.003 9.045E-04 0.002 0.004 3        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -130,12 +130,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.126     0.0       1     
-total count_eff_ruptures         0.010     0.0       3     
+reading composite source model   0.102     0.0       1     
+total count_eff_ruptures         0.008     0.0       3     
 managing sources                 0.003     0.0       1     
-store source_info                6.540E-04 0.0       1     
-aggregate curves                 6.771E-05 0.0       3     
-filtering composite source model 5.722E-05 0.0       1     
-reading site collection          4.387E-05 0.0       1     
-saving probability maps          3.123E-05 0.0       1     
+store source_info                0.001     0.0       1     
+aggregate curves                 1.266E-04 0.0       3     
+saving probability maps          5.126E-05 0.0       1     
+filtering composite source model 4.339E-05 0.0       1     
+reading site collection          3.314E-05 0.0       1     
 ================================ ========= ========= ======
