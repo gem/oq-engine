@@ -2,8 +2,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20908.hdf5 Fri May 12 07:21:32 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21371.hdf5 Fri May 12 10:46:44 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rx rrup rjb vs30 vs30measured z1pt0 dip mag rake ztor
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -92,9 +92,9 @@ Slowest sources
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
 0      3         SimpleFaultSource  617          0.003     1         1        
-0      4         ComplexFaultSource 164          0.003     1         1        
-0      2         AreaSource         1,440        0.001     1         1        
-0      1         PointSource        15           2.444E-04 1         1        
+0      2         AreaSource         1,440        0.002     1         1        
+0      4         ComplexFaultSource 164          0.002     1         1        
+0      1         PointSource        15           3.116E-04 1         1        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,9 +102,9 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-AreaSource         0.001     1     
-ComplexFaultSource 0.003     1     
-PointSource        2.444E-04 1     
+AreaSource         0.002     1     
+ComplexFaultSource 0.002     1     
+PointSource        3.116E-04 1     
 SimpleFaultSource  0.003     1     
 ================== ========= ======
 
@@ -112,7 +112,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.003 7.440E-04 0.002 0.004 3        
+count_eff_ruptures 0.003 9.272E-04 0.002 0.004 3        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -120,12 +120,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.027     0.0       1     
-total count_eff_ruptures         0.010     0.0       3     
+reading composite source model   0.028     0.0       1     
+total count_eff_ruptures         0.009     0.0       3     
 managing sources                 0.002     0.0       1     
-store source_info                4.947E-04 0.0       1     
-aggregate curves                 5.078E-05 0.0       3     
-filtering composite source model 3.910E-05 0.0       1     
-reading site collection          3.242E-05 0.0       1     
-saving probability maps          2.360E-05 0.0       1     
+store source_info                4.930E-04 0.0       1     
+aggregate curves                 5.317E-05 0.0       3     
+filtering composite source model 4.101E-05 0.0       1     
+reading site collection          3.314E-05 0.0       1     
+saving probability maps          2.408E-05 0.0       1     
 ================================ ========= ========= ======

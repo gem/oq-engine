@@ -2,8 +2,8 @@ scenario hazard
 ===============
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20815.hdf5 Fri May 12 07:20:04 2017
-engine_version                            2.4.0-git85daf7a        
+localhost:/mnt/ssd/oqdata/calc_21278.hdf5 Fri May 12 10:45:16 2017
+engine_version                            2.4.0-git59713b5        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
@@ -69,7 +69,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
+filtering sites         0.006     0.0       1     
 reading exposure        0.006     0.0       1     
-reading site collection 7.391E-06 0.0       1     
+reading site collection 4.768E-06 0.0       1     
 ======================= ========= ========= ======
