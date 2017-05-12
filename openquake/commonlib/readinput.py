@@ -380,7 +380,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
 
     # consider only the effective realizations
     for sm in source_model_lt.gen_source_models(gsim_lt):
-        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm.name))
+        fname = possibly_gunzip(
+            os.path.abspath(os.path.join(oqparam.base_path, sm.name)))
         if in_memory:
             apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
             try:
@@ -407,11 +408,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                     src_groups.append(sg)
             else:  # NRML 0.4 format: smodel is a list of source nodes
                 src_groups.extend(sourceconverter.SourceGroup.collect(smodel))
+        num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
-        logging.info('Processed source model %d with %d gsim path(s)',
-                     sm.ordinal + 1, sm.num_gsim_paths)
+        logging.info(
+            'Processed source model %d with %d potential gsim path(s) and %d '
+            'sources', sm.ordinal + 1, sm.num_gsim_paths, num_sources)
 
         gsim_file = oqparam.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
@@ -510,10 +513,11 @@ def get_job_info(oqparam, csm, sitecol):
     # The output weight is a pure number which is proportional to the size
     # of the expected output of the calculator. For classical and disagg
     # calculators it is given by
-    # n_sites * n_realizations * n_imts * n_levels;
+    # n_sites * n_imts * n_levels * n_statistics;
     # for the event based calculator is given by n_sites * n_realizations
     # * n_levels * n_imts * (n_ses * investigation_time) * NORMALIZATION_FACTOR
-    output_weight = n_sites * n_imts * n_realizations
+    n_stats = len(oqparam.hazard_stats()) or 1
+    output_weight = n_sites * n_imts * n_stats
     if oqparam.calculation_mode == 'event_based':
         total_time = (oqparam.investigation_time *
                       oqparam.ses_per_logic_tree_path)

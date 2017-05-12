@@ -2,8 +2,8 @@ Scenario Damage QA Test 4
 =========================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20379.hdf5 Fri May 12 06:36:19 2017
-engine_version                            2.4.0-giteadb85d        
+localhost:/mnt/ssd/oqdata/calc_20705.hdf5 Fri May 12 07:07:34 2017
+engine_version                            2.4.0-git7dc35c5        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
@@ -70,5 +70,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.005     0.0       1     
 filtering sites         0.004     0.0       1     
-reading site collection 4.768E-06 0.0       1     
+reading site collection 5.007E-06 0.0       1     
 ======================= ========= ========= ======

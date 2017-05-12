@@ -2,8 +2,8 @@ Mutex sources for Nankai, Japan, case_27
 ========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20433.hdf5 Fri May 12 06:37:04 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20759.hdf5 Fri May 12 07:08:12 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -73,7 +73,7 @@ source_model.xml 0      Subduction Interface 15          19           19
 Informational data
 ------------------
 ============================== ========================================================================
-count_eff_ruptures.received    tot 1.4 KB, max_per_task 1.4 KB                                         
+count_eff_ruptures.received    max_per_task 1.41 KB, tot 1.41 KB                                       
 count_eff_ruptures.sent        sources 1.08 MB, monitor 868 B, srcfilter 684 B, gsims 106 B, param 65 B
 hazard.input_weight            19                                                                      
 hazard.n_imts                  1 B                                                                     
@@ -96,16 +96,16 @@ grp_id source_id source_class               num_ruptures calc_time num_sites num
 0      case_03   NonParametricSeismicSource 1            0.002     1         1        
 0      case_04   NonParametricSeismicSource 1            0.002     1         1        
 0      case_06   NonParametricSeismicSource 1            0.002     1         1        
-0      case_08   NonParametricSeismicSource 1            0.002     1         1        
-0      case_05   NonParametricSeismicSource 1            0.002     1         1        
-0      case_09   NonParametricSeismicSource 1            0.002     1         1        
 0      case_07   NonParametricSeismicSource 1            0.002     1         1        
-0      case_10   NonParametricSeismicSource 1            0.002     1         1        
-0      case_12   NonParametricSeismicSource 2            0.002     1         1        
+0      case_05   NonParametricSeismicSource 1            0.002     1         1        
 0      case_13   NonParametricSeismicSource 2            0.002     1         1        
-0      case_14   NonParametricSeismicSource 2            0.002     1         1        
+0      case_12   NonParametricSeismicSource 2            0.002     1         1        
 0      case_11   NonParametricSeismicSource 1            0.002     1         1        
+0      case_09   NonParametricSeismicSource 1            0.002     1         1        
+0      case_08   NonParametricSeismicSource 1            0.002     1         1        
+0      case_10   NonParametricSeismicSource 1            0.002     1         1        
 0      case_15   NonParametricSeismicSource 2            0.002     1         1        
+0      case_14   NonParametricSeismicSource 2            0.002     1         1        
 ====== ========= ========================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -120,7 +120,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.033 NaN    0.033 0.033 1        
+count_eff_ruptures 0.034 NaN    0.034 0.034 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -128,12 +128,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.258     0.0       1     
-total count_eff_ruptures         0.033     0.0       1     
+reading composite source model   0.291     0.0       1     
+total count_eff_ruptures         0.034     0.742     1     
 managing sources                 0.001     0.0       1     
-store source_info                6.237E-04 0.0       1     
-aggregate curves                 4.292E-05 0.0       1     
-saving probability maps          3.839E-05 0.0       1     
-reading site collection          3.481E-05 0.0       1     
-filtering composite source model 2.527E-05 0.0       1     
+store source_info                9.029E-04 0.0       1     
+aggregate curves                 5.174E-05 0.0       1     
+saving probability maps          3.791E-05 0.0       1     
+reading site collection          3.386E-05 0.0       1     
+filtering composite source model 2.646E-05 0.0       1     
 ================================ ========= ========= ======

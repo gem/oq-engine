@@ -2,8 +2,8 @@ Event-Based Hazard QA Test, Case 18
 ===================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20457.hdf5 Fri May 12 06:37:23 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20783.hdf5 Fri May 12 07:08:31 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ====================================== ========= ========== ==========
 grp_id gsims                                  distances siteparams ruptparams
 ====== ====================================== ========= ========== ==========
-0      AkkarBommer2010() CauzziFaccioli2008() rhypo rjb vs30       mag rake  
+0      AkkarBommer2010() CauzziFaccioli2008() rjb rhypo vs30       mag rake  
 ====== ====================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -74,15 +74,15 @@ source_model.xml 0      Active Shallow Crust 1           6            3,000
 Informational data
 ------------------
 ============================ ==========================================================================
-compute_ruptures.received    tot 6.85 KB, max_per_task 6.85 KB                                         
-compute_ruptures.sent        sources 12.93 KB, monitor 858 B, src_filter 684 B, gsims 181 B, param 67 B
+compute_ruptures.received    max_per_task 6.85 KB, tot 6.85 KB                                         
+compute_ruptures.sent        sources 13.01 KB, monitor 858 B, src_filter 684 B, gsims 181 B, param 67 B
 hazard.input_weight          900                                                                       
 hazard.n_imts                1 B                                                                       
 hazard.n_levels              4 B                                                                       
 hazard.n_realizations        3 B                                                                       
 hazard.n_sites               1 B                                                                       
 hazard.n_sources             1 B                                                                       
-hazard.output_weight         10                                                                        
+hazard.output_weight         3.500                                                                     
 hostname                     tstation.gem.lan                                                          
 require_epsilons             0 B                                                                       
 ============================ ==========================================================================
@@ -107,7 +107,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   3.920 NaN    3.920 3.920 1        
+compute_ruptures   3.796 NaN    3.796 3.796 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -115,13 +115,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           3.920     0.0       1     
+total compute_ruptures           3.796     0.0       1     
 saving ruptures                  0.006     0.0       1     
 reading composite source model   0.005     0.0       1     
 setting event years              0.003     0.0       1     
 filtering ruptures               0.001     0.0       6     
 store source_info                0.001     0.0       1     
-managing sources                 7.379E-04 0.0       1     
-reading site collection          3.052E-05 0.0       1     
-filtering composite source model 2.480E-05 0.0       1     
+managing sources                 7.641E-04 0.0       1     
+reading site collection          3.004E-05 0.0       1     
+filtering composite source model 2.456E-05 0.0       1     
 ================================ ========= ========= ======

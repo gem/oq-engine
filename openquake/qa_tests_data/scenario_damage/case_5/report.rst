@@ -2,8 +2,8 @@ Calculation of the ground motion fields for a scenario
 ======================================================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20381.hdf5 Fri May 12 06:36:20 2017
-engine_version                            2.4.0-giteadb85d        
+localhost:/mnt/ssd/oqdata/calc_20707.hdf5 Fri May 12 07:07:34 2017
+engine_version                            2.4.0-git7dc35c5        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
