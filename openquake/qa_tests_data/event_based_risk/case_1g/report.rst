@@ -2,8 +2,8 @@ event based risk with PMF
 =========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20852.hdf5 Fri May 12 07:20:32 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21315.hdf5 Fri May 12 10:45:44 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -76,7 +76,7 @@ source_model.xml 0      Active Shallow Crust 1           31           482
 Informational data
 ------------------
 ============================ =========================================================================
-compute_ruptures.received    max_per_task 25.88 KB, tot 25.88 KB                                      
+compute_ruptures.received    tot 25.88 KB, max_per_task 25.88 KB                                      
 compute_ruptures.sent        sources 3.09 KB, monitor 890 B, src_filter 684 B, gsims 102 B, param 65 B
 hazard.input_weight          482                                                                      
 hazard.n_imts                1 B                                                                      
@@ -127,7 +127,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.048 NaN    0.048 0.048 1        
+compute_ruptures   0.071 NaN    0.071 0.071 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,14 +135,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.048     0.0       1     
-reading exposure                 0.007     0.0       1     
+total compute_ruptures           0.071     0.023     1     
+saving ruptures                  0.007     0.0       1     
+reading exposure                 0.006     0.0       1     
+filtering ruptures               0.005     0.0       31    
 reading composite source model   0.004     0.0       1     
-filtering ruptures               0.004     0.0       31    
-saving ruptures                  0.004     0.0       1     
-setting event years              0.002     0.0       1     
-managing sources                 0.001     0.0       1     
-store source_info                5.729E-04 0.0       1     
-filtering composite source model 4.697E-05 0.0       1     
-reading site collection          9.537E-06 0.0       1     
+setting event years              0.003     0.0       1     
+store source_info                0.001     0.0       1     
+managing sources                 9.909E-04 0.0       1     
+filtering composite source model 4.649E-05 0.0       1     
+reading site collection          7.868E-06 0.0       1     
 ================================ ========= ========= ======

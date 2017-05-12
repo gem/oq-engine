@@ -2,8 +2,8 @@ classical risk
 ==============
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20806.hdf5 Fri May 12 07:20:03 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21269.hdf5 Fri May 12 10:45:15 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -60,10 +60,10 @@ Required parameters per tectonic region type
 ====== ===================================== =========== ======================= =================
 grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
-0      BooreAtkinson2008() ChiouYoungs2008() rx rrup rjb vs30 vs30measured z1pt0 dip mag rake ztor
-1      AkkarBommer2010() ChiouYoungs2008()   rx rrup rjb vs30 vs30measured z1pt0 dip mag rake ztor
-2      BooreAtkinson2008() ChiouYoungs2008() rx rrup rjb vs30 vs30measured z1pt0 dip mag rake ztor
-3      AkkarBommer2010() ChiouYoungs2008()   rx rrup rjb vs30 vs30measured z1pt0 dip mag rake ztor
+0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+1      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+2      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+3      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 ====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -138,10 +138,10 @@ Slowest sources
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
+2      1         SimpleFaultSource         482          0.004     7         1        
+1      2         SimpleFaultSource         4            0.004     7         1        
+3      2         CharacteristicFaultSource 1            0.003     7         1        
 0      1         SimpleFaultSource         482          0.003     7         1        
-1      2         SimpleFaultSource         4            0.002     7         1        
-2      1         SimpleFaultSource         482          0.002     7         1        
-3      2         CharacteristicFaultSource 1            0.002     7         1        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -149,15 +149,15 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.002     1     
-SimpleFaultSource         0.007     3     
+CharacteristicFaultSource 0.003     1     
+SimpleFaultSource         0.011     3     
 ========================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.003 9.786E-04 0.002 0.004 4        
+count_eff_ruptures 0.004 3.827E-04 0.004 0.005 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -165,13 +165,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
+total count_eff_ruptures         0.018     0.070     4     
 reading composite source model   0.017     0.0       1     
-total count_eff_ruptures         0.012     0.074     4     
 reading exposure                 0.009     0.0       1     
-managing sources                 0.004     0.0       1     
-store source_info                6.230E-04 0.0       1     
-aggregate curves                 9.346E-05 0.0       4     
-filtering composite source model 6.199E-05 0.0       1     
-saving probability maps          3.195E-05 0.0       1     
-reading site collection          9.060E-06 0.0       1     
+managing sources                 0.003     0.0       1     
+store source_info                5.784E-04 0.0       1     
+aggregate curves                 9.537E-05 0.0       4     
+filtering composite source model 6.032E-05 0.0       1     
+saving probability maps          3.028E-05 0.0       1     
+reading site collection          7.391E-06 0.0       1     
 ================================ ========= ========= ======

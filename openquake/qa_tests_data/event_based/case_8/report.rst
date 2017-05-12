@@ -2,8 +2,8 @@ Event Based from NonParametric source
 =====================================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20888.hdf5 Fri May 12 07:20:57 2017
-engine_version                            2.4.0-git85daf7a        
+localhost:/mnt/ssd/oqdata/calc_21351.hdf5 Fri May 12 10:46:08 2017
+engine_version                            2.4.0-git59713b5        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rx rrup rjb vs30 vs30measured z1pt0 dip mag rake ztor
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -68,6 +68,6 @@ Slowest operations
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 reading composite source model   0.038     0.0       1     
-filtering composite source model 3.600E-05 0.0       1     
-reading site collection          3.314E-05 0.0       1     
+filtering composite source model 3.505E-05 0.0       1     
+reading site collection          3.242E-05 0.0       1     
 ================================ ========= ========= ======
