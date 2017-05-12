@@ -1,11 +1,11 @@
 Scenario Risk with site model
 =============================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_7643.hdf5 Wed Apr 26 15:56:32 2017
-engine_version                                  2.4.0-git9336bd0        
-hazardlib_version                               0.24.0-gita895d4c       
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21368.hdf5 Fri May 12 10:46:43 2017
+engine_version                                   2.4.0-git59713b5        
+hazardlib_version                                0.24.0-git0596dd3       
+================================================ ========================
 
 num_sites = 11, sitecol = 1.74 KB
 
@@ -75,15 +75,14 @@ steel_spl    1.000 0.0    1   1   3         3
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-filtering sites          0.040     0.0       1     
-building site collection 0.024     0.0       1     
-computing gmfs           0.010     0.0       1     
-reading exposure         0.002     0.0       1     
-saving gmfs              0.001     0.0       1     
-building riskinputs      6.132E-04 0.0       1     
-building epsilons        4.551E-04 0.0       1     
-reading site collection  5.960E-06 0.0       1     
-======================== ========= ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+filtering sites         0.041     0.0       1     
+reading exposure        0.026     0.0       1     
+computing gmfs          0.010     0.0       1     
+saving gmfs             0.001     0.0       1     
+building riskinputs     8.321E-04 0.0       1     
+building epsilons       4.668E-04 0.0       1     
+reading site collection 5.007E-06 0.0       1     
+======================= ========= ========= ======
