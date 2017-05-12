@@ -2,8 +2,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20742.hdf5 Fri May 12 07:08:01 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20849.hdf5 Fri May 12 07:20:32 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -134,8 +134,8 @@ Slowest sources
 ====== ========= ================== ============ ========= ========= =========
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
-1      D         ComplexFaultSource 3,945        0.0       0         0        
 0      F         ComplexFaultSource 2,558        0.0       0         0        
+1      D         ComplexFaultSource 3,945        0.0       0         0        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -150,7 +150,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   3.689 1.365  2.723 4.654 2        
+compute_ruptures   3.716 1.497  2.658 4.775 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -158,15 +158,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           7.377     1.922     2     
-assoc_assets_sites               1.383     0.0       1     
-filtering ruptures               0.328     0.0       489   
-reading site collection          0.216     0.0       1     
-reading composite source model   0.145     0.0       1     
-reading exposure                 0.090     0.0       1     
-saving ruptures                  0.046     0.0       2     
-setting event years              0.007     0.0       1     
+total compute_ruptures           7.433     1.945     2     
+assoc_assets_sites               1.667     0.0       1     
+filtering ruptures               0.362     0.0       489   
+reading site collection          0.201     0.0       1     
+reading composite source model   0.140     0.0       1     
+reading exposure                 0.095     0.0       1     
+saving ruptures                  0.043     0.0       2     
+setting event years              0.006     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                8.805E-04 0.0       1     
-filtering composite source model 2.646E-05 0.0       1     
+store source_info                8.399E-04 0.0       1     
+filtering composite source model 3.982E-05 0.0       1     
 ================================ ========= ========= ======

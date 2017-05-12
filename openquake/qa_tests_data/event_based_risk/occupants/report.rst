@@ -2,8 +2,8 @@ event based risk
 ================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20736.hdf5 Fri May 12 07:07:37 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20843.hdf5 Fri May 12 07:20:07 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -127,7 +127,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.153 NaN    0.153 0.153 1        
+compute_ruptures   0.157 NaN    0.157 0.157 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,14 +135,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.153     0.926     1     
-filtering ruptures               0.069     0.0       259   
-saving ruptures                  0.012     0.0       1     
+total compute_ruptures           0.157     0.863     1     
+filtering ruptures               0.071     0.0       259   
+saving ruptures                  0.015     0.0       1     
 reading exposure                 0.006     0.0       1     
 setting event years              0.004     0.0       1     
-reading composite source model   0.004     0.0       1     
-managing sources                 8.173E-04 0.0       1     
-store source_info                7.148E-04 0.0       1     
-filtering composite source model 2.575E-05 0.0       1     
-reading site collection          6.199E-06 0.0       1     
+reading composite source model   0.003     0.0       1     
+store source_info                8.502E-04 0.0       1     
+managing sources                 7.548E-04 0.0       1     
+filtering composite source model 3.505E-05 0.0       1     
+reading site collection          5.722E-06 0.0       1     
 ================================ ========= ========= ======

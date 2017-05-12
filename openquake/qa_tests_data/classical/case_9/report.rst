@@ -2,8 +2,8 @@ Classical Hazard QA Test, Case 9
 ================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20754.hdf5 Fri May 12 07:08:06 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20861.hdf5 Fri May 12 07:20:36 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -105,8 +105,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      1         PointSource  3,500        0.061     1         1        
-0      1         PointSource  3,000        0.010     1         1        
+1      1         PointSource  3,500        0.062     1         1        
+0      1         PointSource  3,000        0.006     1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -114,14 +114,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.071     2     
+PointSource  0.069     2     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.036 0.036  0.010 0.062 2        
+count_eff_ruptures 0.035 0.040  0.007 0.063 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -129,12 +129,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         0.072     1.379     2     
+total count_eff_ruptures         0.070     1.664     2     
 reading composite source model   0.012     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                7.155E-04 0.0       1     
-aggregate curves                 5.722E-05 0.0       2     
-reading site collection          4.005E-05 0.0       1     
-saving probability maps          3.433E-05 0.0       1     
-filtering composite source model 3.290E-05 0.0       1     
+store source_info                0.001     0.0       1     
+aggregate curves                 7.105E-05 0.0       2     
+saving probability maps          5.436E-05 0.0       1     
+filtering composite source model 5.150E-05 0.0       1     
+reading site collection          4.029E-05 0.0       1     
 ================================ ========= ========= ======

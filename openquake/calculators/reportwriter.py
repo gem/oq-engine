@@ -66,6 +66,7 @@ def no_prefilter(csm, src_filter):
     """
     Disable source prefiltering in CompositeSourceModel
     """
+    csm.set_weights()
     return csm
 
 

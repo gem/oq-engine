@@ -2,8 +2,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20779.hdf5 Fri May 12 07:08:27 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20886.hdf5 Fri May 12 07:20:57 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -73,7 +73,7 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 Informational data
 ------------------
 ============================ =========================================================================
-compute_ruptures.received    max_per_task 369.45 KB, tot 369.45 KB                                    
+compute_ruptures.received    max_per_task 369.48 KB, tot 369.48 KB                                    
 compute_ruptures.sent        sources 1.27 KB, monitor 787 B, src_filter 712 B, gsims 102 B, param 68 B
 hazard.input_weight          0.100                                                                    
 hazard.n_imts                1 B                                                                      
@@ -114,13 +114,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-setting event years              0.080     0.0       1     
+setting event years              0.073     0.0       1     
 saving ruptures                  0.055     0.0       1     
-total compute_ruptures           0.021     0.266     1     
+total compute_ruptures           0.021     0.328     1     
 reading composite source model   0.002     0.0       1     
 managing sources                 0.001     0.0       1     
-filtering ruptures               5.925E-04 0.0       1     
-store source_info                5.686E-04 0.0       1     
-reading site collection          4.315E-05 0.0       1     
-filtering composite source model 3.242E-05 0.0       1     
+store source_info                5.698E-04 0.0       1     
+filtering ruptures               5.696E-04 0.0       1     
+filtering composite source model 4.625E-05 0.0       1     
+reading site collection          4.554E-05 0.0       1     
 ================================ ========= ========= ======
