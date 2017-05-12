@@ -2,8 +2,8 @@ Event Based Risk QA Test 2
 ==========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20735.hdf5 Fri May 12 07:07:37 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20842.hdf5 Fri May 12 07:20:07 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -115,9 +115,9 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      2         PointSource  6            0.0       0         0        
-0      1         PointSource  6            0.0       0         0        
 0      3         PointSource  6            0.0       0         0        
+0      1         PointSource  6            0.0       0         0        
+0      2         PointSource  6            0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -140,15 +140,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.020     0.637     1     
+total compute_ruptures           0.020     0.508     1     
 reading exposure                 0.006     0.0       1     
-filtering ruptures               0.005     0.0       9     
+filtering ruptures               0.004     0.0       9     
 assoc_assets_sites               0.004     0.0       1     
 saving ruptures                  0.003     0.0       1     
 reading composite source model   0.002     0.0       1     
 setting event years              0.001     0.0       1     
-managing sources                 9.875E-04 0.0       1     
-store source_info                5.338E-04 0.0       1     
-reading site collection          4.435E-05 0.0       1     
-filtering composite source model 2.837E-05 0.0       1     
+managing sources                 9.761E-04 0.0       1     
+store source_info                4.900E-04 0.0       1     
+filtering composite source model 3.815E-05 0.0       1     
+reading site collection          3.552E-05 0.0       1     
 ================================ ========= ========= ======

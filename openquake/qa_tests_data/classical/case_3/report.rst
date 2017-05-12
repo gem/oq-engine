@@ -2,8 +2,8 @@ Classical Hazard QA Test, Case 3
 ================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20757.hdf5 Fri May 12 07:08:11 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20864.hdf5 Fri May 12 07:20:41 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -114,12 +114,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   3.990     0.0       1     
+reading composite source model   3.822     0.0       1     
 total count_eff_ruptures         0.003     0.0       1     
-managing sources                 9.983E-04 0.0       1     
-store source_info                5.825E-04 0.0       1     
-reading site collection          4.053E-05 0.0       1     
-filtering composite source model 2.742E-05 0.0       1     
-saving probability maps          2.527E-05 0.0       1     
-aggregate curves                 2.027E-05 0.0       1     
+managing sources                 0.001     0.0       1     
+store source_info                5.028E-04 0.0       1     
+reading site collection          4.172E-05 0.0       1     
+filtering composite source model 3.958E-05 0.0       1     
+saving probability maps          2.456E-05 0.0       1     
+aggregate curves                 2.074E-05 0.0       1     
 ================================ ========= ========= ======

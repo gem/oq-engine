@@ -2,8 +2,8 @@ Classical PSHA-Based Hazard
 ===========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20727.hdf5 Fri May 12 07:07:36 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20834.hdf5 Fri May 12 07:20:06 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -133,10 +133,10 @@ operation                        time_sec  memory_mb counts
 reading composite source model   0.007     0.0       1     
 reading exposure                 0.006     0.0       1     
 total count_eff_ruptures         0.004     0.0       1     
-managing sources                 9.739E-04 0.0       1     
-store source_info                6.011E-04 0.0       1     
-filtering composite source model 3.362E-05 0.0       1     
-saving probability maps          3.242E-05 0.0       1     
-aggregate curves                 2.360E-05 0.0       1     
+managing sources                 0.001     0.0       1     
+store source_info                5.736E-04 0.0       1     
+filtering composite source model 4.864E-05 0.0       1     
+saving probability maps          3.123E-05 0.0       1     
+aggregate curves                 2.456E-05 0.0       1     
 reading site collection          7.629E-06 0.0       1     
 ================================ ========= ========= ======

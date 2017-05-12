@@ -2,8 +2,8 @@ Classical Tiling for Turkey reduced
 ===================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20802.hdf5 Fri May 12 07:09:03 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20909.hdf5 Fri May 12 07:21:33 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -47,9 +47,9 @@ Composite source model
 ======================== ====== ======================================================== ====================== ================
 smlt_path                weight source_model_file                                        gsim_logic_tree        num_realizations
 ======================== ====== ======================================================== ====================== ================
-AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(5,4,4,1,0,2,4) 4/4             
-FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(5,4,4,1,0,2,4) 4/4             
-SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(5,4,4,1,0,2,4) 0/0             
+AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(4,5,2,0,1,4,4) 4/4             
+FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(4,5,2,0,1,4,4) 4/4             
+SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(4,5,2,0,1,4,4) 0/0             
 ======================== ====== ======================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -57,8 +57,8 @@ Required parameters per tectonic region type
 ====== ========================================================================== ================= ======================= ============================
 grp_id gsims                                                                      distances         siteparams              ruptparams                  
 ====== ========================================================================== ================= ======================= ============================
-4      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rx rrup rjb rhypo vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
-9      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rx rrup rjb rhypo vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+4      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rx rrup rjb vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+9      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rx rrup rjb vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
 ====== ========================================================================== ================= ======================= ============================
 
 Realizations per (TRT, GSIM)
@@ -111,37 +111,37 @@ require_epsilons               0 B
 
 Slowest sources
 ---------------
-====== ============== ================== ============ ========= ========= =========
-grp_id source_id      source_class       num_ruptures calc_time num_sites num_split
-====== ============== ================== ============ ========= ========= =========
-4      AS_GEAS343     AreaSource         3,876        0.008     33        1        
-9      FSBG_ARAS462   AreaSource         306          0.005     4         1        
-9      FSBG_TRBG103   AreaSource         1,755        0.004     16        1        
-2      IS_ITID10      AreaSource         18,585       0.0       0         0        
-5      AS_PLAS982     AreaSource         1,044        0.0       0         0        
-4      AS_NOAS079     AreaSource         23,250       0.0       0         0        
-9      FSBG_BGBG090   AreaSource         486          0.0       0         0        
-8      FSBG_DEAS972   AreaSource         528          0.0       0         0        
-9      FSBG_HUAS132   AreaSource         630          0.0       0         0        
-9      FSBG_ESBG038   AreaSource         675          0.0       0         0        
-9      FSBG_ESAS971   AreaSource         2,436        0.0       0         0        
-5      AS_BEAS157     AreaSource         36           0.0       0         0        
-9      FSBG_CHAS098   AreaSource         429          0.0       0         0        
-9      FSBG_YUBG128   AreaSource         1,809        0.0       0         0        
-0      AS_SEAS033     AreaSource         2,808        0.0       0         0        
-4      AS_ZZAS267     AreaSource         5,355        0.0       0         0        
-5      AS_IEAS021     AreaSource         16,668       0.0       0         0        
-1      IF_HELL_GRID01 ComplexFaultSource 334          0.0       0         0        
-9      FSBG_HRAS215   AreaSource         357          0.0       0         0        
-5      AS_NOAS055     AreaSource         2,952        0.0       0         0        
-====== ============== ================== ============ ========= ========= =========
+====== ============ ============ ============ ========= ========= =========
+grp_id source_id    source_class num_ruptures calc_time num_sites num_split
+====== ============ ============ ============ ========= ========= =========
+4      AS_GEAS343   AreaSource   3,876        0.008     33        1        
+9      FSBG_ARAS462 AreaSource   306          0.006     4         1        
+9      FSBG_TRBG103 AreaSource   1,755        0.005     16        1        
+9      AS_PTAS275   AreaSource   5,733        0.0       0         0        
+2      IS_ITID10    AreaSource   18,585       0.0       0         0        
+5      AS_BEAS177   AreaSource   1,638        0.0       0         0        
+9      FSBG_HRAS215 AreaSource   357          0.0       0         0        
+10     100041       PointSource  27           0.0       0         0        
+9      FSBG_CHAS098 AreaSource   429          0.0       0         0        
+7      V_CZAS127    AreaSource   42           0.0       0         0        
+9      FSBG_ESBG038 AreaSource   675          0.0       0         0        
+9      FSBG_BGBG090 AreaSource   486          0.0       0         0        
+6      AS_FIAS032   AreaSource   20,124       0.0       0         0        
+9      FSBG_ESAS971 AreaSource   2,436        0.0       0         0        
+9      FSBG_CHAS089 AreaSource   180          0.0       0         0        
+5      AS_NOAS055   AreaSource   2,952        0.0       0         0        
+9      FSBG_HUAS132 AreaSource   630          0.0       0         0        
+0      AS_SEAS033   AreaSource   2,808        0.0       0         0        
+4      AS_NOAS079   AreaSource   23,250       0.0       0         0        
+9      FSBG_ITAS307 AreaSource   867          0.0       0         0        
+====== ============ ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-AreaSource         0.017     29    
+AreaSource         0.019     29    
 ComplexFaultSource 0.0       1     
 PointSource        0.0       1     
 ================== ========= ======
@@ -150,7 +150,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.017 0.019  0.001 0.063 11       
+count_eff_ruptures 0.019 0.022  0.001 0.076 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -158,12 +158,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.619     0.0       1     
-total count_eff_ruptures         0.189     0.0       11    
-managing sources                 0.013     0.0       1     
+reading composite source model   0.595     0.0       1     
+total count_eff_ruptures         0.212     0.0       11    
+managing sources                 0.012     0.0       1     
 reading site collection          0.005     0.0       1     
-store source_info                7.017E-04 0.0       1     
-aggregate curves                 1.702E-04 0.0       11    
-saving probability maps          2.718E-05 0.0       1     
-filtering composite source model 2.551E-05 0.0       1     
+store source_info                0.001     0.0       1     
+aggregate curves                 3.071E-04 0.0       11    
+filtering composite source model 7.939E-05 0.0       1     
+saving probability maps          3.958E-05 0.0       1     
 ================================ ========= ========= ======

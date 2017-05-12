@@ -2,8 +2,8 @@ event based risk
 ================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20741.hdf5 Fri May 12 07:07:55 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20848.hdf5 Fri May 12 07:20:24 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -95,7 +95,7 @@ source_model_2.xml 2      Active Shallow Crust 1           1            482
 Informational data
 ------------------
 ============================ ===============================================================================
-compute_ruptures.received    tot 9.93 KB, max_per_task 3.28 KB                                              
+compute_ruptures.received    tot 10.02 KB, max_per_task 3.33 KB                                             
 compute_ruptures.sent        sources 18.21 KB, monitor 5.51 KB, src_filter 3.33 KB, gsims 708 B, param 260 B
 hazard.input_weight          969                                                                            
 hazard.n_imts                4 B                                                                            
@@ -134,10 +134,10 @@ Slowest sources
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-0      1         SimpleFaultSource         482          0.0       0         0        
 2      1         SimpleFaultSource         482          0.0       0         0        
-1      2         SimpleFaultSource         4            0.0       0         0        
 3      2         CharacteristicFaultSource 1            0.0       0         0        
+1      2         SimpleFaultSource         4            0.0       0         0        
+0      1         SimpleFaultSource         482          0.0       0         0        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -153,7 +153,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.035 0.035  0.004 0.076 4        
+compute_ruptures   0.040 0.041  0.002 0.075 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,14 +161,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.139     0.035     4     
-reading composite source model   0.017     0.0       1     
+total compute_ruptures           0.159     0.0       4     
+reading composite source model   0.016     0.0       1     
 reading exposure                 0.009     0.0       1     
-saving ruptures                  0.006     0.0       4     
+saving ruptures                  0.008     0.0       4     
+setting event years              0.004     0.0       1     
 managing sources                 0.004     0.0       1     
-setting event years              0.003     0.0       1     
-store source_info                6.754E-04 0.0       1     
-filtering ruptures               6.657E-04 0.0       2     
-filtering composite source model 3.314E-05 0.0       1     
-reading site collection          7.868E-06 0.0       1     
+store source_info                0.001     0.0       1     
+filtering ruptures               5.925E-04 0.0       2     
+filtering composite source model 5.746E-05 0.0       1     
+reading site collection          8.106E-06 0.0       1     
 ================================ ========= ========= ======

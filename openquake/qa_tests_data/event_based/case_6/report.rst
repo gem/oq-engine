@@ -2,8 +2,8 @@ Event-based PSHA producing hazard curves only
 =============================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20775.hdf5 Fri May 12 07:08:25 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20882.hdf5 Fri May 12 07:20:55 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -124,7 +124,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.710 0.269  1.520 1.900 2        
+compute_ruptures   1.719 0.207  1.573 1.866 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -132,13 +132,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           3.420     7.418     2     
-filtering ruptures               0.544     0.0       3,081 
-saving ruptures                  0.120     0.0       2     
-reading composite source model   0.113     0.0       1     
-setting event years              0.070     0.0       1     
+total compute_ruptures           3.439     7.332     2     
+filtering ruptures               0.548     0.0       3,081 
+saving ruptures                  0.119     0.0       2     
+reading composite source model   0.110     0.0       1     
+setting event years              0.064     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                5.658E-04 0.0       1     
-reading site collection          3.958E-05 0.0       1     
-filtering composite source model 3.242E-05 0.0       1     
+store source_info                5.622E-04 0.0       1     
+filtering composite source model 5.102E-05 0.0       1     
+reading site collection          4.053E-05 0.0       1     
 ================================ ========= ========= ======

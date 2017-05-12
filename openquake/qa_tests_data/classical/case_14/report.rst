@@ -2,8 +2,8 @@ Classical PSHA QA test with sites_csv
 =====================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20763.hdf5 Fri May 12 07:08:13 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20870.hdf5 Fri May 12 07:20:43 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -116,12 +116,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         0.004     0.0       1     
 reading composite source model   0.004     0.0       1     
-managing sources                 9.828E-04 0.0       1     
-store source_info                6.359E-04 0.0       1     
-reading site collection          1.931E-04 0.0       1     
-filtering composite source model 3.386E-05 0.0       1     
-saving probability maps          3.076E-05 0.0       1     
-aggregate curves                 2.384E-05 0.0       1     
+total count_eff_ruptures         0.004     0.035     1     
+managing sources                 9.964E-04 0.0       1     
+store source_info                6.330E-04 0.0       1     
+reading site collection          1.950E-04 0.0       1     
+filtering composite source model 4.864E-05 0.0       1     
+saving probability maps          3.147E-05 0.0       1     
+aggregate curves                 2.408E-05 0.0       1     
 ================================ ========= ========= ======
