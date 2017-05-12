@@ -2,8 +2,8 @@ Event-based PSHA producing hazard curves only
 =============================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20882.hdf5 Fri May 12 07:20:55 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21345.hdf5 Fri May 12 10:46:07 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -53,8 +53,8 @@ Required parameters per tectonic region type
 ====== ============================================================= =========== ============================= =================
 grp_id gsims                                                         distances   siteparams                    ruptparams       
 ====== ============================================================= =========== ============================= =================
-0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rx rrup rjb vs30 vs30measured z1pt0 z2pt5 dip mag rake ztor
-1      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rx rrup rjb vs30 vs30measured z1pt0 z2pt5 dip mag rake ztor
+0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip mag rake ztor
+1      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip mag rake ztor
 ====== ============================================================= =========== ============================= =================
 
 Realizations per (TRT, GSIM)
@@ -108,8 +108,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   2,456        0.0       0         0        
 1      1         AreaSource   2,456        0.0       0         0        
+0      1         AreaSource   2,456        0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -124,7 +124,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.719 0.207  1.573 1.866 2        
+compute_ruptures   1.737 0.174  1.614 1.860 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -132,13 +132,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           3.439     7.332     2     
-filtering ruptures               0.548     0.0       3,081 
-saving ruptures                  0.119     0.0       2     
-reading composite source model   0.110     0.0       1     
-setting event years              0.064     0.0       1     
+total compute_ruptures           3.474     9.145     2     
+filtering ruptures               0.576     0.0       3,081 
+saving ruptures                  0.116     0.0       2     
+reading composite source model   0.111     0.0       1     
+setting event years              0.069     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                5.622E-04 0.0       1     
-filtering composite source model 5.102E-05 0.0       1     
-reading site collection          4.053E-05 0.0       1     
+store source_info                5.574E-04 0.0       1     
+filtering composite source model 5.031E-05 0.0       1     
+reading site collection          4.029E-05 0.0       1     
 ================================ ========= ========= ======

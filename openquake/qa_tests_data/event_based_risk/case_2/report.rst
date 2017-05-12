@@ -2,8 +2,8 @@ Event Based Risk QA Test 2
 ==========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20842.hdf5 Fri May 12 07:20:07 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21305.hdf5 Fri May 12 10:45:18 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -54,7 +54,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rx rrup rjb vs30 vs30measured z1pt0 dip mag rake ztor
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -76,7 +76,7 @@ source_model.xml 0      Active Shallow Crust 3           9            18
 Informational data
 ------------------
 ============================ =========================================================================
-compute_ruptures.received    max_per_task 9.52 KB, tot 9.52 KB                                        
+compute_ruptures.received    tot 9.52 KB, max_per_task 9.52 KB                                        
 compute_ruptures.sent        sources 2.1 KB, monitor 1.06 KB, src_filter 740 B, gsims 98 B, param 65 B
 hazard.input_weight          1.800                                                                    
 hazard.n_imts                3 B                                                                      
@@ -116,8 +116,8 @@ Slowest sources
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 0      3         PointSource  6            0.0       0         0        
-0      1         PointSource  6            0.0       0         0        
 0      2         PointSource  6            0.0       0         0        
+0      1         PointSource  6            0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -132,7 +132,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.020 NaN    0.020 0.020 1        
+compute_ruptures   0.015 NaN    0.015 0.015 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -140,15 +140,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.020     0.508     1     
-reading exposure                 0.006     0.0       1     
-filtering ruptures               0.004     0.0       9     
+total compute_ruptures           0.015     0.648     1     
+reading exposure                 0.005     0.0       1     
 assoc_assets_sites               0.004     0.0       1     
-saving ruptures                  0.003     0.0       1     
+filtering ruptures               0.003     0.0       9     
+saving ruptures                  0.002     0.0       1     
 reading composite source model   0.002     0.0       1     
 setting event years              0.001     0.0       1     
-managing sources                 9.761E-04 0.0       1     
-store source_info                4.900E-04 0.0       1     
+managing sources                 8.593E-04 0.0       1     
+store source_info                4.802E-04 0.0       1     
 filtering composite source model 3.815E-05 0.0       1     
-reading site collection          3.552E-05 0.0       1     
+reading site collection          3.123E-05 0.0       1     
 ================================ ========= ========= ======

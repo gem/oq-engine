@@ -2,8 +2,8 @@ oq-test03, depth=15km
 =====================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20810.hdf5 Fri May 12 07:20:03 2017
-engine_version                            2.4.0-git85daf7a        
+localhost:/mnt/ssd/oqdata/calc_21273.hdf5 Fri May 12 10:45:15 2017
+engine_version                            2.4.0-git59713b5        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
@@ -70,7 +70,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
+reading exposure        0.005     0.0       1     
 filtering sites         0.001     0.0       1     
-reading site collection 6.437E-06 0.0       1     
+reading site collection 5.245E-06 0.0       1     
 ======================= ========= ========= ======

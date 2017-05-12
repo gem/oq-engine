@@ -2,8 +2,8 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20872.hdf5 Fri May 12 07:20:43 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21335.hdf5 Fri May 12 10:45:55 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -76,8 +76,8 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2430         2
 Informational data
 ------------------
 ============================== =============================================================================
-count_eff_ruptures.received    max_per_task 1.47 KB, tot 1.47 KB                                            
-count_eff_ruptures.sent        gsims 156.16 KB, sources 2.1 KB, monitor 1.23 KB, srcfilter 740 B, param 65 B
+count_eff_ruptures.received    tot 1.47 KB, max_per_task 1.47 KB                                            
+count_eff_ruptures.sent        gsims 156.15 KB, sources 2.1 KB, monitor 1.23 KB, srcfilter 740 B, param 65 B
 hazard.input_weight            243                                                                          
 hazard.n_imts                  3 B                                                                          
 hazard.n_levels                36 B                                                                         
@@ -118,11 +118,11 @@ Slowest operations
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 reading composite source model   0.021     0.0       1     
-total count_eff_ruptures         0.003     0.004     1     
+total count_eff_ruptures         0.003     0.0       1     
 managing sources                 0.001     0.0       1     
-store source_info                6.382E-04 0.0       1     
-reading site collection          1.915E-04 0.0       1     
-filtering composite source model 6.342E-05 0.0       1     
-saving probability maps          3.171E-05 0.0       1     
-aggregate curves                 2.575E-05 0.0       1     
+store source_info                6.418E-04 0.0       1     
+reading site collection          1.647E-04 0.0       1     
+filtering composite source model 4.935E-05 0.0       1     
+saving probability maps          3.195E-05 0.0       1     
+aggregate curves                 2.456E-05 0.0       1     
 ================================ ========= ========= ======

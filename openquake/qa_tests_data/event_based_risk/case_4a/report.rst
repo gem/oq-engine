@@ -2,8 +2,8 @@ Event Based Hazard
 ==================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20846.hdf5 Fri May 12 07:20:13 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21309.hdf5 Fri May 12 10:45:25 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -125,7 +125,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.074 0.100  0.003 0.145 2        
+compute_ruptures   0.073 0.100  0.003 0.144 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -134,13 +134,13 @@ Slowest operations
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 total compute_ruptures           0.147     0.0       2     
-reading composite source model   0.012     0.0       1     
+reading composite source model   0.011     0.0       1     
 reading exposure                 0.006     0.0       1     
-saving ruptures                  0.005     0.0       2     
+saving ruptures                  0.006     0.0       2     
 setting event years              0.003     0.0       1     
 managing sources                 0.002     0.0       1     
 store source_info                0.001     0.0       1     
-filtering ruptures               9.418E-04 0.0       5     
-filtering composite source model 4.625E-05 0.0       1     
-reading site collection          7.391E-06 0.0       1     
+filtering ruptures               8.597E-04 0.0       5     
+filtering composite source model 4.745E-05 0.0       1     
+reading site collection          7.629E-06 0.0       1     
 ================================ ========= ========= ======

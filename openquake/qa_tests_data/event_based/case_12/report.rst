@@ -2,8 +2,8 @@ Event Based QA Test, Case 12
 ============================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20894.hdf5 Fri May 12 07:21:30 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21357.hdf5 Fri May 12 10:46:42 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -84,7 +84,7 @@ source_model.xml 1      Stable Continental   1           1            1
 Informational data
 ------------------
 ============================ ==============================================================================
-compute_ruptures.received    tot 140.64 KB, max_per_task 71.94 KB                                          
+compute_ruptures.received    tot 140.62 KB, max_per_task 71.93 KB                                          
 compute_ruptures.sent        sources 2.55 KB, monitor 1.66 KB, src_filter 1.34 KB, gsims 193 B, param 134 B
 hazard.input_weight          0.200                                                                         
 hazard.n_imts                1 B                                                                           
@@ -118,7 +118,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-compute_ruptures   0.030 6.978E-04 0.030 0.031 2        
+compute_ruptures   0.029 1.027E-04 0.029 0.029 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -126,13 +126,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.060     0.0       2     
-setting event years              0.029     0.0       1     
-saving ruptures                  0.025     0.0       2     
+total compute_ruptures           0.059     0.0       2     
+setting event years              0.030     0.0       1     
+saving ruptures                  0.026     0.0       2     
 reading composite source model   0.002     0.0       1     
 managing sources                 0.002     0.0       1     
 filtering ruptures               0.001     0.0       2     
-store source_info                6.061E-04 0.0       1     
-filtering composite source model 4.983E-05 0.0       1     
-reading site collection          4.315E-05 0.0       1     
+store source_info                5.724E-04 0.0       1     
+filtering composite source model 5.126E-05 0.0       1     
+reading site collection          4.387E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,8 +2,8 @@ Classical PSHA QA test with sites_csv
 =====================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20870.hdf5 Fri May 12 07:20:43 2017
-engine_version                                   2.4.0-git85daf7a        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21333.hdf5 Fri May 12 10:45:54 2017
+engine_version                                   2.4.0-git59713b5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -52,7 +52,7 @@ Required parameters per tectonic region type
 ====== ============================================= =========== ============================= =======================
 grp_id gsims                                         distances   siteparams                    ruptparams             
 ====== ============================================= =========== ============================= =======================
-0      AbrahamsonSilva2008() CampbellBozorgnia2008() rx rrup rjb vs30 vs30measured z1pt0 z2pt5 dip mag rake width ztor
+0      AbrahamsonSilva2008() CampbellBozorgnia2008() rjb rrup rx vs30 vs30measured z1pt0 z2pt5 dip mag rake width ztor
 ====== ============================================= =========== ============================= =======================
 
 Realizations per (TRT, GSIM)
@@ -75,7 +75,7 @@ simple_fault.xml 0      Active Shallow Crust 1           447          447
 Informational data
 ------------------
 ============================== ========================================================================
-count_eff_ruptures.received    max_per_task 1.15 KB, tot 1.15 KB                                       
+count_eff_ruptures.received    tot 1.15 KB, max_per_task 1.15 KB                                       
 count_eff_ruptures.sent        sources 1.05 KB, srcfilter 936 B, monitor 934 B, gsims 195 B, param 65 B
 hazard.input_weight            447                                                                     
 hazard.n_imts                  1 B                                                                     
@@ -93,7 +93,7 @@ Slowest sources
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      3         SimpleFaultSource 447          0.003     10        1        
+0      3         SimpleFaultSource 447          0.002     10        1        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -101,14 +101,14 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.003     1     
+SimpleFaultSource 0.002     1     
 ================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.004 NaN    0.004 0.004 1        
+count_eff_ruptures 0.002 NaN    0.002 0.002 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -117,11 +117,11 @@ Slowest operations
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 reading composite source model   0.004     0.0       1     
-total count_eff_ruptures         0.004     0.035     1     
-managing sources                 9.964E-04 0.0       1     
-store source_info                6.330E-04 0.0       1     
-reading site collection          1.950E-04 0.0       1     
-filtering composite source model 4.864E-05 0.0       1     
-saving probability maps          3.147E-05 0.0       1     
-aggregate curves                 2.408E-05 0.0       1     
+total count_eff_ruptures         0.002     0.0       1     
+managing sources                 9.675E-04 0.0       1     
+store source_info                6.261E-04 0.0       1     
+reading site collection          1.898E-04 0.0       1     
+filtering composite source model 4.911E-05 0.0       1     
+saving probability maps          3.052E-05 0.0       1     
+aggregate curves                 2.480E-05 0.0       1     
 ================================ ========= ========= ======
