@@ -377,7 +377,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
     parser = nrml.SourceModelParser(converter)
-    gsim_file = oqparam.inputs.get('gsim_logic_tree')
 
     # consider only the effective realizations
     for sm in source_model_lt.gen_source_models(gsim_lt):
@@ -413,6 +412,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         source_model_lt.tectonic_region_types.update(trts)
         logging.info('Processed source model %d with %d gsim path(s)',
                      sm.ordinal + 1, sm.num_gsim_paths)
+
+        gsim_file = oqparam.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
             for src_group in src_groups:
                 if src_group.trt not in gsim_lt.values:
@@ -436,7 +437,6 @@ def get_composite_source_model(oqparam, in_memory=True):
     :param in_memory:
         if False, just parse the XML without instantiating the sources
     """
-    source_model_lt = get_source_model_lt(oqparam)
     smodels = []
     grp_id = 0
     idx = 0
@@ -447,6 +447,7 @@ def get_composite_source_model(oqparam, in_memory=True):
         except:
             return src['id']
     gsim_lt = get_gsim_lt(oqparam)
+    source_model_lt = get_source_model_lt(oqparam)
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, in_memory=in_memory):
         for src_group in source_model.src_groups:
