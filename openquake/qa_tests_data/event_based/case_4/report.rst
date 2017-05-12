@@ -1,11 +1,11 @@
 Event-Based Hazard QA Test, Case 4
 ==================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_7627.hdf5 Wed Apr 26 15:55:53 2017
-engine_version                                  2.4.0-git9336bd0        
-hazardlib_version                               0.24.0-gita895d4c       
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20456.hdf5 Fri May 12 06:37:19 2017
+engine_version                                   2.4.0-giteadb85d        
+hazardlib_version                                0.24.0-git0596dd3       
+================================================ ========================
 
 num_sites = 1, sitecol = 809 B
 
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       rake mag  
+0      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -74,7 +74,7 @@ Informational data
 ------------------
 ============================ ========================================================================
 compute_ruptures.received    tot 7.98 KB, max_per_task 7.98 KB                                       
-compute_ruptures.sent        sources 1.23 KB, monitor 849 B, src_filter 684 B, gsims 91 B, param 66 B
+compute_ruptures.sent        sources 1.14 KB, monitor 850 B, src_filter 684 B, gsims 91 B, param 66 B
 hazard.input_weight          10                                                                      
 hazard.n_imts                1 B                                                                     
 hazard.n_levels              3 B                                                                     
@@ -91,7 +91,7 @@ Slowest sources
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      1         SimpleFaultSource 10           0.0       1         0        
+0      1         SimpleFaultSource 10           0.0       0         0        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -116,11 +116,11 @@ operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 total compute_ruptures           0.015     0.0       1     
 reading composite source model   0.003     0.0       1     
-saving ruptures                  0.002     0.0       1     
+saving ruptures                  0.003     0.0       1     
 filtering ruptures               0.002     0.0       10    
-setting event years              0.002     0.0       1     
-filtering composite source model 0.001     0.0       1     
-store source_info                4.616E-04 0.0       1     
-managing sources                 8.368E-05 0.0       1     
-reading site collection          3.147E-05 0.0       1     
+setting event years              0.001     0.0       1     
+managing sources                 8.063E-04 0.0       1     
+store source_info                4.652E-04 0.0       1     
+reading site collection          3.314E-05 0.0       1     
+filtering composite source model 2.742E-05 0.0       1     
 ================================ ========= ========= ======

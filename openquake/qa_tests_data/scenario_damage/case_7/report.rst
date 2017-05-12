@@ -1,11 +1,11 @@
 scenario hazard
 ===============
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_7553.hdf5 Wed Apr 26 15:54:20 2017
-engine_version                           2.4.0-git9336bd0        
-hazardlib_version                        0.24.0-gita895d4c       
-======================================== ========================
+========================================= ========================
+localhost:/mnt/ssd/oqdata/calc_20380.hdf5 Fri May 12 06:36:19 2017
+engine_version                            2.4.0-giteadb85d        
+hazardlib_version                         0.24.0-git0596dd3       
+========================================= ========================
 
 num_sites = 1, sitecol = 809 B
 
@@ -61,11 +61,10 @@ tax1     1.000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-filtering sites          0.006     0.0       1     
-building site collection 0.004     0.0       1     
-reading exposure         9.282E-04 0.0       1     
-reading site collection  5.960E-06 0.0       1     
-======================== ========= ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+filtering sites         0.007     0.0       1     
+reading exposure        0.005     0.0       1     
+reading site collection 4.530E-06 0.0       1     
+======================= ========= ========= ======
