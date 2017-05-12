@@ -736,6 +736,6 @@ class SourceInfo(object):
         self.source_id = src.source_id
         self.source_class = src.__class__.__name__
         self.num_ruptures = src.num_ruptures
-        self.num_sites = src.nsites
+        self.num_sites = getattr(src, 'nsites', 0)
         self.calc_time = calc_time
         self.num_split = num_split

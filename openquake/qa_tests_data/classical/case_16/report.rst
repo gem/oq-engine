@@ -1,11 +1,11 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_7613.hdf5 Wed Apr 26 15:55:39 2017
-engine_version                                  2.4.0-git9336bd0        
-hazardlib_version                               0.24.0-gita895d4c       
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20442.hdf5 Fri May 12 06:37:06 2017
+engine_version                                   2.4.0-giteadb85d        
+hazardlib_version                                0.24.0-git0596dd3       
+================================================ ========================
 
 num_sites = 1, sitecol = 809 B
 
@@ -100,16 +100,16 @@ Required parameters per tectonic region type
 ====== =================== ========= ========== ==========
 grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       rake mag  
-1      BooreAtkinson2008() rjb       vs30       rake mag  
-2      BooreAtkinson2008() rjb       vs30       rake mag  
-3      BooreAtkinson2008() rjb       vs30       rake mag  
-4      BooreAtkinson2008() rjb       vs30       rake mag  
-5      BooreAtkinson2008() rjb       vs30       rake mag  
-6      BooreAtkinson2008() rjb       vs30       rake mag  
-7      BooreAtkinson2008() rjb       vs30       rake mag  
-8      BooreAtkinson2008() rjb       vs30       rake mag  
-9      BooreAtkinson2008() rjb       vs30       rake mag  
+0      BooreAtkinson2008() rjb       vs30       mag rake  
+1      BooreAtkinson2008() rjb       vs30       mag rake  
+2      BooreAtkinson2008() rjb       vs30       mag rake  
+3      BooreAtkinson2008() rjb       vs30       mag rake  
+4      BooreAtkinson2008() rjb       vs30       mag rake  
+5      BooreAtkinson2008() rjb       vs30       mag rake  
+6      BooreAtkinson2008() rjb       vs30       mag rake  
+7      BooreAtkinson2008() rjb       vs30       mag rake  
+8      BooreAtkinson2008() rjb       vs30       mag rake  
+9      BooreAtkinson2008() rjb       vs30       mag rake  
 ====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -156,45 +156,45 @@ source_model.xml 9      Active Shallow Crust 5           2025         2,025
 
 Informational data
 ------------------
-============================== =====================================================================================
-count_eff_ruptures.received    tot 17.83 KB, max_per_task 1.05 KB                                                   
-count_eff_ruptures.sent        sources 138.81 KB, monitor 14.13 KB, srcfilter 11.36 KB, gsims 1.69 KB, param 1.08 KB
-hazard.input_weight            2,026                                                                                
-hazard.n_imts                  1 B                                                                                  
-hazard.n_levels                3 B                                                                                  
-hazard.n_realizations          10 B                                                                                 
-hazard.n_sites                 1 B                                                                                  
-hazard.n_sources               50 B                                                                                 
-hazard.output_weight           30                                                                                   
-hostname                       tstation.gem.lan                                                                     
-require_epsilons               0 B                                                                                  
-============================== =====================================================================================
+============================== ===============================================================================
+count_eff_ruptures.received    tot 11.35 KB, max_per_task 1.13 KB                                             
+count_eff_ruptures.sent        sources 47.96 KB, monitor 8.32 KB, srcfilter 6.68 KB, gsims 1020 B, param 650 B
+hazard.input_weight            2,026                                                                          
+hazard.n_imts                  1 B                                                                            
+hazard.n_levels                3 B                                                                            
+hazard.n_realizations          10 B                                                                           
+hazard.n_sites                 1 B                                                                            
+hazard.n_sources               50 B                                                                           
+hazard.output_weight           30                                                                             
+hostname                       tstation.gem.lan                                                               
+require_epsilons               0 B                                                                            
+============================== ===============================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-6      4         AreaSource   375          0.0       1         0        
-2      1         AreaSource   375          0.0       1         0        
-4      5         AreaSource   325          0.0       1         0        
-2      2         AreaSource   450          0.0       1         0        
-5      3         AreaSource   450          0.0       1         0        
-0      4         AreaSource   325          0.0       1         0        
-9      1         AreaSource   425          0.0       1         0        
-7      2         AreaSource   450          0.0       1         0        
-9      2         AreaSource   450          0.0       1         0        
-8      3         AreaSource   390          0.0       1         0        
-1      1         AreaSource   375          0.0       1         0        
-5      5         AreaSource   375          0.0       1         0        
-7      1         AreaSource   375          0.0       1         0        
-4      2         AreaSource   390          0.0       1         0        
-2      3         AreaSource   510          0.0       1         0        
-1      2         AreaSource   450          0.0       1         0        
-9      4         AreaSource   325          0.0       1         0        
-2      5         AreaSource   425          0.0       1         0        
-6      1         AreaSource   425          0.0       1         0        
-6      2         AreaSource   450          0.0       1         0        
+6      1         AreaSource   425          0.002     1         1        
+2      1         AreaSource   375          0.001     1         1        
+8      1         AreaSource   375          0.001     1         1        
+6      2         AreaSource   450          0.001     1         1        
+8      2         AreaSource   390          0.001     1         1        
+2      3         AreaSource   510          0.001     1         1        
+9      1         AreaSource   425          0.001     1         1        
+2      4         AreaSource   375          0.001     1         1        
+1      5         AreaSource   375          0.001     1         1        
+1      4         AreaSource   375          0.001     1         1        
+6      5         AreaSource   375          0.001     1         1        
+2      5         AreaSource   425          0.001     1         1        
+2      2         AreaSource   450          0.001     1         1        
+1      3         AreaSource   450          0.001     1         1        
+6      3         AreaSource   450          0.001     1         1        
+6      4         AreaSource   375          0.001     1         1        
+9      2         AreaSource   450          0.001     1         1        
+3      1         AreaSource   325          0.001     1         1        
+8      5         AreaSource   325          0.001     1         1        
+9      4         AreaSource   325          0.001     1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -202,14 +202,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.0       50    
+AreaSource   0.058     50    
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.571 0.320  0.157 0.943 17       
+count_eff_ruptures 0.007 0.001  0.005 0.008 10       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -217,12 +217,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         9.709     0.0       17    
-reading composite source model   0.227     0.0       1     
-filtering composite source model 0.031     0.0       1     
-store source_info                0.002     0.0       1     
-aggregate curves                 3.128E-04 0.0       17    
-managing sources                 1.180E-04 0.0       1     
-reading site collection          6.008E-05 0.0       1     
-saving probability maps          5.317E-05 0.0       1     
+reading composite source model   0.209     0.0       1     
+total count_eff_ruptures         0.070     0.0       10    
+managing sources                 0.015     0.0       1     
+store source_info                9.856E-04 0.0       1     
+aggregate curves                 3.147E-04 0.0       10    
+reading site collection          3.934E-05 0.0       1     
+filtering composite source model 3.505E-05 0.0       1     
+saving probability maps          3.266E-05 0.0       1     
 ================================ ========= ========= ======
