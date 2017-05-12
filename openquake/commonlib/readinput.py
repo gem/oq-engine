@@ -255,7 +255,7 @@ def get_site_collection(oqparam, mesh=None):
                     param.z1pt0, param.z2pt5, param.backarc))
             return site.SiteCollection(sitecol)
         # read the parameters directly from their file
-        site_model_params = geo.geodetic.GeographicObjects(
+        site_model_params = geo.utils.GeographicObjects(
             get_site_model(oqparam))
         for pt in mesh:
             # attach the closest site model params to each site
