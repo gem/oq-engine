@@ -2,8 +2,8 @@ Scenario QA Test, Case 3
 ========================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20386.hdf5 Fri May 12 06:36:20 2017
-engine_version                            2.4.0-giteadb85d        
+localhost:/mnt/ssd/oqdata/calc_20712.hdf5 Fri May 12 07:07:34 2017
+engine_version                            2.4.0-git7dc35c5        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
@@ -50,5 +50,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.011     0.0       1     
-reading site collection 3.171E-05 0.0       1     
+reading site collection 3.099E-05 0.0       1     
 ======================= ========= ========= ======

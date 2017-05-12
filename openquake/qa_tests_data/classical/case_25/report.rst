@@ -2,8 +2,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 =================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20423.hdf5 Fri May 12 06:36:55 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20749.hdf5 Fri May 12 07:08:03 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -74,8 +74,8 @@ source_model.xml 0      Volcanic 1           440          440
 Informational data
 ------------------
 ============================== ========================================================================
-count_eff_ruptures.received    tot 1.07 KB, max_per_task 1.07 KB                                       
-count_eff_ruptures.sent        sources 1.89 KB, monitor 852 B, srcfilter 824 B, gsims 101 B, param 65 B
+count_eff_ruptures.received    max_per_task 1.07 KB, tot 1.07 KB                                       
+count_eff_ruptures.sent        sources 1.97 KB, monitor 852 B, srcfilter 824 B, gsims 101 B, param 65 B
 hazard.input_weight            44                                                                      
 hazard.n_imts                  1 B                                                                     
 hazard.n_levels                3 B                                                                     
@@ -115,12 +115,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.009     0.0       1     
+reading composite source model   0.010     0.0       1     
 total count_eff_ruptures         0.002     0.0       1     
 managing sources                 0.001     0.0       1     
-store source_info                6.776E-04 0.0       1     
-reading site collection          1.922E-04 0.0       1     
-filtering composite source model 4.530E-05 0.0       1     
-saving probability maps          3.242E-05 0.0       1     
-aggregate curves                 2.623E-05 0.0       1     
+store source_info                6.440E-04 0.0       1     
+reading site collection          1.991E-04 0.0       1     
+filtering composite source model 3.600E-05 0.0       1     
+saving probability maps          3.266E-05 0.0       1     
+aggregate curves                 2.408E-05 0.0       1     
 ================================ ========= ========= ======

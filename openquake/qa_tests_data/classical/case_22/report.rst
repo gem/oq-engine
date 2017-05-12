@@ -2,8 +2,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20430.hdf5 Fri May 12 06:37:00 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20756.hdf5 Fri May 12 07:08:07 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -76,39 +76,39 @@ Alaska_asc_grid_NSHMP2007.xml 0      Active Shallow Crust 14          276       
 
 Informational data
 ------------------
-============================== ============================================================================
-count_eff_ruptures.received    tot 2.33 KB, max_per_task 2.33 KB                                           
-count_eff_ruptures.sent        sources 10.1 KB, monitor 2.05 KB, srcfilter 1.21 KB, gsims 353 B, param 65 B
-hazard.input_weight            126                                                                         
-hazard.n_imts                  6 B                                                                         
-hazard.n_levels                114 B                                                                       
-hazard.n_realizations          4 B                                                                         
-hazard.n_sites                 21 B                                                                        
-hazard.n_sources               14 B                                                                        
-hazard.output_weight           9,576                                                                       
-hostname                       tstation.gem.lan                                                            
-require_epsilons               0 B                                                                         
-============================== ============================================================================
+============================== =============================================================================
+count_eff_ruptures.received    max_per_task 2.33 KB, tot 2.33 KB                                            
+count_eff_ruptures.sent        sources 10.18 KB, monitor 2.05 KB, srcfilter 1.21 KB, gsims 353 B, param 65 B
+hazard.input_weight            126                                                                          
+hazard.n_imts                  6 B                                                                          
+hazard.n_levels                114 B                                                                        
+hazard.n_realizations          4 B                                                                          
+hazard.n_sites                 21 B                                                                         
+hazard.n_sources               14 B                                                                         
+hazard.output_weight           2,394                                                                        
+hostname                       tstation.gem.lan                                                             
+require_epsilons               0 B                                                                          
+============================== =============================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      8878      PointSource  92           3.762E-04 2         1        
+0      70088     PointSource  92           1.800E-04 1         1        
 0      6736      PointSource  92           1.781E-04 1         1        
-0      70088     PointSource  92           1.774E-04 1         1        
+0      8878      PointSource  92           1.767E-04 2         1        
 0      102588    PointSource  92           0.0       0         0        
-0      98979     PointSource  92           0.0       0         0        
-0      44535     PointSource  92           0.0       0         0        
-0      428       PointSource  80           0.0       0         0        
-0      41060     PointSource  92           0.0       0         0        
-0      98725     PointSource  92           0.0       0         0        
-0      22285     PointSource  92           0.0       0         0        
-0      106150    PointSource  92           0.0       0         0        
-0      15999     PointSource  92           0.0       0         0        
-0      23947     PointSource  92           0.0       0         0        
 0      3802      PointSource  80           0.0       0         0        
+0      44535     PointSource  92           0.0       0         0        
+0      106150    PointSource  92           0.0       0         0        
+0      428       PointSource  80           0.0       0         0        
+0      23947     PointSource  92           0.0       0         0        
+0      98979     PointSource  92           0.0       0         0        
+0      22285     PointSource  92           0.0       0         0        
+0      41060     PointSource  92           0.0       0         0        
+0      15999     PointSource  92           0.0       0         0        
+0      98725     PointSource  92           0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -116,7 +116,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  7.317E-04 14    
+PointSource  5.348E-04 14    
 ============ ========= ======
 
 Information about the tasks
@@ -132,11 +132,11 @@ Slowest operations
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 reading composite source model   0.011     0.0       1     
-total count_eff_ruptures         0.004     0.0       1     
+total count_eff_ruptures         0.004     0.027     1     
 managing sources                 0.001     0.0       1     
-store source_info                7.498E-04 0.0       1     
+store source_info                7.615E-04 0.0       1     
 reading site collection          2.439E-04 0.0       1     
-filtering composite source model 3.171E-05 0.0       1     
-saving probability maps          3.147E-05 0.0       1     
-aggregate curves                 3.052E-05 0.0       1     
+filtering composite source model 3.314E-05 0.0       1     
+saving probability maps          3.195E-05 0.0       1     
+aggregate curves                 2.885E-05 0.0       1     
 ================================ ========= ========= ======

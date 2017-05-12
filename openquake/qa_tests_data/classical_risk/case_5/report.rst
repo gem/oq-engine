@@ -2,8 +2,8 @@ Hazard Calculation for end-to-end hazard+risk
 =============================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20374.hdf5 Fri May 12 06:36:19 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20700.hdf5 Fri May 12 07:07:33 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -52,7 +52,7 @@ Required parameters per tectonic region type
 grp_id gsims                                                                                    distances  siteparams ruptparams    
 ====== ======================================================================================== ========== ========== ==============
 0      AkkarBommer2010()                                                                        rjb        vs30       mag rake      
-1      AtkinsonBoore2003SInter() LinLee2008SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter() rhypo rrup vs30       hypo_depth mag
+1      AtkinsonBoore2003SInter() LinLee2008SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter() rrup rhypo vs30       hypo_depth mag
 ====== ======================================================================================== ========== ========== ==============
 
 Realizations per (TRT, GSIM)
@@ -86,27 +86,27 @@ source_model.xml 1      Subduction Interface 1           23           23
 
 Informational data
 ------------------
-============================== ============================================================================
-count_eff_ruptures.received    tot 2.89 KB, max_per_task 1.45 KB                                           
-count_eff_ruptures.sent        monitor 2.42 KB, sources 2.1 KB, srcfilter 1.34 KB, gsims 425 B, param 130 B
-hazard.input_weight            4.600                                                                       
-hazard.n_imts                  1 B                                                                         
-hazard.n_levels                50 B                                                                        
-hazard.n_realizations          4 B                                                                         
-hazard.n_sites                 1 B                                                                         
-hazard.n_sources               2 B                                                                         
-hazard.output_weight           200                                                                         
-hostname                       tstation.gem.lan                                                            
-require_epsilons               0 B                                                                         
-============================== ============================================================================
+============================== =============================================================================
+count_eff_ruptures.received    tot 2.89 KB, max_per_task 1.44 KB                                            
+count_eff_ruptures.sent        monitor 2.42 KB, sources 2.26 KB, srcfilter 1.34 KB, gsims 425 B, param 130 B
+hazard.input_weight            4.600                                                                        
+hazard.n_imts                  1 B                                                                          
+hazard.n_levels                50 B                                                                         
+hazard.n_realizations          4 B                                                                          
+hazard.n_sites                 1 B                                                                          
+hazard.n_sources               2 B                                                                          
+hazard.output_weight           50                                                                           
+hostname                       tstation.gem.lan                                                             
+require_epsilons               0 B                                                                          
+============================== =============================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      A         PointSource  23           7.982E-04 1         1        
-1      B         PointSource  23           6.146E-04 1         1        
+1      B         PointSource  23           3.371E-04 1         1        
+0      A         PointSource  23           2.949E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -114,14 +114,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.001     2     
+PointSource  6.320E-04 2     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 5.439E-04 0.002 0.003 2        
+count_eff_ruptures 0.001 1.541E-04 0.001 0.001 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -129,12 +129,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         0.005     1.254     2     
+total count_eff_ruptures         0.002     0.0       2     
 reading composite source model   0.002     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                5.729E-04 0.0       1     
-aggregate curves                 4.959E-05 0.0       2     
-reading site collection          3.362E-05 0.0       1     
-filtering composite source model 2.575E-05 0.0       1     
-saving probability maps          2.551E-05 0.0       1     
+store source_info                5.014E-04 0.0       1     
+aggregate curves                 3.815E-05 0.0       2     
+reading site collection          3.171E-05 0.0       1     
+filtering composite source model 2.551E-05 0.0       1     
+saving probability maps          2.456E-05 0.0       1     
 ================================ ========= ========= ======

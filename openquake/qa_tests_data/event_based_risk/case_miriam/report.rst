@@ -2,8 +2,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20416.hdf5 Fri May 12 06:36:54 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20742.hdf5 Fri May 12 07:08:01 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -88,7 +88,7 @@ Informational data
 ------------------
 ============================ =================================================================================
 compute_ruptures.received    tot 279.23 KB, max_per_task 251.53 KB                                            
-compute_ruptures.sent        src_filter 103.94 KB, sources 27.77 KB, monitor 2.41 KB, gsims 206 B, param 130 B
+compute_ruptures.sent        src_filter 103.94 KB, sources 27.93 KB, monitor 2.41 KB, gsims 206 B, param 130 B
 hazard.input_weight          26,012                                                                           
 hazard.n_imts                1 B                                                                              
 hazard.n_levels              50 B                                                                             
@@ -150,7 +150,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   3.914 1.437  2.898 4.930 2        
+compute_ruptures   3.689 1.365  2.723 4.654 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -158,15 +158,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           7.828     0.512     2     
-assoc_assets_sites               1.472     0.0       1     
-filtering ruptures               0.318     0.0       489   
-reading site collection          0.203     0.0       1     
-reading composite source model   0.140     0.0       1     
+total compute_ruptures           7.377     1.922     2     
+assoc_assets_sites               1.383     0.0       1     
+filtering ruptures               0.328     0.0       489   
+reading site collection          0.216     0.0       1     
+reading composite source model   0.145     0.0       1     
 reading exposure                 0.090     0.0       1     
 saving ruptures                  0.046     0.0       2     
-setting event years              0.006     0.0       1     
+setting event years              0.007     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                8.979E-04 0.0       1     
-filtering composite source model 2.575E-05 0.0       1     
+store source_info                8.805E-04 0.0       1     
+filtering composite source model 2.646E-05 0.0       1     
 ================================ ========= ========= ======
