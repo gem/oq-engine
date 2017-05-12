@@ -283,8 +283,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        if hasattr(self, 'rupser'):
-            self.rupser.close()
+        self.rupser.close()
         num_events = sum(_count(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
