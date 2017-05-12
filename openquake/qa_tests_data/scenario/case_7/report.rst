@@ -1,11 +1,11 @@
 Scenario QA Test with No Spatial Correlation
 ============================================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_7562.hdf5 Wed Apr 26 15:54:20 2017
-engine_version                           2.4.0-git9336bd0        
-hazardlib_version                        0.24.0-gita895d4c       
-======================================== ========================
+========================================= ========================
+localhost:/mnt/ssd/oqdata/calc_21285.hdf5 Fri May 12 10:45:16 2017
+engine_version                            2.4.0-git59713b5        
+hazardlib_version                         0.24.0-git0596dd3       
+========================================= ========================
 
 num_sites = 2, sitecol = 863 B
 
@@ -50,5 +50,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.008     0.0       1     
-reading site collection 3.123E-05 0.0       1     
+reading site collection 3.052E-05 0.0       1     
 ======================= ========= ========= ======
