@@ -106,10 +106,6 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if django.get_version() < '1.5':
-            # Django too old
-            raise unittest.SkipTest('webui tests do not run with Diango < 1.5')
-
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
@@ -184,7 +180,7 @@ class EngineServerTestCase(unittest.TestCase):
         # remove output ID digits from the filename
         contentdisp = re.sub(r'\d', '', resp.headers['Content-Disposition'])
         self.assertEqual(
-            contentdisp, 'attachment; filename=output--hmaps-csv.zip')
+            contentdisp, 'attachment; filename=output--hazard_map-mean_.csv')
 
     def test_err_1(self):
         # the rupture XML file has a syntax error

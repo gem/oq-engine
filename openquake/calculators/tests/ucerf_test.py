@@ -48,7 +48,8 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmdata_eb.csv', got)
 
         # check the mean hazard map
-        [fname] = export(('hmaps', 'csv'), self.calc.datastore)
+        [fname] = [f for f in export(('hmaps', 'csv'), self.calc.datastore)
+                   if 'mean' in f]
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
     @attr('qa', 'hazard', 'ucerf')
@@ -66,9 +67,8 @@ class UcerfTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
-        out = self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
-                            exports='csv')
-        [f1, f2] = out['hcurves', 'csv']
+        self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
+        [f1, f2] = export(('hcurves/all', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-rlz-000.csv', f1)
         self.assertEqualFiles('expected/hazard_curve-rlz-001.csv', f2)
 

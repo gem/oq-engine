@@ -24,6 +24,7 @@ from __future__ import print_function, unicode_literals
 from openquake.baselib.python3compat import decode
 import os
 import sys
+import ast
 import mock
 import time
 
@@ -93,8 +94,11 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
-        info = {decode(k): decode(v)
-                for k, v in dict(dstore['job_info']).items()}
+        try:
+            info = {decode(k): ast.literal_eval(decode(v))
+                    for k, v in dict(dstore['job_info']).items()}
+        except KeyError:  # job_info not in the datastore (scenario hazard)
+            info = dict(hostname='localhost')
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
         host = '%s:%s' % (info['hostname'], decode(dpath))
@@ -130,7 +134,7 @@ class ReportWriter(object):
         self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
         if 'source_info' in ds:
             self.add('ruptures_per_trt')
-        if 'scenario' not in oq.calculation_mode:
+        if 'job_info' in ds:
             self.add('job_info')
         if 'rup_data' in ds:
             self.add('ruptures_events')

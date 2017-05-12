@@ -17,14 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import numpy
 from openquake.baselib import sap
-from openquake.commonlib import datastore
-from openquake.commands.show import get_hcurves_and_means
+from openquake.hazardlib.stats import mean_curve, compute_pmap_stats
+from openquake.commonlib import datastore, calc
 
 
-def make_figure(indices, imtls, spec_curves, curves=(), label=''):
+def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
     """
     :param indices: the indices of the sites under analysis
+    :param n: the total number of sites
     :param imtls: ordered dictionary with the IMTs and levels
     :param spec_curves: a dictionary of curves IMT -> array(n_sites, n_levels)
     :param curves: a dictionary of dictionaries IMT -> array
@@ -36,6 +38,8 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     fig = plt.figure()
     n_imts = len(imtls)
     n_sites = len(indices)
+    spec_curves = spec_curves.convert(imtls, n)
+    all_curves = [c.convert(imtls, n) for c in curves]
     for i, site in enumerate(indices):
         for j, imt in enumerate(imtls):
             ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
@@ -46,10 +50,18 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
                 ax.set_ylabel('PoE')
             if spec_curves is not None:
                 ax.plot(imtls[imt], spec_curves[imt][site], '--', label=label)
-            for rlz in sorted(curves):
-                ax.plot(imtls[imt], curves[rlz][imt][site], label=str(rlz))
+            for r, curves in enumerate(all_curves):
+                ax.plot(imtls[imt], curves[imt][site], label=str(r))
     plt.legend()
     return plt
+
+
+def get_pmaps(dstore, indices):
+    getter = calc.PmapGetter(dstore)
+    pmaps = getter.get_pmaps(indices)
+    weights = [rlz.weight for rlz in getter.rlzs]
+    mean = compute_pmap_stats(pmaps, [mean_curve], weights)
+    return mean, pmaps
 
 
 @sap.Script
@@ -61,7 +73,7 @@ def plot(calc_id, other_id=None, sites='0'):
     haz = datastore.read(calc_id)
     other = datastore.read(other_id) if other_id else None
     oq = haz['oqparam']
-    indices = list(map(int, sites.split(',')))
+    indices = numpy.array(list(map(int, sites.split(','))))
     n_sites = len(haz['sitecol'])
     if not set(indices) <= set(range(n_sites)):
         invalid = sorted(set(indices) - set(range(n_sites)))
@@ -69,21 +81,15 @@ def plot(calc_id, other_id=None, sites='0'):
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
     if other is None:
-        curves_by_rlz, mean_curves = get_hcurves_and_means(haz)
-        single_curve = len(curves_by_rlz) == 1 or not getattr(
-            oq, 'individual_curves', True)
-        plt = make_figure(valid, oq.imtls, mean_curves,
-                          {} if single_curve else curves_by_rlz, 'mean')
+        mean_curves, pmaps = get_pmaps(haz, indices)
+        single_curve = len(pmaps) == 1
+        plt = make_figure(valid, n_sites, oq.imtls, mean_curves,
+                          [] if single_curve else pmaps, 'mean')
     else:
-        try:
-            mean1 = haz['hcurves/mean'].convert(oq.imtls)
-        except KeyError:
-            mean1 = haz['hcurves/rlz-000'].convert(oq.imtls)
-        try:
-            mean2 = other['hcurves/mean'].convert(oq.imtls)
-        except KeyError:
-            mean2 = other['hcurves/rlz-000'].convert(oq.imtls)
-        plt = make_figure(valid, oq.imtls, mean1, {'mean': mean2}, 'reference')
+        mean1, _ = get_pmaps(haz, indices)
+        mean2, _ = get_pmaps(other, indices)
+        plt = make_figure(valid, n_sites, oq.imtls, mean1,
+                          [mean2], 'reference')
     plt.show()
 
 plot.arg('calc_id', 'a computation id', type=int)

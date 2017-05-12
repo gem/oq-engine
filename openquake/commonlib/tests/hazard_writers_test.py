@@ -118,11 +118,10 @@ class ProbabilisticRupture(object):
 
 class EBRupture(object):
 
-    def __init__(self, rupture, ses, seed=0, etag="TAG"):
+    def __init__(self, rupture, ses, seed=0):
         self.rupture = rupture
         self.ses = ses
         self.seed = seed
-        self.etag = etag
 
 
 class HazardWriterTestCase(unittest.TestCase):
