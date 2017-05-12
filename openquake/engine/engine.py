@@ -90,13 +90,13 @@ def expose_outputs(dstore):
         rlzs = []
     # expose gmf_data only if < 10 MB
     if oq.ground_motion_fields and calcmode == 'event_based':
-        with dstore.ext5() as ext5:
-            nbytes = ext5['gmf_data'].attrs['nbytes']
+        nbytes = dstore['gmf_data'].attrs['nbytes']
         if nbytes < 10 * 1024 ** 2:
             dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
-    if 'hcurves' in dstore:
+    if 'poes' in dstore:
+        dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
@@ -191,6 +191,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         if USE_CELERY and os.environ.get('OQ_DISTRIBUTE') == 'celery':
             set_concurrent_tasks_default()
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
+        calc.from_engine = True
         tb = 'None\n'
         try:
             logs.dbcmd('set_status', job_id, 'executing')
@@ -200,7 +201,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.dbcmd('save_performance', job_id, records)
             calc.datastore.close()
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                          job_id, calc.monitor.duration)
+                          job_id, calc._monitor.duration)
             logs.dbcmd('finish', job_id, 'complete')
         except:
             tb = traceback.format_exc()
@@ -225,6 +226,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
 
 
 def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
-    with calc.monitor:
+    with calc._monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
                  close=False, **kw)  # don't close the datastore too soon

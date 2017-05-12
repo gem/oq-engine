@@ -1,11 +1,11 @@
 scenario risk
 =============
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85599.hdf5 Tue Feb 14 15:49:00 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_7640.hdf5 Wed Apr 26 15:56:32 2017
+engine_version                                  2.4.0-git9336bd0        
+hazardlib_version                               0.24.0-gita895d4c       
+=============================================== ========================
 
 num_sites = 7, sitecol = 1.11 KB
 
@@ -53,6 +53,13 @@ Realizations per (TRT, GSIM)
   0,BooreAtkinson2008(): ['<0,b_1~b1,w=0.75>']
   0,ChiouYoungs2008(): ['<1,b_1~b2,w=0.25>']>
 
+Informational data
+------------------
+================ ================
+hostname         tstation.gem.lan
+require_epsilons 1 B             
+================ ================
+
 Exposure model
 --------------
 =============== ========
@@ -72,14 +79,15 @@ tax3     1.000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-computing gmfs          0.021     0.0       1     
-filtering sites         0.010     0.0       1     
-reading exposure        0.005     0.0       1     
-saving gmfs             0.003     0.0       1     
-building riskinputs     7.973E-04 0.0       1     
-building epsilons       2.196E-04 0.0       1     
-reading site collection 7.391E-06 0.0       1     
-======================= ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+computing gmfs           0.026     0.0       1     
+filtering sites          0.006     0.0       1     
+building site collection 0.004     0.0       1     
+reading exposure         0.003     0.0       1     
+saving gmfs              0.002     0.0       1     
+building riskinputs      4.838E-04 0.0       1     
+building epsilons        3.266E-04 0.0       1     
+reading site collection  5.960E-06 0.0       1     
+======================== ========= ========= ======

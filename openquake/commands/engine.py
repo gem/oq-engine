@@ -63,7 +63,7 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
         job_ini, getpass.getuser(), hazard_calculation_id)
     calc = eng.run_calc(job_id, oqparam, log_level, log_file, exports,
                         hazard_calculation_id=hazard_calculation_id, **kw)
-    calc.monitor.flush()
+    calc._monitor.flush()
     for line in logs.dbcmd('list_outputs', job_id, False):
         safeprint(line)
     return job_id
@@ -183,7 +183,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             safeprint(line)
     elif run_hazard is not None:
         safeprint('WARN: --rh/--run-hazard are deprecated, use --run instead',
-              file=sys.stderr)
+                  file=sys.stderr)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         run_job(os.path.expanduser(run_hazard), log_level,
@@ -196,7 +196,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             safeprint(line)
     elif run_risk is not None:
         safeprint('WARN: --rr/--run-risk are deprecated, use --run instead',
-              file=sys.stderr)
+                  file=sys.stderr)
         if hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
         log_file = os.path.expanduser(log_file) \

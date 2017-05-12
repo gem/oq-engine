@@ -605,8 +605,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
-    insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True),
-    deductible_is_absolute = deductible.attrib.get('isAbsolute', True),
+    insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True)
+    deductible_is_absolute = deductible.attrib.get('isAbsolute', True)
     time_events = set()
     cc = riskmodels.CostCalculator(
         {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute)
@@ -827,15 +827,21 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, etags, gmf array
+        sitecol, etags, gmf array of shape (N, I, E)
     """
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.txt'):
-        return get_gmfs_from_txt(oqparam, fname)
+        sitecol, etags, gmfs_by_imt = get_gmfs_from_txt(oqparam, fname)
     elif fname.endswith('.xml'):
-        return get_scenario_from_nrml(oqparam, fname)
+        sitecol, etags, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
     else:
         raise NotImplemented('Reading from %s' % fname)
+    N, E = gmfs_by_imt.shape
+    I = len(oqparam.imtls)
+    gmfs = numpy.zeros((N, I, E), F32)
+    for imti, imtstr in enumerate(oqparam.imtls):
+        gmfs[:, imti, :] = gmfs_by_imt[imtstr]
+    return sitecol, etags, gmfs
 
 
 def get_hcurves(oqparam):
@@ -975,7 +981,7 @@ def _extract_etags_sitecounts(gmfset):
         etags.add(gmf['ruptureId'])
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
-    return numpy.array(sorted(etags), '|S100'), counter
+    return numpy.array(sorted(etags), numpy.uint64), counter
 
 
 def get_scenario_from_nrml(oqparam, fname):

@@ -103,7 +103,7 @@ class AssetCollection(object):
         """
         :returns: a composite array of asset values by loss type
         """
-        loss_dt = numpy.dtype([(str(lt), float) for lt in self.loss_types])
+        loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
         vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
         for assets in self.assets_by_site():
             for asset in assets:
@@ -316,6 +316,7 @@ class CompositeRiskModel(collections.Mapping):
         self.covs = 0  # number of coefficients of variation
         self.curve_builder = self.make_curve_builder(oqparam)
         self.loss_types = [cb.loss_type for cb in self.curve_builder]
+        self.insured_losses = oqparam.insured_losses
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
@@ -431,8 +432,6 @@ class CompositeRiskModel(collections.Mapping):
                 assets_by_site = riskinput.assets_by_site
             else:
                 assets_by_site = assetcol.assets_by_site()
-            if hasattr(hazard_getter, 'init'):  # expensive operation
-                hazard_getter.init()
 
         # group the assets by taxonomy
         taxonomies = set()
@@ -477,18 +476,25 @@ class CompositeRiskModel(collections.Mapping):
             self.__class__.__name__, len(lines), self.covs, '\n'.join(lines))
 
 
-class PoeGetter(object):
+class HazardGetter(object):
     """
+    :param kind:
+        kind of HazardGetter; can be 'poe' or 'gmf'
+    :param grp_id:
+        source group ID
     :param rlzs_by_gsim:
         a dictionary gsim -> realizations for that GSIM
-    :param hazards_by_rlz
-        a nested dictionary rlz -> imt -> rlz -> PoE array
+    :param hazards_by_rlz:
+        a nested dictionary rlz -> imt -> PoE array or a flat dictionary
+        rlz -> GMF array of shape (N, I, E)
     :params sids:
         array of site IDs of interest
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, grp_id, rlzs_by_gsim, hazards_by_rlz, sids, imts):
+    def __init__(self, kind, grp_id, rlzs_by_gsim, hazards_by_rlz, sids, imts):
+        assert kind in ('poe', 'gmf'), kind
+        self.kind = kind
         self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
         self.sids = sids
@@ -496,14 +502,29 @@ class PoeGetter(object):
         self.data = {}
         for gsim in rlzs_by_gsim:
             rlzs = self.rlzs_by_gsim[gsim]
-            self.data[gsim] = datadicts = [{} for _ in rlzs]
+            self.data[gsim] = []
             for r, rlz in enumerate(rlzs):
-                datadict = datadicts[r]
+                datadict = collections.defaultdict(list)
+                self.data[gsim].append(datadict)
                 hazards_by_imt = hazards_by_rlz[rlz]
                 for imti, imt in enumerate(self.imts):
-                    hazard_by_site = hazards_by_imt[imt][self.sids]
+                    if kind == 'poe':
+                        hazard_by_site = hazards_by_imt[imt][self.sids]
+                    else:  # gmf
+                        hazard_by_site = hazards_by_imt[self.sids, imti]
                     for idx, haz in enumerate(hazard_by_site):
                         datadict[idx, imti] = haz
+
+        if kind == 'gmf':
+            # now some attributes set for API compatibility with the GmfGetter
+            # number of ground motion fields
+            num_events = hazard_by_site.shape[-1]
+            self.eids = numpy.arange(num_events, dtype=F32)
+            # dictionary rlzi -> array(imts, events, nbytes)
+            self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
+
+    def init(self):  # for API compatibility
+        pass
 
     def get_hazard(self, gsim):
         """
@@ -555,6 +576,10 @@ class GmfGetter(object):
             self.computers.append(computer)
         # dictionary rlzi -> array(imts, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
+        self.eids = numpy.concatenate(
+            [ebr.events['eid'] for ebr in self.ebruptures])
+        # dictionary eid -> index
+        self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
     def gen_gmv(self, gsim):
         """
@@ -619,7 +644,7 @@ gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
 class GmfDataGetter(GmfGetter):
     """
-    Extracts a dictionary of GMVs from the underlying .ext5 file
+    Extracts a dictionary of GMVs from the datastore
     """
     def __init__(self, gmf_data, grp_id, rlzs_by_gsim, start=0, stop=None):
         self.gmf_data = gmf_data
@@ -691,7 +716,6 @@ class RiskInput(object):
                 aids.append(asset.ordinal)
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
-        self.eids = None  # for API compatibility with RiskInputFromRuptures
         self.weight = len(self.aids)
 
     rlzs = property(get_rlzs)
@@ -728,11 +752,8 @@ class RiskInputFromRuptures(object):
     def __init__(self, hazard_getter, epsilons=None):
         self.hazard_getter = hazard_getter
         self.weight = sum(sr.weight for sr in hazard_getter.ebruptures)
-        self.eids = numpy.concatenate(
-            [r.events['eid'] for r in hazard_getter.ebruptures])
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
-            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
     rlzs = property(get_rlzs)
 
@@ -745,7 +766,8 @@ class RiskInputFromRuptures(object):
             return lambda aid, eids: None
 
         def geteps(aid, eids):
-            return self.eps[aid, [self.eid2idx[eid] for eid in eids]]
+            idxs = [self.hazard_getter.eid2idx[eid] for eid in eids]
+            return self.eps[aid, idxs]
         return geteps
 
     def __repr__(self):
@@ -802,20 +824,20 @@ class LossRatiosGetter(object):
     def __init__(self, dstore):
         self.dstore = dstore
 
-    def get(self, aids, rlzi=None):
+    def get(self, aids, rlzi):
         """
         :param aids: a list of A asset ordinals
-        :param rlzi: None or a realization ordinal
-        :returns: a dictionary aid, rlzi -> loss ratios
+        :param rlzi: a realization ordinal
+        :returns: a dictionary aid -> loss ratios
         """
         data = self.dset['all_loss_ratios/data']
         indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
-        dic = collections.defaultdict(list)  # (aid, rlzi) -> ratios
+        dic = collections.defaultdict(list)  # aid -> ratios
         for aid, idxs in zip(aids, indices):
             for idx in idxs:
                 for rec in data[idx[0]: idx[1]]:
-                    if rlzi is None or rlzi == rec['rlzi']:
-                        dic[aid, rec['rlzi']].append(rec['ratios'])
+                    if rlzi == rec['rlzi']:
+                        dic[aid].append(rec['ratios'])
         return dic
 
     def get_all(self, aids):
@@ -823,11 +845,10 @@ class LossRatiosGetter(object):
         :param aids: a list of A asset ordinals
         :returns: a list of A composite arrays of dtype `lrs_dt`
         """
-        with self.dstore as ds:
-            data = ds['all_loss_ratios/data']
-            indices = ds['all_loss_ratios/indices'][aids]  # (A, T, 2)
-            loss_ratio_data = []
-            for aid, idxs in zip(aids, indices):
-                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
-                loss_ratio_data.append(arr)
+        data = self.dstore['all_loss_ratios/data']
+        indices = self.dstore['all_loss_ratios/indices'][aids]  # (A, T, 2)
+        loss_ratio_data = []
+        for aid, idxs in zip(aids, indices):
+            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+            loss_ratio_data.append(arr)
         return loss_ratio_data

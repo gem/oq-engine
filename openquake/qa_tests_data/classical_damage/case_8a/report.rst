@@ -1,11 +1,11 @@
 Classical PSHA-Based Hazard
 ===========================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85538.hdf5 Tue Feb 14 15:36:56 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_7577.hdf5 Wed Apr 26 15:54:25 2017
+engine_version                                  2.4.0-git9336bd0        
+hazardlib_version                               0.24.0-gita895d4c       
+=============================================== ========================
 
 num_sites = 1, sitecol = 809 B
 
@@ -53,7 +53,7 @@ Required parameters per tectonic region type
 ====== ================================== ========= ========== ==========
 grp_id gsims                              distances siteparams ruptparams
 ====== ================================== ========= ========== ==========
-0      AkkarBommer2010() SadighEtAl1997() rrup rjb  vs30       mag rake  
+0      AkkarBommer2010() SadighEtAl1997() rjb rrup  vs30       rake mag  
 ====== ================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -75,24 +75,19 @@ source_model.xml 0      Active Shallow Crust 1           1694         1,694
 
 Informational data
 ------------------
-=========================================== ============
-count_eff_ruptures_max_received_per_task    1,318       
-count_eff_ruptures_num_tasks                10          
-count_eff_ruptures_sent.gsims               1,680       
-count_eff_ruptures_sent.monitor             10,950      
-count_eff_ruptures_sent.sources             11,402      
-count_eff_ruptures_sent.srcfilter           7,100       
-count_eff_ruptures_tot_received             13,172      
-hazard.input_weight                         1,694       
-hazard.n_imts                               1           
-hazard.n_levels                             8           
-hazard.n_realizations                       2           
-hazard.n_sites                              1           
-hazard.n_sources                            1           
-hazard.output_weight                        16          
-hostname                                    gem-tstation
-require_epsilons                            False       
-=========================================== ============
+============================== ===============================================================================
+count_eff_ruptures.received    tot 10.87 KB, max_per_task 1.09 KB                                             
+count_eff_ruptures.sent        sources 19.42 KB, monitor 8.7 KB, srcfilter 6.68 KB, gsims 1.64 KB, param 650 B
+hazard.input_weight            1,694                                                                          
+hazard.n_imts                  1 B                                                                            
+hazard.n_levels                8 B                                                                            
+hazard.n_realizations          2 B                                                                            
+hazard.n_sites                 1 B                                                                            
+hazard.n_sources               1 B                                                                            
+hazard.output_weight           16                                                                             
+hostname                       tstation.gem.lan                                                               
+require_epsilons               0 B                                                                            
+============================== ===============================================================================
 
 Exposure model
 --------------
@@ -128,7 +123,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.592 0.210  0.474 1.111 10       
+count_eff_ruptures 0.081 0.031  0.048 0.151 10       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -136,13 +131,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         5.916     0.008     10    
-managing sources                 0.129     0.0       1     
-reading composite source model   0.014     0.0       1     
-filtering composite source model 0.003     0.0       1     
-reading exposure                 0.003     0.0       1     
-store source_info                9.937E-04 0.0       1     
-aggregate curves                 1.614E-04 0.0       10    
-saving probability maps          4.745E-05 0.0       1     
-reading site collection          9.775E-06 0.0       1     
+total count_eff_ruptures         0.812     0.910     10    
+reading composite source model   0.008     0.0       1     
+building site collection         0.006     0.0       1     
+filtering composite source model 0.002     0.0       1     
+reading exposure                 0.001     0.0       1     
+store source_info                8.488E-04 0.0       1     
+aggregate curves                 1.707E-04 0.0       10    
+managing sources                 1.054E-04 0.0       1     
+saving probability maps          4.482E-05 0.0       1     
+reading site collection          1.025E-05 0.0       1     
 ================================ ========= ========= ======
