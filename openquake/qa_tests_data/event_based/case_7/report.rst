@@ -2,8 +2,8 @@ Event-based PSHA with logic tree sampling
 =========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20458.hdf5 Fri May 12 06:37:25 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20784.hdf5 Fri May 12 07:08:33 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -53,7 +53,7 @@ Required parameters per tectonic region type
 ====== ============================================================= =========== ============================= =================
 grp_id gsims                                                         distances   siteparams                    ruptparams       
 ====== ============================================================= =========== ============================= =================
-0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rrup rx rjb vs30 vs30measured z1pt0 z2pt5 dip mag rake ztor
+0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rx rrup rjb vs30 vs30measured z1pt0 z2pt5 dip mag rake ztor
 1      BooreAtkinson2008() CampbellBozorgnia2008()                   rrup rjb    vs30 z2pt5                    dip mag rake ztor
 ====== ============================================================= =========== ============================= =================
 
@@ -89,15 +89,15 @@ source_model2.xml 1      Active Shallow Crust 1           478          2,456
 Informational data
 ------------------
 ============================ ===============================================================================
-compute_ruptures.received    tot 2.19 MB, max_per_task 1.82 MB                                              
-compute_ruptures.sent        sources 26.69 KB, monitor 2.36 KB, src_filter 1.45 KB, gsims 458 B, param 130 B
+compute_ruptures.received    tot 2.19 MB, max_per_task 1.83 MB                                              
+compute_ruptures.sent        sources 26.85 KB, monitor 2.36 KB, src_filter 1.45 KB, gsims 458 B, param 130 B
 hazard.input_weight          2,456                                                                          
 hazard.n_imts                2 B                                                                            
 hazard.n_levels              38 B                                                                           
 hazard.n_realizations        10 B                                                                           
 hazard.n_sites               3 B                                                                            
 hazard.n_sources             2 B                                                                            
-hazard.output_weight         1,200                                                                          
+hazard.output_weight         360                                                                            
 hostname                     tstation.gem.lan                                                               
 require_epsilons             0 B                                                                            
 ============================ ===============================================================================
@@ -107,8 +107,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      1         AreaSource   2,456        0.0       0         0        
 0      1         AreaSource   2,456        0.0       0         0        
+1      1         AreaSource   2,456        0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -123,7 +123,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.441 0.526  1.069 1.813 2        
+compute_ruptures   1.438 0.520  1.070 1.806 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -131,13 +131,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           2.882     9.234     2     
-filtering ruptures               0.476     0.0       2,598 
-reading composite source model   0.108     0.0       1     
-saving ruptures                  0.106     0.0       2     
-setting event years              0.059     0.0       1     
+total compute_ruptures           2.875     7.762     2     
+filtering ruptures               0.491     0.0       2,598 
+reading composite source model   0.117     0.0       1     
+saving ruptures                  0.109     0.0       2     
+setting event years              0.063     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                5.724E-04 0.0       1     
-reading site collection          5.174E-05 0.0       1     
-filtering composite source model 3.219E-05 0.0       1     
+store source_info                5.698E-04 0.0       1     
+reading site collection          5.436E-05 0.0       1     
+filtering composite source model 3.171E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,8 +2,8 @@ Scenario Risk with site model
 =============================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20472.hdf5 Fri May 12 06:38:36 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20798.hdf5 Fri May 12 07:09:02 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -79,10 +79,10 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.041     0.0       1     
-reading exposure        0.027     0.0       1     
+reading exposure        0.026     0.0       1     
 computing gmfs          0.010     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     8.247E-04 0.0       1     
-building epsilons       4.702E-04 0.0       1     
-reading site collection 6.437E-06 0.0       1     
+building riskinputs     7.601E-04 0.0       1     
+building epsilons       4.575E-04 0.0       1     
+reading site collection 4.768E-06 0.0       1     
 ======================= ========= ========= ======
