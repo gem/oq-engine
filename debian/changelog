@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the `parallel.Computer` base class
   * Introduced a "grp_probability" attribute to SourceGroups, for use in
     the Japan mutex model
   * Added an utility method `ProbabilityMap.convert2` to convert a probability
