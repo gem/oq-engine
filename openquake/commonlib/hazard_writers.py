@@ -81,8 +81,8 @@ def _validate_hazard_metadata(md):
 
     if md.get('statistics') is not None:
         # make sure only valid statistics types are specified
-        if md.get('statistics') not in ('mean', 'quantile'):
-            raise ValueError('`statistics` must be either `mean` or '
+        if md.get('statistics') not in ('mean', 'max', 'quantile'):
+            raise ValueError('`statistics` must be either `mean`, `max`, or '
                              '`quantile`')
     else:
         # must specify both logic tree paths
@@ -284,9 +284,9 @@ def gen_gmfs(gmf_set):
         if gmf.imt == 'SA':
             gmf_node['saPeriod'] = str(gmf.sa_period)
             gmf_node['saDamping'] = str(gmf.sa_damping)
-        etag = gmf.rupture_id
-        if etag:
-            gmf_node['ruptureId'] = etag
+        eid = gmf.rupture_id
+        if eid:
+            gmf_node['ruptureId'] = eid
         sorted_nodes = sorted(gmf)
         gmf_node.nodes = (
             Node('node', dict(gmv=n.gmv, lon=n.location.x, lat=n.location.y))
@@ -365,7 +365,7 @@ def rupture_to_element(rupture, parent=None):
     Convert a rupture object into an Element object.
 
     :param rupture:
-        must have attributes .rupture, .etag and .seed
+        must have attributes .rupture, .eid and .seed
     :param parent:
         if None a new element is created, otherwise a sub element is
         attached to the parent.
@@ -376,7 +376,7 @@ def rupture_to_element(rupture, parent=None):
         rup_elem = et.SubElement(parent, 'rupture')
 
     rup = rupture.rupture
-    rup_elem.set('id', rupture.etag)
+    rup_elem.set('id', rupture.eid)
     rup_elem.set('magnitude', str(rup.magnitude))
     rup_elem.set('strike', str(rup.strike))
     rup_elem.set('dip', str(rup.dip))
@@ -492,7 +492,7 @@ class SESXMLWriter(object):
             * be iterable, yielding a sequence of "rupture" objects
 
             Each rupture" should have the following attributes:
-            * `etag`
+            * `eid`
             * `magnitude`
             * `strike`
             * `dip`

@@ -32,6 +32,7 @@ from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
+from openquake.commands.engine import run_job
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
@@ -41,6 +42,7 @@ from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
+from openquake.qa_tests_data.event_based_risk import case_master
 from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -203,12 +205,8 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_show_attrs(self):
         with Print.patch() as p:
-            show_attrs('hcurve', self.calc_id)
-        self.assertEqual("'hcurve' is not in <DataStore %d>" %
-                         self.calc_id, str(p))
-        with Print.patch() as p:
-            show_attrs('hcurves', self.calc_id)
-        self.assertEqual("nbytes 24", str(p))
+            show_attrs('poes', self.calc_id)
+        self.assertEqual('nbytes 48', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
@@ -324,3 +322,16 @@ class DbTestCase(unittest.TestCase):
                 db('calc_info 1')
             except dbapi.NotFound:  # happens on an empty db
                 pass
+
+
+class EngineRunJobTestCase(unittest.TestCase):
+    """
+    Test a single case of `run_job`, but it is the most complex one,
+    event based risk with post processing
+    """
+    def test_ebr(self):
+        job_ini = os.path.join(
+            os.path.dirname(case_master.__file__), 'job.ini')
+        with Print.patch() as p:
+            run_job(job_ini, log_level='error')
+        self.assertIn('id | name', str(p))

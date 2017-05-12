@@ -28,8 +28,7 @@ from openquake.hazardlib.geo.mesh import (
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, calc
-from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
+from openquake.hazardlib import geo, calc, probability_map
 from openquake.commonlib import readinput, util
 
 TWO16 = 2 ** 16
@@ -48,7 +47,7 @@ F64 = numpy.float64
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rupserial', U32), ('year', U32),
+    ('eid', U64), ('rup_id', U32), ('year', U32),
     ('ses', U32), ('occ', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
@@ -58,23 +57,129 @@ BaseRupture.init()  # initialize rupture codes
 # ############## utilities for the classical calculator ############### #
 
 
-# used in classical and event_based calculators
-def combine_pmaps(rlzs_assoc, results):
+class PmapGetter(object):
     """
-    :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
-    :param results: dictionary src_group_id -> probability map
-    :returns: a dictionary rlz -> aggregate probability map
+    Read hazard curves from the datastore for all realizations or for a
+    specific realization.
+
+    :param dstore: a DataStore instance
     """
-    num_levels = get_shape(results.values())[1]
-    acc = {rlz: ProbabilityMap(num_levels, 1)
-           for rlz in rlzs_assoc.realizations}
-    for grp_id in results:
-        for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
-            pmap = results[grp_id].extract(i)
-            for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
-                if rlz in acc:
-                    acc[rlz] |= pmap
-    return acc
+    def __init__(self, dstore, rlzs_assoc=None):
+        self.dstore = dstore
+        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        self._pmap_by_grp = None  # cache
+        self.sids = None  # to be set
+        self.nbytes = 0
+
+    def new(self, sids):
+        """
+        :param sids: an array of S site IDs
+        :returns: a new instance of the getter, with the cache populated
+        """
+        newgetter = self.__class__(self.dstore, self.rlzs_assoc)
+        newgetter.sids = sids
+        newgetter.get_pmap_by_grp(sids)  # populate the cache
+        return newgetter
+
+    @property
+    def rlzs(self):
+        return self.rlzs_assoc.realizations
+
+    def combine_pmaps(self, pmap_by_grp):
+        """
+        :param pmap_by_grp: dictionary group string -> probability map
+        :returns: a list of probability maps, one per realization
+        """
+        num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
+        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
+                 for rlz in self.rlzs]
+        for grp in pmap_by_grp:
+            grp_id = int(grp[4:])  # strip grp-
+            for i, gsim in enumerate(self.rlzs_assoc.gsims_by_grp_id[grp_id]):
+                pmap = pmap_by_grp[grp].extract(i)
+                for rlz in self.rlzs_assoc.rlzs_assoc[grp_id, gsim]:
+                    pmaps[rlz.ordinal] |= pmap
+        return pmaps
+
+    def get(self, sids, rlzi):
+        """
+        :param sids: an array of S site IDs
+        :param rlzi: a realization index
+        :returns: the hazard curves for the given realization
+        """
+        pmap_by_grp = self.get_pmap_by_grp(sids)
+        num_levels = probability_map.get_shape(pmap_by_grp.values())[1]
+        pmap = probability_map.ProbabilityMap(num_levels, 1)
+        for grp in pmap_by_grp:
+            grp_id = int(grp[4:])  # strip grp-
+            for i, gsim in enumerate(self.rlzs_assoc.gsims_by_grp_id[grp_id]):
+                for rlz in self.rlzs_assoc.rlzs_assoc[grp_id, gsim]:
+                    if rlz.ordinal == rlzi:
+                        pmap |= pmap_by_grp[grp].extract(i)
+                        break
+        return pmap
+
+    def get_pmaps(self, sids):  # used in classical
+        """
+        :param sids: an array of S site IDs
+        :returns: a list of R probability maps
+        """
+        return self.combine_pmaps(self.get_pmap_by_grp(sids))
+
+    def get_pmap_by_grp(self, sids=None):
+        """
+        :param sids: an array of site IDs
+        :returns: a dictionary of probability maps by source group
+        """
+        if self._pmap_by_grp is None:  # populate the cache
+            self._pmap_by_grp = {}
+            for grp, dset in self.dstore['poes'].items():
+                sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
+                L, I = dset.shape[1:]
+                pmap = probability_map.ProbabilityMap(L, I)
+                for sid in sids:
+                    try:
+                        idx = sid2idx[sid]
+                    except KeyError:
+                        continue
+                    else:
+                        pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
+                self._pmap_by_grp[grp] = pmap
+                self.sids = sids  # store the sids used in the cache
+                self.nbytes += pmap.nbytes
+        else:
+            # make sure the cache refer to the right sids
+            assert sids is None or (sids == self.sids).all()
+        return self._pmap_by_grp
+
+    def items(self, kind=''):
+        """
+        Extract probability maps from the datastore, possibly generating
+        on the fly the ones corresponding to the individual realizations.
+        Yields pairs (tag, pmap).
+
+        :param kind:
+            the kind of PoEs to extract; if not given, returns the realization
+            if there is only one or the statistics otherwise.
+        """
+        rlzs = self.rlzs
+        if self.sids is None:
+            self.sids = self.dstore['sitecol'].complete.sids
+        if not kind:  # use default
+            if 'hcurves' in self.dstore:
+                for k in sorted(self.dstore['hcurves']):
+                    yield k, self.dstore['hcurves/' + k]
+            elif len(rlzs) == 1:
+                yield 'rlz-000', self.get(self.sids, 0)
+            return
+        if 'poes' in self.dstore and kind in ('rlzs', 'all'):
+            for rlz in rlzs:
+                hcurves = self.get(self.sids, rlz.ordinal)
+                yield 'rlz-%03d' % rlz.ordinal, hcurves
+        if 'hcurves' in self.dstore and kind in ('stats', 'all'):
+            for k in sorted(self.dstore['hcurves']):
+                yield k, self.dstore['hcurves/' + k]
+
 
 # ######################### hazard maps ################################### #
 
@@ -211,7 +316,7 @@ def make_hmap(pmap, imtls, poes):
     :returns: a ProbabilityMap with size (N, I * P, 1)
     """
     I, P = len(imtls), len(poes)
-    hmap = ProbabilityMap.build(I * P, 1, pmap)
+    hmap = probability_map.ProbabilityMap.build(I * P, 1, pmap)
     for i, imt in enumerate(imtls):
         curves = numpy.array([pmap[sid].array[imtls.slicedic[imt], 0]
                               for sid in pmap.sids])
@@ -241,7 +346,10 @@ def make_uhs(pmap, imtls, poes, nsites):
     """
     P = len(poes)
     imts, _ = get_imts_periods(imtls)
-    array = make_hmap(pmap, imtls, poes).array  # size (N, I x P, 1)
+    hmap = make_hmap(pmap, imtls, poes)
+    for sid in range(nsites):  # fill empty positions if any
+        hmap.setdefault(sid, 0)
+    array = hmap.array
     imts_dt = numpy.dtype([(str(imt), F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)
@@ -261,14 +369,9 @@ def get_gmfs(dstore, precalc=None):
     oq = dstore['oqparam']
     if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        sitecol, etags, gmfs_by_imt = readinput.get_gmfs(oq)
-
-        # reduce the gmfs matrices to the filtered sites
-        for imt in oq.imtls:
-            gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
-
-        logging.info('Preparing the risk input')
-        return etags, [gmfs_by_imt]
+        sitecol, etags, gmfa = readinput.get_gmfs(oq)
+        # reduce the gmfa matrix to the filtered sites
+        return etags, [gmfa[sitecol.indices]]
 
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol']
@@ -278,27 +381,27 @@ def get_gmfs(dstore, precalc=None):
         haz_sitecol = sitecol  # N sites
     S = len(haz_sitecol)
     N = len(haz_sitecol.complete)
-    imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
+    I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
-    etags = numpy.array(sorted(b'scenario-%010d~ses=1' % i for i in range(E)))
-    gmfs = numpy.zeros((len(rlzs_assoc), N, E), imt_dt)
+    etags = numpy.arange(E)
+    gmfs = numpy.zeros((len(rlzs_assoc), N, I, E))
     if precalc:
-        for i, gsim in enumerate(precalc.gsims):
-            for imti, imt in enumerate(oq.imtls):
-                gmfs[imt][i, sitecol.sids] = precalc.gmfa[gsim][imti]
+        for g, gsim in enumerate(precalc.gsims):
+            gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
         return etags, gmfs
 
     # else read from the datastore
     gsims = sorted(dstore['gmf_data/grp-00'])
+    imtis = range(len(oq.imtls))
     for i, gsim in enumerate(gsims):
         dset = dstore['gmf_data/grp-00/' + gsim]
         for s, sid in enumerate(haz_sitecol.sids):
-            for imti, imt in enumerate(oq.imtls):
+            for imti in imtis:
                 idx = E * (S * imti + s)
                 array = dset[idx: idx + E]
                 if numpy.unique(array['sid']) != [sid]:  # sanity check
                     raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[imt][i, sid] = array['gmv']
+                gmfs[i, sid, imti] = array['gmv']
     return etags, gmfs
 
 
@@ -362,7 +465,7 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rupserial', U32), ('multiplicity', U16), ('eidx', U32),
+            ('rup_id', U32), ('multiplicity', U16), ('eidx', U32),
             ('numsites', U32), ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -501,10 +604,9 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for eid, etag in zip(self.eids, build_etags(self.events, self.grp_id)):
-            new = util.Rupture(sm_by_grp[self.grp_id], eid, etag, self.sids)
+        for event in self.events:
+            new = util.Rupture(sm_by_grp[self.grp_id], event, self.sids)
             new.mesh = mesh[self.sids]
-            new.etag = etag
             new.rupture = new
             new.is_from_fault_source = iffs = isinstance(
                 rupture.surface, (geo.ComplexFaultSurface,
@@ -530,20 +632,9 @@ class EBRupture(object):
                 new.lons[3], new.lats[3], new.depths[3])
             yield new
 
-
-def build_etags(events, grp_id):
-    """
-    An array of tags for the underlying seismic events
-    """
-    tags = []
-    for ev in events:
-        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
-            grp_id, ev['ses'], ev['rupserial'], ev['occ'])
-        sampleid = ev['sample']
-        if sampleid > 0:
-            tag += '~sample=%d' % sampleid
-        tags.append(tag)
-    return numpy.array(tags)
+    def __repr__(self):
+        return '<%s %d%s>' % (
+            self.__class__.__name__, self.serial, self.events['eid'])
 
 
 class RuptureSerializer(object):

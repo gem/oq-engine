@@ -23,6 +23,7 @@ from openquake.qa_tests_data.classical_damage import (
     case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
     case_7c, case_8a)
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.classical_damage import ClassicalDamageCalculator
 
@@ -173,9 +174,9 @@ class ClassicalDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_8a(self):
-        out = self.run_calc(
+        self.run_calc(
             case_8a.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
-        f1, f2 = out['damages-rlzs', 'csv']
+        f1, f2 = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/damages-rlzs-AkkarBommer2010().csv', f2)
         self.assertEqualFiles(

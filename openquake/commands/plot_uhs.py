@@ -17,25 +17,25 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import numpy
 from openquake.baselib import sap
 from openquake.commonlib import datastore, calc
 
 
-def make_figure(indices, n_sites, imtls, poes, pmap_by_rlz):
+def make_figure(indices, n_sites, imtls, poes, pmaps):
     """
     :param indices: the indices of the sites under analysis
     :param n_sites: total number of sites
     :param imtls: DictArray with the IMTs and levels
     :param poes: PoEs used to compute the hazard maps
-    :param pmap_by_rlz: a dictionary realization tag -> pmap
+    :param pmaps: a list of probability maps per realization
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
 
     fig = plt.figure()
     n_poes = len(poes)
-    uhs_by_rlz = {rlz: calc.make_uhs(pmap_by_rlz[rlz], imtls, poes, n_sites)
-                  for rlz in pmap_by_rlz}
+    uhs_by_rlz = [calc.make_uhs(pmap, imtls, poes, n_sites) for pmap in pmaps]
     _, periods = calc.get_imts_periods(imtls)
     for i, site in enumerate(indices):
         for j, poe in enumerate(poes):
@@ -46,9 +46,9 @@ def make_figure(indices, n_sites, imtls, poes, pmap_by_rlz):
                 'UHS on site %d, poe=%s, period in seconds' % (site, poe))
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('SA')
-            for rlz in sorted(uhs_by_rlz):
-                uhs = uhs_by_rlz[rlz][str(poe)][site]
-                ax.plot(periods, list(uhs), label=rlz)
+            for r, all_uhs in enumerate(uhs_by_rlz):
+                uhs = list(all_uhs[str(poe)][site])
+                ax.plot(periods, uhs, label=r)
     plt.legend()
     return plt
 
@@ -60,6 +60,7 @@ def plot_uhs(calc_id, sites='0'):
     """
     # read the hazard data
     dstore = datastore.read(calc_id)
+    getter = calc.PmapGetter(dstore)
     oq = dstore['oqparam']
     indices = list(map(int, sites.split(',')))
     n_sites = len(dstore['sitecol'])
@@ -68,8 +69,8 @@ def plot_uhs(calc_id, sites='0'):
         print('The indices %s are invalid: no graph for them' % invalid)
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    pmap_by_tag = {tag: dstore['hcurves/' + tag] for tag in dstore['hcurves']}
-    plt = make_figure(valid, n_sites, oq.imtls, oq.poes, pmap_by_tag)
+    pmaps = getter.get_pmaps(numpy.array(indices))
+    plt = make_figure(valid, n_sites, oq.imtls, oq.poes, pmaps)
     plt.show()
 
 plot_uhs.arg('calc_id', 'a computation id', type=int)

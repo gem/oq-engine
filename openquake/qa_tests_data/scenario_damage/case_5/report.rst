@@ -1,11 +1,11 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85515.hdf5 Tue Feb 14 15:36:35 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_7554.hdf5 Wed Apr 26 15:54:20 2017
+engine_version                           2.4.0-git9336bd0        
+hazardlib_version                        0.24.0-gita895d4c       
+======================================== ========================
 
 num_sites = 7, sitecol = 1.39 KB
 
@@ -65,10 +65,11 @@ W        1.000 0.0    1   1   2         2
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading exposure        0.005     0.0       1     
-filtering sites         0.004     0.0       1     
-reading site collection 6.914E-06 0.0       1     
-======================= ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+building site collection 0.004     0.0       1     
+filtering sites          0.003     0.0       1     
+reading exposure         0.002     0.0       1     
+reading site collection  5.722E-06 0.0       1     
+======================== ========= ========= ======

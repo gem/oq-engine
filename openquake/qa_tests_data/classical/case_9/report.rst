@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 9
 ================================
 
-============================================ ========================
-gem-tstation:/mnt/ssd/oqdata/calc_85559.hdf5 Tue Feb 14 15:40:06 2017
-engine_version                               2.3.0-git1f56df2        
-hazardlib_version                            0.23.0-git6937706       
-============================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_7600.hdf5 Wed Apr 26 15:54:58 2017
+engine_version                                  2.4.0-git9336bd0        
+hazardlib_version                               0.24.0-gita895d4c       
+=============================================== ========================
 
 num_sites = 1, sitecol = 809 B
 
@@ -54,8 +54,8 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-1      SadighEtAl1997() rrup      vs30       mag rake  
+0      SadighEtAl1997() rrup      vs30       rake mag  
+1      SadighEtAl1997() rrup      vs30       rake mag  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -86,32 +86,27 @@ source_model.xml 1      Active Shallow Crust 1           3500         3,500
 
 Informational data
 ------------------
-=========================================== ============
-count_eff_ruptures_max_received_per_task    1,289       
-count_eff_ruptures_num_tasks                2           
-count_eff_ruptures_sent.gsims               182         
-count_eff_ruptures_sent.monitor             2,126       
-count_eff_ruptures_sent.sources             2,360       
-count_eff_ruptures_sent.srcfilter           1,420       
-count_eff_ruptures_tot_received             2,578       
-hazard.input_weight                         650         
-hazard.n_imts                               1           
-hazard.n_levels                             4           
-hazard.n_realizations                       2           
-hazard.n_sites                              1           
-hazard.n_sources                            2           
-hazard.output_weight                        8.000       
-hostname                                    gem-tstation
-require_epsilons                            False       
-=========================================== ============
+============================== ===========================================================================
+count_eff_ruptures.received    tot 2.12 KB, max_per_task 1.06 KB                                          
+count_eff_ruptures.sent        sources 28 KB, monitor 1.68 KB, srcfilter 1.34 KB, gsims 182 B, param 130 B
+hazard.input_weight            650                                                                        
+hazard.n_imts                  1 B                                                                        
+hazard.n_levels                4 B                                                                        
+hazard.n_realizations          2 B                                                                        
+hazard.n_sites                 1 B                                                                        
+hazard.n_sources               2 B                                                                        
+hazard.output_weight           8.000                                                                      
+hostname                       tstation.gem.lan                                                           
+require_epsilons               0 B                                                                        
+============================== ===========================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  3,000        0.0       1         0        
 1      1         PointSource  3,500        0.0       1         0        
+0      1         PointSource  3,000        0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -126,7 +121,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 2.059 0.190  1.924 2.194 2        
+count_eff_ruptures 1.851 0.262  1.666 2.037 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -134,12 +129,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         4.118     0.781     2     
-reading composite source model   0.025     0.0       1     
-filtering composite source model 0.020     0.0       1     
-managing sources                 0.005     0.0       1     
+total count_eff_ruptures         3.703     0.250     2     
+reading composite source model   0.015     0.0       1     
+filtering composite source model 0.013     0.0       1     
 store source_info                0.001     0.0       1     
-aggregate curves                 6.795E-05 0.0       2     
-reading site collection          6.318E-05 0.0       1     
-saving probability maps          4.745E-05 0.0       1     
+managing sources                 1.280E-04 0.0       1     
+aggregate curves                 6.318E-05 0.0       2     
+reading site collection          5.627E-05 0.0       1     
+saving probability maps          4.888E-05 0.0       1     
 ================================ ========= ========= ======

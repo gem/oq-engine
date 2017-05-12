@@ -23,7 +23,7 @@ import numpy
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, source
+from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
 
 
@@ -65,7 +65,8 @@ def classical_risk(riskinput, riskmodel, param, monitor):
 
     # compute statistics
     rlzs = riskinput.rlzs
-    if len(rlzs) > 1:
+    if len(rlzs) > 1 and param['stats']:
+        statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
         for assets, rows in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():
@@ -74,8 +75,7 @@ def classical_risk(riskinput, riskmodel, param, monitor):
             for l in l_idxs:
                 for i, asset in enumerate(assets):
                     avgs = numpy.array([r.average_losses[l][i] for r in rows])
-                    avg_stats = compute_stats(
-                        avgs, param['quantile_loss_curves'], weights)
+                    avg_stats = compute_stats(avgs, stats, weights)
                     # row is index by the loss type index l and row[l]
                     # is a pair loss_curves, insured_loss_curves
                     # loss_curves[i, 0] are the i-th losses,
@@ -83,7 +83,7 @@ def classical_risk(riskinput, riskmodel, param, monitor):
                     losses = row[l][0][i, 0]
                     poes_stats = compute_stats(
                         numpy.array([row[l][0][i, 1] for row in rows]),
-                        param['quantile_loss_curves'], weights)
+                        stats, weights)
                     result['stat_curves'].append(
                         (l, asset.ordinal, losses, poes_stats, avg_stats))
     return result
@@ -114,29 +114,28 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
             [rlz] = self.rlzs_assoc.realizations
-            curves_by_rlz = {rlz: haz_curves}
+            curves = {rlz: haz_curves}
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
-            logging.info('Preparing the risk input')
-            curves_by_rlz = {}
-            nsites = len(self.sitecol.complete)
-            if 'hcurves' not in self.datastore:  # when building short report
+            if 'poes' not in self.datastore:  # when building short report
                 return
-            for key in self.datastore['hcurves']:
-                pmap = self.datastore['hcurves/' + key]
-                rlz = self.rlzs_assoc.get_rlz(key)
-                if rlz is not None:  # can be None if a realization is
-                    # missing; this happen in test_case_5
-                    curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
+            logging.info('Combining the hazard curves')
+            pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
+            sids = self.sitecol.complete.sids
+            with self.monitor(
+                    'combining hcurves', measuremem=True, autoflush=True):
+                pmaps = pgetter.get_pmaps(sids)
+                curves = {rlz: pmap.convert(oq.imtls, len(sids))
+                          for rlz, pmap in zip(pgetter.rlzs, pmaps)}
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs(curves_by_rlz)
+            self.riskinputs = self.build_riskinputs('poe', curves)
         self.param = dict(insured_losses=oq.insured_losses,
-                          quantile_loss_curves=oq.quantile_loss_curves)
+                          stats=oq.risk_stats())
         self.N = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
         self.R = len(self.rlzs_assoc.realizations)
         self.I = oq.insured_losses
-        self.Q1 = len(oq.quantile_loss_curves) + 1
+        self.S = len(oq.risk_stats())
 
     def post_execute(self, result):
         """
@@ -163,10 +162,10 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         # loss curves stats
         if self.R > 1:
-            stat_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
+            stat_curves = numpy.zeros((self.N, self.S), self.loss_curve_dt)
             for l, aid, losses, statpoes, statloss in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
-                for s in range(self.Q1):
+                for s in range(self.S):
                     stat_curves_lt['avg'][aid, s] = statloss[s]
                     base.set_array(stat_curves_lt['poes'][aid, s], statpoes[s])
                     base.set_array(stat_curves_lt['losses'][aid, s], losses)
