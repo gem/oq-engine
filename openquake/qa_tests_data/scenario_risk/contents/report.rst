@@ -1,11 +1,11 @@
 Scenario QA Test for contents
 =============================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_7635.hdf5 Wed Apr 26 15:56:32 2017
-engine_version                           2.4.0-git9336bd0        
-hazardlib_version                        0.24.0-gita895d4c       
-======================================== ========================
+========================================= ========================
+localhost:/mnt/ssd/oqdata/calc_21360.hdf5 Fri May 12 10:46:42 2017
+engine_version                            2.4.0-git59713b5        
+hazardlib_version                         0.24.0-git0596dd3       
+========================================= ========================
 
 num_sites = 3, sitecol = 917 B
 
@@ -65,11 +65,10 @@ W        1.000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-filtering sites          0.006     0.0       1     
-building site collection 0.005     0.0       1     
-reading exposure         0.001     0.0       1     
-reading site collection  8.106E-06 0.0       1     
-======================== ========= ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+reading exposure        0.006     0.0       1     
+filtering sites         0.006     0.0       1     
+reading site collection 6.437E-06 0.0       1     
+======================= ========= ========= ======
