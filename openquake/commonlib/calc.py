@@ -44,11 +44,10 @@ F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
 
-event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
-                        ('sample', U32)])
+event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rup_id', U32), ('year', U32),
-    ('ses', U32), ('occ', U32), ('sample', U32)])
+    ('eid', U64), ('rup_id', U32), ('year', U32), ('ses', U32),
+    ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
