@@ -31,8 +31,7 @@ import time
 from openquake.baselib import parallel
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib.calc.filters import FarAwayRupture
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, source
 from openquake.calculators.classical import PSHACalculator
 from openquake.calculators import views
 
@@ -50,21 +49,25 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     acc = AccumDict()
     acc.grp_id = sources[0].src_group_id
     acc.calc_times = []
-    idist = srcfilter.integration_distance
     count = 0
     for src in sources:
+        t0 = time.time()
         sites = srcfilter.get_close_sites(src)
         if sites is not None:
-            for i, rup in enumerate(src.iter_ruptures()):
-                rup.serial = src.serial[i]  # added for debugging purposes
-                try:
-                    idist.get_closest(sites, rup)
-                except FarAwayRupture:
-                    continue
-                else:
-                    count += 1
+            count += src.num_ruptures
+            dt = time.time() - t0
+            acc.calc_times.append((src.source_id, len(sites), dt))
     acc.eff_ruptures = {acc.grp_id: count}
     return acc
+
+
+def no_prefilter(csm, src_filter):
+    return csm
+
+
+def no_split_sources(csm, sources, src_filter, maxweight):
+    csm.add_infos(sources)
+    return [sources]
 
 
 class ReportWriter(object):
@@ -177,9 +180,11 @@ def build_report(job_ini, output_dir=None):
 
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
-    with mock.patch.object(PSHACalculator, 'core_task', count_eff_ruptures):
-        PSHACalculator.is_stochastic = True  # to call .init_serials()
-        if calc.pre_calculator == 'ebrisk':
+    p = mock.patch.object
+    with p(PSHACalculator, 'core_task', count_eff_ruptures), \
+         p(source.CompositeSourceModel, 'filter', no_prefilter), \
+         p(source.CompositeSourceModel, 'split_sources', no_split_sources):
+        if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
         calc.pre_execute()
