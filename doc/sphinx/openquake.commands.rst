@@ -49,14 +49,6 @@ info command
     :undoc-members:
     :show-inheritance:
 
-normalize command
------------------------------------
-
-.. automodule:: openquake.commands.normalize
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 plot_agg_curve command
 ----------------------------------------
 

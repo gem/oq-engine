@@ -30,6 +30,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.baselib import parallel
 from openquake.hazardlib import sourceconverter
+from openquake.commonlib import calc
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
@@ -137,15 +138,18 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         """
         dic = {}
         imtls = self.oqparam.imtls
+        pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
         for rlz in self.rlzs_assoc.realizations:
-            pmap = self.datastore['hcurves/rlz-%03d' % rlz.ordinal]
-            if sid in pmap:
-                poes = pmap[sid].convert(imtls)
-            else:
+            try:
+                pmap = pgetter.get(numpy.array([sid]), rlz.ordinal)
+            except ValueError:  # empty pmaps
                 logging.info(
                     'hazard curve contains all zero probabilities; '
                     'skipping site %d, rlz=%d', sid, rlz.ordinal)
                 continue
+            if sid not in pmap:
+                continue
+            poes = pmap[sid].convert(imtls)
             for imt_str in imtls:
                 if all(x == 0.0 for x in poes[imt_str]):
                     logging.info(
@@ -224,10 +228,11 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     for split, _sites in src_filter(
                             sourceconverter.split_source(src), sitecol):
                         split_sources.append(split)
+                mon = self.monitor('disaggregation')
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
                         (src_filter, srcs, src_group.id, self.rlzs_assoc,
-                         trt_names, curves_dict, bin_edges, oq, self.monitor))
+                         trt_names, curves_dict, bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)

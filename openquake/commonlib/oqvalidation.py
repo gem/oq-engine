@@ -18,12 +18,13 @@
 
 import os
 import logging
+import functools
 import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation
+from openquake.hazardlib import correlation, stats
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
@@ -40,7 +41,7 @@ class OqParam(valid.ParamSet):
         z2pt5='reference_depth_to_2pt5km_per_sec',
         backarc='reference_backarc',
     )
-    all_losses = valid.Param(valid.boolean, False)
+    asset_loss_table = valid.Param(valid.boolean, False)
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -73,7 +74,6 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    individual_curves = valid.Param(valid.boolean, True)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
@@ -88,7 +88,10 @@ class OqParam(valid.ParamSet):
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
-    mean_hazard_curves = valid.Param(valid.boolean, False)
+    max_hazard_curves = valid.Param(valid.boolean, False)
+    mean_hazard_curves = valid.Param(valid.boolean, True)
+    max_loss_curves = valid.Param(valid.boolean, False)
+    mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
@@ -187,11 +190,7 @@ class OqParam(valid.ParamSet):
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
-            if not self.individual_curves:
-                raise ValueError(
-                    'For disaggregation the flag `individual_curves` '
-                    'must be true')
-            elif not self.poes_disagg and not self.iml_disagg:
+            if not self.poes_disagg and not self.iml_disagg:
                 raise ValueError('poes_disagg or iml_disagg must be set '
                                  'in the job.ini file')
             elif self.poes_disagg and self.iml_disagg:
@@ -199,6 +198,17 @@ class OqParam(valid.ParamSet):
                     'iml_disagg=%s will not be computed from poes_disagg=%s',
                     str(self.iml_disagg), self.poes_disagg)
 
+        # checks for classical_damage
+        if self.calculation_mode == 'classical_damage':
+            if self.quantile_loss_curves:
+                raise ValueError('quantile_loss_curves are not defined '
+                                 'for classical_damage calculations: '
+                                 'remove them for the .ini file')
+            if self.conditional_loss_poes:
+                raise ValueError('conditional_loss_poes are not defined '
+                                 'for classical_damage calculations: '
+                                 'remove them for the .ini file')
+        
         # checks for event_based_risk
         if (self.calculation_mode == 'event_based_risk'
                 and self.asset_correlation not in (0, 1)):
@@ -314,14 +324,6 @@ class OqParam(valid.ParamSet):
         """
         return numpy.dtype(self.loss_dt_list(dtype))
 
-    def multiloss_dt(self, dtype=numpy.float32):
-        """
-        Return a composite dtype based on the loss types, including occupants
-        """
-        I = self.insured_losses + 1
-        return numpy.dtype([(str(lt), (dtype, I))
-                            for lt in self.all_cost_types])
-
     def loss_dt_list(self, dtype=numpy.float32):
         """
         Return a data type list [(loss_name, dtype), ...]
@@ -350,6 +352,42 @@ class OqParam(valid.ParamSet):
         correl_model_cls = getattr(
             correlation, '%sCorrelationModel' % correl_name)
         return correl_model_cls(**self.ground_motion_correlation_params)
+
+    def hazard_stats(self):
+        """
+        Return a list of item with the statistical functions defined for the
+        hazard calculation
+        """
+        names = []  # name of statistical functions
+        funcs = []  # statistical functions of kind func(values, weights)
+        if self.mean_hazard_curves:
+            names.append('mean')
+            funcs.append(stats.mean_curve)
+        for q in self.quantile_hazard_curves:
+            names.append('quantile-%s' % q)
+            funcs.append(functools.partial(stats.quantile_curve, q))
+        if self.max_hazard_curves:
+            names.append('max')
+            funcs.append(stats.max_curve)
+        return list(zip(names, funcs))
+
+    def risk_stats(self):
+        """
+        Return a list of items with the statistical functions defined for the
+        risk calculation
+        """
+        names = []  # name of statistical functions
+        funcs = []  # statistical functions of kind func(values, weights)
+        if self.mean_loss_curves:
+            names.append('mean')
+            funcs.append(stats.mean_curve)
+        for q in self.quantile_loss_curves:
+            names.append('quantile-%s' % q)
+            funcs.append(functools.partial(stats.quantile_curve, q))
+        if self.max_loss_curves:
+            names.append('max')
+            funcs.append(stats.max_curve)
+        return list(zip(names, funcs))
 
     @property
     def job_type(self):
@@ -484,16 +522,6 @@ class OqParam(valid.ParamSet):
             return False
         else:
             return True
-
-    def is_valid_hazard_curves(self):
-        """
-        You must set `hazard_curves_from_gmfs` if `mean_hazard_curves`
-        or `quantile_hazard_curves` are set.
-        """
-        if self.calculation_mode == 'event_based' and (
-           self.mean_hazard_curves or self.quantile_hazard_curves):
-            return self.hazard_curves_from_gmfs
-        return True
 
     def is_valid_export_dir(self):
         """
