@@ -2,8 +2,8 @@ Scenario Damage
 ===============
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20376.hdf5 Fri May 12 06:36:19 2017
-engine_version                                   2.4.0-giteadb85d        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20702.hdf5 Fri May 12 07:07:33 2017
+engine_version                                   2.4.0-git7dc35c5        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -78,6 +78,6 @@ reading exposure        0.005     0.0       1
 assoc_assets_sites      0.005     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-reading site collection 1.376E-04 0.0       1     
-building riskinputs     1.271E-04 0.0       1     
+reading site collection 1.361E-04 0.0       1     
+building riskinputs     1.173E-04 0.0       1     
 ======================= ========= ========= ======
