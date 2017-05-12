@@ -25,6 +25,10 @@ from __future__ import division
 import operator
 
 import numpy
+try:
+    import rtree
+except ImportError:
+    rtree = None
 
 from openquake.baselib.python3compat import range, round
 
@@ -47,9 +51,14 @@ class GeographicObjects(object):
                  getlat=operator.attrgetter('lat')):
         self.objects = list(objects)
         lons, lats = [], []
-        for obj in self.objects:
-            lons.append(getlon(obj))
-            lats.append(getlat(obj))
+        if rtree:
+            self.index = rtree.index.Index()
+        for i, obj in enumerate(self.objects):
+            lon, lat = getlon(obj), getlat(obj)
+            lons.append(lon)
+            lats.append(lat)
+            if rtree:
+                self.index.insert(i, (lon, lat, lon, lat))
         self.lons, self.lats = numpy.array(lons), numpy.array(lats)
 
     def get_closest(self, lon, lat, max_distance=None):
@@ -62,12 +71,16 @@ class GeographicObjects(object):
         :param lat: latitude in degrees
         :param max_distance: distance in km (or None)
         """
-        zeros = numpy.zeros_like(self.lons)
-        index, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
-        if max_distance is not None:
-            if min_dist > max_distance:
-                return None, None
-        return self.objects[index], min_dist
+        if rtree:
+            idx = list(self.index.nearest((lon, lat, lon, lat), 1))[0]
+            min_dist = geodetic_distance(
+                lon, lat, self.lons[idx], self.lats[idx])
+        else:
+            zeros = numpy.zeros_like(self.lons)
+            idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
+        if max_distance is not None and min_dist > max_distance:
+            return None, None
+        return self.objects[idx], min_dist
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
