@@ -1,11 +1,11 @@
 Ucerf test
 ==========
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_7548.hdf5 Wed Apr 26 15:54:19 2017
-engine_version                           2.4.0-git9336bd0        
-hazardlib_version                        0.24.0-gita895d4c       
-======================================== ========================
+========================================= ========================
+localhost:/mnt/ssd/oqdata/calc_21271.hdf5 Fri May 12 10:45:15 2017
+engine_version                            2.4.0-git59713b5        
+hazardlib_version                         0.24.0-git0596dd3       
+========================================= ========================
 
 num_sites = 155, sitecol = 8.93 KB
 
@@ -99,30 +99,30 @@ Required parameters per tectonic region type
 ====== ===================================== =========== ======================= =======================
 grp_id gsims                                 distances   siteparams              ruptparams             
 ====== ===================================== =========== ======================= =======================
-0      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-1      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-2      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-3      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-4      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-5      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-6      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-7      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-8      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-9      AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-10     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-11     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-12     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-13     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-14     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-15     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-16     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-17     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-18     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-19     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-20     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-21     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-22     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
-23     AbrahamsonSilva2008() BooreEtAl2014() rjb rx rrup vs30 vs30measured z1pt0 dip width ztor rake mag
+0      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+1      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+2      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+3      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+4      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+5      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+6      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+7      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+8      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+9      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+10     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+11     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+12     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+13     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+14     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+15     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+16     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+17     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+18     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+19     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+20     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+21     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+22     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+23     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
 ====== ===================================== =========== ======================= =======================
 
 Realizations per (TRT, GSIM)
@@ -185,5 +185,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 8.373E-04 0.0       1     
+reading site collection 8.249E-04 0.0       1     
 ======================= ========= ========= ======
