@@ -2,8 +2,8 @@ Event Based Hazard QA Test, Case 17
 ===================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20774.hdf5 Fri May 12 07:08:23 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20881.hdf5 Fri May 12 07:20:53 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -93,8 +93,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  39           0.0       0         0        
 1      2         PointSource  7            0.0       0         0        
+0      1         PointSource  39           0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -109,7 +109,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.017 0.013  0.008 0.026 2        
+compute_ruptures   0.016 0.013  0.008 0.025 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -117,13 +117,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.034     0.0       2     
-reading composite source model   0.003     0.0       1     
+total compute_ruptures           0.033     0.0       2     
+reading composite source model   0.004     0.0       1     
 saving ruptures                  0.003     0.0       2     
 managing sources                 0.002     0.0       1     
-filtering ruptures               0.002     0.0       3     
 setting event years              0.002     0.0       1     
-store source_info                5.949E-04 0.0       1     
-reading site collection          4.768E-05 0.0       1     
-filtering composite source model 3.409E-05 0.0       1     
+filtering ruptures               0.001     0.0       3     
+store source_info                6.030E-04 0.0       1     
+filtering composite source model 5.674E-05 0.0       1     
+reading site collection          5.054E-05 0.0       1     
 ================================ ========= ========= ======

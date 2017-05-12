@@ -2,8 +2,8 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20771.hdf5 Fri May 12 07:08:20 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20878.hdf5 Fri May 12 07:20:50 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ============================================================== ====================== ================
 smlt_path weight source_model_file                                              gsim_logic_tree        num_realizations
 ========= ====== ============================================================== ====================== ================
-b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(5,0,4,2,4,1,0) 4/4             
+b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(0,4,1,4,5,2,0) 4/4             
 ========= ====== ============================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ==================================================================================== ========== ========== ==============
 grp_id gsims                                                                                distances  siteparams ruptparams    
 ====== ==================================================================================== ========== ========== ==============
-4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab() rrup rhypo vs30       hypo_depth mag
+4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab() rhypo rrup vs30       hypo_depth mag
 ====== ==================================================================================== ========== ========== ==============
 
 Realizations per (TRT, GSIM)
@@ -76,8 +76,8 @@ simple_area_source_model.xml 4      Subduction Inslab 7           7770         9
 Informational data
 ------------------
 ============================== ================================================================================
-count_eff_ruptures.received    tot 16.77 KB, max_per_task 1.88 KB                                              
-count_eff_ruptures.sent        sources 48.66 KB, monitor 14.79 KB, srcfilter 6.8 KB, gsims 2.47 KB, param 585 B
+count_eff_ruptures.received    tot 16.76 KB, max_per_task 1.88 KB                                              
+count_eff_ruptures.sent        sources 48.65 KB, monitor 14.79 KB, srcfilter 6.8 KB, gsims 2.47 KB, param 585 B
 hazard.input_weight            197,635                                                                         
 hazard.n_imts                  3 B                                                                             
 hazard.n_levels                78 B                                                                            
@@ -95,23 +95,23 @@ Slowest sources
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
 4      s46       AreaSource         7,770        0.002     1         1        
-2      sh6       AreaSource         12,900       0.0       0         0        
-4      s35       AreaSource         12,327       0.0       0         0        
-2      sh14      AreaSource         41,952       0.0       0         0        
-2      sh13      AreaSource         41,952       0.0       0         0        
-1      v1        AreaSource         42           0.0       0         0        
-4      s13       AreaSource         12,726       0.0       0         0        
 4      s72       AreaSource         17,871       0.0       0         0        
-4      s40       AreaSource         12,327       0.0       0         0        
-4      s70       AreaSource         17,871       0.0       0         0        
-3      scr304    AreaSource         574          0.0       0         0        
+2      sh13      AreaSource         41,952       0.0       0         0        
 3      scr299    AreaSource         1,572        0.0       0         0        
+2      sh14      AreaSource         41,952       0.0       0         0        
+3      scr301    AreaSource         17,268       0.0       0         0        
+1      v1        AreaSource         42           0.0       0         0        
+0      i17       ComplexFaultSource 33,383       0.0       0         0        
+4      s40       AreaSource         12,327       0.0       0         0        
+4      s34       AreaSource         12,327       0.0       0         0        
+3      scr293    AreaSource         61,740       0.0       0         0        
+2      sh6       AreaSource         12,900       0.0       0         0        
+4      s13       AreaSource         12,726       0.0       0         0        
+4      s35       AreaSource         12,327       0.0       0         0        
+4      s70       AreaSource         17,871       0.0       0         0        
 0      i20       ComplexFaultSource 9,241        0.0       0         0        
 1      v4        AreaSource         168          0.0       0         0        
-4      s34       AreaSource         12,327       0.0       0         0        
-3      scr301    AreaSource         17,268       0.0       0         0        
-0      i17       ComplexFaultSource 33,383       0.0       0         0        
-3      scr293    AreaSource         61,740       0.0       0         0        
+3      scr304    AreaSource         574          0.0       0         0        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -127,7 +127,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.006 0.003  0.002 0.011 9        
+count_eff_ruptures 0.006 0.002  0.003 0.009 9        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,12 +135,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   4.664     0.0       1     
-total count_eff_ruptures         0.055     0.281     9     
-managing sources                 0.011     0.0       1     
-store source_info                6.247E-04 0.0       1     
-aggregate curves                 1.173E-04 0.0       9     
-reading site collection          3.266E-05 0.0       1     
-filtering composite source model 2.694E-05 0.0       1     
-saving probability maps          2.646E-05 0.0       1     
+reading composite source model   4.619     0.0       1     
+total count_eff_ruptures         0.051     0.0       9     
+managing sources                 0.014     0.0       1     
+store source_info                0.001     0.0       1     
+aggregate curves                 2.308E-04 0.0       9     
+filtering composite source model 6.151E-05 0.0       1     
+saving probability maps          4.268E-05 0.0       1     
+reading site collection          3.481E-05 0.0       1     
 ================================ ========= ========= ======

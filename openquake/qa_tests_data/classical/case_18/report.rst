@@ -2,8 +2,8 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20765.hdf5 Fri May 12 07:08:13 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20872.hdf5 Fri May 12 07:20:43 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -77,7 +77,7 @@ Informational data
 ------------------
 ============================== =============================================================================
 count_eff_ruptures.received    max_per_task 1.47 KB, tot 1.47 KB                                            
-count_eff_ruptures.sent        gsims 156.15 KB, sources 2.1 KB, monitor 1.23 KB, srcfilter 740 B, param 65 B
+count_eff_ruptures.sent        gsims 156.16 KB, sources 2.1 KB, monitor 1.23 KB, srcfilter 740 B, param 65 B
 hazard.input_weight            243                                                                          
 hazard.n_imts                  3 B                                                                          
 hazard.n_levels                36 B                                                                         
@@ -94,7 +94,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      VICM      AreaSource   2,430        0.001     3         1        
+0      VICM      AreaSource   2,430        0.002     3         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,14 +102,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.001     1     
+AreaSource   0.002     1     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.002 NaN    0.002 0.002 1        
+count_eff_ruptures 0.003 NaN    0.003 0.003 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,11 +118,11 @@ Slowest operations
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 reading composite source model   0.021     0.0       1     
-total count_eff_ruptures         0.002     0.0       1     
+total count_eff_ruptures         0.003     0.004     1     
 managing sources                 0.001     0.0       1     
-store source_info                6.337E-04 0.0       1     
-reading site collection          2.010E-04 0.0       1     
-filtering composite source model 3.338E-05 0.0       1     
-saving probability maps          3.099E-05 0.0       1     
-aggregate curves                 2.432E-05 0.0       1     
+store source_info                6.382E-04 0.0       1     
+reading site collection          1.915E-04 0.0       1     
+filtering composite source model 6.342E-05 0.0       1     
+saving probability maps          3.171E-05 0.0       1     
+aggregate curves                 2.575E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,8 +2,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 =================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_20749.hdf5 Fri May 12 07:08:03 2017
-engine_version                                   2.4.0-git7dc35c5        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_20856.hdf5 Fri May 12 07:20:33 2017
+engine_version                                   2.4.0-git85daf7a        
 hazardlib_version                                0.24.0-git0596dd3       
 ================================================ ========================
 
@@ -92,7 +92,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   440          0.001     6         1        
+0      1         AreaSource   440          0.002     6         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -100,14 +100,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.001     1     
+AreaSource   0.002     1     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.002 NaN    0.002 0.002 1        
+count_eff_ruptures 0.003 NaN    0.003 0.003 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -115,12 +115,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.010     0.0       1     
-total count_eff_ruptures         0.002     0.0       1     
+reading composite source model   0.009     0.0       1     
+total count_eff_ruptures         0.003     0.0       1     
+store source_info                0.001     0.0       1     
 managing sources                 0.001     0.0       1     
-store source_info                6.440E-04 0.0       1     
-reading site collection          1.991E-04 0.0       1     
-filtering composite source model 3.600E-05 0.0       1     
-saving probability maps          3.266E-05 0.0       1     
-aggregate curves                 2.408E-05 0.0       1     
+reading site collection          1.800E-04 0.0       1     
+saving probability maps          5.412E-05 0.0       1     
+filtering composite source model 4.911E-05 0.0       1     
+aggregate curves                 4.435E-05 0.0       1     
 ================================ ========= ========= ======

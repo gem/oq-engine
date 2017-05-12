@@ -2,8 +2,8 @@ Scenario QA Test, Case 1
 ========================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_20717.hdf5 Fri May 12 07:07:34 2017
-engine_version                            2.4.0-git7dc35c5        
+localhost:/mnt/ssd/oqdata/calc_20824.hdf5 Fri May 12 07:20:05 2017
+engine_version                            2.4.0-git85daf7a        
 hazardlib_version                         0.24.0-git0596dd3       
 ========================================= ========================
 
