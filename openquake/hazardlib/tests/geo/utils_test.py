@@ -24,6 +24,7 @@ from openquake.hazardlib.geo import utils
 
 Point = collections.namedtuple("Point",  'lon lat')
 
+
 class CleanPointTestCase(unittest.TestCase):
     def test_exact_duplicates(self):
         a, b, c = geo.Point(1, 2, 3), geo.Point(3, 4, 5), geo.Point(5, 6, 7)
