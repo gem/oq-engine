@@ -28,6 +28,9 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib import valid
 
 MAXWEIGHT = 200  # tuned by M. Simionato
+U32 = numpy.uint32
+U64 = numpy.uint64
+event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
 
 
 class SourceGroup(collections.Sequence):
@@ -568,15 +571,25 @@ class RuptureConverter(object):
     def convert_ruptureCollection(self, node):
         """
         :param node: a ruptureCollection node
-        :returns: a dictionary grp_id -> ruptures
+        :returns: a dictionary grp_id -> EBRuptures
         """
         coll = {}
         for grpnode in node:
             grp_id = int(grpnode['id'])
-            coll[grp_id] = rups = []
+            coll[grp_id] = ebrs = []
             for node in grpnode:
                 rup = self.convert_node(node)
-                rups.append(rup)
+                rupid = int(node['id'])
+                sesnodes = node.stochasticEventSets
+                events = []
+                for sesnode in sesnodes:
+                    with context(self.fname, sesnode):
+                        ses = sesnode['id']
+                        for eid in (~sesnode).split():
+                            events.append((eid, ses, 0))
+                ebr = source.rupture.EBRupture(
+                    rup, None, numpy.array(events, event_dt), grp_id, rupid)
+                ebrs.append(ebr)
         return coll
 
 
