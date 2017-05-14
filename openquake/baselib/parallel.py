@@ -452,51 +452,6 @@ class IterResult(object):
         return res
 
 
-class Computer(object):
-    """
-    Abstract Base Class. Subclasses must override the methods `__call__`
-    and `gen_args`, and may override `aggregate`. They may also override
-    `__init__`: in that case they must set the `hdf5path` and `__name__`
-    attributes.
-    """
-    def __init__(self, hdf5path=None):
-        self.hdf5path = hdf5path
-        self.__name__ = self.__class__.__name__
-
-    @abc.abstractmethod
-    def __call__(self, *args):
-        """Return a result, typically a dictionary"""
-        return {}
-
-    @abc.abstractmethod
-    def gen_args(self, *args):
-        """Yield tuples of arguments"""
-        yield ()
-
-    def aggregate(self, acc, val):
-        """Aggregate values; the default operation is the sum"""
-        return acc + val
-
-    def monitor(self, operation=None, autoflush=False, measuremem=False):
-        """
-        Return a :class:`openquake.baselib.performance.Monitor` instance
-        """
-        return Monitor(operation or self.__name__, self.hdf5path, autoflush,
-                       measuremem)
-
-    def run(self, *args, **kw):
-        """
-        Run the computer with the given arguments; one can specify the extra
-        arguments `acc` and `Starmap`.
-        """
-        acc = kw.get('acc')
-        starmap = kw.get('Starmap', Starmap)
-        wakeup_pool()  # if not already started
-        with self.monitor('complete runtime', measuremem=True, autoflush=True):
-            return starmap(self, self.gen_args(*args)).reduce(
-                self.aggregate, acc)
-
-
 class Starmap(object):
     """
     A manager to submit several tasks of the same type.
