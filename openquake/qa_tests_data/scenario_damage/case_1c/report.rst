@@ -1,11 +1,11 @@
 Scenario Damage
 ===============
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_7549.hdf5 Wed Apr 26 15:54:20 2017
-engine_version                                  2.4.0-git9336bd0        
-hazardlib_version                               0.24.0-gita895d4c       
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21272.hdf5 Fri May 12 10:45:15 2017
+engine_version                                   2.4.0-git59713b5        
+hazardlib_version                                0.24.0-git0596dd3       
+================================================ ========================
 
 num_sites = 1, sitecol = 1.14 KB
 
@@ -70,15 +70,14 @@ Wood     1.000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-filtering sites          0.008     0.0       1     
-assoc_assets_sites       0.006     0.0       1     
-building site collection 0.005     0.0       1     
-computing gmfs           0.002     0.0       1     
-saving gmfs              0.001     0.0       1     
-reading exposure         0.001     0.0       1     
-reading site collection  1.755E-04 0.0       1     
-building riskinputs      1.228E-04 0.0       1     
-======================== ========= ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+filtering sites         0.007     0.0       1     
+reading exposure        0.006     0.0       1     
+assoc_assets_sites      0.005     0.0       1     
+computing gmfs          0.002     0.0       1     
+saving gmfs             0.001     0.0       1     
+reading site collection 1.545E-04 0.0       1     
+building riskinputs     1.206E-04 0.0       1     
+======================= ========= ========= ======
