@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OpenQuake Engine (WebUI)
+GenericName=OpenQuake Engine (WebUI)
+Comment=The OpenQuake Engine web interface
+Exec=xdg-open http://localhost:8800
+Icon=openquake
+Terminal=false
+Categories=Education;Science;Geoscience;
