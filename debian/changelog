@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Reduced the data transfer in the object `RlzsAssoc` and improved the
     postprocessing of hazard curves when the option `--hc` is given
+  * Made `oq info --report` fast again by removing the rupture fine filtering
   * Improved the readibility of the CSV export `dmg_total`
   * Removed the column `eid` from the CSV export `ruptures`; also
     renamed the field `serial` to `rup_id` and reordered the fields
