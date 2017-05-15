@@ -877,10 +877,3 @@ class SourceConverter(RuptureConverter):
         sg.grp_probability = grp_probability
         return sg
 
-
-def parse_ses_ruptures(fname):
-    """
-    Convert a stochasticEventSetCollection file into a set of SES,
-    each one containing ruptures with an etag and a seed.
-    """
-    raise NotImplementedError('parse_ses_ruptures')

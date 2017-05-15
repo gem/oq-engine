@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Fixed a numeric issue in the square root of negative small numbers that
     actually should have been zero
+  * Removed the `parallel.Computer` base class
   * Introduced a "grp_probability" attribute to SourceGroups, for use in
     the Japan mutex model
   * Added an utility method `ProbabilityMap.convert2` to convert a probability
