@@ -32,6 +32,15 @@ F32 = numpy.float32
 point3d = numpy.dtype([('lon', F32), ('lat', F32), ('depth', F32)])
 
 
+def sqrt(array):
+    # due to numerical errors an array of positive values can become negative;
+    # for instance: 1 - array([[ 0.99999989,  1.00000001,  1.        ]]) =
+    # array([[  1.08272703e-07,  -5.19256105e-09,  -3.94126065e-10]])
+    # here we replace the small negative values with zeros
+    array[array < 0] = 0
+    return numpy.sqrt(array)
+
+
 def build_array(lons_lats_depths):
     """
     Convert a list of n triples into a composite numpy array with fields
@@ -643,7 +652,7 @@ class RectangularMesh(Mesh):
             xx = numpy.sum(tl_area * incl_cos)
             # express sine via cosine using Pythagorean trigonometric identity,
             # this is a bit faster than sin(arccos(incl_cos))
-            yy = numpy.sum(tl_area * numpy.sqrt(1 - incl_cos * incl_cos))
+            yy = numpy.sum(tl_area * sqrt(1 - incl_cos * incl_cos))
 
             # bottom-right triangles
             en = earth_surface_tangent_normal[1:, 1:]
@@ -655,7 +664,7 @@ class RectangularMesh(Mesh):
             # and bottom-right triangles of each cell in a mesh. here we
             # combine both and finally get the weighted mean angle
             xx += numpy.sum(br_area * incl_cos)
-            yy += numpy.sum(br_area * numpy.sqrt(1 - incl_cos * incl_cos))
+            yy += numpy.sum(br_area * sqrt(1 - incl_cos * incl_cos))
             inclination = numpy.degrees(numpy.arctan2(yy, xx))
 
         # azimuth calculation is done similar to one for inclination. we also
@@ -700,8 +709,7 @@ class RectangularMesh(Mesh):
         # the only difference is that azimuth is defined in a range
         # [0, 360), so we need to have two reference planes and change
         # sign of projection on one normal to sign of projection to another one
-        yy = numpy.sum(tl_area * numpy.sqrt(1 - az_cos * az_cos) * sign)
-
+        yy = numpy.sum(tl_area * sqrt(1 - az_cos * az_cos) * sign)
         # bottom-right triangles
         sign = numpy.sign(numpy.sign(
             numpy.sum(along_azimuth[1:] * norms_west[1:, 1:], axis=-1))
@@ -709,7 +717,7 @@ class RectangularMesh(Mesh):
         )
         az_cos = numpy.sum(along_azimuth[1:] * norms_north[1:, 1:], axis=-1)
         xx += numpy.sum(br_area * az_cos)
-        yy += numpy.sum(br_area * numpy.sqrt(1 - az_cos * az_cos) * sign)
+        yy += numpy.sum(br_area * sqrt(1 - az_cos * az_cos) * sign)
 
         azimuth = numpy.degrees(numpy.arctan2(yy, xx))
         if azimuth < 0:
