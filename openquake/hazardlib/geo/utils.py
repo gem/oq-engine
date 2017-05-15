@@ -21,7 +21,10 @@ Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
 import operator
-import rtree
+try:
+    import rtree
+except:
+    rtree = None
 import numpy
 import shapely.geometry
 
