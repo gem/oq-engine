@@ -547,20 +547,20 @@ def get_result(request, result_id):
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
-    try:
-        bname = os.path.basename(exported)
-        if bname.startswith('.'):
-            # the "." is added by `export_from_db`, strip it
-            bname = bname[1:]
-        fname = 'output-%s-%s' % (result_id, bname)
-        # 'b' is needed when running the WebUI on Windows
-        stream = FileWrapper(open(exported, 'rb'))
-        response = FileResponse(stream, content_type=content_type)
-        response['Content-Disposition'] = (
-            'attachment; filename=%s' % os.path.basename(fname))
-        return response
-    finally:
-        shutil.rmtree(tmpdir)
+
+    bname = os.path.basename(exported)
+    if bname.startswith('.'):
+        # the "." is added by `export_from_db`, strip it
+        bname = bname[1:]
+    fname = 'output-%s-%s' % (result_id, bname)
+    # 'b' is needed when running the WebUI on Windows
+    stream = FileWrapper(open(exported, 'rb'))
+    stream.close = lambda: (
+        FileWrapper.close(stream), shutil.rmtree(tmpdir))
+    response = FileResponse(stream, content_type=content_type)
+    response['Content-Disposition'] = (
+        'attachment; filename=%s' % os.path.basename(fname))
+    return response
 
 
 @cross_domain_ajax
