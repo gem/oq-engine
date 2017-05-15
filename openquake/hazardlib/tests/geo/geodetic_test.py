@@ -29,6 +29,7 @@ JFK = (73 + 47 / 60., 40 + 38 / 60.)
 
 assert_aeq = numpy.testing.assert_almost_equal
 
+
 class TestGeodeticDistance(unittest.TestCase):
     def test_LAX_to_JFK(self):
         dist = geodetic.geodetic_distance(*(LAX + JFK))
@@ -196,32 +197,6 @@ class MinDistanceTest(unittest.TestCase):
         self._test(mlons=[[10., 11.]], mlats=[[-40, -41]], mdepths=[[1., 2.]],
                    slons=[9., 9.], slats=[-39, -45], sdepths=[0.1, 0.2],
                    expected_mpoint_indices=[0, 1])
-
-
-class GeographicObjectsTest(unittest.TestCase):
-    def setUp(self):
-        p1 = Point(0.0, 0.1)
-        p2 = Point(0.0, 0.2)
-        p3 = Point(0.0, 0.3)
-        self.points = geodetic.GeographicObjects([p1, p2, p3])
-
-    def test_closest(self):
-        point, dist = self.points.get_closest(0.0, 0.21)
-        self.assertEqual(point, Point(0.0, 0.2))
-        point, dist = self.points.get_closest(0.0, 0.29)
-        self.assertEqual(point, Point(0.0, 0.3))
-
-    def test_exact_point(self):
-        point, dist = self.points.get_closest(0.0, 0.2)
-        self.assertEqual(point, Point(0.0, 0.2))
-
-    def test_max_distance(self):
-        point, dist = self.points.get_closest(
-            0.0, 0.21, max_distance=100)  # close
-        self.assertEqual(point, Point(0.0, 0.2))
-        point, dist = self.points.get_closest(
-            0.0, 0.21, max_distance=0.1)  # far
-        self.assertIsNone(point)
 
 
 class MinDistanceToSegmentTest(unittest.TestCase):
