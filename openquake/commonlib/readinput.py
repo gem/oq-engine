@@ -376,10 +376,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-    parser = nrml.SourceModelParser(converter)
+    psr = nrml.SourceModelParser(converter)
 
     # consider only the effective realizations
     for sm in source_model_lt.gen_source_models(gsim_lt):
+        src_groups = []
         for name in sm.name.split():
             fname = possibly_gunzip(
                 os.path.abspath(os.path.join(oqparam.base_path, name)))
@@ -387,7 +388,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 try:
                     logging.info('Parsing %s', fname)
-                    src_groups = parser.parse_src_groups(fname, apply_unc)
+                    src_groups.extend(psr.parse_src_groups(fname, apply_unc))
                 except ValueError as e:
                     if str(e) in ('Surface does not conform with Aki & '
                                   'Richards convention',
@@ -401,7 +402,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                         raise
             else:  # just collect the TRT models
                 smodel = nrml.read(fname).sourceModel
-                src_groups = []
                 if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
                     for sg_node in smodel:
                         sg = sourceconverter.SourceGroup(
@@ -429,7 +429,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         yield sm
 
     # log if some source file is being used more than once
-    for fname, hits in parser.fname_hits.items():
+    for fname, hits in psr.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
 
