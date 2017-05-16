@@ -24,8 +24,10 @@ import abc
 import numpy
 import math
 import itertools
+from openquake.baselib import general
 from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
+from openquake.hazardlib import geo
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
@@ -472,3 +474,168 @@ def get_subclasses(cls):
         yield subclass
         for ssc in get_subclasses(subclass):
             yield ssc
+
+
+def get_geom(surface, is_from_fault_source, is_multi_surface):
+    """
+    The following fields can be interpreted different ways,
+    depending on the value of `is_from_fault_source`. If
+    `is_from_fault_source` is True, each of these fields should
+    contain a 2D numpy array (all of the same shape). Each triple
+    of (lon, lat, depth) for a given index represents the node of
+    a rectangular mesh. If `is_from_fault_source` is False, each
+    of these fields should contain a sequence (tuple, list, or
+    numpy array, for example) of 4 values. In order, the triples
+    of (lon, lat, depth) represent top left, top right, bottom
+    left, and bottom right corners of the the rupture's planar
+    surface. Update: There is now a third case. If the rupture
+    originated from a characteristic fault source with a
+    multi-planar-surface geometry, `lons`, `lats`, and `depths`
+    will contain one or more sets of 4 points, similar to how
+    planar surface geometry is stored (see above).
+
+    :param surface: a Surface instance
+    :param is_from_fault_source: a boolean
+    :param is_multi_surface: a boolean
+    """
+    if is_from_fault_source:
+        # for simple and complex fault sources,
+        # rupture surface geometry is represented by a mesh
+        surf_mesh = surface.get_mesh()
+        lons = surf_mesh.lons
+        lats = surf_mesh.lats
+        depths = surf_mesh.depths
+    else:
+        if is_multi_surface:
+            # `list` of
+            # openquake.hazardlib.geo.surface.planar.PlanarSurface
+            # objects:
+            surfaces = surface.surfaces
+
+            # lons, lats, and depths are arrays with len == 4*N,
+            # where N is the number of surfaces in the
+            # multisurface for each `corner_*`, the ordering is:
+            #   - top left
+            #   - top right
+            #   - bottom left
+            #   - bottom right
+            lons = numpy.concatenate([x.corner_lons for x in surfaces])
+            lats = numpy.concatenate([x.corner_lats for x in surfaces])
+            depths = numpy.concatenate([x.corner_depths for x in surfaces])
+        else:
+            # For area or point source,
+            # rupture geometry is represented by a planar surface,
+            # defined by 3D corner points
+            lons = numpy.zeros((4))
+            lats = numpy.zeros((4))
+            depths = numpy.zeros((4))
+
+            # NOTE: It is important to maintain the order of these
+            # corner points. TODO: check the ordering
+            for i, corner in enumerate((surface.top_left,
+                                        surface.top_right,
+                                        surface.bottom_left,
+                                        surface.bottom_right)):
+                lons[i] = corner.longitude
+                lats[i] = corner.latitude
+                depths[i] = corner.depth
+    return lons, lats, depths
+
+
+class ExportedRupture(object):
+    """
+    Simplified Rupture class with attributes rupid, events_by_ses, indices
+    and others, used in export.
+
+    :param rupid: rupture serial ID
+    :param events_by_ses: dictionary ses_idx -> event records
+    :param indices: site indices
+    """
+    def __init__(self, rupid, events_by_ses, indices=None):
+        self.rupid = rupid
+        self.events_by_ses = events_by_ses
+        self.indices = indices
+
+
+class EBRupture(object):
+    """
+    An event based rupture. It is a wrapper over a hazardlib rupture
+    object, containing an array of site indices affected by the rupture,
+    as well as the IDs of the corresponding seismic events.
+    """
+    def __init__(self, rupture, sids, events, grp_id, serial):
+        self.rupture = rupture
+        self.sids = sids
+        self.events = events
+        self.grp_id = grp_id
+        self.serial = serial
+        self.sidx = self.eidx1 = self.eidx2 = None  # to be set when needed
+
+    @property
+    def weight(self):
+        """
+        Weight of the EBRupture
+        """
+        return len(self.sids) * len(self.events)
+
+    @property
+    def eids(self):
+        """
+        An array with the underlying event IDs
+        """
+        return self.events['eid']
+
+    @property
+    def multiplicity(self):
+        """
+        How many times the underlying rupture occurs.
+        """
+        return len(self.events)
+
+    def export(self, mesh, sm_by_grp):
+        """
+        Yield :class:`Rupture` objects, with all the
+        attributes set, suitable for export in XML format.
+        """
+        rupture = self.rupture
+        events_by_ses = general.group_array(self.events, 'ses')
+        new = ExportedRupture(self.serial, events_by_ses, self.sids)
+        new.mesh = mesh[self.sids]
+        new.multiplicity = self.multiplicity
+        if isinstance(rupture.surface, geo.ComplexFaultSurface):
+            new.typology = 'complexFaultsurface'
+        elif isinstance(rupture.surface, geo.SimpleFaultSurface):
+            new.typology = 'simpleFaultsurface'
+        elif isinstance(rupture.surface, geo.GriddedSurface):
+            new.typology = 'griddedRupture'
+        elif isinstance(rupture.surface, geo.MultiSurface):
+            new.typology = 'multiPlanesRupture'
+        else:
+            new.typology = 'singlePlaneRupture'
+        new.is_from_fault_source = iffs = isinstance(
+            rupture.surface, (geo.ComplexFaultSurface,
+                              geo.SimpleFaultSurface))
+        new.is_multi_surface = ims = isinstance(
+            rupture.surface, geo.MultiSurface)
+        new.lons, new.lats, new.depths = get_geom(
+            rupture.surface, iffs, ims)
+        new.surface = rupture.surface
+        new.strike = rupture.surface.get_strike()
+        new.dip = rupture.surface.get_dip()
+        new.rake = rupture.rake
+        new.hypocenter = rupture.hypocenter
+        new.tectonic_region_type = rupture.tectonic_region_type
+        new.magnitude = new.mag = rupture.mag
+        new.top_left_corner = None if iffs or ims else (
+            new.lons[0], new.lats[0], new.depths[0])
+        new.top_right_corner = None if iffs or ims else (
+            new.lons[1], new.lats[1], new.depths[1])
+        new.bottom_left_corner = None if iffs or ims else (
+            new.lons[2], new.lats[2], new.depths[2])
+        new.bottom_right_corner = None if iffs or ims else (
+            new.lons[3], new.lats[3], new.depths[3])
+        return new
+
+    def __repr__(self):
+        return '<%s %d%s>' % (
+            self.__class__.__name__, self.serial, self.events['eid'])
