@@ -360,29 +360,31 @@ class EventBasedGMFXMLWriter(object):
             nrml.write([gmf_container], dest, fmt)
 
 
-def rupture_to_element(rupture, parent=None):
+def sub_elems(elem, rup, *names):
+    for name in names:
+        et.SubElement(elem, name).text = str(getattr(rup, name))
+
+
+def rupture_to_element(rup, parent):
     """
     Convert a rupture object into an Element object.
 
-    :param rupture:
-        must have attributes .rupture, .eid and .seed
+    :param rup:
+        must have attributes .rupid, .events_by_ses and .seed
     :param parent:
-        if None a new element is created, otherwise a sub element is
-        attached to the parent.
+         parent of the returned element
     """
-    if parent is None:
-        rup_elem = et.Element('rupture')
-    else:
-        rup_elem = et.SubElement(parent, 'rupture')
-
-    rup = rupture.rupture
-    rup_elem.set('id', rupture.eid)
-    rup_elem.set('magnitude', str(rup.magnitude))
-    rup_elem.set('strike', str(rup.strike))
-    rup_elem.set('dip', str(rup.dip))
-    rup_elem.set('rake', str(rup.rake))
-    rup_elem.set('tectonicRegion', str(rup.tectonic_region_type))
-
+    rup_elem = et.SubElement(parent, rup.typology)
+    elem = et.SubElement(rup_elem, 'stochasticEventSets')
+    for ses in rup.events_by_ses:
+        eids = rup.events_by_ses[ses]['eid']
+        ses_elem = et.SubElement(elem, 'SES', id=ses)
+        ses_elem.text = ' '.join(str(eid) for eid in eids)
+    rup_elem.set('id', rup.rupid)
+    rup_elem.set('multiplicity', str(rup.multiplicity))
+    sub_elems(rup_elem, rup, 'magnitude',  'strike', 'dip', 'rake')
+    h = rup.hypocenter
+    et.SubElement(rup_elem, 'hypocenter', dict(lon=h.x, lat=h.y, depth=h.z))
     if rup.is_from_fault_source:
         # rup is from a simple or complex fault source
         # the rup geometry is represented by a mesh of 3D
@@ -479,20 +481,17 @@ class SESXMLWriter(object):
     def __init__(self, dest):
         self.dest = dest
 
-    def serialize(self, data):
+    def serialize(self, data, investigation_time):
         """
         Serialize a collection of stochastic event sets to XML.
 
         :param data:
-            An iterable of "SES" ("Stochastic Event Set") objects.
-            Each "SES" object should:
+            A dictionary src_group_id -> list of
+            :class:`openquake.commonlib.calc.Rupture` objects.
+            Each Rupture should have the following attributes:
 
-            * have an `investigation_time` attribute
-            * have an `ordinal` attribute
-            * be iterable, yielding a sequence of "rupture" objects
-
-            Each rupture" should have the following attributes:
-            * `eid`
+            * `rupid`
+            * `events_by_ses`
             * `magnitude`
             * `strike`
             * `dip`
@@ -534,21 +533,21 @@ class SESXMLWriter(object):
             * bottom right
 
             Each of these should be a triple of `lon`, `lat`, `depth`.
+
+        :param investigation_time:
+            Investigation time parameter specified in the job.ini
         """
         with open(self.dest, 'wb') as fh:
             root = et.Element('nrml')
-            ses_container = et.SubElement(
-                root, 'stochasticEventSetCollection')
-            for ses in data:
-                ruptures = list(ses)
-                if not ruptures:  # empty SES, don't export it
-                    continue
-                ses_elem = et.SubElement(
-                    ses_container, 'stochasticEventSet')
-                ses_elem.set('id', str(ses.ordinal or 1))
-                ses_elem.set('investigationTime', str(ses.investigation_time))
-                for rupture in ruptures:
-                    rupture_to_element(rupture, ses_elem)
+            ses_container = et.SubElement(root, 'ruptureCollection')
+            ses_container.set('investigationTime', str(investigation_time))
+            for grp_id in sorted(data):
+                attrs = dict(
+                    id=grp_id,
+                    tectonicRegion=data[grp_id][0].tectonic_region_type)
+                sg = et.SubElement(ses_container, 'ruptureGroup', attrs)
+                for rupture in data[grp_id]:
+                    rupture_to_element(rupture, sg)
             nrml.write(list(root), fh)
 
 
