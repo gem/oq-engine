@@ -28,7 +28,7 @@ import collections
 import numpy
 
 from openquake.hazardlib import __version__ as hazardlib_version
-from openquake.hazardlib.geo import geodetic
+from openquake.hazardlib import geo
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -341,7 +341,7 @@ class HazardCalculator(BaseCalculator):
         for some sites.
         """
         maximum_distance = self.oqparam.asset_hazard_distance
-        siteobjects = geodetic.GeographicObjects(
+        siteobjects = geo.utils.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
             zip(sitecol.sids, sitecol.lons, sitecol.lats))
         assets_by_sid = general.AccumDict()
