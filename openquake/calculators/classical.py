@@ -407,7 +407,7 @@ class ClassicalCalculator(PSHACalculator):
 
     def gen_args(self, pgetter):
         """
-        :param lazy: if True read the probability maps on the workers
+        :param pgetter: PmapGetter instance
         :yields: arguments for the function build_hcurves_and_stats
         """
         monitor = self.monitor('build_hcurves_and_stats')
@@ -445,7 +445,8 @@ class ClassicalCalculator(PSHACalculator):
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
-                pgetter = calc.PmapGetter(self.datastore.parent, lazy=True)
+                pgetter = calc.PmapGetter(
+                    self.datastore.parent, read_direct=True)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:
