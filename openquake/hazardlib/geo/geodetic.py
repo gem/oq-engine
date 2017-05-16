@@ -25,6 +25,10 @@ from __future__ import division
 import operator
 
 import numpy
+try:
+    import rtree
+except ImportError:
+    rtree = None
 
 from openquake.baselib.python3compat import range, round
 
@@ -33,41 +37,6 @@ EARTH_RADIUS = 6371.0
 
 #: Maximum elevation on Earth in km.
 EARTH_ELEVATION = -8.848
-
-
-class GeographicObjects(object):
-    """
-    Store a collection of geographic objects, i.e. objects with longitudes
-    and latitudes. By default extracts the coordinates from the attributes
-    .lon and .lat, but you can provide your own getters. It is possible
-    to extract the closest object to a given location by calling the
-    method .get_closest(lon, lat).
-    """
-    def __init__(self, objects, getlon=operator.attrgetter('lon'),
-                 getlat=operator.attrgetter('lat')):
-        self.objects = list(objects)
-        lons, lats = [], []
-        for obj in self.objects:
-            lons.append(getlon(obj))
-            lats.append(getlat(obj))
-        self.lons, self.lats = numpy.array(lons), numpy.array(lats)
-
-    def get_closest(self, lon, lat, max_distance=None):
-        """
-        Get the closest object to the given longitude and latitude
-        and its distance. If the `max_distance` is given and all objects
-        are farther than the maximum distance, returns (None, None).
-
-        :param lon: longitude in degrees
-        :param lat: latitude in degrees
-        :param max_distance: distance in km (or None)
-        """
-        zeros = numpy.zeros_like(self.lons)
-        index, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
-        if max_distance is not None:
-            if min_dist > max_distance:
-                return None, None
-        return self.objects[index], min_dist
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
