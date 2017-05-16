@@ -319,6 +319,7 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
 
     @attr('qa', 'hazard', 'classical')
     def test_case_22(self):  # crossing date line calculation for Alaska
+        # this also tests the splitting of the source model in two files
         self.assert_curves_ok(['hazard_curve-mean.csv'], case_22.__file__)
 
     @attr('qa', 'hazard', 'classical')
