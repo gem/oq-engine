@@ -62,11 +62,11 @@ class PmapGetter(object):
     specific realization.
 
     :param dstore: a DataStore instance
-    :param direct_read: if True, read directly from the datastore
+    :param fromworker: if True, read directly from the datastore
     """
-    def __init__(self, dstore, direct_read=False):
+    def __init__(self, dstore, fromworker=False):
         self.dstore = dstore
-        self.direct_read = direct_read
+        self.fromworker = fromworker
         self.assoc_by_grp = dstore['csm_info/assoc_by_grp'].value
         self.weights = self.dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
@@ -75,12 +75,12 @@ class PmapGetter(object):
         self.nbytes = 0
 
     def __enter__(self):
-        if self.direct_read:
+        if self.fromworker:
             self.dstore.__enter__()
         return self
 
     def __exit__(self, *args):
-        if self.direct_read:
+        if self.fromworker:
             self.dstore.__exit__(*args)
 
     def new(self, sids):
@@ -91,7 +91,7 @@ class PmapGetter(object):
         newgetter = object.__new__(self.__class__, self.dstore)
         vars(newgetter).update(vars(self))
         newgetter.sids = sids
-        if not self.direct_read:  # populate the cache
+        if not self.fromworker:  # populate the cache
             newgetter.get_pmap_by_grp(sids)
         return newgetter
 
