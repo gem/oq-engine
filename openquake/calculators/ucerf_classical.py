@@ -205,11 +205,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             for pmap in bg_res:
                 acc[grp_id] |= pmap
 
-            with self.monitor('store source_info', autoflush=True):
-                self.store_source_info(self.csm.infos)
-        self.datastore['csm_info'] = self.csm.info
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            functools.partial(self.count_eff_ruptures, acc))
+        with self.monitor('store source_info', autoflush=True):
+            self.store_source_info(self.csm.infos, acc)
         return acc  # {grp_id: pmap}
 
 
