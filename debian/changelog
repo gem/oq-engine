@@ -75,6 +75,8 @@
 
   [Daniele Viganò]
   * The 'oq webui' command now works on a multi-user installation
+  * Splitted RPM packages into python-oq-engine (single node)and
+    python-oq-engine-master/python-oq-engine-worker (multi-node)
 
   [Paolo Tormene]
   * The 'Continue' button in the Web UI is now available also for risk
