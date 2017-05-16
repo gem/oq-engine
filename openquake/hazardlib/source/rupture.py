@@ -450,7 +450,7 @@ class ParametricProbabilisticRupture(BaseRupture):
 
             cdpp_sites_lats = mesh.lats[(mesh_rup <= target_rup[iloc] + space)
                                         & (mesh_rup >= target_rup[iloc]
-                                           - space)]
+                                        - space)]
             cdpp_sites_lons = mesh.lons[(mesh_rup <= target_rup[iloc] + space)
                                         & (mesh_rup >= target_rup[iloc]
                                         - space)]
@@ -494,7 +494,7 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     will contain one or more sets of 4 points, similar to how
     planar surface geometry is stored (see above).
 
-    :param rupture: an instance of :class:`BaseProbabilisticRupture`
+    :param surface: a Surface instance
     :param is_from_fault_source: a boolean
     :param is_multi_surface: a boolean
     """
