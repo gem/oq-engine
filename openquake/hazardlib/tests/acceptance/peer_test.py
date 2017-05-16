@@ -27,7 +27,7 @@ import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.source import AreaSource, SimpleFaultSource, \
-    NonParametricSeismicSource, Rupture
+    NonParametricSeismicSource, BaseRupture
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo import NodalPlane, RectangularMesh, \
     SimpleFaultSurface, Point
@@ -233,9 +233,9 @@ class Set1TestCase(unittest.TestCase):
                     data['hypo_lats'][i, j],
                     data['hypo_depths'][i, j]
                 )
-                rup = Rupture(data['mag'], data['rake'],
-                              data['tectonic_region_type'], hypo, surf,
-                              data['source_typology'])
+                rup = BaseRupture(data['mag'], data['rake'],
+                                  data['tectonic_region_type'], hypo, surf,
+                                  data['source_typology'])
                 ruptures.append((rup, data['pmf']))
         npss = NonParametricSeismicSource(
             'id', 'name', data['tectonic_region_type'], ruptures

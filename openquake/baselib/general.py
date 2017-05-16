@@ -823,3 +823,19 @@ def deprecated(message):
         func.called += 1
         return func(*args, **kw)
     return decorator(_deprecated)
+
+
+def safeprint(*args, **kwargs):
+    """
+    Convert and print characters using the proper encoding
+    """
+    new_args = []
+    # when stdout is redirected to a file, python 2 uses ascii for the writer;
+    # python 3 uses what is configured in the system (i.e. 'utf-8')
+    # if sys.stdout is replaced by a StringIO instance, Python 2 does not
+    # have an attribute 'encoding', and we assume ascii in that case
+    str_encoding = getattr(sys.stdout, 'encoding', None) or 'ascii'
+    for s in args:
+        new_args.append(s.encode('utf-8').decode(str_encoding, 'ignore'))
+
+    return print(*new_args, **kwargs)

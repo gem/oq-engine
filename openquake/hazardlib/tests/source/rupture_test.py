@@ -24,7 +24,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.source.rupture import Rupture, \
+from openquake.hazardlib.source.rupture import BaseRupture, \
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
@@ -45,7 +45,10 @@ def make_rupture(rupture_class, **kwargs):
     kwargs = default_arguments
     rupture = rupture_class(**kwargs)
     for key in kwargs:
-        assert getattr(rupture, key) is kwargs[key]
+        if key != 'pmf':
+            # for pmf .pmf is a numpy array whereas pmf is a PMF instance
+            assert getattr(rupture, key) is kwargs[key], (
+                getattr(rupture, key), kwargs[key])
     return rupture
 
 
@@ -57,14 +60,14 @@ class RuptureCreationTestCase(unittest.TestCase):
 
     def test_negative_magnitude(self):
         self.assert_failed_creation(
-            Rupture, ValueError,
+            BaseRupture, ValueError,
             'magnitude must be positive',
             mag=-1
         )
 
     def test_zero_magnitude(self):
         self.assert_failed_creation(
-            Rupture, ValueError,
+            BaseRupture, ValueError,
             'magnitude must be positive',
             mag=0
         )
@@ -84,7 +87,7 @@ class RuptureCreationTestCase(unittest.TestCase):
         )
 
     def test_rupture_topo(self):
-        rupture = make_rupture(Rupture, hypocenter=Point(5, 6, -2))
+        rupture = make_rupture(BaseRupture, hypocenter=Point(5, 6, -2))
         self.assertEqual(rupture.hypocenter.depth, -2)
 
 

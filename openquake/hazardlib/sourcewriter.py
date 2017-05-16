@@ -21,9 +21,10 @@ Source model XML Writer
 """
 
 import os
-from openquake.baselib.general import CallableDict
+import operator
+from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, sourceconverter
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -550,22 +551,31 @@ def build_source_group(source_group):
         attrs['rup_interdep'] = source_group.rup_interdep
     if source_group.srcs_weights:
         attrs['srcs_weights'] = ' '.join(map(str, source_group.srcs_weights))
+    if source_group.grp_probability is not None:
+        attrs['grp_probability'] = source_group.grp_probability
     return Node('sourceGroup', attrs, nodes=source_nodes)
 
 
 # ##################### generic source model writer ####################### #
 
-def write_source_model(dest, groups, name=None):
+def write_source_model(dest, sources_or_groups, name=None):
     """
     Writes a source model to XML.
 
     :param str dest:
         Destination path
-    :param list groups:
-        Source model as list of SourceGroups
+    :param list sources_or_groups:
+        Source model as list of sources or a list of SourceGroups
     :param str name:
         Name of the source model (if missing, extracted from the filename)
     """
+    if isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
+        groups = sources_or_groups
+    else:  # passed a list of sources
+        srcs_by_trt = groupby(
+            sources_or_groups, operator.attrgetter('tectonic_region_type'))
+        groups = [sourceconverter.SourceGroup(trt, srcs_by_trt[trt])
+                  for trt in srcs_by_trt]
     name = name or os.path.splitext(os.path.basename(dest))[0]
     nodes = list(map(obj_to_node, sorted(groups)))
     source_model = Node("sourceModel", {"name": name}, nodes=nodes)

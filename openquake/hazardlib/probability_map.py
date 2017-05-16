@@ -16,11 +16,17 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib.stats import compute_stats
+from openquake.hazardlib import stats as s
 import numpy
 
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+
+
+class AllEmptyProbabilityMaps(ValueError):
+    """
+    Raised by get_shape(pmaps) if all passed probability maps are empty
+    """
 
 
 class ProbabilityCurve(object):
@@ -176,26 +182,59 @@ class ProbabilityMap(dict):
     @property
     def nbytes(self):
         """The size of the underlying array"""
-        N, L, I = get_shape([self])
+        try:
+            N, L, I = get_shape([self])
+        except AllEmptyProbabilityMaps:
+            return 0
         return BYTES_PER_FLOAT * N * L * I
 
     # used when exporting to HDF5
-    def convert(self, imtls, nsites=None, idx=0):
+    def convert(self, imtls, nsites, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
         and dtype `imtls.dt`.
 
-        :param imtls: DictArray instance
-        :param nsites: the total number of sites (or None)
-        :param idx: extract the data corresponding to the given inner index
+        :param imtls:
+            DictArray instance
+        :param nsites:
+            the total number of sites
+        :param idx:
+            index on the z-axis (default 0)
         """
-        if nsites is None:
-            nsites = len(self)
         curves = numpy.zeros(nsites, imtls.dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
-                curves_by_imt[sid] = self[sid].array[imtls.slicedic[imt], idx]
+                curves_by_imt[sid] = self[sid].array[
+                    imtls.slicedic[imt], idx]
+        return curves
+
+    def convert2(self, imtls, sids):
+        """
+        Convert a probability map into a composite array of shape (N, Z)
+        and dtype `imtls.dt`.
+
+        :param imtls:
+            DictArray instance
+        :param sids:
+            the IDs of the sites we are interested in
+        :returns:
+            an array of curves of shape (N, Z)
+        """
+        if sids is None:
+            sids = numpy.array(sorted(self), numpy.float32)
+        curves = numpy.zeros((len(sids), self.shape_z), imtls.dt)
+        for imt in curves.dtype.names:
+            curves_by_imt = curves[imt]
+            for idx in range(self.shape_z):
+                for i, sid in numpy.ndenumerate(sids):
+                    try:
+                        pcurve = self[sid]
+                    except KeyError:
+                        pass  # the poes will be zeros
+                    else:
+                        curves_by_imt[i, idx] = pcurve.array[
+                            imtls.slicedic[imt], idx]
         return curves
 
     def filter(self, sids):
@@ -240,10 +279,18 @@ class ProbabilityMap(dict):
     __ror__ = __or__
 
     def __mul__(self, other):
-        sids = set(self) | set(other)
+        try:
+            other.get
+            is_pmap = True
+            sids = set(self) | set(other)
+        except AttributeError:  # no .get method, assume a float
+            is_pmap = False
+            assert 0. <= other <= 1., other  # must be a probability
+            sids = set(self)
         new = self.__class__(self.shape_y, self.shape_z)
         for sid in sids:
-            new[sid] = self.get(sid, 1) * other.get(sid, 1)
+            prob = other.get(sid, 1) if is_pmap else other
+            new[sid] = self.get(sid, 1) * prob
         return new
 
     def __invert__(self):
@@ -281,73 +328,5 @@ def get_shape(pmaps):
             sid = next(iter(pmap))
             break
     else:
-        raise ValueError('All probability maps where empty!')
+        raise AllEmptyProbabilityMaps(pmaps)
     return (len(pmap),) + pmap[sid].array.shape
-
-
-class PmapStats(object):
-    """
-    A class to perform statistics on ProbabilityMaps.
-
-    :param weights: a list of weights
-    :param quantiles: a list of floats in the range 0..1
-
-    Here is an example:
-
-    >>> pm1 = ProbabilityMap.build(3, 1, sids=[0, 1],
-    ...                            initvalue=1.0)
-    >>> pm2 = ProbabilityMap.build(3, 1, sids=[0],
-    ...                            initvalue=0.8)
-    >>> PmapStats(quantiles=[]).compute(sids=[0, 1], pmaps=[pm1, pm2])
-    [('mean', {0: <ProbabilityCurve
-    [[ 0.9]
-     [ 0.9]
-     [ 0.9]]>, 1: <ProbabilityCurve
-    [[ 0.5]
-     [ 0.5]
-     [ 0.5]]>})]
-    """
-    def __init__(self, quantiles, weights=None):
-        self.quantiles = quantiles
-        self.weights = weights
-
-    # the tests are in the engine
-    def compute_pmap(self, sids, pmaps):
-        """
-        :params sids: array of N site IDs
-        :param pmaps: array of R simple ProbabilityMaps
-        :returns: a ProbabilityMap with arrays of size (num_levels, num_stats)
-        """
-        if len(pmaps) == 0:
-            raise ValueError('No probability maps!')
-        elif len(pmaps) == 1:  # the mean is the only pmap
-            assert not self.quantiles, self.quantiles
-            return pmaps[0]
-        elif sum(len(pmap) for pmap in pmaps) == 0:  # all empty pmaps
-            raise ValueError('All empty probability maps!')
-        N, L, I = get_shape(pmaps)
-        nstats = len(self.quantiles) + 1
-        stats = ProbabilityMap.build(L, nstats, sids)
-        curves_by_rlz = numpy.zeros((len(pmaps), len(sids), L), numpy.float64)
-        for i, pmap in enumerate(pmaps):
-            for j, sid in enumerate(sids):
-                if sid in pmap:
-                    curves_by_rlz[i][j] = pmap[sid].array[:, 0]
-        mq = compute_stats(curves_by_rlz, self.quantiles, self.weights)
-        for i, array in enumerate(mq):
-            for j, sid in numpy.ndenumerate(sids):
-                stats[sid].array[:, i] = array[j]
-        return stats
-
-    def compute(self, sids, pmaps):
-        """
-        :params sids:
-            array of N site IDs
-        :param pmaps:
-            array of R simple ProbabilityMaps
-        :returns:
-            a list of pairs [('mean', ...), ('quantile-XXX', ...), ...]
-        """
-        stats = self.compute_pmap(sids, pmaps)
-        names = ['mean'] + ['quantile-%s' % q for q in self.quantiles]
-        return [(name, stats.extract(i)) for i, name in enumerate(names)]

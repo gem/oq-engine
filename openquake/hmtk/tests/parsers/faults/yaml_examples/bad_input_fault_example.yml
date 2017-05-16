@@ -1,0 +1,25 @@
+#*****************************************************************************
+#FAULT FILE IN YAML (Yet Another Markup Language) FORMAT
+#*****************************************************************************
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+tectonic_regionalisation: 
+    - Name: Active Shallow Crust
+      Code: 001
+      # Magnitude scaling relation (see http://docs.openquake.org/oq-hazardlib) 
+      #for currently available choices!
+      Magnitude_Scaling_Relation: {
+          Value: [WC1994], 
+          Weight: [1.0]}
+      # Shear Modulus (in gigapascals, GPa)
+      Shear_Modulus: {
+          Value: [30.0], 
+          Weight: [1.0]}
+      # Fault displacement to length ratio
+      Displacement_Length_Ratio: {
+          Value: [1.25E-5],
+          Weight: [1.0]}
+          
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+Fault_Model_ID: 001
+Fault_Model_Name: Template Simple Fault

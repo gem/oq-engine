@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-hazardlib"
-GEM_DEPENDS="oq-libs|deb"
+GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -306,6 +306,8 @@ _devtest_innervm_run () {
 
             add_local_pkg_repo "$dep"
             ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+        elif [ "$dep_type" = "sub" ]; then
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -325,7 +327,7 @@ _devtest_innervm_run () {
             # skip slow tests
             skip_tests="!slow,"
         fi
-        ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; export PYTHONPATH=/opt/openquake/lib/python2.7/site-packages ; /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
+        ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; export PYTHONPATH=/opt/openquake/lib/python2.7/site-packages; export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
         scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
@@ -366,6 +368,10 @@ _pkgtest_innervm_run () {
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        # if the deb is a subpackage we skip source check
+        if [ "$dep_type" == "sub" ]; then
+            continue
+        fi
 
         add_local_pkg_repo "$dep"
     done
@@ -431,6 +437,8 @@ _builddoc_innervm_run () {
             # cd _jenkins_deps/$dep
 
             add_local_pkg_repo "$dep"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+        elif [ "$dep_type" = "sub" ]; then
             ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
@@ -615,6 +623,10 @@ devtest_run () {
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        # if the deb is a subpackage we skip source check
+        if [ "$dep_type" == "sub" ]; then
+            continue
+        fi
         found=0
         branch_cur="$branch"
         for repo in $repos; do
@@ -954,7 +966,11 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     cp debian/control debian/control.orig
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
+        if [ "$dep" = "oq-libs" ]; then
+            sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
+        else
+            sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
+        fi
     done
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
