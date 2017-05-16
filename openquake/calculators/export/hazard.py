@@ -471,18 +471,19 @@ def get_metadata(realizations, kind):
 @export.add(('uhs', 'xml'))
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     pgetter = calc.PmapGetter(dstore)
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, fmt = ekey
     fnames = []
     periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
     for kind, hcurves in pgetter.items():
-        metadata = get_metadata(pgetter.rlzs, kind)
+        metadata = get_metadata(rlzs_assoc.realizations, kind)
         _, periods = calc.get_imts_periods(oq.imtls)
         uhs = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(sitemesh))
         for poe in oq.poes:
             fname = hazard_curve_name(
-                dstore, ekey, kind + '-%s' % poe, pgetter.rlzs_assoc)
+                dstore, ekey, kind + '-%s' % poe, rlzs_assoc)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
