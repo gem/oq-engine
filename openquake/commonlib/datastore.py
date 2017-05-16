@@ -398,11 +398,15 @@ class DataStore(collections.MutableMapping):
         del self.hdf5[key]
 
     def __enter__(self):
-        self.open()
+        self.was_close = self.hdf5 is None
+        if self.was_close:
+            self.open()
         return self
 
     def __exit__(self, etype, exc, tb):
-        self.close()
+        if self.was_close:  # and has been opened in __enter__, close it
+            self.close()
+        del self.was_close
 
     def __getstate__(self):
         # make the datastore pickleable
