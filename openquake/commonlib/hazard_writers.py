@@ -533,6 +533,9 @@ class SESXMLWriter(object):
             * bottom right
 
             Each of these should be a triple of `lon`, `lat`, `depth`.
+
+        :param investigation_time:
+            Investigation time parameter specified in the job.ini
         """
         with open(self.dest, 'wb') as fh:
             root = et.Element('nrml')
