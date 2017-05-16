@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the `ruptures.xml` exporter to export unique ruptures
   * Fixed a bug when downloading the outputs from the WebUI on Windows
   * Made `oq info --report` fast again by removing the rupture fine filtering
   * Improved the readibility of the CSV export `dmg_total`
