@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Make it possible to specify multiple file names in <uncertaintyValue/>
+    in the source_model_logic_tree file
   * Fixed a bug when downloading the outputs from the WebUI on Windows
   * Made `oq info --report` fast again by removing the rupture fine filtering
   * Improved the readibility of the CSV export `dmg_total`
