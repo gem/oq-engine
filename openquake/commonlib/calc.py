@@ -104,9 +104,10 @@ class PmapGetter(object):
                  for _ in self.weights]
         for rec in self.assoc_by_grp:
             grp = 'grp-%02d' % rec['grp_id']
-            pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
-            for rlzi in rec['rlzis']:
-                pmaps[rlzi] |= pmap
+            if grp in pmap_by_grp:
+                pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
+                for rlzi in rec['rlzis']:
+                    pmaps[rlzi] |= pmap
         return pmaps
 
     def get(self, sids, rlzi):
@@ -119,10 +120,11 @@ class PmapGetter(object):
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
         for rec in self.assoc_by_grp:
             grp = 'grp-%02d' % rec['grp_id']
-            for r in rec['rlzis']:
-                if r == rlzi:
-                    pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
-                    break
+            if grp in pmap_by_grp:
+                for r in rec['rlzis']:
+                    if r == rlzi:
+                        pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
+                        break
         return pmap
 
     def get_pmaps(self, sids):  # used in classical
