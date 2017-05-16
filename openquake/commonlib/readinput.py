@@ -230,7 +230,7 @@ def get_site_model(oqparam):
         yield valid.site_param(**node.attrib)
 
 
-def get_site_collection(oqparam, mesh=None, site_model_params=None):
+def get_site_collection(oqparam, mesh=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
@@ -240,9 +240,6 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
     :param mesh:
         a mesh of hazardlib points; if None the mesh is
         determined by invoking get_mesh
-    :param site_model_params:
-        object with a method .get_closest returning the closest site
-        model parameters
     """
     if mesh is None:
         mesh = get_mesh(oqparam)
@@ -257,10 +254,9 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
                     pt, param.vs30, param.measured,
                     param.z1pt0, param.z2pt5, param.backarc))
             return site.SiteCollection(sitecol)
-        if site_model_params is None:
-            # read the parameters directly from their file
-            site_model_params = geo.geodetic.GeographicObjects(
-                get_site_model(oqparam))
+        # read the parameters directly from their file
+        site_model_params = geo.utils.GeographicObjects(
+            get_site_model(oqparam))
         for pt in mesh:
             # attach the closest site model params to each site
             param, dist = site_model_params.get_closest(
