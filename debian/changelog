@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made it possible to specify multiple file names in <uncertaintyValue/>
+    in the source_model_logic_tree file
   * Reduced the data transfer in the object `RlzsAssoc` and improved the
     postprocessing of hazard curves when the option `--hc` is given
   * Changed the `ruptures.xml` exporter to export unique ruptures
