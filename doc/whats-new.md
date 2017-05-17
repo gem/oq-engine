@@ -4,8 +4,8 @@ Release notes for the OpenQuake Engine, version 2.4
 This release introduces several changes and improvements in the
 engine calculators.
 
-More than XX pull requests were closed in oq-hazardlib and more than
-XX pull requests were closed in oq-engine. For the complete list of
+More than 40 pull requests were closed in oq-hazardlib and more than
+200 pull requests were closed in oq-engine. For the complete list of
 changes, please see the changelogs:
 https://github.com/gem/oq-hazardlib/blob/engine-2.4/debian/changelog
 and https://github.com/gem/oq-engine/blob/engine-2.4/debian/changelog.
@@ -45,11 +45,36 @@ Event based from the GMFs.
 Loss maps npz exporter 
 
 
+It is now possible to split a source model in several files and read
+them as if they were a single file. Just specify the file names in the
+source_model_logic_tree file. For instance, you could split by tectonic
+region and have something like this:
+
+```
+ <logicTreeBranch branchID="b1">
+   <uncertaintyModel>
+     active_shallow_sources.xml
+     stable_shallow_sources.xml
+   </uncertaintyModel>
+   <uncertaintyWeight>
+     1.0
+   </uncertaintyWeight>
+ </logicTreeBranch>
+```
+
+
+
+
 New features in hazardlib
 --------------------------
 
 The calculator `calc_hazard_curves` now properly supports mutually exclusive
 sources.
+
+We extended the Rtree filtering to site parameters.
+Also filtered only at sea level.
+
+The sourcewriter.
 
 Performance improvements
 ------------------------
