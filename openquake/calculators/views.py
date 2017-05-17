@@ -581,9 +581,9 @@ def view_required_params_per_trt(token, dstore):
     tbl = []
     for grp_id, gsims in gsims_per_grp_id:
         maker = ContextMaker(gsims)
-        distances = maker.REQUIRES_DISTANCES
-        siteparams = maker.REQUIRES_SITES_PARAMETERS
-        ruptparams = maker.REQUIRES_RUPTURE_PARAMETERS
+        distances = sorted(maker.REQUIRES_DISTANCES)
+        siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
+        ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
         tbl.append((grp_id, gsims, distances, siteparams, ruptparams))
     return rst_table(
         tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
