@@ -1,11 +1,11 @@
 Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 =====================================================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_7623.hdf5 Wed Apr 26 15:55:53 2017
-engine_version                                  2.4.0-git9336bd0        
-hazardlib_version                               0.24.0-gita895d4c       
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21348.hdf5 Fri May 12 10:46:08 2017
+engine_version                                   2.4.0-git59713b5        
+hazardlib_version                                0.24.0-git0596dd3       
+================================================ ========================
 
 num_sites = 2, sitecol = 863 B
 
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== =================== ========= ========== ==========
 grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       rake mag  
+0      BooreAtkinson2008() rjb       vs30       mag rake  
 ====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -74,7 +74,7 @@ Informational data
 ------------------
 ============================ =========================================================================
 compute_ruptures.received    tot 887.93 KB, max_per_task 887.93 KB                                    
-compute_ruptures.sent        sources 1.29 KB, monitor 786 B, src_filter 712 B, gsims 102 B, param 69 B
+compute_ruptures.sent        sources 1.27 KB, monitor 787 B, src_filter 712 B, gsims 102 B, param 69 B
 hazard.input_weight          0.100                                                                    
 hazard.n_imts                1 B                                                                      
 hazard.n_levels              1 B                                                                      
@@ -91,7 +91,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  1            0.0       2         0        
+0      1         PointSource  1            0.0       0         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -106,7 +106,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.043 NaN    0.043 0.043 1        
+compute_ruptures   0.044 NaN    0.044 0.044 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -114,13 +114,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-setting event years              0.531     0.098     1     
-saving ruptures                  0.169     0.0       1     
-total compute_ruptures           0.043     1.602     1     
+setting event years              0.187     3.285     1     
+saving ruptures                  0.127     0.0       1     
+total compute_ruptures           0.044     0.898     1     
 reading composite source model   0.002     0.0       1     
-filtering composite source model 9.248E-04 0.0       1     
-store source_info                5.763E-04 0.0       1     
-filtering ruptures               5.746E-04 0.0       1     
-managing sources                 1.187E-04 0.0       1     
-reading site collection          4.578E-05 0.0       1     
+managing sources                 0.001     0.0       1     
+filtering ruptures               6.299E-04 0.0       1     
+store source_info                5.717E-04 0.0       1     
+filtering composite source model 5.841E-05 0.0       1     
+reading site collection          4.506E-05 0.0       1     
 ================================ ========= ========= ======

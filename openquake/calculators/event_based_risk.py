@@ -498,10 +498,6 @@ class EbriskCalculator(base.RiskCalculator):
             num_rlzs += ires.num_rlzs
             for sg in source_models[i].src_groups:
                 sg.eff_ruptures = ires.num_ruptures.get(sg.id, 0)
-        self.datastore['csm_info'] = self.csm.info
-        self.datastore.flush()  # when killing the computation
-        # the csm_info arrays were stored but not the attributes;
-        # adding the .flush() solved the issue
         num_events = self.save_results(allres, num_rlzs)
         return num_events  # {sm_id: #events}
 
@@ -604,8 +600,6 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Save risk data and possibly execute the EbrPostCalculator
         """
-        event_based.EventBasedRuptureCalculator.__dict__['post_execute'](
-            self, num_events)
         # gmv[:-2] are the total gmv per each IMT
         gmv = sum(gm[:-2].sum() for gm in self.gmdata.values())
         if not gmv:

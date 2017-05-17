@@ -4,8 +4,8 @@ Release notes for the OpenQuake Engine, version 2.4
 This release introduces several changes and improvements in the
 engine calculators.
 
-More than XX pull requests were closed in oq-hazardlib and more than
-XX pull requests were closed in oq-engine. For the complete list of
+More than 40 pull requests were closed in oq-hazardlib and more than
+200 pull requests were closed in oq-engine. For the complete list of
 changes, please see the changelogs:
 https://github.com/gem/oq-hazardlib/blob/engine-2.4/debian/changelog
 and https://github.com/gem/oq-engine/blob/engine-2.4/debian/changelog.
@@ -47,6 +47,7 @@ them as if they were a single file. Just specify the file names in the
 source_model_logic_tree file. For instance, you could split by
 tectonic region and have something like this:
 
+```
  <logicTreeBranch branchID="b1">
    <uncertaintyModel>
      active_shallow_sources.xml
@@ -56,10 +57,20 @@ tectonic region and have something like this:
      1.0
    </uncertaintyWeight>
  </logicTreeBranch>
+```
+
+
+
+
  
 The parallelization library has been improved; now the `task_info` and
 `job_info` datasets are automatically stored at the end of a parallel
 calculation.
+
+We extended the Rtree filtering to site parameters.
+Also filtered only at sea level.
+
+The sourcewriter.
 
 There is a new configuration parameter `max_hazard_curves` in the
 `job.ini` file, with by default is False. This parameter controls
