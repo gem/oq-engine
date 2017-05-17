@@ -706,8 +706,8 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         continue
                     indices = r_sites.indices
                     events = []
-                    for occ in range(n_occ):
-                        events.append((0, ses_idx, occ, sample))
+                    for _ in range(n_occ):
+                        events.append((0, ses_idx, sample))
                     if events:
                         evs = numpy.array(events, calc.event_dt)
                         ebruptures.append(

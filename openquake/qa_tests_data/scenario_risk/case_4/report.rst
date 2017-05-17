@@ -1,11 +1,11 @@
 Scenario Risk for Nepal with 20 assets
 ======================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_7639.hdf5 Wed Apr 26 15:56:32 2017
-engine_version                                  2.4.0-git9336bd0        
-hazardlib_version                               0.24.0-gita895d4c       
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21364.hdf5 Fri May 12 10:46:43 2017
+engine_version                                   2.4.0-git59713b5        
+hazardlib_version                                0.24.0-git0596dd3       
+================================================ ========================
 
 num_sites = 20, sitecol = 1.79 KB
 
@@ -74,15 +74,14 @@ Wood                       1.000 0.0    1   1   8         8
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-computing gmfs           0.006     0.0       1     
-reading exposure         0.005     0.0       1     
-building site collection 0.004     0.0       1     
-filtering sites          0.003     0.0       1     
-saving gmfs              0.001     0.0       1     
-building epsilons        7.474E-04 0.0       1     
-building riskinputs      7.000E-04 0.0       1     
-reading site collection  6.437E-06 0.0       1     
-======================== ========= ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+reading exposure        0.008     0.0       1     
+computing gmfs          0.006     0.0       1     
+filtering sites         0.004     0.0       1     
+saving gmfs             0.001     0.0       1     
+building riskinputs     9.825E-04 0.0       1     
+building epsilons       6.399E-04 0.0       1     
+reading site collection 5.484E-06 0.0       1     
+======================= ========= ========= ======
