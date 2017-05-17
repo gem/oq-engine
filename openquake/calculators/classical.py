@@ -297,10 +297,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.core_task.__func__, iterargs).submit_all()
         acc = ires.reduce(self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, acc))
-        self.datastore['csm_info'] = self.csm.info
+            self.store_source_info(self.csm.infos, acc)
         return acc
 
     def gen_args(self, csm, monitor):
@@ -333,7 +330,7 @@ class PSHACalculator(base.HazardCalculator):
                             sg.sources, self.src_filter, maxweight):
                         yield block, self.src_filter, gsims, param, monitor
 
-    def store_source_info(self, infos):
+    def store_source_info(self, infos, acc):
         # save the calculation times per each source
         if infos:
             rows = sorted(
@@ -346,6 +343,14 @@ class PSHACalculator(base.HazardCalculator):
                     array[i][name] = getattr(row, name)
             self.source_info = array
             infos.clear()
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+            partial(self.count_eff_ruptures, acc))
+        self.datastore['csm_info'] = self.csm.info
+        self.datastore['csm_info/assoc_by_grp'] = array = (
+            self.rlzs_assoc.get_assoc_by_grp())
+        # computing properly the length in bytes of a variable length array
+        nbytes = array.nbytes + sum(rec['rlzis'].nbytes for rec in array)
+        self.datastore.set_attrs('csm_info/assoc_by_grp', nbytes=nbytes)
         self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
@@ -379,14 +384,15 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('combine pmaps'):
+    with monitor('combine pmaps'), pgetter:
         pmaps = pgetter.get_pmaps(pgetter.sids)
+    if sum(len(pmap) for pmap in pmaps) == 0:  # no data
+        return {}
     pmap_by_kind = {}
-    if len(pgetter.rlzs) > 1 and hstats:
-        weights = [rlz.weight for rlz in pgetter.rlzs]
+    if len(pgetter.weights) > 1 and hstats:
         for kind, stat in hstats:
             with monitor('compute ' + kind):
-                pmap = compute_pmap_stats(pmaps, [stat], weights)
+                pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
             pmap_by_kind[kind] = pmap
     return pmap_by_kind
 
@@ -399,9 +405,20 @@ class ClassicalCalculator(PSHACalculator):
     pre_calculator = 'psha'
     core_task = build_hcurves_and_stats
 
+    def gen_args(self, pgetter):
+        """
+        :param pgetter: PmapGetter instance
+        :yields: arguments for the function build_hcurves_and_stats
+        """
+        monitor = self.monitor('build_hcurves_and_stats')
+        hstats = self.oqparam.hazard_stats()
+        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
+            newgetter = pgetter.new(tile.sids)
+            yield newgetter, hstats, monitor
+
     def execute(self):
         """
-        Builds hcurves and stats from the stored PoEs
+        Build statistical hazard curves from the stored PoEs
         """
         if 'poes' not in self.datastore:  # for short report
             return
@@ -425,24 +442,23 @@ class ClassicalCalculator(PSHACalculator):
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
 
-        with self.monitor('postprocessing', autoflush=True, measuremem=True):
-            nbytes = parallel.Starmap(
-                self.core_task.__func__, self.gen_args()
-            ).reduce(self.save_hcurves)
+        with self.monitor('sending pmaps', autoflush=True, measuremem=True):
+            if self.datastore.parent != ():
+                # workers read from the parent datastore
+                pgetter = calc.PmapGetter(
+                    self.datastore.parent, fromworker=True)
+                allargs = list(self.gen_args(pgetter))
+                self.datastore.parent.close()
+            else:
+                # workers read from the cache
+                pgetter = calc.PmapGetter(self.datastore)
+                allargs = self.gen_args(pgetter)
+            ires = parallel.Starmap(
+                self.core_task.__func__, allargs).submit_all()
+        if self.datastore.parent != ():
+            self.datastore.parent.open()  # if closed
+        nbytes = ires.reduce(self.save_hcurves)
         return nbytes
-
-    def gen_args(self):
-        """
-        :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
-        :yields: arguments for the function build_hcurves_and_stats
-        """
-        monitor = self.monitor('build_hcurves_and_stats')
-        hstats = self.oqparam.hazard_stats()
-        pgetter = calc.PmapGetter(self.datastore, self.rlzs_assoc)
-        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            newgetter = pgetter.new(tile.sids)  # read the probability maps
-            if newgetter.nbytes > 0:  # some probability map is nonzero
-                yield newgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
@@ -452,7 +468,7 @@ class ClassicalCalculator(PSHACalculator):
         :param acc: dictionary kind -> nbytes
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
-        with self.monitor('saving hcurves and stats', autoflush=True):
+        with self.monitor('saving statistical hcurves', autoflush=True):
             for kind in pmap_by_kind:
                 pmap = pmap_by_kind[kind]
                 if pmap:

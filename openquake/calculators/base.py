@@ -28,7 +28,7 @@ import collections
 import numpy
 
 from openquake.hazardlib import __version__ as hazardlib_version
-from openquake.hazardlib.geo import geodetic
+from openquake.hazardlib import geo
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -341,7 +341,7 @@ class HazardCalculator(BaseCalculator):
         for some sites.
         """
         maximum_distance = self.oqparam.asset_hazard_distance
-        siteobjects = geodetic.GeographicObjects(
+        siteobjects = geo.utils.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
             zip(sitecol.sids, sitecol.lons, sitecol.lats))
         assets_by_sid = general.AccumDict()
@@ -478,18 +478,16 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
-            arefs = numpy.array(self.exposure.asset_refs)
+            self.sitecol, self.assetcol = (
+                readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
             # NB: using hdf5.vstr would fail for large exposures;
             # the datastore could become corrupt, and also ultra-strange
             # may happen (i.e. having the sitecol saved inside asset_refs!!)
+            arefs = numpy.array(self.exposure.asset_refs)
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
-        logging.info('Building the site collection')
-        with self.monitor('building site collection', autoflush=True):
-            self.sitecol, self.assetcol = (
-                readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
             logging.info('Read %d assets on %d sites',
-                         len(arefs), len(self.sitecol))
+                         len(self.assetcol), len(self.sitecol))
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
