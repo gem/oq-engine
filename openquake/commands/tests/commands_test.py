@@ -37,7 +37,7 @@ from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands import run
-from openquake.commands.upgrade_nrml import get_vulnerability_functions_04
+from openquake.commands.upgrade_nrml import upgrade_nrml
 from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
@@ -261,7 +261,11 @@ class ReduceTestCase(unittest.TestCase):
 
 
 class UpgradeNRMLTestCase(unittest.TestCase):
-    vf = writetmp('''\
+    def test(self):
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'vf.xml')
+        with open(path, 'w') as f:
+            f.write('''\
 <?xml version="1.0"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
     <vulnerabilityModel>
@@ -274,10 +278,8 @@ class UpgradeNRMLTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
     </vulnerabilityModel>
 </nrml>''')
-
-    def test(self):
-        get_vulnerability_functions_04(self.vf)
-        # NB: look also at nrml.get_vulnerability_functions_04
+        upgrade_nrml(tmpdir, False)
+        shutil.rmtree(tmpdir)
 
 
 class SourceModelShapefileConverterTestCase(unittest.TestCase):
