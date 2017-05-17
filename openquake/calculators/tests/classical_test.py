@@ -162,10 +162,12 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-mean.csv', 'hazard_map-mean.csv'],
             case_13.__file__)
 
-        # test recomputing the hazard maps
+        # test recomputing the hazard maps, i.e. with --hc
+        # must be run sequentially to avoid the usual heisenbug
         self.run_calc(
             case_13.__file__, 'job.ini', exports='csv', poes='0.2',
-            hazard_calculation_id=str(self.calc.datastore.calc_id))
+            hazard_calculation_id=str(self.calc.datastore.calc_id),
+            concurrent_tasks='0')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
@@ -228,6 +230,21 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         # npz exports
         export(('hmaps', 'npz'), self.calc.datastore)
         export(('uhs', 'npz'), self.calc.datastore)
+
+        # check the size of assoc_by_grp for a complex logic tree
+        # grp_id gsim_idx rlzis
+        # 0	0	 {0, 1}
+        # 0	1	 {2, 3}
+        # 1	0	 {0, 2}
+        # 1	1	 {1, 3}
+        # 2	0	 {4}
+        # 2	1	 {5}
+        # 3	0	 {6}
+        # 3	1	 {7}
+        # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
+        nbytes = self.calc.datastore.get_attr(
+            'csm_info/assoc_by_grp', 'nbytes')
+        self.assertEqual(nbytes, 120)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
@@ -319,6 +336,7 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
 
     @attr('qa', 'hazard', 'classical')
     def test_case_22(self):  # crossing date line calculation for Alaska
+        # this also tests the splitting of the source model in two files
         self.assert_curves_ok(['hazard_curve-mean.csv'], case_22.__file__)
 
     @attr('qa', 'hazard', 'classical')
