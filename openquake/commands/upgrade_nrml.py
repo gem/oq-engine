@@ -28,6 +28,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib.nrml import NRML05
 from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific, read_nrml
 
 
@@ -93,7 +94,7 @@ def upgrade_file(path):
         # below I am converting into a NRML 0.5 vulnerabilityModel
         node0 = Node(
             'vulnerabilityModel', cat_dict,
-            nodes=list(map(read_nrml.obj_to_node, vf_dict.values())))
+            nodes=[obj_to_node(val) for val in vf_dict.values()])
         gml = False
     elif tag == 'fragilityModel':
         node0 = read_nrml.convert_fragility_model_04(
