@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import logging
 import numpy
-from openquake.baselib.python3compat import decode
 from openquake.commonlib import config
 
 F32 = numpy.float32
@@ -132,30 +130,6 @@ def get_assets(dstore):
     asset_data = [(asset_refs[a['idx']], '"%s"' % taxo[a['taxonomy_id']],
                    a['lon'], a['lat']) for a in assetcol.array]
     return numpy.array(asset_data, asset_dt)
-
-
-def get_ses_idx(etag):
-    """
-    >>> get_ses_idx("grp=00~ses=0007~rup=018-01")
-    7
-    """
-    return int(decode(etag).split('~')[1][4:])
-
-
-class Rupture(object):
-    """
-    Simplified Rupture class with attributes eid, indices, ses_idx,
-    used in export.
-
-    :param grp_id: source group ID
-    :param event: event record
-    :param indices: site indices
-    """
-    def __init__(self, grp_id, event, indices=None):
-        self.grp_id = grp_id
-        self.eid = event['eid']
-        self.indices = indices
-        self.ses_idx = event['ses']
 
 
 def shared_dir_on():

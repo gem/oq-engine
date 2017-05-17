@@ -65,36 +65,6 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-class SES(object):
-    """
-    Stochastic Event Set: A container for 1 or more ruptures associated with a
-    specific investigation time span.
-    """
-    # the ordinal must be > 0: the reason is that it appears in the
-    # exported XML file and the schema constraints the number to be
-    # nonzero
-    def __init__(self, ruptures, investigation_time, ordinal=1):
-        self.ruptures = sorted(ruptures, key=operator.attrgetter('eid'))
-        self.investigation_time = investigation_time
-        self.ordinal = ordinal
-
-    def __iter__(self):
-        return iter(self.ruptures)
-
-
-class SESCollection(object):
-    """
-    Stochastic Event Set Collection
-    """
-    def __init__(self, idx_ses_dict, investigation_time=None):
-        self.idx_ses_dict = idx_ses_dict
-        self.investigation_time = investigation_time
-
-    def __iter__(self):
-        for idx, sesruptures in sorted(self.idx_ses_dict.items()):
-            yield SES(sesruptures, self.investigation_time, idx)
-
-
 @export.add(('ruptures', 'xml'))
 def export_ruptures_xml(ekey, dstore):
     """
@@ -105,17 +75,15 @@ def export_ruptures_xml(ekey, dstore):
     oq = dstore['oqparam']
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
-    ruptures = []
+    ruptures = {}
     for grp in dstore['ruptures']:
         grp_id = int(grp[4:])  # strip grp-
+        ruptures[grp_id] = []
         for ebr in calc.get_ruptures(dstore, grp_id):
-            ruptures.extend(ebr.export(mesh, sm_by_grp))
-    ses_coll = SESCollection(
-        groupby(ruptures, operator.attrgetter('ses_idx')),
-        oq.investigation_time)
+            ruptures[grp_id].append(ebr.export(mesh, sm_by_grp))
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
-    writer.serialize(ses_coll)
+    writer.serialize(ruptures, oq.investigation_time)
     return [dest]
 
 
@@ -129,8 +97,8 @@ def export_ses_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('serial mag centroid_lon centroid_lat centroid_depth trt '
-              'strike dip rake eid multiplicity boundary').split()
+    header = ('rupid multiplicity mag centroid_lon centroid_lat centroid_depth'
+              ' trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
     gsims = csm_info.get_rlzs_assoc().gsims_by_grp_id
@@ -138,13 +106,12 @@ def export_ses_csv(ekey, dstore):
     for grp_id, trt in sorted(grp_trt.items()):
         rup_data = calc.RuptureData(trt, gsims[grp_id]).to_array(
             calc.get_ruptures(dstore, grp_id))
-        events = dstore['events/grp-%02d' % grp_id]
         for r in rup_data:
-            event = events[r['eidx']]
             rows.append(
-                (r['rupserial'], r['mag'], r['lon'], r['lat'], r['depth'],
-                 trt, r['strike'], r['dip'], r['rake'], event['eid'],
-                 r['multiplicity'], r['boundary']))
+                (r['rup_id'], r['multiplicity'], r['mag'],
+                 r['lon'], r['lat'], r['depth'],
+                 trt, r['strike'], r['dip'], r['rake'],
+                 r['boundary']))
     rows.sort()  # by rupture serial
     writers.write_csv(dest, rows, header=header, sep='\t')
     return [dest]
@@ -504,18 +471,19 @@ def get_metadata(realizations, kind):
 @export.add(('uhs', 'xml'))
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     pgetter = calc.PmapGetter(dstore)
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, fmt = ekey
     fnames = []
     periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
     for kind, hcurves in pgetter.items():
-        metadata = get_metadata(pgetter.rlzs, kind)
+        metadata = get_metadata(rlzs_assoc.realizations, kind)
         _, periods = calc.get_imts_periods(oq.imtls)
         uhs = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(sitemesh))
         for poe in oq.poes:
             fname = hazard_curve_name(
-                dstore, ekey, kind + '-%s' % poe, pgetter.rlzs_assoc)
+                dstore, ekey, kind + '-%s' % poe, rlzs_assoc)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
@@ -697,9 +665,8 @@ def export_gmf(ekey, dstore):
             ruptures = ruptures_by_rlz[rlz]
             gmf_arr = get_array(data, rlzi=rlzi)
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                rup = util.Rupture(grp_id, eventdict[eid],
-                                   sorted(set(gmfa['sid'])))
-                rup.gmfa = gmfa
+                ses_idx = eventdict[eid]['ses']
+                rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
                 ruptures.append(rup)
     for rlz in sorted(ruptures_by_rlz):
         ruptures_by_rlz[rlz].sort(key=operator.attrgetter('eid'))
@@ -709,6 +676,9 @@ def export_gmf(ekey, dstore):
             ('gmf', fmt), fname, sitecol, oq.imtls, ruptures_by_rlz[rlz],
             rlz, investigation_time)
     return fnames
+
+
+Rup = collections.namedtuple('Rup', ['eid', 'ses_idx', 'indices', 'gmfa'])
 
 
 def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
