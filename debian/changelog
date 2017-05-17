@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a broken import affecting the command `oq upgrade_nrml`
   * Made it possible to specify multiple file names in <uncertaintyValue/>
     in the source_model_logic_tree file
   * Reduced the data transfer in the object `RlzsAssoc` and improved the
