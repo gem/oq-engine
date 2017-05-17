@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 21
 =================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_7601.hdf5 Wed Apr 26 15:54:59 2017
-engine_version                                  2.4.0-git9336bd0        
-hazardlib_version                               0.24.0-gita895d4c       
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_21325.hdf5 Fri May 12 10:45:48 2017
+engine_version                                   2.4.0-git59713b5        
+hazardlib_version                                0.24.0-git0596dd3       
+================================================ ========================
 
 num_sites = 1, sitecol = 809 B
 
@@ -83,33 +83,33 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       rake mag  
-1      SadighEtAl1997() rrup      vs30       rake mag  
-2      SadighEtAl1997() rrup      vs30       rake mag  
-3      SadighEtAl1997() rrup      vs30       rake mag  
-4      SadighEtAl1997() rrup      vs30       rake mag  
-5      SadighEtAl1997() rrup      vs30       rake mag  
-6      SadighEtAl1997() rrup      vs30       rake mag  
-7      SadighEtAl1997() rrup      vs30       rake mag  
-8      SadighEtAl1997() rrup      vs30       rake mag  
-9      SadighEtAl1997() rrup      vs30       rake mag  
-10     SadighEtAl1997() rrup      vs30       rake mag  
-11     SadighEtAl1997() rrup      vs30       rake mag  
-12     SadighEtAl1997() rrup      vs30       rake mag  
-13     SadighEtAl1997() rrup      vs30       rake mag  
-14     SadighEtAl1997() rrup      vs30       rake mag  
-15     SadighEtAl1997() rrup      vs30       rake mag  
-16     SadighEtAl1997() rrup      vs30       rake mag  
-17     SadighEtAl1997() rrup      vs30       rake mag  
-18     SadighEtAl1997() rrup      vs30       rake mag  
-19     SadighEtAl1997() rrup      vs30       rake mag  
-20     SadighEtAl1997() rrup      vs30       rake mag  
-21     SadighEtAl1997() rrup      vs30       rake mag  
-22     SadighEtAl1997() rrup      vs30       rake mag  
-23     SadighEtAl1997() rrup      vs30       rake mag  
-24     SadighEtAl1997() rrup      vs30       rake mag  
-25     SadighEtAl1997() rrup      vs30       rake mag  
-26     SadighEtAl1997() rrup      vs30       rake mag  
+0      SadighEtAl1997() rrup      vs30       mag rake  
+1      SadighEtAl1997() rrup      vs30       mag rake  
+2      SadighEtAl1997() rrup      vs30       mag rake  
+3      SadighEtAl1997() rrup      vs30       mag rake  
+4      SadighEtAl1997() rrup      vs30       mag rake  
+5      SadighEtAl1997() rrup      vs30       mag rake  
+6      SadighEtAl1997() rrup      vs30       mag rake  
+7      SadighEtAl1997() rrup      vs30       mag rake  
+8      SadighEtAl1997() rrup      vs30       mag rake  
+9      SadighEtAl1997() rrup      vs30       mag rake  
+10     SadighEtAl1997() rrup      vs30       mag rake  
+11     SadighEtAl1997() rrup      vs30       mag rake  
+12     SadighEtAl1997() rrup      vs30       mag rake  
+13     SadighEtAl1997() rrup      vs30       mag rake  
+14     SadighEtAl1997() rrup      vs30       mag rake  
+15     SadighEtAl1997() rrup      vs30       mag rake  
+16     SadighEtAl1997() rrup      vs30       mag rake  
+17     SadighEtAl1997() rrup      vs30       mag rake  
+18     SadighEtAl1997() rrup      vs30       mag rake  
+19     SadighEtAl1997() rrup      vs30       mag rake  
+20     SadighEtAl1997() rrup      vs30       mag rake  
+21     SadighEtAl1997() rrup      vs30       mag rake  
+22     SadighEtAl1997() rrup      vs30       mag rake  
+23     SadighEtAl1997() rrup      vs30       mag rake  
+24     SadighEtAl1997() rrup      vs30       mag rake  
+25     SadighEtAl1997() rrup      vs30       mag rake  
+26     SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -190,45 +190,45 @@ source_model.xml 26     Active Shallow Crust 2           221          221
 
 Informational data
 ------------------
-============================== =====================================================================================
-count_eff_ruptures.received    tot 58.06 KB, max_per_task 1.06 KB                                                   
-count_eff_ruptures.sent        sources 100.78 KB, monitor 46.14 KB, srcfilter 36.74 KB, gsims 4.89 KB, param 3.49 KB
-hazard.input_weight            8,175                                                                                
-hazard.n_imts                  1 B                                                                                  
-hazard.n_levels                4 B                                                                                  
-hazard.n_realizations          27 B                                                                                 
-hazard.n_sites                 1 B                                                                                  
-hazard.n_sources               54 B                                                                                 
-hazard.output_weight           108                                                                                  
-hostname                       tstation.gem.lan                                                                     
-require_epsilons               0 B                                                                                  
-============================== =====================================================================================
+============================== ====================================================================================
+count_eff_ruptures.received    tot 49.77 KB, max_per_task 1.1 KB                                                   
+count_eff_ruptures.sent        sources 50.82 KB, monitor 38.63 KB, srcfilter 30.73 KB, gsims 4.09 KB, param 2.92 KB
+hazard.input_weight            8,175                                                                               
+hazard.n_imts                  1 B                                                                                 
+hazard.n_levels                4 B                                                                                 
+hazard.n_realizations          27 B                                                                                
+hazard.n_sites                 1 B                                                                                 
+hazard.n_sources               54 B                                                                                
+hazard.output_weight           4.000                                                                               
+hostname                       tstation.gem.lan                                                                    
+require_epsilons               0 B                                                                                 
+============================== ====================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-10     SFLT1     SimpleFaultSource 25           0.0       1         0        
-12     SFLT2     SimpleFaultSource 384          0.0       1         0        
-6      SFLT1     SimpleFaultSource 90           0.0       1         0        
-16     SFLT1     SimpleFaultSource 27           0.0       1         0        
-2      SFLT2     SimpleFaultSource 89           0.0       1         0        
-15     SFLT2     SimpleFaultSource 384          0.0       1         0        
-3      SFLT1     SimpleFaultSource 150          0.0       1         0        
-1      SFLT1     SimpleFaultSource 60           0.0       1         0        
-25     SFLT2     SimpleFaultSource 148          0.0       1         0        
-5      SFLT2     SimpleFaultSource 89           0.0       1         0        
-7      SFLT1     SimpleFaultSource 90           0.0       1         0        
-14     SFLT1     SimpleFaultSource 81           0.0       1         0        
-18     SFLT2     SimpleFaultSource 384          0.0       1         0        
-9      SFLT2     SimpleFaultSource 384          0.0       1         0        
-17     SFLT1     SimpleFaultSource 27           0.0       1         0        
-24     SFLT1     SimpleFaultSource 132          0.0       1         0        
-4      SFLT1     SimpleFaultSource 150          0.0       1         0        
-8      SFLT2     SimpleFaultSource 89           0.0       1         0        
-2      SFLT1     SimpleFaultSource 60           0.0       1         0        
-14     SFLT2     SimpleFaultSource 89           0.0       1         0        
+4      SFLT2     SimpleFaultSource 148          0.003     1         1        
+5      SFLT1     SimpleFaultSource 150          0.003     1         1        
+0      SFLT1     SimpleFaultSource 60           0.003     1         1        
+1      SFLT2     SimpleFaultSource 148          0.003     1         1        
+4      SFLT1     SimpleFaultSource 150          0.003     1         1        
+2      SFLT1     SimpleFaultSource 60           0.003     1         1        
+1      SFLT1     SimpleFaultSource 60           0.003     1         1        
+8      SFLT1     SimpleFaultSource 90           0.003     1         1        
+5      SFLT2     SimpleFaultSource 89           0.003     1         1        
+6      SFLT1     SimpleFaultSource 90           0.003     1         1        
+7      SFLT2     SimpleFaultSource 148          0.003     1         1        
+13     SFLT2     SimpleFaultSource 148          0.003     1         1        
+7      SFLT1     SimpleFaultSource 90           0.003     1         1        
+9      SFLT1     SimpleFaultSource 25           0.002     1         1        
+3      SFLT2     SimpleFaultSource 384          0.002     1         1        
+2      SFLT2     SimpleFaultSource 89           0.002     1         1        
+8      SFLT2     SimpleFaultSource 89           0.002     1         1        
+9      SFLT2     SimpleFaultSource 384          0.002     1         1        
+11     SFLT1     SimpleFaultSource 25           0.002     1         1        
+15     SFLT2     SimpleFaultSource 384          0.002     1         1        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -236,14 +236,14 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.0       54    
+SimpleFaultSource 0.123     54    
 ================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.066 0.024  0.018 0.116 55       
+count_eff_ruptures 0.003 0.001  0.002 0.006 46       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -251,12 +251,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total count_eff_ruptures         3.649     2.082     55    
-reading composite source model   0.381     0.0       1     
-filtering composite source model 0.061     0.0       1     
+reading composite source model   0.344     0.0       1     
+total count_eff_ruptures         0.155     0.0       46    
+managing sources                 0.046     0.0       1     
+aggregate curves                 0.001     0.0       46    
 store source_info                0.001     0.0       1     
-aggregate curves                 7.830E-04 0.0       55    
-managing sources                 1.209E-04 0.0       1     
-reading site collection          4.959E-05 0.0       1     
-saving probability maps          3.242E-05 0.0       1     
+filtering composite source model 1.252E-04 0.0       1     
+reading site collection          3.529E-05 0.0       1     
+saving probability maps          3.362E-05 0.0       1     
 ================================ ========= ========= ======
