@@ -52,7 +52,7 @@ class Print(object):
     def __init__(self):
         self.lst = []
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kw):
         self.lst.append(b' '.join(encode(str(a)) for a in args))
 
     def __str__(self):
@@ -184,6 +184,7 @@ class RunShowExportTestCase(unittest.TestCase):
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})
+            calc.datastore.open()  # if closed
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
