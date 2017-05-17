@@ -1,8 +1,11 @@
 Release notes for the OpenQuake Engine, version 2.4
 ===================================================
 
-This release introduces several changes and improvements in the
-engine calculators.
+This release introduces several changes and improvements to the
+engine calculators, most notably in the postprocessing of
+hazard curves in classical PSHA calculations and loss curves in
+event based risk calculations. Also, the risk outputs have been
+revised
 
 More than 40 pull requests were closed in oq-hazardlib and more than
 200 pull requests were closed in oq-engine. For the complete list of
@@ -15,8 +18,15 @@ A summary follows.
 New features in the engine
 --------------------------
  
-The event based exports have been extended and now provides more
-information. In particular it is possible to extract the association
+The event based exportes have been extended.
+
+We have a new exporter for the output losses by asset working in the
+calculators `scenario_risk`, `event_based_risk` and `ucerf_risk`.
+
+The `asset_loss_table` is back, coupled with a new asset loss table
+exporter producing a .hdf5 file.
+
+In particular it is possible to extract the association
 between the ruptures and the seismic events. Just export the
 `ruptures` output in XML format: for each rupture a list of stochastic
 event sets where the rupture occurs as well as the specific event IDs
@@ -27,18 +37,6 @@ and not exposed to the user: now the event IDs are directly
 exported. This is possible because, thanks to a major refactoring, now
 the event IDs are unique within a given calculation and reproducibile,
 provided the parameter `concurrent_tasks` is fixed.
-
-The `asset_loss_table` is back, coupled with a new asset loss table
-exporter producing a .hdf5 file.
-
-UCERF calculators, but they are still officially
-marked as experimental and are left undocumented on purpose. There is a
-new time-dependent classical calculator, while the old calculators were
-substantially improved.
-
-Event based from the GMFs.
-
-Make it possible to specify multiple file names in <uncertaintyValue/>
 
 Loss maps npz exporter 
 
@@ -61,16 +59,9 @@ tectonic region and have something like this:
 
 
 
-
- 
 The parallelization library has been improved; now the `task_info` and
 `job_info` datasets are automatically stored at the end of a parallel
 calculation.
-
-We extended the Rtree filtering to site parameters.
-Also filtered only at sea level.
-
-The sourcewriter.
 
 There is a new configuration parameter `max_hazard_curves` in the
 `job.ini` file, with by default is False. This parameter controls
@@ -84,24 +75,18 @@ the hazard sites.
 Optimizations
 ------------------------
 
-We implemented a *huge* optimization in the storage of the hazard
-curves.  From this release the individual hazard curves are not stored
-anymore if there is more than one realization. Instead they are
-generated on demand at export time from the ProbabilityMaps, the
-internal format used by the datastore. This means that in large
-computation we can save orders of magnitudes of data storage: for
-instance for a big computation we have for the Canada model
-the saving is from 1.27 TB to 5.44 GB (240x improvement).
+We have now a *huge* optimization in the storage of the hazard curves:
+the individual hazard curves are not stored anymore if there is more
+than one realization. Instead they are generated on demand from the
+ProbabilityMaps, the internal format used by the datastore. This means
+that in large computations we can save orders of magnitudes of data
+storage: for instance for a big computation we have for Canada
+the saving in space is from 1.27 TB to 5.44 GB (240x improvement).
 
 Consequently to the change above, the way we export the hazard curves,
-maps and uniform hazard spectra has changed.  The old command still
-work, but now by default the individual curves/maps/spectra are not
-generated if there is more than one realization. The mean curves
-instead are exported (before instead by default they were not
-exporter).
-
-It is still possible to export the individual curves in a multi-realization
-calculation, but only one realization at the time, and with a new command:
+maps and uniform hazard spectra has changed. It is still possible to
+export the individual curves in a multi-realization calculation, but
+only one realization at the time, and with a new command:
 
 ```bash
 $ oq export hcurves/rlz-XXX # export the realization number XXX
@@ -109,9 +94,19 @@ $ oq export hmaps/rlz-XXX # export the realization number XXX
 $ oq export uhs/rlz-XXX # export the realization number XXX
 ```
 
-The rationale is to reduce the size of the exported output which can be
-huge for large calculations. For a discussion of the problem, see
-http://micheles.github.io/2017/05/02/hazard-outputs/
+The rationale for the change was to reduce the size of the exported
+output which can be huge for large calculations. For a discussion of
+the problem, see http://micheles.github.io/2017/05/02/hazard-outputs/
+
+Since the generation of the curves is done at runtime the export will
+be slower than before, but it is a good tradeoff. After all, most
+users will never want to export the full set of realizations.
+Instead they will likely want to export the statistical hazard curves
+and this is possible with old command and without any performance
+penalty, since the statistical curves are computed and store in
+postprocessing very efficiently. Also, now by default the mean hazard
+curves are computer, whereas in the past the default was not to compute
+them.
 
 The postprocessing of hazard curves has been substantially improved:
 now it uses order of magnitudes less memory than before and it is
@@ -122,8 +117,8 @@ realizations in 11 minutes, by spawning 3,500 tasks and using ~500 GB
 of memory among four machines. This is orders of magnitude better than
 everything we ever managed to run before. Technically this has been
 achieved by having the workers reading the data directly instead than
-passing them via celery/rabbitmq, thus improving the scalability by
-orders of magnitude.
+passing them via celery/rabbitmq, thus improving the scalability of the
+engine very significantly.
 
 A similar approach has been used in the event based risk calculator.
 Now the loss curves and maps are produced in postprocessing by reading
@@ -131,9 +126,16 @@ directly the asset loss table. As a consequence such a calculation is
 now a lot more scalable and efficient than before. We can easily compute
 millions of loss curves.
 
+GmfGetter has been optimized.
+
+
 We are using `rtree` to get the nearest site model parameters: this gives
 more than one order of magnitude speedup in calculations that were dominate
 by the site model associations.
+
+There is a way to export the full set of hazard curves in HDF5 format
+efficiently
+
 
 Changes in the hazard exports
 -----------------------------
@@ -160,6 +162,9 @@ The event loss table exporter is now producing an additional column
 
 Renamed the `csq_` outputs of the scenario_damage to `losses_`
 
+There is a new output `losses by event` in `scenario_risk`, similar to
+the event loss table in the event based calculator: it contains the
+aggregate losses for each seismic event.
 
 Work in oq-hazardlib
 --------------------------
@@ -236,6 +241,17 @@ Fixes to the Web UI
 
 All the engine outputs are now streamed by the WebUI.
 Allow the WebUI to bootstrap the DB 
+
+Experimental new features
+------------------------------
+
+UCERF calculators, but they are still officially
+marked as experimental and are left undocumented on purpose. There is a
+new time-dependent classical calculator, while the old calculators were
+substantially improved. Now we can parallelize UCERF event based by SES.
+Do not return the ruptures in ucerf_risk, only the events
+ 
+Event based from the GMFs.
 
 Other
 ------
