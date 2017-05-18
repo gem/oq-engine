@@ -80,6 +80,8 @@ There is a new configuration parameter `max_site_model_distance` in the
 controls the warnings for site model parameters which are far away from
 the hazard sites.
 
+Introduced a `ses_seed` parameter in the `job.ini`
+
 Optimizations
 ------------------------
 
@@ -180,6 +182,10 @@ calculation and reproducibile, provided the parameter
 directly the data saved in the datastore with the exported data, a
 feature wanted by several power users for years.
 
+The CSV exporter for the output `dmg_total` in damage calculators
+now presents the data in a more readable format. The has been done
+for the aggregate losses exported by the `scenario_risk` calculator.
+
 The CSV exporter for the output `ruptures` is slightly different:
 the field `serial` has been renamed as `rup_id`, the field `eid`
 has been removed and the ordering of the fields is different.
@@ -193,6 +199,32 @@ loss curves but it requires a different command than before.
 We renamed the `csq_` outputs of the scenario_damage to `losses_`
 
 We removed the output `rup_data` which was internal.
+
+Changed the npz export to export even GMFs outside of the maximum distance
+
+Raised the limit on the event IDs
+Changed the CSV exporter for classical_risk loss curves
+
+Removed the csv exporter for all_loss_ratios
+Removed the GSIM from the exported file name for the risk calculators
+`ses_per_logic_tree_path` and `number_of_logic_tree_samples`
+are constrained to 2 bytes only in UCERF now
+
+
+Removed the .txt exporter for the GMF
+Removed the .ext5 file
+Renamed the datasets `avg_losses-` to `losses_by_asset-` enhancement
+Added a command `utils/extract_sites` to generate good sites.csv files
+Removed `rup_data` output
+64 bit <-> 32 bit mismatch
+Use a temporary `export_dir` in the tests
+Made the slow classical tests fast by increasing the mesh spacing
+Changed the storage of the events
+Changed the way the GMFs are stored 
+Stored the site IDs in a better way
+Fixed `ignore_covs` for `scenario_risk`
+Removed `ebrisk` calculator
+
 
 hazardlib
 --------------------------
@@ -254,6 +286,8 @@ in some cases (depending on the splitting).
 WebUI
 -------------------
 
+Add an icon for the OpenQuake WebUI
+
 All the engine outputs are now streamed, in order to save memory.
 
 The WebUI automatically creates the engine database at startup,
@@ -264,6 +298,12 @@ low level libraries used in that platform that made it impossible
 to fork sqlite; we worked around it by using a ThreadPoolExecutor instead
 of a ProcessPoolExecutor.
 
+Fix a bug when deleting a calculation from the WebUI
+Added a view `get_available_gsims` to the WebUI
+Changed the Web UI button from "Run Risk" to "Continue"
+Made the full report exportable
+Force hazard_calculation_id from POST to be an int
+Improve the WebUI command
 
 Bugs
 ----
@@ -301,36 +341,49 @@ has been done (no PmapStats)
 Additional validations
 ----------------------
 
-Raised an error if the user specifies `quantile_loss_curves`
-or `conditional_loss_poes` in a classical_damage calculation
- 
-Raise a clear error message for logic trees invalid for scenario calculations 
+We engine is more picky than before.
 
+For instance if the user specifies `quantile_loss_curves`
+or `conditional_loss_poes` in a `classical_damage` calculation he will now
+get an error, since such features make no sense in that context (before
+they were silently ignored).
 
-Deprecations
-------------------------------
+If an exposure contains assets with taxonomies for which there are no
+vulnerability functions available, now the user gets an early error
+before starting the calculation and not in the middle of it.
 
-As of now, all of the risk XML exports are officially deprecated and
-will be removed in the next release. The recommend exports to use are
-the CSV ones (for small outputs) and the NPZ/HDF5 ones (for large outputs).
+Also, if an user provides a complex logic tree file which is
+invalid for the scenario calculator, now she gets a clear error message.
+
+There also checks for patological situations, like the user 
+providing no intensity measure sites, no GSIMs, no sites: now a clearer
+error message will be displayed.
 
 Experimental new features
 ------------------------------
 
-Even in this release the work on the UCERF calculators has continued,
+In this release the work on the UCERF calculators has continued,
 even if they are still officially marked as experimental and left
-undocumented on purpose. There is a new time-dependent classical
-calculator, while the old calculators were substantially improved. Now
-we can parallelize the UCERF event based calculator by number of
+undocumented on purpose.
+
+There old time-independent classical calculator has been extended
+to work with sampling of the logic tree.
+
+The rupture filtering logic has been refactored and improved. 
+
+We can parallelize the UCERF event based calculator by number of
 stochastic event sets. This made it possible to run mean field
 calculations in parallel (before they used a single core, since there
-is a single branch in such models). Also the filtering has been
-refactored and improved.  The data transfer has been hugely reduced in
-the calculator `ucerf_risk`: now we do not return the rupture objects
-from the workers, but only the event arrays, which are enough for the
-purposes of the calculator. This saved around 100 GB of data transfer
-in large calculations for California.
+is a single branch in such models).
+
+The data transfer has been hugely reduced in the calculator
+`ucerf_risk`: now we do not return the rupture objects from the
+workers, but only the event arrays, which are enough for the purposes
+of the calculator. This saved around 100 GB of data transfer in large
+calculations for California.
  
+There is a brand new time-dependent classical calculator.
+
 We started working on an event based calculator starting from Ground
 Motion Fields provided by the user. The current version is still very
 preliminary and requires the GMFs to be in NRML format, but we plan
@@ -341,4 +394,15 @@ We added a facility to serialize `Node` objects into HDF5 files. This is
 the base for a future development that will allow to serialize point sources
 into HDF5 datasets efficiently (scheduled for engine 2.5).
 
+We introduced some preliminary support for the Grid Engine. This is useful
+for people running the engine on big clusters and supercomputers. Unfortunately
+since we do not have a supercomputer we are not able to really test this 
+feature. Interested users should contact us and offer some help, like giving
+us access to a Grid Engine cluster.
 
+Deprecations
+------------------------------
+
+As of now, all of the risk XML exports are officially deprecated and
+will be removed in the next release. The recommend exports to use are
+the CSV ones for small outputs and the NPZ/HDF5 ones for large outputs.
