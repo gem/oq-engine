@@ -815,40 +815,6 @@ def export_loss_curves_stats(ekey, dstore):
     return sorted(fnames)
 
 
-# this is used by event_based_risk to export loss curves
-@export.add(('rcurves-rlzs', 'xml'),
-            ('rcurves-rlzs', 'geojson'),
-            ('rcurves-stats', 'xml'),
-            ('rcurves-stats', 'geojson'))
-@deprecated
-def export_rcurves_rlzs(ekey, dstore):
-    assetcol = dstore['assetcol']
-    aref = dstore['asset_refs'].value
-    rcurves = dstore[ekey[0]]
-    [loss_ratios] = dstore['loss_ratios']
-    fnames = []
-    writercls = (risk_writers.LossCurveGeoJSONWriter
-                 if ekey[0] == 'geojson' else
-                 risk_writers.LossCurveXMLWriter)
-    for writer, (ltype, poe, r, ins) in _gen_writers(
-            dstore, writercls, ekey[0]):
-        if ltype not in loss_ratios.dtype.names:
-            continue  # ignore loss type
-        the_poes = rcurves[ltype][:, r, ins]
-        curves = []
-        for aid, ass in enumerate(assetcol):
-            loc = Location(*ass.location)
-            losses = loss_ratios[ltype] * ass.value(ltype)
-            poes = the_poes[aid]
-            avg = scientific.average_loss([losses, poes])
-            curve = LossCurve(loc, aref[ass.idx], poes,
-                              losses, loss_ratios[ltype], avg, None)
-            curves.append(curve)
-        writer.serialize(curves)
-        fnames.append(writer._dest)
-    return sorted(fnames)
-
-
 # used by scenario_damage
 @export.add(('losses_by_taxon', 'csv'))
 def export_csq_by_taxon_csv(ekey, dstore):
