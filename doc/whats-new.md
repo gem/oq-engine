@@ -17,7 +17,7 @@ and https://github.com/gem/oq-engine/blob/engine-2.4/debian/changelog.
 We have also decided a plan for
 [dropping support to Python 2](dropping-python-2.md). We will abandon that
 platform in the course of the year 2018. Precise dates have not been
-fixed (on purpose) but everybody who is using hazardlib and/or the
+fixed - on purpose - but everybody who is using hazardlib and/or the
 engine as a library has to think about migrating to Python 3. Please
 contact us if this is a problem for you: we are keen to provide
 advice for the migration.
@@ -79,8 +79,11 @@ There is a new configuration parameter `max_site_model_distance` in the
 `job.ini` file, with a default 5 km: before it was hard-coded. This parameter
 controls the warnings for site model parameters which are far away from
 the hazard sites.
-
-Introduced a `ses_seed` parameter in the `job.ini`
+ 
+There is a new configuration parameter `ses_seed` parameter in the `job.ini`
+file. It is the seed used in the generation of the ruptures in the event based
+calculator, which is now distinct from the seed used in the sampling of
+the source model, the `random_seed` parameter.
 
 Optimizations
 ------------------------
@@ -145,6 +148,9 @@ curves are computed and stored in postprocessing. Also, now by default
 the *mean hazard curves* are computed, whereas in the past their were
 not computed.
 
+The `ruptures` are now being saved and read from the datastore in a very
+efficient HDF5 format: before they were stored in an unfortunate pickle format.
+
 The `classical_risk` calculator now reads directly the ProbabilityMaps
 (in the past it read the individual hazard curves that are not stored anymore):
 therefore the required data transfer has been reduced very significantly
@@ -196,35 +202,43 @@ The event loss table exporter is now producing an additional column
 The `loss_curves` output has been removed. You can still export the
 loss curves but it requires a different command than before. 
 
-We renamed the `csq_` outputs of the scenario_damage to `losses_`
+We renamed the `csq_` outputs of the scenario_damage to `losses_`.
 
-We removed the output `rup_data` which was internal.
+We renamed the datasets `avg_losses-` to `losses_by_asset-`.
 
-Changed the npz export to export even GMFs outside of the maximum distance
+We removed the output `rup_data` which was internal and not meant for
+the final user.
 
-Raised the limit on the event IDs
-Changed the CSV exporter for classical_risk loss curves
+We changed the .npz export to export even GMFs outside of the maximum distance,
+with zero value: this makes it easier to visualize the results.
 
-Removed the csv exporter for all_loss_ratios
+Changed the CSV exporter for `classical_risk` loss curves
+
+We removed the csv exporter for the `all_loss_ratios` output in `scenario_risk`:
+now there is an .npz exporter/
+
 Removed the GSIM from the exported file name for the risk calculators
-`ses_per_logic_tree_path` and `number_of_logic_tree_samples`
-are constrained to 2 bytes only in UCERF now
 
+The parameters `ses_per_logic_tree_path` and `number_of_logic_tree_samples`
+are constrained to 2 bytes only in UCERF now.
 
-Removed the .txt exporter for the GMF
-Removed the .ext5 file
-Renamed the datasets `avg_losses-` to `losses_by_asset-` enhancement
-Added a command `utils/extract_sites` to generate good sites.csv files
-Removed `rup_data` output
-64 bit <-> 32 bit mismatch
+As usual the layout of the datastore has changed; in particular the way
+the GMFs and the events are stored is different.
+
 Use a temporary `export_dir` in the tests
-Made the slow classical tests fast by increasing the mesh spacing
 Changed the storage of the events
-Changed the way the GMFs are stored 
-Stored the site IDs in a better way
+Changed the way the
 Fixed `ignore_covs` for `scenario_risk`
-Removed `ebrisk` calculator
 
+In release 2.3 we introduced temporarily an `ebrisk` calculator. Now it is
+gone, just use the good old `event_based_risk` calculator.
+
+Internal TXT exporters for the ground motion fields, used only for the
+tests have been removed.
+
+The .ext5 file has been removed.
+
+As always, a great deal of internal refactoring has been done.
 
 hazardlib
 --------------------------
@@ -251,7 +265,7 @@ than computing the quantile with value 1.0.
 
 The mesh of a rupture is now stored as 32 bit array of floats instead of
 a 64 bit array: this reduces the memory consumption and data storage
-by half. Moreover, we have now an efficient way to realize ruptures
+by half. Moreover, we have now an efficient way to serialize ruptures
 into HDF5 format.
 
 We fixed a numerical issue involving the square root of small negative numbers,
@@ -286,27 +300,42 @@ in some cases (depending on the splitting).
 WebUI
 -------------------
 
-Add an icon for the OpenQuake WebUI
+We added an endpoint `GET /v1/available_gsims` to the REST API underlying
+the WebUI. This is used by the OpenQuake platform to extract the list
+of available GSIM classes. Now the platform uses the engine as a service
+and it does not import directly any code from it.
 
-All the engine outputs are now streamed, in order to save memory.
+We changed the Web UI button from "Run Risk" to "Continue", since it
+can be used also for postprocessing of hazard calculations.
+
+All the engine outputs are streamed from the WebUI. This saves memory in
+the case of large outputs.
+
+We added an output corresponding to the `fullreport` to the WebUI: this
+is extremely useful to get information about a given calculation.
 
 The WebUI automatically creates the engine database at startup,
 if needed.
 
-The DbServer could not start in MacOS Sierra due to a change in the
+The DbServer could not start in MacOS Sierra, due to a change in the
 low level libraries used in that platform that made it impossible
 to fork sqlite; we worked around it by using a ThreadPoolExecutor instead
 of a ProcessPoolExecutor.
 
-Fix a bug when deleting a calculation from the WebUI
-Added a view `get_available_gsims` to the WebUI
-Changed the Web UI button from "Run Risk" to "Continue"
-Made the full report exportable
-Force hazard_calculation_id from POST to be an int
+We fixed a bug when deleting a calculation from the WebUI: now it is possible
+to do so if the user is the owner of that calculation.
+
 Improve the WebUI command
+
+We have now a desktop icon for the OpenQuake WebUI both for Linux and Windows
+platforms.
 
 Bugs
 ----
+
+The was a size limit on the event ID (65,536 events for task) that
+could be exceeded in large calculations. We raised that limit to over 4
+billion events per tasks that is more than reasonable.
 
 We fixed a long standing bug in the event based risk calculation. In some
 cases (when the hazard sites were given as a region) it was associating
@@ -331,12 +360,6 @@ Now the npz export for scenario calculations exports even GMFs outside
 the maximum distance, which are all zeros. This is convenient when plotting
 and consistent with CSV export. The export has also been fixed in the case
 of a single event, i.e. `number_of_ground_motion_fields=1` which was broken.
-
-Internal TXT exporters for the ground motion fields, used only for the
-tests have been removed.
-
-The .ext5 file has been removed. A great deal of internal refactoring
-has been done (no PmapStats)
 
 Additional validations
 ----------------------
@@ -406,3 +429,7 @@ Deprecations
 As of now, all of the risk XML exports are officially deprecated and
 will be removed in the next release. The recommend exports to use are
 the CSV ones for small outputs and the NPZ/HDF5 ones for large outputs.
+
+Python 2.7 is not yet officially deprecated, but will be deprecated soon.
+The version we use for development and production since the beginning of
+2017 is Python 3.5.
