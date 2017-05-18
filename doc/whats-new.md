@@ -3,9 +3,9 @@ Release notes for the OpenQuake Engine, version 2.4
 
 This release introduces several changes and improvements to the
 engine calculators, most notably in the postprocessing of
-hazard curves in classical PSHA calculations and loss curves in
-event based risk calculations. Also, the risk outputs have been
-revised
+hazard curves in classical PSHA calculations and in the postprocessing of
+loss curves in event based risk calculations. Also, the exporters
+have been revised and extended.
 
 More than 40 pull requests were closed in oq-hazardlib and more than
 200 pull requests were closed in oq-engine. For the complete list of
@@ -18,27 +18,30 @@ A summary follows.
 New features in the engine
 --------------------------
  
-The event based exportes have been extended.
-
-We have a new exporter for the output losses by asset working in the
-calculators `scenario_risk`, `event_based_risk` and `ucerf_risk`.
-
-The `asset_loss_table` is back, coupled with a new asset loss table
-exporter producing a .hdf5 file.
-
-In particular it is possible to extract the association
-between the ruptures and the seismic events. Just export the
-`ruptures` output in XML format: for each rupture a list of stochastic
-event sets where the rupture occurs as well as the specific event IDs
-are exported. The event tags (strings) that we had in the past are now
-gone, replaced by the event IDs, which are 64 bit integers. In the
-past the event IDs were internal indicators, hidden in the datastore
-and not exposed to the user: now the event IDs are directly
-exported. This is possible because, thanks to a major refactoring, now
-the event IDs are unique within a given calculation and reproducibile,
-provided the parameter `concurrent_tasks` is fixed.
-
-Loss maps npz exporter 
+There are several new outputs/exporters.
+ 
+- There are new .csv exporters for the aggregated losses by taxonomy which are
+  computed by the calculators `scenario_risk`, `event_based_risk` and
+  `ucerf_risk`.
+- There is a new output and an .hdf5 exporter for the `asset_loss_table`, i.e.
+  the full table of losses for each asset. This is an optional output of
+  the `event_based_risk` calculator, generated when you set the flag
+  `asset_loss_table=true` in the `job.ini` configuration file.
+- There is an equivalent output for the `scenario_risk` calculator, called
+  `all_losses-rlzs`, an an `.npz` exporter for it. This is also an optional
+  output generated when you set `asset_loss_table=true`.
+- There is a new output `losses by event` produced by the `scenario_risk`
+  calculator, which is similar to the event loss table in the event based
+  calculator: it contains the aggregate losses for each seismic event.
+  There is a also new CSV exporter for it.
+- We are now exporting the loss maps and the losses by asset in .npz format.
+- We have a new CSV exporter for the Benefit-Cost-Ratio calculator.
+- There is a new experimental CSV exporter for the ground motion fields
+  produced by the event based calculator.
+- The XML exporter for the output `ruptures` now contains only the
+  ruptures, without any duplication, and for each event set the list of
+  event IDs associated to the rupture. Before there was a rupture for
+  each seismic event, with potential duplications.
 
 It is now possible to split a source model in several files and read
 them as if they were a single file. Just specify the file names in the
@@ -57,15 +60,12 @@ tectonic region and have something like this:
  </logicTreeBranch>
 ```
 
-
-
 The parallelization library has been improved; now the `task_info` and
-`job_info` datasets are automatically stored at the end of a parallel
-calculation.
+`job_info` datasets are automatically stored at the end of a calculation.
 
 There is a new configuration parameter `max_hazard_curves` in the
-`job.ini` file, with by default is False. This parameter controls
-the generation of the maximum hazard curves.
+`job.ini` file, which by default is `False`. This parameter controls
+the generation of the maximum hazard curves, a new feature.
 
 There is a new configuration parameter `max_site_model_distance` in the
 `job.ini` file, with a default 5 km: before it was hard-coded. This parameter
@@ -75,16 +75,44 @@ the hazard sites.
 Optimizations
 ------------------------
 
-We have now a *huge* optimization in the storage of the hazard curves:
-the individual hazard curves are not stored anymore if there is more
-than one realization. Instead they are generated on demand from the
-ProbabilityMaps, the internal format used by the datastore. This means
-that in large computations we can save orders of magnitudes of data
-storage: for instance for a big computation we have for Canada
-the saving in space is from 1.27 TB to 5.44 GB (240x improvement).
+The *postprocessing of hazard curves* has been substantially improved:
+now it uses orders of magnitude less memory than before and it is
+extremely efficient. For instance in our cluster we were able to
+compute mean and max hazard curves in a calculation for the Canada
+model with 206,366 sites, 129 hazard levels and 13,122 realizations in
+11 minutes, by spawning ~3,500 tasks and using ~500 GB of memory among
+four machines. This is orders of magnitude better than everything we
+ever managed to run before. Technically this has been achieved by
+having the workers reading the data directly instead than passing them
+via the celery/rabbitmq combo, thus improving the scalability of the
+engine very significantly.
 
-Consequently to the change above, the way we export the hazard curves,
-maps and uniform hazard spectra has changed. It is still possible to
+A similar approach has been used in the event based risk calculator.
+Now the loss curves and maps are produced in postprocessing by reading
+directly the asset loss table. As a consequence such a calculation is
+a lot more scalable and efficient than before. We can easily compute
+millions of loss maps.
+
+While loss maps are stored as before, *loss curves have become a dynamic
+output*, generated at runtime from the loss ratios (this is the same
+approach used for the hazard curves, generated from the ProbabilityMaps).
+This saves a huge amount of disk space.
+
+The performance of the event based
+calculator has been improved substantially in the *GMF-generation*
+phase, but this is visible only in very large calculations. We measured
+improvements of a factor 2 in speed and a factor 3 in memory occupation.
+
+We have a huge improvement in the *storage of the hazard curves*:
+the [individual hazard curves are not stored anymore]
+(http://micheles.github.io/2017/05/02/hazard-outputs/), unless there is
+only one realization. This means that in large computations we can
+save orders of magnitudes of data storage: for instance for a big
+computation we have for Canada the saving in space is from 1.27 TB
+to 5.44 GB (240x improvement).
+
+Consequently to the change above, the way we *export the hazard curves,
+maps and uniform hazard spectra* has changed. It is still possible to
 export the individual curves in a multi-realization calculation, but
 only one realization at the time, and with a new command:
 
@@ -94,79 +122,61 @@ $ oq export hmaps/rlz-XXX # export the realization number XXX
 $ oq export uhs/rlz-XXX # export the realization number XXX
 ```
 
-The rationale for the change was to reduce the size of the exported
-output which can be huge for large calculations. For a discussion of
-the problem, see http://micheles.github.io/2017/05/02/hazard-outputs/
-
 Since the generation of the curves is done at runtime the export will
-be slower than before, but it is a good tradeoff. After all, most
-users will never want to export the full set of realizations.
-Instead they will likely want to export the statistical hazard curves
-and this is possible with old command and without any performance
-penalty, since the statistical curves are computed and store in
-postprocessing very efficiently. Also, now by default the mean hazard
-curves are computer, whereas in the past the default was not to compute
-them.
+be slower than before, but this is a good tradeoff. After all, most
+users will never want to export the full set of realizations (NB: for those
+few users we still have an efficient .hfd5 exporter doing exactly that).
 
-The postprocessing of hazard curves has been substantially improved:
-now it uses order of magnitudes less memory than before and it is
-extremely efficient. For instance in our cluster we were able to
-compute mean and max hazard curves for all sites in a calculation for
-the Canada model with 206,366 sites, 129 hazard levels and 13,122
-realizations in 11 minutes, by spawning 3,500 tasks and using ~500 GB
-of memory among four machines. This is orders of magnitude better than
-everything we ever managed to run before. Technically this has been
-achieved by having the workers reading the data directly instead than
-passing them via celery/rabbitmq, thus improving the scalability of the
-engine very significantly.
+Most users will just be interested the statistical hazard curves, maps
+and hazard spectra. Such outputs can be exported exactly as in the
+past and without any performance penalty, since the statistical curves
+are computed and stored in postprocessing very efficiently. Also, now
+by default the *mean hazard curves* are computed, whereas in the past
+their were not computed.
 
-A similar approach has been used in the event based risk calculator.
-Now the loss curves and maps are produced in postprocessing by reading
-directly the asset loss table. As a consequence such a calculation is
-now a lot more scalable and efficient than before. We can easily compute
-millions of loss curves.
+The `classical_risk` calculator now reads directly the ProbabilityMaps
+(in the past it read the individual hazard curves that are not stored anymore):
+therefore the required data transfer has been reduced very significantly
+and the performance of the calculator has improved. This is visible only
+for source models with a lot of realizations.
 
-GmfGetter has been optimized.
+The procedure *reading the Ground Motion Fields* from the datastore in
+`scenario_risk` and `scenario_damage` calculators has been optimized:
+the effect is small in small computations, but in a large calculation
+with thousands of sites and GMFs we measured a speedup from 5 hours to
+45 seconds.
 
-
-We are using `rtree` to get the nearest site model parameters: this gives
+We are now using `rtree` to get the *nearest site model parameters*: this gives
 more than one order of magnitude speedup in calculations that were dominate
 by the site model associations.
 
-There is a way to export the full set of hazard curves in HDF5 format
-efficiently
 
-
-Changes in the hazard exports
+Changes
 -----------------------------
+
+The event tags (strings) that we had in the past are now
+gone, replaced by the event IDs, which are 64 bit integers. In the
+past the event IDs were internal indicators, hidden in the datastore
+and not exposed to the user: now the event IDs are directly
+exported. This is possible because, thanks to a major refactoring, now
+the event IDs are unique within a given calculation and reproducibile,
+provided the parameter `concurrent_tasks` is fixed.
 
 The CSV exporter for the output `ruptures` is slightly different:
 the field `serial` has been renamed as `rup_id`, the field `eid`
 has been removed and the ordering of the fields is different.
 
-The XML exporter for the output `ruptures` now contains only the
-ruptures, without any duplication, and the list of event IDs
-associated to the rupture. Before there was a rupture
-for each seismic event, with potential duplications.
-
-
-Changes in the risk exports
------------------------------
+The event loss table exporter is now producing an additional column
+`rup_id` containing the rupture ID.
 
 The `loss_curves` output has been removed. You can still export the
 loss curves but it requires a different command than before. 
 
+We renamed the `csq_` outputs of the scenario_damage to `losses_`
 
-The event loss table exporter is now producing an additional column
-`rup_id` containing the rupture ID.
+We removed the output `rup_data` which was internal.
 
-Renamed the `csq_` outputs of the scenario_damage to `losses_`
-
-There is a new output `losses by event` in `scenario_risk`, similar to
-the event loss table in the event based calculator: it contains the
-aggregate losses for each seismic event.
-
-Work in oq-hazardlib
+Improvements in hazardlib
 --------------------------
 
 The Hazard Modeller Toolkit (HMTK) has been merged into oq-hazardlib. The
@@ -229,12 +239,33 @@ We fixed a bug when splitting sources with a `YoungsCoppersmith1985MFD`
 magnitude frequence distribution: that made impossible to run such calculations
 in some cases (depending on the splitting).
 
+We fixed a long standing bug in the event based risk calculation. In some
+cases (when the hazard sites were given as a region) it was associating
+incorrectly the assets to the sites and produced bogus numbers.
+
+We fixed a couple of bugs affecting exposures with multiple assets of the
+same taxonomy on the same site: that made it impossible to run `classical_risk`
+and `scenario_risk` calculations for such exposures.
+
+Fixed the .npz exporter for the GMFs in the case of a single event
+
+Remove an old, wrong check about Django
+Use a ThreadPoolExecutor instead of a ProcessPoolExecutor in dbserver.py
+for MacOS Sierra.
+
+Fixed the CSV SES exporter: now the bounding box of the ruptures is using the
+correct WKT ordering convention
+Fixed encoding bug in the commands `oq engine --lhc` and `oq engine --lrc`
+The avg_losses could not be stored in UCERF event based risk
+Fixed bug in event_based_risk: it was impossible to use vulnerability
+functions with "PM" distribution
+
 Deprecations
 ------------------------------
 
 As of now, all of the risk XML exports are officially deprecated and
 will be removed in the next release. The recommend exports to use are
-the CSV ones (for small outputs) and the NPZ ones (for large outputs).
+the CSV ones (for small outputs) and the NPZ/HDF5 ones (for large outputs).
 
 Fixes to the Web UI
 -------------------
