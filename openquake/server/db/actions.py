@@ -481,11 +481,11 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
         limit = 100
 
     if 'start_time' in request_get_dict:
-        start = request_get_dict.get('start_time')  # assume an ISO string
-    else:  # consider only calculations younger than 1 month
-        # ISO string with format YYYY-MM-DD
-        start = (datetime.today() - timedelta(30)).isoformat()[:10]
-    time_filter = "start_time >= '%s'" % start
+        # assume an ISO date string
+        time_filter = "start_time >= '%s'" % request_get_dict.get('start_time')
+    else:
+        time_filter = 1
+
     jobs = db('SELECT *, %s FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
               % (JOB_TYPE, time_filter, limit), filterdict)
     return [(job.id, job.user_name, job.status, job.job_type,
