@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Remove the default 30 day-old view limit in the WebUI calculation list
+
   [Michele Simionato]
   * Made it possible to specify multiple file names in <uncertaintyValue/>
     in the source_model_logic_tree file
