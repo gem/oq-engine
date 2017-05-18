@@ -262,7 +262,11 @@ class RiskModel(object):
         if hasattr(self, 'retro_functions'):
             for lt, func in self.retro_functions.items():
                 risk_functions[lt + '_retrofitted'] = func
-        return risk_functions, {}
+        return risk_functions, {'taxonomy': self.taxonomy}
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.risk_functions = dic
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
