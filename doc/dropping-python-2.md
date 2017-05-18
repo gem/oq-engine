@@ -18,7 +18,7 @@ support for Python 2.7 or they will do it shortly:
 In such a situation we are forced to drop support for Python 2 too,
 unless we want to keep using old/deprecated versions of our
 dependencies.  The OpenQuake Engine already supports Python 3 and has
-done so for more than one year. We develop with Python 3 and we use it
+done so for more than one year. We develop with Python 3.5 and we use it
 in production since the beginning of this year.
 
 We could drop support for Python 2 even in the next release, but in
