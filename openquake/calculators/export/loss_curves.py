@@ -117,7 +117,8 @@ class LossCurveExporter(object):
             return {'rlz-%03d' % rlzi: data[:, rlzi] for rlzi in range(self.R)}
 
         # otherwise event_based
-        builder = self.dstore['riskmodel'].curve_builder
+        crm = riskinput.read_composite_risk_model(self.dstore)
+        builder = crm.curve_builder
         assets = [self.assetcol[aid] for aid in aids]
         rlzi = int(key[4:]) if key else None  # strip rlz-
         ratios = riskinput.LossRatiosGetter(self.dstore).get(aids, rlzi)
