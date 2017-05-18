@@ -15,7 +15,7 @@ https://github.com/gem/oq-hazardlib/blob/engine-2.4/debian/changelog
 and https://github.com/gem/oq-engine/blob/engine-2.4/debian/changelog.
 
 We have also decided a plan for
-[dropping support to Python 2](dropping-python-2). We will abandon that
+[dropping support to Python 2](dropping-python-2.md). We will abandon that
 platform in the course of the year 2018. Precise dates have not been
 fixed (on purpose) but everybody who is using hazardlib and/or the
 engine as a library has to think about migrating to Python 3. Please
