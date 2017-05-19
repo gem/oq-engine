@@ -281,7 +281,7 @@ There is a new constructor for the `Polygon` class which is able
 to parse a WKT polygon string.
 
 We fixed a bug when splitting sources with a
-`YoungsCoppersmith1985MFD` magnitude frequence distribution: that made
+`YoungsCoppersmith1985MFD` magnitude frequence distribution that made
 impossible to run such calculations in some cases (depending on the
 splitting).
 
@@ -418,13 +418,13 @@ us access to a Grid Engine cluster.
 Internal changes
 --------------------
 
-As always, there are several internal changes to the engine. They are invisible
+As always, there were several internal changes to the engine. They are invisible
 to regular users, so I am not listing all of the changes here. However, I
 will list some changes that may be of interests to power users and people
-developing with engine.
+developing with the engine.
 
 The parameters `ses_per_logic_tree_path` and `number_of_logic_tree_samples`
-are constrained to 2 bytes only in UCERF now.
+are constrained to a maximum value of 65,536 only in UCERF now.
 
 As usual the layout of the datastore has changed; in particular the way
 the GMFs and the events are stored is different.
