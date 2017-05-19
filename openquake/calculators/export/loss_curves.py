@@ -15,6 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
 from openquake.risklib import riskinput
@@ -147,6 +148,10 @@ class LossCurveExporter(object):
         :returns: a dictionary rlzi -> record of dtype loss_curve_dt
         """
         oq = self.dstore['oqparam']
+        num_rlzs = len(self.dstore['realizations'])
+        if num_rlzs == 1:
+            logging.error('There is a single realization, there are no stats')
+            return {}
         stats = oq.risk_stats()  # pair (name, func)
         stat2idx = {stat[0]: s for s, stat in enumerate(stats)}
         if 'loss_curves-stats' in self.dstore:  # classical_risk
