@@ -9,7 +9,7 @@ In particular, the following projects that we rely upon have already dropped
 support for Python 2.7 or they will do it shortly:
 
 - ipython
-- jypiter
+- jupyter
 - pandas
 - matplotlib
 - QGIS
