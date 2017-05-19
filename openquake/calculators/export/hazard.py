@@ -26,7 +26,7 @@ import numpy
 
 from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.general import (
-    groupby, humansize, get_array, group_array, DictArray)
+    humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
@@ -304,7 +304,7 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
-            lst.append((str(iml), F32))
+            lst.append(('%s-%s' % (imt, iml), F32))
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
