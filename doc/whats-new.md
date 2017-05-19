@@ -81,7 +81,7 @@ tectonic region and have something like this:
      stable_shallow_sources.xml
    </uncertaintyModel>
    <uncertaintyWeight>
-     1.0
+     0.3
    </uncertaintyWeight>
  </logicTreeBranch>
 ```
@@ -92,14 +92,14 @@ The *postprocessing of hazard curves* has been substantially improved:
 now it requires orders of magnitude less memory than before and it is
 extremely efficient. For instance in our cluster we were able to
 compute mean and max hazard curves in a calculation for a Canada model
-with 206,366 sites, 129 hazard levels and 13,122 realizations, spawning
-~3,500 tasks and using ~500 GB of memory spread on four machines, in just
+with 206,366 sites, 129 hazard levels and 13,122 realizations - spawning
+~3,500 tasks and using ~500 GB of memory spread on four machines - in just
 11 minutes. This is orders of magnitude better than everything we ever
 managed to run before.
 
 There is also a huge improvement in the *storage of the hazard
-curves*: the [individual hazard curves are not stored anymore]
-(http://micheles.github.io/2017/05/02/hazard-outputs/), unless there
+curves*: the [individual hazard curves are not stored anymore](
+http://micheles.github.io/2017/05/02/hazard-outputs/), unless there
 is only one realization. This means that in large computations we can
 save orders of magnitudes of data storage: for instance for the Canada
 computation the saving in space is from 1.27 TB to 5.44 GB (240x
@@ -126,7 +126,7 @@ Most users will be interested just in the statistical hazard curves,
 maps and hazard spectra. Such outputs can be exported exactly as in
 the past and without any performance penalty, since the statistical
 curves are computed and stored in postprocessing. Also, it should be noticed
-tha now by default the *mean hazard curves are computed*.
+that now by default the *mean hazard curves are computed*.
 
 The *postprocessing of loss curves* has been improved too: now the
 loss curves and maps are produced by *reading directly the asset loss
@@ -157,7 +157,7 @@ more readable than the one we used in the past which was not even
 a proper CSV (it was used for internal purposes only).
 
 Among the huge improvements to the event based calculators one of the
-most relevant is the fact that the ruptures are being saved and
+most relevant is the fact that the *ruptures* are being saved and
 read from the datastore in HDF5 format: before they were stored in an
 unfortunate pickle format, for historical reasons.
 
@@ -174,7 +174,7 @@ with thousands of sites and GMFs we measured a speedup from 5 hours to
 45 seconds.
 
 The performance of the event based calculator has been improved
-substantially in the *GMF-generation* phase, but the improvement. We
+substantially in the *GMF-generation* phase. We
 measured improvements of a factor 2 in speed and a factor 3 in memory
 occupation, but they can be larger or smaller, depending on the size of your
 computation. The larger the calculation, the more sensible is the improvement.
@@ -199,7 +199,7 @@ directly the data saved in the datastore with the exported data, a
 feature wanted by several power users for years.
 
 The CSV exporter for the output `dmg_total` in damage calculators
-now presents the data in a more readable format. The has been done
+now presents the data in a more readable format. The same has been done
 for the aggregate losses exported by the `scenario_risk` calculator.
 
 The CSV exporter for the output `ruptures` is slightly different:
@@ -222,7 +222,7 @@ the final user.
 We changed the .npz export to export even GMFs outside of the maximum distance,
 with zero value: this makes it easier to visualize the results.
 
-We removed the csv exporter for the `all_loss_ratios` output in `scenario_risk`:
+We removed the CSV exporter for the `all_loss_ratios` output in `scenario_risk`:
 now there is an .npz exporter.
 
 We removed the GSIM name from the exported file name for the scenario
@@ -253,8 +253,7 @@ than computing the quantile with value 1.0.
 
 The mesh of a rupture is now stored as 32 bit array of floats instead of
 a 64 bit array: this reduces the memory consumption and data storage
-by half. Moreover, we have now an efficient way to serialize ruptures
-into HDF5 format.
+by half.
 
 We fixed a numerical issue involving the square root of small negative numbers,
 due to rounding issues.
@@ -268,8 +267,8 @@ filtering is used.
 
 There is now a new class `EBRupture` in hazardlib to describe event based
 ruptures as a raw rupture object and an array of events: previously this
-logic was in the engine. The change make it possible to serialize (read
-and write) groups of event based ruptures in XML.
+class was in the engine. The change make it possible to serialize (read
+and write) groups of event based ruptures in NRML format.
 
 We fixed an ordering bug in `get_surface_boundaries`: now it returns
 the points in clockwise order, i.e. the right order to produce a WKT
