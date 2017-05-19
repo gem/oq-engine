@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Now the command `oq export loss_curves/rlz-XXX` works both for the
+    `classical_risk` calculator and the `event_based_risk` calculator
+
   [Daniele Viganò]
   * Remove the default 30 day-old view limit in the WebUI calculation list
 
