@@ -1,0 +1,3 @@
+# source_model_tree_path=('b11', 'b22', 'b31', 'b43', 'b52', 'b64', 'b73', 'b84', 'b92', 'b104', 'b112'),gsim_tree_path=('b11',),investigation_time=50.0
+lon,lat,PGA-0.005,PGA-0.007,PGA-0.0098
+0.00000,0.00000,6.522423E-01,6.479808E-01,6.365380E-01
