@@ -824,11 +824,12 @@ class LossRatiosGetter(object):
     def __init__(self, dstore):
         self.dstore = dstore
 
+    # used in the loss curves exporter
     def get(self, aids, rlzi):
         """
         :param aids: a list of A asset ordinals
         :param rlzi: a realization ordinal
-        :returns: a dictionary aid -> loss ratios
+        :returns: a dictionary aid -> list of loss ratios
         """
         data = self.dstore['all_loss_ratios/data']
         indices = self.dstore['all_loss_ratios/indices'][aids]  # (A, T, 2)
@@ -840,6 +841,7 @@ class LossRatiosGetter(object):
                         dic[aid].append(rec['ratios'])
         return dic
 
+    # used in the calculator
     def get_all(self, aids):
         """
         :param aids: a list of A asset ordinals
