@@ -97,10 +97,12 @@ ln -sf %{oqprefix}/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
+mkdir -p %{buildroot}%{_datadir}/applications
+mkdir -p %{buildroot}%{_datadir}/pixmaps
 mkdir -p %{buildroot}%{_unitdir}
 install -m 644 openquake/engine/openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
-install -m 644 debian/desktop/oq-engine-webui.desktop %{buildroot}/%{_datadir}/applications
-install -m 644 debian/desktop/openquake.png %{buildroot}/%{_datadir}/pixmaps
+install -m 644 debian/desktop/oq-engine-webui.desktop %{buildroot}%{_datadir}/applications
+install -m 644 debian/desktop/openquake.png %{buildroot}%{_datadir}/pixmaps
 install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
 install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
 install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
@@ -134,6 +136,8 @@ rm -rf %{buildroot}
 %{oqprefix}/lib/python2.7/site-packages/openquake*
 %{_bindir}/oq
 %{_datadir}/openquake/engine
+%{_datadir}/applications/oq-engine-webui.desktop
+%{_datadir}/pixmaps/openquake.png
 %{_sysconfdir}/openquake/openquake.cfg
 %{_unitdir}/openquake-dbserver.service
 %{_unitdir}/openquake-webui.service
