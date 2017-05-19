@@ -18,8 +18,9 @@
 
 import itertools
 import collections
-
+import logging
 import numpy
+
 from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, split_in_blocks, deprecated
@@ -289,6 +290,8 @@ def get_eids_years_serials(events_by_grp, eids):
 @export.add(('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
     if '/' not in ekey[0]:  # full loss curves are not exportable
+        logging.error('Use the command oq export loss_curves/rlz-0 to export '
+                      'the first realization')
         return []
     what = ekey[0].split('/', 1)[1]
     return loss_curves.LossCurveExporter(dstore).export('csv', what)
