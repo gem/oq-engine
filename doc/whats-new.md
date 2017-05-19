@@ -42,7 +42,7 @@ There are several new outputs/exporters.
   produced by the calculators `scenario_risk`, `event_based_risk` and
   `ucerf_risk`. There are CSV exporters associated.
 - There is a new CSV exporter for the loss curves, while the old one has
-  been removed
+  been removed.
 - There two new .npz exporters for the loss maps and the losses by asset.
 - There is a new CSV exporter for the benefit-cost-ratio calculator.
 - There is a new experimental CSV exporter for the ground motion fields
@@ -291,7 +291,7 @@ due to rounding issues.
 
 We have refactored the filtering mechanism and we have now a
 single `IntegrationDistance` class in charge of filtering out sites and
-ruptures outside of the integration distance. For safe of correctness,
+ruptures outside of the integration distance. For sake of correctness,
 we have disabled the `rtree` filtering if the site collection contains
 points which are not at the sea level. In that case the geodetic distance
 filtering is used.
@@ -324,7 +324,7 @@ of available GSIM classes. Now the platform uses the engine as a service
 and it does not import directly any code from it.
 
 We changed the Web UI button from "Run Risk" to "Continue", since it
-can also be used or postprocessing of hazard calculations.
+can also be used for postprocessing of hazard calculations.
 
 All the engine outputs are streamed from the WebUI. This saves memory in
 the case of large outputs.
@@ -451,10 +451,8 @@ us access to a Grid Engine cluster.
 Travis/Jenkins/packaging (check these with Daniele)
 ---------------------------------------------------
 
-Fix an issue with Travis branches when submitting PR
 Change how `local_settings.py` is found
-Make init scripts more robust and portable
-Turned matplolib into a required library and added a plotting test on Travis
+matplolib is now included with the OpenQuake distribution
 Check if oq is talking to a foreign DbServer
 Sync packager.sh with oq-hazardlib to manage oq-libs-extra
 Bump to h5py 2.7.0
@@ -462,7 +460,6 @@ Differentiate listening interface and connect interface in dbserver
 Small fixes for local_settings template to be able to append settings
 Add a template for PAM auth
 Split RPM packages in standard, master, worker
-Use CDN ftp mirror instead of upstream
 
 Deprecations
 ------------------------------
@@ -473,4 +470,4 @@ the CSV ones for small outputs and the NPZ/HDF5 ones for large outputs.
 
 Python 2.7 is not officially deprecated yet, but it will be deprecated soon.
 The version we use for development and production since the beginning of
-2017 is Python 3.5.
+2017 is Python 3.5. Here is [our roadmap for the future](https://github.com/gem/oq-engine/issues/2803).
