@@ -27,17 +27,17 @@ class LossCurveExporter(object):
     and `what` is a string called export specifier. Here are some examples
     for the export specifier:
 
-    sid-42/   # export loss curves of site #42 for all realizations
-    sid-42/rlz-003   # export all loss curves of site #42, realization #3
-    sid-42/stats   # export statistical loss curves of site #42
-    sid-42/mean   # export mean loss curves of site #42
-    sid-42/quantile-0.1   # export quantile loss curves of site #42
+    rlzs/sid-42   # export loss curves of site #42 for all realizations
+    rlz-003/sid-42   # export all loss curves of site #42, realization #3
+    stats/sid-42   # export statistical loss curves of site #42
+    mean/sid-42   # export mean loss curves of site #42
+    quantile-0.1/sid-42   # export quantile loss curves of site #42
 
-    ref-a1/   # export loss curves of asset a1 for all realizations
-    ref-a1/rlz-003   # export loss curves of asset a1, realization 3
-    ref-a1/stats     # export statistical loss curves of asset a1
-    ref-a1/mean     # export mean loss curves of asset a1
-    ref-a1/quantile-0.1    # export quantile loss curves of asset a1
+    rlzs/ref-a1          # export loss curves of asset a1 for all realizations
+    rlz-003/ref-a1      # export loss curves of asset a1, realization 3
+    stats/ref-a1        # export statistical loss curves of asset a1
+    mean/ref-a1         # export mean loss curves of asset a1
+    quantile-0.1/ref-a1 # export quantile loss curves of asset a1
     """
     def __init__(self, dstore):
         self.dstore = dstore
@@ -51,15 +51,21 @@ class LossCurveExporter(object):
     def parse(self, what):
         """
         :param what:
-            can be 'ref-asset1/rlz-1', 'sid-1/rlz-2', ...
+            can be 'rlz-1/ref-asset1', 'rlz-2/sid-1', ...
         """
-        spec, key = what.split('/')
-        if not spec.startswith(('ref-', 'sid-')):
+        if '/' not in what:
+            key, spec = what, ''
+        else:
+            key, spec = what.split('/')
+        if spec and not spec.startswith(('ref-', 'sid-')):
             raise ValueError('Wrong specification in %s' % what)
-        if not (key in ('', 'stats', 'mean') or key.startswith(('rlz-')) or
-                key.startswith('quantile-')):
-            raise ValueError('Wrong export key in %s' % what)
-        if spec.startswith('sid-'):  # passed the site ID
+        elif spec == '':  # export losses for all assets
+            aids = []
+            arefs = []
+            for aid, rec in enumerate(self.assetcol.array):
+                aids.append(aid)
+                arefs.append(self.asset_refs[rec['idx']])
+        elif spec.startswith('sid-'):  # passed the site ID
             sid = int(spec[4:])
             aids = []
             arefs = []
@@ -67,10 +73,12 @@ class LossCurveExporter(object):
                 if rec['site_id'] == sid:
                     aids.append(aid)
                     arefs.append(self.asset_refs[rec['idx']])
-        else:  # passed the asset name
+        elif spec.startswith('ref-'):  # passed the asset name
             arefs = [spec[4:]]
             aids = [self.str2asset[arefs[0]].ordinal]
-        return aids, arefs, spec, key
+        else:
+            raise ValueError('Wrong specification in %s' % what)
+        return aids, arefs, spec or 'all', key
 
     def export_csv(self, spec, asset_refs, curves_dict):
         """
@@ -99,7 +107,7 @@ class LossCurveExporter(object):
         :returns: list of exported file names
         """
         aids, arefs, spec, key = self.parse(what)
-        if not key or key.startswith('rlz-'):
+        if key.startswith('rlz'):
             curves = self.export_curves_rlzs(aids, key)
         else:  # statistical exports
             curves = self.export_curves_stats(aids, key)
@@ -111,16 +119,17 @@ class LossCurveExporter(object):
         """
         if 'loss_curves-rlzs' in self.dstore:  # classical_risk
             data = self.dstore['loss_curves-rlzs'][aids]  # shape (A, R)
-            if key:
+            if key.startswith('rlz-'):
                 rlzi = int(key[4:])
                 return {key: data[:, rlzi]}
+            # else key == 'rlzs', returns all data
             return {'rlz-%03d' % rlzi: data[:, rlzi] for rlzi in range(self.R)}
 
         # otherwise event_based
         crm = riskinput.read_composite_risk_model(self.dstore)
         builder = crm.curve_builder
         assets = [self.assetcol[aid] for aid in aids]
-        rlzi = int(key[4:]) if key else None  # strip rlz-
+        rlzi = int(key[4:]) if key.startswith('rlz-') else None  # strip rlz-
         ratios = riskinput.LossRatiosGetter(self.dstore).get(aids, rlzi)
         if rlzi:
             return {rlzi: builder.build_curves(assets, ratios, rlzi)}
@@ -133,8 +142,8 @@ class LossCurveExporter(object):
         :returns: a dictionary rlzi -> record of dtype loss_curve_dt
         """
         oq = self.dstore['oqparam']
-        stats = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
-        stat2idx = {stat: s for s, stat in enumerate(stats)}
+        stats = oq.risk_stats()  # pair (name, func)
+        stat2idx = {stat[0]: s for s, stat in enumerate(stats)}
         if 'loss_curves-stats' in self.dstore:  # classical_risk
             dset = self.dstore['loss_curves-stats']
             data = dset[aids]  # shape (A, S)
