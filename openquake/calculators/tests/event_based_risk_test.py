@@ -89,7 +89,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini', concurrent_tasks='0')
+        self.run_calc(case_1.__file__, 'job.ini')
         ekeys = [('agg_curve-stats', 'xml')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
