@@ -445,18 +445,42 @@ gone, just use the good old `event_based_risk` calculator.
 Internal TXT exporters for the ground motion fields, used only for the
 tests have been removed.
 
-Travis/Jenkins/packaging (check these with Daniele)
----------------------------------------------------
+Packaging
+-------------------------
+[Matplotlib](https://matplotlib.org/) is now a requirement for the OpenQuake Engine
+and hazardlib. It's already included in the OpenQuake installers, packages and as
+Python wheel.
+[Basemap](https://matplotlib.org/basemap/) can be also installed to enable
+some extra plotting features from the Hazard Modeler Toolkit (part of Hazardlib).
+Basemap is provided as pre-compiled Python wheel, it's included in installers
+and provided by the `python-oq-libs-extra` package on Ubuntu and RedHat/CentOS.
+`python-oq-libs-extra` isn't required on a headless server setup.
 
-Change how `local_settings.py` is found
-matplolib is now included with the OpenQuake distribution
-Check if oq is talking to a foreign DbServer
-Sync packager.sh with oq-hazardlib to manage oq-libs-extra
-Bump to h5py 2.7.0
-Differentiate listening interface and connect interface in dbserver
-Small fixes for local_settings template to be able to append settings
-Add a template for PAM auth
-Split RPM packages in standard, master, worker
+A safety measure has been introduced to check that the OpenQuake Engine is talking
+to a proper `openquake.server` (DbServer) instance if multiple installation
+are performed on the same node (i.e. a system-wide multi-user installation and
+a single-user development installation).
+
+The logic how `local_settings.py` is found has changed: first is
+searched in the folder where `openquake.dbserver` is started from;
+if it does not exist in the folder it will be searched in the `openquake.server`
+location itself. If no `local_settings.py` is provided at all, default settings will be used.
+
+[h5py](http://www.h5py.org/) has been updated to version 2.7.0.
+
+A [template for PAM authentication](../openquake/server/local_settings.py.pam)
+is now provided. This allows the WebUI to authenticate users against system users
+on a Linux server. See the [documentation](installing/server.md#authentication-using-pam)
+for further information.
+
+The RPM `python-oq-engine` package has been splitted into `python-oq-engine`,
+`python-oq-engine-mater` and `python-oq-engine-worker`. This reduces
+the amount of dependencies need by `python-oq-engine` when installed on
+a single node and specific configurations for _master_ and _workers_ nodes
+are provided by dedicated packages.
+This setup will be ported to Ubuntu packages too in the next release.
+See the [documentation](installing/cluster.md#redhat) for further
+information.
 
 Deprecations
 ------------------------------
