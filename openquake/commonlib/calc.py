@@ -184,6 +184,8 @@ class PmapGetter(object):
             for rlzi in range(num_rlzs):
                 hcurves = self.get(self.sids, rlzi)
                 yield 'rlz-%03d' % rlzi, hcurves
+        elif 'poes' in self.dstore and kind.startswith('rlz-'):
+            yield kind, self.get(self.sids, int(kind[4:]))
         if 'hcurves' in self.dstore and kind in ('stats', 'all'):
             for k in sorted(self.dstore['hcurves']):
                 yield k, self.dstore['hcurves/' + k]
