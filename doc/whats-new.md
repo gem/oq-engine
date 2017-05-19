@@ -74,7 +74,7 @@ them as if they were a single file. Just specify the file names in the
 source_model_logic_tree file. For instance, you could split by
 tectonic region and have something like this:
 
-```
+```xml
  <logicTreeBranch branchID="b1">
    <uncertaintyModel>
      active_shallow_sources.xml
@@ -147,7 +147,7 @@ a consequence of the change the engine does not show the loss curves
 output anymore; however the curves can still can be exported, but with
 a new command:
 
-```
+```bash
 $ oq export loss_curves/rlz-XXX
 ```
 
@@ -157,7 +157,7 @@ more readable than the one we used in the past which was not even
 a proper CSV (it was used for internal purposes only).
 
 Among the huge improvements to the event based calculators one of the
-most relevant is the fact that the ruptures are now being saved and
+most relevant is the fact that the ruptures are being saved and
 read from the datastore in HDF5 format: before they were stored in an
 unfortunate pickle format, for historical reasons.
 
@@ -228,36 +228,6 @@ now there is an .npz exporter.
 We removed the GSIM name from the exported file name for the scenario
 calculators.
 
-Internal changes
---------------------
-
-As always, there are several internal changes to the engine. They are invisible
-to regular users, so I am not listing all of the changes here. However, I
-will list some changes that may be of interests to power users and people
-developing with engine.
-
-The parameters `ses_per_logic_tree_path` and `number_of_logic_tree_samples`
-are constrained to 2 bytes only in UCERF now.
-
-As usual the layout of the datastore has changed; in particular the way
-the GMFs and the events are stored is different.
-
-In the past running the tests littered your file systems with lots of
-generated files, both in the current directory and in the /tmp directory.
-Now the tests never write on the current directory and they cleanup the
-/tmp directory (if they are successful).
-
-There an internal configuration flag `ignore_covs` which is used to disable
-the use of the coefficients of variations in vulnerability functions, for
-debugging purposes. Now this flag works for `scenario_risk` calculations too.
-Before it was restricted to `event_based_risk`.
-
-In release 2.3 we introduced temporarily an `ebrisk` calculator. Now it is
-gone, just use the good old `event_based_risk` calculator.
-
-Internal TXT exporters for the ground motion fields, used only for the
-tests have been removed.
-
 hazardlib
 --------------------------
 
@@ -301,9 +271,9 @@ ruptures as a raw rupture object and an array of events: previously this
 logic was in the engine. The change make it possible to serialize (read
 and write) groups of event based ruptures in XML.
 
-We fixed an ordering bug in `get_surface_boundaries`: now it returns the points
-in clockwise order, i.e. the right order to produce a WKT string which used
-to display the rupture.
+We fixed an ordering bug in `get_surface_boundaries`: now it returns
+the points in clockwise order, i.e. the right order to produce a WKT
+bounding box which is used to plot the rupture with our QGIS plugin.
 
 We extended and refactored the `GmfComputer` class which is used by
 the engine in scenario and event based calculations.
@@ -311,9 +281,10 @@ the engine in scenario and event based calculations.
 There is a new constructor for the `Polygon` class which is able 
 to parse a WKT polygon string.
 
-We fixed a bug when splitting sources with a `YoungsCoppersmith1985MFD`
-magnitude frequence distribution: that made impossible to run such calculations
-in some cases (depending on the splitting).
+We fixed a bug when splitting sources with a
+`YoungsCoppersmith1985MFD` magnitude frequence distribution: that made
+impossible to run such calculations in some cases (depending on the
+splitting).
 
 WebUI
 -------------------
@@ -367,22 +338,19 @@ We fixed a couple of bugs affecting exposures with multiple assets of the
 same taxonomy on the same site: that made it impossible to run `classical_risk`
 and `scenario_risk` calculations for such exposures.
 
-We fixed the CSV rupture exporter: now the bounding box of the
-ruptures is using the correct WKT ordering convention and can be
-easily be plotted by our QGIS plugin.
-
 We fixed an annoying encoding bug in the commands `oq engine --lhc` and
 `oq engine --lrc` which affected the display of calculations with non-ASCII
 characters in the description.
 
-We fixed bug in `event_based_risk`: it was impossible to use
+We fixed a bug in `event_based_risk`: it was impossible to use
 vulnerability functions with "PM" distribution, i.e. with Probability
 Mass Functions. Now they work as expected.
 
-The .npz export for scenario calculations exports even GMFs outside
+The .npz export for scenario calculations now exports GMFs outside
 the maximum distance, which are all zeros. This is convenient when plotting
 and consistent with CSV export. The export has also been fixed in the case
-of a single event, i.e. `number_of_ground_motion_fields=1` which was broken.
+of a single event, i.e. when `number_of_ground_motion_fields=1`,
+which was broken.
 
 Additional validations
 ----------------------
@@ -400,7 +368,7 @@ before starting the calculation and not in the middle of it.
 Also, if an user provides a complex logic tree file which is
 invalid for the scenario calculator, now she gets a clear error message.
 
-There also checks for patological situations, like the user 
+There are more checks for patological situations, like the user 
 providing no intensity measure sites, no GSIMs, no sites: now a clearer
 error message will be displayed.
 
@@ -443,10 +411,40 @@ the base for a future development that will allow to serialize point sources
 into HDF5 datasets efficiently (scheduled for engine 2.5).
 
 We introduced some preliminary support for the Grid Engine. This is useful
-for people running the engine on big clusters and supercomputers. Unfortunately
-since we do not have a supercomputer we are not able to really test this 
+for people running the engine on big clusters and supercomputers. Unfortunately,
+since we do not have a supercomputer, we are not able to really test this 
 feature. Interested users should contact us and offer some help, like giving
 us access to a Grid Engine cluster.
+
+Internal changes
+--------------------
+
+As always, there are several internal changes to the engine. They are invisible
+to regular users, so I am not listing all of the changes here. However, I
+will list some changes that may be of interests to power users and people
+developing with engine.
+
+The parameters `ses_per_logic_tree_path` and `number_of_logic_tree_samples`
+are constrained to 2 bytes only in UCERF now.
+
+As usual the layout of the datastore has changed; in particular the way
+the GMFs and the events are stored is different.
+
+In the past running the tests littered your file systems with lots of
+generated files, both in the current directory and in the /tmp directory.
+Now the tests never write on the current directory and they cleanup the
+/tmp directory (if they are successful).
+
+There an internal configuration flag `ignore_covs` which is used to disable
+the use of the coefficients of variations in vulnerability functions, for
+debugging purposes. Now this flag works for `scenario_risk` calculations too.
+Before it was restricted to `event_based_risk`.
+
+In release 2.3 we introduced temporarily an `ebrisk` calculator. Now it is
+gone, just use the good old `event_based_risk` calculator.
+
+Internal TXT exporters for the ground motion fields, used only for the
+tests have been removed.
 
 Travis/Jenkins/packaging (check these with Daniele)
 ---------------------------------------------------
