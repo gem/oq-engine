@@ -89,13 +89,20 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini')
+        self.run_calc(case_1.__file__, 'job.ini', concurrent_tasks='0')
         ekeys = [('agg_curve-stats', 'xml')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
                     'expected/%s' % strip_calc_id(fname), fname)
 
+        # test the loss curves exporter
+        [f1] = export(('loss_curves/rlz-0', 'csv'), self.calc.datastore)
+        [f2] = export(('loss_curves/rlz-1', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-rlz-000.csv', f1)
+        self.assertEqualFiles('expected/loss_curves-rlz-001.csv', f2)
+
+        # test the loss maps exporter
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         assert fnames
         if REFERENCE_OS:

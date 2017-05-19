@@ -23,7 +23,8 @@ import numpy
 
 from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import AccumDict, split_in_blocks, deprecated
+from openquake.baselib.general import (
+    AccumDict, split_in_blocks, deprecated as depr)
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
@@ -44,7 +45,7 @@ U64 = numpy.uint64
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-deprecated = deprecated('Use the csv exporter instead')
+deprecated = depr('Use the csv exporter instead')
 
 
 def add_quotes(values):
@@ -861,7 +862,7 @@ def export_losses_by_taxon_csv(ekey, dstore):
 # this is used by classical_risk
 @export.add(('loss_curves-rlzs', 'xml'),
             ('loss_curves-rlzs', 'geojson'))
-@deprecated
+@depr('Use `oq export loss_curves/rlz-XX` instead')
 def export_loss_curves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
