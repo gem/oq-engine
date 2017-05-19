@@ -995,7 +995,7 @@ class CurveBuilder(object):
                 data = loss_ratios[a][rlzi]
             except KeyError:  # no ratios for the given realization
                 continue
-            ratios = data['ratios'].reshape(-1, LI)
+            ratios = data.reshape(-1, LI)
             for cb in self.cbs:
                 lt = cb.loss_type
                 losses = asset.value(lt) * cb.ratios

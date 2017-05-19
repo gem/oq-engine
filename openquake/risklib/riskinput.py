@@ -830,8 +830,8 @@ class LossRatiosGetter(object):
         :param rlzi: a realization ordinal
         :returns: a dictionary aid -> loss ratios
         """
-        data = self.dset['all_loss_ratios/data']
-        indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
+        data = self.dstore['all_loss_ratios/data']
+        indices = self.dstore['all_loss_ratios/indices'][aids]  # (A, T, 2)
         dic = collections.defaultdict(list)  # aid -> ratios
         for aid, idxs in zip(aids, indices):
             for idx in idxs:
