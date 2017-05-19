@@ -4,7 +4,7 @@ Release notes for the OpenQuake Engine, version 2.4
 This release introduces several changes and improvements to the
 engine calculators, most notably in the postprocessing of
 hazard curves in classical PSHA calculations and in the postprocessing of
-loss curves in event based risk calculations. Also, both hazard and
+loss curves in event based risk calculations. Also, hazard and
 risk exporters have been revised and extended. Several bugs have
 been fixed and several optimizations added.
 
@@ -18,7 +18,7 @@ We have also decided a plan for
 [dropping support to Python 2](dropping-python-2.md). We will abandon that
 platform in the course of the year 2018. Precise dates have not been
 fixed - on purpose - but everybody who is using hazardlib and/or the
-engine as a library has to think about migrating to Python 3. Please
+engine as a library should think about migrating to Python 3. Please
 contact us if this is a problem for you: we are keen to provide
 advice for the migration.
 
@@ -27,11 +27,8 @@ New features in the engine
  
 There are several new outputs/exporters.
  
-- There are new .csv exporters for the losses aggregated by taxonomy which are
-  computed by the calculators `scenario_risk`, `event_based_risk` and
-  `ucerf_risk`.
-- There is a new output and a new .hdf5 exporter for the `asset_loss_table`,
-  i.e. the full table of losses for each asset. This is an optional output of
+- There is a new output and a new .hdf5 exporter for the full set of losses
+  for each asset and for each seismic event. This is an optional output of
   the `event_based_risk` calculator, generated when you set the flag
   `asset_loss_table=true` in the `job.ini` configuration file.
 - There is an equivalent output for the `scenario_risk` calculator, called
@@ -41,9 +38,14 @@ There are several new outputs/exporters.
   calculator, which is similar to the event loss table in the event based
   calculator: it contains the aggregate losses for each seismic event.
   There is a also new CSV exporter for it.
+- There are new outputs for the losses aggregated by taxonomy which are
+  produced by the calculators `scenario_risk`, `event_based_risk` and
+  `ucerf_risk`. There are CSV exporters associated.
+- There is a new CSV exporter for the loss curves, while the old one has
+  been removed
 - There two new .npz exporters for the loss maps and the losses by asset
   outputs.
-- There is a new CSV exporter for the Benefit-Cost-Ratio calculator.
+- There is a new CSV exporter for the benefit-cost-ratio calculator.
 - There is a new experimental CSV exporter for the ground motion fields
   produced by the event based calculator.
 - The XML exporter for the output `ruptures` now contains only the
@@ -91,31 +93,11 @@ Optimizations
 The *postprocessing of hazard curves* has been substantially improved:
 now it uses orders of magnitude less memory than before and it is
 extremely efficient. For instance in our cluster we were able to
-compute mean and max hazard curves in a calculation for a Canada
-model with 206,366 sites, 129 hazard levels and 13,122 realizations in
-11 minutes, by spawning ~3,500 tasks and using ~500 GB of memory among
-four machines. This is orders of magnitude better than everything we
-ever managed to run before. Technically this has been achieved by
-having the workers reading the data directly instead than passing them
-via the celery/rabbitmq combo, thus improving the scalability of the
-engine very significantly.
-
-A similar approach has been used in the event based risk calculator.
-Now the loss curves and maps are produced in postprocessing by
-*reading directly the asset loss table*. As a consequence the
-postprocessing is a lot more scalable than before. We can easily
-compute millions of loss maps.
-
-While loss maps are stored as before, *loss curves have become a dynamic
-output*, generated at runtime from the loss ratios (this is the same
-approach used for the hazard curves, generated at runtime from the
-ProbabilityMaps). This saves a huge amount of disk space. As a consequence
-of the change the engine does not show the loss curves anymore; however
-they still can be exported, but with a new command:
-
-```
-$ oq export loss_curves/rlz-XXX
-```
+compute mean and max hazard curves in a calculation for a Canada model
+with 206,366 sites, 129 hazard levels and 13,122 realizations spawning
+~3,500 tasks and using ~500 GB of memory among four machines in just
+11 minutes. This is orders of magnitude better than everything we ever
+managed to run before.
 
 There is a huge improvement in the *storage of the hazard curves*:
 the [individual hazard curves are not stored anymore]
@@ -123,7 +105,7 @@ the [individual hazard curves are not stored anymore]
 only one realization. This means that in large computations we can
 save orders of magnitudes of data storage: for instance for a big
 computation we have for Canada the saving in space is from 1.27 TB
-to 5.44 GB (240x improvement).
+to 5.44 GB (240x improvement!).
 
 Consequently to the change above, the way we *export the hazard curves,
 maps and uniform hazard spectra* has changed. It is still possible to
@@ -147,6 +129,27 @@ the past and without any performance penalty, since the statistical
 curves are computed and stored in postprocessing. Also, now by default
 the *mean hazard curves* are computed, whereas in the past their were
 not computed.
+
+The *postprocessing of loss curves* has been improved too: now the
+loss curves and maps are produced by *reading directly the asset loss
+table* from the workers, instead than passing them via the
+celery/rabbitmq combo. This change has improved the scalability of the
+engine very significantly and now we can easily compute millions of
+loss maps. It should be noticed that in a cluster, the new approach
+requires a shared file system, otherwise the postprocessing will use
+only the cores of the controller node.
+
+While the loss maps are stored as before, the *loss curves have become
+a dynamic output*, generated at runtime from the asset loss table
+(this is the same approach used for the hazard curves, generated at
+runtime from the ProbabilityMaps). This approach saves a huge amount
+of disk space. As a consequence of the change the engine does not show
+the loss curves anymore; however they still can be exported, but with
+a new command:
+
+```
+$ oq export loss_curves/rlz-XXX
+```
 
 The `ruptures` are now being saved and read from the datastore in a very
 efficient HDF5 format: before they were stored in an unfortunate pickle format.
@@ -217,7 +220,8 @@ Changed the CSV exporter for `classical_risk` loss curves
 We removed the csv exporter for the `all_loss_ratios` output in `scenario_risk`:
 now there is an .npz exporter/
 
-Removed the GSIM from the exported file name for the risk calculators
+We emoved the GSIM name from the exported file name for the
+scenario calculators.
 
 The parameters `ses_per_logic_tree_path` and `number_of_logic_tree_samples`
 are constrained to 2 bytes only in UCERF now.
@@ -225,9 +229,13 @@ are constrained to 2 bytes only in UCERF now.
 As usual the layout of the datastore has changed; in particular the way
 the GMFs and the events are stored is different.
 
-Use a temporary `export_dir` in the tests
+In the past running the tests littered your file systems with lots of
+generated files, both in the current directory and in the /tmp directory.
+Now the tests never write on the current directory and they cleanup the
+/tmp directory (if they are successful).
+
 Changed the storage of the events
-Changed the way the
+
 Fixed `ignore_covs` for `scenario_risk`
 
 In release 2.3 we introduced temporarily an `ebrisk` calculator. Now it is
@@ -236,7 +244,7 @@ gone, just use the good old `event_based_risk` calculator.
 Internal TXT exporters for the ground motion fields, used only for the
 tests have been removed.
 
-The .ext5 file has been removed.
+The .ext5 file which was used internally to store the GMFs has been removed.
 
 As always, a great deal of internal refactoring has been done.
 
