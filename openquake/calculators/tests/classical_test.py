@@ -254,6 +254,10 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
              'quantile_curve-0.9.csv'],
             case_16.__file__)
 
+        # test single realization export
+        [fname] = export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-rlz-003.csv', fname)
+
     @attr('qa', 'hazard', 'classical')
     def test_case_17(self):  # oversampling
         self.assert_curves_ok(
