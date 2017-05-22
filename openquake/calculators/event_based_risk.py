@@ -239,7 +239,8 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
-            if self.oqparam.hazard_calculation_id:
+            if self.oqparam.hazard_calculation_id and (
+                    'asset_loss_table' in self.datastore.parent):
                 Starmap = parallel.Starmap  # we can parallelize fully
                 lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
                 # avoid OSError: Can't read data (Wrong b-tree signature)
