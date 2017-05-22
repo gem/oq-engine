@@ -43,18 +43,18 @@
 # liability for use of the software.
 # -*- coding: utf-8 -*-
 '''
-Module :mod: openquake.hmtk.seismicity.smoothing.kernels.isotropic_gaussian imports
-openquake.hmtk.seismicity.smoothing.kernels.isotropic_gaussian.IsotropicGaussian the
-simple isotropic Gaussian smoothing kernel as described by Frankel (1995)
+Module :mod:`openquake.hmtk.seismicity.smoothing.kernels.isotropic_gaussian`
+imports :class:`openquake.hmtk.seismicity.smoothing.kernels.isotropic_gaussian.IsotropicGaussian`
+the simple isotropic Gaussian smoothing kernel as described by Frankel (1995)
 
 Frankel, A. (1995) Mapping Seismic Hazard in the Central and Eastern United
 States. Seismological Research Letters. 66(4) 8 - 21
-
 '''
 
 import numpy as np
 from openquake.hmtk.seismicity.utils import haversine
-from openquake.hmtk.seismicity.smoothing.kernels.base import BaseSmoothingKernel
+from openquake.hmtk.seismicity.smoothing.kernels.base import (
+    BaseSmoothingKernel)
 
 
 class IsotropicGaussian(BaseSmoothingKernel):
@@ -66,6 +66,7 @@ class IsotropicGaussian(BaseSmoothingKernel):
     def smooth_data(self, data, config, is_3d=False):
         '''
         Applies the smoothing kernel to the data
+
         :param np.ndarray data:
             Raw earthquake count in the form [Longitude, Latitude, Depth,
                 Count]

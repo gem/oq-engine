@@ -64,6 +64,7 @@ def get_bilinear_residuals_stepp(input_params, xvals, yvals, slope1_fit):
     '''
     Returns the residual sum-of-squares value of a bilinear fit to a data
     set - with a segment - 1 gradient fixed by an input value (slope_1_fit)
+
     :param list input_params:
         Input parameters for the bilinear model [slope2, crossover_point,
                                                  intercept]
@@ -144,13 +145,10 @@ class Stepp1971(BaseCatalogueCompleteness):
 
         :param dict config:
             Configuration parameters of the algorithm, containing the
-            following information -
-                'magnitude_bin' Size of magnitude bin (non-negative float)
-                'time_bin' Size (in dec. years) of the time window
-                           (non-negative float)
-                'increment_lock' Boolean to indicate whether to ensure
-                           completeness magnitudes always decrease with more
-                           recent bins
+            following information:
+            'magnitude_bin' Size of magnitude bin (non-negative float)
+            'time_bin' Size (in dec. years) of the time window (non-negative float)         'increment_lock' Boolean to indicate whether to ensure
+            completeness magnitudes always decrease with more recent bins
 
         :returns:
             2-column table indicating year of completeness and corresponding
@@ -346,7 +344,8 @@ class Stepp1971(BaseCatalogueCompleteness):
         return comp_time, gradient_2, model_line
 
     def _fit_bilinear_to_stepp(self, xdata, ydata, initial_values=None):
-        '''Returns the residuals of a bilinear fit subject to the following
+        '''
+        Returns the residuals of a bilinear fit subject to the following
         constraints: 1) gradient of slope 1 = 1 / sqrt(T)
                      2) Crossover (x_c) < 0
                      3) gradient 2 is always < 0

@@ -105,15 +105,14 @@ class Characteristic(BaseMFDfromSlip):
             * 'MFD_spacing' - Width of MFD bin (float)
             * 'Minimum_Magnitude' - Minimum magnitude of activity rates (float)
             * 'Maximum_Magnitude' - Characteristic magnituded (float)
-                                    (if not defined will use scaling relation)
+            (if not defined will use scaling relation)
             * 'Maximum_Magnitude_Uncertainty' - Uncertainty on
-               maximum magnitude
-               (If not defined and the MSR has a sigma term then this will be
-               taken from sigma)
+            maximum magnitude
+            (If not defined and the MSR has a sigma term then this will be
+            taken from sigma)
             * 'Lower_Bound' - Lower bound in terms of number of sigma (float)
             * 'Upper_Bound' - Upper bound in terms of number of sigma (float)
             * 'Sigma' - Standard deviation (in magnitude units) of distribution
-
         '''
         self.mfd_model = 'Characteristic'
         self.mfd_weight = mfd_conf['Model_Weight']

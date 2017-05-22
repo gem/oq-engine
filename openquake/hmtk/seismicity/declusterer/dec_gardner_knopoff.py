@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -48,8 +48,8 @@
 # -*- coding: utf-8 -*-:
 
 """
-Module :mod:`openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff' defines the
-Gardner and Knopoff declustering algorithm
+Module :mod:`openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff`
+defines the Gardner and Knopoff declustering algorithm
 """
 
 import numpy as np

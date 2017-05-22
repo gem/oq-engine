@@ -17,7 +17,7 @@
 Tests are based on report "PEER 2010/106 - Verification of Probabilistic
 Seismic Hazard Analysis Computer Programs" by  Patricia Thomas, Ivan Wong,
 Norman Abrahamson, see
-`http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`_.
+http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`.
 """
 import unittest
 from decimal import Decimal

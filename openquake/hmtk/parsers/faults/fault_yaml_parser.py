@@ -57,11 +57,12 @@ from math import fabs
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.scalerel import get_available_scalerel
-from openquake.hmtk.faults.fault_geometries import (SimpleFaultGeometry,
-                                          ComplexFaultGeometry)
+from openquake.hmtk.faults.fault_geometries import (
+    SimpleFaultGeometry, ComplexFaultGeometry)
 from openquake.hmtk.faults.fault_models import mtkActiveFault
 from openquake.hmtk.faults.active_fault_model import mtkActiveFaultModel
-from openquake.hmtk.faults.tectonic_regionalisation import TectonicRegionalisation
+from openquake.hmtk.faults.tectonic_regionalisation import (
+    TectonicRegionalisation)
 
 
 SCALE_REL_MAP = get_available_scalerel()
@@ -130,12 +131,13 @@ class FaultYmltoSource(object):
             Name of input file (in yml format)
         '''
         self.data = yaml.load(open(filename, 'rt'))
-        if not 'Fault_Model' in self.data.keys():
+        if 'Fault_Model' not in self.data:
             raise ValueError('Fault Model not defined in input file!')
 
     def read_file(self, mesh_spacing=1.0):
         '''
-        Reads the file and returns an instance of the FaultSource class
+        Reads the file and returns an instance of the FaultSource class.
+
         :param float mesh_spacing:
             Fault mesh spacing (km)
         '''
@@ -202,7 +204,8 @@ class FaultYmltoSource(object):
     def read_fault_geometry(self, geo_dict, mesh_spacing=1.0):
         '''
         Creates the fault geometry from the parameters specified in the
-        dictionary
+        dictionary.
+
         :param dict geo_dict:
             Sub-dictionary of main fault dictionary containing only
             the geometry attributes
