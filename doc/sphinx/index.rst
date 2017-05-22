@@ -11,3 +11,4 @@ Internal structure
 
    openquake.baselib
    openquake.hazardlib
+   openquake.hmtk
