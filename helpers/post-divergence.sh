@@ -47,12 +47,12 @@ clear
 # substitute 'blob/master' with 'blob/<stable-branch-name>'
 echo "=== Blob/master to blob/$branch_new substitution ==="
 echo
-files="$(egrep -ril 'github.com/gem/oq-(hazardlib|engine)/blob/master/' README.md doc/)"
+files="$(grep -ril 'github.com/gem/oq-engine/blob/master/' README.md doc/)"
 IFS='
 '
 for f in $files; do
     echo "$f"
-    sed -i "s@github.com/gem/oq-\([^/]\+\)/blob/master/@github.com/gem/oq-\1/blob/$branch_new/@g" "$f"
+    sed -i "s@github.com/gem/oq-engine/blob/master/@github.com/gem/oq-engine/blob/$branch_new/@g" "$f"
 done
 echo
 read -p "[Press enter to continue] " a
