@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Move to Celery 4. Celery support is removed from Windows.
+
   [Michele Simionato]
   * Now the command `oq export loss_curves/rlz-XXX` works both for the
     `classical_risk` calculator and the `event_based_risk` calculator
