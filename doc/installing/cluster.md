@@ -105,6 +105,36 @@ sudo service openquake-celery start
 The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu](ubuntu.md#configure-the-system-services) or [RedHat](rhel.md#configure-the-system-services) to see how to enable or disable services.
 
 
+## Shared filesystem (optional)
+
+OpenQuake 2.4 introduces the concept of _shared directory_ (aka _shared_dir_). This _shared dir_ allows workers to read HDF5 directly from master's filesystem, increasing scalability and performance; this feature is optional: the old behaviour, transmitting data via `rabbitmq`, will be used when `shared_dir` isn't set.
+
+The _shared directory_ must be exported from the master node to workers via a _POSIX_ compliant filesystem (like **NFS**). The export may be (and _should_ be) exported and/or mounted as **read-only** by workers.
+
+As soon as the shared export is in place the `shared_dir` config parameter in `openquake.cfg` must be configured to point to the path of the exported dir on the _master_ node and to where the export is mounted on each _worker_ node.
+
+```
+[directory]
+# the base directory containing the <user>/oqdata directories;
+# if set, it should be on a shared filesystem; for instance in our
+# cluster it is /home/openquake; if not set, the oqdata directories
+# go into $HOME/oqdata, unless the user sets his own OQ_DATADIR variable
+shared_dir = /home/openquake
+```
+
+When `shared_dir` is set, the `oqdata` folders will be stored under `$shared_dir/<user>/oqdata` instead of `/home/<user>/oqdata`. See the comment in the `openquake.cfg` for further information.
+You may need to give `RWX` permission to the `shared_dir` on _master_ to the `openquake` group (which is usually created by packages) and add all the cluster users the `openquake` group. For example:
+
+```bash
+$ mkdir /home/openquake
+$ chown openquake.openquake /home/openquake
+# Enable setgid on the tree
+$ chmod 2750 /home/openquake
+```
+
+On workers the _shared_dir_ should be mounted as the `openquake` user too, or access must be given to the user running `celeryd` (which is `openquake` by default in the official packages).
+
+
 ## Network and security considerations
 
 The worker nodes should be isolated from the external network using either a dedicated internal network or a firewall.
