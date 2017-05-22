@@ -17,7 +17,7 @@ and https://github.com/gem/oq-engine/blob/engine-2.4/debian/changelog.
 We have also decided a plan for
 [dropping support to Python 2](dropping-python-2.md). We will abandon that
 platform in the course of the year 2018. Precise dates have not been
-fixed - on purpose - but everybody who is using hazardlib and/or the
+fixed yet - on purpose - but everybody who is using hazardlib and/or the
 engine as a library should think about migrating to Python 3. Please
 contact us if this is a problem for you: we are keen to provide
 advice for the migration.
@@ -322,6 +322,11 @@ We removed a wrong and now useless check about Django 1.5.
 We have now a desktop icon for the OpenQuake WebUI both for Linux and Windows
 platforms.
 
+The logic about how `local_settings.py` is found has changed: first it
+is searched in the folder where the `openquake.dbserver` is started
+from; if it does not exist in the folder it will be searched in the
+`openquake.server` location itself. If no `local_settings.py` is
+provided at all, default settings will be used.
 
 Bugs
 ----
@@ -448,36 +453,35 @@ tests have been removed.
 
 Packaging
 -------------------------
-[Matplotlib](https://matplotlib.org/) is now a requirement for the OpenQuake Engine
-and hazardlib. It's already included in the OpenQuake installers, packages and as
-Python wheel.
-[Basemap](https://matplotlib.org/basemap/) can be also installed to enable
-some extra plotting features from the Hazard Modeler Toolkit (part of Hazardlib).
-Basemap is provided as pre-compiled Python wheel, it's included in installers
-and provided by the `python-oq-libs-extra` package on Ubuntu and RedHat/CentOS.
+
+[Matplotlib](https://matplotlib.org/) is now a requirement for the
+OpenQuake Engine and hazardlib. It's already included in the OpenQuake
+installers and packages as a Python wheel.
+[Basemap](https://matplotlib.org/basemap/) can be also installed to
+enable some extra plotting features from the Hazard Modeller Toolkit.
+Basemap is provided as pre-compiled Python
+wheel, it's included in installers and provided by the
+`python-oq-libs-extra` package on Ubuntu and RedHat/CentOS.
 `python-oq-libs-extra` isn't required on a headless server setup.
 
-A safety measure has been introduced to check that the OpenQuake Engine is talking
-to a proper `openquake.server` (DbServer) instance if multiple installation
-are performed on the same node (i.e. a system-wide multi-user installation and
-a single-user development installation).
-
-The logic how `local_settings.py` is found has changed: first is
-searched in the folder where `openquake.dbserver` is started from;
-if it does not exist in the folder it will be searched in the `openquake.server`
-location itself. If no `local_settings.py` is provided at all, default settings will be used.
+A safety measure has been introduced to check that the OpenQuake
+Engine is talking to the proper DbServer instance. This helps debugging
+issues in the case of multiple installations of the engine (for instance
+a system-wide multi-user installation and a single-user development
+installation coexisting on the same machine).
 
 [h5py](http://www.h5py.org/) has been updated to version 2.7.0.
 
 A [template for PAM authentication](../openquake/server/local_settings.py.pam)
-is now provided. This allows the WebUI to authenticate users against system users
-on a Linux server. See the [documentation](installing/server.md#authentication-using-pam)
-for further information.
+is now provided. This allows the WebUI to authenticate users against
+system users on a Linux server. See the
+[documentation](installing/server.md#authentication-using-pam) for
+further information.
 
 The RPM `python-oq-engine` package has been splitted into `python-oq-engine`,
-`python-oq-engine-mater` and `python-oq-engine-worker`. This reduces
-the amount of dependencies need by `python-oq-engine` when installed on
-a single node and specific configurations for _master_ and _workers_ nodes
+`python-oq-engine-master` and `python-oq-engine-worker`. This reduces
+the amount of dependencies needed by `python-oq-engine` when installed on
+a single node. Specific configurations for _master_ and _workers_ nodes
 are provided by dedicated packages.
 This setup will be ported to Ubuntu packages too in the next release.
 See the [documentation](installing/cluster.md#redhat) for further
