@@ -19,6 +19,10 @@ http://cdn.ftp.openquake.org/wheelhouse/macos/py/decorator-4.0.11-py2.py3-none-a
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/funcsigs-1.0.2-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/pbr-1.8.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/six-1.10.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/macos/py/Django-1.8.17-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/macos/py/requests-2.9.1-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/macos/py35/pyshp-1.2.3-py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/macos/py35/PyYAML-3.12-cp35-cp35m-macosx_10_6_intel.whl
 
 ## Extra ##
 

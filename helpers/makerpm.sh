@@ -22,7 +22,7 @@ set -e
 CUR=$(pwd)
 BASE=$(cd $(dirname $0)/.. && /bin/pwd)
 
-REPO=oq-hazardlib
+REPO=oq-engine
 BRANCH='HEAD'
 STABLE=0
 EXTRA=''
@@ -68,7 +68,7 @@ mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
 
 LIB=$(cut -d "-" -f 2 <<< $REPO)
 SHA=$(git rev-parse --short $BRANCH)
-VER=$(cat openquake/hazardlib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
+VER=$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
 TIME=$(date +"%s")
 echo "$LIB - $BRANCH - $SHA - $VER"
 
@@ -83,6 +83,7 @@ else
     sed -i "s/##_release_##/git${SHA}/g" build-rpm/SPECS/python-${REPO}.spec
     OUT=python-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm
 fi
+cp debian/patches/openquake.cfg.patch build-rpm/SOURCES
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
 if [ "$BUILD" == "1" ]; then
