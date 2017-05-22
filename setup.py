@@ -64,7 +64,6 @@ install_requires = [
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
-    'openquake.hazardlib ==0.24',
 ]
 
 if sys.version < '3':
