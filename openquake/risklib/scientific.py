@@ -980,11 +980,10 @@ class CurveBuilder(object):
     def __len__(self):
         return len(self.cbs)
 
-    def build_curves(self, assets, loss_ratios, rlzi):
+    def build_curves(self, assets, loss_ratios):
         """
         :param assets: a list of assets
-        :param loss_ratios: a list of dictionaries rlzi -> loss ratios
-        :param rlzi: a realization index
+        :param loss_ratios: a list of dictionaries aid -> loss ratios
         :returns: A curves of dtype loss_curve_dt
         """
         curves = numpy.zeros(len(assets), self.loss_curve_dt)
@@ -992,10 +991,10 @@ class CurveBuilder(object):
         LI = L * self.I
         for a, asset in enumerate(assets):
             try:
-                data = loss_ratios[a][rlzi]
+                data = numpy.concatenate(loss_ratios[a])
             except KeyError:  # no ratios for the given realization
                 continue
-            ratios = data['ratios'].reshape(-1, LI)
+            ratios = data.reshape(-1, LI)
             for cb in self.cbs:
                 lt = cb.loss_type
                 losses = asset.value(lt) * cb.ratios
