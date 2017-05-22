@@ -167,7 +167,8 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
 
     def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
         '''
-        Writes the catalogue to file, purging events if necessary
+        Writes the catalogue to file, purging events if necessary.
+
         :param catalogue:
             Earthquake catalogue as instance of :class:
             openquake.hmtk.seismicity.catalogue.Catalogue
@@ -205,11 +206,11 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
 
     def apply_purging(self, catalogue, flag_vector, magnitude_table):
         '''
-        Apply all the various purging conditions (if specified)
+        Apply all the various purging conditions, if specified.
+
         :param catalogue:
-            Earthquake catalogue as instance of :class:
-            openquake.hmtk.seismicity.catalogue.Catalogue:
-        param numpy.array flag_vector:
+            Earthquake catalogue as instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
+        :param numpy.array flag_vector:
             Boolean vector specifying whether each event is valid (therefore
             written) or otherwise
         :param numpy.ndarray magnitude_table:
@@ -246,10 +247,10 @@ class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
                    'eigenvalue_p', 'azimuth_p', 'plunge_p',
                    'eigenvalue_t', 'azimuth_t', 'plunge_t']
 
-
     def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
         '''
-        Writes the catalogue to file, purging events if necessary
+        Writes the catalogue to file, purging events if necessary.
+
         :param catalogue:
             Earthquake catalogue as instance of :class:
             openquake.hmtk.seismicity.catalogue.Catalogue
@@ -287,11 +288,12 @@ class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
 
     def apply_purging(self, catalogue, flag_vector, magnitude_table):
         '''
-        Apply all the various purging conditions (if specified)
+        Apply all the various purging conditions, if specified.
+
         :param catalogue:
             Earthquake catalogue as instance of :class:
             openquake.hmtk.seismicity.catalogue.Catalogue:
-        param numpy.array flag_vector:
+        :param numpy.array flag_vector:
             Boolean vector specifying whether each event is valid (therefore
             written) or otherwise
         :param numpy.ndarray magnitude_table:

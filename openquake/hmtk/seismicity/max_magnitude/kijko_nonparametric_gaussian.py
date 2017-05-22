@@ -3,19 +3,20 @@
 #
 # Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can redistribute
-# it and/or modify it under the terms of the GNU Affero General Public License
-# as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
+# redistribute it and/or modify it under the terms of the GNU Affero General
+# Public License  as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein is released as
-# a prototype implementation on behalf of scientists and engineers working
-# within the GEM Foundation (Global Earthquake Model).
+# The software Hazard Modeller's Toolkit (openquake.hmtk) provided
+# herein is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the hope that
 # it will be useful to the scientific, engineering, disaster risk and software
@@ -32,16 +33,17 @@
 # the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-# details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
 #
 # The GEM Foundation, and the authors of the software, assume no liability for
 # use of the software.
 
 '''
-Module :mod: 'openquake.hmtk.seismicity.max_magnitude.kijko_nonparametric_gaussian'
+Module
+:mod:`openquake.hmtk.seismicity.max_magnitude.kijko_nonparametric_gaussian`
 implements the Non-Parametric Gaussian estimator of maximum magnitude
 proposed by Kijko (2004)
 '''
@@ -56,7 +58,7 @@ def check_config(config):
     essential_keys = ['number_earthquakes']
 
     for key in essential_keys:
-        if not key in config.keys():
+        if key not in config:
             raise ValueError('For Kijko Nonparametric Gaussian the key %s '
                              'needs to be set in the configuation' % key)
 
@@ -76,6 +78,7 @@ def _get_exponential_spaced_values(mmin, mmax, number_samples):
     '''
     Function to return a set of exponentially spaced values between mmin and
     mmax
+
     :param float mmin:
         Minimum value
     :param float mmax:
@@ -105,22 +108,19 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
     def get_mmax(self, catalogue, config):
         '''
         Calculates maximum magnitude
+
         :param catalogue:
             Instance of :class: openquake.hmtk.seismicity.catalogue.Catalogue
 
         :param dict config:
             Configuration parameters - including:
             * 'number_earthquakes': Number of largest magnitudes to consider
-            * 'number_samples' [optional]: Number of samples for integral
-                                           {default=51}
-            * 'maximum_iterations' [optional]: Maximum number of iterations
-                                           {default=100}
-            * 'tolerance' [optional]: Magnitude difference threshold for
-                                      iterstor stability {default=0.05}
+            * 'number_samples' [optional]: Number of samples for integral {default=51}
+            * 'maximum_iterations' [optional]: Maximum number of iterations {default=100}
+            * 'tolerance' [optional]: Magnitude difference threshold for iterstor stability {default=0.05}
 
         :returns:
             Maximum magnitude and its uncertainty
-
         '''
         config = check_config(config)
 
@@ -198,6 +198,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         '''Function to implement Hasting's approximation of the normalised
         cumulative normal function - this is taken from Kijko's own code
         so I don't really know why this is here!!!!!
+
         :param np.ndarray xval:
             x variate
         :param float barx:
@@ -228,6 +229,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
     def _kijko_npg_intfunc_simps(self, mval, mag, mmax, hfact, neq):
         '''Integral function for non-parametric Gaussuan assuming that
         Simpson's rule has been invoked for exponentially spaced samples
+
         :param numpy.ndarray mval:
             Target Magnitudes
         :param numpy.ndarray mag:

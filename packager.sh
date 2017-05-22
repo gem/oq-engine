@@ -457,7 +457,7 @@ _builddoc_innervm_run () {
     ssh $lxc_ip "sudo apt-get -y install python-pip"
     ssh $lxc_ip "sudo pip install sphinx==1.3.4"
 
-    ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD:/opt/openquake/lib/python2.7/site-packages: ; cd doc/sphinx ; make html"
+    ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD:/opt/openquake/lib/python2.7/site-packages ; export MPLBACKEND=Agg ; cd doc/sphinx ; make html"
     scp -r "$lxc_ip:${GEM_GIT_PACKAGE}/doc/sphinx/build/html" "out_${BUILD_UBUVER}/"
 
     trap ERR

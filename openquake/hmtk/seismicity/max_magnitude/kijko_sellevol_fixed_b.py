@@ -3,7 +3,8 @@
 #
 # Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can redistribute
+# The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
+# redistribute
 # it and/or modify it under the terms of the GNU Affero General Public License
 # as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
@@ -13,9 +14,9 @@
 #
 # DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein is released as
-# a prototype implementation on behalf of scientists and engineers working
-# within the GEM Foundation (Global Earthquake Model).
+# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein is
+# released as a prototype implementation on behalf of scientists and engineers
+# working within the GEM Foundation (Global Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the hope that
 # it will be useful to the scientific, engineering, disaster risk and software
@@ -32,17 +33,17 @@
 # the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
 # The GEM Foundation, and the authors of the software, assume no liability for
 # use of the software.
 
 '''
-Module :mod: 'openquake.hmtk.seismicity.max_magnitude.kijko_sellevol defines the
-Kijko & Sellevol algorithm for maximum magnitude
+Module :mod:`openquake.hmtk.seismicity.max_magnitude.kijko_sellevol` defines
+the Kijko & Sellevol algorithm for maximum magnitude
 '''
 
 import warnings
@@ -107,8 +108,8 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
             Configuration file for algorithm, contains the attributes:
             * 'b-value': b-value (positive float)
             * 'input_mmin': Minimum magnitude for integral (if less than
-                            minimum observed magnitude, will be overwritten by
-                            minimum observed magnitude)
+            minimum observed magnitude, will be overwritten by
+            minimum observed magnitude)
             * 'tolerance': Tolerance of stabilising of iterator
             * 'maximum_interations': Maximum number of iterations
 
@@ -144,6 +145,7 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
     def _ks_intfunc(self, mval, neq, mmax, mmin, beta):
         '''Integral function inside Kijko-Sellevol estimator
         (Eq. 6 in Kijko, 2004)
+
         :param float mval:
             Magnitude value
         :param float neq:

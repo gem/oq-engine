@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -37,20 +37,19 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
 '''
-:mod: openquake.hmtk.regionalisation.tectonic_regionalisation implements the
-openquake.hmtk.ancillary.tectonic_regionalisation.TectonicRegion :class:, defining
-the methods and attributes associated with a region, and the
-openquake.hmtk.ancillary.tectonic_regionalisation.TectonicRegionalisation :class:
-defining a regionalisation as a set of regions
+:mod:`openquake.hmtk.regionalisation.tectonic_regionalisation` implements
+:class:`openquake.hmtk.ancillary.tectonic_regionalisation.TectonicRegion`,
+defining the methods and attributes associated with a region, and the
+:class:`openquake.hmtk.ancillary.tectonic_regionalisation.TectonicRegionalisation` defining a regionalisation as a set of regions
 '''
 from math import fabs
 import numpy as np
@@ -110,10 +109,11 @@ class TectonicRegionalisation(object):
     def populate_regions(self, tectonic_region_dict):
         '''
         Populates the tectonic region from the list of dictionaries, where each
-        region is a dictionary of with the following format:
-        region = {'Shear_Modulus': [(val1, weight1), (val2, weight2), ...],
-                  'Displacement_Length_Ratio': [(val1, weight1), ...],
-                  'Magnitude_Scaling_Relation': [(val1, weight1), ...]}
+        region is a dictionary of with the following format::
+
+         region = {'Shear_Modulus': [(val1, weight1), (val2, weight2), ...],
+                   'Displacement_Length_Ratio': [(val1, weight1), ...],
+                   'Magnitude_Scaling_Relation': [(val1, weight1), ...]}
         '''
         for tect_reg in tectonic_region_dict:
             if 'Shear_Modulus' in tect_reg.keys():
