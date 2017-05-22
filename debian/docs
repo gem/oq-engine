@@ -1,1 +1,8 @@
 README.md
+CONTRIBUTORS.txt
+LICENSE
+doc/*.md
+doc/img/*
+doc/installing/*
+doc/running/*
+doc/upgrading/*
