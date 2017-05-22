@@ -13,7 +13,6 @@ Subpackages
     openquake.hmtk.seismicity
     openquake.hmtk.sources
     openquake.hmtk.strain
-    openquake.hmtk.tests
 
 Submodules
 ----------
