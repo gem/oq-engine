@@ -65,10 +65,10 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_risk')
     def test_case_3(self):
         self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        [fname] = export(('loss_curves/sid-0/', 'csv'),
+        [fname] = export(('loss_curves/rlz-0/sid-0', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-000.csv', fname)
-        [fname] = export(('loss_curves/ref-a8/', 'csv'),
+        [fname] = export(('loss_curves/rlz-0/ref-a8', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-ref-a8-000.csv', fname)
 
@@ -80,14 +80,14 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])
 
-        fnames = export(('loss_curves/sid-0/', 'csv'), self.calc.datastore)
+        fnames = export(('loss_curves/rlzs/sid-0', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
         [fname] = export(('loss_maps-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-mean-structural.xml', fname)
 
-        [fname] = export(('loss_curves/sid-1/stats', 'csv'),
+        [fname] = export(('loss_curves/stats/sid-1', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-sid-1-mean.csv',
                               fname)
