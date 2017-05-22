@@ -74,14 +74,14 @@ them as if they were a single file. Just specify the file names in the
 source_model_logic_tree file. For instance, you could split by
 tectonic region and have something like this:
 
-```
+```xml
  <logicTreeBranch branchID="b1">
    <uncertaintyModel>
      active_shallow_sources.xml
      stable_shallow_sources.xml
    </uncertaintyModel>
    <uncertaintyWeight>
-     1.0
+     0.3
    </uncertaintyWeight>
  </logicTreeBranch>
 ```
@@ -93,14 +93,14 @@ The *postprocessing of hazard curves* has been substantially improved:
 now it requires orders of magnitude less memory than before and it is
 extremely efficient. For instance in our cluster we were able to
 compute mean and max hazard curves in a calculation for a Canada model
-with 206,366 sites, 129 hazard levels and 13,122 realizations, spawning
-~3,500 tasks and using ~500 GB of memory spread on four machines, in just
+with 206,366 sites, 129 hazard levels and 13,122 realizations - spawning
+~3,500 tasks and using ~500 GB of memory spread on four machines - in just
 11 minutes. This is orders of magnitude better than everything we ever
 managed to run before.
 
 There is also a huge improvement in the *storage of the hazard
-curves*: the [individual hazard curves are not stored anymore]
-(http://micheles.github.io/2017/05/02/hazard-outputs/), unless there
+curves*: the [individual hazard curves are not stored anymore](
+http://micheles.github.io/2017/05/02/hazard-outputs/), unless there
 is only one realization. This means that in large computations we can
 save orders of magnitudes of data storage: for instance for the Canada
 computation the saving in space is from 1.27 TB to 5.44 GB (240x
@@ -127,7 +127,7 @@ Most users will be interested just in the statistical hazard curves,
 maps and hazard spectra. Such outputs can be exported exactly as in
 the past and without any performance penalty, since the statistical
 curves are computed and stored in postprocessing. Also, it should be noted
-tha now by default the *mean hazard curves are computed*.
+that now by default the *mean hazard curves are computed*.
 
 The *postprocessing of loss curves* has been improved too: now the
 loss curves and maps are produced by *reading directly the asset loss
@@ -148,7 +148,7 @@ a consequence of the change the engine does not show the loss curves
 output anymore; however the curves can still can be exported, but with
 a new command:
 
-```
+```bash
 $ oq export loss_curves/rlz-XXX
 ```
 
@@ -158,7 +158,7 @@ more readable than the one we used in the past which was not even
 a proper CSV (it was used for internal purposes only).
 
 Among the huge improvements to the event based calculators one of the
-most relevant is the fact that the ruptures are now being saved and
+most relevant is the fact that the *ruptures* are being saved and
 read from the datastore in HDF5 format: before they were stored in a 
 pickle format, for historical reasons.
 
@@ -175,7 +175,7 @@ with thousands of sites and GMFs we measured a speedup from 5 hours to
 45 seconds.
 
 The performance of the event based calculator has been improved
-substantially in the *GMF-generation* phase, but the improvement. We
+substantially in the *GMF-generation* phase. We
 measured improvements of a factor 2 in speed and a factor 3 in memory
 occupation, but they can be larger or smaller, depending on the size of your
 computation. The larger the calculation, the more sensible is the improvement.
@@ -200,7 +200,7 @@ directly the data saved in the datastore with the exported data, a
 feature wanted by several power users for years.
 
 The CSV exporter for the output `dmg_total` in damage calculators
-now presents the data in a more readable format. The has been done
+now presents the data in a more readable format. The same has been done
 for the aggregate losses exported by the `scenario_risk` calculator.
 
 The CSV exporter for the output `ruptures` is slightly different:
@@ -229,36 +229,6 @@ now there is an .npz exporter.
 We removed the GSIM name from the exported file name for the scenario
 calculators.
 
-Internal changes
---------------------
-
-As always, there are several internal changes to the engine. They are invisible
-to regular users, so I am not listing all of the changes here. However, I
-will list some changes that may be of interest to power users and people
-developing with engine.
-
-The parameters `ses_per_logic_tree_path` and `number_of_logic_tree_samples`
-are constrained to 2 bytes only in UCERF now.
-
-As usual the layout of the datastore has changed; in particular the way
-the GMFs and the events are stored is different.
-
-In the past running the tests littered your file systems with lots of
-generated files, both in the current directory and in the /tmp directory.
-Now the tests never write on the current directory and they cleanup the
-/tmp directory (if they are successful).
-
-There an internal configuration flag `ignore_covs` which is used to disable
-the use of the coefficients of variations in vulnerability functions, for
-debugging purposes. Now this flag works for `scenario_risk` calculations too.
-Before it was restricted to `event_based_risk`.
-
-In release 2.3 we introduced temporarily an `ebrisk` calculator. Now it is
-gone, just use the good old `event_based_risk` calculator.
-
-Internal TXT exporters for the ground motion fields, used only for the
-tests have been removed.
-
 hazardlib
 --------------------------
 
@@ -284,27 +254,26 @@ than computing the quantile with value 1.0.
 
 The mesh of a rupture is now stored as 32 bit array of floats instead of
 a 64 bit array: this reduces the memory consumption and data storage
-by half. Moreover, we have now an efficient way to serialize ruptures
-into HDF5 format.
+by half.
 
 We fixed a numerical issue involving the square root of small negative numbers,
 due to rounding issues.
 
 We have refactored the filtering mechanism and we have now a
 single `IntegrationDistance` class in charge of filtering out sites and
-ruptures outside of the integration distance. For safe of correctness,
+ruptures outside of the integration distance. For sake of correctness,
 we have disabled the `rtree` filtering if the site collection contains
 points which are not at the sea level. In that case the geodetic distance
 filtering is used.
 
 There is now a new class `EBRupture` in hazardlib to describe event based
 ruptures as a raw rupture object and an array of events: previously this
-logic was in the engine. The change make it possible to serialize (read
-and write) groups of event based ruptures in XML.
+class was in the engine. The change make it possible to serialize (read
+and write) groups of event based ruptures in NRML format.
 
-We fixed an ordering bug in `get_surface_boundaries`: now it returns the points
-in clockwise order, i.e. the right order to produce a WKT string which used
-to display the rupture.
+We fixed an ordering bug in `get_surface_boundaries`: now it returns
+the points in clockwise order, i.e. the right order to produce a WKT
+bounding box which is used to plot the rupture with our QGIS plugin.
 
 We extended and refactored the `GmfComputer` class which is used by
 the engine in scenario and event based calculations.
@@ -312,9 +281,10 @@ the engine in scenario and event based calculations.
 There is a new constructor for the `Polygon` class which is able 
 to parse a WKT polygon string.
 
-We fixed a bug when splitting sources with a `YoungsCoppersmith1985MFD`
-magnitude frequence distribution: that made impossible to run such calculations
-in some cases (depending on the splitting).
+We fixed a bug when splitting sources with a
+`YoungsCoppersmith1985MFD` magnitude frequence distribution that made
+impossible to run such calculations in some cases (depending on the
+splitting).
 
 WebUI
 -------------------
@@ -325,7 +295,7 @@ of available GSIM classes. Now the platform uses the engine as a service
 and it does not import directly any code from it.
 
 We changed the Web UI button from "Run Risk" to "Continue", since it
-can also be used or postprocessing of hazard calculations.
+can also be used for postprocessing of hazard calculations.
 
 All the engine outputs are streamed from the WebUI. This saves memory in
 the case of large outputs.
@@ -368,22 +338,19 @@ We fixed a couple of bugs affecting exposures with multiple assets of the
 same taxonomy on the same site: that made it impossible to run `classical_risk`
 and `scenario_risk` calculations for such exposures.
 
-We fixed the CSV rupture exporter: now the bounding box of the
-ruptures is using the correct WKT ordering convention and can be
-easily be plotted by our QGIS plugin.
-
 We fixed an annoying encoding bug in the commands `oq engine --lhc` and
 `oq engine --lrc` which affected the display of calculations with non-ASCII
 characters in the description.
 
-We fixed bug in `event_based_risk`: it was impossible to use
+We fixed a bug in `event_based_risk`: it was impossible to use
 vulnerability functions with "PM" distribution, i.e. with Probability
 Mass Functions. Now they work as expected.
 
-The .npz export for scenario calculations exports even GMFs outside
+The .npz export for scenario calculations now exports GMFs outside
 the maximum distance, which are all zeros. This is convenient when plotting
 and consistent with CSV export. The export has also been fixed in the case
-of a single event, i.e. `number_of_ground_motion_fields=1` which was broken.
+of a single event, i.e. when `number_of_ground_motion_fields=1`,
+which was broken.
 
 Additional validations
 ----------------------
@@ -401,7 +368,7 @@ before starting the calculation and not in the middle of it.
 Also, if an user provides a complex logic tree file which is
 invalid for the scenario calculator, now she gets a clear error message.
 
-There also checks for patological situations, like the user 
+There are more checks for patological situations, like the user 
 providing no intensity measure sites, no GSIMs, no sites: now a clearer
 error message will be displayed.
 
@@ -444,26 +411,77 @@ the base for a future development that will allow to serialize point sources
 into HDF5 datasets efficiently (scheduled for engine 2.5).
 
 We introduced some preliminary support for the Grid Engine. This is useful
-for people running the engine on big clusters and supercomputers. Unfortunately
-since we do not have a supercomputer we are not able to really test this 
+for people running the engine on big clusters and supercomputers. Unfortunately,
+since we do not have a supercomputer, we are not able to really test this 
 feature. Interested users should contact us and offer some help, like giving
 us access to a Grid Engine cluster.
 
-Travis/Jenkins/packaging (check these with Daniele)
----------------------------------------------------
+Internal changes
+--------------------
 
-Fix an issue with Travis branches when submitting PR
-Change how `local_settings.py` is found
-Make init scripts more robust and portable
-Turned matplolib into a required library and added a plotting test on Travis
-Check if oq is talking to a foreign DbServer
-Sync packager.sh with oq-hazardlib to manage oq-libs-extra
-Bump to h5py 2.7.0
-Differentiate listening interface and connect interface in dbserver
-Small fixes for local_settings template to be able to append settings
-Add a template for PAM auth
-Split RPM packages in standard, master, worker
-Use CDN ftp mirror instead of upstream
+As always, there were several internal changes to the engine. They are invisible
+to regular users, so I am not listing all of the changes here. However, I
+will list some changes that may be of interests to power users and people
+developing with the engine.
+
+The parameters `ses_per_logic_tree_path` and `number_of_logic_tree_samples`
+are constrained to a maximum value of 65,536 only in UCERF now.
+
+As usual the layout of the datastore has changed; in particular the way
+the GMFs and the events are stored is different.
+
+In the past running the tests littered your file systems with lots of
+generated files, both in the current directory and in the /tmp directory.
+Now the tests never write on the current directory and they cleanup the
+/tmp directory (if they are successful).
+
+There an internal configuration flag `ignore_covs` which is used to disable
+the use of the coefficients of variations in vulnerability functions, for
+debugging purposes. Now this flag works for `scenario_risk` calculations too.
+Before it was restricted to `event_based_risk`.
+
+In release 2.3 we introduced temporarily an `ebrisk` calculator. Now it is
+gone, just use the good old `event_based_risk` calculator.
+
+Internal TXT exporters for the ground motion fields, used only for the
+tests have been removed.
+
+Packaging
+-------------------------
+[Matplotlib](https://matplotlib.org/) is now a requirement for the OpenQuake Engine
+and hazardlib. It's already included in the OpenQuake installers, packages and as
+Python wheel.
+[Basemap](https://matplotlib.org/basemap/) can be also installed to enable
+some extra plotting features from the Hazard Modeler Toolkit (part of Hazardlib).
+Basemap is provided as pre-compiled Python wheel, it's included in installers
+and provided by the `python-oq-libs-extra` package on Ubuntu and RedHat/CentOS.
+`python-oq-libs-extra` isn't required on a headless server setup.
+
+A safety measure has been introduced to check that the OpenQuake Engine is talking
+to a proper `openquake.server` (DbServer) instance if multiple installation
+are performed on the same node (i.e. a system-wide multi-user installation and
+a single-user development installation).
+
+The logic how `local_settings.py` is found has changed: first is
+searched in the folder where `openquake.dbserver` is started from;
+if it does not exist in the folder it will be searched in the `openquake.server`
+location itself. If no `local_settings.py` is provided at all, default settings will be used.
+
+[h5py](http://www.h5py.org/) has been updated to version 2.7.0.
+
+A [template for PAM authentication](../openquake/server/local_settings.py.pam)
+is now provided. This allows the WebUI to authenticate users against system users
+on a Linux server. See the [documentation](installing/server.md#authentication-using-pam)
+for further information.
+
+The RPM `python-oq-engine` package has been splitted into `python-oq-engine`,
+`python-oq-engine-mater` and `python-oq-engine-worker`. This reduces
+the amount of dependencies need by `python-oq-engine` when installed on
+a single node and specific configurations for _master_ and _workers_ nodes
+are provided by dedicated packages.
+This setup will be ported to Ubuntu packages too in the next release.
+See the [documentation](installing/cluster.md#redhat) for further
+information.
 
 Deprecations
 ------------------------------
@@ -474,4 +492,4 @@ the CSV ones for small outputs and the .npz/HDF5 ones for large outputs.
 
 Python 2.7 is not officially deprecated yet, but it will be deprecated soon.
 The version we use for development and production since the beginning of
-2017 is Python 3.5.
+2017 is Python 3.5. Here is [our roadmap for the future](https://github.com/gem/oq-engine/issues/2803).
