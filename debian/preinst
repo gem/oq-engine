@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+# set -x
+# echo "ARGS PREINST: $@"
+
+PKGNAME=python-oq-hazardlib
+
+# remove 'undivert' divertions if exists
+for dvt in $(dpkg-divert --list "python-oq-risklib" | grep "\.undivert\.oq-haz by python-oq-risklib" | sed 's/^.* of //g;s/ to .*$//g'); do
+    # here we are using a trick because divert is assigned to another package
+    # without 'sudo' this operation is denied
+    sudo dpkg-divert --package "python-oq-risklib" --remove "$dvt"
+done
+
+ownpkg="$(dpkg -S openquake/baselib/__init__.py 2>/dev/null | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' || true)"
+# if file not already owned by this package
+if ! echo "$ownpkg" | grep -q  "$PKGNAME"; then
+    for p in /usr/share/pyshared/openquake/baselib /usr/lib/python2.7/dist-packages/openquake/baselib; do
+        if [ ! -d "$p" ]; then
+            continue
+        fi
+        for i in $(find $p \( -type f -o -type l \) -a -not -name '*.pyc' 2>/dev/null); do
+            dpkg-divert --package "$PKGNAME" --add --rename --divert "${i}.oq-haz" "${i}"
+        done
+        for i in $(find $p -type f -a -name '*.pyc' 2>/dev/null); do
+            rm $i
+        done
+    done
+fi

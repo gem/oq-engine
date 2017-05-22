@@ -1,0 +1,48 @@
+#!/bin/sh
+set -e
+#set -x
+#echo "ARGS POSTRM: $@"
+PKGNAME=python-oq-hazardlib
+
+divert_list="$(dpkg-divert --list "$PKGNAME" | sed 's/^.* of //g;s/ to .*$//g')"
+risklib_owned="$(dpkg -S openquake/baselib/__init__.py 2>/dev/null | grep -v '^diversion by ' | head -n 1 | sed 's/:.*//g' | grep 'python-oq-risklib' || true)"
+
+case $1 in
+    upgrade)
+        if [ -n "$risklib_owned" -a -n "$divert_list" ]; then
+            if dpkg --compare-versions "$2" lt 0.15.0; then
+                is_downgrade="true"
+            fi
+        fi
+       
+        if [ "$is_downgrade" ]; then
+            for i in $divert_list ; do
+                mv "$i" "${i}.postrm"
+                dpkg-divert --package "$PKGNAME" --remove --rename --divert "${i}.oq-haz" "$i"
+                if echo "$i" | grep -q '\.py$'; then
+                    if [ -e "${i}c" ]; then
+                        rm "${i}c"
+                    fi
+                fi
+            done
+            ownpkg="python-oq-risklib"
+            if which pycompile >/dev/null 2>&1; then
+                pycompile -p "$ownpkg"
+            fi
+            for i in $divert_list ; do
+                dpkg-divert --package "python-oq-risklib" --add --divert "${i}.undivert.oq-haz" "${i}"
+                mv "${i}.postrm" "${i}.undivert.oq-haz"
+            done
+        fi
+        ;;
+
+    remove)
+        if [ -n "$divert_list" ]; then
+            for i in $divert_list ; do
+                dpkg-divert --package "$PKGNAME" --remove --rename --divert "${i}.oq-haz" "$i"
+            done
+        fi
+        ;;
+#    purge)
+#        ;;
+esac
