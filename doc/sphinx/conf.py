@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-# hazardlib documentation build configuration file, created by
-# sphinx-quickstart on Fri May 18 17:26:22 2012.
+#
+# openquake documentation build configuration file, created by
+# sphinx-quickstart on Tue Oct 28 16:06:40 2014.
 #
 # This file is execfile()d with the current directory set to its containing dir.
 #
@@ -28,7 +29,7 @@
 # serve to show the default.
 
 import sys, os
-import openquake.hazardlib
+import openquake.risklib
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -42,7 +43,7 @@ import openquake.hazardlib
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx.ext.pngmath', 'sphinx.ext.viewcode']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -57,15 +58,15 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'hazardlib'
-copyright = u'2012-2017 GEM Foundation'
+project = u'openquake'
+copyright = u'2014-2017 GEM Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = openquake.hazardlib.__version__
+version = openquake.risklib.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -81,7 +82,7 @@ release = version
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['intro.rst']
+exclude_patterns = ['_build']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -108,7 +109,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'classic'
+html_theme = 'default'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -181,7 +182,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'hazardlibdoc'
+htmlhelp_basename = 'openquakedoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -200,8 +201,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'openquake.hazardlib.tex', u'hazardlib Documentation',
-   u'GEM Foundation', 'manual'),
+  ('index', 'openquake.tex', u'openquake Documentation',
+   u'Author', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -230,8 +231,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'hazardlib', u'hazardlib Documentation',
-     [u'GEM Foundation'], 1)
+    ('index', 'openquake', u'openquake Documentation',
+     [u'Author'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -244,8 +245,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'hazardlib', u'hazardlib Documentation',
-   u'GEM Foundation', 'hazardlib', 'One line description of project.',
+  ('index', 'openquake', u'openquake Documentation',
+   u'GEM', 'openquake', 'Python libraries for Earthquake Hazard and Risk',
    'Miscellaneous'),
 ]
 
@@ -258,9 +259,45 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
 
-nitpick_ignore = [
-    ('py:obj', 'float'),
-    ('py:obj', 'int'),
-    ('py:obj', 'array'),
-    ('py:exc', 'ValueError'),
-]
+
+# -- Options for Epub output ---------------------------------------------------
+
+# Bibliographic Dublin Core info.
+epub_title = u'openquake'
+epub_author = u'Author'
+epub_publisher = u'Author'
+epub_copyright = u'2014, Author'
+
+# The language of the text. It defaults to the language option
+# or en if the language is not set.
+#epub_language = ''
+
+# The scheme of the identifier. Typical schemes are ISBN or URL.
+#epub_scheme = ''
+
+# The unique identifier of the text. This can be a ISBN number
+# or the project homepage.
+#epub_identifier = ''
+
+# A unique identification for the text.
+#epub_uid = ''
+
+# A tuple containing the cover image and cover page html template filenames.
+#epub_cover = ()
+
+# HTML files that should be inserted before the pages created by sphinx.
+# The format is a list of tuples containing the path and title.
+#epub_pre_files = []
+
+# HTML files shat should be inserted after the pages created by sphinx.
+# The format is a list of tuples containing the path and title.
+#epub_post_files = []
+
+# A list of files that should not be packed into the epub file.
+#epub_exclude_files = []
+
+# The depth of the table of contents in toc.ncx.
+#epub_tocdepth = 3
+
+# Allow duplicate toc entries.
+#epub_tocdup = True
