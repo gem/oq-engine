@@ -23,7 +23,8 @@ in production since the beginning of this year.
 
 We could drop support for Python 2 even in the next release, but in
 consideration for our users we will keep supporting it until the end
-of 2017. In the course of 2018, however, we will start using Python 3
+of 2017 (see [our roadmap](https://github.com/gem/oq-engine/issues/2803)).
+In the course of 2018, however, we will start using Python 3
 features. This means that users of hazardlib and the engine will have
 to upgrade to Python 3 to stay updated. This requirement only applies to
 users *importing* directly Python modules. If you are using the Web
