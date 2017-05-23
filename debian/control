@@ -11,6 +11,6 @@ Homepage: http://github.com/gem/oq-hazardlib
 Package: python-oq-hazardlib
 Architecture: all
 Conflicts: python-nhlib
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, python-oq-libs (>= 1.2.1~)
-Suggests: python-oq-libs-extra (>= 1.2.1~)
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, python-oq-libs (>= 1.3.0~)
+Suggests: python-oq-libs-extra (>= 1.3.0~)
 Description: hazardlib is a library for performing seismic hazard analysis
