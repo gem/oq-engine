@@ -17,6 +17,7 @@ DEFAULT_SIZE = (8., 6.)
 def build_filename(filename, filetype='png', resolution=300):
     """
     Uses the input properties to create the string of the filename
+
     :param str filename:
         Name of the file
     :param str filetype:
@@ -34,6 +35,7 @@ def build_filename(filename, filetype='png', resolution=300):
     if not resolution:
         resolution = 300
     return filename, filetype, resolution
+
 
 def _save_image(filename, filetype='png', resolution=300):
     """
@@ -54,6 +56,7 @@ def _save_image(filename, filetype='png', resolution=300):
         pass
     return
 
+
 def _get_catalogue_bin_limits(catalogue, dmag):
     """
     Returns the magnitude bins corresponing to the catalogue
@@ -67,10 +70,13 @@ def _get_catalogue_bin_limits(catalogue, dmag):
     mag_bins = mag_bins[idx[0]:idx[-1] + 3]
     return mag_bins
 
-def plot_depth_histogram(catalogue, bin_width,  normalisation=False,
+
+def plot_depth_histogram(
+        catalogue, bin_width, normalisation=False,
         bootstrap=None, filename=None, filetype='png', dpi=300):
     """
     Creates a histogram of the depths in the catalogue
+
     :param catalogue:
         Earthquake catalogue as instance of :class:
         openquake.hmtk.seismicity.catalogue.Catalogue
@@ -106,11 +112,14 @@ def plot_depth_histogram(catalogue, bin_width,  normalisation=False,
     plt.show()
     return
 
-def plot_magnitude_depth_density(catalogue, mag_int, depth_int, logscale=False,
+
+def plot_magnitude_depth_density(
+        catalogue, mag_int, depth_int, logscale=False,
         normalisation=False, bootstrap=None, filename=None, filetype='png',
         dpi=300):
     """
     Creates a density plot of the magnitude and depth distribution
+
     :param catalogue:
         Earthquake catalogue as instance of :class:
         openquake.hmtk.seismicity.catalogue.Catalogue
@@ -160,10 +169,13 @@ def plot_magnitude_depth_density(catalogue, mag_int, depth_int, logscale=False,
     plt.show()
     return
 
-def plot_magnitude_time_scatter(catalogue, plot_error=False, filename=None,
+
+def plot_magnitude_time_scatter(
+        catalogue, plot_error=False, filename=None,
         filetype='png', dpi=300, fmt_string='o'):
     """
     Creates a simple scatter plot of magnitude with time
+
     :param catalogue:
         Earthquake catalogue as instance of :class:
         openquake.hmtk.seismicity.catalogue.Catalogue
@@ -194,11 +206,14 @@ def plot_magnitude_time_scatter(catalogue, plot_error=False, filename=None,
     plt.show()
     return
 
-def plot_magnitude_time_density(catalogue, mag_int, time_int,
+
+def plot_magnitude_time_density(
+        catalogue, mag_int, time_int,
         normalisation=False, logscale=True, bootstrap=None, filename=None,
         filetype='png', dpi=300, completeness=None):
     """
     Creates a plot of magnitude-time density
+
     :param catalogue:
         Earthquake catalogue as instance of :class:
         openquake.hmtk.seismicity.catalogue.Catalogue
@@ -326,7 +341,9 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
                             cum_rates[out_idx],
                             np.log10(cum_rates[out_idx])])
 
-def plot_observed_recurrence(catalogue, completeness, dmag, end_year=None,
+
+def plot_observed_recurrence(
+        catalogue, completeness, dmag, end_year=None,
         figure_size=DEFAULT_SIZE, filename=None, filetype='png', dpi=300):
     """
     Plots the observed recurrence taking into account the completeness
@@ -338,14 +355,14 @@ def plot_observed_recurrence(catalogue, completeness, dmag, end_year=None,
                                   completeness]])
     if not end_year:
         end_year = catalogue.update_end_year()
-    catalogue.data["dtime"] = catalogue.get_decimal_time() 
+    catalogue.data["dtime"] = catalogue.get_decimal_time()
     cent_mag, t_per, n_obs = get_completeness_counts(catalogue,
                                                      completeness,
                                                      dmag)
     obs_rates = n_obs / t_per
     cum_obs_rates = np.array([np.sum(obs_rates[i:])
                               for i in range(len(obs_rates))])
- 
+
     plt.figure(figsize=figure_size)
     plt.semilogy(cent_mag, obs_rates, 'bo', label="Incremental")
     plt.semilogy(cent_mag, cum_obs_rates, 'rs', label="Cumulative")

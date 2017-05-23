@@ -37,16 +37,17 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 '''
-Module openquake.hmtk.strain.geodectic_strain.GeodeticStain is a core class for storage
-and implementation of a geodetic strain rate model
+:class:`openquake.hmtk.strain.geodectic_strain.GeodeticStain` is a
+core class for storage and implementation of a geodetic strain rate
+model
 '''
 import numpy as np
 from copy import deepcopy
@@ -56,8 +57,9 @@ DATA_VARIABLES = ['longitude', 'latitude', 'exx', 'eyy', 'exy']
 
 class GeodeticStrain(object):
     '''
-    :Class: openquake.hmtk.strain.geodetic_strain.GeodeticStrain described the geodetic
-    strain model
+    :class:`openquake.hmtk.strain.geodetic_strain.GeodeticStrain` describes
+    the geodetic strain model
+
     :param dict data:
         Strain data in the form of a dictionary where is vector of attributes
         is stored under the correponding dictionary key (i.e.
@@ -70,10 +72,8 @@ class GeodeticStrain(object):
         Seismicity rate at each point associated with the strain model
     :param numpy.ndarray target_magnitudes:
         Magnitudes for the corresponding activity rates
-
     :param list data_variables:
         List of strain data attributes in the current class
-
     '''
 
     def __init__(self):

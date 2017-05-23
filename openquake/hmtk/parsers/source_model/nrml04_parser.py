@@ -169,6 +169,7 @@ def node_to_area_geometry(node):
 def node_to_simple_fault_geometry(node):
     """
     Reads a simple fault geometry node and returns an OpenQuake representation
+
     :returns:
         trace - Trace of fault as instance
     """

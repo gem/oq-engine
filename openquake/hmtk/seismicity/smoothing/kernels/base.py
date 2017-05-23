@@ -38,18 +38,18 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
 # -*- coding: utf-8 -*-
 '''
-Module openquake.hmtk.seismicity.smoothing.kernels.base implements the abstract base
-class for the smoothing kernels
+Module :mod:`openquake.hmtk.seismicity.smoothing.kernels.base`
+implements the abstract base class for the smoothing kernels
 '''
 import abc
 
@@ -65,6 +65,7 @@ class BaseSmoothingKernel(object):
     def smooth_data(self, data, config):
         '''
         Applies the smoothing Kernel
+
         :param numpy.ndarray data:
             Earthquake grid counts in the form
             [Longitude, Latitude, Depth, Count] where Longitude, Latitude and

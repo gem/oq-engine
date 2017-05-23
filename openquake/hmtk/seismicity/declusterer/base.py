@@ -63,6 +63,7 @@ class BaseCatalogueDecluster(object):
     def decluster(self, catalogue, config):
         """
         Implements declustering algorithms
+
         :param catalogue:
             Catalogue of earthquakes
         :type catalogue:

@@ -87,9 +87,9 @@ def _update_slip_rates_with_aseismic(slip_rate, aseismic):
 
 class RecurrenceBranch(object):
     '''
-    :Module: openquake.hmtk.faults.fault_model.RecurrenceBranch is an object to store a
-    set of parameters for recurrence calculations and the corresponding
-    total weight
+    :class:`openquake.hmtk.faults.fault_model.RecurrenceBranch` is an object
+    to store a set of parameters for recurrence calculations and the
+    corresponding total weight
 
     :param str branch_id:
         Unique branch id
@@ -119,8 +119,6 @@ class RecurrenceBranch(object):
     '''
     def __init__(self, area, slip, msr, rake, shear_modulus,
                  disp_length_ratio=None, msr_sigma=0., weight=1.0):
-        '''
-        '''
         self.branch_id = None
         self.area = area
         self.slip = slip
@@ -137,6 +135,7 @@ class RecurrenceBranch(object):
     def update_weight(self, new_weight):
         '''
         Updates the weight by multiplying by the new weight
+
         :param float new_weight:
             Weight to be multiplied by existing weight
         '''
@@ -186,8 +185,8 @@ class mtkActiveFault(object):
     :param str name:
         Fault Name
     :param geometry:
-        Instance of :class: openquake.hmtk.faults.fault_model.SimpleFaultGeometry or
-        :class: openquake.hmtk.faults.fault_model.ComplexFaultGeometry
+        Instance of :class:`openquake.hmtk.faults.fault_model.SimpleFaultGeometry` or
+        :class:`openquake.hmtk.faults.fault_model.ComplexFaultGeometry`
     :param list slip_rate:
         Slip rate (mm/yr) as list of tuples [(Value, Weight)]
     :param float aseismic:
@@ -195,7 +194,7 @@ class mtkActiveFault(object):
     :param float rake:
         Rake of the fault slip (degrees)
     :param neotectonic_fault:
-        Instance of openquake.hmtk.faults.faulted_earth.NeotectonicFault :class:
+        Instance of :class:`openquake.hmtk.faults.faulted_earth.NeotectonicFault`
     :param str trt:
         Tectonic region type
     :param scale_rel:
@@ -266,6 +265,7 @@ class mtkActiveFault(object):
         Defines the tectonic region and updates the shear modulus,
         magnitude scaling relation and displacement to length ratio using
         the regional values, if not previously defined for the fault
+
         :param regionalistion:
             Instance of the :class:
             openquake.hmtk.faults.tectonic_regionalisaion.TectonicRegionalisation
@@ -335,7 +335,7 @@ class mtkActiveFault(object):
 
         :returns:
             * branch_index - A 2-D numpy.ndarray where each row is a pointer
-                             to a particular combination of values
+            to a particular combination of values
             * number_branches - Total number of branches (int)
 
         '''
@@ -364,6 +364,7 @@ class mtkActiveFault(object):
         '''
         Generates a list of magnitude frequency distributions and renders as
         a tuple
+
         :param dict/list config:
             Configuration paramters of magnitude frequency distribution
         '''
@@ -393,6 +394,7 @@ class mtkActiveFault(object):
         At present epistemic uncertainty is supported for: 1) slip rate,
         2) magnitude scaling relation, 3) shear modulus, 4) displacement
         to length ratio) and 5) recurrence model.
+
         :param list config:
             List of MFD model configurations
         :param bool collapse:
@@ -475,6 +477,7 @@ class mtkActiveFault(object):
     def collapse_branches(self, mmin, bin_width, mmax):
         '''
         Collapse the logic tree branches into a single IncrementalMFD
+
         :param float mmin:
             Minimum magnitude of reference mfd
         :param float bin_width:
@@ -503,13 +506,13 @@ class mtkActiveFault(object):
 
     def generate_fault_source_model(self):
         '''
-        Creates a resulting openquake.hmtk fault source set.
+        Creates a resulting `openquake.hmtk` fault source set.
 
         :returns:
-            source_model - list of instances of either the
-              :class:`openquake.hmtk.sources.simple_fault_source.mtkSimpleFaultSource`
-              or
-              :class:`openquake.hmtk.sources.complex_fault_source.mtkComplexFaultSource`
+            source_model - list of instances of either the :class:
+            `openquake.hmtk.sources.simple_fault_source.mtkSimpleFaultSource`
+            or :class:
+            `openquake.hmtk.sources.complex_fault_source.mtkComplexFaultSource`
             model_weight - Corresponding weights for each source model
         '''
         source_model = []
