@@ -17,7 +17,7 @@ install:
 script:
   - python -c'import platform; print(platform.platform())'
   - bin/run-demos.sh
-  - nosetests --with-doctest -vsx -a'!slow'
+  - nosetests --with-doctest -xs -a'!slow'
   - cat /tmp/webui*
   - bin/oq reset --yes
 
