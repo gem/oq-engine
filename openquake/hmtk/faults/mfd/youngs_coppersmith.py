@@ -113,11 +113,11 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
             * 'Minimum_Magnitude' - Minimum magnitude of activity rates (float)
             * 'b_value' - Tuple of (b-value, b-value uncertainty)
             * 'Maximum_Magnitude' - Maximum magnitude on fault (if not defined
-                                    will use scaling relation)
+            will use scaling relation)
             * 'Maximum_Magnitude_Uncertainty' - Uncertainty on
-               maximum magnitude
-               (If not defined and the MSR has a sigma term then this will be
-               taken from sigma)
+            maximum magnitude
+            (If not defined and the MSR has a sigma term then this will be
+            taken from sigma)
         '''
         self.mfd_model = 'Youngs & Coppersmith Exponential'
         self.mfd_weight = mfd_conf['Model_Weight']
@@ -133,8 +133,9 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
         '''
         Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise
+
         :param dict mfd_config:
-            Configuration file (see setUp for paramters)
+            Configuration file (see setUp for parameters)
         :param msr:
             Instance of :class: nhlib.scalerel
         :param float rake:
@@ -265,12 +266,11 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
             * 'Minimum_Magnitude' - Minimum magnitude of activity rates (float)
             * 'b_value' - Tuple of (b-value, b-value uncertainty)
             * 'Maximum_Magnitude' - Characteristic magnitude on fault
-                                    (if not defined, will use scaling relation)
+            (if not defined, will use scaling relation)
             * 'Maximum_Magnitude_Uncertainty' - Uncertainty on
-               maximum magnitude
-               (If not defined and the MSR has a sigma term then this will be
-               taken from sigma)
-
+            maximum magnitude
+            (If not defined and the MSR has a sigma term then this will be
+            taken from sigma)
         '''
         self.mfd_type = 'Youngs & Coppersmith (1985) Characteristic'
         self.mfd_weight = mfd_conf['Model_Weight']
@@ -287,6 +287,7 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
         '''
         Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise
+
         :param dict mfd_config:
             Configuration file (see setUp for paramters)
         :param msr:
@@ -321,7 +322,6 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
             * Minimum Magnitude (float)
             * Bin width (float)
             * Occurrence Rates (numpy.ndarray)
-
 
         Behavioural Notes: To use the openquake.hazardlib implementation the
         magnitudes returned will be the mid_point of the bins and not the

@@ -64,6 +64,7 @@ from openquake.hazardlib.geo.polygon import Polygon
 class RateGrid(object):
     """
     Class for calculation of activity rate grids
+
     :param float xspc:
         Longitude spacing of grid
     :param float yspc:
@@ -116,6 +117,7 @@ class RateGrid(object):
                          mfd_width=0.1, area_discretisation=10.0):
         """
         Reads the hazard model from a file
+
         :param list limits:
              Grid configuration [west, east, xspc, south, north, yspc,
                                  upper, lower, zspc]
@@ -153,6 +155,7 @@ class RateGrid(object):
     def get_rates(self, mmin, mmax=np.inf):
         """
         Returns the cumulative rates greater than Mmin
+
         :param float mmin:
             Minimum magnitude
         """
@@ -181,6 +184,7 @@ class RateGrid(object):
         """
         Returns the location in the output grid corresponding to the cell in
         which the epicentre lays
+
         :param location:
             Source hypocentre as instance of :class:
             openquake.hazardlib.geo.point.Point
@@ -201,6 +205,7 @@ class RateGrid(object):
     def _get_point_rates(self, source, mmin, mmax=np.inf):
         """
         Adds the rates for a point source
+
         :param source:
             Point source as instance of :class:
             openquake.hazardlib.source.point.PointSource
@@ -230,6 +235,7 @@ class RateGrid(object):
         """
         Adds the rates from the area source by discretising the source
         to a set of point sources
+
         :param source:
             Area source as instance of :class:
             openquake.hazardlib.source.area.AreaSource
@@ -241,6 +247,7 @@ class RateGrid(object):
     def _get_fault_rates(self, source, mmin, mmax=np.inf):
         """
         Adds the rates for a simple or complex fault source
+
         :param source:
             Fault source as instance of :class:
             openquake.hazardlib.source.simple_fault.SimpleFaultSource or
@@ -264,6 +271,7 @@ class RateGrid(object):
 class RatePolygon(RateGrid):
     """
     Calculates the rate of events within a polygon
+
     :param limits:
         Polygon as instance of :class: openquake.hazardlib.geo.polygon.Polygon
     :param float upper_depth:
@@ -297,6 +305,7 @@ class RatePolygon(RateGrid):
     def _get_point_rates(self, source, mmin, mmax=np.inf):
         """
         Adds the rates for a point source
+
         :param source:
             Point source as instance of :class:
             openquake.hazardlib.source.point.PointSource
@@ -324,6 +333,7 @@ class RatePolygon(RateGrid):
     def _get_fault_rates(self, source, mmin, mmax=np.inf):
         """
         Adds the rates for a simple or complex fault source
+
         :param source:
             Fault source as instance of :class:
             openquake.hazardlib.source.simple_fault.SimpleFaultSource or
