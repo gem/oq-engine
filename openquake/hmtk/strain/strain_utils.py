@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -37,16 +37,16 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 '''
-Module openquake.hmtk.strain.utils holds a set of useful utility functions for the
-strain rate model calculations
+Module :mod:`openquake.hmtk.strain.utils` holds a set of useful
+utility functions for the strain rate model calculations
 '''
 
 import numpy as np
@@ -56,6 +56,7 @@ from math import exp
 def moment_function(magnitude):
     '''
     Get moment (in Nm) from magnitude using Hanks & Kanamori (1979)
+
     :param float (or numpy.ndarray) magnitude:
         Magnitude of event
     :returns:
@@ -68,6 +69,7 @@ def moment_magnitude_function(moment):
     '''
     For a given moment, get the moment magnitude using the formula
     of Hanks & Kanamori (1979)
+
     :param float or numpy.ndarray magnitude
         Seismic moment in Nm
     '''
@@ -79,9 +81,10 @@ def calculate_taper_function(obs_threshold_moment, sel_threshold_moment,
                              corner_moment, beta):
     '''
     Calculates the tapering function of the tapered Gutenberg & Richter model:
-    as described in Bird & Liu (2007):
-    taper_function = (M_0(M_T) / M_0(M_T^{CMT}))^-beta x exp((M_0(m_T^CMT) -
-        M_0(m_T)) / M_0(m_c))
+    as described in Bird & Liu (2007)::
+
+     taper_function = (M_0(M_T) / M_0(M_T^{CMT}))^-beta x exp((M_0(m_T^CMT) -
+         M_0(m_T)) / M_0(m_c))
 
     :param numpy.ndarray obs_threshold_moment:
         Moment of the threshold magnitude of the observed earthquake catalogue
@@ -93,7 +96,6 @@ def calculate_taper_function(obs_threshold_moment, sel_threshold_moment,
         Beta value (b * ln(10.)) of the Tapered Gutenberg-Richter Function
     :returns:
         Relative moment rate
-
     '''
     argument = (obs_threshold_moment - sel_threshold_moment) /\
         corner_moment

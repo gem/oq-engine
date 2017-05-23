@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,33 +17,33 @@
 #
 # DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
+# risk and software design communities.
 # 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 #!/usr/bin/env python
 
@@ -56,32 +56,32 @@ by plotting the cumulative rate of events with time in each interval
 import numpy as np
 import pylab
 import matplotlib.pyplot as plt
-from openquake.hmtk.seismicity.completeness.base import BaseCatalogueCompleteness
+from openquake.hmtk.seismicity.completeness.base import (
+    BaseCatalogueCompleteness)
+
 
 class SimpleCumulativeRate(BaseCatalogueCompleteness):
     '''
-    Class to define the temporal variation in completess using simple 
+    Class to define the temporal variation in completess using simple
     changes in cumulative rates in individual completeness bins
     '''
     def completeness(self, catalogue, config, saveplot=False, filetype='png',
                      timeout=120):
         '''
-                
         :param catalogue:
-            Earthquake catalogue as instance of 
-            :class: openquake.hmtk.seismicity.catalogue.Catalogue
-        
+            Earthquake catalogue as instance of
+            :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
         :param dict config:
-            Configuration parameters of the algorithm, containing the 
-            following information - 
-                'magnitude_bin' Size of magnitude bin (non-negative float)
-                'time_bin' Size (in dec. years) of the time window 
-                           (non-negative float)
-                'increment_lock' Boolean to indicate whether to ensure
-                           completeness magnitudes always decrease with more
-                           recent bins
-        :returns: 
-            2-column table indicating year of completeness and corresponding 
+            Configuration parameters of the algorithm, containing the
+            following information:
+            'magnitude_bin' Size of magnitude bin (non-negative float)
+            'time_bin' Size (in dec. years) of the time window (non-negative
+            float)
+            'increment_lock' Boolean to indicate whether to ensure
+            completeness magnitudes always decrease with more
+            recent bins
+        :returns:
+            2-column table indicating year of completeness and corresponding
             magnitude numpy.ndarray
         '''
         if saveplot and not isinstance(saveplot, str):
@@ -130,16 +130,15 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
             plt.close()
         return completeness_table[has_completeness, :]
 
-
     def _get_magnitudes_from_spacing(self, magnitudes, delta_m):
         '''If a single magnitude spacing is input then create the bins
-    
+
         :param numpy.ndarray magnitudes:
             Vector of earthquake magnitudes
-    
+
         :param float delta_m:
             Magnitude bin width
-    
+
         :returns: Vector of magnitude bin edges (numpy.ndarray)
         '''
         min_mag = np.min(magnitudes)

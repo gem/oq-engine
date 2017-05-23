@@ -209,6 +209,7 @@ class SmoothedSeismicity(object):
     def __init__(self, grid_limits, use_3d=False, bvalue=None):
         '''
         Instatiate class with a set of grid limits
+
         :param grid_limits:
             It could be a float (in that case the grid is computed from the
             catalogue with the given spacing).
@@ -253,10 +254,10 @@ class SmoothedSeismicity(object):
         :param dict config:
             Configuration settings of the algorithm:
             * 'Length_Limit' - Maximum number of bandwidths for use in
-                               smoothing (Float)
+            smoothing (Float)
             * 'BandWidth' - Bandwidth (km) of the Smoothing Kernel (Float)
             * 'increment' - Output incremental (True) or cumulative a-value
-                            (False)
+            (False)
 
         :param np.ndarray completeness_table:
             Completeness of the catalogue assuming evenly spaced magnitudes
@@ -264,7 +265,7 @@ class SmoothedSeismicity(object):
 
         :param smoothing_kernel:
             Smoothing kernel as instance of :class:
-                openquake.hmtk.seismicity.smoothing.kernels.base.BaseSmoothingKernel
+            `openquake.hmtk.seismicity.smoothing.kernels.base.BaseSmoothingKernel`
 
         :returns:
             Full smoothed seismicity data as np.ndarray, of the form
@@ -322,6 +323,7 @@ class SmoothedSeismicity(object):
         '''
         Generates the grid from the limits using an approach closer to that of
         Frankel (1995)
+
         :param numpy.ndarray longitude:
             Vector of earthquake longitudes
 
@@ -339,7 +341,6 @@ class SmoothedSeismicity(object):
 
         :param float t_f:
             Weichert adjustment factor
-
 
         :returns:
            Two-dimensional spatial grid of observed rates
@@ -488,6 +489,7 @@ class SmoothedSeismicity(object):
     def write_to_csv(self, filename):
         '''
         Exports to simple csv
+
         :param str filename:
             Path to file for export
         '''

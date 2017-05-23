@@ -31,7 +31,7 @@ from openquake.baselib.general import (
 
 
 class BlockSplitterTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.baselib.general.block_splitter`."""
+    """Tests for :func:`openquake.baselib.general.block_splitter`."""
 
     DATA = range(10)
 

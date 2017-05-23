@@ -59,6 +59,7 @@ class CumulativeMoment(BaseMaximumMagnitude):
     def get_mmax(self, catalogue, config):
         '''
         Calculates Maximum magnitude and its uncertainty
+
         :param catalogue:
             Instance of openquake.hmtk.seismicity.catalogue.Catalogue class
             Earthquake calatalogue data as dictionary containing -
@@ -116,6 +117,7 @@ class CumulativeMoment(BaseMaximumMagnitude):
     def cumulative_moment(self, year, mag):
         '''Calculation of Mmax using aCumulative Moment approach, adapted from
         the cumulative strain energy method of Makropoulos & Burton (1983)
+
         :param year: Year of Earthquake
         :type year: numpy.ndarray
         :param mag: Magnitude of Earthquake

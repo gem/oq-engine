@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -37,17 +37,17 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
 '''
-Module openquake.hmtk.faults.active_fault_model.mtkActiveFaultModel implements a wrapper
-class for a set of active fault sources
+Module :mod:`openquake.hmtk.faults.active_fault_model.mtkActiveFaultModel`
+implements a wrapper class for a set of active fault sources
 '''
 from copy import deepcopy
 import numpy as np
@@ -58,6 +58,7 @@ from openquake.hmtk.sources.source_model import mtkSourceModel
 class mtkActiveFaultModel(object):
     '''
     Class to define a compilation of active fault sources
+
     :param str id:
         Identifier for the model
     :param str name:
@@ -65,10 +66,9 @@ class mtkActiveFaultModel(object):
     :param list faults:
         Active faults as a list of tuples where each tuple is an instance
         of (openquake.hmtk.faults.fault_model.mtkActiveFault,
-            [list of MFD configurations for that fault])
+        [list of MFD configurations for that fault])
     :param source_model:
         Instance of openquake.hmtk.source.source_model.mtkSourceModel class
-
     '''
 
     def __init__(self, identifier=None, name=None, faults=None):
@@ -98,6 +98,7 @@ class mtkActiveFaultModel(object):
         enumerating all the possible recurrence models of each fault as
         separate faults, with the recurrence rates multiplied by the
         corresponding weights.
+
         :param bool collapse:
             Determines whether or not to collapse the branches
         :param rendered_msr:
