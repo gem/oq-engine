@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 import numpy
 from openquake.baselib import sap, hdf5, node
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, sourceconverter
 
 
 def convert_npz_hdf5(input_file, output_file):
@@ -24,8 +24,16 @@ def convert_xml_hdf5(input_file, output_file):
         else:  # not a NRML
             raise ValueError('Unknown NRML:' % inp['xmlns'])
         for group in sm:
-            for src in group:  # make the trt implicit
-                del src.attrib['tectonicRegion']
+            psources = []
+            others = []
+            for src in group:
+                del src.attrib['tectonicRegion']  # make the trt implicit
+                if src.tag.endswith('pointSource'):
+                    psources.append(src)
+                else:
+                    others.append(src)
+            mpsources = sourceconverter.pointsources2multipoints(psources)
+            group.nodes = others + mpsources
         out.save(node.node_to_dict(sm))
     return output_file
 
