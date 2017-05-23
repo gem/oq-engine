@@ -4,7 +4,7 @@ Release notes for the OpenQuake Engine, version 2.4
 This release introduces several changes and improvements to the engine
 calculators, most notably in the postprocessing of hazard curves and
 in the postprocessing of loss curves. Also, several exporters
-have been revised, several have been added, and there are new kinds
+have been revised and several have been added, since there are new kinds
 of outputs. A few important bugs have been fixed and a few spectacular
 optimizations have been added.
 
