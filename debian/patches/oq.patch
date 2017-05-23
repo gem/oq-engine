@@ -1,0 +1,10 @@
+Index: oq-engine/bin/oq
+===================================================================
+--- oq-engine.orig/bin/oq	2017-05-05 14:55:20.440888148 +0200
++++ oq-engine/bin/oq	2017-05-05 14:55:49.712825321 +0200
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/opt/openquake/bin/python2
+ # -*- coding: utf-8 -*-
+ # vim: tabstop=4 shiftwidth=4 softtabstop=4
+ #

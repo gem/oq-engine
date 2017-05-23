@@ -360,20 +360,6 @@ _devtest_innervm_run () {
     pkgs_list="$(deps_list "all" debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
-    # build oq-hazardlib speedups and put in the right place
-    ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
-                 set -e
-                 if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
-                     export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
-                     set -x
-                 fi
-                 cd oq-hazardlib
-                 python ./setup.py build
-                 for i in \$(find build/ -name *.so); do
-                     o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
-                     cp \$i \$o
-                 done"
-
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
@@ -385,9 +371,9 @@ _devtest_innervm_run () {
         fi
 
         ssh $lxc_ip "set -e
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
                  echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
-                 cd oq-engine; nohup bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
+                 cd oq-engine; nohup /opt/openquake/bin/python bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
 
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
@@ -395,7 +381,7 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
                  cd oq-engine
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
@@ -408,8 +394,8 @@ _devtest_innervm_run () {
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib openquake/commonlib
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
 
-                 python-coverage xml --include=\"openquake/*\"
-        bin/oq dbserver stop"
+                 /opt/openquake/bin/coverage xml --include=\"openquake/*\"
+                 /opt/openquake/bin/python bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
@@ -570,7 +556,6 @@ if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
     set -x
 fi
 set -e
-export PYTHONPATH=\"$OPT_LIBS_PATH\"
 # FIXME: the big sleep below is a temporary workaround to avoid races.
 #        No better solution because we will abandon supervisord at all early
 sleep 30

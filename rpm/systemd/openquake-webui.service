@@ -2,15 +2,15 @@
 Description=The OpenQuake Engine WebUI
 Documentation=https://github.com/gem/oq-engine/wiki
 After=network.target openquake-dbserver.service
+Requires=openquake-dbserver.service
 
 [Service]
 User=openquake
 Group=openquake
-Environment=PYTHONPATH=/opt/openquake/lib/python2.7/site-packages
 WorkingDirectory=/usr/share/openquake/engine
-ExecStart=/usr/bin/env python -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
+ExecStart=/opt/openquake/bin/python -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
 # Using gunicorn (Nginx or another webserver is needed for static content)
-# ExecStart=/usr/bin/env gunicorn -w 2 openquake.server.wsgi:application
+# ExecStart=/opt/openquake/bin/gunicorn -w 2 openquake.server.wsgi:application
 Restart=always
 RestartSec=30
 KillMode=control-group
