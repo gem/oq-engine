@@ -22,7 +22,8 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib.node import context, striptag
+from openquake.baselib.general import groupby
+from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib import valid
@@ -613,8 +614,8 @@ class SourceConverter(RuptureConverter):
         object.
 
         :param node: a node of kind incrementalMFD or truncGutenbergRichterMFD
-        :returns: a :class:`openquake.hazardlib.mdf.EvenlyDiscretizedMFD.` or
-                  :class:`openquake.hazardlib.mdf.TruncatedGRMFD` instance
+        :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
+                  :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
         """
         with context(self.fname, node):
             [mfd_node] = [subnode for subnode in node
@@ -917,3 +918,86 @@ class SourceConverter(RuptureConverter):
         sg.grp_probability = grp_probability
         return sg
 
+# ################### MultiPointSource conversion ######################## #
+
+
+def npd(nodes):
+    """Convert the nodalPlaneDistributions into a tuple"""
+    lst = []
+    for node in nodes:
+        lst.append((node['probability'],
+                    node['rake'], node['strike'], node['dip']))
+    return tuple(lst)
+
+
+def hd(nodes):
+    """Convert the hypocenterDistributions into a tuple"""
+    lst = []
+    for node in nodes:
+        lst.append((node['probability'], node['depth']))
+    return tuple(lst)
+
+
+def get_key(node):
+    """
+    Convert the given pointSource node into a tuple
+    """
+    return (
+        ~node.magScaleRel, ~node.ruptAspectRatio,
+        ~node.pointGeometry.upperSeismoDepth,
+        ~node.pointGeometry.lowerSeismoDepth,
+        hd(node.hypoDepthDist), npd(node.nodalPlaneDist))
+
+
+def mfds2multimfd(mfds):
+    """
+    Convert a list of MFD nodes into a single MultiMFD node
+    """
+    rows = len(mfds)
+    _, kind = mfds[0].tag.split('}')
+    node = Node('multiMFD', dict(kind=kind))
+    for field in mfd.multi_mfd.ASSOC[kind][1:]:
+        alias = mfd.multi_mfd.ALIAS.get(field, field)
+        if field in ('magnitudes', 'occurRates'):
+            data = [~getattr(m, field) for m in mfds]
+            attrs = dict(rows=rows, cols=len(data[0]))
+            data = sum(data, [])  # the list has to be flat
+        else:
+            attrs = {}
+            data = [m[alias] for m in mfds]
+        node.append(Node(field, attrs, data))
+    return node
+
+
+def pointsources2multipoints(srcs):
+    """
+    :param srcs: a list of pointSource nodes of the same tectonic region
+    :returns: as list of multiPointSource nodes
+    """
+    mpsources = []
+    i = 1
+    for key, sources in groupby(srcs, get_key).items():
+        msr, rar, usd, lsd, hd, npd = key
+        mfds = [src[3] for src in sources]
+        points = [~src.pointGeometry.Point.pos for src in sources]
+        geom = Node('multiPointGeometry')
+        geom.append(Node('gml:posList', text=points))
+        geom.append(Node('upperSeismoDepth', text=usd))
+        geom.append(Node('lowerSeismoDepth', text=lsd))
+        node = Node(
+            'multiPointSource',
+            dict(id='mps-%d' % i, name='multiPointSource-%d' % i),
+            nodes=[geom])
+        node.append(Node("magScaleRel", text=msr))
+        node.append(Node("ruptAspectRatio", text=rar))
+        node.append(mfds2multimfd(mfds))
+        node.append(Node('nodalPlaneDist', nodes=[
+            Node('nodalPlane', dict(probability=prob, rake=rake,
+                                    strike=strike, dip=dip))
+            for prob, rake, strike, dip in npd]))
+        node.append(Node('hypoDepthDist', nodes=[
+            Node('hypoDepth', dict(depth=depth, probability=prob))
+            for prob, depth in hd]))
+        mpsources.append(node)
+        i += 1
+    return mpsources

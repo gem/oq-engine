@@ -27,16 +27,29 @@ from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
 
 F32 = numpy.float32
 
+ASSOC = {
+    'arbitraryMFD': (
+        ArbitraryMFD, 'magnitudes', 'occurRates'),
+    'incrementalMFD': (
+        EvenlyDiscretizedMFD, 'min_mag', 'bin_width', 'occurRates'),
+    'truncGutenbergRichterMFD': (
+        TruncatedGRMFD, 'min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val'),
+    'YoungsCoppersmithMFD': (
+        YoungsCoppersmith1985MFD, 'min_mag', 'max_mag', 'a_val', 'b_val',
+        'char_mag', 'char_rate', 'bin_width')}
+
+ALIAS = dict(min_mag='minMag', max_max='maxMag', bin_width='binWidth')
+
 
 class MultiMFD(BaseMFD):
     """
     A MultiMFD is defined as a sequence of regular MFDs of the same kind.
 
-    :param kind: a string defining the underlying MFD
+    :param kind: a string defining the underlying MFD ('arbitraryMFD', ...)
     :param size: the size of the MFD for ArbitraryMFD and EvenlyDiscretizedMFD,
-                 otherwise 0
+                 otherwise 1
+    :param all_args: the list of arguments of the underlying MFDs
     :param width_of_mfd_bin: used in the truncated Gutenberg-Richter MFD
-    :param all_args: a list of arguments
     """
     MODIFICATIONS = set()
 
@@ -45,40 +58,18 @@ class MultiMFD(BaseMFD):
         self.size = size
         self.width_of_mfd_bin = width_of_mfd_bin
         n = len(all_args)
-        if kind == 'arbitraryMFD':
-            self.mfd_class = ArbitraryMFD
-            self.array = numpy.zeros(n, [('magnitudes', (F32, size)),
-                                         ('occurRates', (F32, size))])
-
-        elif kind == 'incrementalMFD':
-            self.mfd_class = EvenlyDiscretizedMFD
-            self.array = numpy.zeros(n, [('min_mag', F32),
-                                         ('bin_width', F32),
-                                         ('occurRates', (F32, size))])
-        elif kind == 'truncGutenbergRichterMFD':
-            self.mfd_class = TruncatedGRMFD
-            self.array = numpy.zeros(n, [('min_mag', F32),
-                                         ('max_mag', F32),
-                                         ('bin_width', F32),
-                                         ('a_val', F32),
-                                         ('b_val', F32)])
-        elif kind == 'YoungsCoppersmithMFD':
-            self.mfd_class = YoungsCoppersmith1985MFD
-            self.array = numpy.zeros(n, [('min_mag', F32),
-                                         ('max_mag', F32),
-                                         ('a_val', F32),
-                                         ('b_val', F32),
-                                         ('char_mag', F32),
-                                         ('char_rate', F32),
-                                         ('bin_width', F32)])
-        else:
-            raise NameError('Unknown MFD: %s' % kind)
+        self.mfd_class = ASSOC[kind][0]
+        fields = ASSOC[kind][1:]
+        self.array = numpy.zeros(n, [(f, (F32, size)) for f in fields])
         for i, args in enumerate(all_args):
             self.array[i] = args
 
     def __iter__(self):
         for args in self.array:
             yield self.mfd_class(*args)
+
+    def __len__(self):
+        return len(self.array)
 
     def get_min_max_mag(self):
         return None, None
