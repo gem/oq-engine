@@ -136,6 +136,7 @@ def leap_check(year):
 def decimal_time(year, month, day, hour, minute, second):
     """
     Returns the full time as a decimal value
+
     :param year:
         Year of events (integer numpy.ndarray)
     :param month:
@@ -239,6 +240,7 @@ def haversine(lon1, lat1, lon2, lat2, radians=False, earth_rad=6371.227):
 def greg2julian(year, month, day, hour, minute, second):
     """
     Function to convert a date from Gregorian to Julian format
+
     :param year:
         Year of events (integer numpy.ndarray)
     :param month:
@@ -274,6 +276,7 @@ def greg2julian(year, month, day, hour, minute, second):
 
 def piecewise_linear_scalar(params, xval):
     '''Piecewise linear function for a scalar variable xval (float).
+
     :param params:
         Piecewise linear parameters (numpy.ndarray) in the following form:
         [slope_i,... slope_n, turning_point_i, ..., turning_point_n, intercept]
@@ -311,9 +314,11 @@ def piecewise_linear_scalar(params, xval):
         select = np.nonzero(turning_points <= xval)[0][-1] + 1
     return gradients[select] * xval + c_val[select]
 
+
 def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
     '''
     Samples a Gaussian distribution subject to boundaries on the data
+
     :param numpy.ndarray data:
         Vector of N data values
     :param numpy.ndarray uncertainties:
@@ -361,6 +366,7 @@ def hmtk_histogram_1D(values, intervals, offset=1.0E-10):
     version that allows us to offset the intervals by a smaller amount and
     ensure that 3.0999999999, 3.0, and 3.10000000001 would fall in the group
     3.1 - 3.2!
+
     :param numpy.ndarray values:
         Values of data
     :param numpy.ndarray intervals:
@@ -378,10 +384,12 @@ def hmtk_histogram_1D(values, intervals, offset=1.0E-10):
         counter[i] += float(np.sum(idx))
     return counter
 
+
 def hmtk_histogram_2D(xvalues, yvalues, bins, x_offset=1.0E-10,
                       y_offset=1.0E-10):
     """
     See the explanation for the 1D case - now applied to 2D.
+
     :param numpy.ndarray xvalues:
         Values of x-data
     :param numpy.ndarray yvalues:
@@ -406,13 +414,14 @@ def hmtk_histogram_2D(xvalues, yvalues, bins, x_offset=1.0E-10,
             idx = np.logical_and(x_vals >= xbins[i], x_vals < xbins[i + 1])
             counter[j, i] += float(np.sum(idx))
     return counter.T
-    
+
 
 def bootstrap_histogram_1D(
         values, intervals, uncertainties=None,
         normalisation=False, number_bootstraps=None, boundaries=None):
     '''
     Bootstrap samples a set of vectors
+
     :param numpy.ndarray values:
         The data values
     :param numpy.ndarray intervals:
@@ -465,6 +474,7 @@ def bootstrap_histogram_2D(
     '''
     Calculates a 2D histogram of data, allowing for normalisation and
     bootstrap sampling
+
     :param numpy.ndarray xvalues:
         Data values of the first variable
 
@@ -550,10 +560,12 @@ TO_Qm = lambda lat: (
     (1.0 + WGS84m["e"] * np.sin(lat))))))
     )
 
+
 def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
     """
     Converts vectors of longitude and latitude into Lambert Azimuthal
     Equal Area projection (km), with respect to an origin point
+
     :param numpy.ndarray lon:
         Longitudes
     :param numpy.ndarray lat:
@@ -590,6 +602,7 @@ def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
     northing = f_n + (bval / dval) * ((np.cos(beta0) * np.sin(beta)) -
         (np.sin(beta0) * np.cos(beta) * np.cos(lon - lon0)))
     return easting, northing
+
 
 def area_of_polygon(polygon):
     """

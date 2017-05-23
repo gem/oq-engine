@@ -59,13 +59,15 @@ import matplotlib.pyplot as plt
 valid_markers = ['*', '+', '1', '2', '3', '4', '8', '<', '>', 'D', 'H', '^',
                  '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
 
-DEFAULT_SIZE=(8., 6.)
-DEFAULT_OFFSET=(1.3, 1.0)
+DEFAULT_SIZE = (8., 6.)
+DEFAULT_OFFSET = (1.3, 1.0)
+
 
 def create_stepp_plot(model, filename, filetype='png', filedpi=300):
     '''
     Creates the classic Stepp (1972) plots for a completed Stepp analysis,
     and exports the figure to a file.
+
     :param model:
         Completed Stepp (1972) analysis as instance of :class:
         'openquake.hmtk.seismicity.completeness.comp_stepp_1971.Stepp1971'

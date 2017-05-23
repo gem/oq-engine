@@ -113,13 +113,13 @@ def _get_decimal_from_datetime(time):
 class CatalogueSelector(object):
     '''
     Class to implement methods for selecting subsets of the catalogue
-    according to various attribute criteria
+    according to various attribute criteria.
+
     :attr catalogue: The catalogue to which the selection is applied as
                      instance of openquake.hmtk.seismicity.catalogue.Catalogue
 
     :attr create_copy: Boolean to indicate whether to create copy of the
                        original catalogue before selecting {default = True}
-
     '''
 
     def __init__(self, master_catalogue, create_copy=True):
@@ -137,6 +137,7 @@ class CatalogueSelector(object):
     def select_catalogue(self, valid_id):
         '''
         Method to post-process the catalogue based on the selection options
+
         :param numpy.ndarray valid_id:
             Boolean vector indicating whether each event is selected (True)
             or not (False)
@@ -174,8 +175,8 @@ class CatalogueSelector(object):
             Buffer distance (km) (can take negative values)
 
         :returns:
-            Instance of openquake.hmtk.seismicity.catalogue.Catalogue class containing
-            only selected events
+            Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
+            containing only selected events
         '''
 
         if distance:
@@ -210,8 +211,8 @@ class CatalogueSelector(object):
             Distance (km)
 
         :returns:
-            Instance of openquake.hmtk.seismicity.catalogue.Catalogue class containing
-            only selected events
+            Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
+            containing only selected events
         '''
 
         if kwargs['distance_type'] is 'epicentral':
@@ -238,8 +239,8 @@ class CatalogueSelector(object):
             Distance (km)
 
         :returns:
-            Instance of openquake.hmtk.seismicity.catalogue.Catalogue class containing
-            only selected events
+            Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
+            class containing only selected events
         '''
         point_surface = Point(point.longitude, point.latitude, 0.)
         # As distance is
@@ -276,8 +277,8 @@ class CatalogueSelector(object):
             Rupture distance (km)
 
         :returns:
-            Instance of openquake.hmtk.seismicity.catalogue.Catalogue class containing
-            only selected events
+            Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
+            containing only selected events
         '''
 
         upper_depth, lower_depth = _check_depth_limits(kwargs)
@@ -301,8 +302,8 @@ class CatalogueSelector(object):
             Rupture distance (km)
 
         :returns:
-            Instance of openquake.hmtk.seismicity.catalogue.Catalogue class containing
-            only selected events
+            Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
+            containing only selected events
         '''
         # Check for upper and lower depths
         upper_depth, lower_depth = _check_depth_limits(kwargs)
@@ -318,6 +319,7 @@ class CatalogueSelector(object):
     def within_time_period(self, start_time=None, end_time=None):
         '''
         Select earthquakes occurring within a given time period
+
         :param start_time:
             Earliest time (as datetime.datetime object)
 
@@ -325,8 +327,8 @@ class CatalogueSelector(object):
             Latest time (as datetime.datetime object)
 
         :returns:
-            Instance of openquake.hmtk.seismicity.catalogue.Catalogue class containing
-            only selected events
+            Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
+            containing only selected events
         '''
         time_value = self.catalogue.get_decimal_time()
         if not start_time:
@@ -354,6 +356,7 @@ class CatalogueSelector(object):
     def within_depth_range(self, lower_depth=None, upper_depth=None):
         '''
         Selects events within a specified depth range
+
         :param float lower_depth:
             Lower depth for consideration
 
@@ -361,8 +364,8 @@ class CatalogueSelector(object):
             Upper depth for consideration
 
         :returns:
-            Instance of openquake.hmtk.seismicity.catalogue.Catalogue class containing
-            only selected events
+            Instance of :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
+            containing only selected events
         '''
         if not lower_depth:
             if not upper_depth:
@@ -411,9 +414,9 @@ class CatalogueSelector(object):
         For a given catalogue and list of cluster IDs this function splits
         the catalogue into a dictionary containing an individual catalogue
         of events within each cluster
+
         :param numpy.ndarray vcl:
             Cluster ID list
-        
         :returns:
             Dictionary of instances of the :class:
             openquake.hmtk.seismicity.catalogue.Catalogue, where each instance
@@ -431,17 +434,16 @@ class CatalogueSelector(object):
     def within_bounding_box(self, limits):
         """
         Selects the earthquakes within a bounding box.
-        
+
         :parameter limits:
             A list or a numpy array with four elements in the following order:
                 - min x (longitude)
                 - min y (latitude)
                 - max x (longitude)
                 - max y (latitude)
-        : returns: 
+        :returns:
             Returns a :class:htmk.seismicity.catalogue.Catalogue` instance
         """
-
         is_valid = np.logical_and(
             self.catalogue.data['longitude'] >= limits[0],
             np.logical_and(self.catalogue.data['longitude'] <= limits[2],

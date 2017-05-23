@@ -178,13 +178,12 @@ class mtkPointSource(object):
         point
 
         :param selector:
-            Populated instance of openquake.hmtk.seismicity.selector.CatalogueSelector
+            Populated instance of :class:
+            `openquake.hmtk.seismicity.selector.CatalogueSelector`
         :param float distance:
             Distance from point (km) for selection
-
         :param str selector_type:
             Chooses whether to select within {'circle'} or within a {'square'}.
-
         :param str distance_metric:
             'epicentral' or 'hypocentral' (only for 'circle' selector type)
         :param float point_depth:
@@ -219,15 +218,16 @@ class mtkPointSource(object):
             distance_metric='epicentral', point_depth=None):
         '''
         Selects catalogue of earthquakes within distance from point
+
         :param selector:
-            Populated instance of openquake.hmtk.seismicity.selector.CatalogueSelector
+            Populated instance of :class:
+            `openquake.hmtk.seismicity.selector.CatalogueSelector`
         :param distance:
             Distance from point (km) for selection
-        :param str distance_metric
+        :param str distance_metric:
             Choice of point source distance metric 'epicentral' or
             'hypocentral'
         '''
-
         if ('hypocentral' in distance_metric) and point_depth:
             # If a hypocentral distance metric is chosen and a
             # hypocentral depth specified then update geometry
@@ -250,8 +250,10 @@ class mtkPointSource(object):
                                      upper_depth=None, lower_depth=None):
         '''
         Selects catalogue of earthquakes within distance from point
+
         :param selector:
-            Populated instance of openquake.hmtk.seismicity.selector.CatalogueSelector
+            Populated instance of :class:
+            `openquake.hmtk.seismicity.selector.CatalogueSelector`
         :param distance:
             Distance from point (km) for selection
         '''
@@ -292,6 +294,3 @@ class mtkPointSource(object):
             self.geometry,
             conv.npd_to_pmf(self.nodal_plane_dist, use_defaults),
             conv.hdd_to_pmf(self.hypo_depth_dist, use_defaults))
-
-
-

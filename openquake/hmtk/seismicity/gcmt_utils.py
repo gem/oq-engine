@@ -9,20 +9,22 @@ from math import fabs, log10, sqrt, acos, atan2, pi
 
 def tensor_components_to_use(mrr, mtt, mpp, mrt, mrp, mtp):
     '''
-    Converts components to Up, South, East definition
-    USE = [[mrr, mrt, mrp],
-           [mtt, mtt, mtp],
-           [mrp, mtp, mpp]]
+    Converts components to Up, South, East definition::
+
+     USE = [[mrr, mrt, mrp],
+            [mtt, mtt, mtp],
+            [mrp, mtp, mpp]]
     '''
     return np.array([[mrr, mrt, mrp], [mrt, mtt, mtp], [mrp, mtp, mpp]])
 
 
 def tensor_components_to_ned(mrr, mtt, mpp, mrt, mrp, mtp):
     '''
-    Converts components to North, East, Down definition
-    NED = [[mtt, -mtp, mrt],
-           [-mtp, mpp, -mrp],
-           [mrt, -mtp, mrr]]
+    Converts components to North, East, Down definition::
+
+     NED = [[mtt, -mtp, mrt],
+            [-mtp, mpp, -mrp],
+            [mrt, -mtp, mrr]]
     '''
     return np.array([[mtt, -mtp, mrt], [-mtp, mpp, -mrp], [mrt, -mtp, mrr]])
 

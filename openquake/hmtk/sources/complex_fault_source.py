@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -47,10 +47,10 @@
 
 # -*- coding: utf-8 -*-
 '''
-Defines the :class
-openquake.hmtk.sources.complex_fault_source.mtkComplexFaultSource, which
+Defines the :class:
+`openquake.hmtk.sources.complex_fault_source.mtkComplexFaultSource`, which
 represents the openquake.hmtk defition of a complex fault source. This extends
-the :class: nrml.models.ComplexFaultSource
+the :class:`nrml.models.ComplexFaultSource`
 '''
 import warnings
 import numpy as np
@@ -80,8 +80,8 @@ class mtkComplexFaultSource(object):
         Rupture aspect ratio
     :param mfd:
         Magnitude frequency distribution as instance of
-        :class: nrml.models.IncrementalMFD or
-        :class: nrml.models.TGRMFD
+        :class:`nrml.models.IncrementalMFD` or
+        :class:`nrml.models.TGRMFD`
     :param float rake:
         Rake of fault
     :param float upper_depth:
@@ -90,7 +90,7 @@ class mtkComplexFaultSource(object):
         Lower seismogenic depth (km)
     :param catalogue:
         Earthquake catalogue associated to source as instance of
-        openquake.hmtk.seismicity.catalogue.Catalogue object
+        :class:`openquake.hmtk.seismicity.catalogue.Catalogue` object
     '''
 
     def __init__(self, identifier, name, trt=None, geometry=None,
@@ -181,8 +181,10 @@ class mtkComplexFaultSource(object):
                          lower_eq_depth=None):
         '''
         Selects earthquakes within a distance of the fault
+
         :param selector:
-            Populated instance of openquake.hmtk.seismicity.selector.CatalogueSelector
+            Populated instance of :class:
+            `openquake.hmtk.seismicity.selector.CatalogueSelector`
 
         :param distance:
             Distance from point (km) for selection
@@ -240,4 +242,3 @@ class mtkComplexFaultSource(object):
             tom,
             self.fault_edges,
             self.rake)
-

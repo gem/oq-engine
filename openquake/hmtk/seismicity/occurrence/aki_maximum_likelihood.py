@@ -57,13 +57,14 @@ from openquake.hmtk.seismicity.occurrence.utils import recurrence_table, input_c
 class AkiMaxLikelihood(SeismicityOccurrence):
 
     def calculate(self, catalogue, config=None, completeness=None):
-        """ Calculation of b-value and its uncertainty for a given
+        """
+        Calculation of b-value and its uncertainty for a given
         catalogue, using the maximum likelihood method of Aki (1965),
         with a correction for discrete bin width (Bender, 1983).
 
         :param catalogue:
-            See :class:`openquake.hmtk.seismicity.occurrence.base.py' for further
-            explanation
+            See :class:`openquake.hmtk.seismicity.occurrence.base.py`
+            for further explanation
         :param config:
             The configuration in this case do not contains specific
             information
