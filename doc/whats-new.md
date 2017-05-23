@@ -149,17 +149,16 @@ output anymore; however the curves can still can be exported, but with
 a new command:
 
 ```bash
-$ oq export loss_curves/rlz-XXX
+$ oq export loss_curves/rlz-XXX # export the realization number XXX
 ```
 
-where `XXX` is the number of the realization you are interested in.
 Notice that CSV format that we are using now is different and a lot
 more readable than the one we used in the past which was not even
 a proper CSV (it was used for internal purposes only).
 
 Among the huge improvements to the event based calculators one of the
 most relevant is the fact that the *ruptures* are being saved and
-read from the datastore in HDF5 format: before they were stored in a 
+read from the datastore in HDF5 format: before they were stored in
 pickle format, for historical reasons.
 
 The `classical_risk` calculator now reads the ProbabilityMaps
@@ -210,9 +209,6 @@ has been removed and the ordering of the fields is different.
 The event loss table exporter is now producing an additional column
 `rup_id` containing the rupture ID.
 
-The `loss_curves` output has been removed. You can still export the
-loss curves but it requires a different command than before. 
-
 We renamed the `csq_` outputs of the scenario_damage to `losses_`.
 
 We renamed the datasets `avg_losses-` to `losses_by_asset-`.
@@ -228,6 +224,10 @@ now there is an .npz exporter.
 
 We removed the GSIM name from the exported file name for the scenario
 calculators.
+
+The .npz export for scenario calculations now exports GMFs outside
+the maximum distance, which are all zeros. This is convenient when plotting
+and consistent with CSV export.
 
 hazardlib
 --------------------------
@@ -351,26 +351,24 @@ We fixed a bug in `event_based_risk`: it was impossible to use
 vulnerability functions with "PM" distribution, i.e. with Probability
 Mass Functions. Now they work as expected.
 
-The .npz export for scenario calculations now exports GMFs outside
-the maximum distance, which are all zeros. This is convenient when plotting
-and consistent with CSV export. The export has also been fixed in the case
-of a single event, i.e. when `number_of_ground_motion_fields=1`,
-which was broken.
+The .npz export for scenario calculations has been fixed in the case
+of a single event, i.e. when `number_of_ground_motion_fields=1`, which
+was broken.
 
 Additional validations
 ----------------------
 
-We engine is more picky than before. For instance if an user
+The engine is more picky than before. For instance if an user
 specifies `quantile_loss_curves` or `conditional_loss_poes` in a
 `classical_damage` calculation she will now get an error, since such
-features make no sense in that context. Before they were silently
+settings make no sense in that context. Before they were silently
 ignored.
 
 If an exposure contains assets with taxonomies for which there are no
-vulnerability functions available, now the user gets an early error
+vulnerability functions available, now the user gets a clear error
 before starting the calculation and not in the middle of it.
 
-Also, if an user provides a complex logic tree file which is
+If an user provides a complex logic tree file which is
 invalid for the scenario calculator, now she gets a clear error message.
 
 There are more checks for patological situations, like the user 
@@ -389,9 +387,9 @@ sampling of the logic tree. The rupture filtering logic has been
 refactored and made more consistent with the other calculators.
 
 The `ucerf_rupture` calculator has been extended so that we can
-parallelize by number of stochastic event sets. This made it possible
-to run mean field calculations in parallel: before such calculations
-used a single core, since there is a single branch.
+parallelize by number of stochastic event sets. This improvement made
+it possible to run mean field calculations in parallel: before such
+calculations used a single core.
 
 The data transfer has been hugely reduced in the calculator
 `ucerf_risk`: now we do not return the rupture objects from the
@@ -440,27 +438,27 @@ generated files, both in the current directory and in the /tmp directory.
 Now the tests never write on the current directory and they cleanup the
 /tmp directory (if they are successful).
 
-There an internal configuration flag `ignore_covs` which is used to disable
+There is an internal configuration flag `ignore_covs` which is needed to disable
 the use of the coefficients of variations in vulnerability functions, for
 debugging purposes. Now this flag works for `scenario_risk` calculations too.
 Before it was restricted to `event_based_risk`.
 
-In release 2.3 we introduced temporarily an `ebrisk` calculator. Now it is
-gone, just use the good old `event_based_risk` calculator.
+In release 2.3 we introduced temporarily an `ebrisk` calculator. It is
+gone now, just use the good old `event_based_risk` calculator.
 
 Internal TXT exporters for the ground motion fields, used only for the
-tests have been removed.
+tests, have been removed.
 
 Packaging
 -------------------------
 
 [Matplotlib](https://matplotlib.org/) is now a requirement for the
-OpenQuake Engine and hazardlib. It's already included in the OpenQuake
+OpenQuake Engine and hazardlib. It's included in the OpenQuake
 installers and packages as a Python wheel.
-[Basemap](https://matplotlib.org/basemap/) can be also installed to
+[Basemap](https://matplotlib.org/basemap/) can be installed to
 enable some extra plotting features from the Hazard Modeller Toolkit.
 Basemap is provided as pre-compiled Python
-wheel, it's included in installers and provided by the
+wheel, it's included in installers and in the
 `python-oq-libs-extra` package on Ubuntu and RedHat/CentOS.
 `python-oq-libs-extra` isn't required on a headless server setup.
 
