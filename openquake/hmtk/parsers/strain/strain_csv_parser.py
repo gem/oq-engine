@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -62,15 +62,16 @@ STRAIN_VARIABLES = ['exx', 'eyy', 'exy', 'var_exx', 'var_eyy', 'var_exy',
 
 class ReadStrainCsv(object):
     '''
-    :class: openquake.hmtk.parsers.strain_csv_parser.ReadStrainCsv reads a strain
-    model (defined by :class: openquake.hmtk.strain.geodetic_strain.GeodeticStrain) from
+    :class:`openquake.hmtk.parsers.strain_csv_parser.ReadStrainCsv` reads a
+    strain model (defined by :class:
+    `openquake.hmtk.strain.geodetic_strain.GeodeticStrain`) from
     a headed csv file
 
     :param str filename:
         Name of strain file in csv format
-    :param strain
+    :param strain:
         Container for the strain data as instance of :class:
-        openquake.hmtk.strain.geodetic_strain.GeodeticStrain
+        `openquake.hmtk.strain.geodetic_strain.GeodeticStrain`
     '''
     def __init__(self, strain_file):
         '''
@@ -143,9 +144,10 @@ class ReadStrainCsv(object):
 
 class WriteStrainCsv(object):
     '''
-    :class: openquake.hmtk.parsers.strain_csv_parser.WriteStrainCsv writes a strain
-    model (defined by :class: openquake.hmtk.strain.geodetic_strain.GeodeticStrain) to
-    a headed csv file
+    :class:`openquake.hmtk.parsers.strain_csv_parser.WriteStrainCsv` writes a
+    strain model (defined by :class:
+    `openquake.hmtk.strain.geodetic_strain.GeodeticStrain`)
+    to a headed csv file
 
     :param str filename:
         Name of output file for writing
@@ -158,6 +160,7 @@ class WriteStrainCsv(object):
     def write_file(self, strain, scaling_factor=1E-9):
         '''
         Main writer function for the csv file
+
         :param strain:
             Instance of :class: openquake.hmtk.strain.geodetic_strain.GeodeticStrain
         :param float scaling_factor:

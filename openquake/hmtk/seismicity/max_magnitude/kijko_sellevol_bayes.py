@@ -3,19 +3,19 @@
 #
 # Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can redistribute
-# it and/or modify it under the terms of the GNU Affero General Public License
-# as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
+# redistribute it and/or modify it under the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation, either version 3
+# of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein is released as
-# a prototype implementation on behalf of scientists and engineers working
-# within the GEM Foundation (Global Earthquake Model).
+# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein is
+# released as a prototype implementation on behalf of scientists and engineers
+# working within the GEM Foundation (Global Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the hope that
 # it will be useful to the scientific, engineering, disaster risk and software
@@ -41,9 +41,9 @@
 # use of the software.
 
 '''
-Module :mod: 'openquake.hmtk.seismicity.max_magnitude.kijko_sellevol_bayes' implements
-the Kijko & Sellevol (1989) method for estimating maximum magnitude from
-observed seismicity with uncertain b-value
+Module :mod:`openquake.hmtk.seismicity.max_magnitude.kijko_sellevol_bayes`
+implements the Kijko & Sellevol (1989) method for estimating maximum magnitude
+from observed seismicity with uncertain b-value
 '''
 
 import numpy as np
@@ -92,13 +92,15 @@ def check_config(config, data):
        "maximum_iterations": 1000,
        "tolerance": 1E-5})
 class KijkoSellevolBayes(BaseMaximumMagnitude):
-    '''Class to implement Kijko & Sellevol Bayesian estimator of Mmax, with
-    uncertain b-value'''
+    '''
+    Class to implement Kijko & Sellevol Bayesian estimator of Mmax, with
+    uncertain b-value
+    '''
 
     def get_mmax(self, catalogue, config):
         '''Calculate maximum magnitude
-        :return: **mmax** Maximum magnitude and **mmax_sig** corresponding
-                    uncertainty
+
+        :returns: **mmax** Maximum magnitude and **mmax_sig** corresponding uncertainty
         :rtype: Float
         '''
         # Check configuration file
@@ -138,8 +140,10 @@ class KijkoSellevolBayes(BaseMaximumMagnitude):
         return mmax.item(), np.sqrt(obsmaxsig ** 2. + delta ** 2.)
 
     def _ksb_intfunc(self, mval, neq, mmin, pval, qval):
-        '''Integral function inside Kijko-Sellevol-Bayes estimator
+        '''
+        Integral function inside Kijko-Sellevol-Bayes estimator
         (part of Eq. 10 in Kijko, 2004 - section 3.2)
+
         :param float mval:
             Magnitude
         :param float neq:

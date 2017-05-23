@@ -197,8 +197,10 @@ class mtkSimpleFaultSource(object):
                          lower_eq_depth=None):
         '''
         Selects earthquakes within a distance of the fault
+
         :param selector:
-            Populated instance of openquake.hmtk.seismicity.selector.CatalogueSelector
+            Populated instance of :class:
+            `openquake.hmtk.seismicity.selector.CatalogueSelector`
 
         :param distance:
             Distance from point (km) for selection
@@ -241,12 +243,12 @@ class mtkSimpleFaultSource(object):
     def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
         """
         Returns an instance of the :class:
-        openquake.hazardlib.source.simple_fault.SimpleFaultSource
+        `openquake.hazardlib.source.simple_fault.SimpleFaultSource`
+
         :param tom:
              Temporal occurrance model
         :param float mesh_spacing:
              Mesh spacing
-        
         """
         if not self.mfd:
             raise ValueError("Cannot write to hazardlib without MFD")
@@ -264,4 +266,3 @@ class mtkSimpleFaultSource(object):
             self.fault_trace,
             self.dip,
             self.rake)
-

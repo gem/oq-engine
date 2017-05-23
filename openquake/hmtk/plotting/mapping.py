@@ -178,28 +178,26 @@ class HMTKBaseMap(object):
 
     def add_catalogue(self, catalogue, overlay=False):
         '''
-
         :param catalogue:
             Earthquake catalogue as instance of
-            :class: openquake.hmtk.seismicity.catalogue.Catalogue
+            :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
 
         :param dict config:
             Configuration parameters of the algorithm, containing the
-            following information -
-                'min_lat' Minimum value of latitude (in degrees, float)
-                'max_lat' Minimum value of longitude (in degrees, float)
-                (min_lat, min_lon) Defines the inferior corner of the map
-
-                'min_lon' Maximum value of latitude (in degrees, float)
-                'max_lon' Maximum value of longitude (in degrees, float)
-                (min_lon, max_lon) Defines the upper corner of the map
+            following information:
+            'min_lat' Minimum value of latitude (in degrees, float)
+            'max_lat' Minimum value of longitude (in degrees, float)
+            (min_lat, min_lon) Defines the inferior corner of the map
+            'min_lon' Maximum value of latitude (in degrees, float)
+            'max_lon' Maximum value of longitude (in degrees, float)
+            (min_lon, max_lon) Defines the upper corner of the map
 
         :returns:
             Figure with the spatial distribution of the events.
         '''
         # Magnitudes bins and minimum marrker size
-        #min_mag = np.min(catalogue.data['magnitude'])
-        #max_mag = np.max(catalogue.data['magnitude'])
+        # min_mag = np.min(catalogue.data['magnitude'])
+        # max_mag = np.max(catalogue.data['magnitude'])
         con_min = np.where(np.array([symb[0] for symb in DEFAULT_SYMBOLOGY]) < 
                            np.min(catalogue.data['magnitude']))[0]
         con_max = np.where(np.array([symb[1] for symb in DEFAULT_SYMBOLOGY]) >
@@ -331,12 +329,13 @@ class HMTKBaseMap(object):
         x2, y2 = self.m(outline[:, 0], outline[:, 1])
         self.m.plot(x2, y2, border, linewidth=border_width)
 
-
-    def add_source_model(self, model, area_border='k-', border_width=1.0,
+    def add_source_model(
+            self, model, area_border='k-', border_width=1.0,
             point_marker='ks', point_size=2.0, overlay=False, min_depth=0.,
             max_depth=None, alpha=1.0):
         """
         Adds a source model to the map
+
         :param model:
             Source model of mixed typologies as instance of :class:
             openquake.hmtk.sources.source_model.mtkSourceModel
@@ -357,10 +356,11 @@ class HMTKBaseMap(object):
             plt.show()
 
     def add_colour_scaled_points(self, longitude, latitude, data, shape='s',
-            alpha=1.0, size=20, norm=None, overlay=False):
+                                 alpha=1.0, size=20, norm=None, overlay=False):
         """
         Overlays a set of points on a map with a fixed size but colour scaled
         according to the data
+
         :param np.ndarray longitude:
             Longitude
         :param np.ndarray latitude:
@@ -391,11 +391,13 @@ class HMTKBaseMap(object):
         if not overlay:
             plt.show()
 
-    def add_size_scaled_points(self, longitude, latitude, data, shape='o',
+    def add_size_scaled_points(
+            self, longitude, latitude, data, shape='o',
             logplot=False, alpha=1.0, colour='b', smin=2.0, sscale=2.0,
             overlay=False):
         """
         Plots a set of points with size scaled according to the data
+
         :param bool logplot:
             Choose to scale according to the logarithm (base 10) of the data
         :param float smin:

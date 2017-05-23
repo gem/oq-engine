@@ -173,6 +173,7 @@ class Catalogue(object):
         """
         Filter the catalogue using a magnitude-time table. The table has
         two columns and n-rows.
+
         :param nump.ndarray mt_table:
             Magnitude time table with n-rows where column 1 is year and column
             2 is magnitude
@@ -193,8 +194,8 @@ class Catalogue(object):
     def get_bounding_box(self):
         """
         Returns the bounding box of the catalogue
-        :returns:
-           * (West, East, South, North)
+
+        :returns: (West, East, South, North)
         """
         return (np.min(self.data["longitude"]),
                 np.max(self.data["longitude"]),
@@ -264,7 +265,8 @@ class Catalogue(object):
 
     def select_catalogue_events(self, id0):
         '''
-        Orders the events in the catalogue according to an indexing vector
+        Orders the events in the catalogue according to an indexing vector.
+
         :param np.ndarray id0:
             Pointer array indicating the locations of selected events
         '''

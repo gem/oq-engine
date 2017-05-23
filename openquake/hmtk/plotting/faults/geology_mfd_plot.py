@@ -5,7 +5,6 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import cnames
 from openquake.hmtk.faults.mfd import get_available_mfds
 from openquake.hmtk.faults.fault_models import RecurrenceBranch
 from openquake.hmtk.plotting.seismicity.catalogue_plots import _save_image
@@ -27,14 +26,17 @@ from openquake.hmtk.plotting.seismicity.catalogue_plots import _save_image
 #    return np.column_stack([mags, occurrence, cumulative])
 #
 
-DEFAULT_SIZE=(8., 6.)
+DEFAULT_SIZE = (8., 6.)
 MFD_MAP = get_available_mfds()
 
-def plot_recurrence_models(configs, area, slip, msr, rake,
+
+def plot_recurrence_models(
+        configs, area, slip, msr, rake,
         shear_modulus=30.0, disp_length_ratio=1.25E-5, msr_sigma=0.,
         filename=None, filetype='png', dpi=300):
     """
     Plots a set of recurrence models
+
     :param list configs:
         List of configuration dictionaries
     """
@@ -51,11 +53,11 @@ def plot_recurrence_models(configs, area, slip, msr, rake,
                     ' Type'
         else:
             flt_label = config['Model_Name']
-        flt_color=np.random.uniform(0.1, 1.0, 3)
+        flt_color = np.random.uniform(0.1, 1.0, 3)
         plt.semilogy(model.magnitudes, cumulative, '-', label=flt_label,
-            color=flt_color, linewidth=2.)
+                     color=flt_color, linewidth=2.)
         plt.semilogy(model.magnitudes, model.recurrence.occur_rates, '--',
-            color=flt_color, linewidth=2.)
+                     color=flt_color, linewidth=2.)
     plt.xlabel('Magnitude', fontsize=14)
     plt.ylabel('Annual Rate', fontsize=14)
     plt.legend(bbox_to_anchor=(1.1, 1.0))

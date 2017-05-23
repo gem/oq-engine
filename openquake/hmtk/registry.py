@@ -91,7 +91,7 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
         :param bool completeness:
             True if the method accepts in input an optional parameter
             for the completeness table
-        :param **fields:
+        :param fields:
             a dictionary of field spec corresponding to the
             keys expected to be present in the config dictionary
             for the decorated method, e.g.
@@ -128,7 +128,7 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
         `check_config`. Then, save into the registry a callable
         function with the same signature of the original method
 
-        :param **fields:
+        :param fields:
             a dictionary of field spec, e.g.
             time_bin=numpy.float,
             b_value=1E-6

@@ -227,17 +227,17 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
         :param dict mfd_conf:
             Configuration file containing the following attributes:
             * 'Type' - Choose between the 1st, 2nd or 3rd type of recurrence
-                       model {'First' | 'Second' | 'Third'}
+            model {'First' | 'Second' | 'Third'}
             * 'Model_Weight' - Logic tree weight of model type (float)
             * 'MFD_spacing' - Width of MFD bin (float)
             * 'Minimum_Magnitude' - Minimum magnitude of activity rates (float)
             * 'b_value' - Tuple of (b-value, b-value uncertainty)
             * 'Maximum_Magnitude' - Maximum magnitude on fault (if not defined
-                                    will use scaling relation)
+            will use scaling relation)
             * 'Maximum_Magnitude_Uncertainty' - Uncertainty
-               on maximum magnitude
-               (If not defined and the MSR has a sigma term then this will be
-               taken from sigma)
+            on maximum magnitude
+            (If not defined and the MSR has a sigma term then this will be
+            taken from sigma)
         '''
         self.mfd_type = mfd_conf['Model_Type']
         self.mfd_model = 'Anderson & Luco (Mmax) ' + self.mfd_type
@@ -254,6 +254,7 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
         '''
         Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise
+
         :param dict mfd_config:
             Configuration file (see setUp for paramters)
         :param msr:

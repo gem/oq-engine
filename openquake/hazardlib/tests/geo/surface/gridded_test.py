@@ -34,8 +34,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
-        expected = np.array([111.19493])
-        raise unittest.SkipTest('Getting 111.235389 instead of 111.19493')
+        expected = np.array([111.235389])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_closest_points(self):

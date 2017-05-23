@@ -48,8 +48,8 @@
 
 # -*- coding: utf-8 -*-
 '''
-Module :mod: openquake.hmtk.seismicity.smoothing.utils implements utility functions for
-smoothed seismicity analysis
+Module :mod:`openquake.hmtk.seismicity.smoothing.utils` implements
+utility functions for smoothed seismicity analysis
 '''
 
 import numpy as np
@@ -57,8 +57,8 @@ import numpy as np
 
 def hermann_adjustment_factors(bval, min_mag, mag_inc):
     '''
-    Returns the adjustment factors (fval, fival) proposed by
-    Hermann (1978)
+    Returns the adjustment factors (fval, fival) proposed by Hermann (1978)
+
     :param float bval:
         Gutenberg & Richter (1944) b-value
 
@@ -114,7 +114,6 @@ def get_weichert_factor(beta, cmag, cyear, end_year):
     :returns:
         Weichert adjustment factor (float)
     '''
-
     if len(cmag) > 1:
         # cval corresponds to the mid-point of the completeness bins
         # In the original code it requires that the magnitude bins be
@@ -133,7 +132,7 @@ def get_weichert_factor(beta, cmag, cyear, end_year):
 def check_completeness_table(completeness_table, catalogue):
     '''
     Check to ensure completeness table is in the correct format
-    completeness_table = np.array([[year_, mag_i]]) for i in number of bins
+    `completeness_table = np.array([[year_, mag_i]]) for i in number of bins`
 
     :param np.ndarray completeness_table:
         Completeness table in format [[year, mag]]
@@ -145,7 +144,6 @@ def check_completeness_table(completeness_table, catalogue):
         Correct completeness table
 
     '''
-
     if isinstance(completeness_table, np.ndarray):
         assert np.shape(completeness_table)[1] == 2
         return completeness_table

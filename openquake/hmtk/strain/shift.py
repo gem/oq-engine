@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -46,15 +46,16 @@
 # liability for use of the software.
 
 '''
-Module openquake.hmtk.strain.shift.Shift implements the Seismic Hazard Inferred from
-Tectonics (SHIFT) methodology (Bird & Liu, 2007; Bird et al. 2010) for
-calculating seismic moment rate from Geodetic Strain
+:class:`openquake.hmtk.strain.shift.Shift` implements the Seismic Hazard
+Inferred from Tectonics (SHIFT) methodology (Bird & Liu, 2007;
+Bird et al. 2010) for calculating seismic moment rate from Geodetic Strain
 '''
 
 import numpy as np
 from math import fabs
 import yaml
-from openquake.hmtk.strain.strain_utils import moment_function, calculate_taper_function
+from openquake.hmtk.strain.strain_utils import (
+    moment_function, calculate_taper_function)
 
 
 RADIAN_CONV = np.pi / 180.
@@ -182,9 +183,10 @@ STRAIN_VARIABLES = ['exx', 'eyy', 'exy', 'e1h', 'e2h', 'err', '2nd_inv',
 
 class Shift(object):
     '''
-    :class: openquake.hmtk.strain.shift.Shift implments the main Seismic Hazard
-    Inferred from Tectonics (SHIFT) methodology for calculating
+    :class:`openquake.hmtk.strain.shift.Shift` implements the main Seismic
+    Hazard Inferred from Tectonics (SHIFT) methodology for calculating
     activity rates (Bird & Liu, 2007; Bird et al. 2010)
+
     :param strain:
         Strain model as instance of :class:
         openquake.hmtk.strain.geodetic_strain.GeodeticStrain

@@ -278,16 +278,15 @@ class GCMTEvent(object):
 
     def get_f_clvd(self):
         """
-        Returns the statistic f_clvd: the signed ratio of the sizes of the 
-        intermediate and largest principal moments
+        Returns the statistic f_clvd: the signed ratio of the sizes of the
+        intermediate and largest principal moments::
 
-        f_clvd = -b_axis_eigenvalue / 
-                  max(|t_axis_eigenvalue|,|p_axis_eigenvalue|)
+         f_clvd = -b_axis_eigenvalue / max(|t_axis_eigenvalue|,|p_axis_eigenvalue|)
         """
         if not self.principal_axes:
             # Principal axes not yet defined for moment tensor - raises error
             raise ValueError('Principal Axes not defined!')
-        
+
         denominator = np.max(np.array([
             fabs(self.principal_axes.t_axis['eigenvalue']),
             fabs(self.principal_axes.p_axis['eigenvalue'])
@@ -298,10 +297,8 @@ class GCMTEvent(object):
     def get_relative_error(self):
         """
         Returns the relative error statistic (e_rel), defined by Frohlich &
-        Davis (1999):
-            e_rel = sqrt((U:U) / (M:M)) 
-        where M is the moment tensor, U is the uncertainty tensor and : is the
-        tensor dot product
+        Davis (1999): `e_rel = sqrt((U:U) / (M:M))` where M is the moment
+        tensor, U is the uncertainty tensor and : is the tensor dot product
         """
         if not self.moment_tensor:
             raise ValueError('Moment tensor not defined!')
@@ -352,7 +349,7 @@ class GCMTCatalogue(Catalogue):
         (set(FLOAT_ATTRIBUTE_LIST).union(
                 set(INT_ATTRIBUTE_LIST))).union(
                     set(STRING_ATTRIBUTE_LIST)))
-        
+
     def __init__(self, start_year=None, end_year=None):
         """
         Instantiate catalogue class
@@ -376,10 +373,10 @@ class GCMTCatalogue(Catalogue):
         """
         return len(self.gcmts)
 
-
     def select_catalogue_events(self, id0):
         '''
         Orders the events in the catalogue according to an indexing vector
+
         :param np.ndarray id0:
             Pointer array indicating the locations of selected events
         '''
@@ -399,16 +396,15 @@ class GCMTCatalogue(Catalogue):
             self.gcmts = [self.gcmts[iloc] for iloc in id0] 
             self.number_gcmts = self.get_number_tensors()
 
-   
     def gcmt_to_simple_array(self, centroid_location=True):
         """
-        Converts the GCMT catalogue to a simple array of 
+        Converts the GCMT catalogue to a simple array of
         [ID, year, month, day, hour, minute, second, long., lat., depth, Mw,
         strike1, dip1, rake1, strike2, dip2, rake2, b-plunge, b-azimuth,
         b-eigenvalue, p-plunge, p-azimuth, p-eigenvalue, t-plunge, t-azimuth,
         t-eigenvalue, moment, f_clvd, erel]
         """
-        catalogue = np.zeros([self.get_number_tensors(), 29], dtype=float) 
+        catalogue = np.zeros([self.get_number_tensors(), 29], dtype=float)
         for iloc, tensor in enumerate(self.gcmts):
             catalogue[iloc, 0] = iloc
             if centroid_location:
@@ -457,4 +453,3 @@ class GCMTCatalogue(Catalogue):
             catalogue[iloc, 27] = tensor.principal_axes.t_axis['azimuth']
             catalogue[iloc, 28] = tensor.principal_axes.t_axis['plunge']
         return catalogue
-

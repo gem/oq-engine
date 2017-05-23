@@ -36,18 +36,18 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-import warnings
+
 import numpy as np
 from openquake.hmtk.seismicity.occurrence.base import (
     SeismicityOccurrence, OCCURRENCE_METHODS)
-from openquake.hmtk.seismicity.occurrence.utils import input_checks
+
 
 @OCCURRENCE_METHODS.add(
     'calculate',
@@ -58,7 +58,6 @@ from openquake.hmtk.seismicity.occurrence.utils import input_checks
     b_prior_weight=1.0,
     area=0.0,
     a_prior_weight=1.0)
-
 class PenalizedMLE(SeismicityOccurrence):
     """
     Test Implementation of the Penalized Maximum Likelihood function
@@ -84,6 +83,7 @@ class PenalizedMLE(SeismicityOccurrence):
         """
         Calculates the b-value and rates (and their corresponding standard
         deviations) using the Penalized MLE approach
+
         :param dict config:
             Configuration parameters
         :param catalogue:
@@ -194,11 +194,12 @@ class PenalizedMLE(SeismicityOccurrence):
         sigma_rate = np.sqrt(error_mat[0, 0])
         rho = error_mat[0, 1] / np.sqrt(error_mat[0, 0] * error_mat[1, 1])
         return bval, sigmab, am0 * config["area"], sigma_rate, rho       
-        
+
     def _get_rate_counts(self, catalogue, config, completeness):
         """
         Using the earthquake catalogue and the completeness table determine
         the number of complete earthquakes in each time and magnitude bin
+
         :returns:
             delta: Mmin - Mi
             kval: Number of earthquakes in magnitude bin
@@ -255,4 +256,4 @@ class PenalizedMLE(SeismicityOccurrence):
             cum_count[:, i] = np.sum(cum_count[:, i:], axis=1)
         cum_rate = np.array([np.sum(lamda[i:]) for i in range(nmx)])
         cum_count = np.array([np.sum(kval[i:]) for i in range(nmx)])
-        return delta, kval, tval, lamda, cum_rate, cum_count, nmx, nmt    
+        return delta, kval, tval, lamda, cum_rate, cum_count, nmx, nmt

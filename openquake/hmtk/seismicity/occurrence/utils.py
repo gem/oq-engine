@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -141,7 +141,6 @@ def input_checks(catalogue, config, completeness):
         else:
             dmag = config['magnitude_interval']
 
- 
     return cmag, ctime, ref_mag, dmag, config
 
 
@@ -149,6 +148,7 @@ def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
     '''
     Generate a random list of magnitudes distributed according to a
     truncated Gutenberg-Richter model
+
     :param float bval:
         b-value
     :param float mmin:
@@ -172,6 +172,7 @@ def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
     Generates a synthetic catalogue for a specified number of years, with
     magnitudes distributed according to a truncated Gutenberg-Richter
     distribution
+
     :param float aval:
         a-value
     :param float bval:
@@ -214,6 +215,7 @@ def get_completeness_counts(catalogue, completeness, d_m):
     Returns the number of earthquakes in a set of magnitude bins of specified
     with, along with the corresponding completeness duration (in years) of the
     bin
+
     :param catalogue:
         Earthquake catalogue as instance of
         :class: openquake.hmtk.seisimicity.catalogue.Catalogue
