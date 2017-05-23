@@ -1,3 +1,5 @@
+python-oq-engine (2.4.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Now the command `oq export loss_curves/rlz-XXX` works both for the
     `classical_risk` calculator and the `event_based_risk` calculator
@@ -153,6 +155,8 @@
     the stochastic event sets; `random_seed` is used for the sampling only
   * Changed the `build_rcurves` procedure to read the loss ratios directly from
     the workers
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 23 May 2017 10:46:56 +0200
 
 python-oq-engine (2.3.0-0~precise01) precise; urgency=low
 
