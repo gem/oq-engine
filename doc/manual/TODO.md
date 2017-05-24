@@ -1,6 +1,7 @@
 Hazard
 ------
 
+* Document the NRML 0.5 format for the source model
 * Describe the (correct?) expected behavior of the stochastic event set
   generator for different values of the three parameters:
   `ses_per_logic_tree_path`, `investigation_time`, `number_of_logic_tree_samples`,
@@ -18,3 +19,5 @@ Risk
 * **§9.4.1.5**: Replace the aggregate loss exceedance curves xml example with csv
 * **§9.5.1**: Replace the benefit-cost ratio map xml example with csv
 * Describe the parameter `time_event` for scenarios
+
+* Document max_hazard_curves, max_site_model_distance, ses_seed ?
