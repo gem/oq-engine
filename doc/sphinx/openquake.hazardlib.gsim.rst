@@ -595,6 +595,14 @@ sadigh_1997
     :undoc-members:
     :show-inheritance:
 
+shahjouei_pezeshk_2016
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.shahjouei_pezeshk_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 sharma_2009
 -------------------------------------------
 

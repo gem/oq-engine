@@ -17,7 +17,7 @@
 Tests are based on report "PEER 2010/106 - Verification of Probabilistic
 Seismic Hazard Analysis Computer Programs" by  Patricia Thomas, Ivan Wong,
 Norman Abrahamson, see
-`http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`_.
+http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`.
 """
 import unittest
 from decimal import Decimal
@@ -27,7 +27,7 @@ import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.source import AreaSource, SimpleFaultSource, \
-    NonParametricSeismicSource, Rupture
+    NonParametricSeismicSource, BaseRupture
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo import NodalPlane, RectangularMesh, \
     SimpleFaultSurface, Point
@@ -233,9 +233,9 @@ class Set1TestCase(unittest.TestCase):
                     data['hypo_lats'][i, j],
                     data['hypo_depths'][i, j]
                 )
-                rup = Rupture(data['mag'], data['rake'],
-                              data['tectonic_region_type'], hypo, surf,
-                              data['source_typology'])
+                rup = BaseRupture(data['mag'], data['rake'],
+                                  data['tectonic_region_type'], hypo, surf,
+                                  data['source_typology'])
                 ruptures.append((rup, data['pmf']))
         npss = NonParametricSeismicSource(
             'id', 'name', data['tectonic_region_type'], ruptures

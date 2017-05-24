@@ -88,8 +88,9 @@ class PointSource(ParametricSeismicSource):
                              'lower and upper seismogenic depths')
 
         if not upper_seismogenic_depth > geodetic.EARTH_ELEVATION:
-            raise ValueError("Upper seismogenic depth must be greater than the "
-                             "maximum elevation on Earth's surface (-8.848 km)")
+            raise ValueError(
+                "Upper seismogenic depth must be greater than the "
+                "maximum elevation on Earth's surface (-8.848 km)")
 
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution

@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-
+import mock
 import numpy
 from numpy.testing import assert_allclose, assert_array_equal
 
@@ -23,7 +23,7 @@ from openquake.hazardlib.imt import SA, PGV
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.calc.gmf import (
-    ground_motion_fields, CorrelationButNoInterIntraStdDevs)
+    ground_motion_fields, CorrelationButNoInterIntraStdDevs, GmfComputer)
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.correlation import JB2009CorrelationModel
 
@@ -341,3 +341,19 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
                 self.rupture, self.sites, [self.imt1], gsim,
                 truncation_level=None, realizations=6000,
                 correlation_model=cormo)
+
+
+class GmfComputerTestCase(unittest.TestCase):
+    # NB: the GmfComputer is heavily tested in the engine, in the tests
+    # of all the GMF-based calculators
+    def test_empty_inputs(self):
+        rupture = mock.Mock()
+        sites = [mock.Mock()]
+        imts = [mock.Mock()]
+        gsims = [mock.Mock()]
+        with self.assertRaises(ValueError):
+            GmfComputer(rupture, [], imts, gsims)
+        with self.assertRaises(ValueError):
+            GmfComputer(rupture, sites, [], gsims)
+        with self.assertRaises(ValueError):
+            GmfComputer(rupture, sites, imts, [])

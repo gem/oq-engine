@@ -21,7 +21,7 @@ import numpy.testing as npt
 
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.source import NonParametricSeismicSource
-from openquake.hazardlib.source.rupture import Rupture
+from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.surface import PlanarSurface, SimpleFaultSurface
@@ -68,8 +68,8 @@ def _create_rupture(distance, magnitude,
     from openquake.hazardlib.geo.mesh import Mesh
     mesh = Mesh(numpy.array([0.0]), numpy.array([0.0]))
     assert abs(surface.get_joyner_boore_distance(mesh)-distance) < 1e-2
-    return Rupture(mag, rake, tectonic_region_type, hypocenter,
-                   surface, NonParametricSeismicSource)
+    return BaseRupture(mag, rake, tectonic_region_type, hypocenter,
+                       surface, NonParametricSeismicSource)
 
 
 def _create_non_param_sourceA(rjb, magnitude, pmf,
@@ -111,10 +111,10 @@ class HazardCurvesTestCase01(unittest.TestCase):
         # Test back-compatibility
         # Classical case i.e. independent sources in a list instance
         curves = calc_hazard_curves([self.src2],
-                                        self.sites,
-                                        self.imtls,
-                                        self.gsim_by_trt,
-                                        truncation_level=None)
+                                    self.sites,
+                                    self.imtls,
+                                    self.gsim_by_trt,
+                                    truncation_level=None)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.30000, 0.27855, 0.08912]),
                                 crv, decimal=4)
@@ -125,10 +125,10 @@ class HazardCurvesTestCase01(unittest.TestCase):
             TRT.ACTIVE_SHALLOW_CRUST, [self.src2], 'test', 'indep', 'indep')
         groups = [group]
         curves = calc_hazard_curves(groups,
-                                        self.sites,
-                                        self.imtls,
-                                        self.gsim_by_trt,
-                                        truncation_level=None)
+                                    self.sites,
+                                    self.imtls,
+                                    self.gsim_by_trt,
+                                    truncation_level=None)
         npt.assert_almost_equal(numpy.array([0.30000, 0.27855, 0.08912]),
                                 curves[0][0], decimal=4)
 
@@ -164,10 +164,10 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
     def test_hazard_curve_A(self):
         # Test classical case i.e. independent sources in a list instance
         curves = calc_hazard_curves([self.src1],
-                                        self.sites,
-                                        self.imtls,
-                                        self.gsim_by_trt,
-                                        truncation_level=None)
+                                    self.sites,
+                                    self.imtls,
+                                    self.gsim_by_trt,
+                                    truncation_level=None)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.40000, 0.36088, 0.07703]),
                                 crv, decimal=4)
@@ -175,10 +175,10 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
     def test_hazard_curve_B(self):
         # Test classical case i.e. independent sources in a list instance
         curves = calc_hazard_curves([self.src1, self.src2],
-                                        self.sites,
-                                        self.imtls,
-                                        self.gsim_by_trt,
-                                        truncation_level=None)
+                                    self.sites,
+                                    self.imtls,
+                                    self.gsim_by_trt,
+                                    truncation_level=None)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.58000, 0.53891, 0.15929]),
                                 crv, decimal=4)
@@ -195,5 +195,6 @@ class NankaiTestCase(unittest.TestCase):
         imtls = DictArray({'PGV': [20, 40, 80]})
         gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
         hcurves = calc_hazard_curves(groups, s_filter, imtls, gsim_by_trt)
-        npt.assert_almost_equal([0.91149953, 0.12548556, 0.00177583],
-                                hcurves['PGV'][0])
+        npt.assert_almost_equal(
+            [1.11315443e-01, 3.92180097e-03, 3.02064427e-05],
+            hcurves['PGV'][0])

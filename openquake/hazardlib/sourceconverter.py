@@ -22,12 +22,17 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib.node import context, striptag
+from openquake.baselib.general import groupby
+from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib import valid
 
 MAXWEIGHT = 200  # tuned by M. Simionato
+U32 = numpy.uint32
+U64 = numpy.uint64
+F32 = numpy.float32
+event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
 
 
 class SourceGroup(collections.Sequence):
@@ -92,7 +97,7 @@ class SourceGroup(collections.Sequence):
         return self._srcs_weights
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
-                 rup_interdep='indep', srcs_weights=None,
+                 rup_interdep='indep', srcs_weights=None, grp_probability=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
         # checks
         self.trt = trt
@@ -103,6 +108,7 @@ class SourceGroup(collections.Sequence):
         self.src_interdep = src_interdep
         self.rup_interdep = rup_interdep
         self._srcs_weights = srcs_weights
+        self.grp_probability = grp_probability
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.id = id
@@ -381,6 +387,14 @@ class RuptureConverter(object):
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
 
+    def get_mag_rake_hypo(self, node):
+        with context(self.fname, node):
+            mag = ~node.magnitude
+            rake = ~node.rake
+            h = node.hypocenter
+            hypocenter = geo.Point(h['lon'], h['lat'], h['depth'])
+        return mag, rake, hypocenter
+
     def convert_node(self, node):
         """
         Convert the given rupture node into a hazardlib rupture, depending
@@ -388,13 +402,8 @@ class RuptureConverter(object):
 
         :param node: a node representing a rupture
         """
-        with context(self.fname, node):
-            convert_rupture = getattr(self, 'convert_' + striptag(node.tag))
-            mag = ~node.magnitude
-            rake = ~node.rake
-            h = node.hypocenter
-            hypocenter = geo.Point(h['lon'], h['lat'], h['depth'])
-        return convert_rupture(node, mag, rake, hypocenter)
+        convert = getattr(self, 'convert_' + striptag(node.tag))
+        return convert(node)
 
     def geo_line(self, edge):
         """
@@ -478,54 +487,48 @@ class RuptureConverter(object):
             surface = geo.MultiSurface(planar_surfaces)
         return surface
 
-    def convert_simpleFaultRupture(self, node, mag, rake, hypocenter):
+    def convert_simpleFaultRupture(self, node):
         """
         Convert a simpleFaultRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = [node.simpleFaultGeometry]
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
             source_typology=source.SimpleFaultSource)
         return rupt
 
-    def convert_complexFaultRupture(self, node, mag, rake, hypocenter):
+    def convert_complexFaultRupture(self, node):
         """
         Convert a complexFaultRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = [node.complexFaultGeometry]
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
             source_typology=source.ComplexFaultSource)
         return rupt
 
-    def convert_singlePlaneRupture(self, node, mag, rake, hypocenter):
+    def convert_singlePlaneRupture(self, node):
         """
         Convert a singlePlaneRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = [node.planarSurface]
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
@@ -533,18 +536,16 @@ class RuptureConverter(object):
             source_typology=source.NonParametricSeismicSource)
         return rupt
 
-    def convert_multiPlanesRupture(self, node, mag, rake, hypocenter):
+    def convert_multiPlanesRupture(self, node):
         """
         Convert a multiPlanesRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
@@ -552,24 +553,46 @@ class RuptureConverter(object):
             source_typology=source.NonParametricSeismicSource)
         return rupt
 
-    def convert_griddedRupture(self, node, mag, rake, hypocenter):
+    def convert_griddedRupture(self, node):
         """
         Convert a griddedRupture node.
 
         :param node: the rupture node
-        :param mag: the rupture magnitude
-        :param rake: the rupture rake angle
-        :param hypocenter: the rupture hypocenter
         """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = [node.griddedSurface]
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
             source_typology=source.NonParametricSeismicSource)
         return rupt
+
+    def convert_ruptureCollection(self, node):
+        """
+        :param node: a ruptureCollection node
+        :returns: a dictionary grp_id -> EBRuptures
+        """
+        coll = {}
+        for grpnode in node:
+            grp_id = int(grpnode['id'])
+            coll[grp_id] = ebrs = []
+            for node in grpnode:
+                rup = self.convert_node(node)
+                rupid = int(node['id'])
+                sesnodes = node.stochasticEventSets
+                events = []
+                for sesnode in sesnodes:
+                    with context(self.fname, sesnode):
+                        ses = sesnode['id']
+                        for eid in (~sesnode).split():
+                            events.append((eid, ses, 0))
+                ebr = source.rupture.EBRupture(
+                    rup, None, numpy.array(events, event_dt), grp_id, rupid)
+                ebrs.append(ebr)
+        return coll
 
 
 class SourceConverter(RuptureConverter):
@@ -586,31 +609,21 @@ class SourceConverter(RuptureConverter):
         self.width_of_mfd_bin = width_of_mfd_bin
         self.tom = PoissonTOM(investigation_time)
 
-    def convert_node(self, node):
-        """
-        Convert the given node into a hazardlib source, depending
-        on the node tag.
-
-        :param node: a node representing a source
-        """
-        with context(self.fname, node):
-            convert_source = getattr(self, 'convert_' + striptag(node.tag))
-        return convert_source(node)
-
     def convert_mfdist(self, node):
         """
         Convert the given node into a Magnitude-Frequency Distribution
         object.
 
         :param node: a node of kind incrementalMFD or truncGutenbergRichterMFD
-        :returns: a :class:`openquake.hazardlib.mdf.EvenlyDiscretizedMFD.` or
-                  :class:`openquake.hazardlib.mdf.TruncatedGRMFD` instance
+        :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
+                  :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
         """
         with context(self.fname, node):
             [mfd_node] = [subnode for subnode in node
                           if subnode.tag.endswith(
                               ('incrementalMFD', 'truncGutenbergRichterMFD',
-                               'arbitraryMFD', 'YoungsCoppersmithMFD'))]
+                               'arbitraryMFD', 'YoungsCoppersmithMFD',
+                               'multiMFD'))]
             if mfd_node.tag.endswith('incrementalMFD'):
                 return mfd.EvenlyDiscretizedMFD(
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
@@ -642,11 +655,8 @@ class SourceConverter(RuptureConverter):
                             char_rate=mfd_node["characteristicRate"],
                             bin_width=mfd_node["binWidth"])
             elif mfd_node.tag.endswith('multiMFD'):
-                data = [~node for node in mfd_node]  # size a x n
-                return mfd.MultiMFD(mfd_node['kind'],
-                                    mfd_node['size'],
-                                    zip(*data),  # size n x a
-                                    self.width_of_mfd_bin)
+                return mfd.multi_mfd.MultiMFD.from_node(
+                    mfd_node, self.width_of_mfd_bin)
 
     def convert_npdist(self, node):
         """
@@ -742,7 +752,7 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.source.MultiPointSource`
         """
         geom = node.multiPointGeometry
-        lon_lat = ~geom.posList.reshape(2, -1)  # shape 2 x N
+        lons, lats = zip(*split_coords_2d(~geom.posList))
         msr = valid.SCALEREL[~node.magScaleRel]()
         return source.MultiPointSource(
             source_id=node['id'],
@@ -757,7 +767,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             temporal_occurrence_model=self.tom,
-            mesh=geo.Mesh(*lon_lat))
+            mesh=geo.Mesh(F32(lons), F32(lats)))
 
     def convert_simpleFaultSource(self, node):
         """
@@ -879,6 +889,7 @@ class SourceConverter(RuptureConverter):
         """
         trt = node['tectonicRegion']
         srcs_weights = node.attrib.get('srcs_weights')
+        grp_probability = node.attrib.get('grp_probability')
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
@@ -889,6 +900,8 @@ class SourceConverter(RuptureConverter):
             for attr, value in grp_attrs.items():
                 if attr == 'tectonicRegion':
                     src.tectonic_region_type = value
+                elif attr == 'grp_probability':
+                    pass  # do not transmit
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
             srcs.append(src)
@@ -901,12 +914,92 @@ class SourceConverter(RuptureConverter):
         sg.src_interdep = node.attrib.get('src_interdep')
         sg.rup_interdep = node.attrib.get('rup_interdep')
         sg._srcs_weights = srcs_weights
+        sg.grp_probability = grp_probability
         return sg
 
+# ################### MultiPointSource conversion ######################## #
 
-def parse_ses_ruptures(fname):
+
+def _npd(nodes):
+    # convert the nodalPlaneDistributions into a tuple
+    lst = []
+    for node in nodes:
+        lst.append((node['probability'],
+                    node['rake'], node['strike'], node['dip']))
+    return tuple(lst)
+
+
+def _hd(nodes):
+    # convert the hypocenterDistributions into a tuple
+    lst = []
+    for node in nodes:
+        lst.append((node['probability'], node['depth']))
+    return tuple(lst)
+
+
+def get_key(node):
     """
-    Convert a stochasticEventSetCollection file into a set of SES,
-    each one containing ruptures with an etag and a seed.
+    Convert the given pointSource node into a tuple
     """
-    raise NotImplementedError('parse_ses_ruptures')
+    return (
+        ~node.magScaleRel, ~node.ruptAspectRatio,
+        ~node.pointGeometry.upperSeismoDepth,
+        ~node.pointGeometry.lowerSeismoDepth,
+        _hd(node.hypoDepthDist), _npd(node.nodalPlaneDist))
+
+
+def mfds2multimfd(mfds):
+    """
+    Convert a list of MFD nodes into a single MultiMFD node
+    """
+    _, kind = mfds[0].tag.split('}')
+    node = Node('multiMFD', dict(kind=kind))
+    lengths = None
+    for field in mfd.multi_mfd.ASSOC[kind][1:]:
+        alias = mfd.multi_mfd.ALIAS.get(field, field)
+        if field in ('magnitudes', 'occurRates'):
+            data = [~getattr(m, field) for m in mfds]
+            lengths = [len(d) for d in data]
+            data = sum(data, [])  # the list has to be flat
+        elif field == 'lengths':  # this is the last field if present
+            data = lengths
+        elif field == 'bin_width':
+            continue
+        else:
+            data = [m[alias] for m in mfds]
+        node.append(Node(field, text=data))
+    return node
+
+
+def pointsources2multipoints(srcs):
+    """
+    :param srcs: a list of pointSource nodes of the same tectonic region
+    :returns: as list of multiPointSource nodes
+    """
+    mpsources = []
+    i = 1
+    for key, sources in groupby(srcs, get_key).items():
+        msr, rar, usd, lsd, hd, npd = key
+        mfds = [src[3] for src in sources]
+        points = [~src.pointGeometry.Point.pos for src in sources]
+        geom = Node('multiPointGeometry')
+        geom.append(Node('gml:posList', text=points))
+        geom.append(Node('upperSeismoDepth', text=usd))
+        geom.append(Node('lowerSeismoDepth', text=lsd))
+        node = Node(
+            'multiPointSource',
+            dict(id='mps-%d' % i, name='multiPointSource-%d' % i),
+            nodes=[geom])
+        node.append(Node("magScaleRel", text=msr))
+        node.append(Node("ruptAspectRatio", text=rar))
+        node.append(mfds2multimfd(mfds))
+        node.append(Node('nodalPlaneDist', nodes=[
+            Node('nodalPlane', dict(probability=prob, rake=rake,
+                                    strike=strike, dip=dip))
+            for prob, rake, strike, dip in npd]))
+        node.append(Node('hypoDepthDist', nodes=[
+            Node('hypoDepth', dict(depth=depth, probability=prob))
+            for prob, depth in hd]))
+        mpsources.append(node)
+        i += 1
+    return mpsources

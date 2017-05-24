@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.polygon` defines :class:`Polygon`.
 """
 import numpy
 import shapely.geometry
+import shapely.wkt
 
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
@@ -79,6 +80,31 @@ class Polygon(object):
         pairs.append(pairs[0])
 
         return 'POLYGON((%s))' % ', '.join(pairs)
+
+    @classmethod
+    def from_wkt(cls, wkt_string):
+        """
+        Create a polygon object from a WKT (Well-Known Text) string.
+
+        :param wkt_string:
+            A standard WKT polygon string.
+        :returns:
+            New :class:`Polygon` object.
+        """
+        # Avoid calling class' constructor
+        polygon = object.__new__(cls)
+
+        # Read WKT polygon and extract coordinates
+        wkt_poly = shapely.wkt.loads(wkt_string)
+        xx, yy = numpy.transpose(wkt_poly.exterior.coords)
+
+        # Inflate polygon object
+        polygon.lons = xx[:-1]
+        polygon.lats = yy[:-1]
+        polygon._projection = None
+        polygon._polygon2d = None
+
+        return polygon
 
     @classmethod
     def _from_2d(cls, polygon2d, proj):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation, G. Weatherill, M. Pagani
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -58,7 +58,7 @@ Copyright (C) 2014-2017 GEM Foundation
 
 install_requires = [
     'mock >=1.0, <1.4',
-    'h5py >=2.2, <2.7',
+    'h5py >=2.2, <2.8',
     'nose >=1.3, <1.4',
     'numpy >=1.8, <1.12',
     'scipy >=0.13, <0.18',
@@ -66,6 +66,8 @@ install_requires = [
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
+    'matplotlib >=1.5',
+    'PyYAML',
 ]
 
 if sys.version < '3':
@@ -75,6 +77,10 @@ if sys.version < '3':
 
 extras_require = {
     'rtree':  ["Rtree >=0.8.2, <0.8.4"],
+    'plotting':  [
+        'basemap >=1.0',
+        'pyproj >=1.9',
+    ]
 }
 
 setup(

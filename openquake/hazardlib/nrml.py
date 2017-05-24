@@ -122,6 +122,11 @@ node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
 
 
+@node_to_obj.add(('ruptureCollection', 'nrml/0.5'))
+def get_rupture_collection(node, fname, converter):
+    return converter.convert_node(node)
+
+
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
 def get_source_model_04(node, fname, converter):
     sources = []
@@ -136,8 +141,6 @@ def get_source_model_04(node, fname, converter):
         source_ids.add(src.source_id)
         if no % 10000 == 0:  # log every 10,000 sources parsed
             logging.info('Instantiated %d sources from %s', no, fname)
-    if no % 10000 != 0:
-        logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     return sorted(sourceconverter.SourceGroup(trt, srcs)
@@ -168,13 +171,18 @@ validators = {
     'posList': valid.posList,
     'pos': valid.lon_lat,
     'aValue': float,
+    'a_val': valid.floats32,
     'bValue': valid.positivefloat,
+    'b_val': valid.positivefloats,
     'magScaleRel': valid.mag_scale_rel,
     'tectonicRegion': str,
     'ruptAspectRatio': valid.positivefloat,
     'maxMag': valid.positivefloat,
     'minMag': valid.positivefloat,
+    'min_mag': valid.positivefloats,
+    'lengths': valid.positiveints,
     'binWidth': valid.positivefloat,
+    'bin_width': valid.positivefloats,
     'probability': valid.probability,
     'occurRates': valid.positivefloats,  # they can be > 1
     'probs_occur': valid.pmf,
@@ -184,7 +192,9 @@ validators = {
     'downDip': valid.probability,
     'totalMomentRate': valid.positivefloat,
     'characteristicRate': valid.positivefloat,
+    'char_rate': valid.positivefloats,
     'characteristicMag': valid.positivefloat,
+    'char_mag': valid.positivefloats,
     'magnitudes': valid.positivefloats,
     'id': valid.simple_id,
     'rupture.id': valid.utf8,  # event tag
@@ -231,6 +241,7 @@ validators = {
     'gmv': valid.positivefloat,
     'spacing': valid.positivefloat,
     'srcs_weights': valid.positivefloats,
+    'grp_probability': valid.probability,
 }
 
 

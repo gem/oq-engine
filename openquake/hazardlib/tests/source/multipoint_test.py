@@ -29,13 +29,15 @@ from openquake.hazardlib.pmf import PMF
 
 class MultiPointTestCase(unittest.TestCase):
     def test(self):
-        all_args = [(4.5, 2.0, [.3, .1, .05]), (4.5, 2.0, [.4, .2, .1])]
         npd = PMF([(0.5, NodalPlane(1, 20, 3)),
                    (0.5, NodalPlane(2, 2, 4))])
         hd = PMF([(1, 4)])
         mesh = Mesh(numpy.array([0, 1]), numpy.array([0.5, 1]))
         tom = PoissonTOM(50.)
-        mmfd = MultiMFD('incrementalMFD', 3, all_args)
+        mmfd = MultiMFD('incrementalMFD',
+                        min_mag=[4.5, 4.5],
+                        bin_width=[2.0, 2.0],
+                        occurRates=[[.3, .1], [.4, .2, .1]])
         mps = MultiPointSource('mp1', 'multi point source',
                                'Active Shallow Crust',
                                mmfd, 2.0, PeerMSR(), 1.0,
@@ -43,16 +45,16 @@ class MultiPointTestCase(unittest.TestCase):
         self.assertEqual(obj_to_node(mps).to_str(), '''\
 multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Shallow Crust'}
   multiPointGeometry
-    gml:posList ['0 0.5', '1 1.0']
+    gml:posList [0, 0.5, 1, 1.0]
     upperSeismoDepth 10
     lowerSeismoDepth 20
   magScaleRel 'PeerMSR'
   ruptAspectRatio 1.0
   multiMFD{kind='incrementalMFD'}
-    min_mag array([ 4.5,  4.5], dtype=float32)
-    bin_width array([ 2.,  2.], dtype=float32)
-    occurRates{cols=3, rows=2} array([ 0.30000001,  0.1       ,  0.05      ,  0.40000001,  0.2       ,
-        0.1       ], dtype=float32)
+    bin_width [2.0, 2.0]
+    min_mag [4.5, 4.5]
+    occurRates [0.3, 0.1, 0.4, 0.2, 0.1]
+    lengths [2, 3]
   nodalPlaneDist
     nodalPlane{dip=20, probability=0.5, rake=3, strike=1}
     nodalPlane{dip=2, probability=0.5, rake=4, strike=2}

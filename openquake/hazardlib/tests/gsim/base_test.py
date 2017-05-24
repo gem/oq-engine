@@ -30,7 +30,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV
 from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.source.rupture import Rupture
+from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
@@ -420,7 +420,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                 return width
 
         self.rupture_hypocenter = Point(2, 3, 40)
-        self.rupture = Rupture(
+        self.rupture = BaseRupture(
             mag=123.45, rake=123.56,
             tectonic_region_type=const.TRT.VOLCANIC,
             hypocenter=self.rupture_hypocenter, surface=FakeSurface(),

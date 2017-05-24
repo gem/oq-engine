@@ -25,60 +25,67 @@ from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
     YoungsCoppersmith1985MFD)
 from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
 
+U16 = numpy.uint16
 F32 = numpy.float32
+
+ASSOC = {
+    'arbitraryMFD': (
+        ArbitraryMFD, 'magnitudes', 'occurRates', 'lengths'),
+    'incrementalMFD': (
+        EvenlyDiscretizedMFD, 'min_mag', 'bin_width', 'occurRates', 'lengths'),
+    'truncGutenbergRichterMFD': (
+        TruncatedGRMFD, 'min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val'),
+    'YoungsCoppersmithMFD': (
+        YoungsCoppersmith1985MFD, 'min_mag', 'max_mag', 'a_val', 'b_val',
+        'char_mag', 'char_rate', 'bin_width')}
+
+ALIAS = dict(min_mag='minMag', max_mag='maxMag',
+             a_val='aValue', b_val='bValue',
+             char_mag='characteristicMag', char_rate='characteristicRate')
+
+
+def _reshape(kwargs, lengths):
+    # reshape occurRates and magnitudes as lists of lists
+    for field in kwargs:
+        if field in ('occurRates', 'magnitudes'):
+            ivalues = iter(kwargs[field])
+            kwargs[field] = [[next(ivalues) for _ in range(length)]
+                             for length in lengths]
 
 
 class MultiMFD(BaseMFD):
     """
     A MultiMFD is defined as a sequence of regular MFDs of the same kind.
 
-    :param kind: a string defining the underlying MFD
-    :param size: the size of the MFD for ArbitraryMFD and EvenlyDiscretizedMFD,
-                 otherwise 0
+    :param kind: a string defining the underlying MFD ('arbitraryMFD', ...)
     :param width_of_mfd_bin: used in the truncated Gutenberg-Richter MFD
-    :param all_args: a list of arguments
     """
     MODIFICATIONS = set()
 
-    def __init__(self, kind, size, all_args, width_of_mfd_bin=None):
-        self.kind = kind
-        self.size = size
-        self.width_of_mfd_bin = width_of_mfd_bin
-        n = len(all_args)
-        if kind == 'arbitraryMFD':
-            self.mfd_class = ArbitraryMFD
-            self.array = numpy.zeros(n, [('magnitudes', (F32, size)),
-                                         ('occurRates', (F32, size))])
+    @classmethod
+    def from_node(cls, node, width_of_mfd_bin=None):
+        kind = node['kind']
+        kwargs = {}  # a dictionary name -> array of n elements
+        for field in ASSOC[kind][1:]:
+            kwargs[field] = ~getattr(node, field)
+        if 'lengths' in kwargs:
+            _reshape(kwargs, kwargs.pop('lengths'))
+        return cls(kind, width_of_mfd_bin, **kwargs)
 
-        elif kind == 'incrementalMFD':
-            self.mfd_class = EvenlyDiscretizedMFD
-            self.array = numpy.zeros(n, [('min_mag', F32),
-                                         ('bin_width', F32),
-                                         ('occurRates', (F32, size))])
-        elif kind == 'truncGutenbergRichterMFD':
-            self.mfd_class = TruncatedGRMFD
-            self.array = numpy.zeros(n, [('min_mag', F32),
-                                         ('max_mag', F32),
-                                         ('bin_width', F32),
-                                         ('a_val', F32),
-                                         ('b_val', F32)])
-        elif kind == 'YoungsCoppersmithMFD':
-            self.mfd_class = YoungsCoppersmith1985MFD
-            self.array = numpy.zeros(n, [('min_mag', F32),
-                                         ('max_mag', F32),
-                                         ('a_val', F32),
-                                         ('b_val', F32),
-                                         ('char_mag', F32),
-                                         ('char_rate', F32),
-                                         ('bin_width', F32)])
-        else:
-            raise NameError('Unknown MFD: %s' % kind)
-        for i, args in enumerate(all_args):
-            self.array[i] = args
+    def __init__(self, kind, width_of_mfd_bin=None, **kwargs):
+        self.kind = kind
+        self.width_of_mfd_bin = width_of_mfd_bin
+        self.mfd_class = ASSOC[kind][0]
+        self.n = len(kwargs[next(iter(kwargs))])
+        self.kwargs = kwargs
 
     def __iter__(self):
-        for args in self.array:
-            yield self.mfd_class(*args)
+        for i in range(self.n):
+            kw = {f: self.kwargs[f][i] for f in self.kwargs}
+            yield self.mfd_class(**kw)
+
+    def __len__(self):
+        return self.n
 
     def get_min_max_mag(self):
         return None, None

@@ -4,58 +4,59 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
-    name="Some Source Model"
+    name="Test Source Model"
     >
         <sourceGroup
         name="group 1"
+        srcs_weights="1.0"
         tectonicRegion="Stable Continental Crust"
         >
-<multiPointSource
-id="mp1"
-name="multi point source"
->
-    <multiPointGeometry>
-        <gml:posList>
-            0 0.5 1 1.0
-        </gml:posList>
-        <upperSeismoDepth>
-            10
-        </upperSeismoDepth>
-        <lowerSeismoDepth>
-            20
-        </lowerSeismoDepth>
-    </multiPointGeometry>
-    <magScaleRel>
-        PeerMSR
-    </magScaleRel>
-    <ruptAspectRatio>
-        1.000000000E+00
-    </ruptAspectRatio>
-    <multiMFD
-    kind="incrementalMFD"
-    >
-        <min_mag>
-            4.500000000E+00 4.500000000E+00
-        </min_mag>
-        <bin_width>
-            2.000000000E+00 2.000000000E+00
-        </bin_width>
-        <occurRates
-        cols="3"
-        rows="2"
-        >
-          3.000000119E-01 1.000000015E-01 5.000000075E-02
-          4.000000060E-01 2.000000030E-01 1.000000015E-01
-        </occurRates>
-    </multiMFD>
-    <nodalPlaneDist>
-        <nodalPlane dip="20" probability=".5" rake="3" strike="1"/>
-        <nodalPlane dip="2" probability=".5" rake="4" strike="2"/>
-    </nodalPlaneDist>
-    <hypoDepthDist>
-        <hypoDepth depth="4" probability="1"/>
-    </hypoDepthDist>
-</multiPointSource>
+            <multiPointSource
+            id="mp1"
+            name="multi point source"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <multiPointGeometry>
+                    <gml:posList>
+                        0.0 1.0 0.5 1.0
+                    </gml:posList>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <multiMFD
+                kind="incrementalMFD"
+                >
+                    <bin_width>
+                        2.0 2.0
+                    </bin_width>
+                    <min_mag>
+                        4.5 4.5
+                    </min_mag>
+                    <occurRates>
+                        0.1000000015 0.05000000075 0.400000006 0.200000003 0.1000000015
+                    </occurRates>
+                    <lengths>
+                        2 3
+                    </lengths>
+                </multiMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="20.0" probability="0.5" rake="3.0" strike="1.0"/>
+                    <nodalPlane dip="2.0" probability="0.5" rake="4.0" strike="2.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4.0" probability="1.0"/>
+                </hypoDepthDist>
+            </multiPointSource>
         </sourceGroup>
     </sourceModel>
 </nrml>

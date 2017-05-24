@@ -1,4 +1,29 @@
   [Michele Simionato]
+  * Added a `ruptureCollection` parser able to instantiate `EBRuptures`
+    suitable for event based calculations
+  * Used rtree in `geo.utils.GeographicObjects` to get the closest point
+  * Fixed a numeric issue in the square root of negative small numbers that
+    actually should have been zero
+  * Removed the `parallel.Computer` base class
+  * Introduced a "grp_probability" attribute to SourceGroups, for use in
+    the Japan mutex model
+  * Added an utility method `ProbabilityMap.convert2` to convert a probability
+    map into a two-dimensional array of curves
+
+  [Abhineet Gupta, Anirudh Rao]
+  * Implemented the Shahjouei & Pezeshk (2016) GMPE
+
+  [Michele Simionato]
+  * Merged the Hazard Modeller Toolkit inside oq-hazardlib
+  * Experimental support for the Grid Engine
+  * Fixed the serialization to HDF5 of nonparametric ruptures
+
+  [Paolo Tormene]
+  * Fixed clockwise order of vertices of surface boundaries, as needed for
+    WKT MULTIPOLYGON strings while exporting ruptures
+
+  [Michele Simionato]
+  * Added input checks to the GmfComputer
   * Fixed bug when splitting area sources into point sources for
     YoungsCoppersmith1985MFD
   * Added a method `hdf5.File.save` to save node dictionaries in HDF5 format

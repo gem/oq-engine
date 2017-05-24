@@ -660,7 +660,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
 
     def get_surface_boundaries(self):
         """
-        The corners lons/lats
+        The corners lons/lats in WKT-friendly order (clockwise)
         """
-        return [self.corner_lons.take([0, 1, 2, 3, 0])], \
-               [self.corner_lats.take([0, 1, 2, 3, 0])]
+        return [self.corner_lons.take([0, 1, 3, 2, 0])], \
+               [self.corner_lats.take([0, 1, 3, 2, 0])]

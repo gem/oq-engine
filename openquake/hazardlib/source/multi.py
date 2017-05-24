@@ -22,6 +22,10 @@ from openquake.hazardlib.source.point import PointSource
 
 class MultiPointSource(ParametricSeismicSource):
     """
+    MultiPointSource class, used to describe point sources with different
+    MFDs and the same rupture_mesh_spacing, magnitude_scaling_relationship,
+    rupture_aspect_ratio, temporal_occurrence_model, upper_seismogenic_depth,
+    lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution
     """
     MODIFICATIONS = set(())
     RUPTURE_WEIGHT = 1 / 10.
@@ -33,6 +37,7 @@ class MultiPointSource(ParametricSeismicSource):
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution, mesh):
+        assert len(mfd) == len(mesh), (len(mfd), len(mesh))
         super(MultiPointSource, self).__init__(
             source_id, name, tectonic_region_type, mfd,
             rupture_mesh_spacing, magnitude_scaling_relationship,
@@ -52,13 +57,15 @@ class MultiPointSource(ParametricSeismicSource):
         <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
+        1 / 0
         max_rup_radius = self._get_max_rupture_projection_radius()
         return self.polygon.dilate(max_rup_radius + dilation)
 
     def __iter__(self):
         for i, mfd, point in enumerate(zip(self.mfd, self.mesh)):
+            name = '%s:%s' % (self.source_id, i)
             ps = PointSource(
-                '%s:%s' % (self.source_id, i), '', self.tectonic_region_type,
+                name, name, self.tectonic_region_type,
                 mfd, self.rupture_mesh_spacing,
                 self.magnitude_scaling_relationship,
                 self.rupture_aspect_ratio,

@@ -13,8 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import functools
 import pickle
+import unittest
+from openquake.baselib.general import assert_independent
 
 
 def assert_angles_equal(testcase, angle1, angle2, delta):
@@ -25,3 +26,9 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
 
 def assert_pickleable(obj):
     pickle.loads(pickle.dumps(obj)).assert_equal(obj)
+
+
+class IndependenceTestCase(unittest.TestCase):
+    def test(self):
+        assert_independent('openquake.baselib', 'openquake.hazardlib')
+        assert_independent('openquake.hazardlib', 'openquake.hmtk')

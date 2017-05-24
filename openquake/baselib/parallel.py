@@ -146,7 +146,9 @@ import logging
 import operator
 import traceback
 import functools
+import subprocess
 import multiprocessing.dummy
+from multiprocessing.connection import Client, Listener
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
 import numpy
 from openquake.baselib import hdf5
@@ -184,7 +186,7 @@ def oq_distribute(task=None):
     """
     env = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
     if hasattr(task, 'shared_dir_on'):
-        if env == 'celery' and not task.shared_dir_on:
+        if env == 'celery' and not task.shared_dir_on():
             logging.warn(
                 'Task `%s` will be run on the controller node only, since '
                 'no `shared_dir` has been specified' % task.__name__)
@@ -210,7 +212,7 @@ def check_mem_usage(monitor=Monitor(),
                      used_mem_percent, hostname)
 
 
-def safely_call(func, args, pickle=False):
+def safely_call(func, args, pickle=False, conn=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -251,6 +253,10 @@ def safely_call(func, args, pickle=False):
 
     if pickle:  # it is impossible to measure the pickling time :-(
         res = Pickled(res)
+    if conn:  # send the result via the connection
+        conn.send(res)
+        conn.close()
+        return None
     return res
 
 
@@ -393,12 +399,15 @@ class IterResult(object):
                 val, etype, mon = result.unpickle()
             else:
                 val, etype, mon = result
+                self.received.append(len(Pickled(result)))
             if etype:
                 raise RuntimeError(val)
             if self.num_tasks:
                 next(self.log_percent)
-            self.save_task_data(mon)
+            if not self.name.startswith('_'):  # no info for private tasks
+                self.save_task_data(mon)
             yield val
+
         if self.received:
             tot = sum(self.received)
             max_per_task = max(self.received)
@@ -418,11 +427,10 @@ class IterResult(object):
         mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
+        if acc is None:
+            acc = AccumDict()
         for result in self:
-            if acc is None:  # first time
-                acc = result
-            else:
-                acc = agg(acc, result)
+            acc = agg(acc, result)
         return acc
 
     @classmethod
@@ -442,49 +450,6 @@ class IterResult(object):
             else:
                 res.name = iresult.name.split('#')[0]
         return res
-
-
-class Computer(object):
-    """
-    Abstract Base Class. Subclasses must override the methods `__call__`
-    and `gen_args`, and may override `aggregate`. They may also override
-    `__init__`: in that case they must set the `hdf5path` and `__name__`
-    attributes.
-    """
-    def __init__(self, hdf5path=None):
-        self.hdf5path = hdf5path
-        self.__name__ = self.__class__.__name__
-
-    @abc.abstractmethod
-    def __call__(self, *args):
-        """Return a result, typically a dictionary"""
-        return {}
-
-    @abc.abstractmethod
-    def gen_args(self, *args):
-        """Yield tuples of arguments"""
-        yield ()
-
-    def aggregate(self, acc, val):
-        """Aggregate values; the default operation is the sum"""
-        return acc + val
-
-    def monitor(self, operation=None, autoflush=False, measuremem=False):
-        """
-        Return a :class:`openquake.baselib.performance.Monitor` instance
-        """
-        return Monitor(operation or self.__name__, self.hdf5path, autoflush,
-                       measuremem)
-
-    def run(self, *args, **kw):
-        """
-        Run the computer with the given arguments; one specify extra arguments
-        `acc` and `Starmap`.
-        """
-        acc = kw.get('acc')
-        starmap = kw.get('Starmap', Starmap)
-        wakeup_pool()  # if not already started
-        return starmap(self, self.gen_args(*args)).reduce(self.aggregate, acc)
 
 
 class Starmap(object):
@@ -624,11 +589,7 @@ class Starmap(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
-        if acc is None:
-            acc = AccumDict()
-        iter_result = self.submit_all()
-        for res in iter_result:
-            acc = agg(acc, res)
+        acc = self.submit_all().reduce(agg, acc or AccumDict())
         self.results = []
         return acc
 
@@ -652,17 +613,23 @@ class Starmap(object):
             [args] = self.task_args
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
-            return IterResult([fut], self.name)
+            return IterResult([fut], self.name, nargs)
+
+        if self.distribute == 'qsub':
+            logging.warn('EXPERIMENTAL: sending tasks to the grid engine')
+            allargs = list(self.task_args)
+            return IterResult(qsub(self.task_func, allargs),
+                              self.name, len(allargs), self.progress)
+
         task_no = 0
         for args in self.task_args:
             task_no += 1
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
-            if isinstance(args[-1], Monitor):  # add incremental task number
+            if isinstance(args[-1], Monitor):
+                # add incremental task number and task weight
                 args[-1].task_no = task_no
-                weight = getattr(args[0], 'weight', None)
-                if weight:
-                    args[-1].weight = weight
+                args[-1].weight = getattr(args[0], 'weight', 1.)
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
@@ -747,24 +714,46 @@ class BaseStarmap(object):
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
               weight=lambda item: 1, key=lambda item: 'Unspecified'):
-        chunks = split_in_blocks(args[0], concurrent_tasks, weight, key)
+        chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
+        if concurrent_tasks == 0:
+            cls = Sequential
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
     def __init__(self, func, iterargs, poolsize=None):
         self.pool = self.poolfactory(poolsize)
         self.func = func
-        allargs = list(iterargs)
+        allargs = []
+        for task_no, args in enumerate(iterargs):
+            if isinstance(args[-1], Monitor):
+                # add incremental task number and task weight
+                args[-1].task_no = task_no
+                args[-1].weight = getattr(args[0], 'weight', 1.)
+            allargs.append(args)
         self.num_tasks = len(allargs)
         logging.info('Starting %d tasks', self.num_tasks)
         self.imap = self.pool.imap_unordered(
             functools.partial(safely_call, func), allargs)
 
+    def submit_all(self, progress=logging.info):
+        """
+        :returns: an :class:`IterResult` instance
+        """
+        futs = (mkfuture(res) for res in self.imap)
+        return IterResult(futs, self.func.__name__, self.num_tasks, progress)
+
+    def __iter__(self):
+        try:
+            for res in self.submit_all():
+                yield res
+        finally:
+            if self.pool:
+                self.pool.close()
+                self.pool.join()
+
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         if acc is None:
             acc = AccumDict()
-        futures = (mkfuture(res) for res in self.imap)
-        for res in IterResult(
-                futures, self.func.__name__, self.num_tasks, progress):
+        for res in self.submit_all(progress):
             acc = agg(acc, res)
         if self.pool:
             self.pool.close()
@@ -781,7 +770,7 @@ class Sequential(BaseStarmap):
         self.func = func
         allargs = list(iterargs)
         self.num_tasks = len(allargs)
-        logging.info('Starting %d tasks', self.num_tasks)
+        logging.info('Starting %d sequential tasks', self.num_tasks)
         self.imap = [safely_call(func, args) for args in allargs]
 
 
@@ -807,3 +796,78 @@ class Processmap(BaseStarmap):
     >>> sorted(c.items())
     [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """
+
+# ######################## support for grid engine ######################## #
+
+
+def qsub(func, allargs, authkey=None):
+    """
+    Map functions to arguments by means of the Grid Engine.
+
+    :param func: a pickleable callable object
+    :param allargs: a list of tuples of arguments
+    :param authkey: authentication token used to send back the results
+    :returns: an iterable over results of the form (res, etype, mon)
+    """
+    thisfile = os.path.abspath(__file__)
+    host = socket.gethostbyname(socket.gethostname())
+    listener = Listener((host, 0), backlog=5, authkey=authkey)
+    try:
+        hostport = listener._listener._socket.getsockname()
+        subprocess.call(
+            ['qsub', '-b', 'y', '-t', '1-%d' % len(allargs), '-N',
+             func.__name__, sys.executable, thisfile, '%s:%d' % hostport])
+        conndict = {}
+        for i, args in enumerate(allargs, 1):
+            monitor = args[-1]
+            monitor.task_no = i
+            monitor.weight = getattr(args[0], 'weight', 1.)
+            conn = _getconn(listener)  # get the first connected task
+            conn.send((func, args))  # send its arguments
+            for data, task_no in _getdata(conndict):
+                yield data  # yield the data received by other tasks, if any
+                del conndict[task_no]
+            conndict[i] = conn
+        # yield the rest of the data
+        for task_no in sorted(conndict):
+            conn = conndict[task_no]
+            try:
+                data = conn.recv()
+            finally:
+                conn.close()
+            yield data
+    finally:
+        listener.close()
+
+
+def _getdata(conndict):
+    for task_no in sorted(conndict):
+        conn = conndict[task_no]
+        if conn.poll():
+            try:
+                data = conn.recv()
+            finally:
+                conn.close()
+            yield data, task_no
+
+
+def _getconn(listener):
+    while True:
+        try:
+            conn = listener.accept()
+        except KeyboardInterrupt:
+            return
+        except:
+            # unauthenticated connection, for instance by a port scanner
+            continue
+        return conn
+
+
+def main(hostport):
+    host, port = hostport.split(':')
+    conn = Client((host, int(port)))
+    func, args = conn.recv()
+    safely_call(func, args, False, conn)
+
+if __name__ == '__main__':
+    main(sys.argv[1])

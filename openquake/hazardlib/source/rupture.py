@@ -16,28 +16,33 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module :mod:`openquake.hazardlib.source.rupture` defines classes
-:class:`Rupture`, :class:`BaseProbabilisticRupture` and its subclasses
+:class:`BaseRupture` and its subclasses
 :class:`NonParametricProbabilisticRupture` and
 :class:`ParametricProbabilisticRupture`
 """
 import abc
 import numpy
 import math
-from openquake.hazardlib.geo.nodalplane import NodalPlane
+import itertools
+from openquake.baselib import general
 from openquake.baselib.slots import with_slots
+from openquake.baselib.python3compat import with_metaclass
+from openquake.hazardlib import geo
+from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.near_fault import (get_plane_equation, projection_pp,
                                             directp, average_s_rad,
                                             isochone_ratio)
-from openquake.baselib.python3compat import with_metaclass
+from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.geo.surface.base import BaseSurface
 
 pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
 
 
 @with_slots
-class Rupture(object):
+class BaseRupture(with_metaclass(abc.ABCMeta)):
     """
     Rupture object represents a single earthquake rupture.
 
@@ -71,6 +76,29 @@ class Rupture(object):
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
     source_typology rupture_slip_direction'''.split()
 
+    @classmethod
+    def init(cls):
+        """
+        Initialize the class dictionaries `._code` and .`types` encoding the
+        bidirectional correspondence between an integer in the range 0..255
+        (the code) and a triplet of classes (rupture_class, surface_class,
+        source_class). This is useful when serializing the rupture to and
+        from HDF5.
+        """
+        source_classes = get_subclasses(BaseSeismicSource)
+        rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
+        surface_classes = get_subclasses(BaseSurface)
+        code, types, n = {}, {}, 0
+        for src, rup, sur in itertools.product(
+                source_classes, rupture_classes, surface_classes):
+            code[rup, sur, src] = n
+            types[n] = rup, sur, src
+            n += 1
+        if n >= 256:
+            raise ValueError('Too many rupture codes: %d' % n)
+        cls._code = code
+        cls.types = types
+
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, source_typology, rupture_slip_direction=None):
         if not mag > 0:
@@ -84,15 +112,12 @@ class Rupture(object):
         self.source_typology = source_typology
         self.rupture_slip_direction = rupture_slip_direction
 
+    @property
+    def code(self):
+        """Returns the code (integer in the range 0 .. 255) of the rupture"""
+        return self._code[self.__class__, self.surface.__class__,
+                          self.source_typology]
 
-class BaseProbabilisticRupture(with_metaclass(abc.ABCMeta, Rupture)):
-    """
-    Base class for a probabilistic rupture, that is a :class:`Rupture`
-    associated with a temporal occurrence model defining probability of
-    rupture occurrence in a certain time span.
-    """
-
-    @abc.abstractmethod
     def get_probability_no_exceedance(self, poes):
         """
         Compute and return the probability that in the time span for which the
@@ -102,10 +127,8 @@ class BaseProbabilisticRupture(with_metaclass(abc.ABCMeta, Rupture)):
         Such calculation is performed starting from the conditional probability
         that an occurrence of the current rupture is producing a ground motion
         value higher than the level of interest at the site of interest.
-
         The actual formula used for such calculation depends on the temporal
         occurrence model the rupture is associated with.
-
         The calculation can be performed for multiple intensity measure levels
         and multiple sites in a vectorized fashion.
 
@@ -117,8 +140,8 @@ class BaseProbabilisticRupture(with_metaclass(abc.ABCMeta, Rupture)):
             calling the :meth:`method
             <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>`.
         """
+        raise NotImplementedError
 
-    @abc.abstractmethod
     def sample_number_of_occurrences(self):
         """
         Randomly sample number of occurrences from temporal occurrence model
@@ -132,9 +155,10 @@ class BaseProbabilisticRupture(with_metaclass(abc.ABCMeta, Rupture)):
         :returns:
             int, Number of rupture occurrences
         """
+        raise NotImplementedError
 
 
-class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
+class NonParametricProbabilisticRupture(BaseRupture):
     """
     Probabilistic rupture for which the probability distribution for rupture
     occurrence is described through a generic probability mass function.
@@ -156,31 +180,26 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
                  source_typology, pmf, rupture_slip_direction=None):
-        x = numpy.array([x for (y, x) in pmf.data])
-        if not x[0] == 0:
+        occ = numpy.array([occ for (prob, occ) in pmf.data])
+        if not occ[0] == 0:
             raise ValueError('minimum number of ruptures must be zero')
-        if not numpy.all(numpy.sort(x) == x):
+        if not numpy.all(numpy.sort(occ) == occ):
             raise ValueError(
                 'numbers of ruptures must be defined in increasing order')
-        if not numpy.all(numpy.diff(x) == 1):
+        if not numpy.all(numpy.diff(occ) == 1):
             raise ValueError(
                 'numbers of ruptures must be defined with unit step')
         super(NonParametricProbabilisticRupture, self).__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            source_typology, rupture_slip_direction
-        )
-        self.pmf = pmf
-
-    def pmf_array(self):
-        """
-        Return a composite array with the Probability Mass Function
-        """
-        return numpy.array(self.data, pmf_dt)
+            source_typology, rupture_slip_direction)
+        # an array of probabilities with sum 1
+        self.pmf = numpy.array(
+            [prob for (prob, occ) in pmf.data], numpy.float32)
 
     def get_probability_no_exceedance(self, poes):
         """
         See :meth:`superclass method
-        <.rupture.BaseProbabilisticRupture.get_probability_no_exceedance>`
+        <.rupture.BaseRupture.get_probability_no_exceedance>`
         for spec of input and result values.
 
         Uses the formula ::
@@ -198,7 +217,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         # Converting from 1d to 2d
         if len(poes.shape) == 1:
             poes = numpy.reshape(poes, (-1, len(poes)))
-        p_kT = numpy.array([float(p) for (p, _) in self.pmf.data])
+        p_kT = self.pmf
         prob_no_exceed = numpy.array(
             [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
         )
@@ -208,13 +227,13 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
     def sample_number_of_occurrences(self):
         """
         See :meth:`superclass method
-        <.rupture.BaseProbabilisticRupture.sample_number_of_occurrences>`
+        <.rupture.BaseRupture.sample_number_of_occurrences>`
         for spec of input and result values.
 
         Uses 'Inverse Transform Sampling' method.
         """
         # compute cdf from pmf
-        cdf = numpy.cumsum([float(p) for p, _ in self.pmf.data])
+        cdf = numpy.cumsum(self.pmf)
 
         rn = numpy.random.random()
         [n_occ] = numpy.digitize([rn], cdf)
@@ -223,7 +242,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
 
 
 @with_slots
-class ParametricProbabilisticRupture(BaseProbabilisticRupture):
+class ParametricProbabilisticRupture(BaseRupture):
     """
     :class:`Rupture` associated with an occurrence rate and a temporal
     occurrence model.
@@ -237,7 +256,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
     :raises ValueError:
         If occurrence rate is not positive.
     """
-    _slots_ = Rupture._slots_ + [
+    _slots_ = BaseRupture._slots_ + [
         'occurrence_rate', 'temporal_occurrence_model']
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
@@ -269,7 +288,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         Return the probability of this rupture to occur exactly one time.
 
         Uses :meth:
-        `~openquake.hazardlib.tom.PoissonTOM.get_probability_one_occurrence`
+        `openquake.hazardlib.tom.PoissonTOM.get_probability_one_occurrence`
         of an assigned temporal occurrence model.
         """
         tom = self.temporal_occurrence_model
@@ -282,7 +301,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         of events to occur.
 
         Uses :meth:
-        `~openquake.hazardlib.tom.PoissonTOM.sample_number_of_occurrences`
+        `openquake.hazardlib.tom.PoissonTOM.sample_number_of_occurrences`
         of an assigned temporal occurrence model.
         """
         return self.temporal_occurrence_model.sample_number_of_occurrences(
@@ -292,11 +311,11 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
     def get_probability_no_exceedance(self, poes):
         """
         See :meth:`superclass method
-        <.rupture.BaseProbabilisticRupture.get_probability_no_exceedance>`
+        <.rupture.BaseRupture.get_probability_no_exceedance>`
         for spec of input and result values.
 
         Uses
-        :meth:`~openquake.hazardlib.tom.PoissonTOM.get_probability_no_exceedance`
+        :meth:`openquake.hazardlib.tom.PoissonTOM.get_probability_no_exceedance`
         """
         tom = self.temporal_occurrence_model
         rate = self.occurrence_rate
@@ -448,3 +467,175 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
             cdpp[iloc] = dpp_target - mean_dpp
 
         return cdpp
+
+
+def get_subclasses(cls):
+    for subclass in cls.__subclasses__():
+        yield subclass
+        for ssc in get_subclasses(subclass):
+            yield ssc
+
+
+def get_geom(surface, is_from_fault_source, is_multi_surface):
+    """
+    The following fields can be interpreted different ways,
+    depending on the value of `is_from_fault_source`. If
+    `is_from_fault_source` is True, each of these fields should
+    contain a 2D numpy array (all of the same shape). Each triple
+    of (lon, lat, depth) for a given index represents the node of
+    a rectangular mesh. If `is_from_fault_source` is False, each
+    of these fields should contain a sequence (tuple, list, or
+    numpy array, for example) of 4 values. In order, the triples
+    of (lon, lat, depth) represent top left, top right, bottom
+    left, and bottom right corners of the the rupture's planar
+    surface. Update: There is now a third case. If the rupture
+    originated from a characteristic fault source with a
+    multi-planar-surface geometry, `lons`, `lats`, and `depths`
+    will contain one or more sets of 4 points, similar to how
+    planar surface geometry is stored (see above).
+
+    :param surface: a Surface instance
+    :param is_from_fault_source: a boolean
+    :param is_multi_surface: a boolean
+    """
+    if is_from_fault_source:
+        # for simple and complex fault sources,
+        # rupture surface geometry is represented by a mesh
+        surf_mesh = surface.get_mesh()
+        lons = surf_mesh.lons
+        lats = surf_mesh.lats
+        depths = surf_mesh.depths
+    else:
+        if is_multi_surface:
+            # `list` of
+            # openquake.hazardlib.geo.surface.planar.PlanarSurface
+            # objects:
+            surfaces = surface.surfaces
+
+            # lons, lats, and depths are arrays with len == 4*N,
+            # where N is the number of surfaces in the
+            # multisurface for each `corner_*`, the ordering is:
+            #   - top left
+            #   - top right
+            #   - bottom left
+            #   - bottom right
+            lons = numpy.concatenate([x.corner_lons for x in surfaces])
+            lats = numpy.concatenate([x.corner_lats for x in surfaces])
+            depths = numpy.concatenate([x.corner_depths for x in surfaces])
+        else:
+            # For area or point source,
+            # rupture geometry is represented by a planar surface,
+            # defined by 3D corner points
+            lons = numpy.zeros((4))
+            lats = numpy.zeros((4))
+            depths = numpy.zeros((4))
+
+            # NOTE: It is important to maintain the order of these
+            # corner points. TODO: check the ordering
+            for i, corner in enumerate((surface.top_left,
+                                        surface.top_right,
+                                        surface.bottom_left,
+                                        surface.bottom_right)):
+                lons[i] = corner.longitude
+                lats[i] = corner.latitude
+                depths[i] = corner.depth
+    return lons, lats, depths
+
+
+class ExportedRupture(object):
+    """
+    Simplified Rupture class with attributes rupid, events_by_ses, indices
+    and others, used in export.
+
+    :param rupid: rupture serial ID
+    :param events_by_ses: dictionary ses_idx -> event records
+    :param indices: site indices
+    """
+    def __init__(self, rupid, events_by_ses, indices=None):
+        self.rupid = rupid
+        self.events_by_ses = events_by_ses
+        self.indices = indices
+
+
+class EBRupture(object):
+    """
+    An event based rupture. It is a wrapper over a hazardlib rupture
+    object, containing an array of site indices affected by the rupture,
+    as well as the IDs of the corresponding seismic events.
+    """
+    def __init__(self, rupture, sids, events, grp_id, serial):
+        self.rupture = rupture
+        self.sids = sids
+        self.events = events
+        self.grp_id = grp_id
+        self.serial = serial
+        self.sidx = self.eidx1 = self.eidx2 = None  # to be set when needed
+
+    @property
+    def weight(self):
+        """
+        Weight of the EBRupture
+        """
+        return len(self.sids) * len(self.events)
+
+    @property
+    def eids(self):
+        """
+        An array with the underlying event IDs
+        """
+        return self.events['eid']
+
+    @property
+    def multiplicity(self):
+        """
+        How many times the underlying rupture occurs.
+        """
+        return len(self.events)
+
+    def export(self, mesh, sm_by_grp):
+        """
+        Yield :class:`Rupture` objects, with all the
+        attributes set, suitable for export in XML format.
+        """
+        rupture = self.rupture
+        events_by_ses = general.group_array(self.events, 'ses')
+        new = ExportedRupture(self.serial, events_by_ses, self.sids)
+        new.mesh = mesh[self.sids]
+        new.multiplicity = self.multiplicity
+        if isinstance(rupture.surface, geo.ComplexFaultSurface):
+            new.typology = 'complexFaultsurface'
+        elif isinstance(rupture.surface, geo.SimpleFaultSurface):
+            new.typology = 'simpleFaultsurface'
+        elif isinstance(rupture.surface, geo.GriddedSurface):
+            new.typology = 'griddedRupture'
+        elif isinstance(rupture.surface, geo.MultiSurface):
+            new.typology = 'multiPlanesRupture'
+        else:
+            new.typology = 'singlePlaneRupture'
+        new.is_from_fault_source = iffs = isinstance(
+            rupture.surface, (geo.ComplexFaultSurface,
+                              geo.SimpleFaultSurface))
+        new.is_multi_surface = ims = isinstance(
+            rupture.surface, geo.MultiSurface)
+        new.lons, new.lats, new.depths = get_geom(
+            rupture.surface, iffs, ims)
+        new.surface = rupture.surface
+        new.strike = rupture.surface.get_strike()
+        new.dip = rupture.surface.get_dip()
+        new.rake = rupture.rake
+        new.hypocenter = rupture.hypocenter
+        new.tectonic_region_type = rupture.tectonic_region_type
+        new.magnitude = new.mag = rupture.mag
+        new.top_left_corner = None if iffs or ims else (
+            new.lons[0], new.lats[0], new.depths[0])
+        new.top_right_corner = None if iffs or ims else (
+            new.lons[1], new.lats[1], new.depths[1])
+        new.bottom_left_corner = None if iffs or ims else (
+            new.lons[2], new.lats[2], new.depths[2])
+        new.bottom_right_corner = None if iffs or ims else (
+            new.lons[3], new.lats[3], new.depths[3])
+        return new
+
+    def __repr__(self):
+        return '<%s %d%s>' % (
+            self.__class__.__name__, self.serial, self.events['eid'])
