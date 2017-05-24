@@ -921,8 +921,8 @@ class SourceConverter(RuptureConverter):
 # ################### MultiPointSource conversion ######################## #
 
 
-def npd(nodes):
-    """Convert the nodalPlaneDistributions into a tuple"""
+def _npd(nodes):
+    # convert the nodalPlaneDistributions into a tuple
     lst = []
     for node in nodes:
         lst.append((node['probability'],
@@ -930,8 +930,8 @@ def npd(nodes):
     return tuple(lst)
 
 
-def hd(nodes):
-    """Convert the hypocenterDistributions into a tuple"""
+def _hd(nodes):
+    # convert the hypocenterDistributions into a tuple
     lst = []
     for node in nodes:
         lst.append((node['probability'], node['depth']))
@@ -946,7 +946,7 @@ def get_key(node):
         ~node.magScaleRel, ~node.ruptAspectRatio,
         ~node.pointGeometry.upperSeismoDepth,
         ~node.pointGeometry.lowerSeismoDepth,
-        hd(node.hypoDepthDist), npd(node.nodalPlaneDist))
+        _hd(node.hypoDepthDist), _npd(node.nodalPlaneDist))
 
 
 def mfds2multimfd(mfds):

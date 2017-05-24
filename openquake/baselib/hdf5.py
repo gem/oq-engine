@@ -343,7 +343,7 @@ class File(h5py.File):
         attrib = nodedict.get('attrib', {})
         path = '/'.join([root, tag])
         nodes = nodedict.get('nodes', [])
-        if text:
+        if text not in ('', None):
             setitem(path, text)
         elif attrib and not nodes:
             setitem(path, numpy.nan)
