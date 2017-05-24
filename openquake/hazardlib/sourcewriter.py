@@ -232,13 +232,15 @@ def build_multi_mfd(mfd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     node = Node("multiMFD", dict(kind=mfd.kind))
-    for name in mfd.array.dtype.names:
+    lengths = None
+    for name in sorted(mfd.kwargs):
+        values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
-            sizes = [str(len(lst)) for lst in mfd.array[name]]
-            attrs = dict(sizes=' '.join(sizes))
-        else:
-            attrs = {}
-        node.append(Node(name, attrs, mfd.array[name].flatten()))
+            lengths = [len(lst) for lst in values]
+            values = sum(values, [])
+        node.append(Node(name, text=values))
+    if lengths is not None:
+        node.append(Node('lengths', text=lengths))
     return node
 
 
@@ -461,7 +463,7 @@ def build_multi_point_source_node(multi_point_source):
         Instance of :class:`openquake.baselib.node.Node`
     """
     # parse geometry
-    mesh_node = Node('gml:posList', text=['%s %s' % (p.x, p.y)
+    mesh_node = Node('gml:posList', text=['%s %s %s' % (p.x, p.y, p.z)
                                           for p in multi_point_source.mesh])
     upper_depth_node = Node(
         "upperSeismoDepth", text=multi_point_source.upper_seismogenic_depth)

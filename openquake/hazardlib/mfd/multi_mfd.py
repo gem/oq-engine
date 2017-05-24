@@ -30,9 +30,9 @@ F32 = numpy.float32
 
 ASSOC = {
     'arbitraryMFD': (
-        ArbitraryMFD, 'magnitudes', 'occurRates'),
+        ArbitraryMFD, 'magnitudes', 'occurRates', 'lengths'),
     'incrementalMFD': (
-        EvenlyDiscretizedMFD, 'min_mag', 'bin_width', 'occurRates'),
+        EvenlyDiscretizedMFD, 'min_mag', 'bin_width', 'occurRates', 'lengths'),
     'truncGutenbergRichterMFD': (
         TruncatedGRMFD, 'min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val'),
     'YoungsCoppersmithMFD': (
@@ -42,12 +42,13 @@ ASSOC = {
 ALIAS = dict(min_mag='minMag', max_max='maxMag', bin_width='binWidth')
 
 
-def build_tuple_of_lists(sizes, values):
-    ivalues = iter(values)
-    out = []
-    for size in sizes:
-        out.append([next(ivalues) for _ in range(size)])
-    return tuple(out)
+def _reshape(kwargs, lengths):
+    # reshape occurRates and magnitudes as lists of lists
+    for field in kwargs:
+        if field in ('occurRates', 'magnitudes'):
+            ivalues = iter(kwargs[field])
+            kwargs[field] = [[next(ivalues) for _ in range(length)]
+                             for length in lengths]
 
 
 class MultiMFD(BaseMFD):
@@ -55,9 +56,6 @@ class MultiMFD(BaseMFD):
     A MultiMFD is defined as a sequence of regular MFDs of the same kind.
 
     :param kind: a string defining the underlying MFD ('arbitraryMFD', ...)
-    :param size: the size of the MFD for ArbitraryMFD and EvenlyDiscretizedMFD,
-                 otherwise 1
-    :param all_args: the list of arguments of the underlying MFDs
     :param width_of_mfd_bin: used in the truncated Gutenberg-Richter MFD
     """
     MODIFICATIONS = set()
@@ -65,36 +63,27 @@ class MultiMFD(BaseMFD):
     @classmethod
     def from_node(cls, node, width_of_mfd_bin=None):
         kind = node['kind']
-        all_args = []
+        kwargs = {}  # a dictionary name -> array of n elements
         for field in ASSOC[kind][1:]:
-            if field in ('magnitudes', 'occurRates'):
-                subnode = getattr(node, field)
-                sizes = [int(s) for s in subnode['sizes'].split()]
-                args = build_tuple_of_lists(sizes, ~subnode)
-            else:
-                args = ~getattr(node, field)
-            all_args.append(args)
-        return cls(kind, all_args, width_of_mfd_bin)
+            kwargs[field] = ~getattr(node, field)
+        if 'lengths' in kwargs:
+            _reshape(kwargs, kwargs.pop('lengths'))
+        return cls(kind, width_of_mfd_bin, **kwargs)
 
-    def __init__(self, kind, all_args, width_of_mfd_bin=None):
+    def __init__(self, kind, width_of_mfd_bin=None, **kwargs):
         self.kind = kind
         self.width_of_mfd_bin = width_of_mfd_bin
-        n = len(all_args)
         self.mfd_class = ASSOC[kind][0]
-        dtlist = []
-        for field in ASSOC[kind][1:]:
-            dt = list if field in ('magnitudes', 'occurRates') else F32
-            dtlist.append((field, dt))
-        self.array = numpy.zeros(n, dtlist)
-        for i, args in enumerate(all_args):
-            self.array[i] = args
+        self.n = len(kwargs[next(iter(kwargs))])
+        self.kwargs = kwargs
 
     def __iter__(self):
-        for args in self.array:
-            yield self.mfd_class(*args)
+        for i in range(self.n):
+            kw = {f: self.kwargs[f][i] for f in self.kwargs}
+            yield self.mfd_class(**kw)
 
     def __len__(self):
-        return len(self.array)
+        return self.n
 
     def get_min_max_mag(self):
         return None, None

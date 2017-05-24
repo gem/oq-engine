@@ -31,6 +31,7 @@ from openquake.hazardlib import valid
 MAXWEIGHT = 200  # tuned by M. Simionato
 U32 = numpy.uint32
 U64 = numpy.uint64
+F32 = numpy.float32
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
 
 
@@ -751,8 +752,7 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.source.MultiPointSource`
         """
         geom = node.multiPointGeometry
-        # shape 2 x N
-        lon_lat = numpy.array(~geom.posList, numpy.float32).reshape(2, -1)
+        lons, lats, deps = zip(*split_coords_3d(~geom.posList))
         msr = valid.SCALEREL[~node.magScaleRel]()
         return source.MultiPointSource(
             source_id=node['id'],
@@ -767,7 +767,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             temporal_occurrence_model=self.tom,
-            mesh=geo.Mesh(*lon_lat))
+            mesh=geo.Mesh(F32(lons), F32(lats), F32(deps)))
 
     def convert_simpleFaultSource(self, node):
         """

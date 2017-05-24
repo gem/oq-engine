@@ -462,17 +462,25 @@ def positivefloat(value):
     return f
 
 
-def positivefloats(value, rows=0, cols=0):
+def positivefloats(value):
     """
-    :param value: string of whitespace separated floats
-    :param rows: the number of rows if the floats are in a matrix (0 otherwise)
-    :param cols: the number of columns if the floats are in a matrix (or 0)
-    :returns: a list of positive floats
+    :param value:
+        string of whitespace separated floats
+    :returns:
+        a list of positive floats
     """
     floats = list(map(positivefloat, value.split()))
-    if rows and cols:
-        floats = numpy.array(floats).reshape((int(rows), int(cols)))
     return floats
+
+
+def floats32(value):
+    """
+    :param value:
+        string of whitespace separated floats
+    :returns:
+        an array of 32 bit floats
+    """
+    return numpy.float32(value.split())
 
 
 _BOOL_DICT = {
