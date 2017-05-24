@@ -232,10 +232,10 @@ def build_multi_mfd(mfd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     node = Node("multiMFD", dict(kind=mfd.kind))
-    npoints = len(mfd.array)
     for name in mfd.array.dtype.names:
         if name in ('magnitudes', 'occurRates'):
-            attrs = dict(rows=npoints, cols=mfd.size)
+            sizes = [str(len(lst)) for lst in mfd.array[name]]
+            attrs = dict(sizes=' '.join(sizes))
         else:
             attrs = {}
         node.append(Node(name, attrs, mfd.array[name].flatten()))

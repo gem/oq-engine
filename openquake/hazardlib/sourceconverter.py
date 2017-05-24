@@ -621,7 +621,8 @@ class SourceConverter(RuptureConverter):
             [mfd_node] = [subnode for subnode in node
                           if subnode.tag.endswith(
                               ('incrementalMFD', 'truncGutenbergRichterMFD',
-                               'arbitraryMFD', 'YoungsCoppersmithMFD'))]
+                               'arbitraryMFD', 'YoungsCoppersmithMFD',
+                               'multiMFD'))]
             if mfd_node.tag.endswith('incrementalMFD'):
                 return mfd.EvenlyDiscretizedMFD(
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
@@ -653,11 +654,8 @@ class SourceConverter(RuptureConverter):
                             char_rate=mfd_node["characteristicRate"],
                             bin_width=mfd_node["binWidth"])
             elif mfd_node.tag.endswith('multiMFD'):
-                data = [~node for node in mfd_node]  # size a x n
-                return mfd.MultiMFD(mfd_node['kind'],
-                                    mfd_node['size'],
-                                    zip(*data),  # size n x a
-                                    self.width_of_mfd_bin)
+                return mfd.multi_mfd.MultiMFD.from_node(
+                    mfd_node, self.width_of_mfd_bin)
 
     def convert_npdist(self, node):
         """
@@ -753,7 +751,8 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.source.MultiPointSource`
         """
         geom = node.multiPointGeometry
-        lon_lat = ~geom.posList.reshape(2, -1)  # shape 2 x N
+        # shape 2 x N
+        lon_lat = numpy.array(~geom.posList, numpy.float32).reshape(2, -1)
         msr = valid.SCALEREL[~node.magScaleRel]()
         return source.MultiPointSource(
             source_id=node['id'],

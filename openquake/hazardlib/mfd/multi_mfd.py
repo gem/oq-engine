@@ -25,6 +25,7 @@ from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
     YoungsCoppersmith1985MFD)
 from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
 
+U16 = numpy.uint16
 F32 = numpy.float32
 
 ASSOC = {
@@ -41,6 +42,14 @@ ASSOC = {
 ALIAS = dict(min_mag='minMag', max_max='maxMag', bin_width='binWidth')
 
 
+def build_tuple_of_lists(sizes, values):
+    ivalues = iter(values)
+    out = []
+    for size in sizes:
+        out.append([next(ivalues) for _ in range(size)])
+    return tuple(out)
+
+
 class MultiMFD(BaseMFD):
     """
     A MultiMFD is defined as a sequence of regular MFDs of the same kind.
@@ -53,15 +62,28 @@ class MultiMFD(BaseMFD):
     """
     MODIFICATIONS = set()
 
-    def __init__(self, kind, size, all_args, width_of_mfd_bin=None):
+    @classmethod
+    def from_node(cls, node, width_of_mfd_bin=None):
+        kind = node['kind']
+        all_args = []
+        for field in ASSOC[kind][1:]:
+            if field in ('magnitudes', 'occurRates'):
+                subnode = getattr(node, field)
+                sizes = [int(s) for s in subnode['sizes'].split()]
+                args = build_tuple_of_lists(sizes, ~subnode)
+            else:
+                args = ~getattr(node, field)
+            all_args.append(args)
+        return cls(kind, all_args, width_of_mfd_bin)
+
+    def __init__(self, kind, all_args, width_of_mfd_bin=None):
         self.kind = kind
-        self.size = size
         self.width_of_mfd_bin = width_of_mfd_bin
         n = len(all_args)
         self.mfd_class = ASSOC[kind][0]
         dtlist = []
         for field in ASSOC[kind][1:]:
-            dt = (F32, size) if field in ('magnitudes', 'occurRates') else F32
+            dt = list if field in ('magnitudes', 'occurRates') else F32
             dtlist.append((field, dt))
         self.array = numpy.zeros(n, dtlist)
         for i, args in enumerate(all_args):
