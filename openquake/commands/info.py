@@ -21,6 +21,8 @@ import os
 import mock
 import logging
 import operator
+import collections
+import numpy
 from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
@@ -31,6 +33,31 @@ from openquake.commonlib import readinput
 from openquake.calculators.export import export
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
+
+
+def source_model_info(node):
+    """
+    Extract information about a NRML/0.5 source model
+    """
+    trts = []
+    counters = []
+    src_classes = set()
+    for src_group in node:
+        c = collections.Counter()
+        trts.append(src_group['tectonicRegion'])
+        for src in src_group:
+            tag = src.tag.split('}')[1]
+            c[tag] += 1
+        counters.append(c)
+        src_classes.update(c)
+    dtlist = [('TRT', (bytes, 30))] + [
+        (name, int) for name in sorted(src_classes)]
+    out = numpy.zeros(len(node), dtlist)
+    for i, c in enumerate(counters):
+        out[i]['TRT'] = trts[i]
+        for name in src_classes:
+            out[i][name] = c[name]
+    return rst_table(out)
 
 
 def print_csm_info(fname):
@@ -97,7 +124,11 @@ def info(calculators, gsims, views, exports, report, input_file=''):
                 do_build_reports(input_file)
         print(mon)
     elif input_file.endswith('.xml'):
-        print(nrml.read(input_file).to_str())
+        node = nrml.read(input_file)[0]
+        if node.tag.endswith('sourceModel'):
+            print(source_model_info(node))
+        else:
+            print(node.to_str())
     elif input_file.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:
