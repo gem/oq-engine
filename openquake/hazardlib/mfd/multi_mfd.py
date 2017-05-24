@@ -59,8 +59,11 @@ class MultiMFD(BaseMFD):
         self.width_of_mfd_bin = width_of_mfd_bin
         n = len(all_args)
         self.mfd_class = ASSOC[kind][0]
-        fields = ASSOC[kind][1:]
-        self.array = numpy.zeros(n, [(f, (F32, size)) for f in fields])
+        dtlist = []
+        for field in ASSOC[kind][1:]:
+            dt = (F32, size) if field in ('magnitudes', 'occurRates') else F32
+            dtlist.append((field, dt))
+        self.array = numpy.zeros(n, dtlist)
         for i, args in enumerate(all_args):
             self.array[i] = args
 
