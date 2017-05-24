@@ -11,15 +11,6 @@ Hazard
 Risk
 ----
 
-* **§9.1**: Scenario damage output names have changed
-* **§9.1**: Collapse maps are no longer exported in a separate file
-* **§9.1.1.1**: Replace the asset damage xml example with csv
-* **§9.1.1.2**: Replace the taxonomy damage xml example with csv
-* **§9.1.1.3**: Replace the total damage xml example with csv
-* **§9.1.2**: Remove the collapse map xml example
-* **§9.2**: Scenario risk output names have changed
-* **§9.2.2**: Replace the scenario loss map xml example with csv
-* **§9.2.x**: Document the new outputs for `all_losses` and `losses_by_event`
 * **§9.4.1.1**: Replace the asset loss exceedance curves xml example with csv
 * **§9.4.1.2**: Replace the insured loss exceedance curves xml example with csv
 * **§9.4.1.3**: Replace the mean loss exceedance curves xml example with csv
