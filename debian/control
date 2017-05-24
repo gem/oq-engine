@@ -8,7 +8,7 @@ Homepage: http://www.globalquakemodel.org/openquake/
 
 Package: python-oq-engine
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-oq-libs (>=1.2.1~), python-oq-hazardlib (>=0.24.0-0~), rabbitmq-server (>=2.8.0-2~gem02), supervisor (>=3.0b2-1~)
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-oq-libs (>=1.3.0~), python-oq-hazardlib (>=0.25.0-0~), rabbitmq-server (>=2.8.0-2~gem02), supervisor (>=3.0b2-1~)
 Conflicts: python-oq-risklib, python-noq, python-oq
 Replaces: python-oq-risklib
 Recommends: ${dist:Recommends}
