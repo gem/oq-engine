@@ -963,6 +963,8 @@ def mfds2multimfd(mfds):
             data = sum(data, [])  # the list has to be flat
         elif field == 'lengths':  # this is the last field if present
             data = lengths
+        elif field == 'bin_width':
+            continue
         else:
             data = [m[alias] for m in mfds]
         node.append(Node(field, text=data))

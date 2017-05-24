@@ -45,7 +45,7 @@ class MultiPointTestCase(unittest.TestCase):
         self.assertEqual(obj_to_node(mps).to_str(), '''\
 multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Shallow Crust'}
   multiPointGeometry
-    gml:posList ['0 0.5', '1 1.0']
+    gml:posList [0, 0.5, 1, 1.0]
     upperSeismoDepth 10
     lowerSeismoDepth 20
   magScaleRel 'PeerMSR'

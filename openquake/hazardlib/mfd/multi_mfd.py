@@ -39,7 +39,9 @@ ASSOC = {
         YoungsCoppersmith1985MFD, 'min_mag', 'max_mag', 'a_val', 'b_val',
         'char_mag', 'char_rate', 'bin_width')}
 
-ALIAS = dict(min_mag='minMag', max_max='maxMag', bin_width='binWidth')
+ALIAS = dict(min_mag='minMag', max_mag='maxMag',
+             a_val='aValue', b_val='bValue',
+             char_mag='characteristicMag', char_rate='characteristicRate')
 
 
 def _reshape(kwargs, lengths):
