@@ -1,3 +1,5 @@
+python-oq-hazardlib (0.24.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Added a `ruptureCollection` parser able to instantiate `EBRuptures`
     suitable for event based calculations
@@ -33,6 +35,8 @@
   * Added a `parallel.Computer` base class
   * Changed the default distance from filtering from Rjb to Rrup
   * Saved data transfer information automatically in `parallel.Starmap`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 23 May 2017 10:46:56 +0200
 
 python-oq-hazardlib (0.23.0-0~precise01) precise; urgency=low
 
