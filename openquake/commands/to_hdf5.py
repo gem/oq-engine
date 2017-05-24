@@ -35,8 +35,9 @@ def convert_xml_hdf5(input_file, output_file):
                     psources.append(src)
                 else:
                     others.append(src)
+            others.sort(key=lambda src: (src.tag, src['id']))
             mpsources = sourceconverter.pointsources2multipoints(psources)
-            group.nodes = others + mpsources
+            group.nodes = mpsources + others
         out.save(node.node_to_dict(sm))
     return output_file
 

@@ -124,9 +124,10 @@ def info(calculators, gsims, views, exports, report, input_file=''):
                 do_build_reports(input_file)
         print(mon)
     elif input_file.endswith('.xml'):
-        node = nrml.read(input_file)[0]
-        if node.tag.endswith('sourceModel'):
-            print(source_model_info(node))
+        node = nrml.read(input_file)
+        if node[0].tag.endswith('sourceModel'):
+            assert node['xmlns'].endswith('nrml/0.5'), node['xmlns']
+            print(source_model_info(node[0]))
         else:
             print(node.to_str())
     elif input_file.endswith(('.ini', '.zip')):
