@@ -61,7 +61,19 @@ Before running the OpenQuake Engine its environment must be loaded
 source ~/openquake/env.sh
 ```
 
-Continue on [How to run the OpenQuake Engine](../running/unix.md)
+now you can run the OpenQuake Engine using its command line interface
+
+```bash
+oq engine --run </path/to/job.ini>
+```
+
+or starting the [WebUI](../running/server.md)
+
+```bash
+oq webui start
+```
+
+More information are available on [How to run the OpenQuake Engine](../running/unix.md) and [The OpenQuake Engine server and WebUI](../running/server.md).
 
 ***
 
