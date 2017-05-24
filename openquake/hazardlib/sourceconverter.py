@@ -752,7 +752,7 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.source.MultiPointSource`
         """
         geom = node.multiPointGeometry
-        lons, lats, deps = zip(*split_coords_3d(~geom.posList))
+        lons, lats = zip(*split_coords_2d(~geom.posList))
         msr = valid.SCALEREL[~node.magScaleRel]()
         return source.MultiPointSource(
             source_id=node['id'],
@@ -767,7 +767,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             temporal_occurrence_model=self.tom,
-            mesh=geo.Mesh(F32(lons), F32(lats), F32(deps)))
+            mesh=geo.Mesh(F32(lons), F32(lats)))
 
     def convert_simpleFaultSource(self, node):
         """
@@ -952,19 +952,20 @@ def mfds2multimfd(mfds):
     """
     Convert a list of MFD nodes into a single MultiMFD node
     """
-    rows = len(mfds)
     _, kind = mfds[0].tag.split('}')
     node = Node('multiMFD', dict(kind=kind))
+    lengths = None
     for field in mfd.multi_mfd.ASSOC[kind][1:]:
         alias = mfd.multi_mfd.ALIAS.get(field, field)
         if field in ('magnitudes', 'occurRates'):
             data = [~getattr(m, field) for m in mfds]
-            attrs = dict(rows=rows, cols=len(data[0]))
+            lengths = [len(d) for d in data]
             data = sum(data, [])  # the list has to be flat
+        elif field == 'lengths':  # this is the last field if present
+            data = lengths
         else:
-            attrs = {}
             data = [m[alias] for m in mfds]
-        node.append(Node(field, attrs, data))
+        node.append(Node(field, text=data))
     return node
 
 

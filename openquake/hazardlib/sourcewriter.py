@@ -463,8 +463,11 @@ def build_multi_point_source_node(multi_point_source):
         Instance of :class:`openquake.baselib.node.Node`
     """
     # parse geometry
-    mesh_node = Node('gml:posList', text=['%s %s %s' % (p.x, p.y, p.z)
-                                          for p in multi_point_source.mesh])
+    pos = []
+    for p in multi_point_source.mesh:
+        pos.append(p.x)
+        pos.append(p.y)
+    mesh_node = Node('gml:posList', text=pos)
     upper_depth_node = Node(
         "upperSeismoDepth", text=multi_point_source.upper_seismogenic_depth)
     lower_depth_node = Node(

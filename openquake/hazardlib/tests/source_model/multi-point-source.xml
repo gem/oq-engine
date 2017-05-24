@@ -18,7 +18,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <multiPointGeometry>
                     <gml:posList>
-                        0.0 1.0 10.0 0.5 1.0 10.0
+                        0.0 1.0 0.5 1.0
                     </gml:posList>
                     <upperSeismoDepth>
                         10.0
