@@ -51,6 +51,8 @@ def _reshape(kwargs, lengths):
         kwargs['bin_width'] *= n
     for field in kwargs:
         if field in ('occurRates', 'magnitudes'):
+            assert len(kwargs[field]) == sum(lengths), (
+                len(kwargs[field]), sum(lengths))
             ivalues = iter(kwargs[field])
             kwargs[field] = [[next(ivalues) for _ in range(length)]
                              for length in lengths]
@@ -74,8 +76,6 @@ class MultiMFD(BaseMFD):
                 kwargs[field] = [width_of_mfd_bin]
             else:
                 kwargs[field] = ~getattr(node, field)
-        if 'lengths' in kwargs:
-            _reshape(kwargs, kwargs['lengths'])
         return cls(kind, width_of_mfd_bin, **kwargs)
 
     def __init__(self, kind, width_of_mfd_bin=None, **kwargs):
@@ -84,6 +84,10 @@ class MultiMFD(BaseMFD):
         self.mfd_class = ASSOC[kind][0]
         self.n = len(kwargs.get('min_mag') or kwargs['lengths'])
         self.kwargs = kwargs
+        if 'occurRates' in kwargs and 'lengths' not in kwargs:
+            kwargs['lengths'] = [len(lst) for lst in kwargs['occurRates']]
+        elif 'lengths' in kwargs:
+            _reshape(kwargs, kwargs['lengths'])
 
     def __iter__(self):
         for i in range(self.n):

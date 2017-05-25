@@ -236,11 +236,8 @@ def build_multi_mfd(mfd):
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
-            lengths = [len(lst) for lst in values]
             values = sum(values, [])
         node.append(Node(name, text=values))
-    if lengths is not None:
-        node.append(Node('lengths', text=lengths))
     return node
 
 
