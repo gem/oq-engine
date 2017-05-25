@@ -24,21 +24,7 @@ def convert_xml_hdf5(input_file, output_file):
             sm = inp.sourceModel
         else:  # not a NRML
             raise ValueError('Unknown NRML:' % inp['xmlns'])
-        n = len(sm)
-        i = 1
-        for grpi, group in enumerate(sm, 1):
-            logging.info('Processing group %d of %d', grpi, n)
-            psrcs = []
-            others = []
-            for src in group:
-                del src.attrib['tectonicRegion']  # make the trt implicit
-                if src.tag.endswith('pointSource'):
-                    psrcs.append(src)
-                else:
-                    others.append(src)
-            others.sort(key=lambda src: (src.tag, src['id']))
-            i, mpsources = sourceconverter.pointsources2multipoints(psrcs, i)
-            group.nodes = mpsources + others
+        sourceconverter.update_source_model(sm)
         out.save(node.node_to_dict(sm))
     return output_file
 
