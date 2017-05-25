@@ -2,37 +2,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
 	  xmlns="http://openquake.org/xmlns/nrml/0.5">
-  <stochasticEventSetCollection sourceModelTreePath="b1">
-    \textcolor{red}{<stochasticEventSet id="12" investigationTime="50.0">}
-\textcolor{green}{     <rupture id="col=00~ses=0001~rup=0049-00"}
-\textcolor{green}{         magnitude="4.55" strike="90.0" dip="90.0"}
-\textcolor{green}{         rake="90.0" tectonicRegion="Active Shallow Crust">}
+  <ruptureCollection sourceModelTreePath="b1"
+    \textcolor{red}{investigationTime="50.0">}
+    <ruptureGroup id="0" tectonicRegion="Active Shallow Crust">
+\textcolor{green}{    <singlePlaneRupture id="13681" multiplicity="1">}
+\textcolor{red}{       <stochasticEventSets>}
+\textcolor{red}{           <SES id="7">}
+\textcolor{red}{               34359738368}
+\textcolor{red}{           </SES>}
+\textcolor{red}{       </stochasticEventSets>}
+\textcolor{green}{       <magnitude>}
+\textcolor{green}{           5.05}
+\textcolor{green}{       </magnitude>}
+\textcolor{green}{       <strike>}
+\textcolor{green}{           0.0}
+\textcolor{green}{       </strike>}
+\textcolor{green}{       <dip>}
+\textcolor{green}{           90.0}
+\textcolor{green}{       </dip>}
+\textcolor{green}{       <rake>}
+\textcolor{green}{           0.0}
+\textcolor{green}{       </rake>}
+\textcolor{green}{       <hypocenter depth="5" lat="-0.20469" lon="-0.09530"/>}
 \textcolor{green}{       <planarSurface>}
-\textcolor{green}{         <topLeft lon="12.233903801" lat="43.256198599"}
-\textcolor{green}{                  depth="11.3933265259"/>}
-\textcolor{green}{         <topRight lon="12.263958243" lat="43.2562025344"}
-\textcolor{green}{                  depth="11.3933265259"/>}
-\textcolor{green}{         <bottomLeft lon="12.233903801" lat="43.256198599"}
-\textcolor{green}{                  depth="12.6066734741"/>}
-\textcolor{green}{         <bottomRight lon="12.263958243" lat="43.2562025344"}
-\textcolor{green}{                  depth="12.6066734741"/>}
+\textcolor{green}{           <topLeft depth="3.1741" lat="-0.221115" lon="-0.095302"/>}
+\textcolor{green}{           <topRight depth="3.1741" lat="-0.18827" lon="-0.095302"/>}
+\textcolor{green}{           <bottomLeft depth="6.82587" lat="-0.221115" lon="-0.095302"/>}
+\textcolor{green}{           <bottomRight depth="6.82587" lat="-0.188274" lon="-0.095302"/>}
 \textcolor{green}{       </planarSurface>}
-\textcolor{green}{     </rupture>}
-      <rupture id="col=00~ses=0001~rup=0121-00"
-              magnitude="4.65" strike="135.0" dip="90.0"
-              rake="90.0" tectonicRegion="Active Shallow Crust">
-        <planarSurface>
-          <topLeft lon="11.45858812" lat="42.7429056814"
-                  depth="11.3208667302"/>
-          <topRight lon="11.4822820715" lat="42.7256333907"
-                  depth="11.3208667302"/>
-          <bottomLeft lon="11.45858812" lat="42.7429056814"
-                  depth="12.6791332698"/>
-          <bottomRight lon="11.4822820715" lat="42.7256333907"
-                  depth="12.6791332698"/>
-        </planarSurface>
-      </rupture>
-    \textcolor{red}{</stochasticEventSet>}
-  </stochasticEventSetCollection>
+\textcolor{green}{    </singlePlaneRupture>}
+    </ruptureGroup>
+  </ruptureCollection>
 </nrml>
 \end{Verbatim}

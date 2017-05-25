@@ -9,29 +9,28 @@ The inset below shows an example of the list of results provided by the
 
 \input{oqum/hazard/verbatim/output_event_based}
 
-This list in the inset above contains a set of stochastic events (in green)
+This list in the inset above contains a set of ruptures (in green)
 and their corresponding sets of ground motion fields (in red).
 
-Exporting the outputs from the stochastic event set will produce, for each
-realisation, a nrml file containing a collection of stochastic event sets.
-Below is an example of the nrml file for a stochastic event set containing
-only 2 ruptures:
+Exporting the outputs from the ruptures will produce, for each
+realisation, a NRML file containing a collection of ruptures.
+Below is an example:
 
 \input{oqum/hazard/verbatim/output_ses}
 
-The text in red shows the part which describes the id of the generated
-stochastic event set and the investigation time covered.
+The text in red shows the part which describes the generated
+stochastic event sets and the investigation time covered. Inside the
+<SES> tag there is a list of integers (a single integer in this example)
+which are unique IDs for the seismic events associated to the rupture.
+In general a rupture can occur more than once and the number of events
+is given by the multiplicity attribute (in this case 1).
 
 The text in green emphasises the portion of the text used to describe a
 rupture. The information provided describes entirely the geometry of the
 rupture as well as its rupturing properties (e.g. rake, magnitude). The
-rupture ID is a string that represents each rupture uniquely (including the
-case where the same rupture is sampled multiple times). The exact format may
-be subject to change from time-to-time; however, the ID will usually contain
-information regarding the specific logic tree branch sample (realisation), the
-stochastic event set counter, the ID of the source from which the rupture was
-samples and a unique number indicating the rupture identifier within the
-earthquake rupture forecast of the specific source.
+rupture ID is an integer that represents each rupture uniquely: it should
+not be confused with the event ID, because the multiplicity of a rupture
+can be different than 1.
 
 Exporting the outputs from the gmfs will produce an xml file for each
 realisation containing the corresponding ground motion fields. Below is an
