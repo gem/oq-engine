@@ -206,7 +206,9 @@ Depending on the \Verb+uncertaintyType+ the content of the
 
     \item if \Verb+uncertaintyType="gmpeModel"+, the uncertainty model
 	contains the name of a ground motion prediction equation (a list of
-	available GMPEs are given in Appendix~\ref{chap:gsims}), e.g.:
+	available GMPEs can be obtained using \texttt{oq info --gsims} and these
+	are also documented at
+	\href{http://docs.openquake.org/oq-hazardlib/0.24/openquake.hazardlib.gsim.html}{http://docs.openquake.org/oq-hazardlib/0.24/openquake.hazardlib.gsim.html}):
 
     \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
 <uncertaintyModel>GMPE_NAME</uncertaintyModel>
