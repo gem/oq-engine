@@ -183,14 +183,14 @@ def classical(sources, src_filter, gsims, param, monitor):
     :returns:
         an AccumDict rlz -> curves
     """
-    truncation_level = monitor.truncation_level
-    imtls = monitor.imtls
+    truncation_level = param['truncation_level']
+    imtls = param['imtls']
     src_group_id = sources[0].src_group_id
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
-    if monitor.disagg:
-        sm_id = monitor.sm_id
+    if param['disagg']:
+        sm_id = param['sm_id']
         bbs = [BoundingBox(sm_id, sid) for sid in src_filter.sitecol.sids]
     else:
         bbs = []
@@ -278,12 +278,8 @@ class PSHACalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        monitor = self.monitor(
-            self.core_task.__name__,
-            truncation_level=oq.truncation_level,
-            imtls=oq.imtls,
-            maximum_distance=oq.maximum_distance,
-            disagg=oq.poes_disagg or oq.iml_disagg)
+        monitor = self.monitor(self.core_task.__name__)
+
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, monitor)
             iterargs = saving_sources_by_task(allargs, self.datastore)
@@ -317,11 +313,15 @@ class PSHACalculator(base.HazardCalculator):
                 logging.info('Sending source group #%d of %d (%s, %d sources)',
                              sg.id + 1, ngroups, sg.trt, len(sg.sources))
                 gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
-                if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
-                    monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
                 param = dict(
+                    truncation_level=oq.truncation_level,
+                    imtls=oq.imtls,
+                    maximum_distance=oq.maximum_distance,
+                    disagg=oq.poes_disagg or oq.iml_disagg,
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+                if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
+                    param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
                 if sg.src_interdep == 'mutex':  # do not split the group
                     self.csm.add_infos(sg.sources)
                     yield sg, self.src_filter, gsims, param, monitor
