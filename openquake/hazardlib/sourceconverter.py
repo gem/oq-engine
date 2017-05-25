@@ -971,13 +971,13 @@ def mfds2multimfd(mfds):
     return node
 
 
-def pointsources2multipoints(srcs):
+def pointsources2multipoints(srcs, i):
     """
     :param srcs: a list of pointSource nodes of the same tectonic region
+    :param i: multiPointSource index, used in the ID
     :returns: as list of multiPointSource nodes
     """
     mpsources = []
-    i = 1
     for key, sources in groupby(srcs, get_key).items():
         msr, rar, usd, lsd, hd, npd = key
         mfds = [src[3] for src in sources]
@@ -1002,4 +1002,4 @@ def pointsources2multipoints(srcs):
             for prob, depth in hd]))
         mpsources.append(node)
         i += 1
-    return mpsources
+    return i, mpsources
