@@ -18,6 +18,9 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.geo.polygon import Polygon
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo import utils
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -50,16 +53,12 @@ class MultiPointSource(ParametricSeismicSource):
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
-        Extends the area source polygon by ``dilation`` plus
-        :meth:`~openquake.hazardlib.source.point.PointSource._get_max_rupture_projection_radius`.
-
-        See :meth:`superclass method
-        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
-        for parameter and return value definition.
         """
-        1 / 0
-        max_rup_radius = self._get_max_rupture_projection_radius()
-        return self.polygon.dilate(max_rup_radius + dilation)
+        w, e, n, s = utils.get_spherical_bounding_box(
+            self.mesh.lons, self.mesh.lats)
+        poly = Polygon([Point(w, s), Point(e, s), Point(e, n), Point(w, n),
+                        Point(w, s)])
+        return poly.dilate(dilation)
 
     def __iter__(self):
         for i, mfd, point in enumerate(zip(self.mfd, self.mesh)):
@@ -88,7 +87,7 @@ class MultiPointSource(ParametricSeismicSource):
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`
         for description of parameters and return value.
         """
-        return (len(self.mfd.array) *
+        return (len(self.mfd) *
                 len(self.get_annual_occurrence_rates()) *
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))

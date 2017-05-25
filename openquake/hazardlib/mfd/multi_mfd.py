@@ -46,6 +46,9 @@ ALIAS = dict(min_mag='minMag', max_mag='maxMag',
 
 def _reshape(kwargs, lengths):
     # reshape occurRates and magnitudes as lists of lists
+    if 'bin_width' in kwargs:
+        n = len(kwargs.get('min_mag') or kwargs['lengths'])
+        kwargs['bin_width'] *= n
     for field in kwargs:
         if field in ('occurRates', 'magnitudes'):
             ivalues = iter(kwargs[field])
@@ -67,22 +70,25 @@ class MultiMFD(BaseMFD):
         kind = node['kind']
         kwargs = {}  # a dictionary name -> array of n elements
         for field in ASSOC[kind][1:]:
-            kwargs[field] = ~getattr(node, field)
+            if field == 'bin_width':
+                kwargs[field] = [width_of_mfd_bin]
+            else:
+                kwargs[field] = ~getattr(node, field)
         if 'lengths' in kwargs:
-            _reshape(kwargs, kwargs.pop('lengths'))
+            _reshape(kwargs, kwargs['lengths'])
         return cls(kind, width_of_mfd_bin, **kwargs)
 
     def __init__(self, kind, width_of_mfd_bin=None, **kwargs):
         self.kind = kind
         self.width_of_mfd_bin = width_of_mfd_bin
         self.mfd_class = ASSOC[kind][0]
-        self.n = len(kwargs[next(iter(kwargs))])
+        self.n = len(kwargs.get('min_mag') or kwargs['lengths'])
         self.kwargs = kwargs
 
     def __iter__(self):
         for i in range(self.n):
-            kw = {f: self.kwargs[f][i] for f in self.kwargs}
-            yield self.mfd_class(**kw)
+            args = [self.kwargs[f][i] for f in ASSOC[self.kind][1:]]
+            yield self.mfd_class(*args)
 
     def __len__(self):
         return self.n

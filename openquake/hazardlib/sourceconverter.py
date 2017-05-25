@@ -1011,6 +1011,7 @@ def update_source_model(sm_node):
     """
     i = 0
     for group in sm_node:
+        assert group.tag.endswith('sourceGroup'), 'wrong source model format!'
         psrcs = []
         others = []
         for src in group:
