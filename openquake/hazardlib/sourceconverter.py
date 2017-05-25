@@ -971,17 +971,17 @@ def mfds2multimfd(mfds):
     return node
 
 
-def pointsources2multipoints(srcs, i):
-    """
-    :param srcs: a list of pointSource nodes of the same tectonic region
-    :param i: multiPointSource index, used in the ID
-    :returns: as list of multiPointSource nodes
-    """
-    mpsources = []
+def _pointsources2multipoints(srcs, i):
+    allsources = []
     for key, sources in groupby(srcs, get_key).items():
+        if len(sources) == 1:  # there is a single source
+            allsources.extend(sources)
+            continue
         msr, rar, usd, lsd, hd, npd = key
         mfds = [src[3] for src in sources]
-        points = [~src.pointGeometry.Point.pos for src in sources]
+        points = []
+        for src in sources:
+            points.extend(~src.pointGeometry.Point.pos)
         geom = Node('multiPointGeometry')
         geom.append(Node('gml:posList', text=points))
         geom.append(Node('upperSeismoDepth', text=usd))
@@ -1000,6 +1000,25 @@ def pointsources2multipoints(srcs, i):
         node.append(Node('hypoDepthDist', nodes=[
             Node('hypoDepth', dict(depth=depth, probability=prob))
             for prob, depth in hd]))
-        mpsources.append(node)
+        allsources.append(node)
         i += 1
-    return i, mpsources
+    return i, allsources
+
+
+def update_source_model(sm_node):
+    """
+    :param sm_node: a sourceModel Node object containing sourceGroups
+    """
+    i = 0
+    for group in sm_node:
+        psrcs = []
+        others = []
+        for src in group:
+            del src.attrib['tectonicRegion']  # make the trt implicit
+            if src.tag.endswith('pointSource'):
+                psrcs.append(src)
+            else:
+                others.append(src)
+        others.sort(key=lambda src: (src.tag, src['id']))
+        i, sources = _pointsources2multipoints(psrcs, i)
+        group.nodes = sources + others
