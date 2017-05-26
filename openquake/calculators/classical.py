@@ -307,7 +307,8 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        logging.info('Using a maxweight of %d', maxweight)
+        logging.info('Using a maxweight of %d, num_tiles=%d',
+                     maxweight, oq.num_tiles)
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
         for sm in csm.source_models:
             for sg in sm.src_groups:
