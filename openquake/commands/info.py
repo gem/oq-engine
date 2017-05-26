@@ -32,7 +32,7 @@ from openquake.hazardlib import gsim
 from openquake.commonlib import readinput
 from openquake.calculators.export import export
 from openquake.calculators import base, reportwriter
-from openquake.calculators.views import view, rst_table, sum_table
+from openquake.calculators.views import view, rst_table
 
 
 def source_model_info(node):
