@@ -87,17 +87,10 @@ class MultiPointSource(ParametricSeismicSource):
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`
         for description of parameters and return value.
         """
-        return (len(self.mfd) *
-                len(self.get_annual_occurrence_rates()) *
+        return (len(self.get_annual_occurrence_rates()) *
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
 
     def filter_sites_by_distance_to_source(self, integration_distance, sites):
-        """
-        Overrides :meth:`implementation
-        <openquake.hazardlib.source.point.PointSource.filter_sites_by_distance_to_source>`
-        of the point source class just to call the :meth:`base class one
-        <openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source>`.
-        """
-        return super(MultiPointSource, self).filter_sites_by_distance_to_source(
-            integration_distance, sites)
+        """Do not filter"""
+        return sites
