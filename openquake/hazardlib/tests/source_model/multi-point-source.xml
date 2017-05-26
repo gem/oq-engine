@@ -36,9 +36,6 @@ xmlns:gml="http://www.opengis.net/gml"
                 <multiMFD
                 kind="incrementalMFD"
                 >
-                    <bin_width>
-                        0.1 0.1
-                    </bin_width>
                     <lengths>
                         2 3
                     </lengths>

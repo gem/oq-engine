@@ -46,9 +46,6 @@ ALIAS = dict(min_mag='minMag', max_mag='maxMag',
 
 def _reshape(kwargs, lengths):
     # reshape occurRates and magnitudes as lists of lists
-    if 'bin_width' in kwargs:
-        n = len(kwargs.get('min_mag') or kwargs['lengths'])
-        kwargs['bin_width'] *= n
     for field in kwargs:
         if field in ('occurRates', 'magnitudes'):
             assert len(kwargs[field]) == sum(lengths), (
@@ -73,7 +70,7 @@ class MultiMFD(BaseMFD):
         kwargs = {}  # a dictionary name -> array of n elements
         for field in ASSOC[kind][1:]:
             if field == 'bin_width':
-                kwargs[field] = [width_of_mfd_bin]
+                kwargs[field] = width_of_mfd_bin
             else:
                 kwargs[field] = ~getattr(node, field)
         return cls(kind, width_of_mfd_bin, **kwargs)
@@ -91,14 +88,24 @@ class MultiMFD(BaseMFD):
 
     def __iter__(self):
         for i in range(self.n):
-            args = [self.kwargs[f][i] for f in ASSOC[self.kind][1:]]
+            args = []
+            for f in ASSOC[self.kind][1:]:
+                if f == 'bin_width':  # f has a scalar value
+                    args.append(self.kwargs[f])
+                else:  # f has a vector value
+                    args.append(self.kwargs[f][i])
             yield self.mfd_class(*args)
 
     def __len__(self):
         return self.n
 
     def get_min_max_mag(self):
-        return None, None
+        m1s, m2s = [], []
+        for mfd in self:
+            m1, m2 = mfd.get_min_max_mag()
+            m1s.append(m1)
+            m2s.append(m2)
+        return min(m1s), max(m2s)
 
     def check_constraints(self):
         pass

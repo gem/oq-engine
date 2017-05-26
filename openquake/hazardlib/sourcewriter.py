@@ -232,11 +232,12 @@ def build_multi_mfd(mfd):
         Instance of :class:`openquake.baselib.node.Node`
     """
     node = Node("multiMFD", dict(kind=mfd.kind))
-    lengths = None
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
             values = sum(values, [])
+        elif name == 'bin_width':
+            continue
         node.append(Node(name, text=values))
     return node
 

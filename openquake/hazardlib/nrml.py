@@ -180,6 +180,7 @@ validators = {
     'maxMag': valid.positivefloat,
     'minMag': valid.positivefloat,
     'min_mag': valid.positivefloats,
+    'max_mag': valid.positivefloats,
     'lengths': valid.positiveints,
     'binWidth': valid.positivefloat,
     'bin_width': valid.positivefloats,
