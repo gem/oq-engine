@@ -306,7 +306,8 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        maxweight = self.csm.get_maxweight(
+            oq.concurrent_tasks / (oq.num_tiles or 1))
         logging.info('Using a maxweight of %d, num_tiles=%d',
                      maxweight, oq.num_tiles)
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
@@ -330,7 +331,7 @@ class PSHACalculator(base.HazardCalculator):
                 if oq.num_tiles:
                     self.csm.add_infos(sg.sources)
                     for block in block_splitter(
-                            sg.sources, maxweight * oq.num_tiles,
+                            sg.sources, maxweight,
                             operator.attrgetter('weight')):
                         for srcfilter in filters:
                             yield block, srcfilter, gsims, param, monitor
