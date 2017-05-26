@@ -32,6 +32,7 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.commonlib import datastore, source, calc, util
 from openquake.calculators import base
 
@@ -322,7 +323,13 @@ class PSHACalculator(base.HazardCalculator):
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
                     param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
-                if sg.src_interdep == 'mutex':  # do not split the group
+                if oq.num_tiles:
+                    self.csm.add_infos(sg.sources)
+                    for tile in self.sitecol.split_in_tiles(oq.num_tiles):
+                        sf = SourceFilter(
+                            tile, oq.maximum_distance, use_rtree=False)
+                        yield sg, sf, gsims, param, monitor
+                elif sg.src_interdep == 'mutex':  # do not split the group
                     self.csm.add_infos(sg.sources)
                     yield sg, self.src_filter, gsims, param, monitor
                 else:
