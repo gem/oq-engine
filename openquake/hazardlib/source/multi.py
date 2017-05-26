@@ -18,9 +18,6 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.polygon import Polygon
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -91,10 +88,3 @@ class MultiPointSource(ParametricSeismicSource):
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """No polygon"""
-
-    def get_bounding_box(self, maxdist):
-        w, e, n, s = utils.get_spherical_bounding_box(
-            self.mesh.lons, self.mesh.lats)
-        poly = Polygon([Point(w, s), Point(e, s), Point(e, n), Point(w, n),
-                        Point(w, s)])
-        return poly.dilate(maxdist).get_bbox()
