@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Restored the tiling functionality in the classical calculator; to enable
+    it, set `num_tiles` in the job.ini file
+
 python-oq-engine (2.4.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
