@@ -25,7 +25,7 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -310,6 +310,9 @@ class PSHACalculator(base.HazardCalculator):
         logging.info('Using a maxweight of %d, num_tiles=%d',
                      maxweight, oq.num_tiles)
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
+        if oq.num_tiles:
+            filters = [SourceFilter(tile, oq.maximum_distance, use_rtree=False)
+                       for tile in self.sitecol.split_in_tiles(oq.num_tiles)]
         for sm in csm.source_models:
             for sg in sm.src_groups:
                 logging.info('Sending source group #%d of %d (%s, %d sources)',
@@ -326,10 +329,11 @@ class PSHACalculator(base.HazardCalculator):
                     param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
                 if oq.num_tiles:
                     self.csm.add_infos(sg.sources)
-                    for tile in self.sitecol.split_in_tiles(oq.num_tiles):
-                        sf = SourceFilter(
-                            tile, oq.maximum_distance, use_rtree=False)
-                        yield sg, sf, gsims, param, monitor
+                    for block in block_splitter(
+                            sg.sources, maxweight * oq.num_tiles,
+                            operator.attrgetter('weight')):
+                        for srcfilter in filters:
+                            yield block, srcfilter, gsims, param, monitor
                 elif sg.src_interdep == 'mutex':  # do not split the group
                     self.csm.add_infos(sg.sources)
                     yield sg, self.src_filter, gsims, param, monitor
