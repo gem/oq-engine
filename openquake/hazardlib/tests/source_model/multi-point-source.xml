@@ -51,7 +51,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <nodalPlane dip="2.0" probability="0.5" rake="4.0" strike="2.0"/>
                 </nodalPlaneDist>
                 <hypoDepthDist>
-                    <hypoDepth depth="4.0" probability="1.0"/>
+                    <hypoDepth depth="14.0" probability="1.0"/>
                 </hypoDepthDist>
             </multiPointSource>
         </sourceGroup>
