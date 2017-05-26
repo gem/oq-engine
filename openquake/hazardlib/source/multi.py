@@ -18,9 +18,9 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.geo.polygon import Polygon
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import utils
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.polygon import Polygon
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -51,17 +51,8 @@ class MultiPointSource(ParametricSeismicSource):
         self.hypocenter_distribution = hypocenter_distribution
         self.mesh = mesh
 
-    def get_rupture_enclosing_polygon(self, dilation=0):
-        """
-        """
-        w, e, n, s = utils.get_spherical_bounding_box(
-            self.mesh.lons, self.mesh.lats)
-        poly = Polygon([Point(w, s), Point(e, s), Point(e, n), Point(w, n),
-                        Point(w, s)])
-        return poly.dilate(dilation)
-
     def __iter__(self):
-        for i, mfd, point in enumerate(zip(self.mfd, self.mesh)):
+        for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
             name = '%s:%s' % (self.source_id, i)
             ps = PointSource(
                 name, name, self.tectonic_region_type,
@@ -77,6 +68,9 @@ class MultiPointSource(ParametricSeismicSource):
             yield ps
 
     def iter_ruptures(self):
+        """
+        Yield the ruptures of the underlying point sources
+        """
         for ps in self:
             for rupture in ps.iter_ruptures():
                 yield rupture
@@ -94,3 +88,13 @@ class MultiPointSource(ParametricSeismicSource):
     def filter_sites_by_distance_to_source(self, integration_distance, sites):
         """Do not filter"""
         return sites
+
+    def get_rupture_enclosing_polygon(self, dilation=0):
+        """No polygon"""
+
+    def get_bounding_box(self, maxdist):
+        w, e, n, s = utils.get_spherical_bounding_box(
+            self.mesh.lons, self.mesh.lats)
+        poly = Polygon([Point(w, s), Point(e, s), Point(e, n), Point(w, n),
+                        Point(w, s)])
+        return poly.dilate(maxdist).get_bbox()

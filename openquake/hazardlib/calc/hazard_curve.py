@@ -57,6 +57,7 @@ from __future__ import division
 import sys
 import time
 import operator
+import collections
 import numpy
 
 from openquake.baselib.python3compat import raise_, zip
@@ -190,6 +191,13 @@ def pmap_from_grp(
     maxdist = source_site_filter.integration_distance
     if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
         gsims = [gsims[trt]]
+    srcs = []
+    for src in sources:
+        if isinstance(src, collections.Iterable):  # MultiPointSource
+            srcs.extend(src)
+        else:
+            srcs.append(src)
+    del sources
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
         cmaker = ContextMaker(gsims, maxdist)
@@ -200,8 +208,8 @@ def pmap_from_grp(
         src_indep = group.src_interdep == 'indep'
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
         pmap.calc_times = []  # pairs (src_id, delta_t)
-        pmap.grp_id = sources[0].src_group_id
-        for src, s_sites in source_site_filter(sources):
+        pmap.grp_id = srcs[0].src_group_id
+        for src, s_sites in source_site_filter(srcs):
             t0 = time.time()
             poemap = poe_map(
                 src, s_sites, imtls, cmaker, truncation_level, ctx_mon,
