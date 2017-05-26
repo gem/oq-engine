@@ -191,7 +191,7 @@ class IntegrationDistance(collections.Mapping):
         for trt, value in self.dic.items():
             if isinstance(value, list):  # assume a list of pairs (mag, dist)
                 value.sort()  # make sure the list is sorted by magnitude
-                self.magdist[trt] = zip(*value)
+                self.magdist[trt] = list(zip(*value))
             else:
                 self.dic[trt] = float(value)
 
