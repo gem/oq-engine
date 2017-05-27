@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -305,23 +305,24 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
+        if len(self.sitecol) <= 10000:
+            src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+            self.csm = csm = csm.filter(src_filter)
+        else:
+            src_filter = None
+        maxweight = csm.get_maxweight(
+            oq.concurrent_tasks / (oq.num_tiles or 1))
+        logging.info('Using maxweight=%d', maxweight)
         if oq.num_tiles:
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
-            maxweight = csm.get_maxweight(
-                oq.concurrent_tasks / (oq.num_tiles or 1))
-            logging.info('Using maxweight=%d', maxweight)
         else:
             tiles = [self.sitecol]
         for t, tile in enumerate(tiles):
             logging.info('Instantiating src_filter for tile %d', t + 1)
-            src_filter = SourceFilter(tile, oq.maximum_distance)
-            filtered_csm = csm.filter(src_filter)
-            if oq.num_tiles == 0:
-                maxweight = filtered_csm.get_maxweight(
-                    oq.concurrent_tasks / (oq.num_tiles or 1))
-                logging.info('Using maxweight=%d', maxweight)
+            if src_filter is None or oq.num_tiles:
+                src_filter = SourceFilter(tile, oq.maximum_distance)
             num_tasks = 0
-            for sm in filtered_csm.source_models:
+            for sm in csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
                     imtls=oq.imtls,
@@ -341,19 +342,14 @@ class PSHACalculator(base.HazardCalculator):
                         self.csm.add_infos(sg.sources)
                         yield sg, src_filter, gsims, param, monitor
                         num_tasks += 1
-                    elif oq.num_tiles:
-                        self.csm.add_infos(sg.sources)
-                        srcs = sorted(sg.sources, key=weight)
-                        for block in block_splitter(srcs, maxweight, weight):
-                            yield block, src_filter, gsims, param, monitor
-                            num_tasks += 1
                     else:
                         for block in csm.split_sources(
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
             logging.info('Sent %d sources in %d tasks',
-                         filtered_csm.get_num_sources(), num_tasks)
+                         csm.get_num_sources(), num_tasks)
+        source.split_map.clear()
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source
