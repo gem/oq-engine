@@ -305,12 +305,17 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
-        for t, tile in enumerate(self.sitecol.split_in_tiles(oq.num_tiles)):
+        if oq.num_tiles:
+            tiles = self.sitecol.split_in_tiles(oq.num_tiles)
+        else:
+            tiles = [self.sitecol]
+        for t, tile in enumerate(tiles):
+            logging.info('Instantiating src_filter for tile %d', t + 1)
             src_filter = SourceFilter(tile, oq.maximum_distance)
             filtered_csm = csm.filter(src_filter)
             maxweight = filtered_csm.get_maxweight(
                 oq.concurrent_tasks / (oq.num_tiles or 1))
-            logging.info('Using maxweight=%d, tile=%d', maxweight, t + 1)
+            logging.info('Using maxweight=%d', maxweight)
             for sm in filtered_csm.source_models:
                 for sg in sm.src_groups:
                     if oq.num_tiles == 0:
