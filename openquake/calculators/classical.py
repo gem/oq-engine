@@ -321,8 +321,7 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Instantiating src_filter for tile %d', t + 1)
             if src_filter is None or oq.num_tiles:
                 # used only for the heavy sources, after their split
-                src_filter = SourceFilter(tile, oq.maximum_distance,
-                                          use_rtree=False)
+                src_filter = SourceFilter(tile, oq.maximum_distance)
             num_tasks = 0
             num_sources = 0
             for sm in csm.source_models:
@@ -351,7 +350,7 @@ class PSHACalculator(base.HazardCalculator):
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
-                        num_sources += len(block)
+                            num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
