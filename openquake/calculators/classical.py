@@ -322,19 +322,19 @@ class PSHACalculator(base.HazardCalculator):
                 logging.info('Using maxweight=%d', maxweight)
             num_tasks = 0
             for sm in filtered_csm.source_models:
+                param = dict(
+                    truncation_level=oq.truncation_level,
+                    imtls=oq.imtls,
+                    maximum_distance=oq.maximum_distance,
+                    disagg=oq.poes_disagg or oq.iml_disagg,
+                    samples=sm.samples, seed=oq.ses_seed,
+                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for sg in sm.src_groups:
                     if oq.num_tiles == 0:
                         logging.info(
                             'Sending source group #%d of %d (%s, %d sources)',
                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
                     gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
-                    param = dict(
-                        truncation_level=oq.truncation_level,
-                        imtls=oq.imtls,
-                        maximum_distance=oq.maximum_distance,
-                        disagg=oq.poes_disagg or oq.iml_disagg,
-                        samples=sm.samples, seed=oq.ses_seed,
-                        ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                     if oq.poes_disagg or oq.iml_disagg:  # only for disagg
                         param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
                     if sg.src_interdep == 'mutex':  # do not split the group
@@ -348,7 +348,7 @@ class PSHACalculator(base.HazardCalculator):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
                     else:
-                        for block in self.csm.split_sources(
+                        for block in csm.split_sources(
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
