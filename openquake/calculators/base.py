@@ -31,7 +31,6 @@ from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib import geo
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, datastore, source, calc
 from openquake.commonlib.oqvalidation import OqParam
