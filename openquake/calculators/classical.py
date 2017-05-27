@@ -315,8 +315,7 @@ class PSHACalculator(base.HazardCalculator):
             filtered_csm = csm.filter(src_filter)
             maxweight = filtered_csm.get_maxweight(
                 oq.concurrent_tasks / (oq.num_tiles or 1))
-            logging.info('Sending %d sources, maxweight=%d',
-                         filtered_csm.get_num_sources(), maxweight)
+            num_tasks = 0
             for sm in filtered_csm.source_models:
                 for sg in sm.src_groups:
                     if oq.num_tiles == 0:
@@ -336,15 +335,20 @@ class PSHACalculator(base.HazardCalculator):
                     if sg.src_interdep == 'mutex':  # do not split the group
                         self.csm.add_infos(sg.sources)
                         yield sg, src_filter, gsims, param, monitor
+                        num_tasks += 1
                     elif oq.num_tiles:
                         self.csm.add_infos(sg.sources)
                         srcs = sorted(sg.sources, key=weight)
                         for block in block_splitter(srcs, maxweight, weight):
                             yield block, src_filter, gsims, param, monitor
+                            num_tasks += 1
                     else:
                         for block in self.csm.split_sources(
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, gsims, param, monitor
+                            num_tasks += 1
+            logging.info('Sent %d sources in %d tasks, maxweight=%d',
+                         filtered_csm.get_num_sources(), num_tasks, maxweight)
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source
