@@ -315,7 +315,8 @@ class PSHACalculator(base.HazardCalculator):
             filtered_csm = csm.filter(src_filter)
             maxweight = filtered_csm.get_maxweight(
                 oq.concurrent_tasks / (oq.num_tiles or 1))
-            logging.info('Using maxweight=%d', maxweight)
+            logging.info('Sending %d sources, maxweight=%d',
+                         filtered_csm.get_num_sources(), maxweight)
             for sm in filtered_csm.source_models:
                 for sg in sm.src_groups:
                     if oq.num_tiles == 0:
