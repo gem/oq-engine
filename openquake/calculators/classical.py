@@ -317,7 +317,7 @@ class PSHACalculator(base.HazardCalculator):
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
         else:
             tiles = [self.sitecol]
-        logging.info('Using maxweight=%d, numheavy=%d, tiles=%d',
+        logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                      maxweight, numheavy, len(tiles))
         for t, tile in enumerate(tiles):
             if src_filter is None or oq.num_tiles:
@@ -328,7 +328,7 @@ class PSHACalculator(base.HazardCalculator):
                                           use_rtree=numheavy > 0)
             num_tasks = 0
             num_sources = 0
-            for sm in csm.source_models:
+            for sm in self.csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
                     imtls=oq.imtls,
@@ -350,7 +350,7 @@ class PSHACalculator(base.HazardCalculator):
                         num_tasks += 1
                         num_sources += len(sg)
                     else:
-                        for block in csm.split_sources(
+                        for block in self.csm.split_sources(
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
