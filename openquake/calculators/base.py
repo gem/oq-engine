@@ -398,22 +398,18 @@ class HazardCalculator(BaseCalculator):
         self.read_risk_data()
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
-            if oq.num_tiles == 0:
-                logging.info('Instantiating the source-sites filter')
-                self.src_filter = SourceFilter(
-                    self.sitecol, oq.maximum_distance)
             if oq.hazard_calculation_id:  # already stored csm
                 logging.info('Reusing composite source model of calc #%d',
                              oq.hazard_calculation_id)
                 with datastore.read(oq.hazard_calculation_id) as dstore:
                     self.csm = dstore['composite_source_model']
             else:
-                self.csm = self.read_filter_csm()
+                self.csm = self.read_csm()
             self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
         self.init()
 
-    def read_filter_csm(self):
+    def read_csm(self):
         with self.monitor('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
         if self.is_stochastic:
@@ -421,11 +417,6 @@ class HazardCalculator(BaseCalculator):
             # filtering; in this way the serials are independent
             # from the site collection; this is ultra-fast
             csm.init_serials()
-        if self.oqparam.num_tiles == 0:
-            with self.monitor('filtering csm', autoflush=True):
-                logging.info('Filtering composite source model')
-                # we are also weighting the sources, but weighting is ultrafast
-                csm = csm.filter(self.src_filter)
         return csm
 
     def pre_execute(self):
