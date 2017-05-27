@@ -313,15 +313,17 @@ class PSHACalculator(base.HazardCalculator):
         maxweight = csm.get_maxweight(
             oq.concurrent_tasks / (oq.num_tiles or 1))
         numheavy = len(csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
         if oq.num_tiles:
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
         else:
             tiles = [self.sitecol]
+        logging.info('Using maxweight=%d, numheavy=%d, tiles=%d',
+                     maxweight, numheavy, len(tiles))
         for t, tile in enumerate(tiles):
-            logging.info('Instantiating src_filter for tile %d', t + 1)
             if src_filter is None or oq.num_tiles:
                 # used only for the heavy sources, after their split
+                if numheavy:
+                    logging.info('Instantiating src_filter for tile %d', t + 1)
                 src_filter = SourceFilter(tile, oq.maximum_distance,
                                           use_rtree=numheavy > 0)
             num_tasks = 0
