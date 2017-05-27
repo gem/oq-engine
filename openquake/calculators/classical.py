@@ -320,7 +320,9 @@ class PSHACalculator(base.HazardCalculator):
         for t, tile in enumerate(tiles):
             logging.info('Instantiating src_filter for tile %d', t + 1)
             if src_filter is None or oq.num_tiles:
-                src_filter = SourceFilter(tile, oq.maximum_distance)
+                # used only for the heavy sources, after their split
+                src_filter = SourceFilter(tile, oq.maximum_distance,
+                                          use_rtree=False)
             num_tasks = 0
             num_sources = 0
             for sm in csm.source_models:
