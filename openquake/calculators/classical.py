@@ -322,6 +322,7 @@ class PSHACalculator(base.HazardCalculator):
             if src_filter is None or oq.num_tiles:
                 src_filter = SourceFilter(tile, oq.maximum_distance)
             num_tasks = 0
+            num_sources = 0
             for sm in csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
@@ -342,13 +343,14 @@ class PSHACalculator(base.HazardCalculator):
                         self.csm.add_infos(sg.sources)
                         yield sg, src_filter, gsims, param, monitor
                         num_tasks += 1
+                        num_sources += len(sg)
                     else:
                         for block in csm.split_sources(
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
-            logging.info('Sent %d sources in %d tasks',
-                         csm.get_num_sources(), num_tasks)
+                        num_sources += len(block)
+            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
     def store_source_info(self, infos, acc):
