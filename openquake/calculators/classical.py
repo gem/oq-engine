@@ -307,14 +307,19 @@ class PSHACalculator(base.HazardCalculator):
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
         if oq.num_tiles:
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
+            maxweight = csm.get_maxweight(
+                oq.concurrent_tasks / (oq.num_tiles or 1))
+            logging.info('Using maxweight=%d', maxweight)
         else:
             tiles = [self.sitecol]
         for t, tile in enumerate(tiles):
             logging.info('Instantiating src_filter for tile %d', t + 1)
             src_filter = SourceFilter(tile, oq.maximum_distance)
             filtered_csm = csm.filter(src_filter)
-            maxweight = filtered_csm.get_maxweight(
-                oq.concurrent_tasks / (oq.num_tiles or 1))
+            if oq.num_tiles == 0:
+                maxweight = filtered_csm.get_maxweight(
+                    oq.concurrent_tasks / (oq.num_tiles or 1))
+                logging.info('Using maxweight=%d', maxweight)
             num_tasks = 0
             for sm in filtered_csm.source_models:
                 for sg in sm.src_groups:
@@ -347,8 +352,8 @@ class PSHACalculator(base.HazardCalculator):
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
-            logging.info('Sent %d sources in %d tasks, maxweight=%d',
-                         filtered_csm.get_num_sources(), num_tasks, maxweight)
+            logging.info('Sent %d sources in %d tasks',
+                         filtered_csm.get_num_sources(), num_tasks)
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source
