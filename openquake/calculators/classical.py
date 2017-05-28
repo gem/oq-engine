@@ -310,10 +310,10 @@ class PSHACalculator(base.HazardCalculator):
             self.csm = csm = csm.filter(src_filter)
         else:
             src_filter = None
-        maxweight = csm.get_maxweight(
-            oq.concurrent_tasks / (oq.num_tiles or 1))
+        maxweight = csm.get_maxweight(oq.concurrent_tasks)
         numheavy = len(csm.get_sources('heavy', maxweight))
         if oq.num_tiles:
+            maxweight *= 2
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
         else:
             tiles = [self.sitecol]
