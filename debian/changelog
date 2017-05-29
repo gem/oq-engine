@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Fixed an issue that was forcing users to install 'git' on macOS
+    even for installations made from the standalone installer or pip
+
 python-oq-hazardlib (0.24.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
