@@ -862,17 +862,16 @@ def save_disagg_to_csv(metadata, matrices):
     base_header = ','.join(
         '%s=%s' % (key, value) for key, value in metadata.items()
         if value is not None and key not in skip_keys)
-    for disag_type, (poe, iml, matrix, fname) in matrices.items():
+    for disag_tup, (poe, iml, matrix, fname) in matrices.items():
         header = '%s,poe=%s,iml=%s\n' % (base_header, poe, iml)
 
-        if disag_type == ('Mag', 'Lon', 'Lat'):
+        if disag_tup == ('Mag', 'Lon', 'Lat'):
             matrix = numpy.swapaxes(matrix, 0, 1)
             matrix = numpy.swapaxes(matrix, 1, 2)
-            disag_type = ('Lon', 'Lat', 'Mag')
+            disag_tup = ('Lon', 'Lat', 'Mag')
 
-        variables = disag_type
-        axis = [metadata[v] for v in variables]
-        header += ','.join(v for v in variables)
+        axis = [metadata[v] for v in disag_tup]
+        header += ','.join(v for v in disag_tup)
         header += ',poe'
 
         # compute axis mid points
