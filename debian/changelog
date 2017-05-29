@@ -2,6 +2,10 @@
   * Restored the tiling functionality in the classical calculator; to enable
     it, set `num_tiles` in the job.ini file
 
+  [Daniele Viganò]
+  * Now the command `oq webui start` tries to open a browser tab
+    with the WebUI loaded
+
 python-oq-engine (2.4.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
