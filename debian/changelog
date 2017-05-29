@@ -4,6 +4,10 @@
   * Fixed a small bug in `oq plot` and added a test
 
   [Daniele Viganò]
+  * Added `collectstatic` and `createsuperuser` subcommands to the
+    `oq webui` command
+  * Added a `local_settings.py.pam` template to use PAM as the authentication
+    provider for API and WebUI
   * Now the command `oq webui start` tries to open a browser tab
     with the WebUI loaded
 
