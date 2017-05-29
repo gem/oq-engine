@@ -44,7 +44,7 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
         for j, imt in enumerate(imtls):
             ax = fig.add_subplot(n_sites, n_imts, i * n_imts + j + 1)
             ax.grid(True)
-            ax.set_xlabel('Hazard curve on site %d, %s' % (site, imt))
+            ax.set_xlabel('site %d, %s' % (site, imt))
             ax.set_ylim([0, 1])
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('PoE')
@@ -59,7 +59,7 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
 def get_pmaps(dstore, indices):
     getter = calc.PmapGetter(dstore)
     pmaps = getter.get_pmaps(indices)
-    weights = [rlz.weight for rlz in getter.rlzs]
+    weights = dstore['realizations']['weight']
     mean = compute_pmap_stats(pmaps, [mean_curve], weights)
     return mean, pmaps
 
