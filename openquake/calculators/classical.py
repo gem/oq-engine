@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -276,9 +276,7 @@ class PSHACalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        oq = self.oqparam
         monitor = self.monitor(self.core_task.__name__)
-
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, monitor)
             iterargs = saving_sources_by_task(allargs, self.datastore)
@@ -305,23 +303,30 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
+        if len(self.sitecol) <= 10000:
+            src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+            self.csm = csm = csm.filter(src_filter)
+        else:
+            src_filter = None
+        maxweight = csm.get_maxweight(oq.concurrent_tasks)
+        numheavy = len(csm.get_sources('heavy', maxweight))
         if oq.num_tiles:
+            maxweight *= 2
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
-            maxweight = csm.get_maxweight(
-                oq.concurrent_tasks / (oq.num_tiles or 1))
-            logging.info('Using maxweight=%d', maxweight)
         else:
             tiles = [self.sitecol]
+        logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
+                     maxweight, numheavy, len(tiles))
         for t, tile in enumerate(tiles):
-            logging.info('Instantiating src_filter for tile %d', t + 1)
-            src_filter = SourceFilter(tile, oq.maximum_distance)
-            filtered_csm = csm.filter(src_filter)
-            if oq.num_tiles == 0:
-                maxweight = filtered_csm.get_maxweight(
-                    oq.concurrent_tasks / (oq.num_tiles or 1))
-                logging.info('Using maxweight=%d', maxweight)
+            if src_filter is None or oq.num_tiles:
+                # used only for the heavy sources, after their split
+                if numheavy:
+                    logging.info('Instantiating src_filter for tile %d', t + 1)
+                src_filter = SourceFilter(tile, oq.maximum_distance,
+                                          use_rtree=numheavy > 0)
             num_tasks = 0
-            for sm in filtered_csm.source_models:
+            num_sources = 0
+            for sm in self.csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
                     imtls=oq.imtls,
@@ -341,19 +346,15 @@ class PSHACalculator(base.HazardCalculator):
                         self.csm.add_infos(sg.sources)
                         yield sg, src_filter, gsims, param, monitor
                         num_tasks += 1
-                    elif oq.num_tiles:
-                        self.csm.add_infos(sg.sources)
-                        srcs = sorted(sg.sources, key=weight)
-                        for block in block_splitter(srcs, maxweight, weight):
-                            yield block, src_filter, gsims, param, monitor
-                            num_tasks += 1
+                        num_sources += len(sg)
                     else:
-                        for block in csm.split_sources(
+                        for block in self.csm.split_sources(
                                 sg.sources, src_filter, maxweight):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
-            logging.info('Sent %d sources in %d tasks',
-                         filtered_csm.get_num_sources(), num_tasks)
+                            num_sources += len(block)
+            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+        source.split_map.clear()
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source
@@ -414,11 +415,10 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     if sum(len(pmap) for pmap in pmaps) == 0:  # no data
         return {}
     pmap_by_kind = {}
-    if len(pgetter.weights) > 1 and hstats:
-        for kind, stat in hstats:
-            with monitor('compute ' + kind):
-                pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
-            pmap_by_kind[kind] = pmap
+    for kind, stat in hstats:
+        with monitor('compute ' + kind):
+            pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
+        pmap_by_kind[kind] = pmap
     return pmap_by_kind
 
 
@@ -449,6 +449,8 @@ class ClassicalCalculator(PSHACalculator):
             return
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
+        if len(rlzs) == 1 or not oq.hazard_stats():
+            return {}
 
         # initialize datasets
         N = len(self.sitecol)
