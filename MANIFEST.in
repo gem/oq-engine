@@ -1,5 +1,6 @@
 include README.md LICENSE CONTRIBUTORS.txt
 include openquake/engine/openquake.cfg
+include openquake/server/local_settings.py.pam
 include openquake/server/local_settings.py.standalone
 
 recursive-include openquake/server/db *.sql
