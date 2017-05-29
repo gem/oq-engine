@@ -57,7 +57,6 @@ from __future__ import division
 import sys
 import time
 import operator
-import collections
 import numpy
 
 from openquake.baselib.python3compat import raise_, zip
@@ -194,7 +193,7 @@ def pmap_from_grp(
         gsims = [gsims[trt]]
     srcs = []
     for src in sources:
-        if isinstance(src, collections.Iterable):  # MultiPointSource
+        if hasattr(src, '__iter__'):  # MultiPointSource
             srcs.extend(src)
         else:
             srcs.append(src)

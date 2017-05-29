@@ -308,6 +308,9 @@ def split_source(src):
     :param src:
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
     """
+    if hasattr(src, '__iter__'):  # multipoint source
+        for s in src:
+            yield s
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
             yield s
