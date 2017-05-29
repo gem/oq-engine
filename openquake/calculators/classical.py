@@ -277,9 +277,7 @@ class PSHACalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        oq = self.oqparam
         monitor = self.monitor(self.core_task.__name__)
-
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, monitor)
             iterargs = saving_sources_by_task(allargs, self.datastore)
@@ -389,11 +387,10 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     if sum(len(pmap) for pmap in pmaps) == 0:  # no data
         return {}
     pmap_by_kind = {}
-    if len(pgetter.weights) > 1 and hstats:
-        for kind, stat in hstats:
-            with monitor('compute ' + kind):
-                pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
-            pmap_by_kind[kind] = pmap
+    for kind, stat in hstats:
+        with monitor('compute ' + kind):
+            pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
+        pmap_by_kind[kind] = pmap
     return pmap_by_kind
 
 
@@ -424,6 +421,8 @@ class ClassicalCalculator(PSHACalculator):
             return
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
+        if len(rlzs) == 1 or not oq.hazard_stats():
+            return {}
 
         # initialize datasets
         N = len(self.sitecol)
