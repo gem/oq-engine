@@ -39,7 +39,8 @@ def get_vulnerability_functions_04(node, fname):
     :returns:
         a dictionary imt, taxonomy -> vulnerability function
     """
-    logging.warn('Please upgrade %s to NRML 0.5', fname)
+    # NB: the fname below can contain non-ASCII characters
+    logging.warn(u'Please upgrade %s to NRML 0.5', fname)
     # NB: the IMTs can be duplicated and with different levels, each
     # vulnerability function in a set will get its own levels
     imts = set()
