@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * If there are no statistical hazard curves to compute, do not transfer
+    anything
   * Fixed a small bug in `oq plot` and added a test
 
   [Daniele Viganò]
