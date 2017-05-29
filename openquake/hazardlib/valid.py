@@ -46,7 +46,7 @@ def disagg_outputs(value):
     """
     Validate disaggregation outputs. For instance
 
-    >>> disagg_outputs('TRT,Mag_Dist')
+    >>> disagg_outputs('TRT Mag_Dist')
     ['TRT', 'Mag_Dist']
     """
     values = value.split()
