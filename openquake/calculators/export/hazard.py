@@ -27,6 +27,7 @@ import numpy
 from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.general import (
     humansize, get_array, group_array, DictArray)
+from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
@@ -861,14 +862,13 @@ def save_disagg_to_csv(metadata, matrices):
     base_header = ','.join(
         '%s=%s' % (key, value) for key, value in metadata.items()
         if value is not None and key not in skip_keys)
-
     for disag_type, (poe, iml, matrix, fname) in matrices.items():
         header = '%s,poe=%s,iml=%s\n' % (base_header, poe, iml)
 
-        if disag_type == 'Mag,Lon,Lat':
+        if disag_type == ('Mag', 'Lon', 'Lat'):
             matrix = numpy.swapaxes(matrix, 0, 1)
             matrix = numpy.swapaxes(matrix, 1, 2)
-            disag_type = 'Lon,Lat,Mag'
+            disag_type = ('Lon', 'Lat', 'Mag')
 
         variables = disag_type
         axis = [metadata[v] for v in variables]
@@ -894,6 +894,7 @@ def save_disagg_to_csv(metadata, matrices):
 @export.add(('disagg', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
+    disagg_outputs = oq.disagg_outputs or valid.disagg_outs
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     group = dstore['disagg']
     fnames = []
@@ -920,10 +921,10 @@ def export_disagg_csv(ekey, dstore):
         metadata['Eps'] = attrs['eps_bin_edges']
         metadata['TRT'] = attrs['trts']
         data = {}
-        for dim_labels in disagg.pmf_map:
-            label = '_'.join(dim_labels)
+        for label in disagg_outputs:
+            tup = tuple(label.split('_'))
             fname = dstore.export_path(key + '_%s.csv' % label)
-            data[dim_labels] = poe, iml, matrix[label].value, fname
+            data[tup] = poe, iml, matrix[label].value, fname
             fnames.append(fname)
         save_disagg_to_csv(metadata, data)
     return fnames
