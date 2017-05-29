@@ -19,7 +19,7 @@ from __future__ import print_function
 import os
 import glob
 import operator
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from openquake.hazardlib import valid
 from openquake.commonlib import datastore
