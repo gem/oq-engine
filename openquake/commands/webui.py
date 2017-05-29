@@ -32,7 +32,7 @@ def rundjango(subcmd, hostport=None, skip_browser=False):
     if hostport:
         args.append(hostport)
     p = subprocess.Popen(args)
-    if not skip_browser:
+    if subcmd == 'runserver' and not skip_browser:
         url = 'http://' + hostport
         if check_webserver_running(url):
             webbrowser.open(url)
