@@ -31,6 +31,8 @@ $ python -m openquake.server.manage migrate
 
 Add a new local superuser:
 ```bash
+$ oq webui createsuperuser
+# or
 $ python -m openquake.server.manage createsuperuser
 ```
 
@@ -45,7 +47,7 @@ On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicor
 
 #### gunicorn
 
-*gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...).
+*gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). When using `python-oq-libs` for RedHat or Debian *gunicorn* is already provided.
 
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 
@@ -70,6 +72,8 @@ STATIC_ROOT = '/var/www/webui'
 then collect static files:
 
 ```bash
+$ oq webui collectstatic
+# or
 $ python -m openquake.server.manage collectstatic
 ```
 
