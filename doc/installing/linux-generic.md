@@ -89,6 +89,7 @@ to start the [WebUI](../running/server.md) use instead
 ```bash
 oq webui start
 ```
+The WebUI will be started and a new browser window will be opened.
 
 More information are available on [How to run the OpenQuake Engine](../running/unix.md) and [The OpenQuake Engine server and WebUI](../running/server.md).
 

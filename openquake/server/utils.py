@@ -17,7 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import getpass
+import requests
+import logging
 
+from time import sleep
 from django.conf import settings
 from openquake.engine import __version__ as oqversion
 
@@ -53,7 +56,31 @@ def oq_server_context_processor(request):
 
     context['oq_engine_server_url'] = ('//' +
                                        request.META.get('HTTP_HOST',
-                                                        'localhost:8000'))
+                                                        'localhost:8800'))
     context['oq_engine_version'] = oqversion
 
     return context
+
+
+def check_webserver_running(url="http://localhost:8800", max_retries=30):
+    """
+    Returns True if a given URL is responding within a given timeout.
+    """
+
+    retry = 0
+    response = ''
+    success = False
+
+    while response != requests.codes.ok and retry < max_retries:
+        try:
+            response = requests.head(url, allow_redirects=True).status_code
+            success = True
+        except:
+            sleep(1)
+
+        retry += 1
+
+    if not success:
+        logging.warn('Unable to connect to %s within %s retries'
+                     % (url, max_retries))
+    return success
