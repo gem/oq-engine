@@ -310,21 +310,20 @@ class PSHACalculator(base.HazardCalculator):
         with self.monitor('prefiltering source model',
                           autoflush=True, measuremem=True):
             src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-            self.csm = csm.filter(src_filter)
+            self.csm = csm = csm.filter(src_filter)
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         numheavy = len(self.csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                      maxweight, numheavy, len(tiles))
         for t, tile in enumerate(tiles):
             if oq.num_tiles:
-                # used only for the heavy sources, after their split
-                if numheavy:
+                with self.monitor('prefiltering source model', autoflush=True):
                     logging.info('Instantiating src_filter for tile %d', t + 1)
-                src_filter = SourceFilter(tile, oq.maximum_distance,
-                                          use_rtree=numheavy > 0)
+                    src_filter = SourceFilter(tile, oq.maximum_distance)
+                    csm = self.csm.filter(src_filter)
             num_tasks = 0
             num_sources = 0
-            for sm in self.csm.source_models:
+            for sm in csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
                     imtls=oq.imtls,
