@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a parameter `disagg_outputs` to specify the kind of disaggregation
+    outputs to export
   * Raised an early error if the consequence model is missing some taxonomies
   * Restored the tiling functionality in the classical calculator; to enable
     it, set `num_tiles` in the job.ini file
