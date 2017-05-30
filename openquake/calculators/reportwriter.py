@@ -70,15 +70,6 @@ def no_prefilter(csm, src_filter):
     return csm
 
 
-def split_sources(csm, sources, src_filter, maxweight):
-    """
-    Fast replacement of CompositeSourceModel.split_sources
-    """
-    csm.add_infos(sources)
-    return general.block_splitter(
-        sources, maxweight, weight=operator.attrgetter('weight'))
-
-
 class ReportWriter(object):
     """
     A particularly smart view over the datastore
@@ -191,8 +182,7 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     p = mock.patch.object
     with p(PSHACalculator, 'core_task', count_eff_ruptures), \
-         p(source.CompositeSourceModel, 'filter', no_prefilter), \
-         p(source.CompositeSourceModel, 'split_sources', split_sources):
+         p(source.CompositeSourceModel, 'filter', no_prefilter):
         if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
