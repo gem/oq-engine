@@ -19,12 +19,13 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 from copy import deepcopy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 
 
 @with_slots
-class AreaSource(PointSource):
+class AreaSource(ParametricSeismicSource):
     """
     Area source represents uniform seismicity occurring over a geographical
     region.
@@ -39,7 +40,9 @@ class AreaSource(PointSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
-    _slots_ = PointSource._slots_ + 'polygon area_discretization'.split()
+    _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
+    lower_seismogenic_depth nodal_plane_distribution hypocenter_distribution
+    polygon area_discretization'''.split()
 
     MODIFICATIONS = set(())
 
@@ -57,13 +60,14 @@ class AreaSource(PointSource):
         super(AreaSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
-            temporal_occurrence_model, upper_seismogenic_depth,
-            lower_seismogenic_depth, location=None,
-            nodal_plane_distribution=nodal_plane_distribution,
-            hypocenter_distribution=hypocenter_distribution,
-        )
+            temporal_occurrence_model)
+        self.upper_seismogenic_depth = upper_seismogenic_depth
+        self.lower_seismogenic_depth = lower_seismogenic_depth
+        self.nodal_plane_distribution = nodal_plane_distribution
+        self.hypocenter_distribution = hypocenter_distribution
         self.polygon = polygon
         self.area_discretization = area_discretization
+        self.max_radius = 0
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
@@ -149,13 +153,7 @@ class AreaSource(PointSource):
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
 
-    def filter_sites_by_distance_to_source(self, integration_distance, sites):
-        """
-        Overrides :meth:`implementation
-        <openquake.hazardlib.source.point.PointSource.filter_sites_by_distance_to_source>`
-        of the point source class just to call the :meth:`base class one
-        <openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source>`.
-        """
-        return super(PointSource, self).filter_sites_by_distance_to_source(
-            integration_distance, sites
-        )
+    _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
+    _get_max_rupture_projection_radius = PointSource.__dict__[
+        '_get_max_rupture_projection_radius']
+    _get_rupture_surface = PointSource.__dict__['_get_rupture_surface']
