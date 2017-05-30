@@ -29,7 +29,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.baselib.general import groupby, AccumDict, writetmp
-from openquake.baselib.python3compat import configparser, encode
+from openquake.baselib.python3compat import configparser, encode, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
@@ -115,7 +115,7 @@ def get_params(job_inis):
 
     # drectory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
-    base_path = os.path.dirname(job_ini)
+    base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
