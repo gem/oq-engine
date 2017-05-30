@@ -19,12 +19,13 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 from copy import deepcopy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 
 
 @with_slots
-class AreaSource(PointSource):
+class AreaSource(ParametricSeismicSource):
     """
     Area source represents uniform seismicity occurring over a geographical
     region.
@@ -54,16 +55,17 @@ class AreaSource(PointSource):
                  nodal_plane_distribution, hypocenter_distribution,
                  # area-specific parameters
                  polygon, area_discretization):
-        super(AreaSource, self).__init__(
+        PointSource.__init__(
+            self,
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
             temporal_occurrence_model, upper_seismogenic_depth,
             lower_seismogenic_depth, location=None,
             nodal_plane_distribution=nodal_plane_distribution,
-            hypocenter_distribution=hypocenter_distribution,
-        )
+            hypocenter_distribution=hypocenter_distribution)
         self.polygon = polygon
         self.area_discretization = area_discretization
+        self.maxradius = 0
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
@@ -159,3 +161,7 @@ class AreaSource(PointSource):
         return super(PointSource, self).filter_sites_by_distance_to_source(
             integration_distance, sites
         )
+
+    _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
+    _get_max_rupture_projection_radius = PointSource.__dict__[
+        '_get_max_rupture_projection_radius']
