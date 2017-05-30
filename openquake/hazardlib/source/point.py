@@ -351,3 +351,17 @@ class PointSource(ParametricSeismicSource):
         return PlanarSurface(self.rupture_mesh_spacing, nodal_plane.strike,
                              nodal_plane.dip, left_top, right_top,
                              right_bottom, left_bottom)
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing all points, enlarged by the maximum distance
+        and the maximum rupture projection radius (upper limit).
+       """
+        maxradius = self._get_max_rupture_projection_radius()
+        angle = (maxdist + maxradius) * KM_TO_DEGREES
+        x = self.location.x
+        y = self.location.y
+        import pdb; pdb.set_trace()
+        return x - angle, y - angle, x + angle, y + angle
+
+KM_TO_DEGREES = 0.0089932
