@@ -319,25 +319,6 @@ def split_source(src):
         yield src
 
 
-def split_filter_source(src, src_filter):
-    """
-    :param src: a source to split
-    :param src_filter: a SourceFilter instance
-    :returns: a list of split sources
-    """
-    has_serial = hasattr(src, 'serial')
-    split_sources = []
-    start = 0
-    for split in split_source(src):
-        if has_serial:
-            nr = split.num_ruptures
-            split.serial = src.serial[start:start + nr]
-            start += nr
-        if src_filter.get_close_sites(split) is not None:
-            split_sources.append(split)
-    return split_sources
-
-
 def split_coords_2d(seq):
     """
     :param seq: a flat list with lons and lats
