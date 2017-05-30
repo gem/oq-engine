@@ -65,6 +65,7 @@ class AreaSource(ParametricSeismicSource):
         self.hypocenter_distribution = hypocenter_distribution
         self.polygon = polygon
         self.area_discretization = area_discretization
+        self.location = None
         self.max_radius = 0
 
     def get_rupture_enclosing_polygon(self, dilation=0):
