@@ -24,6 +24,8 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 
+KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
+
 
 @with_slots
 class PointSource(ParametricSeismicSource):
@@ -362,5 +364,3 @@ class PointSource(ParametricSeismicSource):
         x = self.location.x
         y = self.location.y
         return x - angle, y - angle, x + angle, y + angle
-
-KM_TO_DEGREES = 0.0089932
