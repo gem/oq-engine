@@ -683,7 +683,7 @@ class CompositeSourceModel(collections.Sequence):
         heavy = [src for src in sources if src.weight > maxweight]
         self.add_infos(heavy)
         for src in heavy:
-            srcs = sourceconverter.split_filter_source(src, src_filter)
+            srcs = split_filter_source(src, src_filter)
             if len(srcs) > 1:
                 logging.info(
                     'Splitting %s "%s" in %d sources', src.__class__.__name__,
@@ -712,6 +712,32 @@ class CompositeSourceModel(collections.Sequence):
     def __len__(self):
         """Return the number of underlying source models"""
         return len(self.source_models)
+
+
+split_map = {}  # src -> split sources
+
+
+def split_filter_source(src, src_filter):
+    """
+    :param src: a source to split
+    :param src_filter: a SourceFilter instance
+    :returns: a list of split sources
+    """
+    has_serial = hasattr(src, 'serial')
+    split_sources = []
+    start = 0
+    try:
+        splits = split_map[src]
+    except KeyError:
+        splits = split_map[src] = list(sourceconverter.split_source(src))
+    for split in splits:
+        if has_serial:
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
+            start += nr
+        if src_filter.get_close_sites(split) is not None:
+            split_sources.append(split)
+    return split_sources
 
 
 def collect_source_model_paths(smlt):
