@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Restored the tiling functionality in the classical calculator; to enable
+    it, set `num_tiles` in the job.ini file
   * If there are no statistical hazard curves to compute, do not transfer
     anything
   * Fixed a small bug in `oq plot` and added a test
