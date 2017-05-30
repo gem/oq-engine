@@ -305,6 +305,7 @@ class PSHACalculator(base.HazardCalculator):
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
         if oq.num_tiles:
             # we don't do prefiltering in the tiling calculator for speed
+            # (actually we will do some prefiltering of the heavy sources)
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
         else:
             tiles = [self.sitecol]
