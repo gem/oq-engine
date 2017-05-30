@@ -52,11 +52,14 @@ def source_model_info(node):
         src_classes.update(c)
     dtlist = [('TRT', (bytes, 30))] + [
         (name, int) for name in sorted(src_classes)]
-    out = numpy.zeros(len(node), dtlist)
+    out = numpy.zeros(len(node) + 1, dtlist)
     for i, c in enumerate(counters):
         out[i]['TRT'] = trts[i]
         for name in src_classes:
             out[i][name] = c[name]
+    out[-1]['TRT'] = 'Total'
+    for name in out.dtype.names[1:]:
+        out[-1][name] = out[name][:-1].sum()
     return rst_table(out)
 
 
