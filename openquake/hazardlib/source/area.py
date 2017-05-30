@@ -151,17 +151,8 @@ class AreaSource(ParametricSeismicSource):
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
 
-    def filter_sites_by_distance_to_source(self, integration_distance, sites):
-        """
-        Overrides :meth:`implementation
-        <openquake.hazardlib.source.point.PointSource.filter_sites_by_distance_to_source>`
-        of the point source class just to call the :meth:`base class one
-        <openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source>`.
-        """
-        return super(PointSource, self).filter_sites_by_distance_to_source(
-            integration_distance, sites
-        )
-
     _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
     _get_max_rupture_projection_radius = PointSource.__dict__[
         '_get_max_rupture_projection_radius']
+    filter_sites_by_distance_to_source = PointSource.__dict__[
+        'filter_sites_by_distance_to_source']
