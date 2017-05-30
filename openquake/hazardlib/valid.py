@@ -32,11 +32,28 @@ from openquake.baselib.python3compat import with_metaclass
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
+from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
 GSIM = gsim.get_available_gsims()
+
+disagg_outs = ['_'.join(tup) for tup in sorted(disagg.pmf_map)]
+
+
+def disagg_outputs(value):
+    """
+    Validate disaggregation outputs. For instance
+
+    >>> disagg_outputs('TRT Mag_Dist')
+    ['TRT', 'Mag_Dist']
+    """
+    values = value.split()
+    for val in values:
+        if val not in disagg_outs:
+            raise ValueError('Invalid disagg output: %s' % val)
+    return values
 
 
 # more tests are in tests/valid_test.py
