@@ -55,17 +55,17 @@ class AreaSource(ParametricSeismicSource):
                  nodal_plane_distribution, hypocenter_distribution,
                  # area-specific parameters
                  polygon, area_discretization):
-        PointSource.__init__(
-            self,
+        super(AreaSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
-            temporal_occurrence_model, upper_seismogenic_depth,
-            lower_seismogenic_depth, location=None,
-            nodal_plane_distribution=nodal_plane_distribution,
-            hypocenter_distribution=hypocenter_distribution)
+            temporal_occurrence_model)
+        self.upper_seismogenic_depth = upper_seismogenic_depth
+        self.lower_seismogenic_depth = lower_seismogenic_depth
+        self.nodal_plane_distribution = nodal_plane_distribution
+        self.hypocenter_distribution = hypocenter_distribution
         self.polygon = polygon
         self.area_discretization = area_discretization
-        self.maxradius = 0
+        self.max_radius = 0
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
