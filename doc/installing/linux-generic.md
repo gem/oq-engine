@@ -47,6 +47,7 @@ Uncompressing installer for the OpenQuake Engine  100%
 Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /home/auser:
 Copying the files in /home/auser/openquake. Please wait.
 Finalizing the installation. Please wait.
+Do you want to make the 'oq' command available by default? [Y/n]: y
 Installation completed. To enable it run 'source /home/auser/openquake/env.sh'
 ```
 
@@ -65,14 +66,32 @@ rm -Rf ~/openquake
 
 ## Run the OpenQuake Engine
 
-Before running the OpenQuake Engine its environment must be loaded
+If _make the 'oq' command available by default_ as been set to 'Y' (default) during the installation
+the 'oq' command will be available by default after the terminal has been restarted.
+
+To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, yum must run
 
 ```bash
 # default is ~/openquake
 source ~/openquake/env.sh
 ```
 
-Continue on [How to run the OpenQuake Engine](../running/unix.md)
+before the OpenQuake Engine can be properly used.
+
+To run the OpenQuake via command line use
+
+```bash
+oq engine --run </path/to/job.ini>
+```
+
+to start the [WebUI](../running/server.md) use instead
+
+```bash
+oq webui start
+```
+The WebUI will be started and a new browser window will be opened.
+
+More information are available on [How to run the OpenQuake Engine](../running/unix.md) and [The OpenQuake Engine server and WebUI](../running/server.md).
 
 ***
 
