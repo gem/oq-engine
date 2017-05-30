@@ -19,7 +19,6 @@
 from __future__ import division
 import logging
 import operator
-import collections
 from functools import partial
 import numpy
 
@@ -32,14 +31,14 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.commonlib import datastore, source, calc, util
 from openquake.calculators import base
 
 U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
-
-HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+weight = operator.attrgetter('weight')
 
 
 class BBdict(AccumDict):
@@ -303,14 +302,29 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        logging.info('Using a maxweight of %d', maxweight)
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
-        for sm in csm.source_models:
-            for sg in sm.src_groups:
-                logging.info('Sending source group #%d of %d (%s, %d sources)',
-                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
-                gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
+        if oq.num_tiles:
+            tiles = self.sitecol.split_in_tiles(oq.num_tiles)
+        else:
+            tiles = [self.sitecol]
+        with self.monitor('prefiltering source model',
+                          autoflush=True, measuremem=True):
+            src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+            self.csm = csm.filter(src_filter)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        numheavy = len(self.csm.get_sources('heavy', maxweight))
+        logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
+                     maxweight, numheavy, len(tiles))
+        for t, tile in enumerate(tiles):
+            if oq.num_tiles:
+                # used only for the heavy sources, after their split
+                if numheavy:
+                    logging.info('Instantiating src_filter for tile %d', t + 1)
+                src_filter = SourceFilter(tile, oq.maximum_distance,
+                                          use_rtree=numheavy > 0)
+            num_tasks = 0
+            num_sources = 0
+            for sm in self.csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
                     imtls=oq.imtls,
@@ -318,15 +332,27 @@ class PSHACalculator(base.HazardCalculator):
                     disagg=oq.poes_disagg or oq.iml_disagg,
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-                if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
-                    param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
-                if sg.src_interdep == 'mutex':  # do not split the group
-                    self.csm.add_infos(sg.sources)
-                    yield sg, self.src_filter, gsims, param, monitor
-                else:
-                    for block in self.csm.split_sources(
-                            sg.sources, self.src_filter, maxweight):
-                        yield block, self.src_filter, gsims, param, monitor
+                for sg in sm.src_groups:
+                    if oq.num_tiles == 0:
+                        logging.info(
+                            'Sending source group #%d of %d (%s, %d sources)',
+                            sg.id + 1, ngroups, sg.trt, len(sg.sources))
+                    gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
+                    if oq.poes_disagg or oq.iml_disagg:  # only for disagg
+                        param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
+                    if sg.src_interdep == 'mutex':  # do not split the group
+                        self.csm.add_infos(sg.sources)
+                        yield sg, src_filter, gsims, param, monitor
+                        num_tasks += 1
+                        num_sources += len(sg)
+                    else:
+                        for block in self.csm.split_sources(
+                                sg.sources, src_filter, maxweight):
+                            yield block, src_filter, gsims, param, monitor
+                            num_tasks += 1
+                            num_sources += len(block)
+            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+        source.split_map.clear()
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source
