@@ -10,6 +10,6 @@ INSTALLED_APPS += (
     'django_pam',
 )
 
-AUTHENTICATION_BACKENDS = (
+AUTHENTICATION_BACKENDS += (
     'django_pam.auth.backends.PAMBackend',
 )
