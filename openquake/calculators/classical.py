@@ -303,22 +303,19 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
-        if len(self.sitecol) <= 10000:
-            src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-            self.csm = csm = csm.filter(src_filter)
-        else:
-            src_filter = None
-        maxweight = csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(csm.get_sources('heavy', maxweight))
         if oq.num_tiles:
-            maxweight *= 2
+            # we don't do prefiltering in the tiling calculator for speed
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
         else:
             tiles = [self.sitecol]
+            src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+            self.csm = csm.filter(src_filter)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        numheavy = len(self.csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                      maxweight, numheavy, len(tiles))
         for t, tile in enumerate(tiles):
-            if src_filter is None or oq.num_tiles:
+            if oq.num_tiles:
                 # used only for the heavy sources, after their split
                 if numheavy:
                     logging.info('Instantiating src_filter for tile %d', t + 1)
