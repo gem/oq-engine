@@ -73,6 +73,7 @@ from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
 from openquake.hazardlib.source.multi import MultiPointSource
 
+
 @contextmanager
 def context(src):
     """
@@ -330,8 +331,7 @@ class SourceFilter(object):
                 yield source, sites
             return
         for src in sources:
-            if (not self.integration_distance or
-                    isinstance(src, MultiPointSource)):  # do not filter
+            if not self.integration_distance:  # do not filter
                 yield src, sites
             elif self.use_rtree:  # Rtree filtering, used in the controller
                 box = self.get_affected_box(src)

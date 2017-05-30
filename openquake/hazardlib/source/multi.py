@@ -19,6 +19,8 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.point import PointSource
 
+KM_TO_DEGREES = 0.0089932
+
 
 class MultiPointSource(ParametricSeismicSource):
     """
@@ -47,6 +49,7 @@ class MultiPointSource(ParametricSeismicSource):
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
         self.mesh = mesh
+        self.max_radius = 0
 
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
@@ -88,3 +91,20 @@ class MultiPointSource(ParametricSeismicSource):
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """No polygon"""
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing all points, enlarged by the maximum distance
+        and the maximum rupture projection radius (upper limit).
+        """
+        maxradius = self._get_max_rupture_projection_radius()
+        angle = (maxdist + maxradius) * KM_TO_DEGREES
+        min_lon = self.mesh.lons.min() - angle
+        max_lon = self.mesh.lons.max() + angle
+        min_lat = self.mesh.lats.min() - angle
+        max_lat = self.mesh.lats.max() + angle
+        return min_lon, min_lat, max_lon, max_lat
+
+    _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
+    _get_max_rupture_projection_radius = PointSource.__dict__[
+        '_get_max_rupture_projection_radius']
