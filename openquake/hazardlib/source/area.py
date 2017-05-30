@@ -155,5 +155,4 @@ class AreaSource(ParametricSeismicSource):
     _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
     _get_max_rupture_projection_radius = PointSource.__dict__[
         '_get_max_rupture_projection_radius']
-    filter_sites_by_distance_to_source = PointSource.__dict__[
-        'filter_sites_by_distance_to_source']
+    _get_rupture_surface = PointSource.__dict__['_get_rupture_surface']
