@@ -33,7 +33,7 @@ from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib import riskinput, __version__ as engine_version
-from openquake.commonlib import readinput, datastore, source, calc
+from openquake.commonlib import readinput, datastore, source, calc, riskmodels
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -568,11 +568,23 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if self.oqparam.job_type == 'risk':
+            taxonomies = set(self.taxonomies)
+
             # check that we are covering all the taxonomies in the exposure
-            missing = set(self.taxonomies) - set(self.riskmodel.taxonomies)
+            missing = taxonomies - set(self.riskmodel.taxonomies)
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
+
+            # same check for the consequence models, if any
+            consequence_models = riskmodels.get_risk_models(
+                self.oqparam, 'consequence')
+            for lt, cm in consequence_models.items():
+                missing = taxonomies - set(cm)
+                if missing:
+                    raise ValueError(
+                        'Missing consequenceFunctions for %s' %
+                        ' '.join(missing))
 
     def post_process(self):
         """For compatibility with the engine"""

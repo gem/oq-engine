@@ -142,14 +142,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        taxonomies = set(self.taxonomies)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        for lt, cm in self.param['consequence_models'].items():
-            missing = taxonomies - set(cm)
-            if missing:
-                raise ValueError(
-                    'Missing consequenceFunctions for %s' % ' '.join(missing))
         self.param['number_of_ground_motion_fields'] = (
             self.oqparam.number_of_ground_motion_fields)
         self.datastore['etags'], gmfs = calc.get_gmfs(
