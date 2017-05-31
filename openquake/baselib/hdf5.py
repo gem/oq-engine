@@ -344,7 +344,7 @@ class File(h5py.File):
         attrib = nodedict.get('attrib', {})
         path = '/'.join([root, tag])
         nodes = nodedict.get('nodes', [])
-        if text not in ('', None):
+        if text not in ('', None):  # text=0 is stored
             try:
                 setitem(path, text)
             except Exception as exc:

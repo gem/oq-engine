@@ -26,7 +26,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, InvalidFile
 
 MAXWEIGHT = 200  # tuned by M. Simionato
 U32 = numpy.uint32
@@ -995,7 +995,9 @@ def update_source_model(sm_node):
     """
     i = 0
     for group in sm_node:
-        assert group.tag.endswith('sourceGroup'), 'wrong source model format!'
+        if not group.tag.endswith('sourceGroup'):
+            raise InvalidFile('wrong NRML, got %s instead of '
+                              'sourceGroup' % group.tag)
         psrcs = []
         others = []
         for src in group:
