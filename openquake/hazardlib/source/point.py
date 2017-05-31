@@ -25,6 +25,12 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
+DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
+
+
+def angular_distance(km, lat):
+    """Return the angular distance of two points at the given latitude"""
+    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
 @with_slots
@@ -358,9 +364,9 @@ class PointSource(ParametricSeismicSource):
         """
         Bounding box containing all points, enlarged by the maximum distance
         and the maximum rupture projection radius (upper limit).
-       """
+        """
+        lon = self.location.x
+        lat = self.location.y
         maxradius = self._get_max_rupture_projection_radius()
-        angle = (maxdist + maxradius) * KM_TO_DEGREES
-        x = self.location.x
-        y = self.location.y
-        return x - angle, y - angle, x + angle, y + angle
+        angle = angular_distance(maxdist + maxradius, lat)
+        return lon - angle, lat - angle, lon + angle, lat + angle
