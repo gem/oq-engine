@@ -42,11 +42,12 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py27/Rtree-0.8.2-cp27-cp27mu-manyl
 ### Celery ###
 # comment the following lines to skip installation
 # of celery (optional feature)
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/vine-1.1.3-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/amqp-2.1.4-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/kombu-4.0.2-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py27/billiard-3.5.0.2-cp27-cp27mu-linux_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/celery-4.0.2-py2.py3-none-any.whl
+## FIXME
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/vine-1.1.3-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/amqp-2.1.4-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/kombu-4.0.2-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/staging/billiard-3.5.0.2-cp27-cp27mu-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/celery-4.0.2-py2.py3-none-any.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
