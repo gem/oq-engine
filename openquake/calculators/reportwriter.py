@@ -27,9 +27,8 @@ import sys
 import ast
 import mock
 import time
-import operator
 
-from openquake.baselib import parallel, general
+from openquake.baselib import parallel
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput, source
