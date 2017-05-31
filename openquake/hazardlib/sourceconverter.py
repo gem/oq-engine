@@ -22,14 +22,16 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib.node import context, striptag
+from openquake.baselib.general import groupby
+from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, InvalidFile
 
 MAXWEIGHT = 200  # tuned by M. Simionato
 U32 = numpy.uint32
 U64 = numpy.uint64
+F32 = numpy.float32
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
 
 
@@ -306,6 +308,9 @@ def split_source(src):
     :param src:
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
     """
+    if hasattr(src, '__iter__'):  # multipoint source
+        for s in src:
+            yield s
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
             yield s
@@ -594,14 +599,15 @@ class SourceConverter(RuptureConverter):
         object.
 
         :param node: a node of kind incrementalMFD or truncGutenbergRichterMFD
-        :returns: a :class:`openquake.hazardlib.mdf.EvenlyDiscretizedMFD.` or
-                  :class:`openquake.hazardlib.mdf.TruncatedGRMFD` instance
+        :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
+                  :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
         """
         with context(self.fname, node):
             [mfd_node] = [subnode for subnode in node
                           if subnode.tag.endswith(
                               ('incrementalMFD', 'truncGutenbergRichterMFD',
-                               'arbitraryMFD', 'YoungsCoppersmithMFD'))]
+                               'arbitraryMFD', 'YoungsCoppersmithMFD',
+                               'multiMFD'))]
             if mfd_node.tag.endswith('incrementalMFD'):
                 return mfd.EvenlyDiscretizedMFD(
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
@@ -632,6 +638,9 @@ class SourceConverter(RuptureConverter):
                             char_mag=mfd_node["characteristicMag"],
                             char_rate=mfd_node["characteristicRate"],
                             bin_width=mfd_node["binWidth"])
+            elif mfd_node.tag.endswith('multiMFD'):
+                return mfd.multi_mfd.MultiMFD.from_node(
+                    mfd_node, self.width_of_mfd_bin)
 
     def convert_npdist(self, node):
         """
@@ -718,6 +727,31 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             temporal_occurrence_model=self.tom)
+
+    def convert_multiPointSource(self, node):
+        """
+        Convert the given node into a MultiPointSource object.
+
+        :param node: a node with tag multiPointGeometry
+        :returns: a :class:`openquake.hazardlib.source.MultiPointSource`
+        """
+        geom = node.multiPointGeometry
+        lons, lats = zip(*split_coords_2d(~geom.posList))
+        msr = valid.SCALEREL[~node.magScaleRel]()
+        return source.MultiPointSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node.attrib.get('tectonicRegion'),
+            mfd=self.convert_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=msr,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~geom.upperSeismoDepth,
+            lower_seismogenic_depth=~geom.lowerSeismoDepth,
+            nodal_plane_distribution=self.convert_npdist(node),
+            hypocenter_distribution=self.convert_hpdist(node),
+            temporal_occurrence_model=self.tom,
+            mesh=geo.Mesh(F32(lons), F32(lats)))
 
     def convert_simpleFaultSource(self, node):
         """
@@ -867,3 +901,111 @@ class SourceConverter(RuptureConverter):
         sg.grp_probability = grp_probability
         return sg
 
+# ################### MultiPointSource conversion ######################## #
+
+
+def _npd(nodes):
+    # convert the nodalPlaneDistributions into a tuple
+    lst = []
+    for node in nodes:
+        lst.append((node['probability'],
+                    node['rake'], node['strike'], node['dip']))
+    return tuple(lst)
+
+
+def _hd(nodes):
+    # convert the hypocenterDistributions into a tuple
+    lst = []
+    for node in nodes:
+        lst.append((node['probability'], node['depth']))
+    return tuple(lst)
+
+
+def get_key(node):
+    """
+    Convert the given pointSource node into a tuple
+    """
+    return (
+        ~node.magScaleRel, ~node.ruptAspectRatio,
+        ~node.pointGeometry.upperSeismoDepth,
+        ~node.pointGeometry.lowerSeismoDepth,
+        _hd(node.hypoDepthDist), _npd(node.nodalPlaneDist))
+
+
+def mfds2multimfd(mfds):
+    """
+    Convert a list of MFD nodes into a single MultiMFD node
+    """
+    _, kind = mfds[0].tag.split('}')
+    node = Node('multiMFD', dict(kind=kind))
+    lengths = None
+    for field in mfd.multi_mfd.ASSOC[kind][1:]:
+        alias = mfd.multi_mfd.ALIAS.get(field, field)
+        if field in ('magnitudes', 'occurRates'):
+            data = [~getattr(m, field) for m in mfds]
+            lengths = [len(d) for d in data]
+            data = sum(data, [])  # the list has to be flat
+        elif field == 'lengths':  # this is the last field if present
+            data = lengths
+        elif field == 'bin_width':
+            continue
+        else:
+            data = [m[alias] for m in mfds]
+        node.append(Node(field, text=data))
+    return node
+
+
+def _pointsources2multipoints(srcs, i):
+    allsources = []
+    for key, sources in groupby(srcs, get_key).items():
+        if len(sources) == 1:  # there is a single source
+            allsources.extend(sources)
+            continue
+        msr, rar, usd, lsd, hd, npd = key
+        mfds = [src[3] for src in sources]
+        points = []
+        for src in sources:
+            points.extend(~src.pointGeometry.Point.pos)
+        geom = Node('multiPointGeometry')
+        geom.append(Node('gml:posList', text=points))
+        geom.append(Node('upperSeismoDepth', text=usd))
+        geom.append(Node('lowerSeismoDepth', text=lsd))
+        node = Node(
+            'multiPointSource',
+            dict(id='mps-%d' % i, name='multiPointSource-%d' % i),
+            nodes=[geom])
+        node.append(Node("magScaleRel", text=msr))
+        node.append(Node("ruptAspectRatio", text=rar))
+        node.append(mfds2multimfd(mfds))
+        node.append(Node('nodalPlaneDist', nodes=[
+            Node('nodalPlane', dict(probability=prob, rake=rake,
+                                    strike=strike, dip=dip))
+            for prob, rake, strike, dip in npd]))
+        node.append(Node('hypoDepthDist', nodes=[
+            Node('hypoDepth', dict(depth=depth, probability=prob))
+            for prob, depth in hd]))
+        allsources.append(node)
+        i += 1
+    return i, allsources
+
+
+def update_source_model(sm_node):
+    """
+    :param sm_node: a sourceModel Node object containing sourceGroups
+    """
+    i = 0
+    for group in sm_node:
+        if not group.tag.endswith('sourceGroup'):
+            raise InvalidFile('wrong NRML, got %s instead of '
+                              'sourceGroup' % group.tag)
+        psrcs = []
+        others = []
+        for src in group:
+            del src.attrib['tectonicRegion']  # make the trt implicit
+            if src.tag.endswith('pointSource'):
+                psrcs.append(src)
+            else:
+                others.append(src)
+        others.sort(key=lambda src: (src.tag, src['id']))
+        i, sources = _pointsources2multipoints(psrcs, i)
+        group.nodes = sources + others

@@ -71,6 +71,7 @@ except ImportError:
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
+from openquake.hazardlib.source.multi import MultiPointSource
 
 
 @contextmanager
@@ -330,7 +331,9 @@ class SourceFilter(object):
                 yield source, sites
             return
         for src in sources:
-            if self.use_rtree:  # Rtree filtering, used in the controller
+            if not self.integration_distance:  # do not filter
+                yield src, sites
+            elif self.use_rtree:  # Rtree filtering, used in the controller
                 box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(set(sids)) < len(sids):
@@ -342,8 +345,6 @@ class SourceFilter(object):
                 if len(sids):
                     src.nsites = len(sids)
                     yield src, FilteredSiteCollection(sids, sites.complete)
-            elif not self.integration_distance:
-                yield src, sites
             else:  # normal filtering, used in the workers
                 maxdist = self.integration_distance(src.tectonic_region_type)
                 with context(src):

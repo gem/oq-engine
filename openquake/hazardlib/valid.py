@@ -481,10 +481,23 @@ def positivefloat(value):
 
 def positivefloats(value):
     """
-    :param value: string of whitespace separated floats
-    :returns: a list of positive floats
+    :param value:
+        string of whitespace separated floats
+    :returns:
+        a list of positive floats
     """
-    return list(map(positivefloat, value.split()))
+    floats = list(map(positivefloat, value.split()))
+    return floats
+
+
+def floats32(value):
+    """
+    :param value:
+        string of whitespace separated floats
+    :returns:
+        an array of 32 bit floats
+    """
+    return numpy.float32(value.split())
 
 
 _BOOL_DICT = {
@@ -524,9 +537,11 @@ probability = FloatRange(0, 1)
 probability.__name__ = 'probability'
 
 
-def probabilities(value):
+def probabilities(value, rows=0, cols=0):
     """
     :param value: input string, comma separated or space separated
+    :param rows: the number of rows if the floats are in a matrix (0 otherwise)
+    :param cols: the number of columns if the floats are in a matrix (or 0
     :returns: a list of probabilities
 
     >>> probabilities('')
@@ -538,7 +553,10 @@ def probabilities(value):
     >>> probabilities('0.1, 0.2')  # commas are ignored
     [0.1, 0.2]
     """
-    return list(map(probability, value.replace(',', ' ').split()))
+    probs = list(map(probability, value.replace(',', ' ').split()))
+    if rows and cols:
+        probs = numpy.array(probs).reshape((len(rows), len(cols)))
+    return probs
 
 
 def decreasing_probabilities(value):

@@ -36,6 +36,9 @@ ALT_MFDS = os.path.join(os.path.dirname(__file__),
 COLLECTION = os.path.join(os.path.dirname(__file__),
                           'source_model/source_group_collection.xml')
 
+MULTIPOINT = os.path.join(os.path.dirname(__file__),
+                          'source_model/multi-point-source.xml')
+
 
 class SourceWriterTestCase(unittest.TestCase):
 
@@ -64,6 +67,9 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_collection(self):
         self.check_round_trip(COLLECTION)
+
+    def test_multipoint(self):
+        self.check_round_trip(MULTIPOINT)
 
 
 class DeepcopyTestCase(unittest.TestCase):
