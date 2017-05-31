@@ -311,7 +311,7 @@ def split_source(src):
         for s in src:
             s.src_group_id = src.src_group_id
             yield s
-    if isinstance(src, source.AreaSource):
+    elif isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
             s.src_group_id = src.src_group_id
             yield s
