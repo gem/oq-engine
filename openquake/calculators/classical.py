@@ -185,6 +185,7 @@ def classical(sources, src_filter, gsims, param, monitor):
     truncation_level = param['truncation_level']
     imtls = param['imtls']
     src_group_id = sources[0].src_group_id
+    assert src_group_id is not None
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
