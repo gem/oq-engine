@@ -95,15 +95,18 @@ looks like this::
                 <multiMFD
                 kind="incrementalMFD"
                 >
-                    <lengths>
-                        2 3
-                    </lengths>
+                    <bin_width>
+                        2.0 2.0
+                    </bin_width>
                     <min_mag>
                         4.5 4.5
                     </min_mag>
                     <occurRates>
                         0.10 0.05 0.40 0.20 0.10
                     </occurRates>
+                    <lengths>
+                        2 3
+                    </lengths>
                 </multiMFD>
                 <nodalPlaneDist>
                     <nodalPlane dip="20.0" probability="0.5" rake="3.0" strike="1.0"/>
