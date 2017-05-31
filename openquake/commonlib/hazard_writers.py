@@ -285,7 +285,7 @@ def gen_gmfs(gmf_set):
             gmf_node['saPeriod'] = str(gmf.sa_period)
             gmf_node['saDamping'] = str(gmf.sa_damping)
         eid = gmf.rupture_id
-        if eid:
+        if eid is not None:
             gmf_node['ruptureId'] = eid
         sorted_nodes = sorted(gmf)
         gmf_node.nodes = (
