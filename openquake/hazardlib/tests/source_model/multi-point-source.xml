@@ -36,6 +36,9 @@ xmlns:gml="http://www.opengis.net/gml"
                 <multiMFD
                 kind="incrementalMFD"
                 >
+                    <bin_width>
+                        0.1
+                    </bin_width>
                     <min_mag>
                         4.5 4.5
                     </min_mag>

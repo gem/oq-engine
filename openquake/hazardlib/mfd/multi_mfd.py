@@ -40,7 +40,7 @@ ASSOC = {
         'char_mag', 'char_rate', 'bin_width')}
 
 ALIAS = dict(min_mag='minMag', max_mag='maxMag',
-             a_val='aValue', b_val='bValue',
+             a_val='aValue', b_val='bValue', bin_width='binWidth',
              char_mag='characteristicMag', char_rate='characteristicRate')
 
 
