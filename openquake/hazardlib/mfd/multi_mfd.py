@@ -30,9 +30,9 @@ F32 = numpy.float32
 
 ASSOC = {
     'arbitraryMFD': (
-        ArbitraryMFD, 'magnitudes', 'occurRates', 'lengths'),
+        ArbitraryMFD, 'magnitudes', 'occurRates'),
     'incrementalMFD': (
-        EvenlyDiscretizedMFD, 'min_mag', 'bin_width', 'occurRates', 'lengths'),
+        EvenlyDiscretizedMFD, 'min_mag', 'bin_width', 'occurRates'),
     'truncGutenbergRichterMFD': (
         TruncatedGRMFD, 'min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val'),
     'YoungsCoppersmithMFD': (
@@ -73,18 +73,22 @@ class MultiMFD(BaseMFD):
                 kwargs[field] = width_of_mfd_bin
             else:
                 kwargs[field] = ~getattr(node, field)
-        return cls(kind, width_of_mfd_bin, **kwargs)
+        if 'occurRates' in ASSOC[kind][1:]:
+            lengths = ~getattr(node, 'lengths')
+        else:
+            lengths = None
+        return cls(kind, width_of_mfd_bin, lengths, **kwargs)
 
-    def __init__(self, kind, width_of_mfd_bin=None, **kwargs):
+    def __init__(self, kind, width_of_mfd_bin=None, lengths=None, **kwargs):
         self.kind = kind
         self.width_of_mfd_bin = width_of_mfd_bin
         self.mfd_class = ASSOC[kind][0]
         self.n = len(kwargs.get('min_mag') or kwargs['lengths'])
         self.kwargs = kwargs
-        if 'occurRates' in kwargs and 'lengths' not in kwargs:
-            kwargs['lengths'] = [len(lst) for lst in kwargs['occurRates']]
-        elif 'lengths' in kwargs:
-            _reshape(kwargs, kwargs['lengths'])
+        if 'occurRates' in kwargs and not lengths:
+            lengths = [len(lst) for lst in kwargs['occurRates']]
+        elif lengths:  # coming from .from_node
+            _reshape(kwargs, lengths)
 
     def __iter__(self):
         for i in range(self.n):

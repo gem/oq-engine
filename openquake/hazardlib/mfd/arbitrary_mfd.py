@@ -37,7 +37,7 @@ class ArbitraryMFD(BaseMFD):
     MODIFICATIONS = set(('set_mfd',))
     _slots_ = 'magnitudes occurrence_rates'.split()
 
-    def __init__(self, magnitudes, occurrence_rates, lengths=None):
+    def __init__(self, magnitudes, occurrence_rates):
         self.magnitudes = magnitudes
         self.occurrence_rates = occurrence_rates
 

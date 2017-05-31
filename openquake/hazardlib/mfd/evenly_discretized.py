@@ -39,7 +39,7 @@ class EvenlyDiscretizedMFD(BaseMFD):
     MODIFICATIONS = set(('set_mfd',))
     _slots_ = 'min_mag bin_width occurrence_rates'.split()
 
-    def __init__(self, min_mag, bin_width, occurrence_rates, lengths=None):
+    def __init__(self, min_mag, bin_width, occurrence_rates):
         self.min_mag = min_mag
         self.bin_width = bin_width
         self.occurrence_rates = occurrence_rates

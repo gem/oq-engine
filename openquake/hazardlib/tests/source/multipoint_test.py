@@ -51,9 +51,9 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
   magScaleRel 'PeerMSR'
   ruptAspectRatio 1.0
   multiMFD{kind='incrementalMFD'}
-    lengths [2, 3]
     min_mag [4.5, 4.5]
     occurRates [0.3, 0.1, 0.4, 0.2, 0.1]
+    lengths [2, 3]
   nodalPlaneDist
     nodalPlane{dip=20, probability=0.5, rake=3, strike=1}
     nodalPlane{dip=2, probability=0.5, rake=4, strike=2}
