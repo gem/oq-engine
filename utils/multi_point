@@ -22,23 +22,25 @@ from openquake.baselib import node
 from openquake.hazardlib import nrml, sourceconverter
 
 
-def main(input_file):
+def main(input_files):
     """
     Collect multiPointSources
     """
-    with open(input_file + '.bak', 'w') as f:
-        f.write(open(input_file).read())
-    inp = nrml.read(input_file) 
-    sm = inp.sourceModel
-    sourceconverter.update_source_model(sm)
-    source_model = node.Node(
-        "sourceModel", {"name": sm['name']}, nodes=sm.nodes)
-    with open(input_file, 'wb') as f:
-        nrml.write([source_model], f, '%s')
+    for input_file in input_files:
+        with open(input_file + '.bak', 'w') as f:
+            f.write(open(input_file).read())
+        inp = nrml.read(input_file) 
+        sm = inp.sourceModel
+        print('Converting %s' % input_file)
+        sourceconverter.update_source_model(sm)
+        source_model = node.Node(
+            "sourceModel", {"name": sm['name']}, nodes=sm.nodes)
+        with open(input_file, 'wb') as f:
+            nrml.write([source_model], f, '%s')
         
 
 if __name__ == '__main__':
     t0 = time.time()
-    main(sys.argv[1])
+    main(sys.argv[1:])
     dt = time.time() - t0
     print('Time spent: %s seconds' % dt)
