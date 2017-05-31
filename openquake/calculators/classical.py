@@ -198,7 +198,6 @@ def classical(sources, src_filter, gsims, param, monitor):
         sources, src_filter, imtls, gsims, truncation_level,
         bbs=bbs, monitor=monitor)
     pmap.bbs = bbs
-    pmap.grp_id = src_group_id
     return pmap
 
 
