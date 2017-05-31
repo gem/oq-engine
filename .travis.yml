@@ -23,6 +23,7 @@ script:
   - nosetests --with-doctest -vsx -a'!slow'
   - cat /tmp/webui*
   - bin/oq reset --yes
+  - bin/oq webui migrate
 
 after_success:
   - pip install sphinx==1.3.6
