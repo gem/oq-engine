@@ -75,22 +75,20 @@ class MultiMFD(BaseMFD):
                 kwargs[field] = ~getattr(node, field)
         if 'occurRates' in ASSOC[kind][1:]:
             lengths = ~getattr(node, 'lengths')
-        else:
-            lengths = None
-        return cls(kind, width_of_mfd_bin, lengths, **kwargs)
+            _reshape(kwargs, lengths)
+        return cls(kind, width_of_mfd_bin, **kwargs)
 
-    def __init__(self, kind, width_of_mfd_bin=None, lengths=None, **kwargs):
+    def __init__(self, kind, width_of_mfd_bin=None, **kwargs):
         self.kind = kind
         self.width_of_mfd_bin = width_of_mfd_bin
         self.mfd_class = ASSOC[kind][0]
         self.n = len(kwargs.get('min_mag') or kwargs['lengths'])
         self.kwargs = kwargs
-        if 'occurRates' in kwargs and not lengths:
-            lengths = [len(lst) for lst in kwargs['occurRates']]
-        elif lengths:  # coming from .from_node
-            _reshape(kwargs, lengths)
 
     def __iter__(self):
+        """
+        Yield the underlying MFDs instances
+        """
         for i in range(self.n):
             args = []
             for f in ASSOC[self.kind][1:]:
@@ -104,6 +102,9 @@ class MultiMFD(BaseMFD):
         return self.n
 
     def get_min_max_mag(self):
+        """
+        :returns: minumum and maximum magnitudes from the underlying MFDs
+        """
         m1s, m2s = [], []
         for mfd in self:
             m1, m2 = mfd.get_min_max_mag()
@@ -115,6 +116,9 @@ class MultiMFD(BaseMFD):
         pass
 
     def get_annual_occurrence_rates(self):
+        """
+        Yields the occurrence rates of the underlying MFDs in order
+        """
         for mfd in self:
             for rates in mfd.get_annual_occurrence_rates():
                 yield rates
