@@ -63,6 +63,8 @@ class MultiMFD(BaseMFD):
     :param width_of_mfd_bin: used in the truncated Gutenberg-Richter MFD
     """
     MODIFICATIONS = set()
+    for vals in ASSOC.values():
+        MODIFICATIONS.update(vals[0].MODIFICATIONS)
 
     @classmethod
     def from_node(cls, node, width_of_mfd_bin=None):
@@ -123,3 +125,11 @@ class MultiMFD(BaseMFD):
         for mfd in self:
             for rates in mfd.get_annual_occurrence_rates():
                 yield rates
+
+    def modify(self, modification, parameters):
+        """
+        Apply a modification to the underlying point sources, with the
+        same parameters for all sources
+        """
+        for src in self:
+            src.modify(modification, parameters)

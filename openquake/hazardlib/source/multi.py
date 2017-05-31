@@ -92,14 +92,6 @@ class MultiPointSource(ParametricSeismicSource):
     def get_rupture_enclosing_polygon(self, dilation=0):
         """No polygon"""
 
-    def modify(self, modification, parameters):
-        """
-        Apply a modification to the underlying point sources, with the
-        same parameters for all sources
-        """
-        for src in self:
-            src.modify(modification, parameters)
-
     def get_bounding_box(self, maxdist):
         """
         Bounding box containing all points, enlarged by the maximum distance
