@@ -8,7 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
     >
         <sourceGroup
         name="group 1"
-        srcs_weights="1.0"
+        srcs_weights="0.6 0.4"
         tectonicRegion="Stable Continental Crust"
         >
             <multiPointSource
@@ -37,7 +37,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 kind="incrementalMFD"
                 >
                     <bin_width>
-                        0.1
+                        0.1 0.1
                     </bin_width>
                     <min_mag>
                         4.5 4.5
@@ -55,6 +55,55 @@ xmlns:gml="http://www.opengis.net/gml"
                 </nodalPlaneDist>
                 <hypoDepthDist>
                     <hypoDepth depth="14.0" probability="1.0"/>
+                </hypoDepthDist>
+            </multiPointSource>
+            <multiPointSource
+            id="mp2"
+            name="mps-with-GR"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <multiPointGeometry>
+                    <gml:posList>
+                        0.1 1.1
+                    </gml:posList>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <multiMFD
+                kind="truncGutenbergRichterMFD"
+                >
+                    <a_val>
+                        -5.481
+                    </a_val>
+                    <b_val>
+                        0.9
+                    </b_val>
+                    <bin_width>
+                        0.1
+                    </bin_width>
+                    <max_mag>
+                        7.5
+                    </max_mag>
+                    <min_mag>
+                        5.0
+                    </min_mag>
+                </multiMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.5" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="90.0" probability="0.5" rake="0.0" strike="90.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="6.3" probability="1.0"/>
                 </hypoDepthDist>
             </multiPointSource>
         </sourceGroup>

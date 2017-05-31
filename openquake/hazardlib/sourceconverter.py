@@ -948,7 +948,12 @@ def mfds2multimfd(mfds):
             lengths = [len(d) for d in data]
             data = sum(data, [])  # the list has to be flat
         else:
-            data = [m[alias] for m in mfds]
+            try:
+                data = [m[alias] for m in mfds]
+            except KeyError:
+                if alias == 'binWidth':  # it is missing in GR MDFs, ok
+                    continue
+                raise
         node.append(Node(field, text=data))
         if lengths:  # this is the last field if present
             node.append(Node('lengths', text=lengths))

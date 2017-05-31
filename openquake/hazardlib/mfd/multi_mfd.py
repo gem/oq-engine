@@ -69,10 +69,12 @@ class MultiMFD(BaseMFD):
         kind = node['kind']
         kwargs = {}  # a dictionary name -> array of n elements
         for field in ASSOC[kind][1:]:
-            if field == 'bin_width':
-                kwargs[field] = width_of_mfd_bin
-            else:
+            try:
                 kwargs[field] = ~getattr(node, field)
+            except AttributeError:
+                if field == 'bin_width':  # ok for truncGutenbergRichterMFD
+                    continue
+                raise
         if 'occurRates' in ASSOC[kind][1:]:
             lengths = ~getattr(node, 'lengths')
             _reshape(kwargs, lengths)
@@ -82,8 +84,10 @@ class MultiMFD(BaseMFD):
         self.kind = kind
         self.width_of_mfd_bin = width_of_mfd_bin
         self.mfd_class = ASSOC[kind][0]
-        self.n = len(kwargs.get('min_mag') or kwargs['lengths'])
+        self.n = len(kwargs.get('min_mag') or kwargs['occurRates'])
         self.kwargs = kwargs
+        if 'bin_width' not in kwargs:
+            kwargs['bin_width'] = [width_of_mfd_bin] * self.n
 
     def __iter__(self):
         """
@@ -92,10 +96,7 @@ class MultiMFD(BaseMFD):
         for i in range(self.n):
             args = []
             for f in ASSOC[self.kind][1:]:
-                if f == 'bin_width':  # f has a scalar value
-                    args.append(self.kwargs[f])
-                else:  # f has a vector value
-                    args.append(self.kwargs[f][i])
+                args.append(self.kwargs[f][i])
             yield self.mfd_class(*args)
 
     def __len__(self):
