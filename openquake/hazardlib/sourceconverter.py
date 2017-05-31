@@ -945,13 +945,13 @@ def mfds2multimfd(mfds):
             data = [~getattr(m, field) for m in mfds]
             lengths = [len(d) for d in data]
             data = sum(data, [])  # the list has to be flat
-        elif field == 'lengths':  # this is the last field if present
-            data = lengths
         elif field == 'bin_width':
             continue
         else:
             data = [m[alias] for m in mfds]
         node.append(Node(field, text=data))
+        if lengths:  # this is the last field if present
+            node.append(Node('lengths', text=lengths))
     return node
 
 
@@ -989,6 +989,7 @@ def _pointsources2multipoints(srcs, i):
     return i, allsources
 
 
+# TODO: tests are missing
 def update_source_model(sm_node):
     """
     :param sm_node: a sourceModel Node object containing sourceGroups
