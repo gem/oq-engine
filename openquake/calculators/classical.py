@@ -307,6 +307,7 @@ class PSHACalculator(base.HazardCalculator):
             tiles = self.sitecol.split_in_tiles(oq.num_tiles)
         else:
             tiles = [self.sitecol]
+        logging.info('Prefiltering the CompositeSourceModel')
         with self.monitor('prefiltering source model',
                           autoflush=True, measuremem=True):
             src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
