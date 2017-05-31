@@ -684,10 +684,6 @@ class CompositeSourceModel(collections.Sequence):
         self.add_infos(heavy)
         for src in heavy:
             srcs = split_filter_source(src, src_filter)
-            if len(srcs) > 1:
-                logging.info(
-                    'Splitting %s "%s" in %d sources', src.__class__.__name__,
-                    src.source_id, len(srcs))
             for block in block_splitter(
                     srcs, maxweight, weight=operator.attrgetter('weight')):
                 yield block
@@ -727,9 +723,13 @@ def split_filter_source(src, src_filter):
     split_sources = []
     start = 0
     try:
-        splits = split_map[src]
-    except KeyError:
+        splits = split_map[src]  # read from the cache
+    except KeyError:  # fill the cache
         splits = split_map[src] = list(sourceconverter.split_source(src))
+        if len(splits) > 1:
+            logging.info(
+                'Splitting %s "%s" in %d sources', src.__class__.__name__,
+                src.source_id, len(splits))
     for split in splits:
         if has_serial:
             nr = split.num_ruptures
