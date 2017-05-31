@@ -430,7 +430,7 @@ class HazardCalculator(BaseCalculator):
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
             self.precalc = (self.compute_previous() if precalc_id is None
-                            else self.read_previous(precalc_id))
+                            else self.read_previous(int(precalc_id)))
             self.init()
         else:  # we are in a basic calculator
             self.precalc = None

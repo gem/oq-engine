@@ -200,7 +200,6 @@ class EngineServerTestCase(unittest.TestCase):
         # make sure job_id is no more in the list of relevant jobs
         job_ids = [job['id'] for job in self.get('list', relevant=True)]
         self.assertFalse(job_id in job_ids)
-        # NB: the job is invisible but still there
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
