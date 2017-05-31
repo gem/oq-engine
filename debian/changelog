@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Optimized PointSource.get_bounding_box
+  * Introduced a MultiPointSource class and multiPointSource tag
 
   [Daniele Viganò]
   * Fixed an issue that was forcing users to install 'git' on macOS

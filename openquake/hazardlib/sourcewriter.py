@@ -220,6 +220,31 @@ def build_youngs_coppersmith_mfd(mfd):
                  "binWidth": mfd.bin_width})
 
 
+@obj_to_node.add('MultiMFD')
+def build_multi_mfd(mfd):
+    """
+    Parses the MultiMFD as a Node
+
+    :param mfd:
+        MFD as instance of :class:
+        `openquake.hazardlib.mfd.multi_mfd.MultiMFD`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    node = Node("multiMFD", dict(kind=mfd.kind))
+    for name in sorted(mfd.kwargs):
+        values = mfd.kwargs[name]
+        if name in ('magnitudes', 'occurRates'):
+            values = sum(values, [])
+        elif name == 'bin_width':
+            continue
+        node.append(Node(name, text=values))
+    if 'occurRates' in mfd.kwargs:
+        lengths = [len(rates) for rates in mfd.kwargs['occurRates']]
+        node.append(Node('lengths', text=lengths))
+    return node
+
+
 def build_nodal_plane_dist(npd):
     """
     Returns the nodal plane distribution as a Node instance
@@ -425,6 +450,38 @@ def build_rupture_node(rupt, probs_occur):
     elif geom == 'griddedSurface':
         name = 'griddedRupture'
     return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
+
+
+@obj_to_node.add('MultiPointSource')
+def build_multi_point_source_node(multi_point_source):
+    """
+    Parses a point source to a Node class
+
+    :param point_source:
+        MultiPoint source as instance of :class:
+        `openquake.hazardlib.source.point.MultiPointSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    # parse geometry
+    pos = []
+    for p in multi_point_source.mesh:
+        pos.append(p.x)
+        pos.append(p.y)
+    mesh_node = Node('gml:posList', text=pos)
+    upper_depth_node = Node(
+        "upperSeismoDepth", text=multi_point_source.upper_seismogenic_depth)
+    lower_depth_node = Node(
+        "lowerSeismoDepth", text=multi_point_source.lower_seismogenic_depth)
+    source_nodes = [Node(
+        "multiPointGeometry",
+        nodes=[mesh_node, upper_depth_node, lower_depth_node])]
+    # parse common distributed attributes
+    source_nodes.extend(get_distributed_seismicity_source_nodes(
+        multi_point_source))
+    return Node("multiPointSource",
+                get_source_attributes(multi_point_source),
+                nodes=source_nodes)
 
 
 @obj_to_node.add('PointSource')

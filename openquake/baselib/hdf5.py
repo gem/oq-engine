@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import ast
 import operator
 import tempfile
@@ -343,8 +344,12 @@ class File(h5py.File):
         attrib = nodedict.get('attrib', {})
         path = '/'.join([root, tag])
         nodes = nodedict.get('nodes', [])
-        if text:
-            setitem(path, text)
+        if text not in ('', None):  # text=0 is stored
+            try:
+                setitem(path, text)
+            except Exception as exc:
+                sys.stderr.write('%s: %s\n' % (path, exc))
+                raise
         elif attrib and not nodes:
             setitem(path, numpy.nan)
         for subdict in _resolve_duplicates(nodes):
