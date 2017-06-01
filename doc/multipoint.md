@@ -28,7 +28,7 @@ a `MultiMFD` object can be instantiated as follows::
 
 ```python
 mmfd = MultiMFD('incrementalMFD',
-                bin_width=2.0,
+                bin_width=[2.0, 2.0],
                 min_mag=[4.5, 4.5],
                 occurRates=[[.3, .1], [.4, .2, .1]])
 ```
