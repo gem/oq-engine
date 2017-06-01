@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug when exporting a GMF with `ruptureId=0`
   * Added a parameter `disagg_outputs` to specify the kind of disaggregation
     outputs to export
   * Raised an early error if the consequence model is missing some taxonomies
