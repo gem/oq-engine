@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized `PointSource.get_bounding_box`
   * Introduced a MultiPointSource class and multiPointSource tag
 
   [Daniele Viganò]

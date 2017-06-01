@@ -212,10 +212,12 @@ class MultiPointTestCase(unittest.TestCase):
         imtls = DictArray({'PGA': [0.01, 0.02, 0.04, 0.08, 0.16]})
         gsim_by_trt = {'Stable Continental Crust': Campbell2003()}
         hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt)
-        expected = [1.0, 0.9999907, 0.9861116, 0.5003878, 0.0230944]
+        expected = [0.99999778, 0.9084039, 0.148975348,
+                    0.0036909656, 2.76326e-05]
         npt.assert_almost_equal(hcurves['PGA'][0], expected)
 
         # splitting in point sources
-        [[mps]] = groups
-        hcurves = calc_hazard_curves(list(mps), sitecol, imtls, gsim_by_trt)
+        [[mps1, mps2]] = groups
+        psources = list(mps1) + list(mps2)
+        hcurves = calc_hazard_curves(psources, sitecol, imtls, gsim_by_trt)
         npt.assert_almost_equal(hcurves['PGA'][0], expected)

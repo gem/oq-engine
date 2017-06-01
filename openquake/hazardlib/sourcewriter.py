@@ -236,8 +236,6 @@ def build_multi_mfd(mfd):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
             values = sum(values, [])
-        elif name == 'bin_width':
-            continue
         node.append(Node(name, text=values))
     if 'occurRates' in mfd.kwargs:
         lengths = [len(rates) for rates in mfd.kwargs['occurRates']]

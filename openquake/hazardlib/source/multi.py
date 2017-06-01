@@ -17,9 +17,9 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.point import PointSource
-
-KM_TO_DEGREES = 0.0089932
+from openquake.hazardlib.source.point import (
+    PointSource, angular_distance, KM_TO_DEGREES)
+from openquake.hazardlib.geo.utils import cross_idl
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -98,12 +98,16 @@ class MultiPointSource(ParametricSeismicSource):
         and the maximum rupture projection radius (upper limit).
         """
         maxradius = self._get_max_rupture_projection_radius()
-        angle = (maxdist + maxradius) * KM_TO_DEGREES
-        min_lon = self.mesh.lons.min() - angle
-        max_lon = self.mesh.lons.max() + angle
-        min_lat = self.mesh.lats.min() - angle
-        max_lat = self.mesh.lats.max() + angle
-        return min_lon, min_lat, max_lon, max_lat
+        min_lon = self.mesh.lons.min()
+        max_lon = self.mesh.lons.max()
+        if cross_idl(min_lon, max_lon):
+            min_lon, max_lon = max_lon, min_lon + 360
+        min_lat = self.mesh.lats.min()
+        max_lat = self.mesh.lats.max()
+        a1 = (maxdist + maxradius) * KM_TO_DEGREES
+        a2 = max(angular_distance(maxdist + maxradius, min_lat),
+                 angular_distance(maxdist + maxradius, max_lat))
+        return min_lon - a2, min_lat - a1, max_lon + a2, max_lat + a1
 
     _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
     _get_max_rupture_projection_radius = PointSource.__dict__[

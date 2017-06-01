@@ -249,7 +249,6 @@ def area_to_point_sources(area_src):
             nodal_plane_distribution=area_src.nodal_plane_distribution,
             hypocenter_distribution=area_src.hypocenter_distribution,
             temporal_occurrence_model=area_src.temporal_occurrence_model)
-        pt.src_group_id = area_src.src_group_id
         pt.num_ruptures = pt.count_ruptures()
         yield pt
 
@@ -310,13 +309,16 @@ def split_source(src):
     """
     if hasattr(src, '__iter__'):  # multipoint source
         for s in src:
+            s.src_group_id = src.src_group_id
             yield s
-    if isinstance(src, source.AreaSource):
+    elif isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
+            s.src_group_id = src.src_group_id
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
         for s in split_fault_source(src):
+            s.src_group_id = src.src_group_id
             yield s
     else:
         # characteristic and nonparametric sources are not split
@@ -945,10 +947,13 @@ def mfds2multimfd(mfds):
             data = [~getattr(m, field) for m in mfds]
             lengths = [len(d) for d in data]
             data = sum(data, [])  # the list has to be flat
-        elif field == 'bin_width':
-            continue
         else:
-            data = [m[alias] for m in mfds]
+            try:
+                data = [m[alias] for m in mfds]
+            except KeyError:
+                if alias != 'binWidth':
+                    raise
+                # missing bindWidth in GR MDFs is ok
         node.append(Node(field, text=data))
         if lengths:  # this is the last field if present
             node.append(Node('lengths', text=lengths))

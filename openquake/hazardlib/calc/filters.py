@@ -71,7 +71,6 @@ except ImportError:
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
-from openquake.hazardlib.source.multi import MultiPointSource
 
 
 @contextmanager
