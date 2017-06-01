@@ -743,8 +743,7 @@ def get_composite_source_model(oq):
         sm.src_groups = [sg]
         sg.sources = [UcerfSource(sg[0], sm.ordinal, sm.path[0], sm.name)]
         source_models.append(sm)
-    return source.CompositeSourceModel(
-        gsim_lt, smlt, source_models, set_weight=True)
+    return source.CompositeSourceModel(gsim_lt, smlt, source_models)
 
 
 @base.calculators.add('ucerf_rupture')
