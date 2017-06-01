@@ -1,8 +1,9 @@
 from __future__ import print_function
 import os
+import logging
 import numpy
-from openquake.baselib import sap, hdf5, node
-from openquake.hazardlib import nrml
+from openquake.baselib import sap, hdf5, node, performance
+from openquake.hazardlib import nrml, sourceconverter
 
 
 def convert_npz_hdf5(input_file, output_file):
@@ -23,9 +24,7 @@ def convert_xml_hdf5(input_file, output_file):
             sm = inp.sourceModel
         else:  # not a NRML
             raise ValueError('Unknown NRML:' % inp['xmlns'])
-        for group in sm:
-            for src in group:  # make the trt implicit
-                del src.attrib['tectonicRegion']
+        sourceconverter.update_source_model(sm)
         out.save(node.node_to_dict(sm))
     return output_file
 
@@ -35,13 +34,16 @@ def to_hdf5(input):
     """
     Convert .xml and .npz files to .hdf5 files.
     """
-    for input_file in input:
-        if input_file.endswith('.npz'):
-            output = convert_npz_hdf5(input_file, input_file[:-3] + 'hdf5')
-        elif input_file.endswith('.xml'):  # for source model files
-            output = convert_xml_hdf5(input_file, input_file[:-3] + 'hdf5')
-        else:
-            continue
-        print('Generated %s' % output)
+    logging.basicConfig(level=logging.INFO)
+    with performance.Monitor('to_hdf5') as mon:
+        for input_file in input:
+            if input_file.endswith('.npz'):
+                output = convert_npz_hdf5(input_file, input_file[:-3] + 'hdf5')
+            elif input_file.endswith('.xml'):  # for source model files
+                output = convert_xml_hdf5(input_file, input_file[:-3] + 'hdf5')
+            else:
+                continue
+            print('Generated %s' % output)
+    print(mon)
 
 to_hdf5.arg('input', '.npz file to convert', nargs='*')
