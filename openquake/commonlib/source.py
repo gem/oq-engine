@@ -550,8 +550,7 @@ class CompositeSourceModel(collections.Sequence):
         sm = self.source_models[sm_id]
         if self.source_model_lt.num_samples:
             self.source_model_lt.num_samples = sm.samples
-        new = self.__class__(
-            self.gsim_lt, self.source_model_lt, [sm], set_weight=False)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm])
         new.sm_id = sm_id
         new.weight = sum(src.weight for sg in sm.src_groups
                          for src in sg.sources)
@@ -567,14 +566,27 @@ class CompositeSourceModel(collections.Sequence):
         """
         source_models = []
         weight = 0
+        idx = 0
+        seed = int(self.source_model_lt.seed)  # avoids F32 issues on Windows
         for sm in self.source_models:
-            src_groups = [copy.copy(sg) for sg in sm.src_groups]
-            for src_group in src_groups:
+            src_groups = []
+            for src_group in sm.src_groups:
+                if self.source_model_lt.num_samples:
+                    rnd = random.Random(seed + idx)
+                    rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
+                    idx += len(rlzs)
+                    for i, sg in enumerate(sm.src_groups):
+                        sg.gsims = sorted(set(rlz.value[i] for rlz in rlzs))
+                else:
+                    for sg in sm.src_groups:
+                        sg.gsims = sorted(self.gsim_lt.values[sg.trt])
                 sources = []
                 for src, sites in src_filter(src_group.sources):
                     sources.append(src)
                     weight += src.weight
-                src_group.sources = sources
+                sg = copy.copy(src_group)
+                sg.sources = sources
+                src_groups.append(sg)
             newsm = logictree.SourceModel(
                 sm.name, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
