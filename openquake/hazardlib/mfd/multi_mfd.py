@@ -74,9 +74,9 @@ class MultiMFD(BaseMFD):
             try:
                 kwargs[field] = ~getattr(node, field)
             except AttributeError:
-                if field == 'bin_width':  # ok for truncGutenbergRichterMFD
-                    continue
-                raise
+                if field != 'bin_width':
+                    raise
+                # missing bindWidth in GR MDFs is ok
         if 'occurRates' in ASSOC[kind][1:]:
             lengths = ~getattr(node, 'lengths')
             _reshape(kwargs, lengths)
