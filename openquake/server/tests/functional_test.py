@@ -29,7 +29,6 @@ import time
 import unittest
 import subprocess
 import tempfile
-import django
 import requests
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
