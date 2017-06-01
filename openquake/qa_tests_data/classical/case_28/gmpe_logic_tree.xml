@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+<logicTree logicTreeID="lt1">
+
+  <!-- ***************************************** -->
+  <!-- GMPE GROUP: A -->
+
+  <logicTreeBranchingLevel branchingLevelID="bl1">
+  <logicTreeBranchSet uncertaintyType="gmpeModel"
+                      branchSetID="GROUP_A"
+                      applyToTectonicRegionType="Tectonic_Type_A">
+
+    <logicTreeBranch branchID="GROUP_A_GMPE_0">
+    <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+    <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="GROUP_A_GMPE_1">
+    <uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
+    <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+
+  </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+
+  <!-- ***************************************** -->
+  <!-- GMPE GROUP: B -->
+
+  <logicTreeBranchingLevel branchingLevelID="bl2">
+  <logicTreeBranchSet uncertaintyType="gmpeModel"
+                      branchSetID="GROUP_B"
+                      applyToTectonicRegionType="Tectonic_Type_B">
+
+    <logicTreeBranch branchID="GROUP_B_GMPE_0">
+    <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+    <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="GROUP_B_GMPE_1">
+    <uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
+    <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="GROUP_B_GMPE_2">
+    <uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+    <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="GROUP_B_GMPE_3">
+    <uncertaintyModel>PezeshkEtAl2011</uncertaintyModel>
+    <uncertaintyWeight>0.25</uncertaintyWeight>
+    </logicTreeBranch>
+
+  </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+
+  <!-- ***************************************** -->
+  <!-- GMPE GROUP: C -->
+
+  <logicTreeBranchingLevel branchingLevelID="bl3">
+  <logicTreeBranchSet uncertaintyType="gmpeModel"
+                      branchSetID="GROUP_C"
+                      applyToTectonicRegionType="Tectonic_Type_C">
+
+    <logicTreeBranch branchID="GROUP_C_GMPE_2">
+    <uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+    <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="GROUP_C_GMPE_3">
+    <uncertaintyModel>PezeshkEtAl2011</uncertaintyModel>
+    <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+
+  </logicTreeBranchSet>
+  </logicTreeBranchingLevel>
+
+</logicTree>
+
+</nrml>
