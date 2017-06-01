@@ -525,17 +525,13 @@ class CompositeSourceModel(collections.Sequence):
         a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
-    def __init__(self, gsim_lt, source_model_lt, source_models,
-                 set_weight=False):
+    def __init__(self, gsim_lt, source_model_lt, source_models):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()
         self.split_map = {}
-        if set_weight:
-            self.set_weights()
-        else:
-            self.weight = 0
+        self.weight = 0
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
@@ -583,8 +579,8 @@ class CompositeSourceModel(collections.Sequence):
                 sm.name, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
-                             set_weight=True)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
+        new.weight = weight
         return new
 
     @property
@@ -620,23 +616,6 @@ class CompositeSourceModel(collections.Sequence):
         :returns: the total number of sources in the model
         """
         return sum(len(src_group) for src_group in self.src_groups)
-
-    def set_weights(self):
-        """
-        Update the attributes .weight and src.num_ruptures for each TRT model
-        .weight of the CompositeSourceModel.
-        """
-        self.weight = 0
-        for src_group in self.src_groups:
-            weight = 0
-            num_ruptures = 0
-            for src in src_group:
-                weight += src.weight
-                num_ruptures += src.num_ruptures
-            src_group.weight = weight
-            src_group.sources = sorted(
-                src_group, key=operator.attrgetter('source_id'))
-            self.weight += weight
 
     def init_serials(self):
         """
