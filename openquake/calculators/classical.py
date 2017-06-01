@@ -337,7 +337,7 @@ class PSHACalculator(base.HazardCalculator):
                         logging.info(
                             'Sending source group #%d of %d (%s, %d sources)',
                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
-                    gsims = sorted(csm.gsim_lt.values[sg.trt])
+                    gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
                     if oq.poes_disagg or oq.iml_disagg:  # only for disagg
                         param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
                     if sg.src_interdep == 'mutex':  # do not split the group
