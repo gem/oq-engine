@@ -411,6 +411,7 @@ class HazardCalculator(BaseCalculator):
                 self.src_filter = SourceFilter(
                     self.sitecol, oq.maximum_distance)
             self.csm = csm.filter(self.src_filter)
+            csm.info.gsim_lt.check_imts(oq.imtls)
             self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
         self.init()
@@ -448,12 +449,6 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
         self._monitor.save_info(job_info)
-        try:
-            self.csm_info = self.datastore['csm_info']
-        except KeyError:
-            pass
-        else:
-            self.csm_info.gsim_lt.check_imts(self.oqparam.imtls)
         self.param = {}  # used in the risk calculators
 
     def init(self):
