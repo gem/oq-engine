@@ -628,6 +628,8 @@ def get_ruptures(dstore, grp_id):
     oq = dstore['oqparam']
     trt = dstore['csm_info'].grp_trt()[grp_id]
     grp = 'grp-%02d' % grp_id
+    if grp not in dstore['events']:
+        return
     events = dstore['events/' + grp]
     for rec in dstore['ruptures/' + grp]:
         mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
