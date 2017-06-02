@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import ast
-import shlex
 import inspect
 from decorator import getfullargspec
 from openquake.baselib import sap
@@ -45,11 +44,10 @@ def convert(strings):
 
 
 @sap.Script
-def db(cmd, args=''):
+def db(cmd, args):
     """
     Run a database command
     """
-    args = shlex.split(args)
     if cmd not in commands:
         okcmds = '\n'.join(
             '%s %s' % (name, repr(' '.join(args)) if args else '')
@@ -67,4 +65,4 @@ def db(cmd, args=''):
             print(res)
 
 db.arg('cmd', 'db command')
-db.arg('args', 'a string of arguments')
+db.arg('args', 'db command arguments', nargs='*')
