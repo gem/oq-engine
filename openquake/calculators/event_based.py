@@ -231,18 +231,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
             oq.minimum_intensity, oq.imtls)
         self.rupser = calc.RuptureSerializer(self.datastore)
 
-    def count_eff_ruptures(self, ruptures_by_grp_id, src_group):
-        """
-        Returns the number of ruptures sampled in the given src_group.
-
-        :param ruptures_by_grp_id: a dictionary with key grp_id
-        :param src_group: a SourceGroup instance
-        """
-        nr = sum(
-            len(ruptures) for grp_id, ruptures in ruptures_by_grp_id.items()
-            if src_group.id == grp_id)
-        return nr
-
     def zerodict(self):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
@@ -531,6 +519,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 if result[i]:
                     self.datastore[key] = result[i]
                 else:
+                    self.datastore[key] = ProbabilityMap(oq.imtls.array.size)
                     logging.info('Zero curves for %s', key)
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations

@@ -327,6 +327,8 @@ def make_hmap(pmap, imtls, poes):
     """
     I, P = len(imtls), len(poes)
     hmap = probability_map.ProbabilityMap.build(I * P, 1, pmap)
+    if len(pmap) == 0:
+        return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
         curves = numpy.array([pmap[sid].array[imtls.slicedic[imt], 0]
                               for sid in pmap.sids])
