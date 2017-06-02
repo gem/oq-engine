@@ -266,6 +266,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
+        # it has 8 realizations but 4 of them have 0 ruptures
         out = self.run_calc(case_4.__file__, 'job.ini',
                             calculation_mode='event_based',
                             ground_motion_fields='false', exports='csv')
@@ -275,7 +276,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
         fnames = export(('hmaps', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 20)  # 2 IMT x 2 poes + 16 files
+        self.assertEqual(len(fnames), 36)  # 2 IMT x 2 poes + 32 files
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):
