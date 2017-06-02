@@ -322,7 +322,7 @@ class DbTestCase(unittest.TestCase):
                 'openquake.commonlib.logs.dbcmd', manage.dbcmd):
             db('version_db')
             try:
-                db('calc_info 1')
+                db('calc_info', (1,))
             except dbapi.NotFound:  # happens on an empty db
                 pass
 

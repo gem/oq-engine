@@ -44,7 +44,7 @@ def convert(strings):
 
 
 @sap.Script
-def db(cmd, args):
+def db(cmd, args=()):
     """
     Run a database command
     """
