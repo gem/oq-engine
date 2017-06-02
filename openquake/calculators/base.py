@@ -28,6 +28,7 @@ import collections
 import numpy
 
 from openquake.hazardlib import __version__ as hazardlib_version
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
@@ -401,9 +402,15 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Reusing composite source model of calc #%d',
                              oq.hazard_calculation_id)
                 with datastore.read(oq.hazard_calculation_id) as dstore:
-                    self.csm = dstore['composite_source_model']
+                    csm = dstore['composite_source_model']
             else:
-                self.csm = self.read_csm()
+                csm = self.read_csm()
+            logging.info('Prefiltering the CompositeSourceModel')
+            with self.monitor('prefiltering source model',
+                              autoflush=True, measuremem=True):
+                self.src_filter = SourceFilter(
+                    self.sitecol, oq.maximum_distance)
+            self.csm = csm.filter(self.src_filter)
             self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
         self.init()
