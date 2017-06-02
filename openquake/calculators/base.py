@@ -410,7 +410,7 @@ class HazardCalculator(BaseCalculator):
                               autoflush=True, measuremem=True):
                 self.src_filter = SourceFilter(
                     self.sitecol, oq.maximum_distance)
-            self.csm = csm.filter(self.src_filter)
+                self.csm = csm.filter(self.src_filter)
             csm.info.gsim_lt.check_imts(oq.imtls)
             self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
