@@ -659,7 +659,14 @@ class GmfDataGetter(GmfGetter):
         pass
 
     def gen_gmv(self, gsim):
-        dset = self.gmf_data['grp-%02d/%s' % (self.grp_id, gsim)]
+        """
+        Yield gmv records from the datastore, if present
+        """
+        key = 'grp-%02d/%s' % (self.grp_id, gsim)
+        try:
+            dset = self.gmf_data[key]
+        except KeyError:
+            return
         for rec in dset[self.start:self.stop]:
             yield rec
 
