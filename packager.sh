@@ -393,6 +393,10 @@ _devtest_innervm_run () {
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib openquake/commonlib
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
 
+		 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib
+
+
+
                  python-coverage xml --include=\"openquake/*\"
         bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
