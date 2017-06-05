@@ -24,7 +24,7 @@ script:
   - python -c'import platform; print(platform.platform())'
   - if [ "$PKG" == "demos" ]; then bin/run-demos.sh; fi
   - if [ "$PKG" == "engine" ]; then nosetests --with-doctest -xs -a'!slow' openquake.engine;  fi
-  - if [ "$PKG" == "server" ]; then nosetests --with-doctest -xs -a'!slow' openquake.server && bin/oq webui migrate && cat /tmp/webui*; fi
+  - if [ "$PKG" == "server" ]; then mkdir ~/oqdata; nosetests --with-doctest -xs -a'!slow' openquake.server && bin/oq webui migrate && cat /tmp/webui*; fi
   - if [ "$PKG" == "hazardlib" ]; then nosetests --with-doctest -xs -a'!slow' openquake.hazardlib; fi
   - if [ "$PKG" == "risklib" ]; then nosetests --with-doctest -xs -a'!slow' openquake.risklib; fi
   - if [ "$PKG" == "hmtk" ]; then nosetests --with-doctest -xs -a'!slow' openquake.hmtk; fi
