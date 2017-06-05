@@ -19,20 +19,31 @@
 import os
 import sys
 import subprocess
+import webbrowser
+
 from openquake.baselib import sap
 from openquake.commonlib import config
 from openquake.server import dbserver
+from openquake.server.utils import check_webserver_running
+
+# syncdb is left for backward compatibility with Django 1.6
+commands = ['start', 'migrate', 'syncdb', 'createsuperuser', 'collectstatic']
 
 
-def rundjango(subcmd, hostport=None):
+def rundjango(subcmd, hostport=None, skip_browser=False):
     args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
     if hostport:
         args.append(hostport)
-    subprocess.call(args)
+    p = subprocess.Popen(args)
+    if subcmd == 'runserver' and not skip_browser:
+        url = 'http://' + hostport
+        if check_webserver_running(url):
+            webbrowser.open(url)
+    p.wait()
 
 
 @sap.Script
-def webui(cmd, hostport='127.0.0.1:8800'):
+def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
     """
     start the webui server in foreground or perform other operation on the
     django application
@@ -44,12 +55,10 @@ def webui(cmd, hostport='127.0.0.1:8800'):
                  'see the documentation for details')
     if cmd == 'start':
         dbserver.ensure_on()  # start the dbserver in a subproces
-        rundjango('runserver', hostport)
-    elif cmd == 'migrate':
-        rundjango('migrate')
-    # For backward compatibility with Django 1.6
-    elif cmd == 'syncdb':
-        rundjango('syncdb')
+        rundjango('runserver', hostport, skip_browser)
+    elif cmd in commands:
+        rundjango(cmd)
 
-webui.arg('cmd', 'webui command', choices='start migrate syncdb'.split())
+webui.arg('cmd', 'webui command', choices=commands)
 webui.arg('hostport', 'a string of the form <hostname:port>')
+webui.flg('skip_browser', 'do not automatically open the browser')
