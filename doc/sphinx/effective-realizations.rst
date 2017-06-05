@@ -154,11 +154,11 @@ it will export only two files with names like::
 How to analyze the logic tree of a calculation without running the calculation
 ==============================================================================
 
-`oq-lite` provide some facilities to explore the logic tree of a
+The engine provide some facilities to explore the logic tree of a
 computation without running it. The command you need is the *info* command::
 
-   $ oq-lite info -h
-   usage: oq-lite info [-h] [-c] [-g] [-v] [-r] [input_file]
+   $ oq info -h
+   usage: oq info [-h] [-c] [-g] [-v] [-r] [input_file]
    
    positional arguments:
      input_file         job.ini file or zip archive [default: '']
@@ -175,7 +175,7 @@ SHARE source model, the SHARE source model logic tree file and the SHARE
 GMPE logic tree file as provided by the SHARE collaboration, as well as
 a `job.ini` file. If you run
 
-  `oq-lite info SHARE.zip`
+  `oq info SHARE.zip`
 
 all the files will be parsed and the full logic tree of the computation
 will be generated. This is very fast, it runs in exactly 1 minute on my
@@ -211,7 +211,7 @@ realizations, not the potential ones. You can perform that check by
 using the `--report` flag. This will generate a report with a name
 like `report_<calc_id>.rst`::
 
-   $ oq-lite info SHARE.zip --report
+   $ oq info SHARE.zip --report
    ...
    Generated /home/michele/report_5580.rst
 
@@ -240,7 +240,7 @@ it possible to understand what it is in the association object. So, it is
 better to look at a simpler example. Consider for instance our QA test
 classical/case_7; you can run the command and get::
 
-   $ oq-lite info classical/case_7/job.ini 
+   $ oq info classical/case_7/job.ini 
    <CompositionInfo
    b1, source_model_1.xml, trt=[0], weight=0.70: 1 realization(s)
    b2, source_model_2.xml, trt=[1], weight=0.30: 1 realization(s)>
@@ -257,7 +257,7 @@ tectonic region type, but more complex cases are possibile.  For
 instance consider our test classical/case_19, which is a reduction of
 the SHARE model with just a simplified area source model::
 
-   $ oq-lite info classical/case_19/job.ini -f
+   $ oq info classical/case_19/job.ini -f
    <CompositionInfo
    b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4], weight=1.0:: 4 realization(s)>
    <RlzsAssoc(8)
