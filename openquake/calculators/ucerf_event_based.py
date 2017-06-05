@@ -430,6 +430,8 @@ class UcerfSource(object):
     :param branch_name: name of the UCERF branch
     :param branch_id: string associated to the branch
     """
+    tectonic_region_type = DEFAULT_TRT
+
     def __init__(self, control, grp_id, branch_name, branch_id):
         self.control = control
         self.src_group_id = grp_id
@@ -722,6 +724,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     if not param['save_ruptures']:
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
+    res.eff_ruptures = {src.src_group_id: src.num_ruptures}
     return res
 
 
@@ -743,8 +746,7 @@ def get_composite_source_model(oq):
         sm.src_groups = [sg]
         sg.sources = [UcerfSource(sg[0], sm.ordinal, sm.path[0], sm.name)]
         source_models.append(sm)
-    return source.CompositeSourceModel(
-        gsim_lt, smlt, source_models, set_weight=True)
+    return source.CompositeSourceModel(gsim_lt, smlt, source_models)
 
 
 @base.calculators.add('ucerf_rupture')

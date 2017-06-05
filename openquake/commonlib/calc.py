@@ -327,6 +327,8 @@ def make_hmap(pmap, imtls, poes):
     """
     I, P = len(imtls), len(poes)
     hmap = probability_map.ProbabilityMap.build(I * P, 1, pmap)
+    if len(pmap) == 0:
+        return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
         curves = numpy.array([pmap[sid].array[imtls.slicedic[imt], 0]
                               for sid in pmap.sids])
@@ -628,6 +630,8 @@ def get_ruptures(dstore, grp_id):
     oq = dstore['oqparam']
     trt = dstore['csm_info'].grp_trt()[grp_id]
     grp = 'grp-%02d' % grp_id
+    if grp not in dstore['events']:
+        return
     events = dstore['events/' + grp]
     for rec in dstore['ruptures/' + grp]:
         mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])

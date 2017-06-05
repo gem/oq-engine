@@ -28,12 +28,12 @@ import collections
 import numpy
 
 from openquake.hazardlib import __version__ as hazardlib_version
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib import riskinput, __version__ as engine_version
-from openquake.commonlib import readinput, datastore, source, calc
+from openquake.commonlib import readinput, datastore, source, calc, riskmodels
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -398,20 +398,25 @@ class HazardCalculator(BaseCalculator):
         self.read_risk_data()
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
-            logging.info('Instantiating the source-sites filter')
-            self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
             if oq.hazard_calculation_id:  # already stored csm
                 logging.info('Reusing composite source model of calc #%d',
                              oq.hazard_calculation_id)
                 with datastore.read(oq.hazard_calculation_id) as dstore:
-                    self.csm = dstore['composite_source_model']
+                    csm = dstore['composite_source_model']
             else:
-                self.csm = self.read_filter_csm()
+                csm = self.read_csm()
+            logging.info('Prefiltering the CompositeSourceModel')
+            with self.monitor('prefiltering source model',
+                              autoflush=True, measuremem=True):
+                self.src_filter = SourceFilter(
+                    self.sitecol, oq.maximum_distance)
+                self.csm = csm.filter(self.src_filter)
+            csm.info.gsim_lt.check_imts(oq.imtls)
             self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
         self.init()
 
-    def read_filter_csm(self):
+    def read_csm(self):
         with self.monitor('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
         if self.is_stochastic:
@@ -419,10 +424,6 @@ class HazardCalculator(BaseCalculator):
             # filtering; in this way the serials are independent
             # from the site collection; this is ultra-fast
             csm.init_serials()
-        with self.monitor('filtering composite source model', autoflush=True):
-            logging.info('Filtering composite source model')
-            # we are also weighting the sources, but weighting is ultrafast
-            csm = csm.filter(self.src_filter)
         return csm
 
     def pre_execute(self):
@@ -448,12 +449,6 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
         self._monitor.save_info(job_info)
-        try:
-            self.csm_info = self.datastore['csm_info']
-        except KeyError:
-            pass
-        else:
-            self.csm_info.gsim_lt.check_imts(self.oqparam.imtls)
         self.param = {}  # used in the risk calculators
 
     def init(self):
@@ -568,11 +563,23 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if self.oqparam.job_type == 'risk':
+            taxonomies = set(self.taxonomies)
+
             # check that we are covering all the taxonomies in the exposure
-            missing = set(self.taxonomies) - set(self.riskmodel.taxonomies)
+            missing = taxonomies - set(self.riskmodel.taxonomies)
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
+
+            # same check for the consequence models, if any
+            consequence_models = riskmodels.get_risk_models(
+                self.oqparam, 'consequence')
+            for lt, cm in consequence_models.items():
+                missing = taxonomies - set(cm)
+                if missing:
+                    raise ValueError(
+                        'Missing consequenceFunctions for %s' %
+                        ' '.join(missing))
 
     def post_process(self):
         """For compatibility with the engine"""
