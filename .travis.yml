@@ -34,6 +34,7 @@ jobs:
     script:
         - nosetests --with-doctest -xs -a'!slow' openquake.hmtk
   - stage: demos
+    env: DEMOS
     script: 
         - bin/run-demos.sh
 
