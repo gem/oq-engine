@@ -650,40 +650,6 @@ def export_losses_by_taxon_csv(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by classical_risk
-@export.add(('loss_curves-rlzs', 'xml'),
-            ('loss_curves-rlzs', 'geojson'))
-@depr('Use `oq export loss_curves/rlz-XX` instead')
-def export_loss_curves_rlzs(ekey, dstore):
-    assetcol = dstore['assetcol/array'].value
-    aref = dstore['asset_refs'].value
-    loss_curves = dstore[ekey[0]]
-    fnames = []
-    writercls = (risk_writers.LossCurveGeoJSONWriter
-                 if ekey[0] == 'geojson' else
-                 risk_writers.LossCurveXMLWriter)
-    for writer, (lt, poe, r, insflag) in _gen_writers(
-            dstore, writercls, ekey[0]):
-        ins = '_ins' if insflag else ''
-        array = loss_curves[lt][:, r]
-        curves = []
-        for ass, data in zip(assetcol, array):
-            loc = Location(ass['lon'], ass['lat'])
-            losses = data['losses' + ins]
-            poes = data['poes' + ins]
-            avg = data['avg' + ins]
-            if lt == 'occupants':
-                loss_ratios = losses / ass['occupants']
-            else:
-                loss_ratios = losses / ass['value-' + lt]
-            curve = LossCurve(loc, aref[ass['idx']], poes,
-                              losses, loss_ratios, avg, None)
-            curves.append(curve)
-        writer.serialize(curves)
-        fnames.append(writer._dest)
-    return sorted(fnames)
-
-
 @export.add(('bcr-rlzs', 'csv'))
 def export_bcr_map(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
