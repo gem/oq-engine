@@ -10,8 +10,8 @@ jobs:
   - stage: tests
     env: ENGINE
     script:
-        - nosetests --with-doctest -xs -a'!slow' openquake.engine
-        - mkdir ~/oqdata; nosetests --with-doctest -xs -a'!slow' openquake.server
+        - nosetests --with-doctest -xvs -a'!slow' openquake.engine
+        - mkdir ~/oqdata; nosetests --with-doctest -xvs -a'!slow' openquake.server
         - bin/oq webui migrate
         - cat /tmp/webui*
     after_success:
@@ -19,20 +19,20 @@ jobs:
   - stage: tests
     env: HAZARDLIB
     script:
-        - nosetests --with-doctest -xs -a'!slow' openquake.hazardlib 
+        - nosetests --with-doctest -xvs -a'!slow' openquake.hazardlib
   - stage: tests
     env: RISKLIB
     script:
-        - nosetests --with-doctest -xs -a'!slow' openquake.risklib
+        - nosetests --with-doctest -xvs -a'!slow' openquake.risklib
   - stage: tests
     env: COMMON
     script:
-        - nosetests --with-doctest -xs -a'!slow' openquake.commonlib
-        - nosetests --with-doctest -xs -a'!slow' openquake.commands
+        - nosetests --with-doctest -xvs -a'!slow' openquake.commonlib
+        - nosetests --with-doctest -xvs -a'!slow' openquake.commands
   - stage: tests
     env: HMTK
     script:
-        - nosetests --with-doctest -xs -a'!slow' openquake.hmtk
+        - nosetests --with-doctest -xvs -a'!slow' openquake.hmtk
   - stage: demos
     env: DEMOS
     script: 
