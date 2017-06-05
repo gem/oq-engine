@@ -27,7 +27,7 @@ from openquake.calculators.tests import CalculatorTestCase
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
-    def assert_ok(self, pkg, job_ini, exports='xml', kind='dmg'):
+    def assert_ok(self, pkg, job_ini, exports='csv', kind='dmg'):
         test_dir = os.path.dirname(pkg.__file__)
         out = self.run_calc(test_dir, job_ini, exports=exports)
         got = (out[kind + '_by_asset', exports] +
@@ -48,9 +48,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
         test_dir = os.path.dirname(case_1c.__file__)
-        out = self.run_calc(test_dir, 'job.ini', exports='xml')
-        [total] = out['dmg_total', 'xml']
-        self.assertEqualFiles('expected/dmg_dist_total.xml', total)
+        out = self.run_calc(test_dir, 'job.ini', exports='csv')
+        [total] = out['dmg_total', 'csv']
+        self.assertEqualFiles('expected/dmg_total.csv', total)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1h(self):
