@@ -1,0 +1,11 @@
+loss_type,damage_state,damage_value
+structural,no_damage_mean,2.682000E+03
+structural,no_damage_stdv,0.000000E+00
+structural,Slight_mean,-1.523619E-11
+structural,Slight_stdv,3.213232E-11
+structural,Moderate_mean,1.045347E-12
+structural,Moderate_stdv,2.233282E-12
+structural,Extensive_mean,-4.350956E-09
+structural,Extensive_stdv,9.055496E-09
+structural,Collapse_mean,4.365148E-09
+structural,Collapse_stdv,9.085390E-09
