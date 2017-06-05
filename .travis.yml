@@ -10,7 +10,7 @@ jobs:
   - stage: demos
     script: 
         - bin/run-demos.sh
-  - stage: engine
+  - stage: tests
     script:
         - nosetests --with-doctest -xs -a'!slow' openquake.engine
         - mkdir ~/oqdata; nosetests --with-doctest -xs -a'!slow' openquake.server
@@ -18,17 +18,17 @@ jobs:
         - cat /tmp/webui*
     after_success:
         - pip install sphinx==1.3.6 && cd doc/sphinx && make html
-  - stage: hazardlib
+  - stage: tests
     script:
         - nosetests --with-doctest -xs -a'!slow' openquake.hazardlib 
-  - stage: risklib
+  - stage: tests
     script:
         - nosetests --with-doctest -xs -a'!slow' openquake.risklib
-  - stage: common
+  - stage: tests
     script:
         - nosetests --with-doctest -xs -a'!slow' openquake.commonlib
         - nosetests --with-doctest -xs -a'!slow' openquake.commands
-  - stage: hmtk
+  - stage: tests
     script:
         - nosetests --with-doctest -xs -a'!slow' openquake.hmtk
 
