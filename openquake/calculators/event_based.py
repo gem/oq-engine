@@ -110,10 +110,12 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
     # Compute and save stochastic event sets
+    num_ruptures = 0
     for src, s_sites in src_filter(sources):
         t0 = time.time()
         if s_sites is None:
             continue
+        num_ruptures += src.num_ruptures
         num_occ_by_rup = sample_ruptures(
             src, param['ses_per_logic_tree_path'], param['samples'],
             param['seed'])
@@ -129,6 +131,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     res = AccumDict({grp_id: eb_ruptures})
     res.num_events = set_eids(eb_ruptures, getattr(monitor, 'task_no', 0))
     res.calc_times = calc_times
+    res.eff_ruptures = {grp_id: num_ruptures}
     return res
 
 
@@ -224,22 +227,9 @@ class EventBasedRuptureCalculator(PSHACalculator):
         minimum_intensity dictionary.
         """
         oq = self.oqparam
-        self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
         self.rupser = calc.RuptureSerializer(self.datastore)
-
-    def count_eff_ruptures(self, ruptures_by_grp_id, src_group):
-        """
-        Returns the number of ruptures sampled in the given src_group.
-
-        :param ruptures_by_grp_id: a dictionary with key grp_id
-        :param src_group: a SourceGroup instance
-        """
-        nr = sum(
-            len(ruptures) for grp_id, ruptures in ruptures_by_grp_id.items()
-            if src_group.id == grp_id)
-        return nr
 
     def zerodict(self):
         """
@@ -529,6 +519,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 if result[i]:
                     self.datastore[key] = result[i]
                 else:
+                    self.datastore[key] = ProbabilityMap(oq.imtls.array.size)
                     logging.info('Zero curves for %s', key)
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations

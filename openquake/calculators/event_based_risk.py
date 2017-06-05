@@ -390,10 +390,9 @@ class EbriskCalculator(base.RiskCalculator):
         :param monitor: a Monitor instance
         :returns: an IterResult instance
         """
-        csm_info = self.csm_info.get_info(sm_id)
+        csm_info = self.csm.info.get_info(sm_id)
         grp_ids = sorted(csm_info.get_sm_by_grp())
-        rlzs_assoc = csm_info.get_rlzs_assoc(
-            count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, [])))
+        rlzs_assoc = csm_info.get_rlzs_assoc()
         num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
                          for ebr in ruptures_by_grp[grp])
         seeds = self.oqparam.random_seed + numpy.arange(num_events)
