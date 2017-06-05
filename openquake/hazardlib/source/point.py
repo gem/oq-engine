@@ -24,6 +24,14 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 
+KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
+DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
+
+
+def angular_distance(km, lat):
+    """Return the angular distance of two points at the given latitude"""
+    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
+
 
 @with_slots
 class PointSource(ParametricSeismicSource):
@@ -88,8 +96,9 @@ class PointSource(ParametricSeismicSource):
                              'lower and upper seismogenic depths')
 
         if not upper_seismogenic_depth > geodetic.EARTH_ELEVATION:
-            raise ValueError("Upper seismogenic depth must be greater than the "
-                             "maximum elevation on Earth's surface (-8.848 km)")
+            raise ValueError(
+                "Upper seismogenic depth must be greater than the "
+                "maximum elevation on Earth's surface (-8.848 km)")
 
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution
@@ -351,3 +360,15 @@ class PointSource(ParametricSeismicSource):
         return PlanarSurface(self.rupture_mesh_spacing, nodal_plane.strike,
                              nodal_plane.dip, left_top, right_top,
                              right_bottom, left_bottom)
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing all points, enlarged by the maximum distance
+        and the maximum rupture projection radius (upper limit).
+        """
+        lon = self.location.x
+        lat = self.location.y
+        maxradius = self._get_max_rupture_projection_radius()
+        a1 = (maxdist + maxradius) * KM_TO_DEGREES
+        a2 = angular_distance(maxdist + maxradius, lat)
+        return lon - a2, lat - a1, lon + a2, lat + a1
