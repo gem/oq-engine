@@ -1,14 +1,20 @@
 sudo: false
 
 language: python
-
-python:
- - "3.5"
-
-addons:
-  apt:
-    packages:
-    - git
+matrix:
+  include:
+  - python: "3.5"
+    env: PKG=engine
+  - python: "3.5"
+    env: PKG=server
+  - python: "3.5"
+    env: PKG=hazardlib
+  - python: "3.5"
+    env: PKG=risklib
+  - python: "3.5"
+    env: PKG=common
+  - python: "3.5"
+    env: PKG=hmtk
 
 install:
   - pip install -r requirements-py35-linux64.txt
@@ -16,13 +22,14 @@ install:
 
 script:
   - python -c'import platform; print(platform.platform())'
-  - bin/run-demos.sh
-  - nosetests --with-doctest -xs -a'!slow'
-  - cat /tmp/webui*
+  - if [ "$PKG" == "demos" ]; then bin/run-demos.sh; fi
+  - if [ "$PKG" == "engine" ]; then nosetests --with-doctest -xs -a'!slow' openquake.engine;  fi
+  - if [ "$PKG" == "server" ]; then nosetests --with-doctest -xs -a'!slow' openquake.server && bin/oq webui migrate && cat /tmp/webui*; fi
+  - if [ "$PKG" == "hazardlib" ]; then nosetests --with-doctest -xs -a'!slow' openquake.hazardlib; fi
+  - if [ "$PKG" == "risklib" ]; then nosetests --with-doctest -xs -a'!slow' openquake.risklib; fi
+  - if [ "$PKG" == "hmtk" ]; then nosetests --with-doctest -xs -a'!slow' openquake.hmtk; fi
+  - if [ "$PKG" == "common" ]; then nosetests --with-doctest -xs -a'!slow' openquake.commonlib openquake.commands; fi
   - bin/oq reset --yes
-  - bin/oq webui migrate
 
 after_success:
-  - pip install sphinx==1.3.6
-  - cd doc/sphinx
-  - make html
+  - if [ "$PKG" == "engine" ]; then pip install sphinx==1.3.6 && cd doc/sphinx && make html; fi
