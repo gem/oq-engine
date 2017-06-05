@@ -525,17 +525,13 @@ class CompositeSourceModel(collections.Sequence):
         a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
-    def __init__(self, gsim_lt, source_model_lt, source_models,
-                 set_weight=False):
+    def __init__(self, gsim_lt, source_model_lt, source_models):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()
         self.split_map = {}
-        if set_weight:
-            self.set_weights()
-        else:
-            self.weight = 0
+        self.weight = 0
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
@@ -554,8 +550,7 @@ class CompositeSourceModel(collections.Sequence):
         sm = self.source_models[sm_id]
         if self.source_model_lt.num_samples:
             self.source_model_lt.num_samples = sm.samples
-        new = self.__class__(
-            self.gsim_lt, self.source_model_lt, [sm], set_weight=False)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm])
         new.sm_id = sm_id
         new.weight = sum(src.weight for sg in sm.src_groups
                          for src in sg.sources)
@@ -571,20 +566,33 @@ class CompositeSourceModel(collections.Sequence):
         """
         source_models = []
         weight = 0
+        idx = 0
+        seed = int(self.source_model_lt.seed)  # avoids F32 issues on Windows
         for sm in self.source_models:
-            src_groups = [copy.copy(sg) for sg in sm.src_groups]
-            for src_group in src_groups:
+            src_groups = []
+            for src_group in sm.src_groups:
+                if self.source_model_lt.num_samples:
+                    rnd = random.Random(seed + idx)
+                    rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
+                    idx += len(rlzs)
+                    for i, sg in enumerate(sm.src_groups):
+                        sg.gsims = sorted(set(rlz.value[i] for rlz in rlzs))
+                else:
+                    for sg in sm.src_groups:
+                        sg.gsims = sorted(self.gsim_lt.values[sg.trt])
                 sources = []
                 for src, sites in src_filter(src_group.sources):
                     sources.append(src)
                     weight += src.weight
-                src_group.sources = sources
+                sg = copy.copy(src_group)
+                sg.sources = sources
+                src_groups.append(sg)
             newsm = logictree.SourceModel(
                 sm.name, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
-                             set_weight=True)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
+        new.weight = weight
         return new
 
     @property
@@ -620,23 +628,6 @@ class CompositeSourceModel(collections.Sequence):
         :returns: the total number of sources in the model
         """
         return sum(len(src_group) for src_group in self.src_groups)
-
-    def set_weights(self):
-        """
-        Update the attributes .weight and src.num_ruptures for each TRT model
-        .weight of the CompositeSourceModel.
-        """
-        self.weight = 0
-        for src_group in self.src_groups:
-            weight = 0
-            num_ruptures = 0
-            for src in src_group:
-                weight += src.weight
-                num_ruptures += src.num_ruptures
-            src_group.weight = weight
-            src_group.sources = sorted(
-                src_group, key=operator.attrgetter('source_id'))
-            self.weight += weight
 
     def init_serials(self):
         """
@@ -683,11 +674,7 @@ class CompositeSourceModel(collections.Sequence):
         heavy = [src for src in sources if src.weight > maxweight]
         self.add_infos(heavy)
         for src in heavy:
-            srcs = sourceconverter.split_filter_source(src, src_filter)
-            if len(srcs) > 1:
-                logging.info(
-                    'Splitting %s "%s" in %d sources', src.__class__.__name__,
-                    src.source_id, len(srcs))
+            srcs = split_filter_source(src, src_filter)
             for block in block_splitter(
                     srcs, maxweight, weight=operator.attrgetter('weight')):
                 yield block
@@ -712,6 +699,36 @@ class CompositeSourceModel(collections.Sequence):
     def __len__(self):
         """Return the number of underlying source models"""
         return len(self.source_models)
+
+
+split_map = {}  # src -> split sources
+
+
+def split_filter_source(src, src_filter):
+    """
+    :param src: a source to split
+    :param src_filter: a SourceFilter instance
+    :returns: a list of split sources
+    """
+    has_serial = hasattr(src, 'serial')
+    split_sources = []
+    start = 0
+    try:
+        splits = split_map[src]  # read from the cache
+    except KeyError:  # fill the cache
+        splits = split_map[src] = list(sourceconverter.split_source(src))
+        if len(splits) > 1:
+            logging.info(
+                'Splitting %s "%s" in %d sources', src.__class__.__name__,
+                src.source_id, len(splits))
+    for split in splits:
+        if has_serial:
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
+            start += nr
+        if src_filter.get_close_sites(split) is not None:
+            split_sources.append(split)
+    return split_sources
 
 
 def collect_source_model_paths(smlt):
