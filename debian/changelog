@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an end point `v1/calc/XXX/oqparam` to extract the calculation
+    parameters as a JSON dictionary
   * Fixed the excessive logic tree reduction in event based calculators
   * Improved the command `oq db`
   * Fixed an encoding bug when logging a filename with a non-ASCII character
