@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Fixed an encoding bug when logging a filename with a non-ASCII character
+  * Fixed a bug when exporting a GMF with `ruptureId=0`
+  * Added a parameter `disagg_outputs` to specify the kind of disaggregation
+    outputs to export
+  * Raised an early error if the consequence model is missing some taxonomies
+  * Restored the tiling functionality in the classical calculator; to enable
+    it, set `num_tiles` in the job.ini file
   * If there are no statistical hazard curves to compute, do not transfer
     anything
   * Fixed a small bug in `oq plot` and added a test
