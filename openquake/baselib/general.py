@@ -339,16 +339,28 @@ def git_suffix(fname):
     """
     :returns: `<short git hash>` if Git repository found
     """
-    try:
-        gh = subprocess.check_output(
-            ['git', 'rev-parse', '--short', 'HEAD'],
-            stderr=open(os.devnull, 'w'), cwd=os.path.dirname(fname)).strip()
-        gh = "-git" + decode(gh) if gh else ''
-        return gh
-    except:
-        # trapping everything on purpose; git may not be installed or it
-        # may not work properly
-        return ''
+    # we assume that the .git folder is two levels above any package
+    # i.e. openquake/engine/../../.git
+    git_path = os.path.join(os.path.dirname(fname), '..', '..', '.git')
+
+    # macOS complains if we try to execute git and it's not available.
+    # Code will run, but a pop-up offering to install bloatware (Xcode)
+    # is raised. This is annoying in end-users installations, so we check
+    # if .git exists before trying to execute the git executable
+    if os.path.isdir(git_path):
+        try:
+            gh = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                stderr=open(os.devnull, 'w'),
+                cwd=os.path.dirname(git_path)).strip()
+            gh = "-git" + decode(gh) if gh else ''
+            return gh
+        except:
+            # trapping everything on purpose; git may not be installed or it
+            # may not work properly
+            pass
+
+    return ''
 
 
 def run_in_process(code, *args):

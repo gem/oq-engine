@@ -137,7 +137,6 @@ fast sources.
 from __future__ import print_function
 import os
 import sys
-import abc
 import time
 import signal
 import socket

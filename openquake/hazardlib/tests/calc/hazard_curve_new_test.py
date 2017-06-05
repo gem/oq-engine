@@ -32,6 +32,7 @@ from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.hazard_curve import pmap_from_grp
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
+from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -198,3 +199,25 @@ class NankaiTestCase(unittest.TestCase):
         npt.assert_almost_equal(
             [1.11315443e-01, 3.92180097e-03, 3.02064427e-05],
             hcurves['PGV'][0])
+
+
+class MultiPointTestCase(unittest.TestCase):
+    def test(self):
+        d = os.path.dirname(os.path.dirname(__file__))
+        source_model = os.path.join(d, 'source_model/multi-point-source.xml')
+        groups = nrml.parse(source_model, SourceConverter(
+            investigation_time=50., rupture_mesh_spacing=2.))
+        site = Site(Point(0.1, 0.1), 800, True, z1pt0=100., z2pt5=1.)
+        sitecol = SiteCollection([site])
+        imtls = DictArray({'PGA': [0.01, 0.02, 0.04, 0.08, 0.16]})
+        gsim_by_trt = {'Stable Continental Crust': Campbell2003()}
+        hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt)
+        expected = [0.99999778, 0.9084039, 0.148975348,
+                    0.0036909656, 2.76326e-05]
+        npt.assert_almost_equal(hcurves['PGA'][0], expected)
+
+        # splitting in point sources
+        [[mps1, mps2]] = groups
+        psources = list(mps1) + list(mps2)
+        hcurves = calc_hazard_curves(psources, sitecol, imtls, gsim_by_trt)
+        npt.assert_almost_equal(hcurves['PGA'][0], expected)

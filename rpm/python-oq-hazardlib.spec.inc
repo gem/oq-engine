@@ -27,7 +27,7 @@ Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
 
 Requires: python
-Requires: python-oq-libs >= 1.0.0
+Requires: python-oq-libs >= 1.3.0
 
 BuildRequires: python-setuptools
 
