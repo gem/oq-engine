@@ -79,7 +79,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
         [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/loss_maps-mean-structural.csv', fname)
+        self.assertEqualFiles('expected/loss_maps-mean.csv', fname)
 
         [fname] = export(('loss_curves/stats/sid-1', 'csv'),
                          self.calc.datastore)
@@ -93,7 +93,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
 
         # check mean loss curves
-        [fname] = export(('loss_curves-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-mean.csv', fname)
 
         # check individual avg losses
