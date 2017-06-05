@@ -30,5 +30,5 @@ class InvalidFile(Exception):
     pass
 
 # the version is managed by packager.sh with a sed
-__version__ = '0.24.0'
+__version__ = '0.25.0'
 __version__ += git_suffix(__file__)
