@@ -53,7 +53,21 @@ Response:
 
 #### GET /v1/calc/:calc_id
 
-Get calculation status and parameter summary for the given `calc_id`.
+Get calculation status and times for the given `calc_id`.
+
+Parameters: None
+
+Response:
+
+    {"user_name": "michele",
+    "is_running": 0,
+    "stop_time": "2017-06-05 12:01:28.575776",
+    "status": "failed",
+    "start_time": "2017-06-05 12:01:26"}
+
+#### GET /v1/calc/:calc_id/oqparam
+
+Get the parameters of the given `calc_id`.
 
 Parameters: None
 
