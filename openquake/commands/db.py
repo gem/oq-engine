@@ -59,7 +59,7 @@ def db(cmd, args=()):
     else:
         dbserver.ensure_on()
         res = logs.dbcmd(cmd, *convert(args))
-        if hasattr(res, '_fields'):
+        if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
             print(rst_table(res))
         else:
             print(res)
