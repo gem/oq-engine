@@ -19,7 +19,7 @@ from __future__ import print_function
 import os
 import glob
 import operator
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from openquake.hazardlib import valid
 from openquake.commonlib import datastore
@@ -60,20 +60,21 @@ def reset_is_running(db):
 
 def set_status(db, job_id, status):
     """
-    Set the status 'created', 'executing', 'successful', 'failed'
+    Set the status 'created', 'executing', 'complete', 'failed'
     consistently with `is_running`.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
     :param status: status string
     """
-    assert status in ('created', 'executing', 'successful', 'failed'), status
-    if status in ('created', 'successful', 'failed'):
+    assert status in ('created', 'executing', 'complete', 'failed'), status
+    if status in ('created', 'complete', 'failed'):
         is_running = 0
     else:  # 'executing'
         is_running = 1
-    db('UPDATE job SET status=?x, is_running=?x WHERE id=?x',
-       status, is_running, job_id)
+    cursor = db('UPDATE job SET status=?x, is_running=?x WHERE id=?x',
+                status, is_running, job_id)
+    return cursor.rowcount
 
 
 def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
@@ -178,16 +179,9 @@ def list_calculations(db, job_type, user_name):
                '        description')
         for job in jobs:
             descr = job.description
-            if job.is_running:
-                status = 'pending'
-            else:
-                if job.status == 'complete':
-                    status = 'successful'
-                else:
-                    status = 'failed'
             start_time = job.start_time
             yield ('%6d | %10s | %s | %s' % (
-                job.id, status, start_time, descr))
+                job.id, job.status, start_time, descr))
 
 
 def list_outputs(db, job_id, full=True):
