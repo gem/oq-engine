@@ -41,7 +41,7 @@ from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
-from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
@@ -588,6 +588,21 @@ def get_datastore(request, job_id):
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
     return response
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_oqparam(request, job_id):
+    """
+    Return the calculation parameters as a JSON
+    """
+    try:
+        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    with datastore.read(job.id) as ds:
+        oq = ds['oqparam']
+    return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)
 
 
 def web_engine(request, **kwargs):
