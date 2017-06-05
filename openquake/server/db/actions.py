@@ -223,7 +223,7 @@ def get_outputs(db, job_id):
     """
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
-DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
+DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset')
 
 
 def create_outputs(db, job_id, dskeys):
