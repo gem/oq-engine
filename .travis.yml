@@ -39,8 +39,8 @@ jobs:
         - bin/run-demos.sh
 
 install:
-  - pip install -r requirements-py35-linux64.txt
-  - pip install -e .
+  - pip -q install -r requirements-py35-linux64.txt
+  - pip -q install -e .
 
 before_script:
   - python -c'import platform; print(platform.platform())'
