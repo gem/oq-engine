@@ -240,11 +240,11 @@ def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
     along great circle arc and the same approach as in :func:`distance`
     for combining it with depth distance.
 
-    :param array mlons, mlats, mdepths:
+    :param mlons, mlats, mdepths:
         Numpy arrays of the same shape representing a first collection
         of points, the one distance to which is of interest -- longitudes,
         latitudes (both in decimal degrees) and depths (in km).
-    :param array slons, slats, sdepths:
+    :param slons, slats, sdepths:
         Scalars, python lists or tuples or numpy arrays of the same shape,
         representing a second collection: a list of points to find a minimum
         distance from for.
