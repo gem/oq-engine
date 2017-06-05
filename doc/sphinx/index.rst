@@ -11,6 +11,7 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
+   intro
    architecture
    effective-realizations
    event-based-with-large-logic-tree
