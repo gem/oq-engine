@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the excessive logic tree reduction in event based calculators
+  * Improved the command `oq db`
   * Fixed an encoding bug when logging a filename with a non-ASCII character
   * Fixed a bug when exporting a GMF with `ruptureId=0`
   * Added a parameter `disagg_outputs` to specify the kind of disaggregation
