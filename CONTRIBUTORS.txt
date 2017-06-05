@@ -7,19 +7,31 @@ think a name is missing or a date is incorrect, please let us know. =)
 
 Code
 ----
-Andrea Cerisara         January 2012
-Anton Gritsay           January 2012
-Giuseppe Vallarelli     February 2012
-Lars Butler             May 2012
-Damiano Monelli         June 2012
-Luis Rodríguez          December 2012
-Matteo Nastasi          December 2012
+Marco Pagani            July 2010
+Andy Smith              August 2010
+Fabian Euchner          August 2010
+Gaya Moemke             August 2010
+Joshua McKenty          August 2010
+Philip Kaestli          August 2010
+Christopher MacGown     November 2010
+Lars Butler             November 2010
+Roland Siegert          November 2010
+Andrea Cerisara         December 2010
+Marco Milanesi          February 2011
+Muharem Hrnjadovic      February 2011
+Damiano Monelli         May 2011
+Gabriele Favalessa      June 2011
+Mattia Barbon           June 2011
+Giuseppe Vallarelli     July 2011
+Anton Gritsay           August 2011
+Luigi Panzeri           August 2012
+Matteo Nastasi          November 2012
 Michele Simionato       December 2012
-Luigi Panzeri           February 2013
-Marco Pagani            July 2013
+Luis Rodríguez          December 2012
+Daniele Viganò          April 2013
 Graeme Weatherill       September 2013
+Paolo Tormene           October 2013
 Yen-Shin Chen           November 2013
-Daniele Vigano          March 2014
 Julio Garcia            March 2014
 Robin Gee               September 2015
 Silvia Canessa          December 2015
@@ -29,16 +41,8 @@ Jonathan Griffin        October 2016
 Ozkan Kale              October 2016
 Valerio Poggi           March 2017
 
-Research
---------
-Damiano Monelli         January 2012
-Laurentiu Danciu        January 2012
-Marco Pagani            January 2012
-Graeme Weatherill       January 2012
-Luis Rodríguez          December 2012
-Yen-Shin Chen           November 2013
-Julio Garcia            March 2014
-Robin Gee               September 2015
-Silvia Canessa          December 2015
-Nick Ackerley           December 2015
-Valerio Poggi           March 2017
+Project management
+------------------
+Joshua McKenty          August 2010
+John Tarter             November 2010
+Paul Henshaw            February 2012
