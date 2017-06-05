@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_DEPENDS="oq-libs|deb oq-libs-extra"
+GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -358,20 +358,6 @@ _devtest_innervm_run () {
     # extract dependencies for this package
     pkgs_list="$(deps_list "all" debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
-
-    # build oq-hazardlib  # FIXME: is this needed?
-    ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
-                 set -e
-                 if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
-                     export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
-                     set -x
-                 fi
-                 cd oq-hazardlib
-                 python ./setup.py build
-                 for i in \$(find build/ -name *.so); do
-                     o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
-                     cp \$i \$o
-                 done"
 
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
