@@ -575,6 +575,9 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         a pair (Exposure instance, list of asset nodes)
     """
     [exposure] = nrml.read(fname, stop=stop)
+    if not exposure.tag.endswith('exposureModel'):
+        raise InvalidFile('%s: expected exposureModel, got %s' %
+                          (fname, exposure.tag))
     description = exposure.description
     try:
         conversions = exposure.conversions
