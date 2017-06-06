@@ -32,9 +32,6 @@ from openquake.calculators.export.hazard import savez
 from openquake.commonlib import writers, risk_writers, calc
 from openquake.commonlib.util import (
     get_assets, compose_arrays, reader)
-from openquake.commonlib.risk_writers import (
-    DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
-    ExposureData, Site)
 
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
