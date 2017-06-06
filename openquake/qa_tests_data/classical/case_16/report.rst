@@ -2,9 +2,9 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 ==========================================================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21338.hdf5 Fri May 12 10:45:56 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_26078.hdf5 Tue Jun  6 14:58:42 2017
+engine_version                                   2.5.0-gitb270b98        
+hazardlib_version                                0.25.0-git6276f16       
 ================================================ ========================
 
 num_sites = 1, sitecol = 809 B
@@ -151,24 +151,24 @@ source_model.xml 9      Active Shallow Crust 5           2025         2,025
 #sources      50    
 #eff_ruptures 20,260
 #tot_ruptures 20,260
-#tot_weight   2,026 
+#tot_weight   0     
 ============= ======
 
 Informational data
 ------------------
-============================== ====================================================================================
-count_eff_ruptures.received    tot 18.7 KB, max_per_task 1.13 KB                                                   
-count_eff_ruptures.sent        sources 56.42 KB, monitor 14.14 KB, srcfilter 11.36 KB, gsims 1.69 KB, param 1.08 KB
-hazard.input_weight            2,026                                                                               
-hazard.n_imts                  1 B                                                                                 
-hazard.n_levels                3 B                                                                                 
-hazard.n_realizations          10 B                                                                                
-hazard.n_sites                 1 B                                                                                 
-hazard.n_sources               50 B                                                                                
-hazard.output_weight           9.000                                                                               
-hostname                       tstation.gem.lan                                                                    
-require_epsilons               0 B                                                                                 
-============================== ====================================================================================
+============================== ===================================================================================
+count_eff_ruptures.received    tot 10.19 KB, max_per_task 649 B                                                   
+count_eff_ruptures.sent        sources 56.78 KB, srcfilter 11.36 KB, param 10.03 KB, monitor 5.2 KB, gsims 1.69 KB
+hazard.input_weight            2,026                                                                              
+hazard.n_imts                  1 B                                                                                
+hazard.n_levels                3 B                                                                                
+hazard.n_realizations          10 B                                                                               
+hazard.n_sites                 1 B                                                                                
+hazard.n_sources               50 B                                                                               
+hazard.output_weight           9.000                                                                              
+hostname                       tstation.gem.lan                                                                   
+require_epsilons               0 B                                                                                
+============================== ===================================================================================
 
 Slowest sources
 ---------------
@@ -177,24 +177,24 @@ grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 1      1         AreaSource   375          0.002     1         1        
 2      5         AreaSource   425          0.002     1         1        
-3      5         AreaSource   375          0.002     1         1        
-0      1         AreaSource   325          0.002     1         1        
-5      5         AreaSource   375          0.002     1         1        
-3      1         AreaSource   325          0.002     1         1        
-5      1         AreaSource   375          0.002     1         1        
-1      5         AreaSource   375          0.002     1         1        
-5      2         AreaSource   510          0.001     1         1        
+5      1         AreaSource   375          0.001     1         1        
+3      5         AreaSource   375          0.001     1         1        
+2      1         AreaSource   375          0.001     1         1        
+5      5         AreaSource   375          0.001     1         1        
+1      5         AreaSource   375          0.001     1         1        
 6      1         AreaSource   425          0.001     1         1        
-1      3         AreaSource   450          0.001     1         1        
-3      3         AreaSource   510          0.001     1         1        
-0      2         AreaSource   450          0.001     1         1        
-1      2         AreaSource   450          0.001     1         1        
-3      2         AreaSource   450          0.001     1         1        
-0      4         AreaSource   325          0.001     1         1        
-3      4         AreaSource   375          0.001     1         1        
-1      4         AreaSource   375          0.001     1         1        
-0      3         AreaSource   450          0.001     1         1        
+6      5         AreaSource   375          0.001     1         1        
+2      2         AreaSource   450          0.001     1         1        
+4      5         AreaSource   325          0.001     1         1        
+3      1         AreaSource   325          0.001     1         1        
 0      5         AreaSource   375          0.001     1         1        
+5      3         AreaSource   450          0.001     1         1        
+1      3         AreaSource   450          0.001     1         1        
+1      2         AreaSource   450          0.001     1         1        
+4      3         AreaSource   450          0.001     1         1        
+5      2         AreaSource   510          0.001     1         1        
+0      3         AreaSource   450          0.001     1         1        
+4      4         AreaSource   325          0.001     1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -202,27 +202,27 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.068     50    
+AreaSource   0.061     50    
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.005 0.003  0.001 0.009 17       
+count_eff_ruptures 0.005 0.002  0.002 0.007 17       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-reading composite source model   0.223     0.0       1     
-total count_eff_ruptures         0.086     0.0       17    
-managing sources                 0.025     0.0       1     
-store source_info                9.501E-04 0.0       1     
-aggregate curves                 4.344E-04 0.0       17    
-filtering composite source model 1.070E-04 0.0       1     
-reading site collection          3.982E-05 0.0       1     
-saving probability maps          3.099E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+reading composite source model 0.234     0.0       1     
+total count_eff_ruptures       0.078     0.0       17    
+prefiltering source model      0.038     0.0       1     
+managing sources               0.021     0.0       1     
+store source_info              0.006     0.0       1     
+aggregate curves               4.349E-04 0.0       17    
+reading site collection        5.698E-05 0.0       1     
+saving probability maps        3.314E-05 0.0       1     
+============================== ========= ========= ======

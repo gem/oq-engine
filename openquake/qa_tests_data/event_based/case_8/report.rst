@@ -2,9 +2,9 @@ Event Based from NonParametric source
 =====================================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21351.hdf5 Fri May 12 10:46:08 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_26091.hdf5 Tue Jun  6 14:58:54 2017
+engine_version                            2.5.0-gitb270b98        
+hazardlib_version                         0.25.0-git6276f16       
 ========================================= ========================
 
 num_sites = 3, sitecol = 917 B
@@ -64,10 +64,10 @@ Realizations per (TRT, GSIM)
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-reading composite source model   0.038     0.0       1     
-filtering composite source model 3.505E-05 0.0       1     
-reading site collection          3.242E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+reading composite source model 0.048     0.0       1     
+prefiltering source model      0.003     0.0       1     
+reading site collection        4.339E-05 0.0       1     
+============================== ========= ========= ======
