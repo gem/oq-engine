@@ -23,18 +23,14 @@ import numpy
 
 from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import (
-    AccumDict, split_in_blocks, deprecated as depr)
+from openquake.baselib.general import split_in_blocks, deprecated as depr
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
-from openquake.commonlib import writers, risk_writers, calc
+from openquake.commonlib import writers, calc
 from openquake.commonlib.util import (
     get_assets, compose_arrays, reader)
-from openquake.commonlib.risk_writers import (
-    DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
-    ExposureData, Site)
 
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
@@ -74,6 +70,27 @@ def copy_to(elt, rup_data, rup_ids):
          rec['centroid_depth']) = rup_data[serial]
 
 # ############################### exporters ############################## #
+
+
+# this is used by event_based_risk
+@export.add(('agg_curve-rlzs', 'csv'), ('agg_curve-stats', 'csv'))
+def export_agg_curve_rlzs(ekey, dstore):
+    oq = dstore['oqparam']
+    agg_curve = dstore[ekey[0]]
+    if ekey[0].endswith('stats'):
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    else:
+        tags = ['rlz-%03d' % r for r in range(agg_curve.shape[1])]
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for r, tag in enumerate(tags):
+        data = [['loss_type', 'loss', 'poe']]
+        for loss_type in agg_curve.dtype.names:
+            array = agg_curve[0, r][loss_type]
+            for loss, poe in zip(array['losses'], array['poes']):
+                data.append((loss_type, loss, poe))
+        dest = dstore.build_fname('agg_curve', tag, 'csv')
+        writer.save(data, dest)
+    return writer.getsaved()
 
 
 # this is used by event_based_risk
@@ -439,36 +456,6 @@ def export_dmg_totalcsv(ekey, dstore):
     return writer.getsaved()
 
 
-def export_dmg_xml(key, dstore, damage_states, dmg_data, lt, rlz):
-    """
-    Export damage outputs in XML format.
-
-    :param key:
-        dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map
-    :param dstore:
-        the datastore
-    :param damage_states:
-        the list of damage states
-    :param dmg_data:
-        a list [(loss_type, unit, asset_ref, mean, stddev), ...]
-    :param lt:
-        loss type string
-    :param rlz:
-        a realization object
-    """
-    dest = dstore.build_fname('%s-%s' % (key[0], lt), rlz, key[1])
-    risk_writers.DamageWriter(damage_states).to_nrml(key[0], dmg_data, dest)
-    return AccumDict({key: [dest]})
-
-
-# exports for scenario_risk
-
-LossMap = collections.namedtuple('LossMap', 'location asset_ref value std_dev')
-LossCurve = collections.namedtuple(
-    'LossCurve', 'location asset_ref poes losses loss_ratios '
-    'average_loss stddev_loss')
-
-
 # emulate a Django point
 class Location(object):
     def __init__(self, x, y):
@@ -545,69 +532,6 @@ def get_paths(rlz):
         dic['source_model_tree_path'] = ''
         dic['gsim_tree_path'] = '_'.join(rlz.lt_path)
     return dic
-
-
-def _gen_writers(dstore, writercls, root):
-    # build Writer instances
-    name = writercls.__name__
-    if 'XML' in name:
-        ext = 'xml'
-    elif 'JSON' in name:
-        ext = 'geojson'
-    else:
-        raise ValueError('Unsupported writer class: %s' % writercls)
-    oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    cc = dstore['assetcol/cost_calculator']
-    poes = oq.conditional_loss_poes if 'maps' in root else [None]
-    for poe in poes:
-        poe_str = '-%s' % poe if poe is not None else ''
-        for l, loss_type in enumerate(cc.loss_types):
-            for ins in range(oq.insured_losses + 1):
-                if root.endswith('-rlzs'):
-                    for rlz in rlzs:
-                        dest = dstore.build_fname(
-                            '%s-%s%s%s' %
-                            (root[:-5],  # strip -rlzs
-                             loss_type, poe_str, '_ins' if ins else ''),
-                            rlz, ext)
-                        yield writercls(
-                            dest, oq.investigation_time, poe=poe,
-                            loss_type=loss_type, unit=cc.units[loss_type],
-                            risk_investigation_time=oq.risk_investigation_time,
-                            **get_paths(rlz)), (
-                                loss_type, poe, rlz.ordinal, ins)
-                elif root.endswith('-stats'):
-                    pairs = [('mean', None)] + [
-                        ('quantile-%s' % q, q)
-                        for q in oq.quantile_loss_curves]
-                    for ordinal, (statname, statvalue) in enumerate(pairs):
-                        prefix = root[:-6]  # strip -stats
-                        key = '%s-%s%s%s' % (statname, loss_type, poe_str,
-                                             '_ins' if ins else '')
-                        dest = dstore.build_fname(prefix, key, ext)
-                        yield writercls(
-                            dest, oq.investigation_time,
-                            poe=poe, loss_type=loss_type,
-                            risk_investigation_time=oq.risk_investigation_time,
-                            statistics='mean' if ordinal == 0 else 'quantile',
-                            quantile_value=statvalue,
-                            unit=cc.units[loss_type],
-                        ), (loss_type, poe, ordinal, ins)
-
-
-# this is used by event_based_risk
-@export.add(('agg_curve-rlzs', 'xml'), ('agg_curve-stats', 'xml'))
-def export_agg_curve_rlzs(ekey, dstore):
-    agg_curve = dstore[ekey[0]]
-    fnames = []
-    for writer, (loss_type, poe, r, ins) in _gen_writers(
-            dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
-        rec = agg_curve[loss_type][ins, r]
-        curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
-        writer.serialize(curve)
-        fnames.append(writer._dest)
-    return sorted(fnames)
 
 
 # used by scenario_damage
