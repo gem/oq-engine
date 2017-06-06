@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in `oq export hcurves-rlzs --exports hdf5`
   * Restored the parameter sites_per_tile with a default of 20,000, i.e.
     tiling starts automatically if there are more than 20,000 sites
   * Better error message for invalid exposures
