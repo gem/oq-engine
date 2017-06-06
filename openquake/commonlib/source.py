@@ -532,7 +532,6 @@ class CompositeSourceModel(collections.Sequence):
         self.source_info = ()
         self.split_map = {}
         self.weight = 0
-        # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,

@@ -2,9 +2,9 @@ Scenario QA Test with Spatial Correlation - Case 1
 ==================================================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21286.hdf5 Fri May 12 10:45:16 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_26025.hdf5 Tue Jun  6 14:58:00 2017
+engine_version                            2.5.0-gitb270b98        
+hazardlib_version                         0.25.0-git6276f16       
 ========================================= ========================
 
 num_sites = 2, sitecol = 863 B

@@ -2,9 +2,9 @@ Scenario Calculation with Simple Fault Rupture
 ==============================================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21362.hdf5 Fri May 12 10:46:42 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_26102.hdf5 Tue Jun  6 14:59:26 2017
+engine_version                            2.5.0-gitb270b98        
+hazardlib_version                         0.25.0-git6276f16       
 ========================================= ========================
 
 num_sites = 1, sitecol = 809 B
@@ -52,5 +52,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.007     0.0       1     
-reading site collection 3.266E-05 0.0       1     
+reading site collection 3.672E-05 0.0       1     
 ======================= ========= ========= ======
