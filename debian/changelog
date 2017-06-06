@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Restored the parameter sites_per_tile with a default of 20,000, i.e.
+    tiling starts automatically if there are more than 20,000 sites
   * Removed the deprecated XML outputs of the risk calculators
   * Added an end point `v1/calc/XXX/oqparam` to extract the calculation
     parameters as a JSON dictionary
