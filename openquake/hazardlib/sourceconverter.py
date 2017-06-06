@@ -951,9 +951,11 @@ def mfds2multimfd(mfds):
             try:
                 data = [m[alias] for m in mfds]
             except KeyError:
-                if alias != 'binWidth':
+                if alias == 'binWidth':
+                    # missing bindWidth in GR MDFs is ok
+                    continue
+                else:
                     raise
-                # missing bindWidth in GR MDFs is ok
         node.append(Node(field, text=data))
         if lengths:  # this is the last field if present
             node.append(Node('lengths', text=lengths))
