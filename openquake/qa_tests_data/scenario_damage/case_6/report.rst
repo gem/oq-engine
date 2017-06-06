@@ -2,9 +2,9 @@ oq-test03, depth=15km
 =====================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21273.hdf5 Fri May 12 10:45:15 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_26012.hdf5 Tue Jun  6 14:57:59 2017
+engine_version                            2.5.0-gitb270b98        
+hazardlib_version                         0.25.0-git6276f16       
 ========================================= ========================
 
 num_sites = 1, sitecol = 809 B
