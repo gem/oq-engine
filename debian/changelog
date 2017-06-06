@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Better error message for invalid exposures
   * Removed the deprecated XML outputs of the risk calculators
   * Added an end point `v1/calc/XXX/oqparam` to extract the calculation
     parameters as a JSON dictionary
