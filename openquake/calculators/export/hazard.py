@@ -346,12 +346,13 @@ def _comment(rlzs_assoc, kind, investigation_time):
 
 @util.reader
 def build_hcurves(getter, imtls, monitor):
-    pmaps = getter.get_pmaps(getter.sids)
-    idx = dict(zip(getter.sids, range(len(getter.sids))))
-    curves = numpy.zeros((len(getter.sids), len(pmaps)), imtls.dt)
-    for r, pmap in enumerate(pmaps):
-        for sid in pmap:
-            curves[idx[sid], r] = pmap[sid].convert(imtls)
+    with getter.dstore:
+        pmaps = getter.get_pmaps(getter.sids)
+        idx = dict(zip(getter.sids, range(len(getter.sids))))
+        curves = numpy.zeros((len(getter.sids), len(pmaps)), imtls.dt)
+        for r, pmap in enumerate(pmaps):
+            for sid in pmap:
+                curves[idx[sid], r] = pmap[sid].convert(imtls)
     return getter.sids, curves
 
 
