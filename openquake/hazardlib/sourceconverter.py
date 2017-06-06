@@ -879,19 +879,19 @@ class SourceConverter(RuptureConverter):
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
-        srcs = []
+        sg = SourceGroup(trt)
         for src_node in node:
-            src = self.convert_node(src_node)
-            # transmit the group attributes to the underlying source
-            for attr, value in grp_attrs.items():
-                if attr == 'tectonicRegion':
-                    src.tectonic_region_type = value
-                elif attr == 'grp_probability':
-                    pass  # do not transmit
-                else:  # transmit as it is
-                    setattr(src, attr, node[attr])
-            srcs.append(src)
-        sg = SourceGroup(trt, srcs)
+            with context(self.fname, src_node):
+                src = self.convert_node(src_node)
+                # transmit the group attributes to the underlying source
+                for attr, value in grp_attrs.items():
+                    if attr == 'tectonicRegion':
+                        src.tectonic_region_type = value
+                    elif attr == 'grp_probability':
+                        pass  # do not transmit
+                    else:  # transmit as it is
+                        setattr(src, attr, node[attr])
+                sg.update(src)
         if srcs_weights is not None:
             if len(srcs_weights) != len(node):
                 raise ValueError('There are %d srcs_weights but %d source(s)'
