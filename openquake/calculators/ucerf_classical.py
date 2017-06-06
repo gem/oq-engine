@@ -150,7 +150,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.csm = get_composite_source_model(self.oqparam)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
-        self.num_tiles = 1
 
     def execute(self):
         """
