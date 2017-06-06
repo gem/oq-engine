@@ -343,7 +343,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
     value = dstore[ekey[0]].value  # matrix N x R or T x R
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
+        fname = dstore.build_fname('damages', rlz, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
 
@@ -404,6 +404,27 @@ def export_dmg_by_asset_csv(ekey, dstore):
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
     return writer.getsaved()
+
+
+@export.add(('dmg_by_asset', 'npz'))
+def export_dmg_by_asset_npz(ekey, dstore):
+    damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
+    dmg_by_asset = dstore['dmg_by_asset']
+    ltypes = dmg_by_asset.dtype.names
+    assets = get_assets(dstore)
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    dic = {}
+    dt = numpy.dtype([(ds, F32) for ds in damage_states])
+    for rlz in rlzs:
+        for ltype in ltypes:
+            # I am exporting the 'mean' and ignoring the 'stddev'
+            dmg = dmg_by_asset[:, rlz.ordinal][ltype]['mean'].copy()
+            # shape (N, D) with D = num damage states
+            data = compose_arrays(assets, dmg.view(dt)[:, 0])
+            dic['rlz-%03d-%s' % (rlz.ordinal, ltype)] = data
+    fname = dstore.export_path('%s.%s' % ekey)
+    savez(fname, **dic)
+    return [fname]
 
 
 @export.add(('dmg_by_taxon', 'csv'))
