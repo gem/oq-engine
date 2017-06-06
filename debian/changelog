@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in `oq export hcurves-rlzs --exports hdf5`
   * Removed the deprecated XML outputs of the risk calculators
   * Added an end point `v1/calc/XXX/oqparam` to extract the calculation
     parameters as a JSON dictionary
