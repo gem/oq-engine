@@ -61,14 +61,6 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     return acc
 
 
-def no_prefilter(csm, src_filter):
-    """
-    Disable source prefiltering in CompositeSourceModel
-    """
-    csm.set_weights()
-    return csm
-
-
 class ReportWriter(object):
     """
     A particularly smart view over the datastore
@@ -180,8 +172,7 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     p = mock.patch.object
-    with p(PSHACalculator, 'core_task', count_eff_ruptures), \
-         p(source.CompositeSourceModel, 'filter', no_prefilter):
+    with p(PSHACalculator, 'core_task', count_eff_ruptures):
         if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'

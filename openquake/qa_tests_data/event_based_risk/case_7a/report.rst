@@ -2,9 +2,9 @@ event based hazard
 ==================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21313.hdf5 Fri May 12 10:45:44 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_26052.hdf5 Tue Jun  6 14:58:24 2017
+engine_version                                   2.5.0-gitb270b98        
+hazardlib_version                                0.25.0-git6276f16       
 ================================================ ========================
 
 num_sites = 1, sitecol = 809 B
@@ -68,24 +68,24 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ============
 source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           5            482         
+source_model.xml 0      Active Shallow Crust 1           482          482         
 ================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
-============================ =========================================================================
-compute_ruptures.received    tot 7.2 KB, max_per_task 7.2 KB                                          
-compute_ruptures.sent        sources 3.09 KB, monitor 795 B, src_filter 684 B, gsims 102 B, param 65 B
-hazard.input_weight          482                                                                      
-hazard.n_imts                1 B                                                                      
-hazard.n_levels              1 B                                                                      
-hazard.n_realizations        1 B                                                                      
-hazard.n_sites               1 B                                                                      
-hazard.n_sources             1 B                                                                      
-hazard.output_weight         1.000                                                                    
-hostname                     tstation.gem.lan                                                         
-require_epsilons             0 B                                                                      
-============================ =========================================================================
+============================ ===========================================================================
+compute_ruptures.received    tot 10.12 KB, max_per_task 5.29 KB                                         
+compute_ruptures.sent        sources 7.78 KB, src_filter 2 KB, param 1.61 KB, monitor 933 B, gsims 306 B
+hazard.input_weight          482                                                                        
+hazard.n_imts                1 B                                                                        
+hazard.n_levels              1 B                                                                        
+hazard.n_realizations        1 B                                                                        
+hazard.n_sites               1 B                                                                        
+hazard.n_sources             1 B                                                                        
+hazard.output_weight         1.000                                                                      
+hostname                     tstation.gem.lan                                                           
+require_epsilons             0 B                                                                        
+============================ ===========================================================================
 
 Exposure model
 --------------
@@ -106,7 +106,7 @@ Slowest sources
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      1         SimpleFaultSource 482          0.0       0         0        
+0      1         SimpleFaultSource 482          0.0       1         0        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -121,22 +121,22 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.142 NaN    0.142 0.142 1        
+compute_ruptures   0.084 0.011  0.071 0.094 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-total compute_ruptures           0.142     0.0       1     
-saving ruptures                  0.006     0.0       1     
-reading exposure                 0.006     0.0       1     
-reading composite source model   0.004     0.0       1     
-setting event years              0.003     0.0       1     
-managing sources                 0.002     0.0       1     
-store source_info                0.001     0.0       1     
-filtering ruptures               9.267E-04 0.0       5     
-filtering composite source model 4.721E-05 0.0       1     
-reading site collection          7.629E-06 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_ruptures         0.251     0.0       3     
+managing sources               0.058     0.0       1     
+saving ruptures                0.012     0.0       3     
+store source_info              0.007     0.0       1     
+reading exposure               0.006     0.0       1     
+reading composite source model 0.004     0.0       1     
+prefiltering source model      0.002     0.0       1     
+setting event years            0.002     0.0       1     
+filtering ruptures             0.001     0.0       5     
+reading site collection        7.629E-06 0.0       1     
+============================== ========= ========= ======

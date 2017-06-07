@@ -2,9 +2,9 @@ Event Based Hazard QA Test, Case 17
 ===================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21344.hdf5 Fri May 12 10:46:04 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_26084.hdf5 Tue Jun  6 14:58:50 2017
+engine_version                                   2.5.0-gitb270b98        
+hazardlib_version                                0.25.0-git6276f16       
 ================================================ ========================
 
 num_sites = 1, sitecol = 809 B
@@ -44,7 +44,7 @@ Composite source model
 ========= ====== ========================================== =============== ================
 smlt_path weight source_model_file                          gsim_logic_tree num_realizations
 ========= ====== ========================================== =============== ================
-b1        0.200  `source_model_1.xml <source_model_1.xml>`_ trivial(1)      1/0             
+b1        0.200  `source_model_1.xml <source_model_1.xml>`_ trivial(1)      1/1             
 b2        0.200  `source_model_2.xml <source_model_2.xml>`_ trivial(1)      4/1             
 ========= ====== ========================================== =============== ================
 
@@ -53,6 +53,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       mag rake  
 1      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
@@ -61,7 +62,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=5)
+  <RlzsAssoc(size=2, rlzs=5)
+  0,SadighEtAl1997(): ['<0,b1~b1,w=0.2>']
   1,SadighEtAl1997(): ['<1,b2~b1,w=0.2>', '<2,b2~b1,w=0.2>', '<3,b2~b1,w=0.2>', '<4,b2~b1,w=0.2>']>
 
 Number of ruptures per tectonic region type
@@ -69,14 +71,23 @@ Number of ruptures per tectonic region type
 ================== ====== ==================== =========== ============ ============
 source_model       grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================== ====== ==================== =========== ============ ============
-source_model_2.xml 1      Active Shallow Crust 1           3            7           
+source_model_1.xml 0      Active Shallow Crust 1           39           39          
+source_model_2.xml 1      Active Shallow Crust 1           7            7           
 ================== ====== ==================== =========== ============ ============
+
+============= ==
+#TRT models   2 
+#sources      2 
+#eff_ruptures 46
+#tot_ruptures 46
+#tot_weight   0 
+============= ==
 
 Informational data
 ------------------
 ============================ ==============================================================================
-compute_ruptures.received    tot 6.08 KB, max_per_task 4.91 KB                                             
-compute_ruptures.sent        sources 2.99 KB, monitor 1.66 KB, src_filter 1.34 KB, gsims 182 B, param 130 B
+compute_ruptures.received    tot 5 KB, max_per_task 4.33 KB                                                
+compute_ruptures.sent        sources 3.03 KB, src_filter 1.34 KB, param 1.18 KB, monitor 622 B, gsims 182 B
 hazard.input_weight          6.700                                                                         
 hazard.n_imts                1 B                                                                           
 hazard.n_levels              3 B                                                                           
@@ -93,8 +104,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      2         PointSource  7            0.0       0         0        
-0      1         PointSource  39           0.0       0         0        
+1      2         PointSource  7            0.0       1         0        
+0      1         PointSource  39           0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -109,21 +120,21 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.018 0.013  0.008 0.027 2        
+compute_ruptures   0.015 0.014  0.005 0.025 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-total compute_ruptures           0.035     0.0       2     
-reading composite source model   0.003     0.0       1     
-saving ruptures                  0.003     0.0       2     
-managing sources                 0.002     0.0       1     
-filtering ruptures               0.002     0.0       3     
-setting event years              0.002     0.0       1     
-store source_info                5.898E-04 0.0       1     
-filtering composite source model 5.627E-05 0.0       1     
-reading site collection          4.840E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_ruptures         0.030     0.0       2     
+store source_info              0.007     0.0       1     
+saving ruptures                0.006     0.0       2     
+reading composite source model 0.003     0.0       1     
+setting event years            0.002     0.0       1     
+managing sources               0.002     0.0       1     
+prefiltering source model      0.002     0.0       1     
+filtering ruptures             0.001     0.0       3     
+reading site collection        5.007E-05 0.0       1     
+============================== ========= ========= ======

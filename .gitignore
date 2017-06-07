@@ -10,6 +10,7 @@ build
 build-deb
 build-rpm
 dist
-*.swp
+*.so
+*.noseids
 *.egg-info
 local_settings.py

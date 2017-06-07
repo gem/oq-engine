@@ -1060,7 +1060,7 @@ class CurveBuilder(object):
         return loss_maps
 
     def build_all_poes(self, aids, loss_ratios, rlzs):
-        """"
+        """
         :param aids:
             a list of asset IDs
         :param loss_ratios:
