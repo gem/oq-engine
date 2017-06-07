@@ -97,7 +97,6 @@ class OqParam(valid.ParamSet):
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
-    num_tiles = valid.Param(valid.positiveint, 0)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     quantile_hazard_curves = valid.Param(valid.probabilities, [])
@@ -127,6 +126,7 @@ class OqParam(valid.ParamSet):
     max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
+    sites_per_tile = valid.Param(valid.positiveint, 20000)
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     specific_assets = valid.Param(valid.namelist, [])
     taxonomies_from_model = valid.Param(valid.boolean, False)
