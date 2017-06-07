@@ -629,7 +629,8 @@ class GmfGetter(object):
                     for sid, gmv in zip(sids, array[:, :, n + i]):
                         gmv[gmv < self.min_iml] = 0
                         if gmv.sum():  # nonzero
-                            gmdata[i:-2] += gmv
+                            for i, val in enumerate(gmv):
+                                gmdata[i] += val
                             gmdata[NBYTES] += itemsize
                             yield r, sid, eid, gmv
                 n += e
