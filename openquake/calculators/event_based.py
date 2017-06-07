@@ -336,17 +336,15 @@ def compute_gmfs_and_curves(getter, oq, monitor):
                 hazard = getter.get_hazard(gsim, data)
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
                 hazardr = hazard[r]
-                lst = []
                 for sid in getter.sids:
-                    for imti, imt in enumerate(getter.imts):
-                        array = hazardr[sid, imti]
-                        if len(array) == 0:  # no data
-                            continue
-                        for rec in array:
-                            lst.append((sid, rec['eid'], imti, rec['gmv']))
-                        with hc_mon:
+                    array = hazardr[sid]
+                    if len(array) == 0:  # no data
+                        continue
+                    with hc_mon:
+                        gmvs = array['gmv']
+                        for imti, imt in enumerate(getter.imts):
                             poes = calc._gmvs_to_haz_curve(
-                                array['gmv'], oq.imtls[imt],
+                                gmvs[:, imti], oq.imtls[imt],
                                 oq.investigation_time, duration)
                             hcurves[rsi2str(rlz.ordinal, sid, imt)] = poes
     else:  # fast lane
