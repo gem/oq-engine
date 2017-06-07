@@ -31,13 +31,13 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: python-oq-libs >= 1.3.0 python-oq-hazardlib >= 0.25.0
+Requires: python-oq-libs >= 1.3.0
 Requires: sudo systemd python
 
 BuildRequires: systemd python-setuptools
 
-Obsoletes: python-oq-risklib
-Provides: python-oq-risklib
+Obsoletes: python-oq-risklib python-oq-hazardlib
+Provides: python-oq-risklib python-oq-hazardlib
 
 %description
 OpenQuake is an open source application that allows users to
