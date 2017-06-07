@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import math
 import logging
 import operator
 from functools import partial
@@ -303,8 +304,9 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
-        if oq.num_tiles:
-            tiles = self.sitecol.split_in_tiles(oq.num_tiles)
+        num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+        if num_tiles > 1:
+            tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
@@ -312,7 +314,7 @@ class PSHACalculator(base.HazardCalculator):
         logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                      maxweight, numheavy, len(tiles))
         for t, tile in enumerate(tiles):
-            if oq.num_tiles:
+            if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
                     logging.info('Instantiating src_filter for tile %d', t + 1)
                     src_filter = SourceFilter(tile, oq.maximum_distance)
@@ -330,7 +332,7 @@ class PSHACalculator(base.HazardCalculator):
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for sg in sm.src_groups:
-                    if oq.num_tiles == 0:
+                    if num_tiles <= 1:
                         logging.info(
                             'Sending source group #%d of %d (%s, %d sources)',
                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
