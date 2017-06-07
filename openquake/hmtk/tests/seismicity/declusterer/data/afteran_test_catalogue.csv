@@ -1,0 +1,7 @@
+year,month,day,longitude,latitude,magnitude,flag,comment
+1979,12,29,0.80,0.00,5.0, 0, Smaller mainshock >> d
+1979,12,31,0.60,0.00,5.0,-1, Foreshock of M1
+1980,01,01,0.00,0.00,7.0, 0, Large Mainshock1 (M1)
+1980,01,31,0.60,0.00,5.0, 1, Aftershock of M1
+1982,06,30,0.00,0.00,5.5, 0, Small mainshock (M2)
+1982,07,30,0.00,0.00,5.0, 1, Aftershock of M2
