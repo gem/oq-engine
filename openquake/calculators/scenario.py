@@ -16,13 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import collections
+import itertools
 import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.risklib.riskinput import gmf_data_dt
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
+
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
+F32 = numpy.float32
 
 
 @base.calculators.add('scenario')
@@ -72,32 +77,36 @@ class ScenarioCalculator(base.HazardCalculator):
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
 
     def init(self):
-        pass
+        I = len(self.oqparam.imtls)
+        self.gmv_data_dt = numpy.dtype(
+            [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+
+    def to_gmf_data(self, gsim):
+        gmfa = self.gmfa[gsim]
+        n, e, i = gmfa.shape
+        data = ((0, sid, eid, gmfa[sid, eid])
+                for sid, eid in itertools.product(range(n), range(e)))
+        return numpy.fromiter(data, self.gmv_data_dt)
 
     def execute(self):
         """
-        Compute the GMFs and return a dictionary gsim -> array gmf_data_dt
+        Compute the GMFs and return a dictionary gsim -> array(N, E, I)
         """
-        res = collections.defaultdict(list)
-        sids = self.sitecol.sids
         self.gmfa = {}
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
             for gsim in self.gsims:
                 gmfa = self.computer.compute(gsim, n)  # shape (I, N, E)
-                self.gmfa[gsim] = gmfa.transpose(1, 0, 2)  # shape (N, I, E)
-                for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
-                    res[gsim].append((0, sids[sid], eid, imti, gmv))
-            return {gsim: numpy.array(res[gsim], gmf_data_dt)
-                    for gsim in res}
+                self.gmfa[gsim] = gmfa.transpose(1, 2, 0)  # shape (N, E, I)
+        return self.gmfa
 
-    def post_execute(self, gmfa_by_gsim):
+    def post_execute(self, dummy):
         """
         :param gmfa: a dictionary gsim -> gmfa
         """
         with self.monitor('saving gmfs', autoflush=True):
             for gsim in self.gsims:
                 rlzstr = 'gmf_data/grp-00/%s' % gsim
-                self.datastore[rlzstr] = gmfa_by_gsim[gsim]
+                self.datastore[rlzstr] = self.to_gmf_data(gsim)
                 self.datastore.set_attrs(rlzstr, gsim=str(gsim))
             self.datastore.set_nbytes('gmf_data')

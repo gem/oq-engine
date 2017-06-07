@@ -31,8 +31,7 @@ from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.risklib.riskinput import (
-    GmfGetter, str2rsi, rsi2str, gmf_data_dt)
+from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
@@ -333,7 +332,7 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
                 gmfcoll[grp_id, gsim] = data = numpy.fromiter(
-                    getter.gen_gmv(gsim), gmf_data_dt)
+                    getter.gen_gmv(gsim), getter.gmf_data_dt)
                 hazard = getter.get_hazard(gsim, data)
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
                 hazardr = hazard[r]
@@ -354,7 +353,7 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
                 gmfcoll[grp_id, gsim] = numpy.fromiter(
-                    getter.gen_gmv(gsim), gmf_data_dt)
+                    getter.gen_gmv(gsim), getter.gmf_data_dt)
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
