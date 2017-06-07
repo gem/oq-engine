@@ -534,12 +534,6 @@ class HazardGetter(object):
         return self.data[gsim]
 
 
-gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
-gmf_data_dt = numpy.dtype([('rlzi', U16), ('sid', U32), ('eid', U64),
-                           ('imti', U8), ('gmv', F32)])
-BYTES_PER_RECORD = gmf_data_dt.itemsize
-
-
 class GmfGetter(object):
     """
     An hazard getter with methods .gen_gmv and .get_hazard returning
@@ -563,7 +557,11 @@ class GmfGetter(object):
         Initialize the computers. Should be called on the workers
         """
         self.N = len(self.sitecol.complete)
-        self.I = len(self.imts)
+        self.I = I = len(self.imts)
+        self.gmv_dt = numpy.dtype(
+            [('sid', U32), ('eid', U64), ('gmv', (F32, I))])
+        self.gmf_data_dt = numpy.dtype([('rlzi', U16), ('sid', U32),
+                                        ('eid', U64), ('gmv', (F32, I))])
         self.sids = self.sitecol.sids
         self.computers = []
         gsims = sorted(self.rlzs_by_gsim)
@@ -602,21 +600,19 @@ class GmfGetter(object):
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
-            array = computer.compute(gsim, num_events)  # (i, n, e)
+            array = computer.compute(gsim, num_events).transpose(1, 0, 2)
+            # (n, i, e)
             n = 0
             for r, rlz in enumerate(rlzs):
                 e = len(all_eids[r])
                 gmdata = self.gmdata[rlz.ordinal]
                 gmdata[EVENTS] += e
-                for imti, imt in enumerate(self.imts):
-                    min_gmv = self.min_iml[imti]
-                    for i, eid in enumerate(all_eids[r]):
-                        gmf = array[imti, :, n + i]
-                        for sid, gmv in zip(sids, gmf):
-                            if gmv > min_gmv:
-                                gmdata[imti] += gmv
-                                gmdata[NBYTES] += BYTES_PER_RECORD
-                                yield r, sid, eid, imti, gmv
+                for i, eid in enumerate(all_eids[r]):
+                    gmdata[NBYTES] += self.gmf_data_dt.itemsize * len(sids)
+                    for sid, gmv in zip(sids, array[:, :, n + i]):
+                        gmv[gmv < self.min_iml] = 0
+                        gmdata[2:] += gmv
+                        yield r, sid, eid, gmv
                 n += e
 
     def get_hazard(self, gsim, data=None):
@@ -628,11 +624,11 @@ class GmfGetter(object):
         if data is None:
             data = self.gen_gmv(gsim)
         R = len(self.rlzs_by_gsim[gsim])
-        gmfa = numpy.zeros((R, self.N, self.I), object)
-        for rlzi, sid, eid, imti, gmv in data:
-            lst = gmfa[rlzi, sid, imti]
+        gmfa = numpy.zeros((R, self.N), object)
+        for rlzi, sid, eid, gmv in data:
+            lst = gmfa[rlzi, sid]
             if lst == 0:
-                gmfa[rlzi, sid, imti] = [(gmv, eid)]
+                gmfa[rlzi, sid] = [(gmv, eid)]
             else:
                 lst.append((gmv, eid))
         for idx, lst in numpy.ndenumerate(gmfa):
