@@ -449,7 +449,7 @@ def export_dmg_by_asset_npz(ekey, dstore):
 
 @export.add(('dmg_by_taxon', 'csv'))
 def export_dmg_by_taxon_csv(ekey, dstore):
-    damage_dt = build_damage_dt(dstore, mean_std=True)
+    damage_dt = build_damage_dt(dstore)
     taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
@@ -464,7 +464,7 @@ def export_dmg_by_taxon_csv(ekey, dstore):
 
 @export.add(('dmg_total', 'csv'))
 def export_dmg_totalcsv(ekey, dstore):
-    damage_dt = build_damage_dt(dstore, mean_std=True)
+    damage_dt = build_damage_dt(dstore)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     dset = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
