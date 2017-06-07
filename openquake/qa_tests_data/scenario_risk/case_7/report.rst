@@ -2,9 +2,9 @@ Scenario Risk Test
 ==================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21367.hdf5 Fri May 12 10:46:43 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_26107.hdf5 Tue Jun  6 14:59:27 2017
+engine_version                            2.5.0-gitb270b98        
+hazardlib_version                         0.25.0-git6276f16       
 ========================================= ========================
 
 num_sites = 27, sitecol = 2.16 KB
@@ -74,5 +74,5 @@ assoc_assets_sites      0.007     0.0       1
 reading exposure        0.007     0.0       1     
 reading site collection 0.002     0.0       1     
 building riskinputs     0.001     0.0       1     
-building epsilons       4.890E-04 0.0       1     
+building epsilons       4.835E-04 0.0       1     
 ======================= ========= ========= ======

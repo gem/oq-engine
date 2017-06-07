@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Some Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Subduction Interface"
+        >
+            <complexFaultSource
+            id="1"
+            name="Cascadia Megathrust"
+            tectonicRegion="Subduction Interface"
+            >
+                <complexFaultGeometry>
+                    <faultTopEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -1.2470400E+02 4.0363000E+01 5.4932600E+00 -1.2497700E+02 4.1214000E+01 4.9885600E+00 -1.2514000E+02 4.2096000E+01 4.8973400E+00
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -1.2470400E+02 4.0363000E+01 5.5932600E+00 -1.2497700E+02 4.1214000E+01 5.0885600E+00 -1.2514000E+02 4.2096000E+01 4.9973400E+00
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -1.2470400E+02 4.0363000E+01 5.6932600E+00 -1.2497700E+02 4.1214000E+01 5.1885600E+00 -1.2514000E+02 4.2096000E+01 5.0973400E+00
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <faultBottomEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -1.2382900E+02 4.0347000E+01 2.0384900E+01 -1.2413700E+02 4.1218000E+01 1.7413900E+01 -1.2425200E+02 4.2115000E+01 1.7527400E+01
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </complexFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.5000000E+00" bValue="1.0000000E+00" maxMag="6.5000000E+00" minMag="5.0000000E+00"/>
+                <rake>
+                    3.0000000E+01
+                </rake>
+            </complexFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

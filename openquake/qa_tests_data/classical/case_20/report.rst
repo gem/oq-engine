@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 20
 =================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21331.hdf5 Fri May 12 10:45:54 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_26070.hdf5 Tue Jun  6 14:58:40 2017
+engine_version                                   2.5.0-gitb270b98        
+hazardlib_version                                0.25.0-git6276f16       
 ================================================ ========================
 
 num_sites = 1, sitecol = 809 B
@@ -119,50 +119,50 @@ source_model.xml 11     Active Shallow Crust 3           121          121
 #sources      36   
 #eff_ruptures 1,242
 #tot_ruptures 1,242
-#tot_weight   2,880
+#tot_weight   0    
 ============= =====
 
 Informational data
 ------------------
-============================== =====================================================================================
-count_eff_ruptures.received    tot 26.15 KB, max_per_task 1.12 KB                                                   
-count_eff_ruptures.sent        sources 101.75 KB, monitor 20.16 KB, srcfilter 16.03 KB, gsims 2.13 KB, param 1.52 KB
-hazard.input_weight            2,880                                                                                
-hazard.n_imts                  1 B                                                                                  
-hazard.n_levels                4 B                                                                                  
-hazard.n_realizations          12 B                                                                                 
-hazard.n_sites                 1 B                                                                                  
-hazard.n_sources               36 B                                                                                 
-hazard.output_weight           4.000                                                                                
-hostname                       tstation.gem.lan                                                                     
-require_epsilons               0 B                                                                                  
-============================== =====================================================================================
+============================== ==================================================================================
+count_eff_ruptures.received    tot 10.66 KB, max_per_task 628 B                                                  
+count_eff_ruptures.sent        sources 99.54 KB, srcfilter 12.02 KB, param 10.76 KB, monitor 5.5 KB, gsims 1.6 KB
+hazard.input_weight            2,880                                                                             
+hazard.n_imts                  1 B                                                                               
+hazard.n_levels                4 B                                                                               
+hazard.n_realizations          12 B                                                                              
+hazard.n_sites                 1 B                                                                               
+hazard.n_sources               36 B                                                                              
+hazard.output_weight           4.000                                                                             
+hostname                       tstation.gem.lan                                                                  
+require_epsilons               0 B                                                                               
+============================== ==================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-4      SFLT1     SimpleFaultSource         56           0.003     1         1        
-5      SFLT1     SimpleFaultSource         56           0.003     1         1        
 4      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
 3      SFLT1     SimpleFaultSource         56           0.003     1         1        
-0      SFLT1     SimpleFaultSource         56           0.003     1         1        
-1      SFLT1     SimpleFaultSource         56           0.003     1         1        
-2      SFLT1     SimpleFaultSource         56           0.003     1         1        
-8      SFLT1     SimpleFaultSource         58           0.003     1         1        
-10     SFLT1     SimpleFaultSource         58           0.003     1         1        
 5      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-11     SFLT1     SimpleFaultSource         58           0.003     1         1        
-9      SFLT1     SimpleFaultSource         58           0.003     1         1        
-0      COMFLT1   ComplexFaultSource        29           0.003     1         1        
+5      SFLT1     SimpleFaultSource         56           0.003     1         1        
+0      SFLT1     SimpleFaultSource         56           0.003     1         1        
+2      SFLT1     SimpleFaultSource         56           0.003     1         1        
+3      COMFLT1   ComplexFaultSource        62           0.003     1         1        
+4      SFLT1     SimpleFaultSource         56           0.003     1         1        
+6      SFLT1     SimpleFaultSource         58           0.003     1         1        
 0      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-8      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-6      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
 3      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-9      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
+0      COMFLT1   ComplexFaultSource        29           0.003     1         1        
+6      COMFLT1   ComplexFaultSource        29           0.003     1         1        
 10     CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-10     COMFLT1   ComplexFaultSource        62           0.002     1         1        
+8      SFLT1     SimpleFaultSource         58           0.003     1         1        
+9      SFLT1     SimpleFaultSource         58           0.003     1         1        
+7      SFLT1     SimpleFaultSource         58           0.003     1         1        
+11     SFLT1     SimpleFaultSource         58           0.002     1         1        
+1      CHAR1     CharacteristicFaultSource 1            0.002     1         1        
+8      CHAR1     CharacteristicFaultSource 1            0.002     1         1        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -170,29 +170,29 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.029     12    
-ComplexFaultSource        0.025     12    
-SimpleFaultSource         0.033     12    
+CharacteristicFaultSource 0.030     12    
+ComplexFaultSource        0.028     12    
+SimpleFaultSource         0.031     12    
 ========================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.004 0.002  0.002 0.009 24       
+count_eff_ruptures 0.006 0.002  0.003 0.009 18       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-reading composite source model   0.596     0.0       1     
-total count_eff_ruptures         0.106     0.0       24    
-managing sources                 0.028     0.0       1     
-store source_info                0.001     0.0       1     
-aggregate curves                 7.544E-04 0.0       24    
-filtering composite source model 8.488E-05 0.0       1     
-saving probability maps          3.695E-05 0.0       1     
-reading site collection          3.219E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+reading composite source model 0.567     0.0       1     
+total count_eff_ruptures       0.105     0.0       18    
+prefiltering source model      0.036     0.0       1     
+managing sources               0.025     0.0       1     
+store source_info              0.005     0.0       1     
+aggregate curves               3.681E-04 0.0       18    
+reading site collection        3.695E-05 0.0       1     
+saving probability maps        2.694E-05 0.0       1     
+============================== ========= ========= ======

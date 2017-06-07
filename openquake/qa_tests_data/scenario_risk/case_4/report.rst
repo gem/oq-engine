@@ -2,9 +2,9 @@ Scenario Risk for Nepal with 20 assets
 ======================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21364.hdf5 Fri May 12 10:46:43 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_26104.hdf5 Tue Jun  6 14:59:26 2017
+engine_version                                   2.5.0-gitb270b98        
+hazardlib_version                                0.25.0-git6276f16       
 ================================================ ========================
 
 num_sites = 20, sitecol = 1.79 KB
@@ -77,11 +77,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.008     0.0       1     
-computing gmfs          0.006     0.0       1     
+reading exposure        0.009     0.0       1     
+computing gmfs          0.007     0.0       1     
 filtering sites         0.004     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     9.825E-04 0.0       1     
-building epsilons       6.399E-04 0.0       1     
-reading site collection 5.484E-06 0.0       1     
+building riskinputs     9.172E-04 0.0       1     
+building epsilons       7.424E-04 0.0       1     
+reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

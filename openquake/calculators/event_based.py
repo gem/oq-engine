@@ -21,6 +21,7 @@ import os.path
 import operator
 import logging
 import collections
+import mock
 
 import numpy
 
@@ -368,11 +369,13 @@ def get_ruptures_by_grp(dstore):
         n += len(dstore['ruptures/' + grp])
     logging.info('Reading %d ruptures from the datastore', n)
     # disable check on PlaceSurface to support UCERF ruptures
-    PlanarSurface.IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
-    ruptures_by_grp = AccumDict(accum=[])
-    for grp in dstore['ruptures']:
-        grp_id = int(grp[4:])  # strip 'grp-'
-        ruptures_by_grp[grp_id] = list(calc.get_ruptures(dstore, grp_id))
+    with mock.patch(
+            'openquake.hazardlib.geo.surface.PlanarSurface.'
+            'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
+        ruptures_by_grp = AccumDict(accum=[])
+        for grp in dstore['ruptures']:
+            grp_id = int(grp[4:])  # strip 'grp-'
+            ruptures_by_grp[grp_id] = list(calc.get_ruptures(dstore, grp_id))
     return ruptures_by_grp
 
 
