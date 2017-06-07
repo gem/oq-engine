@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Test Source Model"
+    >
+        <sourceGroup
+        srcs_weights="1.0"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultSource
+            id="2A"
+            name="Mount Diablo Thrust YC Characteristic Rate"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -121.8229 37.7301 -122.0388 37.8771
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        45.0
+                    </dip>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5
+                </ruptAspectRatio>
+                <YoungsCoppersmithMFD bValue="1.0" binWidth="0.1" characteristicMag="7.0" characteristicRate="0.005" minMag="5.0"/>
+                <rake>
+                    30.0
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+        <sourceGroup
+        srcs_weights="1.0"
+        tectonicRegion="Subduction Interface"
+        >
+            <characteristicFaultSource
+            id="1"
+            name="characteristic source, complex fault arbitrary mfd"
+            tectonicRegion="Subduction Interface"
+            >
+                <arbitraryMFD>
+                    <magnitudes>
+                        8.6 8.8 9.0
+                    </magnitudes>
+                    <occurRates>
+                        0.0006 0.0008 0.0004
+                    </occurRates>
+                </arbitraryMFD>
+                <rake>
+                    60.0
+                </rake>
+                <surface>
+                    <complexFaultGeometry>
+                        <faultTopEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -124.704 40.363 5.49326 -124.977 41.214 4.98856 -125.14 42.096 4.89734
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultTopEdge>
+                        <intermediateEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -124.704 40.363 5.59326 -124.977 41.214 5.08856 -125.14 42.096 4.99734
+                                </gml:posList>
+                            </gml:LineString>
+                        </intermediateEdge>
+                        <intermediateEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -124.704 40.363 5.69326 -124.977 41.214 5.18856 -125.14 42.096 5.09734
+                                </gml:posList>
+                            </gml:LineString>
+                        </intermediateEdge>
+                        <faultBottomEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -123.829 40.347 20.3849 -124.137 41.218 17.4139 -124.252 42.115 17.5274
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultBottomEdge>
+                    </complexFaultGeometry>
+                </surface>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
