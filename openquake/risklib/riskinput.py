@@ -695,16 +695,16 @@ class GmfDataGetter(GmfGetter):
             grp_ids = [eid // TWO48]
         else:
             grp_ids = rlzs_assoc.gsims_by_grp_id
+        records = []
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             getter = cls(gmf_data, grp_id, rlzs_by_gsim)
-            records = []
             for gsim, rlzs in rlzs_by_gsim.items():
                 for rec in getter.gen_gmv(gsim):
                     if eid is None or eid == rec['eid']:
                         rec['rlzi'] = rlzs[rec['rlzi']].ordinal
                         records.append(rec)
-            return numpy.array(records, getter.gmf_data_dt)
+        return numpy.array(records, getter.gmf_data_dt)
 
 
 def get_rlzs(riskinput):
