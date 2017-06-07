@@ -41,6 +41,9 @@ def rundjango(subcmd, hostport=None, skip_browser=False):
             webbrowser.open(url)
     p.wait()
 
+    if p.returncode != 0:
+        sys.exit(p.returncode)
+
 
 @sap.Script
 def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
