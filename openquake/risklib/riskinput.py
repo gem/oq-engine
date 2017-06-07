@@ -551,6 +551,9 @@ class GmfGetter(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
+        self.gmf_data_dt = numpy.dtype(
+            [('rlzi', U16), ('sid', U32),
+             ('eid', U64), ('gmv', (F32, (len(imts),)))])
 
     def init(self):
         """
@@ -559,9 +562,8 @@ class GmfGetter(object):
         self.N = len(self.sitecol.complete)
         self.I = I = len(self.imts)
         self.gmv_dt = numpy.dtype(
-            [('sid', U32), ('eid', U64), ('gmv', (F32, I))])
-        self.gmf_data_dt = numpy.dtype([('rlzi', U16), ('sid', U32),
-                                        ('eid', U64), ('gmv', (F32, I))])
+            [('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+        self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
         self.sids = self.sitecol.sids
         self.computers = []
         gsims = sorted(self.rlzs_by_gsim)
@@ -608,11 +610,12 @@ class GmfGetter(object):
                 gmdata = self.gmdata[rlz.ordinal]
                 gmdata[EVENTS] += e
                 for i, eid in enumerate(all_eids[r]):
-                    gmdata[NBYTES] += self.gmf_data_dt.itemsize * len(sids)
                     for sid, gmv in zip(sids, array[:, :, n + i]):
                         gmv[gmv < self.min_iml] = 0
                         if gmv.sum():  # nonzero
-                            gmdata[2:] += gmv
+                            for i, val in enumerate(gmv):
+                                gmdata[i] += val
+                            gmdata[NBYTES] += self.gmf_data_dt.itemsize
                             yield r, sid, eid, gmv
                 n += e
 
@@ -633,10 +636,8 @@ class GmfGetter(object):
             else:
                 lst.append((gmv, eid))
         for idx, lst in numpy.ndenumerate(gmfa):
-            gmfa[idx] = numpy.array(lst or [], gmv_eid_dt)
+            gmfa[idx] = numpy.array(lst or [], self.gmv_eid_dt)
         return gmfa
-
-gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
 
 class GmfDataGetter(GmfGetter):
@@ -651,6 +652,9 @@ class GmfDataGetter(GmfGetter):
         self.I = gmf_data.attrs['num_imts']  # used by get_hazard
         self.start = start
         self.stop = stop
+        self.gmf_data_dt = numpy.dtype(
+            [('rlzi', U16), ('sid', U32),
+             ('eid', U64), ('gmv', (F32, (self.I,)))])
 
     def init(self):
         pass
@@ -670,7 +674,7 @@ class GmfDataGetter(GmfGetter):
     @classmethod
     def gen_gmfs(cls, gmf_data, rlzs_assoc, eid=None):
         """
-        Yield GMF records
+        Returns a gmf_data_dt array
         """
         if eid is not None:  # extract the grp_id from the eid
             grp_ids = [eid // TWO48]
@@ -679,11 +683,13 @@ class GmfDataGetter(GmfGetter):
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             getter = cls(gmf_data, grp_id, rlzs_by_gsim)
+            records = []
             for gsim, rlzs in rlzs_by_gsim.items():
                 for rec in getter.gen_gmv(gsim):
                     if eid is None or eid == rec['eid']:
                         rec['rlzi'] = rlzs[rec['rlzi']].ordinal
-                        yield rec
+                        records.append(rec)
+            return numpy.array(records, getter.gmf_data_dt)
 
 
 def get_rlzs(riskinput):
