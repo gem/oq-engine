@@ -447,24 +447,37 @@ class CompositeRiskModel(collections.Mapping):
         for gsim in hazard_getter.rlzs_by_gsim:
             with mon_hazard:
                 hazard = hazard_getter.get_hazard(gsim)
-            for r, rlz in enumerate(hazard_getter.rlzs_by_gsim[gsim]):
-                hazardr = hazard[r]
-                for taxonomy in sorted(taxonomies):
-                    riskmodel = self[taxonomy]
-                    with mon_risk:
-                        for sid, assets, epsgetter in dic[taxonomy]:
-                            outs = [None] * len(self.lti)
-                            for lt in self.loss_types:
-                                imt = riskmodel.risk_functions[lt].imt
-                                haz = hazardr[sid, imti[imt]]
-                                if len(haz):
-                                    out = riskmodel(lt, assets, haz, epsgetter)
-                                    outs[self.lti[lt]] = out
-                            yield Output(self.loss_types, assets, outs,
-                                         sid, rlz.ordinal)
+            with mon_risk:
+                for out in self._gen_outputs(
+                        hazard_getter.rlzs_by_gsim[gsim],
+                        hazard, taxonomies, imti, dic):
+                    yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
+
+    def _gen_outputs(self, rlzs, hazard, taxonomies, imti, dic):
+        for r, rlz in enumerate(rlzs):
+            hazardr = hazard[r]
+            for taxonomy in sorted(taxonomies):
+                riskmodel = self[taxonomy]
+                for sid, assets, epsgetter in dic[taxonomy]:
+                    outs = [None] * len(self.lti)
+                    for lt in self.loss_types:
+                        i = imti[riskmodel.risk_functions[lt].imt]
+                        try:
+                            haz = hazardr[sid, i]
+                        except IndexError:  # for event based
+                            data = hazardr[sid]
+                            if len(data):
+                                haz = data['gmv'][:, i], data['eid']
+                            else:
+                                haz = []
+                        if len(haz):
+                            out = riskmodel(lt, assets, haz, epsgetter)
+                            outs[self.lti[lt]] = out
+                    yield Output(self.loss_types, assets, outs,
+                                 sid, rlz.ordinal)
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
@@ -539,6 +552,8 @@ class GmfGetter(object):
     An hazard getter with methods .gen_gmv and .get_hazard returning
     ground motion values.
     """
+    kind = 'gmf'
+
     def __init__(self, grp_id, rlzs_by_gsim, ebruptures, sitecol, imts,
                  min_iml, truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete
