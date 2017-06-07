@@ -711,8 +711,9 @@ def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    imts = list(oq.imtls)
     if 'scenario' in oq.calculation_mode:
-        imtls = dstore['oqparam'].imtls
+        imtls = oq.imtls
         gsims = [str(rlz.gsim_rlz) for rlz in rlzs_assoc.realizations]
         n_gmfs = oq.number_of_ground_motion_fields
         fields = ['%03d' % i for i in range(n_gmfs)]
@@ -731,17 +732,14 @@ def export_gmf_data_csv(ekey, dstore):
         return writer.getsaved()
     else:  # event based
         eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-        gmfa = numpy.fromiter(
-            GmfDataGetter.gen_gmfs(dstore['gmf_data'], rlzs_assoc, eid),
-            GmfDataGetter.gmf_data_dt)
+        gmfa = GmfDataGetter.gen_gmfs(dstore['gmf_data'], rlzs_assoc, eid)
         if eid is None:  # new format
             fname = dstore.build_fname('gmf', 'data', 'csv')
-            gmfa.sort(order=['rlzi', 'sid', 'eid', 'imti'])
-            writers.write_csv(fname, gmfa)
+            gmfa.sort(order=['rlzi', 'sid', 'eid'])
+            writers.write_csv(fname, expand_gmv(gmfa, imts))
             return [fname]
         # old format for single eid
         fnames = []
-        imts = list(oq.imtls)
         for rlzi, array in group_array(gmfa, 'rlzi').items():
             rlz = rlzs_assoc.realizations[rlzi]
             data, comment = _build_csv_data(
@@ -753,6 +751,20 @@ def export_gmf_data_csv(ekey, dstore):
         return fnames
 
 
+def expand_gmv(array, imts):
+    dtype = array.dtype
+    assert dtype['gmv'].shape[0] == len(imts)
+    dtlist = []
+    for name in dtype.names:
+        dt = dtype[name]
+        if name == 'gmv':
+            for imt in imts:
+                dtlist.append(('gmv_' + imt, F32))
+        else:
+            dtlist.append((name, dt))
+    return array.view(dtlist)
+
+
 def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
     # lon, lat, gmv_imt1, ..., gmv_imtN
     smlt_path = '_'.join(rlz.sm_lt_path)
@@ -760,11 +772,9 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
     comment = ('smlt_path=%s, gsimlt_path=%s, investigation_time=%s' %
                (smlt_path, gsimlt_path, investigation_time))
     rows = [['lon', 'lat'] + imts]
-    irange = range(len(imts))
     for sid, data in group_array(array, 'sid').items():
-        dic = dict(zip(data['imti'], data['gmv']))
-        row = ['%.5f' % sitecol.lons[sid], '%.5f' % sitecol.lats[sid]] + [
-            dic.get(imti, 0) for imti in irange]
+        row = ['%.5f' % sitecol.lons[sid], '%.5f' % sitecol.lats[sid]] + list(
+            data['gmv'])
         rows.append(row)
     return rows, comment
 
