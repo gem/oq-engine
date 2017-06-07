@@ -3,6 +3,14 @@
     The `python-oq-hazardlib` package is now provided by `python-oq-engine`
 
   [Michele Simionato]
+  * Added CSV exports for the agg_curve outputs
+  * Fixed a bug in `oq export hcurves-rlzs --exports hdf5`
+  * Restored the parameter sites_per_tile with a default of 20,000, i.e.
+    tiling starts automatically if there are more than 20,000 sites
+  * Better error message for invalid exposures
+  * Removed the deprecated XML outputs of the risk calculators
+  * Added an end point `v1/calc/XXX/oqparam` to extract the calculation
+    parameters as a JSON dictionary
   * Fixed the excessive logic tree reduction in event based calculators
   * Improved the command `oq db`
   * Fixed an encoding bug when logging a filename with a non-ASCII character
