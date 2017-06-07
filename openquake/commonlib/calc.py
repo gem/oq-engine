@@ -396,7 +396,7 @@ def get_gmfs(dstore, precalc=None):
     I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
     etags = numpy.arange(E)
-    gmfs = numpy.zeros((len(rlzs_assoc), N, I, E))
+    gmfs = numpy.zeros((len(rlzs_assoc), N, E, I))
     if precalc:
         for g, gsim in enumerate(precalc.gsims):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
@@ -404,16 +404,13 @@ def get_gmfs(dstore, precalc=None):
 
     # else read from the datastore
     gsims = sorted(dstore['gmf_data/grp-00'])
-    imtis = range(len(oq.imtls))
     for i, gsim in enumerate(gsims):
         dset = dstore['gmf_data/grp-00/' + gsim]
         for s, sid in enumerate(haz_sitecol.sids):
-            for imti in imtis:
-                idx = E * (S * imti + s)
-                array = dset[idx: idx + E]
-                if numpy.unique(array['sid']) != [sid]:  # sanity check
-                    raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[i, sid, imti] = array['gmv']
+            array = dset[E * s: E * s + E]
+            if numpy.unique(array['sid']) != [sid]:  # sanity check
+                raise ValueError('The GMFs have been stored incorrectly')
+            gmfs[i, sid] = array['gmv']
     return etags, gmfs
 
 

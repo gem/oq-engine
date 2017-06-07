@@ -32,7 +32,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
 from openquake.calculators.export import export
-from openquake.risklib.riskinput import GmfDataGetter, gmf_data_dt
+from openquake.risklib.riskinput import GmfDataGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -216,8 +216,8 @@ class GmfCollection(object):
         for imti, imt_str in enumerate(self.imts):
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture in self.ruptures:
+                gmf = rupture.gmfa['gmv'][:, imti]
                 mesh = completemesh[rupture.indices]
-                gmf = get_array(rupture.gmfa, imti=imti)['gmv']
                 assert len(mesh) == len(gmf), (len(mesh), len(gmf))
                 nodes = (GroundMotionFieldNode(gmv, loc)
                          for gmv, loc in zip(gmf, mesh))
@@ -720,11 +720,11 @@ def export_gmf_data_csv(ekey, dstore):
         etags, gmfs_ = calc.get_gmfs(dstore)
         sitemesh = get_mesh(dstore['sitecol'])
         writer = writers.CsvWriter(fmt='%.5f')
-        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, I, E)
+        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E, I)
             for imti, imt in enumerate(imtls):
                 gmfs = numpy.zeros(len(gmfa), dt)
                 for e, event in enumerate(dt.names):
-                    gmfs[event] = gmfa[:, imti, e]
+                    gmfs[event] = gmfa[:, e, imti]
                 dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)
@@ -733,7 +733,7 @@ def export_gmf_data_csv(ekey, dstore):
         eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
         gmfa = numpy.fromiter(
             GmfDataGetter.gen_gmfs(dstore['gmf_data'], rlzs_assoc, eid),
-            gmf_data_dt)
+            GmfDataGetter.gmf_data_dt)
         if eid is None:  # new format
             fname = dstore.build_fname('gmf', 'data', 'csv')
             gmfa.sort(order=['rlzi', 'sid', 'eid', 'imti'])
