@@ -601,6 +601,7 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
+        itemsize = self.gmf_data_dt.itemsize
         rlzs = self.rlzs_by_gsim[gsim]
         # short event IDs (48 bit) are enlarged to long event IDs (64 bit)
         # containing information about the realization index (16 bit);
@@ -628,9 +629,8 @@ class GmfGetter(object):
                     for sid, gmv in zip(sids, array[:, :, n + i]):
                         gmv[gmv < self.min_iml] = 0
                         if gmv.sum():  # nonzero
-                            for i, val in enumerate(gmv):
-                                gmdata[i] += val
-                            gmdata[NBYTES] += self.gmf_data_dt.itemsize
+                            gmdata[i:-2] += gmv
+                            gmdata[NBYTES] += itemsize
                             yield r, sid, eid, gmv
                 n += e
 
