@@ -2,9 +2,9 @@ Scenario QA Test for contents
 =============================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21360.hdf5 Fri May 12 10:46:42 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_26100.hdf5 Tue Jun  6 14:59:26 2017
+engine_version                            2.5.0-gitb270b98        
+hazardlib_version                         0.25.0-git6276f16       
 ========================================= ========================
 
 num_sites = 3, sitecol = 917 B
@@ -70,5 +70,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.006     0.0       1     
 filtering sites         0.006     0.0       1     
-reading site collection 6.437E-06 0.0       1     
+reading site collection 6.199E-06 0.0       1     
 ======================= ========= ========= ======

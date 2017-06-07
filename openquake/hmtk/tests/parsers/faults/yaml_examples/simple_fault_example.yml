@@ -1,0 +1,93 @@
+#*****************************************************************************
+#FAULT FILE IN YAML (Yet Another Markup Language) FORMAT
+#*****************************************************************************
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+tectonic_regionalisation: 
+    - Name: Active Shallow Crust
+      Code: 001
+      # Magnitude scaling relation (see http://docs.openquake.org/oq-hazardlib) 
+      #for currently available choices!
+      Magnitude_Scaling_Relation: {
+          Value: [WC1994], 
+          Weight: [1.0]}
+      # Shear Modulus (in gigapascals, GPa)
+      Shear_Modulus: {
+          Value: [30.0], 
+          Weight: [1.0]}
+      # Fault displacement to length ratio
+      Displacement_Length_Ratio: {
+          Value: [1.25E-5],
+          Weight: [1.0]}
+          
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+Fault_Model_ID: 001
+Fault_Model_Name: Template Simple Fault
+Fault_Model:
+    - ID: 001
+      Tectonic_Region: Active Shallow Crust
+      Fault_Name: A Simple Fault
+      Fault_Geometry: {
+          Fault_Typology: Simple,
+          # For simple typology, defines the trace in terms of Long., Lat.
+          Fault_Trace: [30.0, 30.0,
+                        30.0, 31.5],
+
+          # Upper Seismogenic Depth (km)
+          Upper_Depth:      0.0,
+          # Lower Seismogenic Depth (km)
+          Lower_Depth:     20.0,
+          Strike: ,
+          # Dip (degrees)
+          Dip:     60.}
+      Rake: -90.0
+      Slip_Type: Thrust
+      Slip_Completeness_Factor: 1
+      #slip [value_1, value_2, ... value_n]
+      #     [weight_1, weight_2, ... weight_n]
+      Slip: {
+          Value: [18., 20.0, 23.],
+          Weight: [0.3, 0.5, 0.2]}
+      #Aseismic Slip Factor 
+      Aseismic: 0.0
+      MFD_Model: 
+          # Example of constructor for characteristic earthquake
+        - Model_Name: Characteristic
+          # Spacing (magnitude units) of the magnitude frequency distribution
+          MFD_spacing: 0.1
+          # Weight of the model
+          Model_Weight: 0.7
+          # Magnitude of the Characteristic Earthquake
+          Maximum_Magnitude:
+          # Uncertainty on Characteristic Magnitude (in magnitude units)
+          Sigma: 0.12
+          # Lower bound truncation (in number of standard deviations)
+          Lower_Bound: -3.0
+          # Upper bound truncation (in number of standard deviations)
+          Upper_Bound: 3.0
+          ####################################################
+        - Model_Name: AndersonLucoArbitrary
+          # Example constructor of the Anderson & Luco (1983) - Arbitrary Exponential 
+          # Type - chooses between type 1 ('First'), type 2 ('Second') or type 3 ('Third')
+          Model_Type: First
+          MFD_spacing: 0.1
+          Model_Weight: 0.3
+          # Maximum Magnitude of the exponential distribution
+          Maximum_Magnitude: 
+          Minimum_Magnitude: 4.5
+          # b-value of the exponential distribution as [expected, uncertainty]
+          b_value: [0.8, 0.05]
+      Megazone: 
+      Shear_Modulus: {
+          Value: [30., 35.0],
+          Weight: [0.8, 0.2]}
+      Magnitude_Scaling_Relation: {
+          Value: [WC1994],
+          Weight: [1.0]}
+      Scaling_Relation_Sigma: {
+          Value: [-1.5, 0.0, 1.5], 
+          Weight: [0.15, 0.7, 0.15]}
+      Aspect_Ratio: 1.5
+      Displacement_Length_Ratio: {
+          Value: [1.25E-5, 1.5E-5],
+          Weight:[0.5, 0.5]}

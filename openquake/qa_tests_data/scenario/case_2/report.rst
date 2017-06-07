@@ -2,9 +2,9 @@ Scenario QA Test, Case 2
 ========================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21279.hdf5 Fri May 12 10:45:16 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_26018.hdf5 Tue Jun  6 14:58:00 2017
+engine_version                            2.5.0-gitb270b98        
+hazardlib_version                         0.25.0-git6276f16       
 ========================================= ========================
 
 num_sites = 3, sitecol = 917 B
@@ -50,5 +50,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.009     0.0       1     
-reading site collection 3.219E-05 0.0       1     
+reading site collection 3.290E-05 0.0       1     
 ======================= ========= ========= ======

@@ -90,7 +90,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
-        ekeys = [('agg_curve-stats', 'xml')]
+        ekeys = [('agg_curve-stats', 'csv')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
@@ -168,9 +168,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
-                      exports='xml', individual_curves='false',
-                      hazard_calculation_id=str(hc_id))
-        [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
+                      exports='csv', hazard_calculation_id=str(hc_id))
+        [fname] = export(('agg_curve-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -188,7 +187,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
-        fnames = export(('agg_curve-rlzs', 'xml'), self.calc.datastore)
+        fnames = export(('agg_curve-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)

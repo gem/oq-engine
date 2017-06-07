@@ -69,7 +69,7 @@ source oqenv/bin/activate
 
 ## Install the code
 
-Inside the *virtualenv* (the prompt shows something like `(openquake)user@myhost:~$`) upgrade `pip` first
+Inside the *virtualenv* (the prompt shows something like `(oqenv)user@myhost:~$`) upgrade `pip` first
 
 ```bash
 pip install -U pip
@@ -80,7 +80,6 @@ pip install -U pip
 ```bash
 mkdir src && cd src
 git clone https://github.com/gem/oq-engine.git
-git clone https://github.com/gem/oq-hazardlib.git
 ```
 
 ### Install OpenQuake 
@@ -88,11 +87,10 @@ git clone https://github.com/gem/oq-hazardlib.git
 You may want to install binary dependencies (in the form of python wheels: see [1](#note1) and [2](#note2).
 
 ```bash
-pip install -e oq-hazardlib/
 pip install -e oq-engine/
 ```
 
-Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` or `oq-hazardlib` code will be reflected in the environment.
+Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` code will be reflected in the environment.
 
 Continue on [How to run the OpenQuake Engine](../running/unix.md)
 
@@ -104,13 +102,7 @@ You can pull all the latest changes to the source code running
 cd oq-engine
 git pull
 cd ..
-
-cd oq-hazardlib
-git pull
-cd ..
 ```
-
-`oq-engine` and `oq-hazardlib` must be always synced at the same time.
 
 ## Loading and unloading the development environment
 
@@ -154,7 +146,7 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ### Notes ###
 
-*<a name="note1">[1]</a>: if you want to use binary dependencies (python wheels: they do not require any compiler, development library...) before installing `oq-engine` and `oq-hazardlib` run:*
+*<a name="note1">[1]</a>: if you want to use binary dependencies (python wheels: they do not require any compiler, development library...) before installing `oq-engine` run:*
 
 ```bash
 # For Linux

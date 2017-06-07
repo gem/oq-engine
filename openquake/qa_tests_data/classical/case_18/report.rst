@@ -2,9 +2,9 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21335.hdf5 Fri May 12 10:45:55 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_26074.hdf5 Tue Jun  6 14:58:41 2017
+engine_version                                   2.5.0-gitb270b98        
+hazardlib_version                                0.25.0-git6276f16       
 ================================================ ========================
 
 num_sites = 3, sitecol = 917 B
@@ -75,26 +75,26 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2430         2
 
 Informational data
 ------------------
-============================== =============================================================================
-count_eff_ruptures.received    tot 1.47 KB, max_per_task 1.47 KB                                            
-count_eff_ruptures.sent        gsims 156.15 KB, sources 2.1 KB, monitor 1.23 KB, srcfilter 740 B, param 65 B
-hazard.input_weight            243                                                                          
-hazard.n_imts                  3 B                                                                          
-hazard.n_levels                36 B                                                                         
-hazard.n_realizations          3 B                                                                          
-hazard.n_sites                 3 B                                                                          
-hazard.n_sources               1 B                                                                          
-hazard.output_weight           108                                                                          
-hostname                       tstation.gem.lan                                                             
-require_epsilons               0 B                                                                          
-============================== =============================================================================
+============================== ================================================================================
+count_eff_ruptures.received    tot 1.77 KB, max_per_task 1.08 KB                                               
+count_eff_ruptures.sent        gsims 312.3 KB, sources 9.05 KB, param 1.98 KB, srcfilter 1.45 KB, monitor 626 B
+hazard.input_weight            243                                                                             
+hazard.n_imts                  3 B                                                                             
+hazard.n_levels                36 B                                                                            
+hazard.n_realizations          3 B                                                                             
+hazard.n_sites                 3 B                                                                             
+hazard.n_sources               1 B                                                                             
+hazard.output_weight           108                                                                             
+hostname                       tstation.gem.lan                                                                
+require_epsilons               0 B                                                                             
+============================== ================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      VICM      AreaSource   2,430        0.002     3         1        
+0      VICM      AreaSource   2,430        0.003     3         30       
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,27 +102,27 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.002     1     
+AreaSource   0.003     1     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 NaN    0.003 0.003 1        
+count_eff_ruptures 0.003 0.001  0.002 0.004 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-reading composite source model   0.021     0.0       1     
-total count_eff_ruptures         0.003     0.0       1     
-managing sources                 0.001     0.0       1     
-store source_info                6.418E-04 0.0       1     
-reading site collection          1.647E-04 0.0       1     
-filtering composite source model 4.935E-05 0.0       1     
-saving probability maps          3.195E-05 0.0       1     
-aggregate curves                 2.456E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+reading composite source model 0.016     0.0       1     
+managing sources               0.012     0.0       1     
+store source_info              0.011     0.0       1     
+total count_eff_ruptures       0.005     0.0       2     
+prefiltering source model      0.002     0.0       1     
+reading site collection        1.271E-04 0.0       1     
+aggregate curves               6.843E-05 0.0       2     
+saving probability maps        2.432E-05 0.0       1     
+============================== ========= ========= ======
