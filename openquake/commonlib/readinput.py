@@ -833,7 +833,7 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, etags, gmf array of shape (N, I, E)
+        sitecol, etags, gmf array of shape (N, E, I)
     """
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.txt'):
@@ -844,9 +844,9 @@ def get_gmfs(oqparam):
         raise NotImplemented('Reading from %s' % fname)
     N, E = gmfs_by_imt.shape
     I = len(oqparam.imtls)
-    gmfs = numpy.zeros((N, I, E), F32)
+    gmfs = numpy.zeros((N, E, I), F32)
     for imti, imtstr in enumerate(oqparam.imtls):
-        gmfs[:, imti, :] = gmfs_by_imt[imtstr]
+        gmfs[:, :, imti] = gmfs_by_imt[imtstr]
     return sitecol, etags, gmfs
 
 
