@@ -82,10 +82,11 @@ class ScenarioCalculator(base.HazardCalculator):
             [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
 
     def to_gmf_data(self, gsim):
+        sids = self.sitecol.sids
         gmfa = self.gmfa[gsim]
         n, e, i = gmfa.shape
-        data = ((0, sid, eid, gmfa[sid, eid])
-                for sid, eid in itertools.product(range(n), range(e)))
+        data = ((0, sids[s], eid, gmfa[s, eid])
+                for s, eid in itertools.product(range(n), range(e)))
         return numpy.fromiter(data, self.gmv_data_dt)
 
     def execute(self):
