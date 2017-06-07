@@ -2,8 +2,8 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    = -j 4
-SPHINXBUILD   = sphinx-build
+SPHINXOPTS    = -j 8 # -n -W
+SPHINXBUILD   = python $(shell which sphinx-build)
 PAPER         =
 BUILDDIR      = build
 
@@ -77,17 +77,17 @@ qthelp:
 	@echo
 	@echo "Build finished; now you can run "qcollectiongenerator" with the" \
 	      ".qhcp project file in $(BUILDDIR)/qthelp, like this:"
-	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/openquake.qhcp"
+	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/hazardlib.qhcp"
 	@echo "To view the help file:"
-	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/openquake.qhc"
+	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/hazardlib.qhc"
 
 devhelp:
 	$(SPHINXBUILD) -b devhelp $(ALLSPHINXOPTS) $(BUILDDIR)/devhelp
 	@echo
 	@echo "Build finished."
 	@echo "To view the help file:"
-	@echo "# mkdir -p $$HOME/.local/share/devhelp/openquake"
-	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/openquake"
+	@echo "# mkdir -p $$HOME/.local/share/devhelp/hazardlib"
+	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/hazardlib"
 	@echo "# devhelp"
 
 epub:

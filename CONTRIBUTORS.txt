@@ -27,9 +27,19 @@ Anton Gritsay           August 2011
 Luigi Panzeri           August 2012
 Matteo Nastasi          November 2012
 Michele Simionato       December 2012
+Luis Rodríguez          December 2012
 Daniele Viganò          April 2013
+Graeme Weatherill       September 2013
 Paolo Tormene           October 2013
-Robin Gee               November 2016
+Yen-Shin Chen           November 2013
+Julio Garcia            March 2014
+Robin Gee               September 2015
+Silvia Canessa          December 2015
+Nick Ackerley           December 2015
+Trevor Allen            July 2016
+Jonathan Griffin        October 2016
+Ozkan Kale              October 2016
+Valerio Poggi           March 2017
 
 Project management
 ------------------
