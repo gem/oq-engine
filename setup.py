@@ -64,7 +64,6 @@ install_requires = [
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
-    'openquake.hazardlib ==0.25',
 ]
 
 if sys.version < '3':
@@ -77,6 +76,10 @@ extras_require = {
     'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'celery':  ["celery >=3.1, <4.0"],
     'pam': ["python-pam", "django-pam"],
+    'plotting':  [
+        'basemap >=1.0',
+        'pyproj >=1.9',
+    ]
 }
 
 setup(
