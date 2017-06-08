@@ -164,6 +164,8 @@ class DataStore(collections.MutableMapping):
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.hdf5path = self.calc_dir + '.hdf5'
+        if mode == 'r' and not os.path.exists(self.hdf5path):
+            raise IOError('File not found: %s' % self.hdf5path)
         self.hdf5 = None
         self.open()
 
