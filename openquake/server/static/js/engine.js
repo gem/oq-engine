@@ -157,7 +157,7 @@
             confirm_remove: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                window.confirm(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id, "?", function(btn){
+                diaerror.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id, "?", function(btn){
                 if(btn === 'yes'){
                     //some code
                 }
