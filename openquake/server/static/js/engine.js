@@ -198,7 +198,7 @@ var CalculationTable = Backbone.View.extend(
             },
 
             events: {
-                "click .btn-c-remove": "remove_calculation",
+                "click .btn-c-remove": "confirm_remove",
                 "click .btn-danger": "remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
