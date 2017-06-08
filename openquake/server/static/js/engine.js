@@ -169,6 +169,44 @@
                       };
 })();
 
+var ConfirmTable = Backbone.View.extend(
+    {
+
+            /* the html element where the table is rendered */
+            el: $('diaconfirm_scroll_enabled_box'),
+            events: {
+                "click .btn-cc-remove": "remove_calculation",
+            }
+
+    remove_calculation: function(e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                var view = this;
+                diaerror.show(false, "Removing calculation " + calc_id, "...");
+                $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
+                     ).success(
+                         function(data, textStatus, jqXHR)
+                         {
+                             diaerror.show(false, "Removing calculation " + calc_id, "Calculation " + calc_id + " removed.");
+                             view.calculations.remove([view.calculations.get(calc_id)]);
+                         }
+                     ).error(
+                         function(jqXHR, textStatus, errorThrown)
+                         {
+                             if (jqXHR.status == 404) {
+                                 diaerror.show(false, "Removing calculation " + calc_id, "Failed: calculation " + calc_id + " not found.");
+                             }
+                             else {
+                                 diaerror.show(false, "Removing calculation " + calc_id, "Failed: " + textStatus);
+                             }
+                         }
+                     );
+},
+
+    );
+    },
+
+
 var CalculationTable = Backbone.View.extend(
     {
 
@@ -199,7 +237,6 @@ var CalculationTable = Backbone.View.extend(
 
             events: {
                 "click .btn-danger": "confirm_remove",
-                "click .btn-cc-remove": "remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
