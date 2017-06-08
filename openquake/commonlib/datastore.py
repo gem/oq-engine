@@ -81,6 +81,10 @@ def extract_calc_id_datadir(hdf5path, datadir=DATADIR):
 
     >>> extract_calc_id_datadir('/mnt/ssd/oqdata/calc_25.hdf5')
     (25, '/mnt/ssd/oqdata')
+    >>> extract_calc_id_datadir('/mnt/ssd/oqdata/wrong_name.hdf5')
+    Traceback (most recent call last):
+       ...
+    ValueError: Cannot extract calc_id from /mnt/ssd/oqdata/wrong_name.hdf5
     """
     if hdf5path is None:  # use a new datastore
         return get_last_calc_id(datadir) + 1, datadir
