@@ -50,64 +50,6 @@
                           }
                       };
                   })();
-    var diaconfirm = (function ()
-                  {
-                      var errorDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
-                <div class="modal-dialog">\
-                  <div class="modal-content">\
-                    <div class="modal-header">\
-                      <h4 class="modal-title">Calculation not accepted: traceback</h4>\
-                    </div>\
-                    <div class="modal-body" style="font-size: 12px;"><pre style="font-size: 12px;" class="modal-body-pre"></pre>\
-                    </div>\
-                    <div class="modal-footer">\
-                      <span id="diaerror_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaerror_scroll_enabled" checked>\
-                      Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <button type="button" class="btn btn-confirm-remove" data-dismiss="modal">Yes</button>\
-                      <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
-                    </div>\
-                  </div>\
-                </div>\
-                </div>');
-
-    errorDiv.bind('hide', function() { calculation_table.hide_log(); });
-                      return {
-                          getdiv: function() {
-                              return errorDiv;
-                          },
-
-                          show: function(is_large, title, msg) {
-                              if (title != null) {
-                                  $('.modal-title', errorDiv).html(title);
-                              }
-                              if (msg != null) {
-                                  $('.modal-body-pre', errorDiv).html(msg);
-                              }
-                              if (is_large) {
-                                  errorDiv.addClass("errorDialogLarge");
-                              }
-                              else {
-                                  errorDiv.removeClass("errorDialogLarge");
-                              }
-                              errorDiv.modal('show');
-                          },
-
-                          append: function(title, msg) {
-                              if (title != null) {
-                                  $('.modal-title', errorDiv).html(title);
-                              }
-                              $( msg ).appendTo( $('.modal-body-pre', errorDiv) );
-                          },
-
-                          scroll_to_bottom: function(ctx) {
-                              ctx.scrollTop(ctx[0].scrollHeight);
-                          },
-
-                          hide: function () {
-                              errorDiv.modal('hide');
-                          }
-                      };
-})();
 
     var diaerror = (function ()
                   {
@@ -201,6 +143,66 @@
                 "click .btn-file": "on_run_risk_clicked",
                 "change .btn-file input": "on_run_risk_queued"
             },
+            
+            var diaconfirm = (function ()
+                  {
+                      var errorDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
+                <div class="modal-dialog">\
+                  <div class="modal-content">\
+                    <div class="modal-header">\
+                      <h4 class="modal-title">Calculation not accepted: traceback</h4>\
+                    </div>\
+                    <div class="modal-body" style="font-size: 12px;"><pre style="font-size: 12px;" class="modal-body-pre"></pre>\
+                    </div>\
+                    <div class="modal-footer">\
+                      <span id="diaerror_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaerror_scroll_enabled" checked>\
+                      Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
+                      <button type="button" class="btn btn-confirm-remove" data-dismiss="modal">Yes</button>\
+                      <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
+                    </div>\
+                  </div>\
+                </div>\
+</div>');
+
+             errorDiv.bind('hide', function() { calculation_table.hide_log(); });
+                      return {
+                          getdiv: function() {
+                              return errorDiv;
+                          },
+
+                          show: function(is_large, title, msg) {
+                              if (title != null) {
+                                  $('.modal-title', errorDiv).html(title);
+                              }
+                              if (msg != null) {
+                                  $('.modal-body-pre', errorDiv).html(msg);
+                              }
+                              if (is_large) {
+                                  errorDiv.addClass("errorDialogLarge");
+                              }
+                              else {
+                                  errorDiv.removeClass("errorDialogLarge");
+                              }
+                              errorDiv.modal('show');
+                          },
+
+                          append: function(title, msg) {
+                              if (title != null) {
+                                  $('.modal-title', errorDiv).html(title);
+                              }
+                              $( msg ).appendTo( $('.modal-body-pre', errorDiv) );
+                          },
+
+                          scroll_to_bottom: function(ctx) {
+                              ctx.scrollTop(ctx[0].scrollHeight);
+                          },
+
+                          hide: function () {
+                              errorDiv.modal('hide');
+                          }
+                      };
+})();
+ 
 
             /* When an input dialog is opened, it is very important to not re-render the table */
             on_run_risk_clicked: function(e) {
