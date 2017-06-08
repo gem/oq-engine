@@ -123,7 +123,7 @@
                     <div class="modal-footer">\
                       <span id="diaconfirm_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaconfig_scroll_enabled" checked>\
                       Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <button type="button" class="btn btn-confirm-remove" data="modal">Yes</button>\
+                      <button type="button" class="btn btn-c-remove" data="modal">Yes</button>\
                       <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
                     </div>\
                   </div>\
@@ -198,7 +198,7 @@ var CalculationTable = Backbone.View.extend(
             },
 
             events: {
-                "click .btn-confirm-remove": "remove_calculation",
+                "click .btn-c-remove": "remove_calculation",
                 "click .btn-danger": "remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
