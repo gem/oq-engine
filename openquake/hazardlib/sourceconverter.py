@@ -996,7 +996,6 @@ def _pointsources2multipoints(srcs, i):
     return i, allsources
 
 
-# TODO: tests are missing
 def update_source_model(sm_node):
     """
     :param sm_node: a sourceModel Node object containing sourceGroups
@@ -1009,7 +1008,10 @@ def update_source_model(sm_node):
         psrcs = []
         others = []
         for src in group:
-            del src.attrib['tectonicRegion']  # make the trt implicit
+            try:
+                del src.attrib['tectonicRegion']  # make the trt implicit
+            except KeyError:
+                pass  # already missing
             if src.tag.endswith('pointSource'):
                 psrcs.append(src)
             else:
