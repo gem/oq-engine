@@ -110,7 +110,7 @@
 
 var CalculationTable = Backbone.View.extend( {
 
-    var diaconfirm = (function (confirmDiv)
+    var diaconfirm = (function ()
                   {
                       var confirmDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
