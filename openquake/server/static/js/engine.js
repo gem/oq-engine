@@ -108,6 +108,8 @@
                       };
                   })();
 
+var CalculationTable = Backbone.View.extend(
+    {
 
     var diaconfirm = (function ()
                   {
@@ -169,11 +171,6 @@
 })();
 
 
-var CalculationTable = Backbone.View.extend( 
-    { 
-
-    var CalculationTable = Backbone.View.extend(
-        {
             /* the html element where the table is rendered */
             el: $('#my-calculations'),
 
