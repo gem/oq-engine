@@ -136,7 +136,7 @@
             },
 
             events: {
-                "click .btn-danger": "remove_calculation",
+                "click .btn-danger": "confirm_remove",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -153,13 +153,24 @@
                 this.can_be_rendered = true;
             },
 
+            confirm_remove: function(e) {
+                e.preventDefault();
+                Ext.MessageBox.confirm('Delete', 'Are you sure ?', function(e){
+                var conf = $(e.target) 
+                    if( conf === 'yes'){
+                        remove_calculation()
+                    }
+                    else{
+                        //some code
+                    }
+                });
+            } 
+
             remove_calculation: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var view = this;
                 diaerror.show(false, "Removing calculation " + calc_id, "...");
-                var confirmModal = new App.Views.ConfirmModalClass({
-                cb: function(){
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
                      ).success(
                          function(data, textStatus, jqXHR)
@@ -178,9 +189,6 @@
                              }
                          }
                      );
-                 },
-               });
-        confirmModal.render();
             },
 
             show_traceback: function(e) {
