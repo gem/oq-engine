@@ -108,7 +108,7 @@
                       };
                   })();
 
-var diaconfirm = (function ()
+var diaconfirm = (function (confirmDiv)
                   {
                       var confirmDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
@@ -119,9 +119,9 @@ var diaconfirm = (function ()
                     <div class="modal-body" style="font-size: 12px;"><pre style="font-size: 12px;" class="modal-body-pre"></pre>\
                     </div>\
                     <div class="modal-footer">\
-                      <span id="diaerror_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaerror_scroll_enabled" checked>\
+                      <span id="diaconfirm_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaconfig_scroll_enabled" checked>\
                       Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <button type="button" class="btn btn-confirm-remove" data = "modal">Yes</button>\
+                      <button type="button" class="btn btn-confirm-remove" data="modal">Yes</button>\
                       <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
                     </div>\
                   </div>\
