@@ -136,7 +136,7 @@
             },
 
             events: {
-                "click .btn-danger": "confirm_remove",
+                "click .btn-danger": "remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -153,18 +153,6 @@
                 this.can_be_rendered = true;
             },
 
-            confirm_remove: function(e) {
-                e.preventDefault();
-                Ext.MessageBox.confirm('Delete', 'Are you sure ?', function(e){
-                var conf = $(e.target) 
-                    if( conf === 'yes'){
-                        remove_calculation()
-                    }
-                    else{
-                        return
-                    }
-                });
-            } 
 
             remove_calculation: function(e) {
                 e.preventDefault();
