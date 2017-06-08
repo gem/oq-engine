@@ -571,8 +571,9 @@ class Starmap(object):
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
                 fut = mkfuture(result_dict['result'])
-                # work around a celery bug
-                del app.backend._cache[task_id]
+                # work around a celery/rabbitmq bug
+                if CELERY_RESULT_BACKEND.startswith('rpc:'):
+                    del app.backend._cache[task_id]
                 yield fut
 
         else:  # future interface
