@@ -76,7 +76,7 @@ class DataStoreTestCase(unittest.TestCase):
 
     def test_read(self):
         # cas of a non-existing directory
-        with self.assertRaises(IOError):
+        with self.assertRaises(OSError):
             read(42, datadir='/fake/directory')
         # case of a non-existing file
         with self.assertRaises(IOError):
@@ -88,4 +88,4 @@ class DataStoreTestCase(unittest.TestCase):
         os.chmod(fname, 0)
         with self.assertRaises(IOError) as ctx:
             read(42, datadir=tmp)
-        self.assertIn('Permission denied:', str(ctx.exception))
+        self.assertIn('permission denied', str(ctx.exception).lower())
