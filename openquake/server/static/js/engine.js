@@ -110,7 +110,7 @@
 
 var diaconfirm = (function ()
                   {
-                      var errorDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
+                      var confirmDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
                   <div class="modal-content">\
                     <div class="modal-header">\
@@ -121,40 +121,40 @@ var diaconfirm = (function ()
                     <div class="modal-footer">\
                       <span id="diaerror_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaerror_scroll_enabled" checked>\
                       Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <button type="button" data-calc-id = "6" class="btn btn-confirm-remove" >Yes</button>\
+                      <button type="button" class="btn btn-confirm-remove" >Yes</button>\
                       <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
                     </div>\
                   </div>\
                 </div>\
 </div>');
 
-             errorDiv.bind('hide', function() { calculation_table.hide_log(); });
+             confirmDiv.bind('hide', function() { calculation_table.hide_log(); });
                       return {
                           getdiv: function() {
-                              return errorDiv;
+                              return confirmDiv;
                           },
 
                           show: function(is_large, title, msg) {
                               if (title != null) {
-                                  $('.modal-title', errorDiv).html(title);
+                                  $('.modal-title', confirmDiv).html(title);
                               }
                               if (msg != null) {
-                                  $('.modal-body-pre', errorDiv).html(msg);
+                                  $('.modal-body-pre', confirmDiv).html(msg);
                               }
                               if (is_large) {
-                                  errorDiv.addClass("errorDialogLarge");
+                                  confirmDiv.addClass("errorDialogLarge");
                               }
                               else {
-                                  errorDiv.removeClass("errorDialogLarge");
+                                  confirmDiv.removeClass("errorDialogLarge");
                               }
-                              errorDiv.modal('show');
+                              confirmDiv.modal('show');
                           },
 
                           append: function(title, msg) {
                               if (title != null) {
-                                  $('.modal-title', errorDiv).html(title);
+                                  $('.modal-title', confirmDiv).html(title);
                               }
-                              $( msg ).appendTo( $('.modal-body-pre', errorDiv) );
+                              $( msg ).appendTo( $('.modal-body-pre', confirmDiv) );
                           },
 
                           scroll_to_bottom: function(ctx) {
@@ -162,7 +162,7 @@ var diaconfirm = (function ()
                           },
 
                           hide: function () {
-                              errorDiv.modal('hide');
+                              confirmDiv.modal('hide');
                           }
                       };
 })();
