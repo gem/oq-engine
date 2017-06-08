@@ -157,14 +157,7 @@
             confirm_remove: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                diaerror.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id, "?", function(btn){
-                if(btn === 'yes'){
-                    //some code
-                }
-                else{
-                    //some code
-                }
-                });
+                diaerror.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id, " ?");
             },
 
             remove_calculation: function(e) {
