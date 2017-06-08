@@ -173,7 +173,7 @@ var ConfirmTable = Backbone.View.extend(
     {
 
             /* the html element where the table is rendered */
-            el: $('confirmDialog'),
+            el: $('#confirmDialog'),
             events: {
                 "click .btn-cc-remove": "remove_calculation"
             },
