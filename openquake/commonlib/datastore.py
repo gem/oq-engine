@@ -77,20 +77,22 @@ def hdf5new(datadir=DATADIR):
 
 def extract_calc_id_datadir(hdf5path, datadir=DATADIR):
     """
-    Extract the calculation ID from the given hdf5path or integer
+    Extract the calculation ID from the given hdf5path or integer:
+
+    >>> extract_calc_id_datadir('/mnt/ssd/oqdata/calc_25.hdf5')
+    (25, '/mnt/ssd/oqdata')
     """
     if hdf5path is None:  # use a new datastore
         return get_last_calc_id(datadir) + 1, datadir
     try:
         calc_id = int(hdf5path)
-    except TypeError:
+    except:
         datadir = os.path.dirname(hdf5path)
         mo = re.match('calc_(\d+)\.hdf5', os.path.basename(hdf5path))
         if mo is None:
             raise ValueError('Cannot extract calc_id from %s' % hdf5path)
         calc_id = int(mo.group(1))
-    else:
-        return calc_id, datadir
+    return calc_id, datadir
 
 
 def read(calc_id, mode='r', datadir=DATADIR):
