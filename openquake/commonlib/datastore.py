@@ -75,19 +75,33 @@ def hdf5new(datadir=DATADIR):
     return new
 
 
+def extract_calc_id_datadir(hdf5path, datadir=DATADIR):
+    """
+    Extract the calculation ID from the given hdf5path or integer
+    """
+    if hdf5path is None:  # use a new datastore
+        return get_last_calc_id(datadir) + 1, datadir
+    try:
+        calc_id = int(hdf5path)
+    except TypeError:
+        datadir = os.path.dirname(hdf5path)
+        mo = re.match('calc_(\d+)\.hdf5', os.path.basename(hdf5path))
+        if mo is None:
+            raise ValueError('Cannot extract calc_id from %s' % hdf5path)
+        calc_id = int(mo.group(1))
+    else:
+        return calc_id, datadir
+
+
 def read(calc_id, mode='r', datadir=DATADIR):
     """
-    :param calc_id: calculation ID
+    :param calc_id: calculation ID or hdf5path
     :param mode: 'r' or 'w'
     :param datadir: the directory where to look
     :returns: the corresponding DataStore instance
 
     Read the datastore, if it exists and it is accessible.
     """
-    if calc_id < 0:  # retrieve an old datastore
-        calc_id = get_calc_ids(datadir)[calc_id]
-    fname = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
-    open(fname).close()  # check if the file exists and is accessible
     dstore = DataStore(calc_id, datadir, mode=mode)
     try:
         hc_id = dstore['oqparam'].hazard_calculation_id
@@ -126,11 +140,10 @@ class DataStore(collections.MutableMapping):
     """
     def __init__(self, calc_id=None, datadir=DATADIR,
                  params=(), mode=None):
+        calc_id, datadir = extract_calc_id_datadir(calc_id, datadir)
         if not os.path.exists(datadir):
             os.makedirs(datadir)
-        if calc_id is None:  # use a new datastore
-            self.calc_id = get_last_calc_id(datadir) + 1
-        elif calc_id < 0:  # use an old datastore
+        if calc_id < 0:  # use an old datastore
             calc_ids = get_calc_ids(datadir)
             try:
                 self.calc_id = calc_ids[calc_id]
