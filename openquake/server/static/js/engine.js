@@ -121,7 +121,7 @@ var diaconfirm = (function ()
                     <div class="modal-footer">\
                       <span id="diaerror_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaerror_scroll_enabled" checked>\
                       Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <button type="button" class="btn btn-confirm-remove" >Yes</button>\
+                      <button type="button" data-calc-id = "6" class="btn btn-confirm-remove" >Yes</button>\
                       <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
                     </div>\
                   </div>\
@@ -223,7 +223,7 @@ var diaconfirm = (function ()
 
             remove_calculation: function(e) {
                 e.preventDefault();
-                // var calc_id = $(e.target).attr('data-calc-id');
+                var calc_id = $(e.target).attr('data-calc-id');
                 var view = this;
                 diaerror.show(false, "Removing calculation " + calc_id, "...");
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
