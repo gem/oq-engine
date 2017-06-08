@@ -158,7 +158,7 @@
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 iaerror.show(false, "Removing calculation " + calc_id, "...");
-            }
+            },
 
             remove_calculation: function(e) {
                 e.preventDefault();
