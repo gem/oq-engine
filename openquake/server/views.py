@@ -600,7 +600,7 @@ def get_oqparam(request, job_id):
         job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    with datastore.read(job.id) as ds:
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         oq = ds['oqparam']
     return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)
 
