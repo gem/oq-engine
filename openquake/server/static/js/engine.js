@@ -108,43 +108,7 @@
                       };
                   })();
 
-    var CalculationTable = Backbone.View.extend(
-        {
-            /* the html element where the table is rendered */
-            el: $('#my-calculations'),
-
-            logXhr: null,
-            logId: -1,
-            logIsNew: false,
-            logLinesAll: 0,
-            logLines: 0,
-            logTimeout: null,
-
-            initialize: function(options) {
-
-                /* whatever happens to any calculation, re-render the table */
-                _.bindAll(this, 'render');
-                this.calculations = options.calculations;
-                this.calculations.bind('reset', this.render);
-                this.calculations.bind('add', this.render);
-                this.calculations.bind('remove', this.render);
-
-                /* if false, it prevents the table to be refreshed */
-                this.can_be_rendered = true;
-
-                this.render();
-            },
-
-            events: {
-                "click .btn-confirm-remove": "remove_calculation",
-                "click .btn-danger": "confirm_remove",
-                "click .btn-traceback": "show_traceback",
-                "click .btn-log": "show_log",
-                "click .btn-file": "on_run_risk_clicked",
-                "change .btn-file input": "on_run_risk_queued"
-            },
-            
-            var diaconfirm = (function ()
+var diaconfirm = (function ()
                   {
                       var errorDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
@@ -202,7 +166,43 @@
                           }
                       };
 })();
- 
+
+    var CalculationTable = Backbone.View.extend(
+        {
+            /* the html element where the table is rendered */
+            el: $('#my-calculations'),
+
+            logXhr: null,
+            logId: -1,
+            logIsNew: false,
+            logLinesAll: 0,
+            logLines: 0,
+            logTimeout: null,
+
+            initialize: function(options) {
+
+                /* whatever happens to any calculation, re-render the table */
+                _.bindAll(this, 'render');
+                this.calculations = options.calculations;
+                this.calculations.bind('reset', this.render);
+                this.calculations.bind('add', this.render);
+                this.calculations.bind('remove', this.render);
+
+                /* if false, it prevents the table to be refreshed */
+                this.can_be_rendered = true;
+
+                this.render();
+            },
+
+            events: {
+                "click .btn-confirm-remove": "remove_calculation",
+                "click .btn-danger": "confirm_remove",
+                "click .btn-traceback": "show_traceback",
+                "click .btn-log": "show_log",
+                "click .btn-file": "on_run_risk_clicked",
+                "change .btn-file input": "on_run_risk_queued"
+            },
+            
 
             /* When an input dialog is opened, it is very important to not re-render the table */
             on_run_risk_clicked: function(e) {
