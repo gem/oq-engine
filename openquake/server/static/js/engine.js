@@ -161,7 +161,7 @@
                         remove_calculation()
                     }
                     else{
-                        //some code
+                        return
                     }
                 });
             } 
