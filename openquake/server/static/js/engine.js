@@ -175,7 +175,7 @@ var ConfirmTable = Backbone.View.extend(
             /* the html element where the table is rendered */
             el: $('diaconfirm_scroll_enabled_box'),
             events: {
-                "click .btn-cc-remove": "remove_calculation",
+                "click .btn-cc-remove": "remove_calculation"
             }
 
     remove_calculation: function(e) {
@@ -203,8 +203,8 @@ var ConfirmTable = Backbone.View.extend(
                      );
 },
 
-    );
-    },
+    });
+    
 
 
 var CalculationTable = Backbone.View.extend(
