@@ -158,6 +158,8 @@
                 var calc_id = $(e.target).attr('data-calc-id');
                 var view = this;
                 diaerror.show(false, "Removing calculation " + calc_id, "...");
+                var confirmModal = new App.Views.ConfirmModalClass({
+                cb: function(){
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
                      ).success(
                          function(data, textStatus, jqXHR)
@@ -176,6 +178,9 @@
                              }
                          }
                      );
+                 },
+               });
+        confirmModal.render();
             },
 
             show_traceback: function(e) {
