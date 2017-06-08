@@ -108,7 +108,6 @@
                       };
                   })();
 
-var CalculationTable = Backbone.View.extend( {
 
     var diaconfirm = (function ()
                   {
@@ -168,6 +167,10 @@ var CalculationTable = Backbone.View.extend( {
                           }
                       };
 })();
+
+
+var CalculationTable = Backbone.View.extend( 
+    { 
 
     var CalculationTable = Backbone.View.extend(
         {
