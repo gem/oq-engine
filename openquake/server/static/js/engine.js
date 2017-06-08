@@ -69,7 +69,7 @@
                   </div>\
                 </div>\
                 </div>');
-    }
+    });
 
     var diaerror = (function ()
                   {
