@@ -112,10 +112,6 @@
     var diaconfirm = (function ()
                   {
 
-                      events: {
-                          "click .btn-confirm-remove": "remove_calculation"
-                      },
-
                       var confirmDiv = $('<div id="confirmDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
                   <div class="modal-content">\
