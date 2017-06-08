@@ -136,7 +136,7 @@
             },
 
             events: {
-                "click .btn-danger": "remove_calculation",
+                "click .btn-danger": "confirm_remove",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -153,6 +153,12 @@
                 this.can_be_rendered = true;
             },
 
+
+            confirm_remove: function(e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                iaerror.show(false, "Removing calculation " + calc_id, "...");
+            }
 
             remove_calculation: function(e) {
                 e.preventDefault();
