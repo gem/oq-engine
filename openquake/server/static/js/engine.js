@@ -108,12 +108,9 @@
                       };
                   })();
 
-var CalculationTable = Backbone.View.extend(
-    {
-
     var diaconfirm = (function ()
                   {
-                      var confirmDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
+                      var confirmDiv = $('<div id="confirmDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
                   <div class="modal-content">\
                     <div class="modal-header">\
@@ -170,6 +167,8 @@ var CalculationTable = Backbone.View.extend(
                       };
 })();
 
+var CalculationTable = Backbone.View.extend(
+    {
 
             /* the html element where the table is rendered */
             el: $('#my-calculations'),
