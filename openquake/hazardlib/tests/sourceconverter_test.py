@@ -57,18 +57,19 @@ xmlns:gml="http://www.opengis.net/gml"
             </ruptAspectRatio>
             <multiMFD
             kind="truncGutenbergRichterMFD"
+            size="2"
             >
                 <min_mag>
-                    4.5000000E+00 4.5000000E+00
+                    4.5000000E+00
                 </min_mag>
                 <max_mag>
-                    8.2000000E+00 8.2000000E+00
+                    8.2000000E+00
                 </max_mag>
                 <a_val>
-                    1.9473715E+00 1.9473715E+00
+                    1.9473715E+00
                 </a_val>
                 <b_val>
-                    1.0153966E+00 1.0153966E+00
+                    1.0153966E+00
                 </b_val>
             </multiMFD>
             <nodalPlaneDist>
@@ -94,5 +95,5 @@ class PointToMultiPointTestCase(unittest.TestCase):
         with io.BytesIO() as f:
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
+            print(got)
             self.assertEqual(got, expected)
-
