@@ -63,7 +63,7 @@
                     <div class="modal-footer">\
                       <span id="diaerror_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaerror_scroll_enabled" checked>\
                       Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <button type="button" class="btn btn-confirm" data-dismiss="modal">Yes</button>\
+                      <button type="button" class="btn btn-confirm-remove" data-dismiss="modal">Yes</button>\
                       <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
                     </div>\
                   </div>\
@@ -194,7 +194,7 @@
             },
 
             events: {
-                "click .btn-confirm": "remove_calculation",
+                "click .btn-confirm-remove": "remove_calculation",
                 "click .btn-danger": "confirm_remove",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
