@@ -223,7 +223,7 @@ var diaconfirm = (function ()
 
             remove_calculation: function(e) {
                 e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
+                // var calc_id = $(e.target).attr('data-calc-id');
                 var view = this;
                 diaerror.show(false, "Removing calculation " + calc_id, "...");
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
