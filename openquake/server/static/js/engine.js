@@ -69,7 +69,45 @@
                   </div>\
                 </div>\
                 </div>');
-    });
+
+    errorDiv.bind('hide', function() { calculation_table.hide_log(); });
+                      return {
+                          getdiv: function() {
+                              return errorDiv;
+                          },
+
+                          show: function(is_large, title, msg) {
+                              if (title != null) {
+                                  $('.modal-title', errorDiv).html(title);
+                              }
+                              if (msg != null) {
+                                  $('.modal-body-pre', errorDiv).html(msg);
+                              }
+                              if (is_large) {
+                                  errorDiv.addClass("errorDialogLarge");
+                              }
+                              else {
+                                  errorDiv.removeClass("errorDialogLarge");
+                              }
+                              errorDiv.modal('show');
+                          },
+
+                          append: function(title, msg) {
+                              if (title != null) {
+                                  $('.modal-title', errorDiv).html(title);
+                              }
+                              $( msg ).appendTo( $('.modal-body-pre', errorDiv) );
+                          },
+
+                          scroll_to_bottom: function(ctx) {
+                              ctx.scrollTop(ctx[0].scrollHeight);
+                          },
+
+                          hide: function () {
+                              errorDiv.modal('hide');
+                          }
+                      };
+})();
 
     var diaerror = (function ()
                   {
