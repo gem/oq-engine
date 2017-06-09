@@ -631,8 +631,11 @@ class GmfGetter(object):
                 gmdata[EVENTS] += e
                 for ei, eid in enumerate(all_eids[r]):
                     gmf = array[:, :, n + ei]  # shape (N, I)
-                    for i, val in enumerate(gmf.T):
-                        gmdata[i] += val.sum()
+                    tot = gmf.sum(axis=0)  # shape (I,)
+                    if not tot.sum():
+                        continue
+                    for i, val in enumerate(tot):
+                        gmdata[i] += val
                     gmdata[NBYTES] += size
                     for sid, gmv in zip(sids, gmf):
                         if gmv.sum():
