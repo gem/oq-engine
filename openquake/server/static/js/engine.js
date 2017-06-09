@@ -123,7 +123,7 @@
                     <div class="modal-footer">\
                       <span id="diaconfirm_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaconfig_scroll_enabled" checked>\
                       Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <a href="#" data-calc-id="13" class="btn btn-sm btn-cc-remove">Yes</a>\
+                      <button type="button" class="btn btn-cc-remove">Yes</button>\
                       <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
                     </div>\
                   </div>\
@@ -169,7 +169,7 @@
                       };
 })();
 
-var CalculationTable = Backbone.View.extend(
+var ConfirmTable = Backbone.View.extend(
     {
 
             /* the html element where the table is rendered */
@@ -205,6 +205,8 @@ var CalculationTable = Backbone.View.extend(
 },
 
 });
+
+new ConfirmTable;
     
 
 
@@ -262,30 +264,6 @@ var CalculationTable = Backbone.View.extend(
                 diaconfirm.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
             },
 
-            remove_calculation: function(e) {
-                e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
-                var view = this;
-                diaerror.show(false, "Removing calculation " + calc_id, "...");
-                $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
-                     ).success(
-                         function(data, textStatus, jqXHR)
-                         {
-                             diaerror.show(false, "Removing calculation " + calc_id, "Calculation " + calc_id + " removed.");
-                             view.calculations.remove([view.calculations.get(calc_id)]);
-                         }
-                     ).error(
-                         function(jqXHR, textStatus, errorThrown)
-                         {
-                             if (jqXHR.status == 404) {
-                                 diaerror.show(false, "Removing calculation " + calc_id, "Failed: calculation " + calc_id + " not found.");
-                             }
-                             else {
-                                 diaerror.show(false, "Removing calculation " + calc_id, "Failed: " + textStatus);
-                             }
-                         }
-                     );
-            },
 
             show_traceback: function(e) {
                 e.preventDefault();
