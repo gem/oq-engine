@@ -169,7 +169,7 @@
                       };
 })();
 
-var ConfirmTable = Backbone.View.extend(
+var CalculationTable = Backbone.View.extend(
     {
 
             /* the html element where the table is rendered */
@@ -203,14 +203,8 @@ var ConfirmTable = Backbone.View.extend(
                              }
                          }
                      );
-},
+             },
 
-});
-
-
-
-var CalculationTable = Backbone.View.extend(
-    {
 
             /* the html element where the table is rendered */
             el: $('#my-calculations'),
@@ -260,7 +254,7 @@ var CalculationTable = Backbone.View.extend(
             confirm_remove: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                diaconfirm.show(true, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
+                diaconfirm.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
             },
 
 
