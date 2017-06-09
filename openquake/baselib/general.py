@@ -38,6 +38,7 @@ import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+F32 = numpy.float32
 F64 = numpy.float64
 
 
@@ -690,16 +691,6 @@ class DictArray(collections.Mapping):
         arr.slicedic = self.slicedic
         arr.array = array
         return arr
-
-    @property
-    def record(self):
-        """
-        Convert the DictArray into a record [(field, values), ...]
-        """
-        carray = numpy.zeros(1, self.dt)
-        for imt in self:
-            carray[imt] = self[imt]
-        return carray[0]
 
     def __getitem__(self, imt):
         return self.array[self.slicedic[imt]]
