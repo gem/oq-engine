@@ -736,7 +736,7 @@ def export_gmf_data_csv(ekey, dstore):
         if eid is None:  # new format
             fname = dstore.build_fname('gmf', 'data', 'csv')
             gmfa.sort(order=['rlzi', 'sid', 'eid'])
-            writers.write_csv(fname, expand_gmv(gmfa, imts))
+            writers.write_csv(fname, _expand_gmv(gmfa, imts))
             return [fname]
         # old format for single eid
         fnames = []
@@ -751,7 +751,8 @@ def export_gmf_data_csv(ekey, dstore):
         return fnames
 
 
-def expand_gmv(array, imts):
+def _expand_gmv(array, imts):
+    # the array-field gmv becomes a set of scalar fields gmv_<imt>
     dtype = array.dtype
     assert dtype['gmv'].shape[0] == len(imts)
     dtlist = []
