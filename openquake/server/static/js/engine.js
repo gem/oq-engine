@@ -123,7 +123,7 @@
                     <div class="modal-footer">\
                       <span id="diaconfirm_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaconfig_scroll_enabled" checked>\
                       Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <a href="#" class="btn btn-sm btn-cc-remove">Yes</a>\
+                      <a href="#" data-calc-id="13" class="btn btn-sm btn-cc-remove">Yes</a>\
                       <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
                     </div>\
                   </div>\
