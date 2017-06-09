@@ -222,10 +222,10 @@ var CalculationTable = Backbone.View.extend(
                 var calc_id = $(e.target).attr('data-calc-id');
                 
                 var show_or_back = (function() {
-                                               this.conf_show = $('#confirmDialog' + calc_id).show();
-                                               this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
-                                   })();
-                jqXHR.abort();                
+                                        this.conf_show = $('#confirmDialog' + calc_id).show();
+                                        this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
+                                        this.logXhr.abort();
+                                    })();
             },
             //confirm_remove: function(e) {
                 //e.preventDefault();
