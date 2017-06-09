@@ -3,7 +3,7 @@ import os
 import logging
 import numpy
 from openquake.baselib import sap, hdf5, node, performance
-from openquake.hazardlib import nrml, sourceconverter
+from openquake.hazardlib import nrml
 
 
 def convert_npz_hdf5(input_file, output_file):
@@ -24,7 +24,6 @@ def convert_xml_hdf5(input_file, output_file):
             sm = inp.sourceModel
         else:  # not a NRML
             raise ValueError('Unknown NRML:' % inp['xmlns'])
-        sourceconverter.update_source_model(sm)
         out.save(node.node_to_dict(sm))
     return output_file
 

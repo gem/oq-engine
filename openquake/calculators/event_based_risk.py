@@ -390,7 +390,7 @@ class EbriskCalculator(base.RiskCalculator):
         :param monitor: a Monitor instance
         :returns: an IterResult instance
         """
-        csm_info = self.csm.info.get_info(sm_id)
+        csm_info = self.csm_info.get_info(sm_id)
         grp_ids = sorted(csm_info.get_sm_by_grp())
         rlzs_assoc = csm_info.get_rlzs_assoc()
         num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
@@ -480,6 +480,7 @@ class EbriskCalculator(base.RiskCalculator):
             EbrPostCalculator(self).run(close=False)
             return
 
+        self.csm_info = self.datastore['csm_info']
         with self.monitor('reading ruptures', autoflush=True):
             ruptures_by_grp = (
                 self.precalc.result if self.precalc
@@ -489,8 +490,8 @@ class EbriskCalculator(base.RiskCalculator):
                 ruptures_by_grp[grp].sort(key=operator.attrgetter('serial'))
         num_rlzs = 0
         allres = []
-        source_models = self.csm.info.source_models
-        self.sm_by_grp = self.csm.info.get_sm_by_grp()
+        source_models = self.csm_info.source_models
+        self.sm_by_grp = self.csm_info.get_sm_by_grp()
         for i, args in enumerate(self.gen_args(ruptures_by_grp)):
             ires = self.start_tasks(*args)
             allres.append(ires)
