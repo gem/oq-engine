@@ -535,9 +535,9 @@ class RuptureSerializer(object):
             sx, sy, sz = mesh.shape
             points = mesh.flatten()
             # sanity checks
-            assert sx < TWO16, sx
-            assert sy < 256, sy
-            assert sz < 256, sz
+            assert sx < TWO16, 'Too many multisurfaces: %d' % sx
+            assert sy < 256, 'The rupture mesh spacing is too small'
+            assert sz < 256, 'The rupture mesh spacing is too small'
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
             tup = (ebrupture.serial, rup.code, ebrupture.sidx,
