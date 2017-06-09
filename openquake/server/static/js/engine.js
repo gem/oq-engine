@@ -173,13 +173,6 @@ var CalculationTable = Backbone.View.extend(
     {
 
             /* the html element where the table is rendered */
-            el: $('#confirmDialog'),
-
-            events: {
-                "click .btn-cc-remove": "remove_calculation"
-            },
-
-            /* the html element where the table is rendered */
             el: $('#my-calculations'),
 
             logXhr: null,
@@ -205,6 +198,7 @@ var CalculationTable = Backbone.View.extend(
             },
 
             events: {
+                "click .btn-cc-remove": "remove_calculation"
                 "click .btn-danger": "confirm_remove",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
