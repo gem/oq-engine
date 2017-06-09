@@ -691,6 +691,16 @@ class DictArray(collections.Mapping):
         arr.array = array
         return arr
 
+    @property
+    def record(self):
+        """
+        Convert the DictArray into a record [(field, values), ...]
+        """
+        carray = numpy.zeros(1, self.dt)
+        for imt in self:
+            carray[imt] = self[imt]
+        return carray[0]
+
     def __getitem__(self, imt):
         return self.array[self.slicedic[imt]]
 

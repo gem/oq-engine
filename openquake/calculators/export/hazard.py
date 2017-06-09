@@ -597,23 +597,23 @@ def save_npy(fname, dic, mesh, *extras):
     structured array with fields which are they keys of the dictionary,
     plus lon/lat fields coming from the mesh.
     The length of the array is assumed to be equal to the length of the
-    mesh. It is also possible to pass extra triples (field, dtype, value)
+    mesh. It is also possible to pass extra triples (field, dtype, values)
     to store additional fields.
 
     :param fname: .npy file name
     :param dic: dictionary of arrays of the same shape
     :param mesh: a mesh array with lon, lat fields of the same length
-    :param extras: optional triples (field, dtype, value)
+    :param extras: optional triples (field, dtype, values)
     """
     arr = dic[next(iter(dic))]
     dtlist = [(field, arr.dtype) for field in sorted(dic)]
-    for field, dtype, value in extras:
+    for field, dtype, values in extras:
         dtlist.append((field, dtype))
     array = numpy.zeros(arr.shape, dtlist)
     for field in dic:
         array[field] = dic[field]
-    for field, dtype, value in extras:
-        array[field] = value
+    for field, dtype, values in extras:
+        array[field] = values
     numpy.save(fname, util.compose_arrays(mesh, array))
     return [fname]
 
@@ -627,7 +627,7 @@ def export_hcurves_npz(ekey, dstore):
     for kind, hcurves in calc.PmapGetter(dstore).items():
         curves = hcurves.convert(oq.imtls, len(mesh))
         dic[kind] = util.compose_arrays(mesh, curves)
-    save_npy(fname, dic, mesh)
+    save_npy(fname, dic, mesh, ('imtls', oq.imtls.dt, oq.imtls.record))
     return [fname]
 
 
