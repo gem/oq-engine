@@ -130,6 +130,43 @@
                 </div>\
                 </div>');
 
+                confirmDiv.bind('hide', function() { calculation_table.hide_log(); });
+                      return {
+                          getdiv: function() {
+                              return confirmDiv;
+                          },
+
+                          show: function(is_large, title, msg) {
+                              if (title != null) {
+                                  $('.modal-title', confirmDiv).html(title);
+                              }
+                              if (msg != null) {
+                                  $('.modal-body-pre', confirmDiv).html(msg);
+                              }
+                              if (is_large) {
+                                  confirmDiv.addClass("errorDialogLarge");
+                              }
+                              else {
+                                  confirmDiv.removeClass("errorDialogLarge");
+                              }
+                              confirmDiv.modal('show');
+                          },
+
+                          append: function(title, msg) {
+                              if (title != null) {
+                                  $('.modal-title', confirmDiv).html(title);
+                              }
+                              $( msg ).appendTo( $('.modal-body-pre', confirmDiv) );
+                          },
+
+                          scroll_to_bottom: function(ctx) {
+                              ctx.scrollTop(ctx[0].scrollHeight);
+                          },
+
+                          hide: function () {
+                              confirmDiv.modal('hide');
+                          }
+                      };
 })();
 
 var ConfirmTable = Backbone.View.extend(
@@ -170,8 +207,6 @@ var ConfirmTable = Backbone.View.extend(
 
 });
 
-new ConfirmTable;
-    
 
 
 var CalculationTable = Backbone.View.extend(
@@ -225,7 +260,7 @@ var CalculationTable = Backbone.View.extend(
             confirm_remove: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                diaconfirm.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
+                diaconfirm.show(true, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
             },
 
 
