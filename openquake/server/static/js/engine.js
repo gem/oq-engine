@@ -130,43 +130,6 @@
                 </div>\
                 </div>');
 
-             confirmDiv.bind('hide', function() { calculation_table.hide_log(); });
-                      return {
-                          getdiv: function() {
-                              return confirmDiv;
-                          },
-
-                          show: function(is_large, title, msg) {
-                              if (title != null) {
-                                  $('.modal-title', confirmDiv).html(title);
-                              }
-                              if (msg != null) {
-                                  $('.modal-body-pre', confirmDiv).html(msg);
-                              }
-                              if (is_large) {
-                                  confirmDiv.addClass("errorDialogLarge");
-                              }
-                              else {
-                                  confirmDiv.removeClass("errorDialogLarge");
-                              }
-                              confirmDiv.modal('show');
-                          },
-
-                          append: function(title, msg) {
-                              if (title != null) {
-                                  $('.modal-title', confirmDiv).html(title);
-                              }
-                              $( msg ).appendTo( $('.modal-body-pre', confirmDiv) );
-                          },
-
-                          scroll_to_bottom: function(ctx) {
-                              ctx.scrollTop(ctx[0].scrollHeight);
-                          },
-
-                          hide: function () {
-                              confirmDiv.modal('hide');
-                          }
-                      };
 })();
 
 var ConfirmTable = Backbone.View.extend(
@@ -174,27 +137,6 @@ var ConfirmTable = Backbone.View.extend(
 
             /* the html element where the table is rendered */
             el: $('#confirmDialog'),
-            logXhr: null,
-            logId: -1,
-            logIsNew: false,
-            logLinesAll: 0,
-            logLines: 0,
-            logTimeout: null,
-
-            initialize: function(options) {
-
-                /* whatever happens to any calculation, re-render the table */
-                _.bindAll(this, 'render');
-                this.calculations = options.calculations;
-                this.calculations.bind('reset', this.render);
-                this.calculations.bind('add', this.render);
-                this.calculations.bind('remove', this.render);
-
-                /* if false, it prevents the table to be refreshed */
-                this.can_be_rendered = true;
-
-                this.render();
-            },
 
             events: {
                 "click .btn-cc-remove": "remove_calculation"
