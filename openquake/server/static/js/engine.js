@@ -195,11 +195,20 @@ var CalculationTable = Backbone.View.extend(
                 this.can_be_rendered = true;
 
                 this.render();
-            },
+            //},
+            
+            //initialize: function(options){
+                // it works when you click another place
+                $('html').off()
+                $('html').on('click', $.proxy(function(){ 
+                    menuElem = @$el.find('#confirmDialog');
+                    if !menuElem.hasClass('hidden')
+                        menuElem.addClass('hidden');}));
+            },  
 
             events: {
                 "click .btn-cc-remove": "remove_calculation",
-                "click .btn-danger": "confirm_remove",
+                "click .btn-danger": "showMenuContent",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -217,14 +226,17 @@ var CalculationTable = Backbone.View.extend(
                 this.can_be_rendered = true;
             },
 
-
-            confirm_remove: function(e) {
-                e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
+            showMenuContent: function(e) {
+                if ( !@$el.find('#confirmDialog').hasClass('hidden') )
+                @leave = false;
+            }
+            //confirm_remove: function(e) {
+                //e.preventDefault();
+                //var calc_id = $(e.target).attr('data-calc-id');
                 //diaconfirm.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
                 //return calc_id
-                $("#confirmDialog" + calc_id).css('display','block!important');
-            },
+                //$("#confirmDialog" + calc_id).css('display','block!important');
+            //},
 
             remove_calculation: function(e) {
                 e.preventDefault();
