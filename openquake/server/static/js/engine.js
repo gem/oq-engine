@@ -391,7 +391,7 @@ var CalculationTable = Backbone.View.extend(
     }
 
     function closeTimer() {
-        refresh_calcs = clearInterval(function() { calculations.fetch({reset: true}) }, 3000);
+        refresh_calcs = clearInterval(refresh_calcs);
     }
 
 
