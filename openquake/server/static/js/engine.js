@@ -219,7 +219,7 @@ var CalculationTable = Backbone.View.extend(
 
             showMenuContent: function(e) {
                 e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');i
+                var calc_id = $(e.target).attr('data-calc-id');
                 
                 this.conf_show = function(data, textStatus, jqXHR)
                                  {
