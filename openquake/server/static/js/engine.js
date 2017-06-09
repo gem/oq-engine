@@ -228,6 +228,7 @@ var CalculationTable = Backbone.View.extend(
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 diaconfirm.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
+                return calc_id
             },
 
             remove_calculation: function(e) {
