@@ -138,8 +138,9 @@ var CalculationTable = Backbone.View.extend(
             },
             
             events: {
-                "click .btn-cc-remove": "remove_calculation",
-                "click .btn-danger": "showMenuContent",
+                "click .btn-show-remove": "remove_calculation",
+                "click .btn-danger": "show_modal_confirm_remove_calculation",
+                "click .btn-hide-remove": "hide_modal_confirm_remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -157,23 +158,26 @@ var CalculationTable = Backbone.View.extend(
                 this.can_be_rendered = true;
             },
 
-            showMenuContent: function(e) {
+            show_modal_confirm_remove_calculation: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 
                 var show_or_back = (function(e) {
-                                        this.conf_show = $('#confirmDialog' + calc_id).show();
-                                        this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
-                                        closeTimer();
-                                                })();
+                    this.conf_show = $('#confirmDialog' + calc_id).show();
+                    this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
+                    closeTimer();
+                })();
             },
-            //confirm_remove: function(e) {
-                //e.preventDefault();
-                //var calc_id = $(e.target).attr('data-calc-id');
-                //diaconfirm.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
-                //return calc_id
-                //$("#confirmDialog" + calc_id).css('display','block!important');
-            //},
+            hide_modal_confirm_remove_calculation: function(e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                
+                var hide_or_back = (function(e) {
+                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                    setTimer();
+                })();
+            },
 
             remove_calculation: function(e) {
                 e.preventDefault();

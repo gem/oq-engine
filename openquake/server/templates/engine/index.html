@@ -60,7 +60,7 @@
               <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log" style="margin: 2px 0 2px 0;">Console</a>
               <% if (calc.get('is_running') == false) { %>
                 <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
-                <!-- confirmDialog -->
+                <!-- confirm_modal -->
                 <div class="modal-backdrop  in hide back_confirmDialog<%= calc.get('id') %>"></div>
                 <div id="confirmDialog<%= calc.get('id') %>" class="modal hide" data-keyboard="true" tabindex="-1">
                 <div class="modal-dialog">
@@ -71,15 +71,13 @@
                     <div class="modal-body" style="font-size: 12px;"><pre style="font-size: 12px;" class="modal-body-pre">Are you sure to remove the calculation <%= calc.get('id') %> ?</pre>
                     </div>
                     <div class="modal-footer">
-                      <span id="diaconfirm_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaconfig_scroll_enabled" checked>
-                      Auto Scroll</span>&nbsp;&nbsp;&nbsp;
-                      <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-cc-remove">Yes</button>
-                      <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+                      <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-show-remove">Yes</button>
+                      <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-hide-remove">No</button>
                     </div>
                   </div>
                 </div>
                 </div>
-                <!-- end confirmDialog -->
+                <!-- end confirm_modal -->
                 <% if (calc.get('status') == 'complete') { %>
                   <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Outputs</a>
                   <form class="calc-form" enctype="multipart/form-data"
