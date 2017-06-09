@@ -1,4 +1,6 @@
-# Installing the OpenQuake Engine on RedHat Linux 7 and its clones
+# Installing the OpenQuake Engine on RedHat Linux 7 and its clones 
+
+<a href="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python-oq-engine/"><img src="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python-oq-engine/status_image/last_build.png" /></a>
 
 The OpenQuake Engine is available in the form of *rpm* binary packages for the following RHEL based distributions:
 - RedHat Enterprise Linux 7 

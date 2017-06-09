@@ -1,3 +1,10 @@
+  [Michele Simionato]
+  * Improved the error message when the rupture mesh spacing is too small
+  * Unified the versions of baselib, hazardlib and engine
+  * Raised a clear error if the user does not set the `calculation_mode`
+  * Made it is possible to pass the hdf5 full path to the DataStore class
+  * Made it possible to use CELERY_RESULT_BACKEND != 'rpc://'
+
   [Michele Simionato, Daniele Viganò]
   * Merged the `oq-hazardlib` repository into `oq-engine`.
     The `python-oq-hazardlib` package is now provided by `python-oq-engine`
