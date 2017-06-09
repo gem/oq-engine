@@ -169,7 +169,7 @@
                       };
 })();
 
-var ConfirmTable = Backbone.View.extend(
+var CalculationTable = Backbone.View.extend(
     {
 
             /* the html element where the table is rendered */
