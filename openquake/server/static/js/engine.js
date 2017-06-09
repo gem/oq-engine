@@ -109,66 +109,6 @@
                       };
                   })();
 
-    var diaconfirm = (function ()
-                  {
-
-                      var confirmDiv = $('<div id="confirmDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
-                <div class="modal-dialog">\
-                  <div class="modal-content">\
-                    <div class="modal-header">\
-                      <h4 class="modal-title">Calculation not accepted: traceback</h4>\
-                    </div>\
-                    <div class="modal-body" style="font-size: 12px;"><pre style="font-size: 12px;" class="modal-body-pre"></pre>\
-                    </div>\
-                    <div class="modal-footer">\
-                      <span id="diaconfirm_scroll_enabled_box" style="display: none;"><input type="checkbox" id="diaconfig_scroll_enabled" checked>\
-                      Auto Scroll</span>&nbsp;&nbsp;&nbsp;\
-                      <button type="button" class="btn btn-cc-remove">Yes</button>\
-                      <button type="button" class="btn btn-default" data-dismiss="modal">No</button>\
-                    </div>\
-                  </div>\
-                </div>\
-                </div>');
-
-                confirmDiv.bind('hide', function() { calculation_table.hide_log(); });
-                      return {
-                          getdiv: function() {
-                              return confirmDiv;
-                          },
-
-                          show: function(is_large, title, msg) {
-                              if (title != null) {
-                                  $('.modal-title', confirmDiv).html(title);
-                              }
-                              if (msg != null) {
-                                  $('.modal-body-pre', confirmDiv).html(msg);
-                              }
-                              if (is_large) {
-                                  confirmDiv.addClass("errorDialogLarge");
-                              }
-                              else {
-                                  confirmDiv.removeClass("errorDialogLarge");
-                              }
-                              confirmDiv.modal('show');
-                          },
-
-                          append: function(title, msg) {
-                              if (title != null) {
-                                  $('.modal-title', confirmDiv).html(title);
-                              }
-                              $( msg ).appendTo( $('.modal-body-pre', confirmDiv) );
-                          },
-
-                          scroll_to_bottom: function(ctx) {
-                              ctx.scrollTop(ctx[0].scrollHeight);
-                          },
-
-                          hide: function () {
-                              confirmDiv.modal('hide');
-                          }
-                      };
-})();
-
 var CalculationTable = Backbone.View.extend(
     {
 
@@ -221,10 +161,10 @@ var CalculationTable = Backbone.View.extend(
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 
-                var show_or_back = (function() {
+                var show_or_back = (function(e) {
+                                        e.preventDefault();
                                         this.conf_show = $('#confirmDialog' + calc_id).show();
                                         this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
-                                        this.logXhr.abort();
                                     })();
             },
             //confirm_remove: function(e) {
