@@ -174,6 +174,28 @@ var ConfirmTable = Backbone.View.extend(
 
             /* the html element where the table is rendered */
             el: $('#confirmDialog'),
+            logXhr: null,
+            logId: -1,
+            logIsNew: false,
+            logLinesAll: 0,
+            logLines: 0,
+            logTimeout: null,
+
+            initialize: function(options) {
+
+                /* whatever happens to any calculation, re-render the table */
+                _.bindAll(this, 'render');
+                this.calculations = options.calculations;
+                this.calculations.bind('reset', this.render);
+                this.calculations.bind('add', this.render);
+                this.calculations.bind('remove', this.render);
+
+                /* if false, it prevents the table to be refreshed */
+                this.can_be_rendered = true;
+
+                this.render();
+            },
+
             events: {
                 "click .btn-cc-remove": "remove_calculation"
             },
