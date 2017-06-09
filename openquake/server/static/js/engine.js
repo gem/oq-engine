@@ -198,6 +198,7 @@ var CalculationTable = Backbone.View.extend(
                              }
                          }
                      );
+                 setTimer();
 },            
 
             show_traceback: function(e) {
