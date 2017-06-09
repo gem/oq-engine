@@ -25,6 +25,7 @@ urlpatterns = [
     url(r'^list$', views.calc),
     url(r'^(\d+)$', views.calc_info),
     url(r'^(\d+)/datastore$', views.get_datastore),
+    url(r'^(\d+)/export/(\w)$', views.get_export),
     url(r'^(\d+)/oqparam$', views.get_oqparam),
     url(r'^(\d+)/status$', views.calc),
     url(r'^(\d+)/results$', views.calc_results),
@@ -34,7 +35,6 @@ urlpatterns = [
     url(r'^(\d+)/remove$', views.calc_remove),
     url(r'^result/(\d+)$', views.get_result),
     url(r'^run$', views.run_calc),
-
     url(r'^(\d+)/result/list$', views.calc_results),
     url(r'^\d+/result/(\d+)$', views.get_result),
 ]
