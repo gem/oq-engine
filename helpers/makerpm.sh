@@ -68,7 +68,7 @@ mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
 
 LIB=$(cut -d "-" -f 2 <<< $REPO)
 SHA=$(git rev-parse --short $BRANCH)
-VER=$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
+VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
 TIME=$(date +"%s")
 echo "$LIB - $BRANCH - $SHA - $VER"
 

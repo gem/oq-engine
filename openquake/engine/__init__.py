@@ -51,8 +51,7 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
-from openquake.risklib import __version__
-# we want engine.__version__ == risklib.__version__ == commonlib.__version__
+from openquake.baselib import __version__
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
