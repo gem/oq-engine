@@ -449,8 +449,10 @@ var CalculationTable = Backbone.View.extend(
             setTimer();
 
             $(document).on("click", 'button[class=btn-danger]',
-                var calc_id = $(e.target).attr('data-calc-id');
-                $("#confirmDialog" + calc_id).css('display','block');
+                function(e) {
+                    var calc_id = $(e.target).attr('data-calc-id');
+                    $("#confirmDialog" + calc_id).css('display','block');
+                }
             });
 
             /* XXX. Reset the input file value to ensure the change event
