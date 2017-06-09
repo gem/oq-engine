@@ -614,7 +614,7 @@ class GmfGetter(object):
                             for rlz in rlzs]
             else:
                 all_eids = [rup.events['eid']] * len(rlzs)
-            size = itemsize * len(sids)
+            size = itemsize  # * len(sids)
             num_events = sum(len(eids) for eids in all_eids)
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
@@ -631,12 +631,11 @@ class GmfGetter(object):
                 gmdata[EVENTS] += e
                 for ei, eid in enumerate(all_eids[r]):
                     gmf = array[:, :, n + ei]  # shape (N, I)
-                    tot = gmf.sum(axis=0)  # shape (I,)
-                    if tot.sum():  # nonzero
-                        for i, val in enumerate(tot):
-                            gmdata[i] += val
-                            gmdata[NBYTES] += size
-                        for sid, gmv in zip(sids, gmf):
+                    for i, val in enumerate(gmf.T):
+                        gmdata[i] += val.sum()
+                    gmdata[NBYTES] += size
+                    for sid, gmv in zip(sids, gmf):
+                        if gmv.sum():
                             yield r, sid, eid, gmv
                 n += e
 
