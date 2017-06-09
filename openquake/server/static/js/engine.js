@@ -199,7 +199,7 @@ var CalculationTable = Backbone.View.extend(
 
             events: {
                 "click .btn-cc-remove": "remove_calculation",
-                // "click .btn-danger": "confirm_remove",
+                "click .btn-danger": "confirm_remove",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -221,8 +221,9 @@ var CalculationTable = Backbone.View.extend(
             confirm_remove: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                diaconfirm.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
-                return calc_id
+                //diaconfirm.show(false, "Removing calculation " + calc_id, "Are you sure to remove the calculation " + calc_id + " ?");
+                //return calc_id
+                $("#confirmDialog" + calc_id).css('display','block!important');
             },
 
             remove_calculation: function(e) {
@@ -447,13 +448,6 @@ var CalculationTable = Backbone.View.extend(
             calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
             setTimer();
-
-            $(document).on("click", 'button[class=btn-danger]',
-                function(e) {
-                    var calc_id = $(e.target).attr('data-calc-id');
-                    $("#confirmDialog" + calc_id).css('display','block!important');
-                }
-            );
 
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
