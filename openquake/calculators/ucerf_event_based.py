@@ -767,11 +767,11 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.csm = get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
-        self.datastore['csm_info'] = self.csm.info
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        self.datastore['csm_info'] = self.csm_info = self.csm.info
+        self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.infos = []
         self.eid = collections.Counter()  # sm_id -> event_id
-        self.sm_by_grp = self.csm.info.get_sm_by_grp()
+        self.sm_by_grp = self.csm_info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.rupser = calc.RuptureSerializer(self.datastore)
@@ -886,7 +886,7 @@ class UCERFRiskCalculator(EbriskCalculator):
 
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
-        self.grp_trt = self.csm.info.grp_trt()
+        self.grp_trt = self.csm_info.grp_trt()
         res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
         self.vals = self.assetcol.values()
         num_events = self.save_results(res, num_rlzs)
