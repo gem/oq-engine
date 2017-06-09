@@ -199,7 +199,7 @@ var CalculationTable = Backbone.View.extend(
 
             events: {
                 "click .btn-cc-remove": "remove_calculation",
-                "click .btn-danger": "confirm_remove",
+                // "click .btn-danger": "confirm_remove",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -448,7 +448,7 @@ var CalculationTable = Backbone.View.extend(
             calculations.fetch({reset: true});
             setTimer();
 
-            $(".btn-cc-remove").click(function (e) {
+            $(".btn-danger").click(function (e) {
                 var calc_id = $(e.target).attr('data-calc-id');
                 $("#confirmDialog" + calc_id).css('display','block');
             });
