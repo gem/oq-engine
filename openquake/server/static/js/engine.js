@@ -448,7 +448,7 @@ var CalculationTable = Backbone.View.extend(
             calculations.fetch({reset: true});
             setTimer();
 
-            $(".btn-danger").click(function (e) {
+            $(document).on("click", 'button[class=btn-danger]',
                 var calc_id = $(e.target).attr('data-calc-id');
                 $("#confirmDialog" + calc_id).css('display','block');
             });
