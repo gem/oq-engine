@@ -310,6 +310,7 @@ def split_source(src):
     if hasattr(src, '__iter__'):  # multipoint source
         for s in src:
             s.src_group_id = src.src_group_id
+            s.num_ruptures = s.count_ruptures()
             yield s
     elif isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
