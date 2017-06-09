@@ -220,8 +220,8 @@ var CalculationTable = Backbone.View.extend(
             showMenuContent: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-                var conf_show = $('#confirmDialog' + calc_id).show();
-                return conf_show 
+                this.conf_show = $('#confirmDialog' + calc_id).show();
+                //return conf_show 
             },
             //confirm_remove: function(e) {
                 //e.preventDefault();
