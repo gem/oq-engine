@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Unified the versions of baselib, hazardlib and engine
   * Raised a clear error if the user does not set the `calculation_mode`
   * Made it is possible to pass the hdf5 full path to the DataStore class
   * Made it possible to use CELERY_RESULT_BACKEND != 'rpc://'
