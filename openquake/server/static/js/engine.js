@@ -195,17 +195,8 @@ var CalculationTable = Backbone.View.extend(
                 this.can_be_rendered = true;
 
                 this.render();
-            //},
+            },
             
-            //initialize: function(options){
-                // it works when you click another place
-                $('html').off()
-                $('html').on('click', $.proxy(function(){ 
-                    menuElem = @$el.find('#confirmDialog');
-                    if !menuElem.hasClass('hidden')
-                        menuElem.addClass('hidden');}));
-            },  
-
             events: {
                 "click .btn-cc-remove": "remove_calculation",
                 "click .btn-danger": "showMenuContent",
@@ -227,8 +218,9 @@ var CalculationTable = Backbone.View.extend(
             },
 
             showMenuContent: function(e) {
-                if ( !@$el.find('#confirmDialog').hasClass('hidden') )
-                @leave = false;
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                $el.find('#confirmDialog' + calc_id).show();
             }
             //confirm_remove: function(e) {
                 //e.preventDefault();
