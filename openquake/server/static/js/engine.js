@@ -198,7 +198,7 @@ var CalculationTable = Backbone.View.extend(
             },
 
             events: {
-                "click .btn-cc-remove": "remove_calculation"
+                "click .btn-cc-remove": "remove_calculation",
                 "click .btn-danger": "confirm_remove",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
@@ -447,6 +447,11 @@ var CalculationTable = Backbone.View.extend(
             calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
             setTimer();
+
+            $(".btn-cc-remove").click(function (e) {
+                var calc_id = $(e.target).attr('data-calc-id');
+                $("#confirmDialog" + calc_id).css('display','block');
+            });
 
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
