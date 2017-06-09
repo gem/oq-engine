@@ -25,7 +25,7 @@ def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
-    package_init = 'openquake/risklib/__init__.py'
+    package_init = 'openquake/baselib/__init__.py'
     for line in open(package_init, 'r'):
         version_match = re.search(version_re, line, re.M)
         if version_match:
@@ -64,6 +64,7 @@ install_requires = [
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
+    'PyYAML',
 ]
 
 if sys.version < '3':

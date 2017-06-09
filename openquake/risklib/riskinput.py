@@ -614,24 +614,29 @@ class GmfGetter(object):
                             for rlz in rlzs]
             else:
                 all_eids = [rup.events['eid']] * len(rlzs)
+            size = itemsize * len(sids)
             num_events = sum(len(eids) for eids in all_eids)
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
             array = computer.compute(gsim, num_events).transpose(1, 0, 2)
-            # (n, i, e)
+            # shape (N, I, E)
+            for i, miniml in enumerate(self.min_iml):  # set to 0 small gmvs
+                arr = array[:, i, :]
+                arr[arr < miniml] = 0
             n = 0
             for r, rlz in enumerate(rlzs):
                 e = len(all_eids[r])
                 gmdata = self.gmdata[rlz.ordinal]
                 gmdata[EVENTS] += e
-                for i, eid in enumerate(all_eids[r]):
-                    for sid, gmv in zip(sids, array[:, :, n + i]):
-                        gmv[gmv < self.min_iml] = 0
-                        if gmv.sum():  # nonzero
-                            for i, val in enumerate(gmv):
-                                gmdata[i] += val
-                            gmdata[NBYTES] += itemsize
+                for ei, eid in enumerate(all_eids[r]):
+                    gmf = array[:, :, n + ei]  # shape (N, I)
+                    tot = gmf.sum(axis=0)  # shape (I,)
+                    if tot.sum():  # nonzero
+                        for i, val in enumerate(tot):
+                            gmdata[i] += val
+                            gmdata[NBYTES] += size
+                        for sid, gmv in zip(sids, gmf):
                             yield r, sid, eid, gmv
                 n += e
 
