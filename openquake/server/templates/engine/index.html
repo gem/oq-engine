@@ -68,7 +68,10 @@
                     <div class="modal-header">
                       <h4 class="modal-title">Removing Calculation</h4>
                     </div>
-                    <div class="modal-body" style="font-size: 12px;"><pre style="font-size: 12px;" class="modal-body-pre">Are you sure to remove the calculation <%= calc.get('id') %> (<%= calc.get('description') %>) ?</pre>
+                    <div class="modal-body" style="font-size: 12px;">
+                        <pre style="font-size: 12px;" class="modal-body-pre">
+                            Are you sure to remove the calculation <%= calc.get('id') %> <br> (<%= calc.get('description') %>) ?
+                        </pre>
                     </div>
                     <div class="modal-footer">
                       <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-show-remove">Yes</button>
