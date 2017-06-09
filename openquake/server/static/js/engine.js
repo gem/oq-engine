@@ -164,7 +164,8 @@ var CalculationTable = Backbone.View.extend(
                 var show_or_back = (function(e) {
                                         this.conf_show = $('#confirmDialog' + calc_id).show();
                                         this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
-                                    })();
+                                        closeTimer();
+                                                })();
             },
             //confirm_remove: function(e) {
                 //e.preventDefault();
@@ -387,6 +388,10 @@ var CalculationTable = Backbone.View.extend(
 
     function setTimer() {
         refresh_calcs = setInterval(function() { calculations.fetch({reset: true}) }, 3000);
+    }
+
+    function closeTimer() {
+        refresh_calcs = clearInterval(function() { calculations.fetch({reset: true}) }, 3000);
     }
 
 
