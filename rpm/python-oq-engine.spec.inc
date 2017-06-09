@@ -89,7 +89,7 @@ getent passwd %{oquser} >/dev/null || \
     -c "The OpenQuake user" %{oquser}
 
 %install
-sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
+sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
 install -p -m 755 -d %{buildroot}%{oqprefix}/bin
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
