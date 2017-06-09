@@ -625,8 +625,7 @@ def export_hcurves_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     dic = {}
     for kind, hcurves in calc.PmapGetter(dstore).items():
-        curves = hcurves.convert_npy(oq.imtls, len(mesh))
-        dic[kind] = util.compose_arrays(mesh, curves)
+        dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
     save_npy(fname, dic, mesh)
     return [fname]
 
@@ -638,8 +637,7 @@ def export_uhs_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     dic = {}
     for kind, hcurves in calc.PmapGetter(dstore).items():
-        uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
-        dic[kind] = util.compose_arrays(mesh, uhs_curves)
+        dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
     save_npy(fname, dic, mesh)
     return [fname]
 
