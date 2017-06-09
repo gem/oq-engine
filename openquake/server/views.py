@@ -563,6 +563,32 @@ def get_result(request, result_id):
     return response
 
 
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def get_export(request, calc_id, what):
+    """
+    Wrapper over the `oq export` command
+    """
+    try:
+        job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+
+    fname = job.ds_calc_dir + '.hdf5'
+    etype = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
+    with datastore.read(fname) as ds:
+        ds.export_dir = tempfile.mkdtemp()
+        [fname] = export((what, etype), ds)
+    stream = FileWrapper(open(fname, 'rb'))
+    stream.close = lambda: (
+        FileWrapper.close(stream), shutil.rmtree(ds.export_dir))
+    response = FileResponse(stream, content_type=EXPORT_CONTENT_TYPE_MAP.get(
+        etype, DEFAULT_CONTENT_TYPE))
+    response['Content-Disposition'] = (
+        'attachment; filename=%s' % os.path.basename(fname))
+    return response
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_datastore(request, job_id):
