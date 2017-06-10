@@ -304,7 +304,10 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
-        num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+        if self.is_stochastic:  # disable tiling
+            num_tiles = 1
+        else:
+            num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
