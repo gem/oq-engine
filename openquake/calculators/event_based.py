@@ -231,6 +231,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
         self.rupser = calc.RuptureSerializer(self.datastore)
+        self.csm_info = self.datastore['csm_info']
 
     def zerodict(self):
         """
@@ -239,7 +240,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.grp_trt = self.csm.info.grp_trt()
+        self.grp_trt = self.csm_info.grp_trt()
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -338,14 +339,11 @@ def compute_gmfs_and_curves(getter, oq, monitor):
                 hazard = getter.get_hazard(gsim, data)
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
                 hazardr = hazard[r]
-                lst = []
                 for sid in getter.sids:
                     for imti, imt in enumerate(getter.imts):
                         array = hazardr[sid, imti]
                         if len(array) == 0:  # no data
                             continue
-                        for rec in array:
-                            lst.append((sid, rec['eid'], imti, rec['gmv']))
                         with hc_mon:
                             poes = calc._gmvs_to_haz_curve(
                                 array['gmv'], oq.imtls[imt],
@@ -482,8 +480,9 @@ class EventBasedCalculator(ClassicalCalculator):
             ruptures_by_grp = (self.precalc.result if self.precalc
                                else get_ruptures_by_grp(self.datastore.parent))
 
+        self.csm_info = self.datastore['csm_info']
         self.sm_id = {tuple(sm.path): sm.ordinal
-                      for sm in self.csm.info.source_models}
+                      for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
         rlzs = self.rlzs_assoc.realizations
         res = parallel.Starmap(
