@@ -23,7 +23,8 @@ from openquake.hazardlib import InvalidFile
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7)
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.export import export
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
@@ -102,3 +103,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_7(self):
         # this is a case with three loss types
         self.assert_ok(case_7, 'job_h.ini,job_r.ini', exports='csv')
+
+        # just run the npz export
+        [npz] = export(('dmg_by_asset', 'npz'), self.calc.datastore)
+        self.assertEqual(strip_calc_id(npz), 'dmg_by_asset.npz')
