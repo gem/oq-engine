@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized MultiMFD objects for the case of homogeneous parameters
   * Added an .npz exporter for the scenario_damage output `dmg_by_asset`
   * Removed the pickled CompositeSourceModel from the datastore
   * Improved the error message when the rupture mesh spacing is too small

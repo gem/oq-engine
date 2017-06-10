@@ -34,19 +34,20 @@ xmlns:gml="http://www.opengis.net/gml"
                     1.5000000E+00
                 </ruptAspectRatio>
                 <multiMFD
-                kind="truncGutenbergRichterMFD"
+                    kind="truncGutenbergRichterMFD"
+                    size="2"
                 >                    
                     <a_val>
                         1.0984918E-03 1.1134770E-03
                     </a_val>
                     <b_val>
-                        9.3356032E-01 9.3356032E-01
+                        9.3356032E-01
                     </b_val>
                     <max_mag>
-                        5.8300000E+00 5.8300000E+00
+                        5.8300000E+00
                     </max_mag>
                     <min_mag>
-                        4.5000000E+00 4.5000000E+00
+                        4.5000000E+00
                     </min_mag>
                 </multiMFD>
                 <nodalPlaneDist>
