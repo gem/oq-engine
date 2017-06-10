@@ -133,7 +133,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitecol = datastore.persistent_attribute('sitecol')
     assetcol = datastore.persistent_attribute('assetcol')
     performance = datastore.persistent_attribute('performance')
-    csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 

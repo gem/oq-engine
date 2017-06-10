@@ -182,6 +182,7 @@ validators = {
     'min_mag': valid.positivefloats,
     'max_mag': valid.positivefloats,
     'lengths': valid.positiveints,
+    'size': valid.positiveint,
     'binWidth': valid.positivefloat,
     'bin_width': valid.positivefloats,
     'probability': valid.probability,

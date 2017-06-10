@@ -360,7 +360,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
     value = dstore[ekey[0]].value  # matrix N x R or T x R
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
+        fname = dstore.build_fname('damages', rlz, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
 
@@ -376,16 +376,22 @@ def export_losses_total_csv(ekey, dstore):
     return writer.getsaved()
 
 
-def build_damage_dt(dstore):
+def build_damage_dt(dstore, mean_std=True):
     """
     :param dstore: a datastore instance
-    :returns: a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...)
+    :param mean_std: a flag (default True)
+    :returns:
+       a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
+       loss_type -> (ds1, ds2, ...) depending on the flag mean_std
     """
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     dt_list = []
     for ds in damage_states:
-        dt_list.append(('%s_mean' % ds, F32))
-        dt_list.append(('%s_stdv' % ds, F32))
+        if mean_std:
+            dt_list.append(('%s_mean' % ds, F32))
+            dt_list.append(('%s_stdv' % ds, F32))
+        else:
+            dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
@@ -401,11 +407,14 @@ def build_damage_array(data, damage_dt):
     dmg = numpy.zeros(L, damage_dt)
     for lt in damage_dt.names:
         for i, ms in numpy.ndenumerate(data[lt]):
-            lst = []
-            for m, s in zip(ms['mean'], ms['stddev']):
-                lst.append(m)
-                lst.append(s)
-            dmg[lt][i] = tuple(lst)
+            if damage_dt[lt].names[0].endswith('_mean'):
+                lst = []
+                for m, s in zip(ms['mean'], ms['stddev']):
+                    lst.append(m)
+                    lst.append(s)
+                dmg[lt][i] = tuple(lst)
+            else:
+                dmg[lt][i] = ms['mean']
     return dmg
 
 
@@ -421,6 +430,21 @@ def export_dmg_by_asset_csv(ekey, dstore):
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
     return writer.getsaved()
+
+
+@export.add(('dmg_by_asset', 'npz'))
+def export_dmg_by_asset_npz(ekey, dstore):
+    damage_dt = build_damage_dt(dstore)
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    data = dstore[ekey[0]]
+    assets = get_assets(dstore)
+    dic = {}
+    for rlz in rlzs:
+        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        dic['rlz-%03d' % rlz.ordinal] = compose_arrays(assets, dmg_by_asset)
+    fname = dstore.export_path('%s.%s' % ekey)
+    savez(fname, **dic)
+    return [fname]
 
 
 @export.add(('dmg_by_taxon', 'csv'))
