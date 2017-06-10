@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+  <sourceModel>
+    
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointSource
+            id="1"
+            name="1"
+            >
+                
+                <pointGeometry>
+                    
+                    <gml:Point>
+                        
+                        <gml:pos>
+                            -7.0899780E+01 -1.8157140E+01
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.8000000E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="1.9473715E+00" bValue="1.0153966E+00" maxMag="8.2000000E+00" minMag="4.5000000E+00"/>
+                <nodalPlaneDist>
+                    
+                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="-9.0000000E+01" strike="1.3500000E+02"/>
+                    <nodalPlane dip="6.0000000E+01" probability="5.0000000E-01" rake="9.0000000E+01" strike="1.3500000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    
+                    <hypoDepth
+                    depth="5.5000000E+00"
+                    probability="2.3200000E-01"
+                    >
+                        0.232 5.5
+                    </hypoDepth>
+                    <hypoDepth
+                    depth="1.6500000E+01"
+                    probability="9.8000000E-02"
+                    >
+                        0.098 16.5
+                    </hypoDepth>
+                    <hypoDepth
+                    depth="2.7500000E+01"
+                    probability="6.7000000E-01"
+                    >
+                        0.67 27.5
+                    </hypoDepth>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="2"
+            name="2"
+            >
+                
+                <pointGeometry>
+                    
+                    <gml:Point>
+                        
+                        <gml:pos>
+                            -7.1899780E+01 -1.8157140E+01
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        3.8000000E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="1.9473715E+00" bValue="1.0153966E+00" maxMag="8.2000000E+00" minMag="4.5000000E+00"/>
+                <nodalPlaneDist>
+                    
+                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="-9.0000000E+01" strike="1.3500000E+02"/>
+                    <nodalPlane dip="6.0000000E+01" probability="5.0000000E-01" rake="9.0000000E+01" strike="1.3500000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    
+                    <hypoDepth
+                    depth="5.5000000E+00"
+                    probability="2.3200000E-01"
+                    >
+                        0.232 5.5
+                    </hypoDepth>
+                    <hypoDepth
+                    depth="1.6500000E+01"
+                    probability="9.8000000E-02"
+                    >
+                        0.098 16.5
+                    </hypoDepth>
+                    <hypoDepth
+                    depth="2.7500000E+01"
+                    probability="6.7000000E-01"
+                    >
+                        0.67 27.5
+                    </hypoDepth>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

@@ -67,6 +67,9 @@ class MultiPointSource(ParametricSeismicSource):
                 self.hypocenter_distribution)
             yield ps
 
+    def __len__(self):
+        return len(self.mfd)
+
     def iter_ruptures(self):
         """
         Yield the ruptures of the underlying point sources
