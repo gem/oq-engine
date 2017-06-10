@@ -231,7 +231,7 @@ def build_multi_mfd(mfd):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    node = Node("multiMFD", dict(kind=mfd.kind))
+    node = Node("multiMFD", dict(kind=mfd.kind, size=mfd.size))
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
