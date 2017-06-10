@@ -17,4 +17,4 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 # keep the following line to have a __version__
-from openquake.risklib import __version__
+from openquake.baselib import __version__

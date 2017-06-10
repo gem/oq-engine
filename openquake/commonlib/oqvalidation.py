@@ -153,6 +153,8 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
+        if 'calculation_mode' not in names_vals:
+            raise ValueError('Missing calculation_mode in the .ini file!')
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
