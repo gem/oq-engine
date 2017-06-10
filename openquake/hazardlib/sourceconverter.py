@@ -310,6 +310,7 @@ def split_source(src):
     if hasattr(src, '__iter__'):  # multipoint source
         for s in src:
             s.src_group_id = src.src_group_id
+            s.num_ruptures = s.count_ruptures()
             yield s
     elif isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
@@ -934,19 +935,29 @@ def get_key(node):
         _hd(node.hypoDepthDist), _npd(node.nodalPlaneDist))
 
 
+def collapse(array):
+    """
+    Collapse a homogeneous array into a scalar; do nothing if the array
+    is not homogenous
+    """
+    if len(set(a for a in array)) == 1:  # homogenous array
+        return array[0]
+    return array
+
+
 def mfds2multimfd(mfds):
     """
     Convert a list of MFD nodes into a single MultiMFD node
     """
     _, kind = mfds[0].tag.split('}')
-    node = Node('multiMFD', dict(kind=kind))
+    node = Node('multiMFD', dict(kind=kind, size=len(mfds)))
     lengths = None
     for field in mfd.multi_mfd.ASSOC[kind][1:]:
         alias = mfd.multi_mfd.ALIAS.get(field, field)
         if field in ('magnitudes', 'occurRates'):
             data = [~getattr(m, field) for m in mfds]
             lengths = [len(d) for d in data]
-            data = sum(data, [])  # the list has to be flat
+            data = sum(data, [])  # list of lists
         else:
             try:
                 data = [m[alias] for m in mfds]
@@ -956,9 +967,9 @@ def mfds2multimfd(mfds):
                     continue
                 else:
                     raise
-        node.append(Node(field, text=data))
+        node.append(Node(field, text=collapse(data)))
         if lengths:  # this is the last field if present
-            node.append(Node('lengths', text=lengths))
+            node.append(Node('lengths', text=collapse(lengths)))
     return node
 
 
@@ -996,7 +1007,6 @@ def _pointsources2multipoints(srcs, i):
     return i, allsources
 
 
-# TODO: tests are missing
 def update_source_model(sm_node):
     """
     :param sm_node: a sourceModel Node object containing sourceGroups
@@ -1009,7 +1019,10 @@ def update_source_model(sm_node):
         psrcs = []
         others = []
         for src in group:
-            del src.attrib['tectonicRegion']  # make the trt implicit
+            try:
+                del src.attrib['tectonicRegion']  # make the trt implicit
+            except KeyError:
+                pass  # already missing
             if src.tag.endswith('pointSource'):
                 psrcs.append(src)
             else:
