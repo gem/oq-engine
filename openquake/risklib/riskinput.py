@@ -613,7 +613,7 @@ class GmfGetter(object):
                             for rlz in rlzs]
             else:
                 all_eids = [rup.events['eid']] * len(rlzs)
-            size = itemsize  # * len(sids)
+            size = itemsize * len(sids)
             num_events = sum(len(eids) for eids in all_eids)
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
