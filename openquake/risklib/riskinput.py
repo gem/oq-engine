@@ -434,7 +434,6 @@ class CompositeRiskModel(collections.Mapping):
                 assets_by_site = assetcol.assets_by_site()
 
         # group the assets by taxonomy
-        taxonomies = set()
         dic = collections.defaultdict(list)
         for sid, assets in enumerate(assets_by_site):
             group = groupby(assets, by_taxonomy)
@@ -442,42 +441,42 @@ class CompositeRiskModel(collections.Mapping):
                 epsgetter = riskinput.epsilon_getter(
                     [asset.ordinal for asset in group[taxonomy]])
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
-                taxonomies.add(taxonomy)
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
         for gsim in hazard_getter.rlzs_by_gsim:
             with mon_hazard:
                 hazard = hazard_getter.get_hazard(gsim)
             with mon_risk:
                 for out in self._gen_outputs(
-                        hazard_getter.rlzs_by_gsim[gsim],
-                        hazard, taxonomies, imti, dic):
+                        hazard_getter.rlzs_by_gsim[gsim], hazard, imti, dic):
                     yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, rlzs, hazard, taxonomies, imti, dic):
-        for r, rlz in enumerate(rlzs):
-            hazardr = hazard[r]
-            for taxonomy in sorted(taxonomies):
-                riskmodel = self[taxonomy]
+    def _gen_outputs(self, rlzs, hazard, imti, dic):
+        for taxonomy in sorted(dic):
+            riskmodel = self[taxonomy]
+            rangeI = [imti[riskmodel.risk_functions[lt].imt]
+                      for lt in self.loss_types]
+            for r, rlz in enumerate(rlzs):
+                rlzi = rlz.ordinal
+                hazardr = hazard[r]
                 for sid, assets, epsgetter in dic[taxonomy]:
-                    outs = [None] * len(self.lti)
-                    for lt in self.loss_types:
-                        i = imti[riskmodel.risk_functions[lt].imt]
-                        try:
-                            haz = hazardr[sid, i]
-                        except IndexError:  # for event based
-                            data = hazardr[sid]
-                            if len(data):
-                                haz = data['gmv'][:, i], data['eid']
-                            else:
-                                haz = []
-                        if len(haz):
-                            out = riskmodel(lt, assets, haz, epsgetter)
-                            outs[self.lti[lt]] = out
-                    yield Output(self.loss_types, assets, outs,
-                                 sid, rlz.ordinal)
+                    if isinstance(hazardr, dict):  # non-event based
+                        haz = {i: hazardr[sid, i] for i in rangeI}
+                    else:
+                        data = hazardr[sid]
+                        if len(data):
+                            gmvs, eids = data['gmv'], data['eid']
+                            haz = {i: (gmvs[:, i], eids) for i in rangeI}
+                        else:
+                            haz = {i: [] for i in rangeI}
+                    out = [None] * len(self.lti)
+                    for lti, i in enumerate(rangeI):
+                        if len(haz[i]):
+                            lt = self.loss_types[lti]
+                            out[lti] = riskmodel(lt, assets, haz[i], epsgetter)
+                    yield Output(self.loss_types, assets, out, sid, rlzi)
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
