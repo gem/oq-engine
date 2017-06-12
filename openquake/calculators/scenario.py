@@ -81,14 +81,6 @@ class ScenarioCalculator(base.HazardCalculator):
         self.gmv_data_dt = numpy.dtype(
             [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
 
-    def gen_gmf_data(self):
-        sids = self.sitecol.sids
-        for g, gsim in enumerate(self.gsims):
-            gmfa = self.gmfa[gsim]
-            n, e, i = gmfa.shape
-            for s, eid in itertools.product(range(n), range(e)):
-                yield g, sids[s], eid, gmfa[s, eid]
-
     def execute(self):
         """
         Compute the GMFs and return a dictionary gsim -> array(N, E, I)
@@ -107,5 +99,13 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         with self.monitor('saving gmfs', autoflush=True):
             self.datastore['gmf_data/grp-00'] = numpy.fromiter(
-                self.gen_gmf_data(), self.gmv_data_dt)
+                self._gen_gmv_data(), self.gmv_data_dt)
             self.datastore.set_nbytes('gmf_data')
+
+    def _gen_gmv_data(self):
+        sids = self.sitecol.sids
+        for g, gsim in enumerate(self.gsims):
+            gmfa = self.gmfa[gsim]
+            n, e, i = gmfa.shape
+            for s, eid in itertools.product(range(n), range(e)):
+                yield g, sids[s], eid, gmfa[s, eid]
