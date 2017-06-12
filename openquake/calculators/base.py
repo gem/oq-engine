@@ -178,8 +178,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         global logversion
         self.close = close
         self.set_log_format()
-        logging.info('Running %s', self.oqparam.inputs['job_ini'])
         if logversion:  # make sure this is logged only once
+            logging.info('Running %s', self.oqparam.inputs['job_ini'])
             logging.info('Using engine version %s', engine_version)
             logversion = False
         if concurrent_tasks is None:  # use the default
