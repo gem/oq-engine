@@ -48,7 +48,7 @@ Copyright (C) 2010-2017 GEM Foundation
 %package master
 Summary: OpenQuake Engine multi-node cluster support (master node)
 Group: Applications/Engineering
-Requires: %{name}%{?_isa} = %{version}-%{release} rabbitmq-server
+Requires: %{name} = %{version}-%{release} rabbitmq-server
 
 %description master
 OpenQuake Engine multi-node cluster support (master node)
@@ -61,7 +61,7 @@ Copyright (C) 2010-2017 GEM Foundation
 %package worker
 Summary: OpenQuake Engine multi-node cluster support (worker node)
 Group: Applications/Engineering
-Requires: %{name}%{?_isa} = %{version}-%{release}
+Requires: %{name} = %{version}-%{release}
 
 %description worker
 OpenQuake Engine multi-node cluster support (worker node)
