@@ -72,7 +72,7 @@
                         <pre style="font-size: 12px;" class="modal-body-pre">Are you sure to remove the calculation:<br><b>(<%= calc.get('id') %>) <%= calc.get('description') %></b> ?</pre>
                     </div>
                     <div class="modal-footer">
-                      <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-show-remove">Yes</button>
+                      <button type="button" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-show-remove">Yes</button>
                       <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-default btn-hide-remove">No</button>
                     </div>
                   </div>
