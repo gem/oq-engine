@@ -188,7 +188,7 @@
                      ).success(
                          function(data, textStatus, jqXHR)
                          {
-                             diaerror.show(false, "Removed calculation ", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> removed.");
+                             diaerror.show(false, "Calculation removed ", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> removed.");
                              view.calculations.remove([view.calculations.get(calc_id)]);
                          }
                      ).error(
