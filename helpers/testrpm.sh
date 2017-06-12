@@ -31,7 +31,7 @@ while (( "$#" )); do
     case "$1" in
         "-h")
             echo "Usage: $0 [-l] [-r]"
-            echo -e "\nOptions:\n\t-l: test RPM locally\n\t-r: use stable repo"
+            echo -e "\nOptions:\n\t-l: test RPM locally\n\t-r <reponame>: use a GEM COPR repo provided by <reponame> (default: openquake)"
             exit 0
             ;;
         "-r")
