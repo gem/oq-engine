@@ -456,22 +456,24 @@ class CompositeRiskModel(collections.Mapping):
             riskmodel = self[taxonomy]
             rangeI = [imti[riskmodel.risk_functions[lt].imt]
                       for lt in self.loss_types]
-            for rlzi, hazardr in enumerate(hazard):
+            for rlzi, hazardr in sorted(hazard.items()):
                 for sid, assets, epsgetter in dic[taxonomy]:
-                    if isinstance(hazardr, dict):  # non-event based
-                        haz = {i: hazardr[sid, i] for i in rangeI}
+                    try:
+                        haz = hazardr[sid]
+                    except KeyError:  # no hazard for this site
+                        continue
+                    if len(haz) == 0:  # no hazard for this site
+                        continue
+                    elif isinstance(haz, numpy.ndarray):  # event_based
+                        eids = haz['eid']
+                        gmvs = haz['gmv']
+                        data = {i: (gmvs[:, i], eids) for i in rangeI}
                     else:
-                        data = hazardr[sid]
-                        if len(data):
-                            gmvs, eids = data['gmv'], data['eid']
-                            haz = {i: (gmvs[:, i], eids) for i in rangeI}
-                        else:
-                            haz = {i: [] for i in rangeI}
+                        data = haz
                     out = [None] * len(self.lti)
                     for lti, i in enumerate(rangeI):
-                        if len(haz[i]):
-                            lt = self.loss_types[lti]
-                            out[lti] = riskmodel(lt, assets, haz[i], epsgetter)
+                        lt = self.loss_types[lti]
+                        out[lti] = riskmodel(lt, assets, data[i], epsgetter)
                     yield Output(self.loss_types, assets, out, sid, rlzi)
 
     def __toh5__(self):
@@ -511,21 +513,20 @@ class HazardGetter(object):
         for gsim in rlzs_by_gsim:
             rlzs = self.rlzs_by_gsim[gsim]
             for rlz in rlzs:
-                datadict = collections.defaultdict(list)
-                self.data[rlz] = datadict
+                self.data[rlz] = datadict = {}
                 hazards_by_imt = hazards_by_rlz[rlz]
-                for imti, imt in enumerate(self.imts):
-                    if kind == 'poe':
-                        hazard_by_site = hazards_by_imt[imt][self.sids]
-                    else:  # gmf
-                        hazard_by_site = hazards_by_imt[self.sids, :, imti]
-                    for idx, haz in enumerate(hazard_by_site):
-                        datadict[idx, imti] = haz
+                for sid in sids:
+                    datadict[sid] = lst = [None for imt in imts]
+                    for imti, imt in enumerate(self.imts):
+                        if kind == 'poe':
+                            lst[imti] = hazards_by_imt[imt][sid]  # imls
+                        else:  # gmf
+                            lst[imti] = e = hazards_by_imt[sid, :, imti]
+                            num_events = len(e)
 
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
             # number of ground motion fields
-            num_events = hazard_by_site.shape[-1]
             self.eids = numpy.arange(num_events, dtype=F32)
             # dictionary rlzi -> array(imts, events, nbytes)
             self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
@@ -643,10 +644,10 @@ class GmfGetter(object):
         if data is None:
             data = list(self.gen_gmv())
         rlzs = get_rlzs(self)
-        hazard = [collections.defaultdict(list) for r in range(len(rlzs))]
+        hazard = {rlz.ordinal: collections.defaultdict(list) for rlz in rlzs}
         for rlzi, sid, eid, gmv in data:
             hazard[rlzi][sid].append((gmv, eid))
-        for haz in hazard:
+        for haz in hazard.values():
             for sid in haz:
                 haz[sid] = numpy.array(haz[sid], self.gmv_eid_dt)
         return hazard
