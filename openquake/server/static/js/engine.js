@@ -136,7 +136,9 @@
             },
 
             events: {
-                "click .btn-danger": "remove_calculation",
+                "click .btn-show-remove": "remove_calculation",
+                "click .btn-danger": "show_modal_confirm_remove_calculation",
+                "click .btn-hide-remove": "hide_modal_confirm_remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
