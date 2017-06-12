@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Hazard maps were not exposed to the engine in event based calculations
   * Optimized MultiMFD objects for the case of homogeneous parameters
   * Added an .npz exporter for the scenario_damage output `dmg_by_asset`
   * Removed the pickled CompositeSourceModel from the datastore
