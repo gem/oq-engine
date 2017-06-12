@@ -612,7 +612,6 @@ celery_wait $GEM_MAXLOOP"
         cd /usr/share/openquake/engine/demos
 
         for ini in \$(find . -name job.ini | sort); do
-            echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
                 oq engine --run \$ini --exports xml,hdf5
@@ -643,9 +642,7 @@ celery_wait $GEM_MAXLOOP"
         for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
-            echo \"Running \$demo_dir/job_hazard.ini using celery\"
             OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
-            echo \"Running \$demo_dir/job_risk.ini\"
             oq engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
             fi
