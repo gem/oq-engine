@@ -602,9 +602,6 @@ class GmfGetter(object):
         """
         itemsize = self.gmf_data_dt.itemsize
         rlzs = self.rlzs_by_gsim[gsim]
-        # short event IDs (48 bit) are enlarged to long event IDs (64 bit)
-        # containing information about the realization index (16 bit);
-        # the information is used in .get_hazard and compute_gmfs_and_curves
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sites.sids
@@ -699,7 +696,7 @@ class GmfDataGetter(GmfGetter):
         Returns a gmf_data_dt array
         """
         if eid is not None:  # extract the grp_id from the eid
-            grp_ids = [eid // TWO48]
+            grp_ids = [eid // TWO48]  # see event_based.set_eids
         else:
             grp_ids = rlzs_assoc.gsims_by_grp_id
         records = []
