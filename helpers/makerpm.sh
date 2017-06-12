@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>
 
-# Work in progress
-
 set -e
 
 checkcmd() {
@@ -51,11 +49,6 @@ while (( "$#" )); do
             BUILD=1
             shift
             ;;
-        "-t")
-            TEST=1
-            checkcmd docker
-            shift
-            ;;
         "-c")
             CLEAN=1
             shift
@@ -87,12 +80,10 @@ if [ "$STABLE" == "1" ]; then
     git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
     sed -i "s/##_release_##/${PKG}/g" build-rpm/SPECS/python-${REPO}.spec
     OUT=python-${REPO}-${VER}-${PKG}.src.rpm
-    COPR_REPO='openquake-stable'
 else
     git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
     sed -i "s/##_release_##/git${SHA}/g" build-rpm/SPECS/python-${REPO}.spec
     OUT=python-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm
-    COPR_REPO='openquake'
 fi
 cp debian/patches/openquake.cfg.patch build-rpm/SOURCES
 
@@ -101,17 +92,4 @@ if [ "$BUILD" == "1" ]; then
     mock -r openquake build-rpm/SRPMS/${OUT} --resultdir=build-rpm/RPMS $EXTRA
 fi
 
-if [ "$TEST" == "1" ]; then
-    cd build-rpm/RPMS
-    if [ "$BUILD" == "1" ]; then
-        if [ -f python-oq-libs*.x86_64.rpm ]; then
-            sudo docker run --rm -v $(pwd):/io -t docker.io/centos:7 bash -c "yum install -y epel-release && yum install -y /io/python-oq-engine*.noarch.rpm"
-        else
-            echo "WARNING: python-oq-libs not found locally. Skipping."
-        fi
-    else
-        sudo docker run --rm -t docker.io/centos:7 bash -c "yum install -y epel-release && curl -sL https://copr.fedoraproject.org/coprs/gem/${COPR_REPO}/repo/epel-7/gem-${COPR_REPO}-epel-7.repo | sudo tee /etc/yum.repos.d/gem-${COPR_REPO}-epel-7.repo"
-    fi
-fi
- 
 cd $CUR
