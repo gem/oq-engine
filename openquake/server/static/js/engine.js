@@ -16,6 +16,7 @@
  */
 
 (function($, Backbone, _) {
+
     var calculation_table;
 
     var progressHandlingFunction = function(progress) {
@@ -108,8 +109,9 @@
                       };
                   })();
 
-    var CalculationTable = Backbone.View.extend(
-        {
+var CalculationTable = Backbone.View.extend(
+    {
+
             /* the html element where the table is rendered */
             el: $('#my-calculations'),
 
@@ -134,14 +136,17 @@
 
                 this.render();
             },
-
+            
             events: {
-                "click .btn-danger": "remove_calculation",
+                "click .btn-show-remove": "remove_calculation",
+                "click .btn-danger": "show_modal_confirm_remove_calculation",
+                "click .btn-hide-remove": "hide_modal_confirm_remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
                 "change .btn-file input": "on_run_risk_queued"
             },
+            
 
             /* When an input dialog is opened, it is very important to not re-render the table */
             on_run_risk_clicked: function(e) {
@@ -153,30 +158,54 @@
                 this.can_be_rendered = true;
             },
 
+            show_modal_confirm_remove_calculation: function(e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                
+                var show_or_back = (function(e) {
+                    this.conf_show = $('#confirmDialog' + calc_id).show();
+                    this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
+                    closeTimer();
+                })();
+            },
+
+            hide_modal_confirm_remove_calculation: function(e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                
+                var hide_or_back = (function(e) {
+                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                    setTimer();
+                })();
+            },
+
             remove_calculation: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
+                var calc_desc = $(e.target).attr('data-calc-desc');
                 var view = this;
                 diaerror.show(false, "Removing calculation " + calc_id, "...");
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
                      ).success(
                          function(data, textStatus, jqXHR)
                          {
-                             diaerror.show(false, "Removing calculation " + calc_id, "Calculation " + calc_id + " removed.");
+                             diaerror.show(false, "Removed calculation ", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> removed.");
                              view.calculations.remove([view.calculations.get(calc_id)]);
                          }
                      ).error(
                          function(jqXHR, textStatus, errorThrown)
                          {
                              if (jqXHR.status == 404) {
-                                 diaerror.show(false, "Removing calculation " + calc_id, "Failed: calculation " + calc_id + " not found.");
+                                 diaerror.show(false, "Removing calculation ", "Failed calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> not found.");
                              }
                              else {
-                                 diaerror.show(false, "Removing calculation " + calc_id, "Failed: " + textStatus);
+                                 diaerror.show(false, "Removing calculation ", "Failed: " + textStatus);
                              }
                          }
                      );
-            },
+                 setTimer();
+},            
 
             show_traceback: function(e) {
                 e.preventDefault();
@@ -366,6 +395,10 @@
 
     function setTimer() {
         refresh_calcs = setInterval(function() { calculations.fetch({reset: true}) }, 3000);
+    }
+
+    function closeTimer() {
+        refresh_calcs = clearInterval(refresh_calcs);
     }
 
 
