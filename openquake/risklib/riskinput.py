@@ -513,10 +513,10 @@ class HazardGetter(object):
         for gsim in rlzs_by_gsim:
             rlzs = self.rlzs_by_gsim[gsim]
             for rlz in rlzs:
-                self.data[rlz] = datadict = {}
+                self.data[rlz.ordinal] = datadict = {}
                 hazards_by_imt = hazards_by_rlz[rlz]
-                for sid in sids:
-                    datadict[sid] = lst = [None for imt in imts]
+                for idx, sid in enumerate(sids):
+                    datadict[idx] = lst = [None for imt in imts]
                     for imti, imt in enumerate(self.imts):
                         if kind == 'poe':
                             lst[imti] = hazards_by_imt[imt][sid]  # imls
@@ -539,7 +539,7 @@ class HazardGetter(object):
         :param gsim: a GSIM instance
         :yields: pairs (rlz, dic) where dic is dictionary (num_sites, num_imts)
         """
-        return self.data.values()
+        return self.data
 
 
 class GmfGetter(object):
