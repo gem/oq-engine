@@ -155,6 +155,29 @@
                 this.can_be_rendered = true;
             },
 
+            show_modal_confirm_remove_calculation: function(e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                
+                var show_or_back = (function(e) {
+                    this.conf_show = $('#confirmDialog' + calc_id).show();
+                    this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
+                    closeTimer();
+                })();
+            },
+
+            hide_modal_confirm_remove_calculation: function(e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                
+                var hide_or_back = (function(e) {
+                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                    setTimer();
+                })();
+            },
+
+
             remove_calculation: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
