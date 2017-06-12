@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Hazard maps were not exposed to the engine in event based calculations
   * Fixed the check on the DbServer instance: it was failing in presence
     of symbolic links
   * Optimized MultiMFD objects for the case of homogeneous parameters
