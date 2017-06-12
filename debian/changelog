@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the check on the DbServer instance: it was failing in presence
+    symbolic links
   * Optimized MultiMFD objects for the case of homogeneous parameters
   * Added an .npz exporter for the scenario_damage output `dmg_by_asset`
   * Removed the pickled CompositeSourceModel from the datastore
