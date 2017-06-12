@@ -195,7 +195,7 @@
                          function(jqXHR, textStatus, errorThrown)
                          {
                              if (jqXHR.status == 404) {
-                                 diaerror.show(false, "Removing calculation", "Failed calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> not found.");
+                                 diaerror.show(false, "Removing calculation", "The removal command for:<br><b>(" + calc_id + ") " + calc_desc + "</b> is failed.");
                              }
                              else {
                                  diaerror.show(false, "Removing calculation " + calc_id, "Failed: " + textStatus);
