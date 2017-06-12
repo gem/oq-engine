@@ -664,3 +664,29 @@ def view_hmap(token, dstore):
     for i, (maxvalue, sid) in enumerate(reversed(items)):
         array[i] = (sid, ) + tuple(hmap[sid].array[:, 0])
     return rst_table(array)
+
+
+@view.add('synthetic_hcurves')
+def view_synthetic_hcurves(token, dstore):
+    """
+    Display the synthetic hazard curves for the calculation. They are
+    used for debugging purposes when comparing the results of two
+    calculations, they have no physical meaning. They are the simple mean
+    of the PoEs arrays over source groups, gsims and number of sites.
+    """
+    oq = dstore['oqparam']
+    nsites = len(dstore['sitecol'])
+    array = numpy.zeros(len(oq.imtls.array), F32)
+    ngroups = 0
+    for sm in dstore['csm_info'].source_models:
+        for src_group in sm.src_groups:
+            grp_id = src_group.id
+            try:
+                pmap = dstore['poes/grp-%02d' % grp_id]
+            except KeyError:
+                continue
+            ngroups += 1
+            for sid in pmap:
+                array += pmap[sid].array.sum(axis=1) / pmap.shape_z
+    array /= (ngroups * nsites)
+    return oq.imtls.new(array)
