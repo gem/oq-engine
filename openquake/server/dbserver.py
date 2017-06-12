@@ -86,6 +86,8 @@ class DbServer(object):
 
 
 def different_paths(path1, path2):
+    path1 = os.path.realpath(path1)  # expand symlinks
+    path2 = os.path.realpath(path2)  # expand symlinks
     # don't care about the extension (it may be .py or .pyc)
     return os.path.splitext(path1)[0] != os.path.splitext(path2)[0]
 
@@ -113,9 +115,9 @@ def check_foreign():
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
-                   + ' instance (%s)\n' % remote_server_path
-                   + 'Check the configuration or stop the foreign'
-                   + ' DbServer instance')
+                   ' instance (got %s, expected %s)\n'
+                   'Check the configuration or stop the foreign'
+                   ' DbServer instance') % (remote_server_path, server_path)
 
 
 def ensure_on():
