@@ -69,6 +69,7 @@ class MultiMFD(BaseMFD):
     @classmethod
     def from_node(cls, node, width_of_mfd_bin=None):
         kind = node['kind']
+        size = node['size']
         kwargs = {}  # a dictionary name -> array of n elements
         for field in ASSOC[kind][1:]:
             try:
@@ -79,30 +80,43 @@ class MultiMFD(BaseMFD):
                 # missing bindWidth in GR MDFs is ok
         if 'occurRates' in ASSOC[kind][1:]:
             lengths = ~getattr(node, 'lengths')
+            if len(lengths) == 1:  # all occurRates are the same
+                lengths = [lengths[0]] * size
             _reshape(kwargs, lengths)
-        return cls(kind, width_of_mfd_bin, **kwargs)
+        return cls(kind, size, width_of_mfd_bin, **kwargs)
 
-    def __init__(self, kind, width_of_mfd_bin=None, **kwargs):
+    def __init__(self, kind, size, width_of_mfd_bin=None, **kwargs):
         self.kind = kind
+        self.size = size
         self.width_of_mfd_bin = width_of_mfd_bin
         self.mfd_class = ASSOC[kind][0]
-        self.n = len(kwargs.get('min_mag') or kwargs['occurRates'])
         self.kwargs = kwargs
         if 'bin_width' not in kwargs:
-            kwargs['bin_width'] = [width_of_mfd_bin] * self.n
+            kwargs['bin_width'] = [width_of_mfd_bin]
+        for field in kwargs:
+            self.check_size(field, kwargs[field])
+
+    def check_size(self, field, values):
+        if len(values) not in (1, self.size):
+            raise ValueError('%s of size %d, expected 1 or %d' %
+                             (field, len(values), self.size))
 
     def __iter__(self):
         """
         Yield the underlying MFDs instances
         """
-        for i in range(self.n):
+        for i in range(self.size):
             args = []
             for f in ASSOC[self.kind][1:]:
-                args.append(self.kwargs[f][i])
+                arr = self.kwargs[f]
+                if len(arr) == 1:
+                    args.append(arr[0])
+                else:
+                    args.append(arr[i])
             yield self.mfd_class(*args)
 
     def __len__(self):
-        return self.n
+        return self.size
 
     def get_min_max_mag(self):
         """

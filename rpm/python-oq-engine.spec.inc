@@ -48,7 +48,7 @@ Copyright (C) 2010-2017 GEM Foundation
 %package master
 Summary: OpenQuake Engine multi-node cluster support (master node)
 Group: Applications/Engineering
-Requires: %{name}%{?_isa} = %{version}-%{release} rabbitmq-server
+Requires: %{name} = %{version}-%{release} rabbitmq-server
 
 %description master
 OpenQuake Engine multi-node cluster support (master node)
@@ -61,7 +61,7 @@ Copyright (C) 2010-2017 GEM Foundation
 %package worker
 Summary: OpenQuake Engine multi-node cluster support (worker node)
 Group: Applications/Engineering
-Requires: %{name}%{?_isa} = %{version}-%{release}
+Requires: %{name} = %{version}-%{release}
 
 %description worker
 OpenQuake Engine multi-node cluster support (worker node)
@@ -89,7 +89,7 @@ getent passwd %{oquser} >/dev/null || \
     -c "The OpenQuake user" %{oquser}
 
 %install
-sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
+sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
 install -p -m 755 -d %{buildroot}%{oqprefix}/bin
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
