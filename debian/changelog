@@ -1,5 +1,5 @@
  [Armando Scarpati]
-  * Added a confirmation box to calculation removal via the WebUI
+  * Added a confirmation dialog when trying to remove a calculation via the WebUI
  
   [Michele Simionato]
   * Fixed the check on the DbServer instance: it was failing in presence
