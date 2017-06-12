@@ -202,6 +202,7 @@
                              }
                          }
                      );
+                 setTimer();
             },
 
             show_traceback: function(e) {
@@ -394,6 +395,9 @@
         refresh_calcs = setInterval(function() { calculations.fetch({reset: true}) }, 3000);
     }
 
+    function closeTimer() {
+        refresh_calcs = clearInterval(refresh_calcs);
+    }
 
     /* classic event management */
     $(document).ready(
