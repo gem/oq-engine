@@ -102,8 +102,13 @@ if [ "$BUILD" == "1" ]; then
 fi
 
 if [ "$TEST" == "1" ]; then
+    cd build-rpm/RPMS
     if [ "$BUILD" == "1" ]; then
-        sudo docker run --rm -v build-rpm/RPMS:/io -t docker.io/centos:7 bash -c "yum install -y epel-release && yum install -y /io/python-oq-engine*.noarch.rpm"
+        if [ -f python-oq-libs*.x86_64.rpm ]; then
+            sudo docker run --rm -v $(pwd):/io -t docker.io/centos:7 bash -c "yum install -y epel-release && yum install -y /io/python-oq-engine*.noarch.rpm"
+        else
+            echo "WARNING: python-oq-libs not found locally. Skipping."
+        fi
     else
         sudo docker run --rm -t docker.io/centos:7 bash -c "yum install -y epel-release && curl -sL https://copr.fedoraproject.org/coprs/gem/${COPR_REPO}/repo/epel-7/gem-${COPR_REPO}-epel-7.repo | sudo tee /etc/yum.repos.d/gem-${COPR_REPO}-epel-7.repo"
     fi
