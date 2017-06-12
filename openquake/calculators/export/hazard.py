@@ -25,8 +25,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5, parallel, performance
-from openquake.baselib.general import (
-    humansize, get_array, group_array, DictArray)
+from openquake.baselib.general import humansize, group_array, DictArray
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf

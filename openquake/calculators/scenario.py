@@ -81,13 +81,13 @@ class ScenarioCalculator(base.HazardCalculator):
         self.gmv_data_dt = numpy.dtype(
             [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
 
-    def to_gmf_data(self, gsim):
+    def gen_gmf_data(self):
         sids = self.sitecol.sids
-        gmfa = self.gmfa[gsim]
-        n, e, i = gmfa.shape
-        data = ((0, sids[s], eid, gmfa[s, eid])
-                for s, eid in itertools.product(range(n), range(e)))
-        return numpy.fromiter(data, self.gmv_data_dt)
+        for g, gsim in enumerate(self.gsims):
+            gmfa = self.gmfa[gsim]
+            n, e, i = gmfa.shape
+            for s, eid in itertools.product(range(n), range(e)):
+                yield g, sids[s], eid, gmfa[s, eid]
 
     def execute(self):
         """
@@ -106,8 +106,6 @@ class ScenarioCalculator(base.HazardCalculator):
         :param gmfa: a dictionary gsim -> gmfa
         """
         with self.monitor('saving gmfs', autoflush=True):
-            for gsim in self.gsims:
-                rlzstr = 'gmf_data/grp-00/%s' % gsim
-                self.datastore[rlzstr] = self.to_gmf_data(gsim)
-                self.datastore.set_attrs(rlzstr, gsim=str(gsim))
+            self.datastore['gmf_data/grp-00'] = numpy.fromiter(
+                self.gen_gmf_data(), self.gmv_data_dt)
             self.datastore.set_nbytes('gmf_data')
