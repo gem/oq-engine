@@ -1,4 +1,7 @@
-  [Michele Simionato, Daniele Viganò]
+ [Armando Scarpati]
+  * Added a confirmation box to calculation removal via the WebUI
+ 
+ [Michele Simionato, Daniele Viganò]
   * Merged the `oq-hazardlib` repository into `oq-engine`.
     The `python-oq-hazardlib` package is now provided by `python-oq-engine`
 
