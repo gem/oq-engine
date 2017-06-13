@@ -64,7 +64,7 @@ interested only in the magnitude-distance disaggregation, she can set
    `disagg_outputs = Mag_Dist`
   
 and export 8 times less files. The user can list different disaggregation
-outputs separated by spaces (commas are not accepted).
+outputs separated by spaces (commas are also accepted).
 
 There were several small improvements to the Web UI:
 
