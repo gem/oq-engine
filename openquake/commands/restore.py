@@ -28,8 +28,7 @@ from openquake.server.dbapi import Db
 @sap.Script
 def restore(archive, oqdata):
     """
-    Dump the openquake database and all datastores into a archive zip file.
-    In a multiuser installation must be run as administrator.
+    Build a new oqdata directory from the data contained in the zip archive
     """
     oqdata = os.path.abspath(oqdata)
     assert archive.endswith('.zip'), archive
