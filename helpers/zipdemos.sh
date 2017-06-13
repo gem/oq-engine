@@ -16,7 +16,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>
 
 set -e
-set -x
 
 checkcmd() {
     command -v $1 >/dev/null 2>&1 || { echo >&2 "This script requires '$1' but it isn't available. Aborting."; exit 1; }
