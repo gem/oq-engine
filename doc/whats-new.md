@@ -1,7 +1,7 @@
 Release notes for the OpenQuake Engine, version 2.5
 ===================================================
 
-This release (re)introduces a tiling mechanism for classical PSHA
+This release introduces a tiling mechanism for classical PSHA
 calculations. The tiling reduces the memory consumption and increases
 the performance of large calculations: the improvement is sensible
 for calculations dominated by distance computations, less so in other
@@ -12,16 +12,15 @@ XML serialization protocol. Serialized MultiPointSources can be up to
 an order of magnitude smaller than equivalent PointSources.
 MultiPointSource are more efficient to read, to write and to
 transfer. The computational performance is more or less the same as
-before, though, you should not expect miracles.
+before, though.
 
 This is the first release integrating hazardlib into the engine: there
 are no more hazardlib packages. The change is transparent to the user
 and the upgrade procedure will automatically uninstall the old
 hazardlib. However, scientists and developers using the oq-hazardlib
-repository from GitHub should know that it has been deprecated, since
-it has been included in engine repository.  In order to avoid
-confusion, we suggest to remove the oq-hazardlib repository if you
-have one.
+repository from GitHub should know that it has been deprecated.  In
+order to avoid confusion, we suggest to remove the oq-hazardlib
+repository if you have one.
 
 Several bugs have been fixed and there were a few improvements to the
 Web User Interface(WebUI) and to the engine itself.
@@ -76,7 +75,7 @@ There were several improvements to the Web UI:
 - we added the commands `oq webui createsuperuser` and `oq webui collectstatic`
   which are useful for system administrators setting a multiuser instance of
   the WebUI (see https://github.com/gem/oq-engine/blob/engine-2.5/doc/installing/server.md);
-- there is a confirmation dialog when removing a calculation
+- there is a confirmation dialog when removing a calculation;
 - we added an end point `v1/calc/XXX/oqparam` to extract the calculation
   parameters as a JSON dictionary, which is used by the QGIS plugin.
 
@@ -84,55 +83,48 @@ There were several improvements to the Web UI:
 Bugs fixed
 ----------------
 
-- Getting the version of the engine required having git installed on macOS:
-  this is fixed now.
-- We fixed an encoding error when logging filenames with non-ASCII
-  character: this was affecting macOS users.
-- The XML rupture exporter was not saving the first `ruptureId` for
-  scenario calculations: this is fixed.
+- getting the version of the engine required having git installed on macOS
+- there was an encoding error when logging filenames with non-ASCII
+  character affecting macOS users
+- the XML rupture exporter was not saving the first `ruptureId` for
+  scenario calculations
 - Now we raise an early error if there are missing taxonomies in the
   consequence model
-- We fixed a bug in `oq export hcurves-rlzs --exports hdf5`: now it works
-- The hazard maps were not exposed to the engine in event based calculations:
-  this has been fixed.
-- We fixed some packaging issues in the Red Hat packager
-- Fixed a bug in `dbserver.different_paths` affecting people with an engine
+- `oq export hcurves-rlzs --exports hdf5` was broken
+- the hazard maps were not exposed to the engine in event based calculations
+- there were some packaging issues in the Red Hat packager
+- there was a bug in `dbserver.different_paths` affecting people with an engine
   installed in a directory involving symbolic links.
-- A bug in `oq plot`, signaled by a power user, has been fixed.
+- there was bug in the debugging utility `oq plot`; still the official way
+  to display the outputs of the engine is the QGIS plugin.
 
 Other improvements
 ---------------------
 
 - The engine was calling the routine computing the statistics even when
-  not needed i.e. when no statistics are specified, or when there is a
-  single realization. This was inefficient and has been fixed.
-  
+  not needed. This was inefficient and has been fixed.
 - The error checking when parsing source models in format NRML 0.5 has been
   improved: now in case of error one gets the name of the incorrect node and
   its line number, just like for NRML 0.4.
-  
 - There is now a clear error message if the user does not set the
   `calculation_mode` in the `job.ini` file.
-
 - We improved the error message when the rupture mesh spacing is too small.
-
 - We added a new `.npz` exporter for the output `dmg_by_asset_npz`.
-
 - Some preliminary work for the Python 3 installers has been done.
 
 As always, there were several internal changes to the engine. Some of
 them may be of interests to power users and people developing with the
 engine.
 
-- it is now possible to use the engine with backends different from rabbitmq,
+- It is now possible to use the engine with backends different from rabbitmq,
   for instance with redis; we did some experiment in this direction, but
-  rabbitmq is still the official backed to use
-- the AreaSource class in hazardlib is no more a subclass
-  of PointSource (that was an implementation accident)
-- the syntax of the command `oq db` has been improved
-- the `composite_source_model` has been removed from the datastore:
-  this was the last pickled object remaining there for legacy reasons
-- we changed the way the logic tree reduction works in event based calculators:
+  rabbitmq is still the official backend to use.
+- The AreaSource class in hazardlib is no more a subclass
+  of PointSource (that was an implementation accident).
+- The syntax of the command `oq db` has been improved.
+- The `composite_source_model` has been removed from the datastore:
+  this was the last pickled object remaining there for legacy reasons.
+- We changed the way the logic tree reduction works in event based calculators:
   now it works the same as in classical calculators. The change may affect
   rare corner cases, when there are source groups producing zero ruptures;
   see https://github.com/gem/oq-engine/pull/2840 for the details.
@@ -142,5 +134,9 @@ Deprecations
 
 All of the deprecated XML exports for the risk outputs 
 have been finally removed.
+
+The repository https://github.com/gem/oq-hazardlib has been deprecated
+and new pull requests for hazardlib should be opened towards the engine
+repository.
 
 [Our roadmap for abandoning Python 2](https://github.com/gem/oq-engine/issues/2803) has been updated.
