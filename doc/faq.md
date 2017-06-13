@@ -67,10 +67,12 @@ Since OpenQuake Engine 2.5.0, the OpenQuake Hazardlib package has been merged wi
 
 If you are using git and you have the `PYTHONPATH` set you should update `oq-engine` and then remove `oq-hazardlib` from your filesystem and from the `PYTHONPATH`, to avoid any possible confusion.
 
-If `oq-hazardlib` has been installed via `pip -e` you must uninstall both `openquake.engine` and `openquake.hazardlib` first, and then reinstall `oq-engine`.
+If `oq-hazardlib` has been installed via `pip` you must uninstall both `openquake.engine` and `openquake.hazardlib` first, and then reinstall `oq-engine`.
 
 ```bash
 $ pip uninstall openquake.hazardlib openquake.engine
+$ pip install openquake.engine
+# -OR- development installation
 $ pip install -e /path/to/oq-engine/
 ```
 
