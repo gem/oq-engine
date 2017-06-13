@@ -647,7 +647,7 @@ celery_wait $GEM_MAXLOOP"
             cd -
             fi
         done
-        ../utils/check_demos
+        PYTHONPATH=$OPT_LIBS_PATH ../utils/check_demos
         oq info --report risk
         echo 'Listing hazard calculations'
         oq engine --lhc
