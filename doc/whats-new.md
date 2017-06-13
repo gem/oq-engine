@@ -110,6 +110,8 @@ Other improvements
   `calculation_mode` in the `job.ini` file.
 - We improved the error message when the rupture mesh spacing is too small.
 - We added a new `.npz` exporter for the output `dmg_by_asset_npz`.
+- There is a new `.csv` exporter for the aggregate loss curves, replacing
+  the deprecated XML exporter.
 - Some preliminary work for the Python 3 installers has been done.
 
 As always, there were several internal changes to the engine. Some of
