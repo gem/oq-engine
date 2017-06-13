@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import os.path
 from openquake.baselib import sap
 from openquake.server.manage import db
@@ -32,7 +33,7 @@ def dump(archive):
     fnames = [fname for fname, in db('select ds_calc_dir || ".hdf5" from job')
               if os.path.exists(fname)]
     fnames.append(db.path)
-    print('Zipping %d files into %s' % (len(fnames), archive))
-    zipfiles(fnames, archive)
+    zipfiles(fnames, archive, print)
+    print('Zipped %d files into %s' % (len(fnames), archive))
 
 dump.arg('archive', 'path to a zip file')
