@@ -43,8 +43,8 @@ override_dh_auto_install:
 
 override_dh_install:
 	python2 -m compileall $(PWD)/debian/python-oq-engine$(PREFIX) || true
-	# Make a zipped copy of each demo
 	dh_install
+	# Make a zipped copy of each demo
 	helpers/zipdemos.sh $(PWD)/debian/python-oq-engine/usr/share/openquake/engine/demos
 	mkdir -p $(PWD)/debian/python-oq-engine/usr/bin
 	ln -s $(PREFIX)/bin/oq $(PWD)/debian/python-oq-engine/usr/bin/oq
