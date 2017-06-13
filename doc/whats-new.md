@@ -59,33 +59,29 @@ There were several small improvements to the Web UI:
 Bugs fixed
 ------------------
 
-
 - Getting the version of the engine required having git installed on macOS,
   but now this has been fixed
-
-- Disaggregation outputs: `disagg_outputs = Mag_Dist`
-- Fixed an encoding error when logging filenames with non-ASCII
+- We fixed an encoding error when logging filenames with non-ASCII
   character affecting macOS users
+- the XML rupture exporter was not saving the first `ruptureId` for
+  scenario calculations
+  
+- Disaggregation outputs: `disagg_outputs = Mag_Dist`
   
 - Removed the deprecated XML risk outputs
 - Raise an early error if there are missing taxonomies in the consequence model
-Do not skip writing the `ruptureId` for the first event  bug
+
 Removed excessive logic tree reduction in event based bug
-
-
-Added dmg_by_asset_npz exporter enhancement
 
 Added an end point `v1/calc/XXX/oqparam` to extract the calculation parameters as a JSON dictionary  enhancement
 
 Fixed a bug in `oq export hcurves-rlzs --exports hdf5`
 
-Raised a clear error if the user does not set the `calculation_mode` 
-Improved the error message when the rupture mesh is too small
-Exposed hmaps also in event based
-Fixed some packaging issues in the Red Hat packager
-Fixed bug in dbserver.different_paths in presence of symlinks 
+- Exposed hmaps also in event based
+- Fixed some packaging issues in the Red Hat packager
+- Fixed bug in dbserver.different_paths in presence of symlinks 
 
-- We fixed a bug in `oq plot`, signaled by a power user;
+- A bug in `oq plot`, signaled by a power user, has been fixed;
 
 Other improvements
 ---------------------
@@ -111,6 +107,11 @@ engine.
 
 - Improved the `oq db` command 
 - Removed the `composite_source_model` from the datastore
+
+Raised a clear error if the user does not set the `calculation_mode` 
+Improved the error message when the rupture mesh is too small
+
+Added dmg_by_asset_npz exporter enhancement
 
 Deprecations
 ------------------------------
