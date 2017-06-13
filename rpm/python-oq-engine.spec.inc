@@ -34,7 +34,7 @@ Requires(pre): shadow-utils
 Requires: python-oq-libs >= 1.3.0
 Requires: sudo systemd python
 
-BuildRequires: systemd python-setuptools
+BuildRequires: systemd python-setuptools zip
 
 Obsoletes: python-oq-risklib python-oq-hazardlib
 Provides: python-oq-risklib python-oq-hazardlib
@@ -107,6 +107,8 @@ install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/op
 install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
 install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
 cp -R demos %{buildroot}/%{_datadir}/openquake/engine
+# Make a zipped copy of each demo
+helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
