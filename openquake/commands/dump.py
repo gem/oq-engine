@@ -32,7 +32,7 @@ def dump(archive):
     fnames = [fname for fname, in db('select ds_calc_dir || ".hdf5" from job')
               if os.path.exists(fname)]
     fnames.append(db.path)
+    print('Zipping %d files into %s' % (len(fnames), archive))
     zipfiles(fnames, archive)
-    print('Saved %d calculations into %s' % (len(fnames) - 1, archive))
 
 dump.arg('archive', 'path to a zip file')
