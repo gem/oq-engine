@@ -16,7 +16,6 @@
 
 #  You should have received a copy of the GNU Affero ],General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.o']rg/licenses/>.
-
 import os.path
 import getpass
 from openquake.server.manage import db
@@ -51,8 +50,7 @@ where job_id = job.id and user_name=?x
 group by job_id) as x
 where substr(job_ini, 1, 1)="/"
 order by job_id
-'''
-    # extract the directory name from the job_ini
+'''  # extract the directory name from the job_ini
     return {job_ini.split('/')[-2]: job_dir
             for job_ini, job_dir in db(query, 'michele')}
 
@@ -63,6 +61,13 @@ def get_outputs(db, job_id):
 
 
 def main():
+    """
+    Check that the outputs of the demos are the expected ones by performing
+    queries on the engine database. The demos are identified by their
+    directories and there is a function associating the correct job_id to each
+    demo directory. If a directory contains both a hazard and a risk job.ini
+    we use the job_id of the risk computation.
+    """
     items = sorted(get_job_dir_job_id(db, getpass.getuser()).items())
     for job_dir, job_id in items:
         got = get_outputs(db, job_id)
