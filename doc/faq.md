@@ -76,6 +76,10 @@ $ pip install openquake.engine
 $ pip install -e /path/to/oq-engine/
 ```
 
+If you are using Ubuntu or RedHat packages no extra operations are needed, the package manager will remove the old `python-oq-hazardlib` package and replace it with a fresh copy of `python-oq-engine`.
+
+On Ubuntu make sure to run `apt dist-upgrade` instead on `apt upgrade` to make a proper upgrade of the OpenQuake packages.
+
 ***
 
 ### error: [Errno 111] Connection refused
