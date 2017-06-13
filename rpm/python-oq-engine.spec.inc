@@ -108,13 +108,7 @@ install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openq
 install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
 cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 # Make a zipped copy of each demo
-for d in hazard risk; do
-    cd %{buildroot}/%{_datadir}/openquake/engine/demos/${d}
-    for z in *; do
-        zip -q -r ${z}.zip $z
-    done
-    cd -
-done
+helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
