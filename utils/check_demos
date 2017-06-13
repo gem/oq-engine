@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2017, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+
+#  You should have received a copy of the GNU Affero ],General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.o']rg/licenses/>.
+
+import os.path
+import getpass
+from openquake.server.manage import db
+
+expected_outputs = {
+    'AreaSourceClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
+    'CharacteristicFaultSourceCase1ClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
+    'CharacteristicFaultSourceCase2ClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
+    'CharacteristicFaultSourceCase3ClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
+    'ComplexFaultSourceClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
+    'Disaggregation': ['hcurves', 'disagg'],
+    'EventBasedPSHA': ['ruptures', 'gmf_data', 'hcurves', 'hmaps'],
+    'LogicTreeCase1ClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
+    'LogicTreeCase2ClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
+    'LogicTreeCase3ClassicalPSHA': ['hcurves', 'hmaps'],
+    'PointSourceClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
+    'ScenarioCase1': ['gmf_data'],
+    'ScenarioCase2': ['gmf_data'],
+    'SimpleFaultSourceClassicalPSHA': ['hcurves', 'uhs'],
+    'ClassicalBCR': ['hcurves', 'bcr-rlzs'],
+    'ClassicalRisk': ['hcurves', 'hmaps', 'loss_maps-rlzs'],
+    'ScenarioDamage': ['dmg_by_asset', 'dmg_by_taxon', 'dmg_total', 'losses_by_asset', 'losses_by_taxon', 'losses_total'],
+    'ClassicalDamage': ['hcurves', 'damages-rlzs'],
+    'EventBasedRisk': ['agg_loss_table', 'avg_losses-rlzs', 'avg_losses-stats', 'loss_maps-rlzs', 'loss_maps-stats', 'losses_by_taxon-rlzs', 'ruptures'],
+    'ScenarioRisk': ['gmf_data', 'losses_by_asset', 'losses_by_event', 'losses_by_taxon-rlzs']}
+
+
+def get_job_dir_job_id(db, user):
+    query = '''select job_ini, job_id from (
+select job_id, substr(message, 9) as job_ini, min(log.oid) from log, job
+where job_id = job.id and user_name=?x
+group by job_id) as x
+where substr(job_ini, 1, 1)="/"
+order by job_id
+'''
+    # extract the directory name from the job_ini
+    return {job_ini.split('/')[-2]: job_dir
+            for job_ini, job_dir in db(query, 'michele')}
+
+
+def get_outputs(db, job_id):
+    rows = db("select ds_key from output where oq_job_id=?x", job_id)
+    return set(row[0] for row in rows)
+
+
+def main():
+    items = sorted(get_job_dir_job_id(db, getpass.getuser()).items())
+    for job_dir, job_id in items:
+        got = get_outputs(db, job_id)
+        missing = set(expected_outputs[job_dir]) - got
+        if missing:
+            outs = ', '.join(got)
+            exps = ', '.join(expected_outputs[job_dir])
+            raise RuntimeError(
+                'Missing outputs for job %d, %s: expected %s, got %s' %
+                (job_id, job_dir, exps, outs))
+    print('Checked the outputs of %d demos: all OK' % len(items))
+
+if __name__ == '__main__':
+    main()
