@@ -30,6 +30,6 @@ checkcmd zip
 for d in hazard risk; do
     cd ${OQ_DEMOS}/${d}
     for z in *; do
-        zip -q -r ${z}.zip $z
+        if [ -d $z ]; then zip -q -r ${z}.zip $z; fi
     done
 done
