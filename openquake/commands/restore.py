@@ -18,6 +18,7 @@
 
 import re
 import sys
+import time
 import os.path
 import zipfile
 import sqlite3
@@ -30,6 +31,7 @@ def restore(archive, oqdata):
     """
     Build a new oqdata directory from the data contained in the zip archive
     """
+    t0 = time.time()
     oqdata = os.path.abspath(oqdata)
     assert archive.endswith('.zip'), archive
     if os.path.exists(oqdata):
@@ -48,7 +50,8 @@ def restore(archive, oqdata):
             db("UPDATE job SET ds_calc_dir=?x WHERE id=?x", fullname, job_id)
             print('Restoring ' + fname)
             n += 1
-    print('Extracted %d calculations into %s' % (n, oqdata))
+    dt = time.time() - t0
+    print('Extracted %d calculations into %s in %d seconds' % (n, oqdata, dt))
 
 
 restore.arg('archive', 'path to a zip file')
