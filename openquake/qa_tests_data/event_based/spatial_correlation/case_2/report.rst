@@ -2,12 +2,11 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26087.hdf5 Tue Jun  6 14:58:53 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29250.hdf5 Wed Jun 14 10:04:46 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 2, sitecol = 863 B
+num_sites = 2, num_imts = 1
 
 Parameters
 ----------
@@ -73,7 +72,7 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 Informational data
 ------------------
 ============================ ==========================================================================
-compute_ruptures.received    tot 354.99 KB, max_per_task 354.99 KB                                     
+compute_ruptures.received    max_per_task 354.99 KB, tot 354.99 KB                                     
 compute_ruptures.sent        sources 1.29 KB, src_filter 712 B, param 544 B, monitor 311 B, gsims 102 B
 hazard.input_weight          0.100                                                                     
 hazard.n_imts                1 B                                                                       
@@ -106,7 +105,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.020 NaN    0.020 0.020 1        
+compute_ruptures   0.019 NaN    0.019 0.019 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -114,13 +113,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-setting event years            0.089     0.0       1     
-saving ruptures                0.052     0.0       1     
-total compute_ruptures         0.020     0.355     1     
-store source_info              0.004     0.0       1     
-reading composite source model 0.002     0.0       1     
-prefiltering source model      0.001     0.0       1     
-managing sources               0.001     0.0       1     
-filtering ruptures             5.541E-04 0.0       1     
-reading site collection        4.148E-05 0.0       1     
+setting event years            0.099     0.0       1     
+saving ruptures                0.088     0.0       1     
+total compute_ruptures         0.019     0.422     1     
+store source_info              0.005     0.0       1     
+reading composite source model 0.001     0.0       1     
+managing sources               9.508E-04 0.0       1     
+filtering ruptures             5.510E-04 0.0       1     
+prefiltering source model      4.990E-04 0.0       1     
+reading site collection        3.791E-05 0.0       1     
 ============================== ========= ========= ======
