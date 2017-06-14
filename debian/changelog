@@ -1,4 +1,7 @@
   [Daniele Viganò]
+  * Fixed a bug introduced by a change in Django 1.10 that was causing
+    the HTTP requests log to be caught by our logging system and
+    then saved in the DbServer
   * Updated requirements to allow installation of Django 1.11 (LTS)
 
   [Michele Simionato]
