@@ -2,12 +2,11 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26081.hdf5 Tue Jun  6 14:58:47 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29244.hdf5 Wed Jun 14 10:04:40 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 3
 
 Parameters
 ----------
@@ -43,7 +42,7 @@ Composite source model
 ========= ====== ============================================================== ====================== ================
 smlt_path weight source_model_file                                              gsim_logic_tree        num_realizations
 ========= ====== ============================================================== ====================== ================
-b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(2,5,1,4,4,0,0) 4/4             
+b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(2,5,1,0,4,0,4) 4/4             
 ========= ====== ============================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -109,7 +108,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.010 4.585E-04 0.010 0.011 4        
+count_eff_ruptures 0.010 2.637E-04 0.010 0.011 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -117,12 +116,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.626     0.0       1     
-managing sources               0.102     0.0       1     
-total count_eff_ruptures       0.042     0.0       4     
-prefiltering source model      0.019     0.0       1     
-store source_info              0.014     0.0       1     
-aggregate curves               5.033E-04 0.0       4     
-reading site collection        3.386E-05 0.0       1     
-saving probability maps        2.575E-05 0.0       1     
+reading composite source model 4.921     0.0       1     
+managing sources               0.104     0.0       1     
+total count_eff_ruptures       0.041     0.0       4     
+prefiltering source model      0.018     0.0       1     
+store source_info              0.016     0.0       1     
+aggregate curves               4.387E-04 0.0       4     
+reading site collection        4.959E-05 0.0       1     
+saving probability maps        2.599E-05 0.0       1     
 ============================== ========= ========= ======

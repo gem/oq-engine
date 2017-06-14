@@ -2,12 +2,11 @@ Scenario Risk for Nepal with 20 assets
 ======================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26104.hdf5 Tue Jun  6 14:59:26 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29267.hdf5 Wed Jun 14 10:05:20 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 20, sitecol = 1.79 KB
+num_sites = 20, num_imts = 1
 
 Parameters
 ----------
@@ -38,6 +37,22 @@ job_ini                  `job.ini <job.ini>`_
 rupture_model            `fault_rupture.xml <fault_rupture.xml>`_                                  
 structural_vulnerability `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_
 ======================== ==========================================================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================= =========== ======================= =================
+grp_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -81,7 +96,7 @@ reading exposure        0.009     0.0       1
 computing gmfs          0.007     0.0       1     
 filtering sites         0.004     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     9.172E-04 0.0       1     
-building epsilons       7.424E-04 0.0       1     
-reading site collection 5.722E-06 0.0       1     
+building riskinputs     9.730E-04 0.0       1     
+building epsilons       5.198E-04 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======
