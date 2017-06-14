@@ -575,3 +575,6 @@ class OqParam(valid.ParamSet):
             raise ValueError('The `uniform_hazard_spectra` can be True only '
                              'if the IMT set contains SA(...) or PGA, got %s'
                              % list(self.imtls))
+        elif len(ok_imts) == 1:
+            raise ValueError(
+                'There is a single IMT, uniform_hazard_spectra cannot be True')
