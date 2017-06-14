@@ -27,12 +27,11 @@ import collections
 
 import numpy
 
-from openquake.hazardlib import __version__ as hazardlib_version
+from openquake.baselib import general, hdf5, __version__ as engine_version
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
-from openquake.baselib import general, hdf5
-from openquake.baselib.performance import Monitor
-from openquake.risklib import riskinput, __version__ as engine_version
+from openquake.risklib import riskinput
 from openquake.commonlib import readinput, datastore, source, calc, riskmodels
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
@@ -134,7 +133,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitecol = datastore.persistent_attribute('sitecol')
     assetcol = datastore.persistent_attribute('assetcol')
     performance = datastore.persistent_attribute('performance')
-    csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
@@ -164,7 +162,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = engine_version
-        attrs['hazardlib_version'] = hazardlib_version
         self.datastore.flush()
 
     def set_log_format(self):
@@ -182,8 +179,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.close = close
         self.set_log_format()
         if logversion:  # make sure this is logged only once
+            logging.info('Running %s', self.oqparam.inputs['job_ini'])
             logging.info('Using engine version %s', engine_version)
-            logging.info('Using hazardlib version %s', hazardlib_version)
             logversion = False
         if concurrent_tasks is None:  # use the default
             pass
