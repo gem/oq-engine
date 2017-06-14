@@ -52,7 +52,7 @@ where substr(job_ini, 1, 1)="/"
 order by job_id
 '''  # extract the directory name from the job_ini
     return {job_ini.split('/')[-2]: job_dir
-            for job_ini, job_dir in db(query, 'michele')}
+            for job_ini, job_dir in db(query, user)}
 
 
 def get_outputs(db, job_id):
