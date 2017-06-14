@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Updated requirements to allow installation of Django 1.11 (LTS)
+
   [Michele Simionato]
   * Added a check that on the number of intensity measure types when
     generating uniform hazard spectra (must be > 1)
