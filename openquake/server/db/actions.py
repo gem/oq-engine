@@ -630,3 +630,4 @@ SELECT id, description, user_name,
 FROM job WHERE status='complete' AND description LIKE lower(?x)
 ORDER BY id desc'''
     return db(query, description.lower())
+
