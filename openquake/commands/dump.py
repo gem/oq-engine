@@ -20,6 +20,7 @@ from __future__ import print_function
 import time
 import os.path
 from openquake.baselib import sap
+from openquake.baselib.general import safeprint
 from openquake.server.manage import db
 from openquake.engine.export.core import zipfiles
 
@@ -38,10 +39,17 @@ def dump(archive, user=None):
         param['user_name'] = user
     fnames = [f for f, in db(getfnames, param) if os.path.exists(f)]
     fnames.append(db.path)
-    zipfiles(fnames, archive, print)
+    zipfiles(fnames, archive, safeprint)
+    executing = db('select id, description from job where status="executing"')
     dt = time.time() - t0
-    print('Archived %d files into %s in %d seconds'
-          % (len(fnames), archive, dt))
+    safeprint('Archived %d files into %s in %d seconds'
+              % (len(fnames), archive, dt))
+    if executing:
+        safeprint('WARNING: there were calculations executing during the dump')
+        safeprint('They have been not copied; please check the correctness of'
+                  ' the db.sqlite3 file.')
+        for job_id, descr in executing:
+            safeprint('%d %s' % (job_id, descr))
 
 dump.arg('archive', 'path to the zip file where to dump the calculations')
 dump.arg('user', 'if missing, dump all calculations')
