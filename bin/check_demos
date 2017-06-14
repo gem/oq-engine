@@ -44,15 +44,15 @@ expected_outputs = {
 
 
 def get_job_dir_job_id(db, user):
-    query = '''select job_ini, job_id from (
-select job_id, substr(message, 9) as job_ini, min(log.oid) from log, job
-where job_id = job.id and user_name=?x
-group by job_id) as x
-where substr(job_ini, 1, 1)="/"
-order by job_id
-'''  # extract the directory name from the job_ini
-    return {job_ini.split('/')[-2]: job_dir
-            for job_ini, job_dir in db(query, user)}
+    dic = {}
+    for job_id, in db('select id from job where user_name=?x', user):
+        rows = db('select substr(message, 9) from log '  # strip Running
+                  'where job_id=?x limit 1', job_id)
+        if rows:
+            job_dir = rows[0][0]
+            if job_dir.startswith('/'):
+                dic[job_dir.split('/')[-2]] = job_id
+    return dic
 
 
 def get_outputs(db, job_id):
@@ -68,12 +68,6 @@ def main():
     demo directory. If a directory contains both a hazard and a risk job.ini
     we use the job_id of the risk computation.
     """
-    if os.environ.get('TRAVIS_BUILD_DIR'):  # debugging
-        data = db('''select job_ini, job_id from (
-        select job_id, substr(message, 9) as job_ini, min(log.oid) from log, job
-        where job_id = job.id group by job_id) as x order by job_id''')
-        for row in data:
-            print(row)
     items = sorted(get_job_dir_job_id(db, getpass.getuser()).items())
     for job_dir, job_id in items:
         got = get_outputs(db, job_id)
