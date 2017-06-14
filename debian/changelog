@@ -1,3 +1,5 @@
+python-oq-engine (2.5.0-0~precise01) precise; urgency=low
+
   [Armando Scarpati]
   * Added a confirmation dialog when trying to remove a calculation via the
     WebUI
@@ -48,6 +50,8 @@
     provider for API and WebUI
   * Now the command `oq webui start` tries to open a browser tab
     with the WebUI loaded
+
+ -- Daniele Viganò (GEM Foundation) <daniele@openquake.org>  Wed, 14 Jun 2017 10:32:28 +0200
 
 python-oq-engine (2.4.0-0~precise01) precise; urgency=low
 
