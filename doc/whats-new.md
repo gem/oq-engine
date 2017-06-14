@@ -15,12 +15,10 @@ transfer. The computational performance is more or less the same as
 before, though.
 
 This is the first release integrating hazardlib into the engine: there
-are no more hazardlib packages. The change is transparent to the user
-and the upgrade procedure will automatically uninstall the old
-hazardlib. However, scientists and developers using the oq-hazardlib
-repository from GitHub should know that it has been deprecated.  In
-order to avoid confusion, we suggest to remove the oq-hazardlib
-repository if you have one.
+are no more hazardlib packages. The change is transparent to the users
+of the official packages/installers, i.e. there is nothing to do for them.
+However, scientists and developers using the oq-hazardlib repository
+from GitHub should [remove it manually](https://github.com/gem/oq-engine/blob/engine-2.5/doc/faq.md#openquake-hazardlib-errors) to avoid possible confusions.
 
 Several bugs have been fixed and there were a few improvements to the
 Web User Interface(WebUI) and to the engine itself.
@@ -77,7 +75,8 @@ There were several improvements to the Web UI:
   the WebUI (see https://github.com/gem/oq-engine/blob/engine-2.5/doc/installing/server.md);
 - there is a confirmation dialog when removing a calculation;
 - we added an end point `v1/calc/XXX/oqparam` to extract the calculation
-  parameters as a JSON dictionary, which is used by the QGIS plugin.
+  parameters as a JSON dictionary, which is used by the [QGIS plugin]
+  (https://plugins.qgis.org/plugins/svir/).
 
 
 Bugs fixed
@@ -96,7 +95,8 @@ Bugs fixed
 - there was a bug in `dbserver.different_paths` affecting people with an engine
   installed in a directory involving symbolic links.
 - there was bug in the debugging utility `oq plot`; still the official way
-  to display the outputs of the engine is the QGIS plugin.
+  to display the outputs of the engine is the [QGIS plugin]
+  (https://plugins.qgis.org/plugins/svir/).
 
 Other improvements
 ---------------------
