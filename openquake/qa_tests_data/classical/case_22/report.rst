@@ -2,12 +2,11 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26065.hdf5 Tue Jun  6 14:58:29 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29228.hdf5 Wed Jun 14 10:04:20 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 21, sitecol = 1.84 KB
+num_sites = 21, num_imts = 6
 
 Parameters
 ----------
@@ -97,8 +96,8 @@ Alaska_asc_grid_NSHMP2007.xml
 Informational data
 ------------------
 ============================== =============================================================================
-count_eff_ruptures.received    tot 1.14 KB, max_per_task 584 B                                              
-count_eff_ruptures.sent        sources 6.29 KB, param 3.62 KB, srcfilter 2.43 KB, gsims 706 B, monitor 626 B
+count_eff_ruptures.received    tot 1.14 KB, max_per_task 585 B                                              
+count_eff_ruptures.sent        sources 6.08 KB, param 3.62 KB, srcfilter 2.43 KB, gsims 706 B, monitor 626 B
 hazard.input_weight            126                                                                          
 hazard.n_imts                  6 B                                                                          
 hazard.n_levels                114 B                                                                        
@@ -115,8 +114,8 @@ Slowest sources
 ====== ========= ================ ============ ========= ========= =========
 grp_id source_id source_class     num_ruptures calc_time num_sites num_split
 ====== ========= ================ ============ ========= ========= =========
-1      mps-0     MultiPointSource 1,104        6.127E-05 21        1        
-0      mps-0     MultiPointSource 160          5.293E-05 21        1        
+1      mps-0     MultiPointSource 1,104        6.175E-05 21        1        
+0      mps-0     MultiPointSource 160          6.127E-05 21        1        
 ====== ========= ================ ============ ========= ========= =========
 
 Computation times by source typology
@@ -124,27 +123,27 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 1.142E-04 2     
+MultiPointSource 1.230E-04 2     
 ================ ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ===== =========
-operation-duration mean      stddev    min       max   num_tasks
-count_eff_ruptures 9.830E-04 6.238E-05 9.389E-04 0.001 2        
-================== ========= ========= ========= ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_eff_ruptures 0.001 3.422E-05 0.001 0.001 2        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-store source_info              0.003     0.0       1     
-reading composite source model 0.003     0.0       1     
-total count_eff_ruptures       0.002     0.0       2     
+store source_info              0.004     0.0       1     
+reading composite source model 0.004     0.0       1     
+total count_eff_ruptures       0.002     0.023     2     
 managing sources               0.002     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        1.855E-04 0.0       1     
-aggregate curves               3.767E-05 0.0       2     
-saving probability maps        2.408E-05 0.0       1     
+reading site collection        2.496E-04 0.0       1     
+aggregate curves               4.601E-05 0.0       2     
+saving probability maps        3.099E-05 0.0       1     
 ============================== ========= ========= ======
