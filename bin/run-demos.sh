@@ -12,7 +12,9 @@ done
 for ini in $(find $TRAVIS_BUILD_DIR/demos -name job.ini | sort); do
     oq engine --run $ini
 done
-oq export hcurves-rlzs --exports hdf5 -d /tmp
+
+# do something with the generated data
+python -m openquake.commands export hcurves-rlzs 18 --exports hdf5 -d /tmp
 python -m openquake.commands engine --lhc
-MPLBACKEND=Agg python -m openquake.commands plot -1
-MPLBACKEND=Agg python -m openquake.commands plot_uhs -1
+MPLBACKEND=Agg python -m openquake.commands plot 18
+MPLBACKEND=Agg python -m openquake.commands plot_uhs 18
