@@ -8,9 +8,9 @@ for demo_dir in $(find $1 -type d | sort); do
    fi
 done
 # run the other demos (slow)
-#for ini in $(find $1 -name job.ini | sort); do
-#    python -m openquake.commands engine --run $ini
-#done
+for ini in $(find $1 -name job.ini | sort); do
+    python -m openquake.commands engine --run $ini
+done
 
 # do something with the generated data
 python -m openquake.commands export hcurves-rlzs 18 --exports hdf5 -d /tmp
