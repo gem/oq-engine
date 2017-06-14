@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added two commands `oq dump` and `oq restore`
   * Added a check that on the number of intensity measure types when
     generating uniform hazard spectra (must be > 1)
 
