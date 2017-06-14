@@ -17,8 +17,8 @@ before, though.
 This is the first release integrating hazardlib into the engine: there
 are no more hazardlib packages. The change is transparent to the users
 of the official packages/installers, i.e. there is nothing to do for them.
-However, scientists and developers using the oq-hazardlib repository
-from GitHub or PyPI should [remove it manually](https://github.com/gem/oq-engine/blob/engine-2.5/doc/faq.md#openquake-hazardlib-errors) to avoid possible confusions.
+However, scientists and developers using the `oq-hazardlib` repository
+from GitHub or the PyPI `openquake.hazardlib` package should [remove it manually](https://github.com/gem/oq-engine/blob/engine-2.5/doc/faq.md#openquake-hazardlib-errors) to avoid possible confusions.
 
 Several bugs have been fixed and there were a few improvements to the
 Web User Interface(WebUI) and to the engine itself.
