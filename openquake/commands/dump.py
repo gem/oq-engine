@@ -26,14 +26,14 @@ from openquake.engine.export.core import zipfiles
 @sap.Script
 def dump(archive):
     """
-    Dump the openquake database and all datastores into a archive zip file.
-    In a multiuser installation must be run as administrator.
+    Dump the openquake database and all the complete calculations into a zip
+    file. In a multiuser installation must be run as administrator.
     """
     assert archive.endswith('.zip'), archive
-    fnames = [fname for fname, in db('select ds_calc_dir || ".hdf5" from job')
-              if os.path.exists(fname)]
+    query = 'select ds_calc_dir || ".hdf5" from job where status="complete"'
+    fnames = [fname for fname, in db(query) if os.path.exists(fname)]
     fnames.append(db.path)
     zipfiles(fnames, archive, print)
-    print('Zipped %d files into %s' % (len(fnames), archive))
+    print('Archived %d files into %s' % (len(fnames), archive))
 
 dump.arg('archive', 'path to a zip file')
