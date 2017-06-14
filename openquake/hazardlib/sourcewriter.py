@@ -231,7 +231,7 @@ def build_multi_mfd(mfd):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    node = Node("multiMFD", dict(kind=mfd.kind))
+    node = Node("multiMFD", dict(kind=mfd.kind, size=mfd.size))
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
@@ -558,6 +558,13 @@ def build_source_group(source_group):
     if source_group.grp_probability is not None:
         attrs['grp_probability'] = source_group.grp_probability
     return Node('sourceGroup', attrs, nodes=source_nodes)
+
+
+# usage: hdf5write(datastore.hdf5, csm)
+@obj_to_node.add('CompositeSourceModel')
+def build_source_model(csm):
+    nodes = [obj_to_node(sg) for sg in csm.src_groups]
+    return Node('compositeSourceModel', {}, nodes=nodes)
 
 
 # ##################### generic source model writer ####################### #
