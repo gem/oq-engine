@@ -34,9 +34,6 @@ jobs:
         - bin/run-demos.sh
         - oq dump /tmp/oqdata.zip
         - oq restore /tmp/oqdata.zip /tmp/oqdata
-  - stage: tests
-    env: SCRIPTS
-    script:
         - helpers/zipdemos.sh $(pwd)/demos
 
 install:
