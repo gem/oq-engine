@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Added a check that on the number of intensity measure types when
+    generating uniform hazard spectra (must be > 1)
+
 python-oq-engine (2.5.0-0~precise01) precise; urgency=low
 
   [Armando Scarpati]
