@@ -59,7 +59,7 @@ To make this change permanent, add it at the bottom of `.bashrc` or `.bash_profi
 
 ***
 
-### OpenQuke Hazardlib errors
+### OpenQuake Hazardlib errors
 ```bash
 pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
 ```
