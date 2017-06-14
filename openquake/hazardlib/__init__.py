@@ -20,7 +20,7 @@
 hazardlib stands for Hazard Library.
 """
 
-from openquake.baselib.general import git_suffix
+from openquake.baselib import __version__
 from openquake.hazardlib import (
     calc, geo, gsim, mfd, scalerel, source, const, correlation, imt, pmf, site,
     tom, near_fault)
@@ -28,7 +28,3 @@ from openquake.hazardlib import (
 
 class InvalidFile(Exception):
     pass
-
-# the version is managed by packager.sh with a sed
-__version__ = '0.25.0'
-__version__ += git_suffix(__file__)

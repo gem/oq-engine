@@ -32,6 +32,10 @@ jobs:
     env: DEMOS
     script: 
         - bin/run-demos.sh
+  - stage: tests
+    env: SCRIPTS
+    script:
+        - helpers/zipdemos.sh $(pwd)/demos
 
 install:
   - pip -q install -r requirements-py35-linux64.txt

@@ -612,7 +612,6 @@ celery_wait $GEM_MAXLOOP"
         cd /usr/share/openquake/engine/demos
 
         for ini in \$(find . -name job.ini | sort); do
-            echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
                 oq engine --run \$ini --exports xml,hdf5
@@ -643,9 +642,7 @@ celery_wait $GEM_MAXLOOP"
         for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
-            echo \"Running \$demo_dir/job_hazard.ini using celery\"
             OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
-            echo \"Running \$demo_dir/job_risk.ini\"
             oq engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
             fi
@@ -1256,7 +1253,7 @@ fi
 cd "$GEM_BUILD_SRC"
 
 # version info from openquake/risklib/__init__.py
-ini_vers="$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
+ini_vers="$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
@@ -1325,7 +1322,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/,\$ p" >> debian/changelog
     rm debian/changelog.orig
 
-    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/risklib/__init__.py
+    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/baselib/__init__.py
 else
     cp debian/changelog debian/changelog.orig
     cat debian/changelog.orig | sed "1 s/${BUILD_UBUVER_REFERENCE}/${BUILD_UBUVER}/g" > debian/changelog

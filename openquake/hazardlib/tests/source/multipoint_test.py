@@ -36,8 +36,9 @@ class MultiPointTestCase(unittest.TestCase):
         mesh = Mesh(numpy.array([0, 1]), numpy.array([0.5, 1]))
         tom = PoissonTOM(50.)
         mmfd = MultiMFD('incrementalMFD',
-                        min_mag=[4.5, 4.5],
-                        bin_width=[2.0, 2.0],
+                        size=2,
+                        min_mag=[4.5],
+                        bin_width=[2.0],
                         occurRates=[[.3, .1], [.4, .2, .1]])
         mps = MultiPointSource('mp1', 'multi point source',
                                'Active Shallow Crust',
@@ -51,7 +52,9 @@ class MultiPointTestCase(unittest.TestCase):
         for split in splits:
             self.assertEqual(split.src_group_id, mps.src_group_id)
 
-        self.assertEqual(obj_to_node(mps).to_str(), '''\
+        got = obj_to_node(mps).to_str()
+        print(got)
+        self.assertEqual(got, '''\
 multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Shallow Crust'}
   multiPointGeometry
     gml:posList [0, 0.5, 1, 1.0]
@@ -59,9 +62,9 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
     lowerSeismoDepth 20
   magScaleRel 'PeerMSR'
   ruptAspectRatio 1.0
-  multiMFD{kind='incrementalMFD'}
-    bin_width [2.0, 2.0]
-    min_mag [4.5, 4.5]
+  multiMFD{kind='incrementalMFD', size=2}
+    bin_width [2.0]
+    min_mag [4.5]
     occurRates [0.3, 0.1, 0.4, 0.2, 0.1]
     lengths [2, 3]
   nodalPlaneDist
