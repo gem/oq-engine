@@ -578,7 +578,13 @@ def get_export(request, calc_id, what):
     etype = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
     with datastore.read(fname) as ds:
         ds.export_dir = tempfile.mkdtemp()
-        [fname] = export((what, etype), ds)
+        fnames = export((what, etype), ds)
+        if len(fnames) != 1:
+            shutil.rmtree(ds.export_dir)
+            return HttpResponse(
+                content='Expected a single filename, got %s' % fnames,
+                content_type='text/plain', status=500)
+        [fname] = fnames
     stream = FileWrapper(open(fname, 'rb'))
     stream.close = lambda: (
         FileWrapper.close(stream), shutil.rmtree(ds.export_dir))
