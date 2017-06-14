@@ -43,7 +43,7 @@ def zipfiles(fnames, archive, log=lambda msg: None):
     """
     z = zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, allowZip64=True)
     for f in fnames:
-        log('Zipping %s' % f)
+        log('Archiving %s' % f)
         z.write(f, os.path.basename(f))
     z.close()
 
