@@ -75,8 +75,7 @@ There were several improvements to the Web UI:
   the WebUI (see https://github.com/gem/oq-engine/blob/engine-2.5/doc/installing/server.md);
 - there is a confirmation dialog when removing a calculation;
 - we added an end point `v1/calc/XXX/oqparam` to extract the calculation
-  parameters as a JSON dictionary, which is used by the [QGIS plugin]
-  (https://plugins.qgis.org/plugins/svir/).
+  parameters as a JSON dictionary, which is used by the [QGIS plugin](https://plugins.qgis.org/plugins/svir/).
 
 
 Bugs fixed
@@ -95,8 +94,7 @@ Bugs fixed
 - there was a bug in `dbserver.different_paths` affecting people with an engine
   installed in a directory involving symbolic links.
 - there was bug in the debugging utility `oq plot`; still the official way
-  to display the outputs of the engine is the [QGIS plugin]
-  (https://plugins.qgis.org/plugins/svir/).
+  to display the outputs of the engine is the [QGIS plugin](https://plugins.qgis.org/plugins/svir/).
 
 Other improvements
 ---------------------
