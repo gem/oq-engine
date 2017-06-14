@@ -312,7 +312,7 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',
                 reference_vs30_value='200',
-                sites='0.1 0.2',
+                sites='0.1 0.2, 0.3 0.4',
                 poes='0.2',
                 maximum_distance='400',
                 intensity_measure_types_and_levels="{'PGA': [0.1, 0.2, 0.3]}",
