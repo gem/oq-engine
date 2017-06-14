@@ -68,7 +68,7 @@ def main():
     demo directory. If a directory contains both a hazard and a risk job.ini
     we use the job_id of the risk computation.
     """
-    if os.environ('TRAVIS_BUILD_DIR'):  # debugging
+    if os.environ.get('TRAVIS_BUILD_DIR'):  # debugging
         data = db('''select job_ini, job_id from (
         select job_id, substr(message, 9) as job_ini, min(log.oid) from log, job
         where job_id = job.id group by job_id) as x order by job_id''')
