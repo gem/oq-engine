@@ -2,12 +2,11 @@ Classical Hazard QA Test, Case 12
 =================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26079.hdf5 Tue Jun  6 14:58:42 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29242.hdf5 Wed Jun 14 10:04:35 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -102,8 +101,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      2         PointSource  1            1.590E-04 1         1        
-0      1         PointSource  1            1.588E-04 1         1        
+1      2         PointSource  1            1.934E-04 1         1        
+0      1         PointSource  1            1.068E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -111,27 +110,27 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.178E-04 2     
+PointSource  3.002E-04 2     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =========
-operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 8.692E-04 5.901E-06 8.650E-04 8.733E-04 2        
-================== ========= ========= ========= ========= =========
+================== ========= ========= ========= ===== =========
+operation-duration mean      stddev    min       max   num_tasks
+count_eff_ruptures 8.222E-04 3.195E-04 5.963E-04 0.001 2        
+================== ========= ========= ========= ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-store source_info              0.004     0.0       1     
+store source_info              0.008     0.0       1     
+managing sources               0.003     0.0       1     
 reading composite source model 0.002     0.0       1     
-managing sources               0.002     0.0       1     
 total count_eff_ruptures       0.002     0.0       2     
-prefiltering source model      0.001     0.0       1     
-aggregate curves               4.745E-05 0.0       2     
-reading site collection        4.411E-05 0.0       1     
-saving probability maps        3.290E-05 0.0       1     
+prefiltering source model      6.709E-04 0.0       1     
+aggregate curves               8.297E-05 0.0       2     
+saving probability maps        5.388E-05 0.0       1     
+reading site collection        4.530E-05 0.0       1     
 ============================== ========= ========= ======
