@@ -2,12 +2,11 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26057.hdf5 Tue Jun  6 14:58:24 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29220.hdf5 Wed Jun 14 10:04:15 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 3, sitecol = 917 B
+num_sites = 3, num_imts = 2
 
 Parameters
 ----------
@@ -117,10 +116,10 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-2      1         AreaSource   240          0.002     3         1        
 3      1         AreaSource   240          0.002     3         1        
-1      2         PointSource  15           1.981E-04 3         1        
-0      1         PointSource  15           1.755E-04 3         1        
+2      1         AreaSource   240          0.001     3         1        
+1      2         PointSource  15           1.957E-04 3         1        
+0      1         PointSource  15           1.876E-04 3         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -129,14 +128,14 @@ Computation times by source typology
 source_class calc_time counts
 ============ ========= ======
 AreaSource   0.003     2     
-PointSource  3.736E-04 2     
+PointSource  3.834E-04 2     
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 9.612E-04 0.001 0.003 4        
+count_eff_ruptures 0.002 8.185E-04 0.001 0.003 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -144,12 +143,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.009     0.0       1     
-total count_eff_ruptures       0.008     0.0       4     
+reading composite source model 0.010     0.0       1     
+total count_eff_ruptures       0.007     0.0       4     
 store source_info              0.005     0.0       1     
 managing sources               0.004     0.0       1     
-prefiltering source model      0.003     0.0       1     
-aggregate curves               9.155E-05 0.0       4     
-reading site collection        4.435E-05 0.0       1     
-saving probability maps        3.195E-05 0.0       1     
+prefiltering source model      0.002     0.0       1     
+aggregate curves               8.893E-05 0.0       4     
+reading site collection        4.721E-05 0.0       1     
+saving probability maps        3.219E-05 0.0       1     
 ============================== ========= ========= ======
