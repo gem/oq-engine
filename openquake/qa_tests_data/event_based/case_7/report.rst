@@ -2,12 +2,11 @@ Event-based PSHA with logic tree sampling
 =========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26094.hdf5 Tue Jun  6 14:59:01 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29257.hdf5 Wed Jun 14 10:04:54 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 3, sitecol = 917 B
+num_sites = 3, num_imts = 2
 
 Parameters
 ----------
@@ -123,7 +122,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.842 0.595  0.285 1.595 4        
+compute_ruptures   0.852 0.616  0.286 1.646 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -131,13 +130,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.366     2.688     4     
-filtering ruptures             0.601     0.0       2,598 
-managing sources               0.191     0.0       1     
-saving ruptures                0.119     0.0       4     
-reading composite source model 0.116     0.0       1     
-setting event years            0.057     0.0       1     
+total compute_ruptures         3.407     2.086     4     
+filtering ruptures             0.620     0.0       2,598 
+managing sources               0.186     0.0       1     
+saving ruptures                0.123     0.0       4     
+reading composite source model 0.111     0.0       1     
+setting event years            0.058     0.0       1     
 store source_info              0.005     0.0       1     
-prefiltering source model      0.004     0.0       1     
-reading site collection        5.412E-05 0.0       1     
+prefiltering source model      0.003     0.0       1     
+reading site collection        5.269E-05 0.0       1     
 ============================== ========= ========= ======
