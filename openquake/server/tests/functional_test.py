@@ -185,6 +185,13 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
         self.assertEqual(resp['calculation_mode'], 'classical')
 
+        # check the /export endpoint
+        url = 'http://%s/v1/valid/%s/export/hcurves/rlz-000' % (
+            self.hostport, job_id)
+        resp = requests.get(url, dict(export_type='csv'))
+        # for some reason one gets a 405: Method Now Allowed
+        # but it works in the browser!?
+
     def test_err_1(self):
         # the rupture XML file has a syntax error
         job_id = self.postzip('archive_err_1.zip')
