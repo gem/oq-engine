@@ -571,10 +571,10 @@ class OqParam(valid.ParamSet):
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
-        if len(ok_imts) == 1:
-            raise ValueError(
-                'There is a single IMT, uniform_hazard_spectra cannot be True')
-        elif not ok_imts:
+        if not ok_imts:
             raise ValueError('The `uniform_hazard_spectra` can be True only '
                              'if the IMT set contains SA(...) or PGA, got %s'
                              % list(self.imtls))
+        elif len(ok_imts) == 1:
+            raise ValueError(
+                'There is a single IMT, uniform_hazard_spectra cannot be True')
