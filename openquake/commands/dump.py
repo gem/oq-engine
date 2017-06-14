@@ -47,9 +47,9 @@ def dump(archive, user=None):
     if executing:
         safeprint('WARNING: there were calculations executing during the dump')
         safeprint('They have been not copied; please check the correctness of'
-                  ' the db.sqlite3 file.')
+                  ' the db.sqlite3 file')
         for job_id, descr in executing:
-            safeprint('%d %s' % (job_id, descr))
+            safeprint('%d executing %s' % (job_id, descr))
 
 dump.arg('archive', 'path to the zip file where to dump the calculations')
 dump.arg('user', 'if missing, dump all calculations')
