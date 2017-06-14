@@ -2,12 +2,11 @@ event based risk
 ================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26050.hdf5 Tue Jun  6 14:58:19 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29213.hdf5 Wed Jun 14 10:04:09 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 7, sitecol = 1.11 KB
+num_sites = 7, num_imts = 4
 
 Parameters
 ----------
@@ -143,9 +142,9 @@ Slowest sources
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
 1      2         SimpleFaultSource         4            0.0       7         0        
-2      1         SimpleFaultSource         482          0.0       7         0        
 3      2         CharacteristicFaultSource 1            0.0       7         0        
 0      1         SimpleFaultSource         482          0.0       7         0        
+2      1         SimpleFaultSource         482          0.0       7         0        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -161,7 +160,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.040 0.024  0.003 0.074 8        
+compute_ruptures   0.037 0.023  0.004 0.074 8        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -169,14 +168,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.320     0.0       8     
-managing sources               0.098     0.0       1     
-reading composite source model 0.013     0.0       1     
-reading exposure               0.006     0.0       1     
-prefiltering source model      0.005     0.0       1     
+total compute_ruptures         0.296     0.004     8     
+managing sources               0.121     0.0       1     
+reading composite source model 0.017     0.0       1     
+reading exposure               0.009     0.0       1     
+prefiltering source model      0.006     0.0       1     
 saving ruptures                0.005     0.0       8     
-store source_info              0.004     0.0       1     
+store source_info              0.005     0.0       1     
 setting event years            0.002     0.0       1     
-filtering ruptures             8.130E-04 0.0       2     
-reading site collection        6.437E-06 0.0       1     
+filtering ruptures             7.145E-04 0.0       2     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

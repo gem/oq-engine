@@ -2,12 +2,11 @@ scenario hazard
 ===============
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_26106.hdf5 Tue Jun  6 14:59:26 2017
-engine_version                            2.5.0-gitb270b98        
-hazardlib_version                         0.25.0-git6276f16       
+localhost:/mnt/ssd/oqdata/calc_29269.hdf5 Wed Jun 14 10:05:20 2017
+engine_version                            2.5.0-gite200a20        
 ========================================= ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -36,6 +35,22 @@ exposure      `exposure_model.xml <exposure_model.xml>`_
 job_ini       `job_h.ini <job_h.ini>`_                  
 rupture_model `rupture_model.xml <rupture_model.xml>`_  
 ============= ==========================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== =================== ========= ========== ==========
+grp_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      BooreAtkinson2008() rjb       vs30       mag rake  
+====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -66,5 +81,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.006     0.0       1     
 reading exposure        0.005     0.0       1     
-reading site collection 5.484E-06 0.0       1     
+reading site collection 6.437E-06 0.0       1     
 ======================= ========= ========= ======
