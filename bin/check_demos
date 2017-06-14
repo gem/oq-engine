@@ -46,12 +46,16 @@ expected_outputs = {
 def get_job_dir_job_id(db, user):
     dic = {}
     for job_id, in db('select id from job where user_name=?x', user):
+        # we are doing a bunch of queries here; originally I wrote
+        # this as a single query but I could not get it working reliably
+        # on CI; anyway, since there are only ~20 demos this is ultra-fast
         rows = db('select substr(message, 9) from log '  # strip Running
                   'where job_id=?x limit 1', job_id)
         if rows:
-            job_dir = rows[0][0]
-            if job_dir.startswith('/'):
-                dic[job_dir.split('/')[-2]] = job_id
+            [[job_ini]] = rows
+            if job_ini.startswith('/'):
+                # extract the job.ini directory
+                dic[job_ini.split('/')[-2]] = job_id
     return dic
 
 
