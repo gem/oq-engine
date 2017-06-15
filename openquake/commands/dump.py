@@ -28,7 +28,7 @@ from openquake.engine.export.core import zipfiles
 
 def smart_save(dbpath, archive, jobs):
     """
-    Make a copy of the db, remove the pending jobs, add to the archive
+    Make a copy of the db, remove the pending jobs, add the copy to the archive
     """
     tmpdir = tempfile.mkdtemp()
     newdb = os.path.join(tmpdir, os.path.basename(dbpath))
