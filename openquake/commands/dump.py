@@ -39,6 +39,7 @@ def smart_save(dbpath, archive, jobs):
                 conn.execute('DELETE FROM job WHERE id=?', (job.id,))
     except:
         safeprint('Please check the copy of the db in %s' % newdb)
+        raise
     zipfiles([newdb], archive, 'a', safeprint)
     shutil.rmtree(tmpdir)
 
