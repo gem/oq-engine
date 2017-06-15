@@ -376,7 +376,7 @@ def get_gmfs(dstore, precalc=None):
     """
     :param dstore: a datastore
     :param precalc: a scenario calculator with attribute .gmfa
-    :returns: a dictionary grp_id, gsid -> gmfa
+    :returns: a pair (etags, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
     oq = dstore['oqparam']
     if 'gmfs' in oq.inputs:  # from file
@@ -391,12 +391,11 @@ def get_gmfs(dstore, precalc=None):
         haz_sitecol = dstore.parent['sitecol']  # S sites
     else:
         haz_sitecol = sitecol  # N sites
-    S = len(haz_sitecol)
     N = len(haz_sitecol.complete)
     I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
     etags = numpy.arange(E)
-    gmfs = numpy.zeros((len(rlzs_assoc), N, I, E))
+    gmfs = numpy.zeros((len(rlzs_assoc), N, E, I))
     if precalc:
         for g, gsim in enumerate(precalc.gsims):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
@@ -404,16 +403,13 @@ def get_gmfs(dstore, precalc=None):
 
     # else read from the datastore
     gsims = sorted(dstore['gmf_data/grp-00'])
-    imtis = range(len(oq.imtls))
     for i, gsim in enumerate(gsims):
         dset = dstore['gmf_data/grp-00/' + gsim]
         for s, sid in enumerate(haz_sitecol.sids):
-            for imti in imtis:
-                idx = E * (S * imti + s)
-                array = dset[idx: idx + E]
-                if numpy.unique(array['sid']) != [sid]:  # sanity check
-                    raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[i, sid, imti] = array['gmv']
+            array = dset[E * s: E * s + E]  # shape (E, I)
+            if numpy.unique(array['sid']) != [sid]:  # sanity check
+                raise ValueError('The GMFs have been stored incorrectly')
+            gmfs[i, sid] = array['gmv']
     return etags, gmfs
 
 
