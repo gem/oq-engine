@@ -42,7 +42,7 @@ install:
   - pip -q install -e .
 
 before_script:
-  - python -c'import platform; print(platform.platform())'
+  - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
 
 after_script:
   - bin/oq reset --yes
