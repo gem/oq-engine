@@ -15,9 +15,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>
 
-# Work in progress
-
 set -e
+
+checkcmd() {
+    command -v $1 >/dev/null 2>&1 || { echo >&2 "This script requires '$1' but it isn't available. Aborting."; exit 1; }
+}
 
 CUR=$(pwd)
 BASE=$(cd $(dirname $0)/.. && /bin/pwd)
