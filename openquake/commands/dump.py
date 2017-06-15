@@ -38,16 +38,17 @@ def dump(archive, user=None):
     fnames = [f for f, in db(getfnames, param) if os.path.exists(f)]
     fnames.append(db.path)
     zipfiles(fnames, archive, safeprint)
-    executing = db('select id, description from job where status="executing"')
+    pending_jobs = db('select id, status, description from job '
+                      'where status!="complete"')
     dt = time.time() - t0
     safeprint('Archived %d files into %s in %d seconds'
               % (len(fnames), archive, dt))
-    if executing:
+    if pending_jobs:
         safeprint('WARNING: there were calculations executing during the dump')
         safeprint('They have been not copied; please check the correctness of'
                   ' the db.sqlite3 file')
-        for job_id, descr in executing:
-            safeprint('%d executing %s' % (job_id, descr))
+        for job_id, status, descr in pending_jobs:
+            safeprint('%d %s %s' % (job_id, status, descr))
 
 dump.arg('archive', 'path to the zip file where to dump the calculations')
 dump.arg('user', 'if missing, dump all calculations')
