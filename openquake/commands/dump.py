@@ -16,11 +16,31 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import time
+import shutil
+import sqlite3
 import os.path
+import tempfile
 from openquake.baselib import sap
 from openquake.baselib.general import safeprint
 from openquake.server.manage import db
 from openquake.engine.export.core import zipfiles
+
+
+def smart_save(dbpath, archive, jobs):
+    """
+    Make a copy of the db, remove the pending jobs, add to the archive
+    """
+    tmpdir = tempfile.mkdtemp()
+    newdb = os.path.join(tmpdir, os.path.basename(dbpath))
+    shutil.copy(dbpath, newdb)
+    try:
+        with sqlite3.connect(newdb) as conn:
+            for job in jobs:
+                conn.execute('DELETE FROM job WHERE id=?', (job.id,))
+    except:
+        safeprint('Please check the copy of the db in %s' % newdb)
+    zipfiles([newdb], archive, 'a', safeprint)
+    shutil.rmtree(tmpdir)
 
 
 @sap.Script
@@ -36,19 +56,23 @@ def dump(archive, user=None):
     if user:
         param['user_name'] = user
     fnames = [f for f, in db(getfnames, param) if os.path.exists(f)]
-    fnames.append(db.path)
-    zipfiles(fnames, archive, safeprint)
+    zipfiles(fnames, archive, 'w', safeprint)
     pending_jobs = db('select id, status, description from job '
                       'where status="executing"')
-    dt = time.time() - t0
-    safeprint('Archived %d files into %s in %d seconds'
-              % (len(fnames), archive, dt))
     if pending_jobs:
-        safeprint('WARNING: there were calculations executing during the dump')
-        safeprint('They have been not copied; please check the correctness of'
-                  ' the db.sqlite3 file')
+        safeprint('WARNING: there were calculations executing during the dump,'
+                  ' they have been not copied')
         for job_id, status, descr in pending_jobs:
             safeprint('%d %s %s' % (job_id, status, descr))
+        # this also checks that the copied db is not corrupted
+        smart_save(db.path, archive, pending_jobs)
+    else:
+        zipfiles([db.path], archive, 'a', safeprint)
+
+    dt = time.time() - t0
+    safeprint('Archived %d files into %s in %d seconds'
+              % (len(fnames) + 1, archive, dt))
+
 
 dump.arg('archive', 'path to the zip file where to dump the calculations')
 dump.arg('user', 'if missing, dump all calculations')
