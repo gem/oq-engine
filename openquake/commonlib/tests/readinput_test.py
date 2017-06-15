@@ -201,7 +201,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
         oqparam.max_site_model_distance = 5
-        oqparam.sites = [(1.0, 0, 0)]
+        oqparam.sites = [(1.0, 0, 0), (2.0, 0, 0)]
         oqparam.inputs = dict(site_model=sitemodel())
         with mock.patch('logging.warn') as warn:
             readinput.get_site_collection(oqparam)
@@ -209,8 +209,8 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         self.assertEqual(
             warn.call_args[0][0],
             'The site parameter associated to '
-            '<Latitude=0.000000, Longitude=1.000000, Depth=0.0000> '
-            'came from a distance of 111 km!')
+            '<Latitude=0.000000, Longitude=2.000000, Depth=0.0000> '
+            'came from a distance of 222 km!')
 
 
 class ExposureTestCase(unittest.TestCase):
