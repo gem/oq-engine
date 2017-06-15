@@ -26,17 +26,17 @@ from openquake.server.manage import db
 from openquake.engine.export.core import zipfiles
 
 
-def smart_save(dbpath, archive, jobs):
+def smart_save(dbpath, archive):
     """
-    Make a copy of the db, remove the pending jobs, add the copy to the archive
+    Make a copy of the db, remove the incomplete jobs and add the copy
+    to the archive
     """
     tmpdir = tempfile.mkdtemp()
     newdb = os.path.join(tmpdir, os.path.basename(dbpath))
     shutil.copy(dbpath, newdb)
     try:
         with sqlite3.connect(newdb) as conn:
-            for job in jobs:
-                conn.execute('DELETE FROM job WHERE id=?', (job.id,))
+            conn.execute('DELETE FROM job WHERE status != "complete"')
     except:
         safeprint('Please check the copy of the db in %s' % newdb)
         raise
@@ -66,7 +66,7 @@ def dump(archive, user=None):
         for job_id, status, descr in pending_jobs:
             safeprint('%d %s %s' % (job_id, status, descr))
         # this also checks that the copied db is not corrupted
-        smart_save(db.path, archive, pending_jobs)
+        smart_save(db.path, archive)
     else:
         zipfiles([db.path], archive, 'a', safeprint)
 
