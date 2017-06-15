@@ -95,7 +95,7 @@ def expose_outputs(dstore):
             dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
-    if 'poes' in dstore:
+    if 'poes' in dstore or 'hcurves' in dstore:
         dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them

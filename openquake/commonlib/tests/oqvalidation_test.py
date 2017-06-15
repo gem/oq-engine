@@ -297,7 +297,7 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',
                 reference_vs30_value='200',
-                sites='0.1 0.2',
+                sites='0.1 0.2, 0.3 0.4',
                 poes='0.2',
                 maximum_distance='400',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
@@ -306,6 +306,20 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn("The `uniform_hazard_spectra` can be True only if "
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
+
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='classical',
+                gsim='BooreAtkinson2008',
+                reference_vs30_value='200',
+                sites='0.1 0.2, 0.3 0.4',
+                poes='0.2',
+                maximum_distance='400',
+                intensity_measure_types_and_levels="{'PGA': [0.1, 0.2, 0.3]}",
+                uniform_hazard_spectra='1',
+            ).set_risk_imtls({})
+        self.assertIn("There is a single IMT, uniform_hazard_spectra cannot "
+                      "be True", str(ctx.exception))
 
     def test_set_risk_imtls(self):
         oq = object.__new__(OqParam)

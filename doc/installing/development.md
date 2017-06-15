@@ -117,7 +117,7 @@ source $HOME/openquake/qoenv/bin/activate
 You can also add a short-hand command to enable it:
 
 ```bash
-alias oqenv="source $HOME/openquake/qoenv/bin/activate"
+alias oqenv="source $HOME/openquake/oqenv/bin/activate"
 ```
 
 Put it again at the bottom of `~/.bashrc` or `~/.profile`; close and re-open the terminal. You can now load your environment just typing `oqenv`.
