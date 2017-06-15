@@ -14,3 +14,4 @@ dist
 *.noseids
 *.egg-info
 local_settings.py
+demos/*/*.zip
