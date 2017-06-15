@@ -444,7 +444,7 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     :param id:
         if given, extract only the specified calculation
     :returns:
-        list of tuples (job_id, user_name, job_status, job_type,
+        list of tuples (job_id, user_name, job_status, calculation_mode,
                         job_is_running, job_description)
     """
     # helper to get job+calculation data from the oq-engine database
