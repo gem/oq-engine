@@ -2,12 +2,11 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 =================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26058.hdf5 Tue Jun  6 14:58:25 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29221.hdf5 Wed Jun 14 10:04:15 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 6, sitecol = 1.05 KB
+num_sites = 6, num_imts = 1
 
 Parameters
 ----------
@@ -74,7 +73,7 @@ source_model.xml 0      Volcanic 1           440          440
 Informational data
 ------------------
 ============================== =========================================================================
-count_eff_ruptures.received    tot 580 B, max_per_task 580 B                                            
+count_eff_ruptures.received    max_per_task 580 B, tot 580 B                                            
 count_eff_ruptures.sent        sources 1.97 KB, srcfilter 824 B, param 604 B, monitor 313 B, gsims 101 B
 hazard.input_weight            44                                                                       
 hazard.n_imts                  1 B                                                                      
@@ -118,9 +117,9 @@ operation                      time_sec  memory_mb counts
 reading composite source model 0.009     0.0       1     
 store source_info              0.004     0.0       1     
 total count_eff_ruptures       0.003     0.0       1     
-prefiltering source model      0.002     0.0       1     
+prefiltering source model      0.001     0.0       1     
 managing sources               0.001     0.0       1     
-reading site collection        1.748E-04 0.0       1     
-saving probability maps        3.076E-05 0.0       1     
-aggregate curves               2.313E-05 0.0       1     
+reading site collection        1.917E-04 0.0       1     
+saving probability maps        3.195E-05 0.0       1     
+aggregate curves               2.337E-05 0.0       1     
 ============================== ========= ========= ======

@@ -267,6 +267,9 @@ def get_site_collection(oqparam, mesh=None):
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
                           param.z1pt0, param.z2pt5, param.backarc))
+        if len(sitecol) == 1 and oqparam.hazard_maps:
+            logging.warn('There is a single site, hazard_maps=true '
+                         'has little sense')
         return site.SiteCollection(sitecol)
 
     # else use the default site params
@@ -833,7 +836,7 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, etags, gmf array of shape (N, I, E)
+        sitecol, etags, gmf array of shape (N, E, I)
     """
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.txt'):
@@ -844,9 +847,9 @@ def get_gmfs(oqparam):
         raise NotImplemented('Reading from %s' % fname)
     N, E = gmfs_by_imt.shape
     I = len(oqparam.imtls)
-    gmfs = numpy.zeros((N, I, E), F32)
+    gmfs = numpy.zeros((N, E, I), F32)
     for imti, imtstr in enumerate(oqparam.imtls):
-        gmfs[:, imti, :] = gmfs_by_imt[imtstr]
+        gmfs[:, :, imti] = gmfs_by_imt[imtstr]
     return sitecol, etags, gmfs
 
 
