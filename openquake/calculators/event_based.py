@@ -194,8 +194,6 @@ def _build_eb_ruptures(
 
 
 def _count(ruptures):
-    if isinstance(ruptures, int):  # passed the number of ruptures
-        return ruptures
     return sum(ebr.multiplicity for ebr in ruptures)
 
 
