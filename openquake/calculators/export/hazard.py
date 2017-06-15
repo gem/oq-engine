@@ -25,8 +25,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5, parallel, performance
-from openquake.baselib.general import (
-    humansize, get_array, group_array, DictArray)
+from openquake.baselib.general import humansize, group_array, DictArray
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
@@ -640,7 +639,6 @@ def export_gmf(ekey, dstore):
     :param dstore: datastore object
     """
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     oq = dstore['oqparam']
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
@@ -652,31 +650,30 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     ruptures_by_rlz = collections.defaultdict(list)
-    for grp_id, gsim in rlzs_assoc:
-        key = 'grp-%02d' % grp_id
+    for grp in sorted(dstore['events']):
         try:
-            events = dstore['events/' + key]
+            events = dstore['events/' + grp]
         except KeyError:  # source model producing zero ruptures
             continue
         eventdict = dict(zip(events['eid'], events))
         try:
-            data = gmf_data['%s/%s' % (key, gsim)].value
-        except KeyError:  # no GMFs for the given realization
+            data = gmf_data[grp].value
+        except KeyError:  # no GMFs for the given group
             continue
-        for rlzi, rlz in enumerate(rlzs_assoc[grp_id, gsim]):
-            ruptures = ruptures_by_rlz[rlz]
-            gmf_arr = get_array(data, rlzi=rlzi)
+        for rlzi, gmf_arr in group_array(data, 'rlzi').items():
+            ruptures = ruptures_by_rlz[rlzi]
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
                 ses_idx = eventdict[eid]['ses']
                 rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
                 ruptures.append(rup)
-    for rlz in sorted(ruptures_by_rlz):
-        ruptures_by_rlz[rlz].sort(key=operator.attrgetter('eid'))
-        fname = dstore.build_fname('gmf', rlz, fmt)
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    for rlzi in sorted(ruptures_by_rlz):
+        ruptures_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
+        fname = dstore.build_fname('gmf', rlzi, fmt)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures_by_rlz[rlz],
-            rlz, investigation_time)
+            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures_by_rlz[rlzi],
+            rlzs[rlzi], investigation_time)
     return fnames
 
 
@@ -815,9 +812,9 @@ def export_gmf_scenario_npz(ekey, dstore):
     elif 'event_based' in oq.calculation_mode:
         dic['sitemesh'] = get_mesh(dstore['sitecol'])
         for grp in sorted(dstore['gmf_data']):
-            for rlzno in sorted(dstore['gmf_data/' + grp]):
-                dic['rlz-' + rlzno] = dstore[
-                    'gmf_data/%s/%s' % (grp, rlzno)].value
+            data_by_rlzi = group_array(dstore['gmf_data/' + grp].value, 'rlzi')
+            for rlzi in data_by_rlzi:
+                dic['rlz-%03d' % rlzi] = data_by_rlzi[rlzi]
     else:  # nothing to export
         return []
     savez(fname, **dic)
