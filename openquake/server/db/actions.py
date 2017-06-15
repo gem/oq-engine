@@ -444,7 +444,7 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     :param id:
         if given, extract only the specified calculation
     :returns:
-        list of tuples (job_id, user_name, job_status, job_type,
+        list of tuples (job_id, user_name, job_status, calculation_mode,
                         job_is_running, job_description)
     """
     # helper to get job+calculation data from the oq-engine database
@@ -458,8 +458,9 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     if id is not None:
         filterdict['id'] = id
 
-    if 'job_type' in request_get_dict:
-        filterdict['job_type'] = request_get_dict.get('job_type')
+    if 'calculation_mode' in request_get_dict:
+        filterdict['calculation_mode'] = request_get_dict.get(
+            'calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
@@ -480,9 +481,9 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    jobs = db('SELECT *, %s FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
-              % (JOB_TYPE, time_filter, limit), filterdict)
-    return [(job.id, job.user_name, job.status, job.job_type,
+    jobs = db('SELECT * FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
+              % (time_filter, limit), filterdict)
+    return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description) for job in jobs]
 
 
@@ -630,3 +631,4 @@ SELECT id, description, user_name,
 FROM job WHERE status='complete' AND description LIKE lower(?x)
 ORDER BY id desc'''
     return db(query, description.lower())
+
