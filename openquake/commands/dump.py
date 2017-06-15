@@ -39,7 +39,7 @@ def dump(archive, user=None):
     fnames.append(db.path)
     zipfiles(fnames, archive, safeprint)
     pending_jobs = db('select id, status, description from job '
-                      'where status!="complete"')
+                      'where status="executing"')
     dt = time.time() - t0
     safeprint('Archived %d files into %s in %d seconds'
               % (len(fnames), archive, dt))
