@@ -17,3 +17,6 @@ python -m openquake.commands export hcurves-rlzs -3 --exports hdf5 -d /tmp
 python -m openquake.commands engine --lhc
 MPLBACKEND=Agg python -m openquake.commands plot -3
 MPLBACKEND=Agg python -m openquake.commands plot_uhs -3
+
+# fake a wrong calculation still in executing status
+python -m openquake.commands db set_status 1 executing 
