@@ -193,8 +193,6 @@ def _build_eb_ruptures(
 
 
 def _count(ruptures):
-    if isinstance(ruptures, int):  # passed the number of ruptures
-        return ruptures
     return sum(ebr.multiplicity for ebr in ruptures)
 
 
@@ -275,11 +273,13 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         self.rupser.close()
         num_events = sum(_count(ruptures) for ruptures in result.values())
+        num_ruptures = sum(len(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
                 'small or the maximum_distance is too small')
-        logging.info('Setting %d event years', num_events)
+        logging.info('Setting %d event years on %d ruptures',
+                     num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             inv_time = int(self.oqparam.investigation_time)
