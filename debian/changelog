@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the storage of the GMFs; as a consequence the exported .csv
+    has a different format
+
   [Daniele Viganò]
   * Fixed a bug introduced by a change in Django 1.10 that was causing
     the HTTP requests log to be caught by our logging system and
