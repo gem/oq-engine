@@ -24,6 +24,8 @@ from openquake.calculators import base
 class FakeParams(object):
     export_dir = '/tmp'
     hazard_calculation_id = None
+    inputs = {'job_ini': 'fake_job.ini'}
+    concurrent_tasks = 0
 
     def to_params(self):
         return {}
