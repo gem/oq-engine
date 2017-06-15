@@ -151,7 +151,7 @@ def get_calc_id(db, datadir, job_id=None):
     return max(calc_id, job_id)
 
 
-def list_calculations(db, calculation_mode, user_name):
+def list_calculations(db, job_type, user_name):
     """
     Yield a summary of past calculations.
 
@@ -160,8 +160,7 @@ def list_calculations(db, calculation_mode, user_name):
     :param user_name: an user name
     """
     jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
-              'ORDER BY start_time',
-              user_name, calculation_mode)
+              'ORDER BY start_time', user_name, job_type)
 
     if len(jobs) == 0:
         yield 'None'
