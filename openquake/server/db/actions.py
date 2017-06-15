@@ -28,6 +28,15 @@ from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
 
+JOB_TYPE = '''CASE
+WHEN calculation_mode LIKE '%risk'
+OR calculation_mode LIKE '%bcr'
+OR calculation_mode LIKE '%damage'
+THEN 'risk'
+ELSE 'hazard'
+END AS job_type
+'''
+
 
 def check_outdated(db):
     """
@@ -160,7 +169,8 @@ def list_calculations(db, job_type, user_name):
     :param user_name: an user name
     """
     jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
-              'ORDER BY start_time', user_name, job_type)
+              'AND job_type=?x ORDER BY start_time' % JOB_TYPE,
+              user_name, job_type)
 
     if len(jobs) == 0:
         yield 'None'
