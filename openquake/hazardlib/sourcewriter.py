@@ -560,6 +560,13 @@ def build_source_group(source_group):
     return Node('sourceGroup', attrs, nodes=source_nodes)
 
 
+# usage: hdf5write(datastore.hdf5, csm)
+@obj_to_node.add('CompositeSourceModel')
+def build_source_model(csm):
+    nodes = [obj_to_node(sg) for sg in csm.src_groups]
+    return Node('compositeSourceModel', {}, nodes=nodes)
+
+
 # ##################### generic source model writer ####################### #
 
 def write_source_model(dest, sources_or_groups, name=None):

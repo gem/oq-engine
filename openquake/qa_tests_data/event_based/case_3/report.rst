@@ -2,12 +2,11 @@ Event Based QA Test, Case 3
 ===========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26090.hdf5 Tue Jun  6 14:58:54 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29253.hdf5 Wed Jun 14 10:04:47 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -74,7 +73,7 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 Informational data
 ------------------
 ============================ ==========================================================================
-compute_ruptures.received    tot 2.48 KB, max_per_task 2.48 KB                                         
+compute_ruptures.received    max_per_task 2.48 KB, tot 2.48 KB                                         
 compute_ruptures.sent        sources 1.29 KB, src_filter 684 B, param 605 B, monitor 311 B, gsims 168 B
 hazard.input_weight          0.100                                                                     
 hazard.n_imts                1 B                                                                       
@@ -121,7 +120,7 @@ total compute_ruptures         0.003     0.0       1
 reading composite source model 0.002     0.0       1     
 setting event years            0.001     0.0       1     
 managing sources               0.001     0.0       1     
-prefiltering source model      0.001     0.0       1     
-filtering ruptures             5.267E-04 0.0       1     
-reading site collection        4.387E-05 0.0       1     
+prefiltering source model      6.380E-04 0.0       1     
+filtering ruptures             5.500E-04 0.0       1     
+reading site collection        5.293E-05 0.0       1     
 ============================== ========= ========= ======
