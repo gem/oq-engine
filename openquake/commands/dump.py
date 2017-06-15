@@ -65,10 +65,9 @@ def dump(archive, user=None):
                   ' they have been not copied')
         for job_id, status, descr in pending_jobs:
             safeprint('%d %s %s' % (job_id, status, descr))
-        # this also checks that the copied db is not corrupted
-        smart_save(db.path, archive)
-    else:
-        zipfiles([db.path], archive, 'a', safeprint)
+
+    # this also checks that the copied db is not corrupted
+    smart_save(db.path, archive)
 
     dt = time.time() - t0
     safeprint('Archived %d files into %s in %d seconds'
