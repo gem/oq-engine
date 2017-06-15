@@ -2,12 +2,11 @@ classical risk
 ==============
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26008.hdf5 Tue Jun  6 14:57:59 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29171.hdf5 Wed Jun 14 10:03:47 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 7, sitecol = 1.11 KB
+num_sites = 7, num_imts = 4
 
 Parameters
 ----------
@@ -138,10 +137,10 @@ Slowest sources
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-0      1         SimpleFaultSource         482          0.050     7         15       
-2      1         SimpleFaultSource         482          0.045     7         15       
-3      2         CharacteristicFaultSource 1            0.004     7         1        
-1      2         SimpleFaultSource         4            0.003     7         1        
+0      1         SimpleFaultSource         482          0.047     7         15       
+2      1         SimpleFaultSource         482          0.036     7         15       
+1      2         SimpleFaultSource         4            0.005     7         1        
+3      2         CharacteristicFaultSource 1            0.003     7         1        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -149,15 +148,15 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.004     1     
-SimpleFaultSource         0.098     3     
+CharacteristicFaultSource 0.003     1     
+SimpleFaultSource         0.088     3     
 ========================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.014 0.008  0.004 0.027 8        
+count_eff_ruptures 0.013 0.006  0.004 0.024 8        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -165,13 +164,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_eff_ruptures       0.111     3.492     8     
-managing sources               0.097     0.0       1     
-reading composite source model 0.013     0.0       1     
+total count_eff_ruptures       0.101     3.570     8     
+managing sources               0.100     0.0       1     
+reading composite source model 0.014     0.0       1     
 reading exposure               0.007     0.0       1     
-prefiltering source model      0.006     0.0       1     
+prefiltering source model      0.005     0.0       1     
 store source_info              0.005     0.0       1     
-aggregate curves               1.976E-04 0.0       8     
-saving probability maps        2.789E-05 0.0       1     
-reading site collection        7.391E-06 0.0       1     
+aggregate curves               1.707E-04 0.0       8     
+saving probability maps        2.646E-05 0.0       1     
+reading site collection        7.153E-06 0.0       1     
 ============================== ========= ========= ======
