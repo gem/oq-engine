@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made the upgrade_manager transactional again
   * Changed the storage of the GMFs; as a consequence the exported .csv
     has a different format
 
