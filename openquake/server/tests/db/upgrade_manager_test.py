@@ -114,7 +114,6 @@ class UpgradeManagerTestCase(unittest.TestCase):
         # check that the rollback works: the version
         # table contains only the base script and the
         # tables are not populated, i.e. '0001' has to be rolled back
-        raise unittest.SkipTest
         self.assertEqual(count(conn, 'test_version'), 1)
         self.assertEqual(count(conn, 'test_hazard_calculation'), 0)
         self.assertEqual(count(conn, 'test_lt_source_model'), 0)
