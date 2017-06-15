@@ -2,12 +2,11 @@ QA test for disaggregation case_2
 =================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26110.hdf5 Tue Jun  6 14:59:27 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29273.hdf5 Wed Jun 14 10:05:21 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 2, sitecol = 863 B
+num_sites = 2, num_imts = 1
 
 Parameters
 ----------
@@ -91,7 +90,7 @@ source_model_2.xml 2      Active Shallow Crust 1           1420         1,420
 Informational data
 ------------------
 ============================== ===================================================================================
-count_eff_ruptures.received    tot 8.02 KB, max_per_task 623 B                                                    
+count_eff_ruptures.received    tot 8.03 KB, max_per_task 623 B                                                    
 count_eff_ruptures.sent        sources 17.47 KB, param 10.39 KB, srcfilter 9.73 KB, monitor 4.28 KB, gsims 2.37 KB
 hazard.input_weight            1,964                                                                              
 hazard.n_imts                  1 B                                                                                
@@ -109,10 +108,10 @@ Slowest sources
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-2      1         SimpleFaultSource 1,420        0.043     1         15       
-1      1         AreaSource        1,815        0.001     1         1        
-1      3         AreaSource        1,815        0.001     1         1        
-0      2         AreaSource        1,815        0.001     1         1        
+2      1         SimpleFaultSource 1,420        0.040     1         15       
+0      2         AreaSource        1,815        0.002     1         1        
+1      1         AreaSource        1,815        0.002     1         1        
+1      3         AreaSource        1,815        0.002     1         1        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -120,15 +119,15 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-AreaSource        0.004     3     
-SimpleFaultSource 0.043     1     
+AreaSource        0.005     3     
+SimpleFaultSource 0.040     1     
 ================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.004 0.002  0.002 0.009 14       
+count_eff_ruptures 0.004 0.001  0.002 0.007 14       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -136,12 +135,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.105     0.0       1     
-total count_eff_ruptures       0.058     0.0       14    
-reading composite source model 0.040     0.0       1     
-prefiltering source model      0.004     0.0       1     
-store source_info              0.004     0.0       1     
-aggregate curves               2.565E-04 0.0       14    
-reading site collection        4.292E-05 0.0       1     
-saving probability maps        2.646E-05 0.0       1     
+managing sources               0.104     0.0       1     
+total count_eff_ruptures       0.056     0.207     14    
+reading composite source model 0.042     0.0       1     
+store source_info              0.006     0.0       1     
+prefiltering source model      0.003     0.0       1     
+aggregate curves               4.423E-04 0.0       14    
+reading site collection        4.482E-05 0.0       1     
+saving probability maps        4.196E-05 0.0       1     
 ============================== ========= ========= ======
