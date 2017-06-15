@@ -2,12 +2,11 @@ Event Based Hazard QA Test, Case 17
 ===================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26084.hdf5 Tue Jun  6 14:58:50 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29247.hdf5 Wed Jun 14 10:04:43 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -120,7 +119,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.015 0.014  0.005 0.025 2        
+compute_ruptures   0.016 0.013  0.007 0.026 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -128,13 +127,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.030     0.0       2     
-store source_info              0.007     0.0       1     
-saving ruptures                0.006     0.0       2     
+total compute_ruptures         0.032     0.0       2     
+store source_info              0.004     0.0       1     
 reading composite source model 0.003     0.0       1     
-setting event years            0.002     0.0       1     
+saving ruptures                0.003     0.0       2     
 managing sources               0.002     0.0       1     
-prefiltering source model      0.002     0.0       1     
+setting event years            0.002     0.0       1     
 filtering ruptures             0.001     0.0       3     
-reading site collection        5.007E-05 0.0       1     
+prefiltering source model      9.027E-04 0.0       1     
+reading site collection        4.935E-05 0.0       1     
 ============================== ========= ========= ======
