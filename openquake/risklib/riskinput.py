@@ -442,40 +442,38 @@ class CompositeRiskModel(collections.Mapping):
                     [asset.ordinal for asset in group[taxonomy]])
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
-        for gsim in hazard_getter.rlzs_by_gsim:
-            with mon_hazard:
-                hazard = hazard_getter.get_hazard(gsim)
-            with mon_risk:
-                for out in self._gen_outputs(
-                        hazard_getter.rlzs_by_gsim[gsim], hazard, imti, dic):
-                    yield out
+        with mon_hazard:
+            hazard = hazard_getter.get_hazard()
+        with mon_risk:
+            for out in self._gen_outputs(hazard, imti, dic):
+                yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, rlzs, hazard, imti, dic):
+    def _gen_outputs(self, hazard, imti, dic):
         for taxonomy in sorted(dic):
             riskmodel = self[taxonomy]
             rangeI = [imti[riskmodel.risk_functions[lt].imt]
                       for lt in self.loss_types]
-            for r, rlz in enumerate(rlzs):
-                rlzi = rlz.ordinal
-                hazardr = hazard[r]
+            for rlzi, hazardr in sorted(hazard.items()):
                 for sid, assets, epsgetter in dic[taxonomy]:
-                    if isinstance(hazardr, dict):  # non-event based
-                        haz = {i: hazardr[sid, i] for i in rangeI}
+                    try:
+                        haz = hazardr[sid]
+                    except KeyError:  # no hazard for this site
+                        continue
+                    if len(haz) == 0:  # no hazard for this site
+                        continue
+                    elif isinstance(haz, numpy.ndarray):  # event_based
+                        eids = haz['eid']
+                        gmvs = haz['gmv']
+                        data = {i: (gmvs[:, i], eids) for i in rangeI}
                     else:
-                        data = hazardr[sid]
-                        if len(data):
-                            gmvs, eids = data['gmv'], data['eid']
-                            haz = {i: (gmvs[:, i], eids) for i in rangeI}
-                        else:
-                            haz = {i: [] for i in rangeI}
+                        data = haz
                     out = [None] * len(self.lti)
                     for lti, i in enumerate(rangeI):
-                        if len(haz[i]):
-                            lt = self.loss_types[lti]
-                            out[lti] = riskmodel(lt, assets, haz[i], epsgetter)
+                        lt = self.loss_types[lti]
+                        out[lti] = riskmodel(lt, assets, data[i], epsgetter)
                     yield Output(self.loss_types, assets, out, sid, rlzi)
 
     def __toh5__(self):
@@ -511,26 +509,24 @@ class HazardGetter(object):
         self.rlzs_by_gsim = rlzs_by_gsim
         self.sids = sids
         self.imts = imts
-        self.data = {}
+        self.data = collections.OrderedDict()
         for gsim in rlzs_by_gsim:
             rlzs = self.rlzs_by_gsim[gsim]
-            self.data[gsim] = []
-            for r, rlz in enumerate(rlzs):
-                datadict = collections.defaultdict(list)
-                self.data[gsim].append(datadict)
+            for rlz in rlzs:
+                self.data[rlz.ordinal] = datadict = {}
                 hazards_by_imt = hazards_by_rlz[rlz]
-                for imti, imt in enumerate(self.imts):
-                    if kind == 'poe':
-                        hazard_by_site = hazards_by_imt[imt][self.sids]
-                    else:  # gmf
-                        hazard_by_site = hazards_by_imt[self.sids, :, imti]
-                    for idx, haz in enumerate(hazard_by_site):
-                        datadict[idx, imti] = haz
+                for idx, sid in enumerate(sids):
+                    datadict[idx] = lst = [None for imt in imts]
+                    for imti, imt in enumerate(self.imts):
+                        if kind == 'poe':
+                            lst[imti] = hazards_by_imt[imt][sid]  # imls
+                        else:  # gmf
+                            lst[imti] = e = hazards_by_imt[sid, :, imti]
+                            num_events = len(e)
 
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
             # number of ground motion fields
-            num_events = hazard_by_site.shape[-1]
             self.eids = numpy.arange(num_events, dtype=F32)
             # dictionary rlzi -> array(imts, events, nbytes)
             self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
@@ -538,12 +534,12 @@ class HazardGetter(object):
     def init(self):  # for API compatibility
         pass
 
-    def get_hazard(self, gsim):
+    def get_hazard(self):
         """
         :param gsim: a GSIM instance
-        :returns: a list of dictionaries (num_sites, num_imts)
+        :yields: pairs (rlz, dic) where dic is dictionary (num_sites, num_imts)
         """
-        return self.data[gsim]
+        return self.data
 
 
 class GmfGetter(object):
@@ -575,6 +571,7 @@ class GmfGetter(object):
         """
         self.N = len(self.sitecol.complete)
         self.I = I = len(self.imts)
+        self.R = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.gmv_dt = numpy.dtype(
             [('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
         self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
@@ -595,68 +592,65 @@ class GmfGetter(object):
         # dictionary eid -> index
         self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
-    def gen_gmv(self, gsim):
+    def gen_gmv(self):
         """
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
         itemsize = self.gmf_data_dt.itemsize
-        rlzs = self.rlzs_by_gsim[gsim]
-        for computer in self.computers:
-            rup = computer.rupture
-            sids = computer.sites.sids
-            if self.samples > 1:
-                all_eids = [get_array(rup.events, sample=rlz.sampleid)['eid']
-                            for rlz in rlzs]
-            else:
-                all_eids = [rup.events['eid']] * len(rlzs)
-            size = itemsize * len(sids)
-            num_events = sum(len(eids) for eids in all_eids)
-            # NB: the trick for performance is to keep the call to
-            # compute.compute outside of the loop over the realizations
-            # it is better to have few calls producing big arrays
-            array = computer.compute(gsim, num_events).transpose(1, 0, 2)
-            # shape (N, I, E)
-            for i, miniml in enumerate(self.min_iml):  # set to 0 small gmvs
-                arr = array[:, i, :]
-                arr[arr < miniml] = 0
-            n = 0
-            for r, rlz in enumerate(rlzs):
-                e = len(all_eids[r])
-                gmdata = self.gmdata[rlz.ordinal]
-                gmdata[EVENTS] += e
-                for ei, eid in enumerate(all_eids[r]):
-                    gmf = array[:, :, n + ei]  # shape (N, I)
-                    tot = gmf.sum(axis=0)  # shape (I,)
-                    if not tot.sum():
-                        continue
-                    for i, val in enumerate(tot):
-                        gmdata[i] += val
-                    gmdata[NBYTES] += size
-                    for sid, gmv in zip(sids, gmf):
-                        if gmv.sum():
-                            yield r, sid, eid, gmv
-                n += e
+        for gsim, rlzs in self.rlzs_by_gsim.items():  # OrderedDict
+            for computer in self.computers:
+                rup = computer.rupture
+                sids = computer.sites.sids
+                if self.samples > 1:
+                    all_eids = [get_array(rup.events, sample=rlz.sampleid)
+                                ['eid'] for rlz in rlzs]
+                else:
+                    all_eids = [rup.events['eid']] * len(rlzs)
+                size = itemsize * len(sids)
+                num_events = sum(len(eids) for eids in all_eids)
+                # NB: the trick for performance is to keep the call to
+                # compute.compute outside of the loop over the realizations
+                # it is better to have few calls producing big arrays
+                array = computer.compute(gsim, num_events).transpose(1, 0, 2)
+                # shape (N, I, E)
+                for i, miniml in enumerate(self.min_iml):  # gmv < minimum
+                    arr = array[:, i, :]
+                    arr[arr < miniml] = 0
+                n = 0
+                for r, rlz in enumerate(rlzs):
+                    rlzi = rlz.ordinal
+                    e = len(all_eids[r])
+                    gmdata = self.gmdata[rlzi]
+                    gmdata[EVENTS] += e
+                    for ei, eid in enumerate(all_eids[r]):
+                        gmf = array[:, :, n + ei]  # shape (N, I)
+                        tot = gmf.sum(axis=0)  # shape (I,)
+                        if not tot.sum():
+                            continue
+                        for i, val in enumerate(tot):
+                            gmdata[i] += val
+                        gmdata[NBYTES] += size
+                        for sid, gmv in zip(sids, gmf):
+                            if gmv.sum():
+                                yield rlzi, sid, eid, gmv
+                    n += e
 
-    def get_hazard(self, gsim, data=None):
+    def get_hazard(self, data=None):
         """
-        :param gsim: a GSIM instance
         :param data: if given, an iterator of records of dtype gmf_data_dt
         :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
         if data is None:
-            data = self.gen_gmv(gsim)
-        R = len(self.rlzs_by_gsim[gsim])
-        gmfa = numpy.zeros((R, self.N), object)
+            data = list(self.gen_gmv())
+        rlzs = get_rlzs(self)
+        hazard = {rlz.ordinal: collections.defaultdict(list) for rlz in rlzs}
         for rlzi, sid, eid, gmv in data:
-            lst = gmfa[rlzi, sid]
-            if lst == 0:
-                gmfa[rlzi, sid] = [(gmv, eid)]
-            else:
-                lst.append((gmv, eid))
-        for idx, lst in numpy.ndenumerate(gmfa):
-            gmfa[idx] = numpy.array(lst or [], self.gmv_eid_dt)
-        return gmfa
+            hazard[rlzi][sid].append((gmv, eid))
+        for haz in hazard.values():
+            for sid in haz:
+                haz[sid] = numpy.array(haz[sid], self.gmv_eid_dt)
+        return hazard
 
 
 class GmfDataGetter(GmfGetter):
@@ -678,11 +672,11 @@ class GmfDataGetter(GmfGetter):
     def init(self):
         pass
 
-    def gen_gmv(self, gsim):
+    def gen_gmv(self):
         """
         Yield gmv records from the datastore, if present
         """
-        key = 'grp-%02d/%s' % (self.grp_id, gsim)
+        key = 'grp-%02d' % self.grp_id
         try:
             dset = self.gmf_data[key]
         except KeyError:
@@ -703,20 +697,18 @@ class GmfDataGetter(GmfGetter):
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             getter = cls(gmf_data, grp_id, rlzs_by_gsim)
-            for gsim, rlzs in rlzs_by_gsim.items():
-                for rec in getter.gen_gmv(gsim):
-                    if eid is None or eid == rec['eid']:
-                        rec['rlzi'] = rlzs[rec['rlzi']].ordinal
-                        records.append(rec)
+            for rec in getter.gen_gmv():
+                if eid is None or eid == rec['eid']:
+                    records.append(rec)
         return numpy.array(records, getter.gmf_data_dt)
 
 
-def get_rlzs(riskinput):
+def get_rlzs(hazard_getter):
     """
     Returns the realizations contained in the riskinput object.
     """
     all_rlzs = []
-    for gsim, rlzs in sorted(riskinput.hazard_getter.rlzs_by_gsim.items()):
+    for gsim, rlzs in sorted(hazard_getter.rlzs_by_gsim.items()):
         all_rlzs.extend(rlzs)
     return all_rlzs
 
@@ -747,7 +739,7 @@ class RiskInput(object):
         self.taxonomies = sorted(taxonomies_set)
         self.weight = len(self.aids)
 
-    rlzs = property(get_rlzs)
+    rlzs = property(lambda self: get_rlzs(self.hazard_getter))
 
     @property
     def imt_taxonomies(self):
@@ -784,7 +776,7 @@ class RiskInputFromRuptures(object):
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
 
-    rlzs = property(get_rlzs)
+    rlzs = property(lambda self: get_rlzs(self.hazard_getter))
 
     def epsilon_getter(self, asset_ordinals):
         """
