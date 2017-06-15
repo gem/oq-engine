@@ -28,13 +28,11 @@ from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
 
-JOB_TYPE = '''CASE
-WHEN calculation_mode LIKE '%risk'
-OR calculation_mode LIKE '%bcr'
-OR calculation_mode LIKE '%damage'
-THEN 'risk'
-ELSE 'hazard'
-END AS job_type
+CALCULATION_MODE = '''CASE
+WHEN calculation_mode LIKE ''
+THEN 'undefined'
+ELSE calculation_mode
+END AS calculation_mode
 '''
 
 
@@ -160,7 +158,7 @@ def get_calc_id(db, datadir, job_id=None):
     return max(calc_id, job_id)
 
 
-def list_calculations(db, job_type, user_name):
+def list_calculations(db, calculation_mode, user_name):
     """
     Yield a summary of past calculations.
 
@@ -169,8 +167,8 @@ def list_calculations(db, job_type, user_name):
     :param user_name: an user name
     """
     jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
-              'AND job_type=?x ORDER BY start_time' % JOB_TYPE,
-              user_name, job_type)
+              'ORDER BY start_time',
+              user_name, calculation_mode)
 
     if len(jobs) == 0:
         yield 'None'
@@ -458,8 +456,8 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     if id is not None:
         filterdict['id'] = id
 
-    if 'job_type' in request_get_dict:
-        filterdict['job_type'] = request_get_dict.get('job_type')
+    if 'calculation_mode' in request_get_dict:
+        filterdict['calculation_mode'] = request_get_dict.get('calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
@@ -481,9 +479,11 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
         time_filter = 1
 
     jobs = db('SELECT *, %s FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
-              % (JOB_TYPE, time_filter, limit), filterdict)
-    return [(job.id, job.user_name, job.status, job.job_type,
+              % (CALCULATION_MODE, time_filter, limit), filterdict)
+    return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description) for job in jobs]
+
+
 
 
 def set_relevant(db, job_id, flag):
