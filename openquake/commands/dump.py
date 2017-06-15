@@ -15,11 +15,10 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import time
 import os.path
 from openquake.baselib import sap
+from openquake.baselib.general import safeprint
 from openquake.server.manage import db
 from openquake.engine.export.core import zipfiles
 
@@ -38,10 +37,18 @@ def dump(archive, user=None):
         param['user_name'] = user
     fnames = [f for f, in db(getfnames, param) if os.path.exists(f)]
     fnames.append(db.path)
-    zipfiles(fnames, archive, print)
+    zipfiles(fnames, archive, safeprint)
+    pending_jobs = db('select id, status, description from job '
+                      'where status!="complete"')
     dt = time.time() - t0
-    print('Archived %d files into %s in %d seconds'
-          % (len(fnames), archive, dt))
+    safeprint('Archived %d files into %s in %d seconds'
+              % (len(fnames), archive, dt))
+    if pending_jobs:
+        safeprint('WARNING: there were calculations executing during the dump')
+        safeprint('They have been not copied; please check the correctness of'
+                  ' the db.sqlite3 file')
+        for job_id, status, descr in pending_jobs:
+            safeprint('%d %s %s' % (job_id, status, descr))
 
 dump.arg('archive', 'path to the zip file where to dump the calculations')
 dump.arg('user', 'if missing, dump all calculations')
