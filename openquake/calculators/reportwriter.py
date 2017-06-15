@@ -99,13 +99,8 @@ class ReportWriter(object):
         updated = str(time.ctime(mtime))
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
-        # NB: in the future, the sitecol could be transferred as
-        # an array by leveraging the HDF5 serialization protocol;
-        # for the moment however the size of the
-        # data to transfer is given by the usual pickle
-        sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
-        self.text += '\n\nnum_sites = %d, sitecol = %s' % (
-            len(dstore['sitecol']), sitecol_size)
+        self.text += '\n\nnum_sites = %d, num_imts = %d' % (
+            len(dstore['sitecol']), len(oq.imtls))
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -122,7 +117,7 @@ class ReportWriter(object):
         oq, ds = self.oq, self.dstore
         for name in ('params', 'inputs'):
             self.add(name)
-        if 'composite_source_model' in ds:
+        if 'csm_info' in ds:
             self.add('csm_info')
             self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
