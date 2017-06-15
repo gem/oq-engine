@@ -7,7 +7,6 @@
   * Better error checking when parsing a source model in NRML/0.5
   * Optimized `PointSource.get_bounding_box`
   * Introduced a MultiPointSource class and multiPointSource tag
-  * Introduced a MultiPointSource class and multiPointSource tag
 
   [Daniele Viganò]
   * Fixed an issue that was forcing users to install 'git' on macOS
