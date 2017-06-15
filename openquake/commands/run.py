@@ -27,7 +27,6 @@ from openquake.baselib import performance, general, sap
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, datastore, oqvalidation
 from openquake.calculators import base, views
-CT = oqvalidation.OqParam.concurrent_tasks.default
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -128,7 +127,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
 
 
 @sap.Script
-def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
+def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
         loglevel='info', pdb=None):
     """
     Run a calculation.

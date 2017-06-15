@@ -30,11 +30,11 @@ jobs:
         - pip install sphinx==1.3.6 && cd doc/sphinx && make html
   - stage: tests
     env: DEMOS
-    script: 
-        - bin/run-demos.sh
-  - stage: tests
-    env: SCRIPTS
     script:
+        - bin/run-demos.sh $TRAVIS_BUILD_DIR/demos
+        - bin/check_demos
+        - oq dump /tmp/oqdata.zip
+        - oq restore /tmp/oqdata.zip /tmp/oqdata
         - helpers/zipdemos.sh $(pwd)/demos
 
 install:
@@ -42,7 +42,7 @@ install:
   - pip -q install -e .
 
 before_script:
-  - python -c'import platform; print(platform.platform())'
+  - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
 
 after_script:
   - bin/oq reset --yes
