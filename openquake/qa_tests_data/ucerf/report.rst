@@ -2,12 +2,11 @@ Ucerf test
 ==========
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_26010.hdf5 Tue Jun  6 14:57:59 2017
-engine_version                            2.5.0-gitb270b98        
-hazardlib_version                         0.25.0-git6276f16       
+localhost:/mnt/ssd/oqdata/calc_29173.hdf5 Wed Jun 14 10:03:48 2017
+engine_version                            2.5.0-gite200a20        
 ========================================= ========================
 
-num_sites = 155, sitecol = 8.93 KB
+num_sites = 155, num_imts = 1
 
 Parameters
 ----------
@@ -185,5 +184,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 6.835E-04 0.0       1     
+reading site collection 7.763E-04 0.0       1     
 ======================= ========= ========= ======
