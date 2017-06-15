@@ -23,6 +23,7 @@ import os.path
 import zipfile
 import sqlite3
 from openquake.baselib import sap
+from openquake.baselib.general import safeprint
 from openquake.server.dbapi import Db
 
 
@@ -48,10 +49,11 @@ def restore(archive, oqdata):
             job_id = int(mo.group(1))
             fullname = os.path.join(oqdata, fname)[:-5]  # strip .hdf5
             db("UPDATE job SET ds_calc_dir=?x WHERE id=?x", fullname, job_id)
-            print('Restoring ' + fname)
+            safeprint('Restoring ' + fname)
             n += 1
     dt = time.time() - t0
-    print('Extracted %d calculations into %s in %d seconds' % (n, oqdata, dt))
+    safeprint('Extracted %d calculations into %s in %d seconds'
+              % (n, oqdata, dt))
 
 
 restore.arg('archive', 'path to a zip file')
