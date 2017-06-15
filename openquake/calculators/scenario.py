@@ -94,9 +94,6 @@ class ScenarioCalculator(base.HazardCalculator):
         return self.gmfa
 
     def post_execute(self, dummy):
-        """
-        :param gmfa: a dictionary gsim -> gmfa
-        """
         with self.monitor('saving gmfs', autoflush=True):
             self.datastore['gmf_data/grp-00'] = numpy.fromiter(
                 self._gen_gmv_data(), self.gmv_data_dt)
