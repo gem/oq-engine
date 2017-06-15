@@ -2,12 +2,11 @@ event based risk with PMF
 =========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26054.hdf5 Tue Jun  6 14:58:24 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29217.hdf5 Wed Jun 14 10:04:15 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -127,7 +126,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.049 0.011  0.041 0.061 3        
+compute_ruptures   0.053 0.009  0.043 0.062 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,14 +134,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.146     0.0       3     
+total compute_ruptures         0.160     0.0       3     
 managing sources               0.058     0.0       1     
-saving ruptures                0.015     0.0       3     
+saving ruptures                0.012     0.0       3     
 store source_info              0.007     0.0       1     
 filtering ruptures             0.006     0.0       31    
 reading exposure               0.006     0.0       1     
 reading composite source model 0.004     0.0       1     
 setting event years            0.003     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        8.345E-06 0.0       1     
 ============================== ========= ========= ======
