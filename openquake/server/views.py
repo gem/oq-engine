@@ -285,7 +285,7 @@ def calc_info(request, calc_id):
 @cross_domain_ajax
 def calc(request, id=None):
     """
-    Get a list of calculations and report their id, status, job_type,
+    Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
     can be accessed. This is called several times by the Javascript.
 
@@ -299,10 +299,11 @@ def calc(request, id=None):
                            user['name'], user['acl_on'], id)
 
     response_data = []
-    for hc_id, owner, status, job_type, is_running, desc in calc_data:
+    for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
-            dict(id=hc_id, owner=owner, status=status, job_type=job_type,
+            dict(id=hc_id, owner=owner,
+                 calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url))
 
     # if id is specified the related dictionary is returned instead the list
@@ -620,3 +621,4 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
 @require_http_methods(['GET'])
 def license(request, **kwargs):
     return render(request, "engine/license.html")
+
