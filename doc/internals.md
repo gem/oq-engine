@@ -15,6 +15,18 @@ $ python -m openquake.server.db.upgrade_manager ~/oqdata/db.sqlite3
 The OpenQuake server uses Django for the web/API application. Management can be done via:
 
 ```bash
+$ oq webui [help]
+```
+The `oq webui` command provides a limited subset of commands. To be able to access all the available commands in Django the following command must be used.
+
+```bash
+$ python -m openquake.server.manage [help]
+```
+
+Using packages, when a custom local_settings.py is used, the command must be run from `/usr/share/openquake/engine`.
+
+```bash
+$ cd /usr/share/openquake/engine
 $ python -m openquake.server.manage [help]
 ```
 
