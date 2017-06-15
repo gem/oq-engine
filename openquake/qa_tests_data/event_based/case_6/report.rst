@@ -2,12 +2,11 @@ Event-based PSHA producing hazard curves only
 =============================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26085.hdf5 Tue Jun  6 14:58:53 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29248.hdf5 Wed Jun 14 10:04:46 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -124,7 +123,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.985 0.658  0.391 1.693 4        
+compute_ruptures   0.982 0.683  0.347 1.698 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -132,13 +131,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.940     3.766     4     
-filtering ruptures             0.688     0.0       3,081 
-managing sources               0.185     0.0       1     
-saving ruptures                0.136     0.0       4     
-reading composite source model 0.111     0.0       1     
-setting event years            0.065     0.0       1     
-store source_info              0.005     0.0       1     
-prefiltering source model      0.003     0.0       1     
-reading site collection        5.245E-05 0.0       1     
+total compute_ruptures         3.929     2.348     4     
+filtering ruptures             0.702     0.0       3,081 
+managing sources               0.194     0.0       1     
+reading composite source model 0.115     0.0       1     
+saving ruptures                0.107     0.0       4     
+setting event years            0.056     0.0       1     
+store source_info              0.004     0.0       1     
+prefiltering source model      0.002     0.0       1     
+reading site collection        4.554E-05 0.0       1     
 ============================== ========= ========= ======
