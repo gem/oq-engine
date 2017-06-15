@@ -31,7 +31,6 @@ from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.risklib.riskinput import (
     GmfGetter, str2rsi, rsi2str, gmf_data_dt)
 from openquake.baselib import parallel
@@ -277,11 +276,13 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         self.rupser.close()
         num_events = sum(_count(ruptures) for ruptures in result.values())
+        num_ruptures = sum(len(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
                 'small or the maximum_distance is too small')
-        logging.info('Setting %d event years', num_events)
+        logging.info('Setting %d event years on %d ruptures',
+                     num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             inv_time = int(self.oqparam.investigation_time)
