@@ -402,14 +402,16 @@ def get_gmfs(dstore, precalc=None):
         return etags, gmfs
 
     # else read from the datastore
-    gsims = sorted(dstore['gmf_data/grp-00'])
-    for i, gsim in enumerate(gsims):
-        dset = dstore['gmf_data/grp-00/' + gsim]
+    dset = dstore['gmf_data/grp-00']
+    R = len(dstore['realizations'])
+    nrows = len(dset) // R
+    for r in range(R):
         for s, sid in enumerate(haz_sitecol.sids):
-            array = dset[E * s: E * s + E]  # shape (E, I)
+            start = r * nrows + E * s
+            array = dset[start: start + E]  # shape (E, I)
             if numpy.unique(array['sid']) != [sid]:  # sanity check
                 raise ValueError('The GMFs have been stored incorrectly')
-            gmfs[i, sid] = array['gmv']
+            gmfs[r, sid] = array['gmv']
     return etags, gmfs
 
 
