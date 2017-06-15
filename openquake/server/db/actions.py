@@ -28,13 +28,6 @@ from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
 
-CALCULATION_MODE = '''CASE
-WHEN calculation_mode LIKE ''
-THEN 'undefined'
-ELSE calculation_mode
-END AS calculation_mode
-'''
-
 
 def check_outdated(db):
     """
@@ -457,7 +450,8 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
         filterdict['id'] = id
 
     if 'calculation_mode' in request_get_dict:
-        filterdict['calculation_mode'] = request_get_dict.get('calculation_mode')
+        filterdict['calculation_mode'] = request_get_dict.get(
+            'calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
@@ -478,12 +472,10 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    jobs = db('SELECT *, %s FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
-              % (CALCULATION_MODE, time_filter, limit), filterdict)
+    jobs = db('SELECT * FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
+              % (time_filter, limit), filterdict)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description) for job in jobs]
-
-
 
 
 def set_relevant(db, job_id, flag):
