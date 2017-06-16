@@ -95,7 +95,7 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         with self.monitor('saving gmfs', autoflush=True):
-            self.datastore['gmf_data/grp-00'] = numpy.fromiter(
+            self.datastore['gmf_data/data'] = numpy.fromiter(
                 self._gen_gmv_data(), self.gmv_data_dt)
             self.datastore.set_nbytes('gmf_data')
 

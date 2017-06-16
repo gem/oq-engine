@@ -659,7 +659,10 @@ def export_gmf(ekey, dstore):
         try:
             data = gmf_data[grp].value
         except KeyError:  # no GMFs for the given group
-            continue
+            if grp == 'grp-00' and 'scenario' in oq.calculation_mode:
+                data = gmf_data['data'].value
+            else:
+                continue
         for rlzi, gmf_arr in group_array(data, 'rlzi').items():
             ruptures = ruptures_by_rlz[rlzi]
             for eid, gmfa in group_array(gmf_arr, 'eid').items():

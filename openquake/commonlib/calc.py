@@ -402,7 +402,7 @@ def get_gmfs(dstore, precalc=None):
         return etags, gmfs
 
     # else read from the datastore
-    dset = dstore['gmf_data/grp-00']
+    dset = dstore['gmf_data/data']
     R = len(dstore['realizations'])
     nrows = len(dset) // R
     for r in range(R):
