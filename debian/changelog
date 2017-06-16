@@ -1,5 +1,5 @@
   [Daniele Viganò]
-  * Added the 'celerystatus' script in 'utils' to check the
+  * Added the 'celery-status' script in 'utils' to check the
     task distribution in a multi-node celery setup
 
   [Armando Scarpati]
