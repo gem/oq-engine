@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Added the 'celerystatus' script in 'utils' to check the
+    task distribution in a multi-node celery setup
+
   [Armando Scarpati]
   * Visualized the calculation_mode in the WebUI
 
