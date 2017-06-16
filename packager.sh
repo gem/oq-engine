@@ -609,7 +609,7 @@ celery_wait $GEM_MAXLOOP"
             set -x
         fi
 
-        cd /usr/share/openquake/engine/utils/celery-status 
+        /usr/share/openquake/engine/utils/celery-status 
 
         cd /usr/share/openquake/engine/demos
         for demo_dir in \$(find . -type d | sort); do
