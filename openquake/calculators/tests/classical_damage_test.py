@@ -186,7 +186,6 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     def test_poe_1(self):
         oq = object.__new__(OqParam)
         oq.hazard_imtls = {'PGA': [0.00001, 0.0001, 0.001, 0.002, 0.01, 0.05]}
-        curves_by_trt_gsim = {
-            (0, 0): {'PGA': numpy.array([1, 0.99, 0.95, 0.9, 0.6, 0.1])}}
+        curves = [{'PGA': numpy.array([1, 0.99, 0.95, 0.9, 0.6, 0.1])}]
         with self.assertRaises(ValueError):
-            ClassicalDamageCalculator(oq).check_poes(curves_by_trt_gsim)
+            ClassicalDamageCalculator(oq).check_poes(curves)
