@@ -108,7 +108,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        self.datastore['etags'], gmfs = calc.get_gmfs(
+        self.datastore['eids'], gmfs = calc.get_gmfs(
             self.datastore, self.precalc)
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
                          for rlz in self.rlzs_assoc.realizations}
