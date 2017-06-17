@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import itertools
 import logging
 import numpy
 import h5py
@@ -370,6 +371,20 @@ def make_uhs(pmap, imtls, poes, nsites):
             if imt in imts:
                 uhs[poe][imt] = array[:, i * P + j, 0]
     return uhs
+
+
+def get_gmv_data(sids, gmfs):
+    """
+    Convert a list of arrays of shape (N, E, I) into a single array of type
+    gmv_data_dt
+    """
+    N, E, I = gmfs[0].shape
+    gmv_data_dt = numpy.dtype(
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+    it = ((r, sids[s], eid, gmfa[s, eid])
+          for r, gmfa in enumerate(gmfs)
+          for s, eid in itertools.product(range(N), range(E)))
+    return numpy.fromiter(it, gmv_data_dt)
 
 
 def get_gmfs(dstore, precalc=None):
