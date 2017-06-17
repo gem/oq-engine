@@ -391,7 +391,7 @@ def get_gmfs(dstore, precalc=None):
     """
     :param dstore: a datastore
     :param precalc: a scenario calculator with attribute .gmfa
-    :returns: a pair (etags, gmfs) where gmfs is a matrix of shape (G, N, E, I)
+    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
@@ -403,12 +403,12 @@ def get_gmfs(dstore, precalc=None):
     N = len(haz_sitecol.complete)
     I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
-    etags = numpy.arange(E)
+    eids = numpy.arange(E)
     gmfs = numpy.zeros((len(rlzs_assoc), N, E, I))
     if precalc:
         for g, gsim in enumerate(precalc.gsims):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
-        return etags, gmfs
+        return eids, gmfs
 
     if 'gmf_data/grp-00' in dstore:
         # read from the datastore
@@ -422,13 +422,13 @@ def get_gmfs(dstore, precalc=None):
                 if numpy.unique(array['sid']) != [sid]:  # sanity check
                     raise ValueError('The GMFs have been stored incorrectly')
                 gmfs[r, sid] = array['gmv']
-        return etags, gmfs
+        return eids, gmfs
 
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        sitecol, etags, gmfa = readinput.get_gmfs(oq)
+        sitecol, eids, gmfa = readinput.get_gmfs(oq)
         # dstore['gmf_data/grp-00'] = get_gmv_data(sitecol.sids, [gmfa])
-        return etags, [gmfa]
+        return eids, [gmfa]
 
 
 def fix_minimum_intensity(min_iml, imts):
