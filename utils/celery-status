@@ -69,8 +69,7 @@ def status():
             print('Active tasks: %s' % len(worker_activity))
             num_active_tasks += len(worker_activity)
 
-    print('==========')
-    print()
+    print('==========\n')
     print('Total workers:       %s' % total_workers)
     print('Active tasks:        %s' % num_active_tasks)
     print('Cluster utilization: %.2f%%' % (
