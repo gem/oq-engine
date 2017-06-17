@@ -427,8 +427,8 @@ def get_gmfs(dstore, precalc=None):
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         sitecol, etags, gmfa = readinput.get_gmfs(oq)
-        # reduce the gmfa matrix to the filtered sites
-        return etags, [gmfa[sitecol.indices]]
+        # dstore['gmf_data/grp-00'] = get_gmv_data(sitecol.sids, [gmfa])
+        return etags, [gmfa]
 
 
 def fix_minimum_intensity(min_iml, imts):
