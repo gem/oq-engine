@@ -379,12 +379,6 @@ def get_gmfs(dstore, precalc=None):
     :returns: a pair (etags, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
     oq = dstore['oqparam']
-    if 'gmfs' in oq.inputs:  # from file
-        logging.info('Reading gmfs from file')
-        sitecol, etags, gmfa = readinput.get_gmfs(oq)
-        # reduce the gmfa matrix to the filtered sites
-        return etags, [gmfa[sitecol.indices]]
-
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol']
     if dstore.parent:
@@ -401,18 +395,25 @@ def get_gmfs(dstore, precalc=None):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
         return etags, gmfs
 
-    # else read from the datastore
-    dset = dstore['gmf_data/grp-00']
-    R = len(dstore['realizations'])
-    nrows = len(dset) // R
-    for r in range(R):
-        for s, sid in enumerate(haz_sitecol.sids):
-            start = r * nrows + E * s
-            array = dset[start: start + E]  # shape (E, I)
-            if numpy.unique(array['sid']) != [sid]:  # sanity check
-                raise ValueError('The GMFs have been stored incorrectly')
-            gmfs[r, sid] = array['gmv']
-    return etags, gmfs
+    if 'gmf_data/grp-00' in dstore:
+        # read from the datastore
+        dset = dstore['gmf_data/grp-00']
+        R = len(dstore['realizations'])
+        nrows = len(dset) // R
+        for r in range(R):
+            for s, sid in enumerate(haz_sitecol.sids):
+                start = r * nrows + E * s
+                array = dset[start: start + E]  # shape (E, I)
+                if numpy.unique(array['sid']) != [sid]:  # sanity check
+                    raise ValueError('The GMFs have been stored incorrectly')
+                gmfs[r, sid] = array['gmv']
+        return etags, gmfs
+
+    elif 'gmfs' in oq.inputs:  # from file
+        logging.info('Reading gmfs from file')
+        sitecol, etags, gmfa = readinput.get_gmfs(oq)
+        # reduce the gmfa matrix to the filtered sites
+        return etags, [gmfa[sitecol.indices]]
 
 
 def fix_minimum_intensity(min_iml, imts):
