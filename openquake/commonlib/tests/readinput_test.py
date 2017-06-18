@@ -574,14 +574,14 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
 
     def test_ok(self):
         fname = os.path.join(DATADIR,  'gmfdata.xml')
-        sitecol, etags, gmfa = readinput.get_scenario_from_nrml(
+        sitecol, eids, gmfa = readinput.get_scenario_from_nrml(
             self.oqparam, fname)
         coords = list(zip(sitecol.mesh.lons, sitecol.mesh.lats))
         self.assertEqual(writers.write_csv(StringIO(), coords), '''\
 0.000000E+00,0.000000E+00
 0.000000E+00,1.000000E-01
 0.000000E+00,2.000000E-01''')
-        assert_allclose(etags, range(5))
+        assert_allclose(eids, range(5))
         self.assertEqual(
             writers.write_csv(StringIO(), gmfa), '''\
 PGA:float32,PGV:float32
