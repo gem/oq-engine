@@ -426,7 +426,7 @@ def get_gmfs(dstore, precalc=None):
 
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        _sitecol, eids, gmfa = readinput.get_gmfs(oq)
+        eids, gmfa = readinput.get_gmfs(oq)
         dstore['gmf_data/grp-00'] = get_gmv_data(
             haz_sitecol.sids, [gmfa[haz_sitecol.indices]])
         return eids, [gmfa]
