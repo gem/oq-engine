@@ -236,7 +236,7 @@ def safely_call(func, args, pickle=False, conn=None):
         else:
             mon = child
         check_mem_usage(mon)  # check if too much memory is used
-        with mock.patch.object(mon, 'flush', NoFlush(mon, func.__name__)):
+        with mock.patch.object(mon, '_flush', False):
             try:
                 got = func(*args)
                 if inspect.isgenerator(got):
@@ -654,17 +654,6 @@ def do_not_aggregate(acc, value):
     :returns: the accumulator unchanged
     """
     return acc
-
-
-class NoFlush(object):
-    # this is instantiated by safely_call
-    def __init__(self, monitor, taskname):
-        self.monitor = monitor
-        self.taskname = taskname
-
-    def __call__(self):
-        raise RuntimeError('Monitor(%r).flush() must not be called '
-                           'by %s!' % (self.monitor.operation, self.taskname))
 
 
 if OQ_DISTRIBUTE == 'celery':
