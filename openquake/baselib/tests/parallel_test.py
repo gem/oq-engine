@@ -78,8 +78,8 @@ class StarmapTestCase(unittest.TestCase):
     def test_no_flush(self):
         mon = parallel.Monitor('test')
         res = parallel.safely_call(get_len, ('ab', mon))
-        self.assertIn('Monitor(\'test\').flush() must not be called'
-                      ' by get_len!', res[0])
+        self.assertIn(
+            'Monitor(\'test\').flush() must not be called in a worker', res[0])
         self.assertEqual(res[1], RuntimeError)
         self.assertEqual(res[2].operation, mon.operation)
 
