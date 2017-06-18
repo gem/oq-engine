@@ -201,8 +201,6 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
-    elif 'gmfs' in oqparam.inputs:
-        return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
         return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
@@ -837,19 +835,33 @@ def get_gmfs(oqparam):
     :returns:
         sitecol, eids, gmf array of shape (N, E, I)
     """
+    I = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
-        sitecol, eids, gmfs_by_imt = get_gmfs_from_csv(oqparam, fname)
+        array = writers.read_composite_array(fname)
+        rlzi = numpy.unique(array['rlzi'])
+        assert rlzi == [0], rlzi
+        dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
+        num_gmv = len(array.dtype.names[3:])
+        assert num_gmv == I, (num_gmv, I)
+        dtlist.append(('gmv', (F32, num_gmv)))
+        eids = numpy.unique(array['eid'])
+        assert len(eids) == oqparam.number_of_ground_motion_fields, (
+            len(eids), oqparam.number_of_ground_motion_fields)
+        eidx = {eid: e for e, eid in enumerate(eids)}
+        sids = numpy.unique(array['sid'])
+        gmfs = numpy.zeros((len(sids), len(eids), I), F32)
+        for row in array.view(dtlist):
+            gmfs[row['sid'], eidx[row['eid']]] = row['gmv']
     elif fname.endswith('.xml'):
-        sitecol, eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
+        eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
+        N, E = gmfs_by_imt.shape
+        gmfs = numpy.zeros((N, E, I), F32)
+        for imti, imtstr in enumerate(oqparam.imtls):
+            gmfs[:, :, imti] = gmfs_by_imt[imtstr]
     else:
         raise NotImplemented('Reading from %s' % fname)
-    N, E = gmfs_by_imt.shape
-    I = len(oqparam.imtls)
-    gmfs = numpy.zeros((N, E, I), F32)
-    for imti, imtstr in enumerate(oqparam.imtls):
-        gmfs[:, :, imti] = gmfs_by_imt[imtstr]
-    return sitecol, eids, gmfs
+    return eids, gmfs
 
 
 def get_hcurves(oqparam):
@@ -954,7 +966,6 @@ def get_scenario_from_nrml(oqparam, fname):
     oqparam.sites = [(lon, lat, 0) for lon, lat in coords]
     site_idx = {lonlat: i for i, lonlat in enumerate(coords)}
     oqparam.number_of_ground_motion_fields = num_events = len(eids)
-    sitecol = get_site_collection(oqparam)
     num_sites = len(oqparam.sites)
     gmf_by_imt = numpy.zeros((num_events, num_sites), imt_dt)
     counts = collections.Counter()
@@ -983,12 +994,7 @@ def get_scenario_from_nrml(oqparam, fname):
             raise InvalidFile(
                 '%s: expected %d gmvs at location %s, found %d' %
                 (fname, expected_gmvs_per_site, lonlat, counts))
-    return sitecol, eids, gmf_by_imt.T
-
-
-def get_gmfs_from_csv(oqparam, fname):
-    array = writers.read_composite_array(fname)
-    import pdb; pdb.set_trace()
+    return eids, gmf_by_imt.T
 
 
 def get_mesh_hcurves(oqparam):
