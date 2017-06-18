@@ -146,6 +146,7 @@ import operator
 import traceback
 import functools
 import subprocess
+import mock
 import multiprocessing.dummy
 from multiprocessing.connection import Client, Listener
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
@@ -235,20 +236,17 @@ def safely_call(func, args, pickle=False, conn=None):
         else:
             mon = child
         check_mem_usage(mon)  # check if too much memory is used
-        mon.flush = NoFlush(mon, func.__name__)
-        try:
-            got = func(*args)
-            if inspect.isgenerator(got):
-                got = list(got)
-            res = got, None, mon
-        except:
-            etype, exc, tb = sys.exc_info()
-            tb_str = ''.join(traceback.format_tb(tb))
-            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
-
-        # NB: flush must not be called in the workers - they must not
-        # have access to the datastore - so we remove it
-        rec_delattr(mon, 'flush')
+        with mock.patch.object(mon, 'flush', NoFlush(mon, func.__name__)):
+            try:
+                got = func(*args)
+                if inspect.isgenerator(got):
+                    got = list(got)
+                res = got, None, mon
+            except:
+                etype, exc, tb = sys.exc_info()
+                tb_str = ''.join(traceback.format_tb(tb))
+                res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
+                       etype, mon)
 
     if pickle:  # it is impossible to measure the pickling time :-(
         res = Pickled(res)
@@ -667,16 +665,6 @@ class NoFlush(object):
     def __call__(self):
         raise RuntimeError('Monitor(%r).flush() must not be called '
                            'by %s!' % (self.monitor.operation, self.taskname))
-
-
-def rec_delattr(mon, name):
-    """
-    Delete attribute from a monitor recursively
-    """
-    for child in mon.children:
-        rec_delattr(child, name)
-    if name in vars(mon):
-        delattr(mon, name)
 
 
 if OQ_DISTRIBUTE == 'celery':
