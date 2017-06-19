@@ -511,10 +511,9 @@ class HazardGetter(object):
         self.imts = imts
         self.data = collections.OrderedDict()
         for gsim in rlzs_by_gsim:
-            rlzs = self.rlzs_by_gsim[gsim]
-            for rlz in rlzs:
-                self.data[rlz.ordinal] = datadict = {}
-                hazards_by_imt = hazards_by_rlz[rlz]
+            for rlzi in self.rlzs_by_gsim[gsim]:
+                self.data[rlzi] = datadict = {}
+                hazards_by_imt = hazards_by_rlz[rlzi]
                 for idx, sid in enumerate(sids):
                     datadict[idx] = lst = [None for imt in imts]
                     for imti, imt in enumerate(self.imts):
@@ -598,13 +597,16 @@ class GmfGetter(object):
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
         itemsize = self.gmf_data_dt.itemsize
+        sample = 0  # in case of sampling the realizations have a corresponding
+        # sample number from 0 to the number of samples of the given src model
         for gsim, rlzs in self.rlzs_by_gsim.items():  # OrderedDict
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sites.sids
                 if self.samples > 1:
-                    all_eids = [get_array(rup.events, sample=rlz.sampleid)
-                                ['eid'] for rlz in rlzs]
+                    # events of the current slice of realizations
+                    all_eids = [get_array(rup.events, sample=s)['eid']
+                                for s in range(sample, sample + len(rlzs))]
                 else:
                     all_eids = [rup.events['eid']] * len(rlzs)
                 size = itemsize * len(sids)
@@ -618,8 +620,7 @@ class GmfGetter(object):
                     arr = array[:, i, :]
                     arr[arr < miniml] = 0
                 n = 0
-                for r, rlz in enumerate(rlzs):
-                    rlzi = rlz.ordinal
+                for r, rlzi in enumerate(rlzs):
                     e = len(all_eids[r])
                     gmdata = self.gmdata[rlzi]
                     gmdata[EVENTS] += e
@@ -635,6 +636,7 @@ class GmfGetter(object):
                             if gmv.sum():
                                 yield rlzi, sid, eid, gmv
                     n += e
+            sample += len(rlzs)
 
     def get_hazard(self, data=None):
         """
@@ -644,7 +646,7 @@ class GmfGetter(object):
         if data is None:
             data = list(self.gen_gmv())
         rlzs = get_rlzs(self)
-        hazard = {rlz.ordinal: collections.defaultdict(list) for rlz in rlzs}
+        hazard = {rlzi: collections.defaultdict(list) for rlzi in rlzs}
         for rlzi, sid, eid, gmv in data:
             hazard[rlzi][sid].append((gmv, eid))
         for haz in hazard.values():
