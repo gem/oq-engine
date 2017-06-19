@@ -189,11 +189,9 @@
                          function(data, textStatus, jqXHR)
                          {  
                              err = data.error; 
-                             if(err) {
-                                 err = data.error;
-                             }
+                             
                              if(!err) {
-                                 err = "removed";
+                                 err = "removed.";
                              }
                              var hide_or_back = (function(e) {
                                  this.conf_hide = $('#confirmDialog' + calc_id).hide();
