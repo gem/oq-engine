@@ -1,4 +1,51 @@
   [Michele Simionato]
+  * Better error message when running a risk file in absence of hazard
+    calculation
+  * Changed the sampling logic in event based calculators
+  * Imported GMFs from external file into the datastore
+
+  [Daniele Viganò]
+  * Added the 'celery-status' script in 'utils' to check the
+    task distribution in a multi-node celery setup
+
+  [Michele Simionato]
+  * Removed an excessive check from the WebUI: now if an output exists,
+    it can be downloaded even if the calculation was not successful
+
+  [Armando Scarpati]
+  * Visualized the calculation_mode in the WebUI
+
+  [Michele Simionato]
+  * Made the upgrade_manager transactional again
+  * Changed the storage of the GMFs; as a consequence the exported .csv
+    has a different format
+
+  [Daniele Viganò]
+  * Fixed a bug introduced by a change in Django 1.10 that was causing
+    the HTTP requests log to be caught by our logging system and
+    then saved in the DbServer
+  * Updated requirements to allow installation of Django 1.11 (LTS)
+
+  [Michele Simionato]
+  * Added two commands `oq dump` and `oq restore`
+  * Added a check that on the number of intensity measure types when
+    generating uniform hazard spectra (must be > 1)
+
+python-oq-engine (2.5.0-0~precise01) precise; urgency=low
+
+  [Armando Scarpati]
+  * Added a confirmation dialog when trying to remove a calculation via the
+    WebUI
+
+  [Michele Simionato]
+  * Hazard maps were not exposed to the engine in event based calculations
+  * Fixed the check on the DbServer instance: it was failing in presence
+    of symbolic links
+  * Optimized MultiMFD objects for the case of homogeneous parameters
+  * Added an .npz exporter for the scenario_damage output `dmg_by_asset`
+  * Removed the pickled CompositeSourceModel from the datastore
+  * Improved the error message when the rupture mesh spacing is too small
+  * Unified the versions of baselib, hazardlib and engine
   * Raised a clear error if the user does not set the `calculation_mode`
   * Made it is possible to pass the hdf5 full path to the DataStore class
   * Made it possible to use CELERY_RESULT_BACKEND != 'rpc://'
@@ -36,6 +83,8 @@
     provider for API and WebUI
   * Now the command `oq webui start` tries to open a browser tab
     with the WebUI loaded
+
+ -- Daniele Viganò (GEM Foundation) <daniele@openquake.org>  Wed, 14 Jun 2017 10:32:28 +0200
 
 python-oq-engine (2.4.0-0~precise01) precise; urgency=low
 

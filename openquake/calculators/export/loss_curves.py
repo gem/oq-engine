@@ -158,7 +158,7 @@ class LossCurveExporter(object):
             dset = self.dstore['loss_curves-stats']
             data = dset[aids]  # shape (A, S)
             if key == 'stats':
-                return {stat: data[:, s] for s, stat in enumerate(stats)}
+                return {stat[0]: data[:, s] for s, stat in enumerate(stats)}
             else:  # a specific statistics
                 return {key: data[stat2idx[key]]}
         # otherwise event_based

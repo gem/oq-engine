@@ -48,8 +48,10 @@ def disagg_outputs(value):
 
     >>> disagg_outputs('TRT Mag_Dist')
     ['TRT', 'Mag_Dist']
+    >>> disagg_outputs('TRT, Mag_Dist')
+    ['TRT', 'Mag_Dist']
     """
-    values = value.split()
+    values = value.replace(',', ' ').split()
     for val in values:
         if val not in disagg_outs:
             raise ValueError('Invalid disagg output: %s' % val)

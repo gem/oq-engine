@@ -2,12 +2,11 @@ Scenario Calculation with Simple Fault Rupture
 ==============================================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_26013.hdf5 Tue Jun  6 14:57:59 2017
-engine_version                            2.5.0-gitb270b98        
-hazardlib_version                         0.25.0-git6276f16       
+localhost:/mnt/ssd/oqdata/calc_29176.hdf5 Wed Jun 14 10:03:48 2017
+engine_version                            2.5.0-gite200a20        
 ========================================= ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -37,6 +36,22 @@ job_ini         `job_haz.ini <job_haz.ini>`_
 rupture_model   `rupture_model.xml <rupture_model.xml>`_    
 =============== ============================================
 
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    simple(2)       2/2             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ===================================== =========== ======================= =================
+grp_id gsims                                 distances   siteparams              ruptparams       
+====== ===================================== =========== ======================= =================
+0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ===================================== =========== ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -51,6 +66,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.006     0.0       1     
-reading site collection 3.123E-05 0.0       1     
+filtering sites         0.007     0.0       1     
+reading site collection 3.362E-05 0.0       1     
 ======================= ========= ========= ======

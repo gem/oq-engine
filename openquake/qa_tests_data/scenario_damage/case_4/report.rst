@@ -2,12 +2,11 @@ Scenario Damage QA Test 4
 =========================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_26014.hdf5 Tue Jun  6 14:57:59 2017
-engine_version                            2.5.0-gitb270b98        
-hazardlib_version                         0.25.0-git6276f16       
+localhost:/mnt/ssd/oqdata/calc_29177.hdf5 Wed Jun 14 10:03:48 2017
+engine_version                            2.5.0-gite200a20        
 ========================================= ========================
 
-num_sites = 3, sitecol = 917 B
+num_sites = 3, num_imts = 3
 
 Parameters
 ----------
@@ -37,6 +36,22 @@ job_ini              `job_haz.ini <job_haz.ini>`_
 rupture_model        `fault_rupture.xml <fault_rupture.xml>`_    
 structural_fragility `fragility_model.xml <fragility_model.xml>`_
 ==================== ============================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================= =========== ======================= =================
+grp_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -68,7 +83,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.005     0.0       1     
-filtering sites         0.004     0.0       1     
-reading site collection 4.768E-06 0.0       1     
+reading exposure        0.006     0.0       1     
+filtering sites         0.005     0.0       1     
+reading site collection 7.391E-06 0.0       1     
 ======================= ========= ========= ======
