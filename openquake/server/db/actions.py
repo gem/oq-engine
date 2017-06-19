@@ -290,7 +290,7 @@ def del_calc(db, job_id, user):
     try:
         os.remove(fname)
     except OSError as exc:  # permission error
-        {"error": 'Could not remove %s: %s' % (fname, exc)}
+        return {"error": 'Could not remove %s: %s' % (fname, exc)}
     return {"success": fname}
 
 
