@@ -612,7 +612,7 @@ col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
         with self.assertRaises(readinput.InvalidFile):
             readinput.get_gmfs_from_txt(self.oqparam, fname)
 
-    def test_not_ordered_etags(self):
+    def test_not_ordered_eids(self):
         fname = general.writetmp('''\
 0 0,0 1
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
@@ -656,14 +656,14 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
 
     def test_ok(self):
         fname = os.path.join(DATADIR,  'gmfdata.xml')
-        sitecol, etags, gmfa = readinput.get_scenario_from_nrml(
+        sitecol, eids, gmfa = readinput.get_scenario_from_nrml(
             self.oqparam, fname)
         coords = list(zip(sitecol.mesh.lons, sitecol.mesh.lats))
         self.assertEqual(writers.write_csv(StringIO(), coords), '''\
 0.000000E+00,0.000000E+00
 0.000000E+00,1.000000E-01
 0.000000E+00,2.000000E-01''')
-        assert_allclose(etags, range(5))
+        assert_allclose(eids, range(5))
         self.assertEqual(
             writers.write_csv(StringIO(), gmfa), '''\
 PGA:float32,PGV:float32
