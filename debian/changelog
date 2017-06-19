@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Removed an excessive check from the WebUI: now if an output exists,
+    it can be downloaded even if the calculation was not successful
+
   [Armando Scarpati]
   * Visualized the calculation_mode in the WebUI
 
