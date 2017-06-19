@@ -27,12 +27,11 @@ import collections
 
 import numpy
 
-from openquake.hazardlib import __version__ as hazardlib_version
+from openquake.baselib import general, hdf5, __version__ as engine_version
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
-from openquake.baselib import general, hdf5
-from openquake.baselib.performance import Monitor
-from openquake.risklib import riskinput, __version__ as engine_version
+from openquake.risklib import riskinput
 from openquake.commonlib import readinput, datastore, source, calc, riskmodels
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
@@ -134,7 +133,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitecol = datastore.persistent_attribute('sitecol')
     assetcol = datastore.persistent_attribute('assetcol')
     performance = datastore.persistent_attribute('performance')
-    csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
@@ -164,7 +162,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = engine_version
-        attrs['hazardlib_version'] = hazardlib_version
         self.datastore.flush()
 
     def set_log_format(self):
@@ -182,17 +179,19 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.close = close
         self.set_log_format()
         if logversion:  # make sure this is logged only once
+            logging.info('Running %s', self.oqparam.inputs['job_ini'])
             logging.info('Using engine version %s', engine_version)
-            logging.info('Using hazardlib version %s', hazardlib_version)
             logversion = False
-        if concurrent_tasks is None:  # use the default
-            pass
-        elif concurrent_tasks == 0:  # disable distribution temporarily
+        if concurrent_tasks is None:  # use the job.ini parameter
+            ct = self.oqparam.concurrent_tasks
+        else:  # used the parameter passed in the command-line
+            ct = concurrent_tasks
+        if ct == 0:  # disable distribution temporarily
             oq_distribute = os.environ.get('OQ_DISTRIBUTE')
             os.environ['OQ_DISTRIBUTE'] = 'no'
-        elif concurrent_tasks != OqParam.concurrent_tasks.default:
-            # use the passed concurrent_tasks over the default
-            self.oqparam.concurrent_tasks = concurrent_tasks
+        if ct != self.oqparam.concurrent_tasks:
+            # save the used concurrent_tasks
+            self.oqparam.concurrent_tasks = ct
         self.save_params(**kw)
         exported = {}
         try:
@@ -217,7 +216,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 logging.critical('', exc_info=True)
                 raise
         finally:
-            if concurrent_tasks == 0:  # restore OQ_DISTRIBUTE
+            if ct == 0:  # restore OQ_DISTRIBUTE
                 if oq_distribute is None:  # was not set
                     del os.environ['OQ_DISTRIBUTE']
                 else:
@@ -623,7 +622,7 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
-        rlzs = sorted(hazards_by_rlz)
+        rlzs = range(len(hazards_by_rlz))
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []

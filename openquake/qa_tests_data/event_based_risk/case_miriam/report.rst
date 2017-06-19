@@ -2,12 +2,11 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26051.hdf5 Tue Jun  6 14:58:23 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29214.hdf5 Wed Jun 14 10:04:14 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 281, sitecol = 97.5 KB
+num_sites = 281, num_imts = 1
 
 Parameters
 ----------
@@ -87,7 +86,7 @@ source_model.xml 1      Subduction Interface 1           3945         3,945
 Informational data
 ------------------
 ============================ =====================================================================================
-compute_ruptures.received    tot 311.34 KB, max_per_task 76.52 KB                                                 
+compute_ruptures.received    tot 311.33 KB, max_per_task 76.51 KB                                                 
 compute_ruptures.sent        src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.34 KB, gsims 1.12 KB
 hazard.input_weight          26,012                                                                               
 hazard.n_imts                1 B                                                                                  
@@ -150,7 +149,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.910 0.455  0.591 2.082 11       
+compute_ruptures   0.909 0.459  0.545 2.104 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -158,15 +157,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         10       0.566     11    
-managing sources               1.330    0.0       1     
-filtering ruptures             0.383    0.0       489   
-assoc_assets_sites             0.161    0.0       1     
-reading site collection        0.157    0.0       1     
-reading composite source model 0.135    0.0       1     
-reading exposure               0.070    0.0       1     
-saving ruptures                0.058    0.0       11    
+total compute_ruptures         10       0.742     11    
+managing sources               1.522    0.0       1     
+filtering ruptures             0.387    0.0       489   
+reading site collection        0.189    0.0       1     
+assoc_assets_sites             0.176    0.0       1     
+reading composite source model 0.151    0.0       1     
+reading exposure               0.076    0.0       1     
+saving ruptures                0.049    0.0       11    
 prefiltering source model      0.009    0.0       1     
-store source_info              0.008    0.0       1     
-setting event years            0.008    0.0       1     
+setting event years            0.007    0.0       1     
+store source_info              0.007    0.0       1     
 ============================== ======== ========= ======

@@ -2,12 +2,11 @@ QA test for blocksize independence (hazard)
 ===========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26095.hdf5 Tue Jun  6 14:59:03 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29258.hdf5 Wed Jun 14 10:04:57 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 2, sitecol = 863 B
+num_sites = 2, num_imts = 1
 
 Parameters
 ----------
@@ -92,10 +91,10 @@ Slowest sources
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 0      8         AreaSource   1,812        0.0       1         0        
-0      1         AreaSource   7,020        0.0       2         0        
-0      2         AreaSource   2,334        0.0       2         0        
 0      9         AreaSource   897          0.0       2         0        
 0      3         AreaSource   1,760        0.0       2         0        
+0      2         AreaSource   2,334        0.0       2         0        
+0      1         AreaSource   7,020        0.0       2         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -110,7 +109,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.404 0.285  0.002 0.676 9        
+compute_ruptures   0.431 0.308  0.001 0.719 9        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,13 +117,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.632     0.410     9     
-reading composite source model 1.606     0.0       1     
-managing sources               0.520     0.0       1     
+total compute_ruptures         3.877     0.383     9     
+reading composite source model 1.593     0.0       1     
+managing sources               0.694     0.0       1     
 saving ruptures                0.008     0.0       9     
-store source_info              0.007     0.0       1     
-prefiltering source model      0.006     0.0       1     
+store source_info              0.006     0.0       1     
+prefiltering source model      0.005     0.0       1     
 setting event years            0.002     0.0       1     
-filtering ruptures             8.914E-04 0.0       3     
-reading site collection        4.601E-05 0.0       1     
+filtering ruptures             9.668E-04 0.0       3     
+reading site collection        5.007E-05 0.0       1     
 ============================== ========= ========= ======
