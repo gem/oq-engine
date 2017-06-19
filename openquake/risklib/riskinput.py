@@ -661,13 +661,9 @@ class GmfDataGetter(GmfGetter):
         self.gmf_data = gmf_data
         self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.N = gmf_data.attrs['num_sites']  # used by get_hazard
-        self.I = gmf_data.attrs['num_imts']  # used by get_hazard
         self.start = start
         self.stop = stop
-        self.gmf_data_dt = numpy.dtype(
-            [('rlzi', U16), ('sid', U32),
-             ('eid', U64), ('gmv', (F32, (self.I,)))])
+        self.gmf_data_dt = gmf_data[next(iter(gmf_data))].dtype
 
     def init(self):
         pass
