@@ -495,9 +495,7 @@ class EventBasedCalculator(ClassicalCalculator):
         ds = self.datastore
         for sm_id in ds['gmf_data']:
             ds.set_nbytes('gmf_data/' + sm_id)
-            ds['gmf_data'].attrs['num_sites'] = len(self.sitecol.complete)
-            ds['gmf_data'].attrs['num_imts'] = len(self.oqparam.imtls)
-            ds.set_nbytes('gmf_data')
+        ds.set_nbytes('gmf_data')
 
     def post_execute(self, result):
         """
