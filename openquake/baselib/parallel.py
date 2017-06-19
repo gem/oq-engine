@@ -235,7 +235,8 @@ def safely_call(func, args, pickle=False, conn=None):
         else:
             mon = child
         check_mem_usage(mon)  # check if too much memory is used
-        mon.flush = NoFlush(mon, func.__name__)
+        # FIXME: this approach does not work with the Threadmap
+        mon._flush = False
         try:
             got = func(*args)
             if inspect.isgenerator(got):
@@ -244,11 +245,10 @@ def safely_call(func, args, pickle=False, conn=None):
         except:
             etype, exc, tb = sys.exc_info()
             tb_str = ''.join(traceback.format_tb(tb))
-            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
-
-        # NB: flush must not be called in the workers - they must not
-        # have access to the datastore - so we remove it
-        rec_delattr(mon, 'flush')
+            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
+                   etype, mon)
+        finally:
+            mon._flush = True
 
     if pickle:  # it is impossible to measure the pickling time :-(
         res = Pickled(res)
@@ -656,27 +656,6 @@ def do_not_aggregate(acc, value):
     :returns: the accumulator unchanged
     """
     return acc
-
-
-class NoFlush(object):
-    # this is instantiated by safely_call
-    def __init__(self, monitor, taskname):
-        self.monitor = monitor
-        self.taskname = taskname
-
-    def __call__(self):
-        raise RuntimeError('Monitor(%r).flush() must not be called '
-                           'by %s!' % (self.monitor.operation, self.taskname))
-
-
-def rec_delattr(mon, name):
-    """
-    Delete attribute from a monitor recursively
-    """
-    for child in mon.children:
-        rec_delattr(child, name)
-    if name in vars(mon):
-        delattr(mon, name)
 
 
 if OQ_DISTRIBUTE == 'celery':
