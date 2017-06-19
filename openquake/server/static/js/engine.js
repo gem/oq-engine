@@ -187,35 +187,23 @@
                 $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
                      ).success(
                          function(data, textStatus, jqXHR)
-                         {
-                             diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> removed.");
+                         {  
+                             err = data.error; 
+                             if(err) {
+                                 err = data.error;
+                             }
+                             if(!err) {
+                                 err = "removed";
+                             }
+                             var hide_or_back = (function(e) {
+                                 this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                                 this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                                 closeTimer();
+                             })();
+                             diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
                              view.calculations.remove([view.calculations.get(calc_id)]);
                          }
-                     ).error(
-                         // function(jqXHR, textStatus, errorThrown)
-                         // {
-                             // if (jqXHR.status == 404) {
-                             //    diaerror.show(false, "Removing calculation", "Removal command for:<br><b>(" + calc_id + ") " + calc_desc + "</b> failed.");
-                             // }else{
-                             //    diaerror.show(false, "Removing calculation" + calc_id, "Failed: " + textStatus);
-                             // }
-                             // if (jqXHR.status == 500) {
-                             //    diaerror.show(false, "Removing calculation" + calc_id, "Failed: " + errorThrown);
-                             // }
-                         function (jqXHR, exception) 
-                         {
-                             if (jqXHR.status == 404) {
-                                 diaerror.show(false, "Removing calculation", "Removal command for:<br><b>(" + calc_id + ") " + calc_desc + "</b> failed.");
-                             } else if (jqXHR.status == 500) {
-                                 var hide_or_back = (function(e) {
-                                     this.conf_hide = $('#confirmDialog' + calc_id).hide();
-                                     this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-                                 })();
-                                 diaerror.show(false, "Removing calculation", "Not removed calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> Internal server error");
 
-                             }
-
-                         }
                      );
                  setTimer();
             },
