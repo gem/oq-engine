@@ -146,7 +146,6 @@ import operator
 import traceback
 import functools
 import subprocess
-import mock
 import multiprocessing.dummy
 from multiprocessing.connection import Client, Listener
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
@@ -236,17 +235,19 @@ def safely_call(func, args, pickle=False, conn=None):
         else:
             mon = child
         check_mem_usage(mon)  # check if too much memory is used
-        with mock.patch.object(mon, '_flush', False):
-            try:
-                got = func(*args)
-                if inspect.isgenerator(got):
-                    got = list(got)
-                res = got, None, mon
-            except:
-                etype, exc, tb = sys.exc_info()
-                tb_str = ''.join(traceback.format_tb(tb))
-                res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
-                       etype, mon)
+        mon._flush = False
+        try:
+            got = func(*args)
+            if inspect.isgenerator(got):
+                got = list(got)
+            res = got, None, mon
+        except:
+            etype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
+                   etype, mon)
+        finally:
+            mon._flush = True
 
     if pickle:  # it is impossible to measure the pickling time :-(
         res = Pickled(res)
