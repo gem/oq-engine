@@ -105,6 +105,39 @@ sudo service openquake-celery start
 The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu](ubuntu.md#configure-the-system-services) or [RedHat](rhel.md#configure-the-system-services) to see how to enable or disable services.
 
 
+### Monitoring Celery
+
+The `celery-status` script is provided under `/usr/share/openquake/engine/utils` to check the status of the worker nodes, the task distribution and the cluster occupation. An output like this is produced:
+
+```
+==========
+Host: celery@marley
+Status: Online
+Worker processes: 64
+Active tasks: 0
+==========
+Host: celery@mercury
+Status: Online
+Worker processes: 64
+Active tasks: 0
+==========
+Host: celery@dylan
+Status: Online
+Worker processes: 64
+Active tasks: 0
+==========
+Host: celery@cobain
+Status: Online
+Worker processes: 64
+Active tasks: 0
+==========
+
+Total workers:       256
+Active tasks:        0
+Cluster utilization: 0.00%
+```
+
+
 ## Shared filesystem (optional)
 
 OpenQuake 2.4 introduces the concept of _shared directory_ (aka _shared_dir_). This _shared dir_ allows the workers to read directly from the master's filesystem, thus increasing scalability and performance; this feature is optional: the old behaviour, transmitting data via `rabbitmq`, will be used when `shared_dir` isn't set.
