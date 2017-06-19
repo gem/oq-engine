@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Imported GMFs from external file into the datastore
+
   [Daniele Viganò]
   * Added the 'celery-status' script in 'utils' to check the
     task distribution in a multi-node celery setup
