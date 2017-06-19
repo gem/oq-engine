@@ -110,8 +110,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = self.make_eps(E)
         self.datastore['eids'], gmfs = calc.get_gmfs(
             self.datastore, self.precalc)
-        hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
-                         for rlz in self.rlzs_assoc.realizations}
+        hazard_by_rlz = gmfs
         self.riskinputs = self.build_riskinputs('gmf', hazard_by_rlz, eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
