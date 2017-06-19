@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the sampling logic in event based calculators
   * Imported GMFs from external file into the datastore
 
   [Daniele Viganò]
