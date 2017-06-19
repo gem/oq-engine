@@ -2,12 +2,11 @@ Event-Based Hazard QA Test, Case 4
 ==================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26092.hdf5 Tue Jun  6 14:58:54 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29255.hdf5 Wed Jun 14 10:04:47 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -73,7 +72,7 @@ source_model.xml 0      Active Shallow Crust 1           10           10
 Informational data
 ------------------
 ============================ =========================================================================
-compute_ruptures.received    tot 7.31 KB, max_per_task 7.31 KB                                        
+compute_ruptures.received    max_per_task 7.31 KB, tot 7.31 KB                                        
 compute_ruptures.sent        sources 1.23 KB, src_filter 684 B, param 605 B, monitor 311 B, gsims 91 B
 hazard.input_weight          10                                                                       
 hazard.n_imts                1 B                                                                      
@@ -115,12 +114,12 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 total compute_ruptures         0.015     0.0       1     
-store source_info              0.004     0.0       1     
+store source_info              0.003     0.0       1     
 reading composite source model 0.003     0.0       1     
 saving ruptures                0.003     0.0       1     
-prefiltering source model      0.002     0.0       1     
 filtering ruptures             0.002     0.0       10    
-setting event years            0.002     0.0       1     
-managing sources               0.001     0.0       1     
-reading site collection        3.815E-05 0.0       1     
+prefiltering source model      0.002     0.0       1     
+setting event years            0.001     0.0       1     
+managing sources               9.215E-04 0.0       1     
+reading site collection        3.552E-05 0.0       1     
 ============================== ========= ========= ======

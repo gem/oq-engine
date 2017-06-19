@@ -303,6 +303,11 @@ class Db(object):
             self.local.conn = self.connect(*self.args, **self.kw)
             return self.local.conn
 
+    @property
+    def path(self):
+        """Path to the underlying sqlite file"""
+        return self.args[0]
+
     def __enter__(self):
         return self
 

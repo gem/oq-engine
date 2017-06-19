@@ -2,12 +2,11 @@ Event Based QA Test, Case 12
 ============================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26097.hdf5 Tue Jun  6 14:59:25 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29260.hdf5 Wed Jun 14 10:05:19 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -118,7 +117,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.025 0.004  0.022 0.028 2        
+compute_ruptures   0.026 0.004  0.024 0.029 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -126,13 +125,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.051     0.0       2     
-setting event years            0.028     0.0       1     
+total compute_ruptures         0.052     0.0       2     
+setting event years            0.030     0.0       1     
 saving ruptures                0.022     0.0       2     
 store source_info              0.004     0.0       1     
 reading composite source model 0.002     0.0       1     
 managing sources               0.002     0.0       1     
-prefiltering source model      0.001     0.0       1     
-filtering ruptures             9.389E-04 0.0       2     
-reading site collection        4.721E-05 0.0       1     
+filtering ruptures             0.001     0.0       2     
+prefiltering source model      7.184E-04 0.0       1     
+reading site collection        5.341E-05 0.0       1     
 ============================== ========= ========= ======

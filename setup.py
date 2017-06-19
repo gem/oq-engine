@@ -25,7 +25,7 @@ def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
-    package_init = 'openquake/risklib/__init__.py'
+    package_init = 'openquake/baselib/__init__.py'
     for line in open(package_init, 'r'):
         version_match = re.search(version_re, line, re.M)
         if version_match:
@@ -59,7 +59,7 @@ install_requires = [
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
-    'django >=1.6, <1.11',
+    'django >=1.6, <1.12',
     'matplotlib >=1.5, <2.0',
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
