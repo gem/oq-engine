@@ -8,6 +8,11 @@ set -e
 #   fi
 #done
 # run the other demos
+if [ ! -d "$1" ]; then
+    echo "Please specify the location of the folder containing the demos. Aborting." >&2
+    exit 1
+fi
+
 for ini in $(find $1 -name job.ini | sort); do
     python -m openquake.commands engine --run $ini
 done
