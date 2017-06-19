@@ -235,6 +235,7 @@ def safely_call(func, args, pickle=False, conn=None):
         else:
             mon = child
         check_mem_usage(mon)  # check if too much memory is used
+        # FIXME: this approach does not work with the Threadmap
         mon._flush = False
         try:
             got = func(*args)
