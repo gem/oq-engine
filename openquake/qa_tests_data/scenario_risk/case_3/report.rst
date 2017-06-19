@@ -2,12 +2,11 @@ Scenario QA Test 3
 ==================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26103.hdf5 Tue Jun  6 14:59:26 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29266.hdf5 Wed Jun 14 10:05:20 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 4, sitecol = 971 B
+num_sites = 4, num_imts = 3
 
 Parameters
 ----------
@@ -38,6 +37,22 @@ job_ini                  `job.ini <job.ini>`_
 rupture_model            `fault_rupture.xml <fault_rupture.xml>`_            
 structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 ======================== ====================================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================= =========== ======================= =================
+grp_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -76,11 +91,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.073     0.0       1     
+computing gmfs          0.072     0.0       1     
 reading exposure        0.005     0.0       1     
-filtering sites         0.004     0.0       1     
-saving gmfs             0.001     0.0       1     
-building epsilons       5.631E-04 0.0       1     
-building riskinputs     3.269E-04 0.0       1     
-reading site collection 4.768E-06 0.0       1     
+filtering sites         0.005     0.0       1     
+saving gmfs             0.002     0.0       1     
+building epsilons       6.070E-04 0.0       1     
+building riskinputs     3.676E-04 0.0       1     
+reading site collection 6.676E-06 0.0       1     
 ======================= ========= ========= ======

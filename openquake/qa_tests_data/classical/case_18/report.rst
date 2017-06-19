@@ -2,12 +2,11 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26074.hdf5 Tue Jun  6 14:58:41 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29237.hdf5 Wed Jun 14 10:04:33 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 3, sitecol = 917 B
+num_sites = 3, num_imts = 3
 
 Parameters
 ----------
@@ -75,19 +74,19 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2430         2
 
 Informational data
 ------------------
-============================== ================================================================================
-count_eff_ruptures.received    tot 1.77 KB, max_per_task 1.08 KB                                               
-count_eff_ruptures.sent        gsims 312.3 KB, sources 9.05 KB, param 1.98 KB, srcfilter 1.45 KB, monitor 626 B
-hazard.input_weight            243                                                                             
-hazard.n_imts                  3 B                                                                             
-hazard.n_levels                36 B                                                                            
-hazard.n_realizations          3 B                                                                             
-hazard.n_sites                 3 B                                                                             
-hazard.n_sources               1 B                                                                             
-hazard.output_weight           108                                                                             
-hostname                       tstation.gem.lan                                                                
-require_epsilons               0 B                                                                             
-============================== ================================================================================
+============================== =================================================================================
+count_eff_ruptures.received    tot 1.77 KB, max_per_task 1.08 KB                                                
+count_eff_ruptures.sent        gsims 312.29 KB, sources 9.05 KB, param 1.98 KB, srcfilter 1.45 KB, monitor 626 B
+hazard.input_weight            243                                                                              
+hazard.n_imts                  3 B                                                                              
+hazard.n_levels                36 B                                                                             
+hazard.n_realizations          3 B                                                                              
+hazard.n_sites                 3 B                                                                              
+hazard.n_sources               1 B                                                                              
+hazard.output_weight           108                                                                              
+hostname                       tstation.gem.lan                                                                 
+require_epsilons               0 B                                                                              
+============================== =================================================================================
 
 Slowest sources
 ---------------
@@ -109,7 +108,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 0.001  0.002 0.004 2        
+count_eff_ruptures 0.002 0.002  0.001 0.004 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -117,12 +116,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.016     0.0       1     
-managing sources               0.012     0.0       1     
-store source_info              0.011     0.0       1     
+reading composite source model 0.021     0.0       1     
+managing sources               0.015     0.0       1     
+store source_info              0.015     0.0       1     
 total count_eff_ruptures       0.005     0.0       2     
-prefiltering source model      0.002     0.0       1     
-reading site collection        1.271E-04 0.0       1     
-aggregate curves               6.843E-05 0.0       2     
-saving probability maps        2.432E-05 0.0       1     
+prefiltering source model      0.001     0.0       1     
+reading site collection        1.826E-04 0.0       1     
+aggregate curves               7.749E-05 0.0       2     
+saving probability maps        3.123E-05 0.0       1     
 ============================== ========= ========= ======

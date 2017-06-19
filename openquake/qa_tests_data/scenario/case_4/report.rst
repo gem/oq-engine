@@ -2,12 +2,11 @@ Scenario QA Test, Case 1
 ========================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_26023.hdf5 Tue Jun  6 14:58:00 2017
-engine_version                            2.5.0-gitb270b98        
-hazardlib_version                         0.25.0-git6276f16       
+localhost:/mnt/ssd/oqdata/calc_29186.hdf5 Wed Jun 14 10:03:49 2017
+engine_version                            2.5.0-gite200a20        
 ========================================= ========================
 
-num_sites = 3, sitecol = 917 B
+num_sites = 3, num_imts = 1
 
 Parameters
 ----------
@@ -37,6 +36,22 @@ rupture_model `rupture_model.xml <rupture_model.xml>`_
 site_model    `site_model.xml <site_model.xml>`_      
 ============= ========================================
 
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== =================== ========= ========== ==========
+grp_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      BooreAtkinson2008() rjb       vs30       mag rake  
+====== =================== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -50,6 +65,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-reading site collection 4.869E-04 0.0       1     
+filtering sites         0.014     0.0       1     
+reading site collection 6.499E-04 0.0       1     
 ======================= ========= ========= ======
