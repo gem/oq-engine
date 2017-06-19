@@ -50,16 +50,14 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             eps = self.make_eps(E)
         self.datastore['eids'], gmfs = calc.get_gmfs(
             self.datastore, self.precalc)
-        hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
-                         for rlz in self.rlzs_assoc.realizations}
-        self.riskinputs = self.build_riskinputs('gmf', hazard_by_rlz, eps)
+        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['asset_loss_table'] = oq.asset_loss_table or oq.loss_ratios
         self.taskno = 0
         self.start = 0
-        self.R = len(hazard_by_rlz)
+        self.R = len(gmfs)
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
