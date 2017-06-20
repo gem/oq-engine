@@ -334,7 +334,7 @@ def calc_remove(request, calc_id):
     else:  # FIXME: the error is not passed properly to the javascript
         logging.error(message)
         return HttpResponse(content=message,
-                            content_type='text/plain', status=403)
+                            content_type='text/plain', status=500)
 
 def log_to_json(log):
     """Convert a log record into a list of strings"""
