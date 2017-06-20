@@ -193,17 +193,24 @@
                              if(!err) {
                                  err = "removed.";
                              }
+ 
                              var hide_or_back = (function(e) {
+                                 closeTimer();
                                  this.conf_hide = $('#confirmDialog' + calc_id).hide();
                                  this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-                                 closeTimer();
+            
+                                 diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
+                                 setTimer();
+                                 
+                                 if(!err) {
+                                     view.calculations.remove([view.calculations.get(calc_id)]);
+                                 } 
+                             
                              })();
-                             diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
-                             view.calculations.remove([view.calculations.get(calc_id)]);
+ 
                          }
 
                      );
-                 setTimer();
             },
  
 
