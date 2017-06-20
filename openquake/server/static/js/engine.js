@@ -189,6 +189,12 @@
                                     type: "POST",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 403) {
+                                            var hide_or_back = (function(e) {
+                                                closeTimer();
+                                                this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                                                this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                                                setTimer();
+                                            })();
                                             diaerror.show(false, "Error:", JSON.parse(jqXHR.responseText).error);
                                         }
                                     },
