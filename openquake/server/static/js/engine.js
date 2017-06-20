@@ -195,7 +195,7 @@
                                                 this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
                                                 setTimer();
                                             })();
-                                            diaerror.show(false, "Error:", JSON.parse(jqXHR.responseText).error);
+                                            diaerror.show(false, "Error:", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + JSON.parse(jqXHR.responseText).error);
                                         }
                                     },
                                     success: function(data, textStatus, jqXHR) {

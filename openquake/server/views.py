@@ -339,7 +339,7 @@ def calc_remove(request, calc_id):
         logging.error(message)
         return HttpResponse(content=message,
                             content_type='text/plain', status=500)
-     
+
 
 def log_to_json(log):
     """Convert a log record into a list of strings"""
@@ -627,4 +627,3 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
 @require_http_methods(['GET'])
 def license(request, **kwargs):
     return render(request, "engine/license.html")
-
