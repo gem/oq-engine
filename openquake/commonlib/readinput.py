@@ -833,14 +833,13 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, eids, gmf array of shape (N, E, I)
+        sitecol, eids, gmf array of shape (G, N, E, I)
     """
     I = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
         array = writers.read_composite_array(fname)
-        rlzi = numpy.unique(array['rlzi'])
-        assert rlzi == [0], rlzi
+        R = len(numpy.unique(array['rlzi']))
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
         num_gmv = len(array.dtype.names[3:])
         assert num_gmv == I, (num_gmv, I)
@@ -850,15 +849,15 @@ def get_gmfs(oqparam):
             len(eids), oqparam.number_of_ground_motion_fields)
         eidx = {eid: e for e, eid in enumerate(eids)}
         sids = numpy.unique(array['sid'])
-        gmfs = numpy.zeros((len(sids), len(eids), I), F32)
+        gmfs = numpy.zeros((R, len(sids), len(eids), I), F32)
         for row in array.view(dtlist):
-            gmfs[row['sid'], eidx[row['eid']]] = row['gmv']
+            gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
     elif fname.endswith('.xml'):
         eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
         N, E = gmfs_by_imt.shape
-        gmfs = numpy.zeros((N, E, I), F32)
+        gmfs = numpy.zeros((1, N, E, I), F32)
         for imti, imtstr in enumerate(oqparam.imtls):
-            gmfs[:, :, imti] = gmfs_by_imt[imtstr]
+            gmfs[0, :, :, imti] = gmfs_by_imt[imtstr]
     else:
         raise NotImplemented('Reading from %s' % fname)
     return eids, gmfs
