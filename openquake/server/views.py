@@ -338,7 +338,7 @@ def calc_remove(request, calc_id):
         # This is an untrapped server error
         logging.error(message)
         return HttpResponse(content=message,
-                            content_type='plain/text', status=500)
+                            content_type='text/plain', status=500)
      
 
 def log_to_json(log):
