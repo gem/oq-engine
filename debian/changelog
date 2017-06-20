@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Better error message when running a risk file in absence of hazard
+    calculation
   * Changed the sampling logic in event based calculators
   * Imported GMFs from external file into the datastore
 
