@@ -189,23 +189,8 @@
                                     type: "POST",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 403) {
-                                            console.log(jqXHR.status),
-                                            diaerror.show(false, "Error:", JSON.parse(jqXHR.responseText).error),
-                                            function(data, textStatus, jqXHR) {
-                                                console.log(data.error);
-                                                err = data.error;
-                                                if(!err) {
-                                                    err = "removed.";
-                                                }
-                                                var hide_or_back = (function(e) {
-                                                    closeTimer();
-                                                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
-                                                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-                                                    setTimer();
-                                                })();
-                                                diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
-                                            }  
-                                         }
+                                            diaerror.show(false, "Error:", JSON.parse(jqXHR.responseText).error);
+                                        }
                                     },
                                     success: function(data, textStatus, jqXHR) {
                                         err = data.error;
