@@ -37,7 +37,7 @@ jobs:
         - oq restore /tmp/oqdata.zip /tmp/oqdata
         - helpers/zipdemos.sh $(pwd)/demos
     after_success:
-        # Upload dump.zip to http://artifacts.openquake.org/travis/
+        # Upload oqdata.zip to http://artifacts.openquake.org/travis/
         - if [ "$TRAVIS_BRANCH" == "master" ]; then
             openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in .deploy_rsa.enc -out .deploy_rsa -d;
             chmod 600 .deploy_rsa;
