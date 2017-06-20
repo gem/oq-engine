@@ -184,33 +184,43 @@
                 var calc_desc = $(e.target).attr('data-calc-desc');
                 var view = this;
                 diaerror.show(false, "Removing calculation " + calc_id, "...");
-                $.post(gem_oq_server_url + "/v1/calc/" + calc_id + "/remove"
-                     ).success(
-                         function(data, textStatus, jqXHR)
-                         {  
-                             err = data.error; 
-                             
-                             if(!err) {
-                                 err = "removed.";
-                             }
- 
-                             var hide_or_back = (function(e) {
-                                 closeTimer();
-                                 this.conf_hide = $('#confirmDialog' + calc_id).hide();
-                                 this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-            
-                                 diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
-                                 setTimer();
-                                 
-                                 if(!err) {
-                                     view.calculations.remove([view.calculations.get(calc_id)]);
-                                 } 
-                             
-                             })();
- 
-                         }
-
-                     );
+                
+                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/remove",
+                                    type: "POST",
+                                    error: function (jqXHR, textStatus, errorThrown) {
+                                        if (jqXHR.status == 403) {
+                                            console.log(jqXHR.status),
+                                            diaerror.show(false, "Error:", JSON.parse(jqXHR.responseText).error),
+                                            function(data, textStatus, jqXHR) {
+                                                console.log(data.error);
+                                                err = data.error;
+                                                if(!err) {
+                                                    err = "removed.";
+                                                }
+                                                var hide_or_back = (function(e) {
+                                                    closeTimer();
+                                                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                                                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                                                    setTimer();
+                                                })();
+                                                diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
+                                            }  
+                                         }
+                                    },
+                                    success: function(data, textStatus, jqXHR) {
+                                        err = data.error;
+                                        if(!err) {
+                                            err = "removed.";
+                                        }
+                                        var hide_or_back = (function(e) {
+                                            closeTimer();
+                                            this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                                            this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                                            setTimer();
+                                        })();
+                                        diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
+                                        view.calculations.remove([view.calculations.get(calc_id)]);
+                                    }});
             },
  
 
