@@ -64,7 +64,7 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
         for (aid, lt, r), data in result.items():
             bcr_data[lt][aid, r] = data
         self.datastore['bcr-rlzs'] = bcr_data
-        weights = self.datastore['realizations']['weight']
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         if len(weights) > 1:
             snames, sfuncs = zip(*self.oqparam.hazard_stats())
             bcr_stats = numpy.zeros((self.N, len(sfuncs)),
