@@ -326,7 +326,8 @@ def calc_remove(request, calc_id):
         message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    if isinstance(message, list):  # list of removed files
+
+    if 'success' in message:
         return HttpResponse(content=json.dumps(message),
                             content_type=JSON, status=200)
     else:
