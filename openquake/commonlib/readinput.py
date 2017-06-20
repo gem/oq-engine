@@ -876,7 +876,7 @@ def get_hcurves(oqparam):
     elif fname.endswith('.xml'):
         return get_hcurves_from_nrml(oqparam, fname)
     else:
-        raise NotImplemented('Reading from %s' % fname)
+        raise NotImplementedError('Reading from %s' % fname)
 
 
 def get_hcurves_from_csv(oqparam, fname):
