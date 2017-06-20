@@ -326,15 +326,14 @@ def calc_remove(request, calc_id):
         message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    #return HttpResponse(content=json.dumps(message),
-    #                    content_type=JSON, status=200)
     if isinstance(message, list):  # list of removed files
         return HttpResponse(content=json.dumps(message),
                             content_type=JSON, status=200)
-    else:  # FIXME: the error is not passed properly to the javascript
+    else:
         logging.error(message)
-        return HttpResponse(content=message,
-                            content_type='text/plain', status=500)
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=403)
+
 
 def log_to_json(log):
     """Convert a log record into a list of strings"""
