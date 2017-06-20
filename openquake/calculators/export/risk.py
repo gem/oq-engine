@@ -624,8 +624,6 @@ def export_bcr_map(ekey, dstore):
             fnames.append(path)
     return writer.getsaved()
 
-# TODO: add export_bcr_map_stats
-
 
 @reader
 def get_loss_ratios(lrgetter, aids, monitor):
