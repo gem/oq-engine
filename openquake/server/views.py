@@ -330,11 +330,16 @@ def calc_remove(request, calc_id):
     if 'success' in message:
         return HttpResponse(content=json.dumps(message),
                             content_type=JSON, status=200)
-    else:
+    elif 'error' in message:
         logging.error(message)
         return HttpResponse(content=json.dumps(message),
                             content_type=JSON, status=403)
-
+    else:
+        # This is an untrapped server error
+        logging.error(message)
+        return HttpResponse(content=message,
+                            content_type='plain/text', status=500)
+     
 
 def log_to_json(log):
     """Convert a log record into a list of strings"""
