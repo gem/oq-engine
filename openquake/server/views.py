@@ -331,7 +331,7 @@ def calc_remove(request, calc_id):
         return HttpResponse(content=json.dumps(message),
                             content_type=JSON, status=200)
     elif 'error' in message:
-        logging.error(message)
+        logging.error(message['error'])
         return HttpResponse(content=json.dumps(message),
                             content_type=JSON, status=403)
     else:
