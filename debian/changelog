@@ -1,8 +1,7 @@
   [Armando Scarpati]
-  * Added the error message in modal dialog with handle
-    status error when trying to remove calculation of the 
-    other user via the WebUI
-  
+  * Show to the user the error message when deleting a calculation
+    in the WebUI fails
+
   [Michele Simionato]
   * Better error message when running a risk file in absence of hazard
     calculation
