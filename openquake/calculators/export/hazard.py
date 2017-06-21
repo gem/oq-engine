@@ -25,7 +25,6 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5, parallel, performance
-from openquake.baselib.python3compat import encode
 from openquake.baselib.general import humansize, group_array, DictArray
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
@@ -606,9 +605,9 @@ def save_np(fname, dic, mesh, *extras):
     :param extras: optional triples (field, dtype, values)
     """
     arr = dic[next(iter(dic))]
-    dtlist = [(field, arr.dtype) for field in sorted(dic)]
+    dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
     for field, dtype, values in extras:
-        dtlist.append((encode(field), dtype))
+        dtlist.append((str(field), dtype))
     array = numpy.zeros(arr.shape, dtlist)
     for field in dic:
         array[field] = dic[field]
