@@ -2,12 +2,11 @@ event based risk
 ================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26045.hdf5 Tue Jun  6 14:58:05 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29208.hdf5 Wed Jun 14 10:03:55 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 7, sitecol = 1.11 KB
+num_sites = 7, num_imts = 1
 
 Parameters
 ----------
@@ -127,7 +126,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.088 0.013  0.073 0.096 3        
+compute_ruptures   0.088 0.017  0.072 0.105 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,14 +134,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.263     0.703     3     
-filtering ruptures             0.086     0.0       259   
+total compute_ruptures         0.264     0.758     3     
+filtering ruptures             0.087     0.0       259   
 managing sources               0.058     0.0       1     
-saving ruptures                0.023     0.0       3     
+saving ruptures                0.014     0.0       3     
 reading exposure               0.008     0.0       1     
-store source_info              0.006     0.0       1     
-setting event years            0.005     0.0       1     
 reading composite source model 0.004     0.0       1     
-prefiltering source model      0.003     0.0       1     
-reading site collection        9.537E-06 0.0       1     
+store source_info              0.004     0.0       1     
+setting event years            0.003     0.0       1     
+prefiltering source model      0.002     0.0       1     
+reading site collection        8.345E-06 0.0       1     
 ============================== ========= ========= ======

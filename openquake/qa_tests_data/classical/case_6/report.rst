@@ -2,12 +2,11 @@ Classical Hazard QA Test, Case 6
 ================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26060.hdf5 Tue Jun  6 14:58:25 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29223.hdf5 Wed Jun 14 10:04:16 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -108,7 +107,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.004 2.512E-04 0.003 0.004 2        
+count_eff_ruptures 0.004 2.163E-04 0.004 0.004 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -116,12 +115,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.104     0.0       1     
+reading composite source model 0.108     0.0       1     
 total count_eff_ruptures       0.007     0.0       2     
-store source_info              0.003     0.0       1     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.003     0.0       1     
 managing sources               0.002     0.0       1     
-reading site collection        3.910E-05 0.0       1     
-aggregate curves               3.600E-05 0.0       2     
-saving probability maps        2.551E-05 0.0       1     
+reading site collection        4.888E-05 0.0       1     
+aggregate curves               4.125E-05 0.0       2     
+saving probability maps        3.004E-05 0.0       1     
 ============================== ========= ========= ======
