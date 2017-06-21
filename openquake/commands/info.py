@@ -71,8 +71,8 @@ def print_csm_info(fname):
     oqparam = readinput.get_oqparam(fname)
     csm = readinput.get_composite_source_model(oqparam, in_memory=False)
     print(csm.info)
-    print('See https://github.com/gem/oq-risklib/blob/master/doc/'
-          'effective-realizations.rst for an explanation')
+    print('See http://docs.openquake.org/oq-engine/stable/'
+          'effective-realizations.html for an explanation')
     rlzs_assoc = csm.info.get_rlzs_assoc()
     print(rlzs_assoc)
     tot, pairs = get_pickled_sizes(rlzs_assoc)
