@@ -56,12 +56,11 @@ class LtRealization(object):
     Composite realization build on top of a source model realization and
     a GSIM realization.
     """
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, sampleid):
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
         self.ordinal = ordinal
         self.sm_lt_path = tuple(sm_lt_path)
         self.gsim_rlz = gsim_rlz
         self.weight = weight
-        self.sampleid = sampleid
 
     def __repr__(self):
         return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
@@ -203,7 +202,7 @@ class RlzsAssoc(collections.Mapping):
         rlzs = []
         for i, gsim_rlz in enumerate(gsim_rlzs):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
-            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight, i)
+            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
             self.gsim_by_trt.append(
                 dict(zip(gsim_lt.all_trts, gsim_rlz.value)))
             for src_group in lt_model.src_groups:

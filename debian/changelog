@@ -1,3 +1,17 @@
+  [Michele Simionato]
+  * Better error message when running a risk file in absence of hazard
+    calculation
+  * Changed the sampling logic in event based calculators
+  * Imported GMFs from external file into the datastore
+
+  [Daniele Viganò]
+  * Added the 'celery-status' script in 'utils' to check the
+    task distribution in a multi-node celery setup
+
+  [Michele Simionato]
+  * Removed an excessive check from the WebUI: now if an output exists,
+    it can be downloaded even if the calculation was not successful
+
   [Armando Scarpati]
   * Visualized the calculation_mode in the WebUI
 
