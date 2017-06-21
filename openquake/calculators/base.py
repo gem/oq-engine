@@ -622,7 +622,7 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
-        rlzs = sorted(hazards_by_rlz)
+        rlzs = range(len(hazards_by_rlz))
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []

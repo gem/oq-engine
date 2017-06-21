@@ -8,6 +8,11 @@ set -e
 #   fi
 #done
 # run the other demos
+if [ ! -d "$1" ]; then
+    echo "Please specify the location of the folder containing the demos. Aborting." >&2
+    exit 1
+fi
+
 for ini in $(find $1 -name job.ini | sort); do
     python -m openquake.commands engine --run $ini
 done
@@ -21,4 +26,4 @@ MPLBACKEND=Agg python -m openquake.commands plot_uhs -3
 # fake a wrong calculation still in executing status
 python -m openquake.commands db set_status 1 executing
 # repeat the failed/executing calculation, which is useful for QGIS
-python -m openquake.commands run $1/hazard/AreaSourceClassicalPSHA/job.ini
+python -m openquake.commands engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini
