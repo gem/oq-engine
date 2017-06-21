@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Implemented risk statistics for the classical_bcr calculator
+
+  [Armando Scarpati]
+  * Show to the user the error message when deleting a calculation
+    in the WebUI fails
+
+  [Michele Simionato]
   * Better error message when running a risk file in absence of hazard
     calculation
   * Changed the sampling logic in event based calculators
