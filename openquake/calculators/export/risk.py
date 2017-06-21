@@ -215,12 +215,12 @@ def export_agg_losses(ekey, dstore):
     """
     agg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    etags = calc.build_etags(dstore['events'], 0)
+    eids = calc.build_eids(dstore['events'], 0)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
         dest = dstore.build_fname('agg_losses', rlz, 'csv')
-        data = compose_arrays(etags, losses)
+        data = compose_arrays(eids, losses)
         writer.save(data, dest)
     return writer.getsaved()
 
@@ -287,7 +287,7 @@ def export_agg_losses_ebr(ekey, dstore):
 
 
 def get_eids_years_serials(events_by_grp, eids):
-    etags = []
+    eids_ok = []
     years = []
     serials = []
     for eid in eids:
@@ -297,11 +297,11 @@ def get_eids_years_serials(events_by_grp, eids):
             except KeyError:
                 continue
             else:
-                etags.append(event['eid'])
+                eids_ok.append(event['eid'])
                 years.append(event['year'])
                 serials.append(event['rup_id'])
                 break
-    return numpy.array(etags), numpy.array(years), numpy.array(serials)
+    return numpy.array(eids_ok), numpy.array(years), numpy.array(serials)
 
 
 # this is used by classical_risk
