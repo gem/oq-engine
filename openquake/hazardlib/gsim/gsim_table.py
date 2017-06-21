@@ -525,7 +525,7 @@ class GMPETable(GMPE):
             low_period = round(periods[0], 7)
             high_period = round(periods[-1], 7)
 
-            if imt.period < low_period or imt.period > high_period:
+            if round(imt.period, 7) < low_period or round(imt.period, 7) > high_period:
                 raise ValueError("Spectral period %.3f outside of valid range "
                                  "(%.3f to %.3f)" % (imt.period, periods[0],
                                                      periods[-1]))
