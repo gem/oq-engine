@@ -598,20 +598,24 @@ def export_losses_by_taxon_csv(ekey, dstore):
     return writer.getsaved()
 
 
-@export.add(('bcr-rlzs', 'csv'))
+@export.add(('bcr-rlzs', 'csv'), ('bcr-stats', 'csv'))
 def export_bcr_map(ekey, dstore):
+    oq = dstore['oqparam']
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
-    bcr_data = dstore['bcr-rlzs']
+    bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
-    realizations = dstore['csm_info'].get_rlzs_assoc().realizations
+    if ekey[0].endswith('stats'):
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    else:
+        tags = ['rlz-%03d' % r for r in range(R)]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in realizations:
+    for t, tag in enumerate(tags):
         for l, loss_type in enumerate(loss_types):
-            rlz_data = bcr_data[loss_type][:, rlz.ordinal]
-            path = dstore.build_fname('bcr-%s' % loss_type, rlz, 'csv')
+            rlz_data = bcr_data[loss_type][:, t]
+            path = dstore.build_fname('bcr-%s' % loss_type, tag, 'csv')
             data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
                      'average_annual_loss_retrofitted', 'bcr']]
             for ass, value in zip(assetcol, rlz_data):
@@ -623,8 +627,6 @@ def export_bcr_map(ekey, dstore):
             writer.save(data, path)
             fnames.append(path)
     return writer.getsaved()
-
-# TODO: add export_bcr_map_stats
 
 
 @reader
