@@ -36,6 +36,7 @@ def get_version():
 
     return version
 
+
 version = get_version()
 
 url = "https://github.com/gem/oq-engine"
