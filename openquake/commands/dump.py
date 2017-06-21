@@ -70,8 +70,8 @@ def dump(archive, user=None):
     smart_save(db.path, archive)
 
     dt = time.time() - t0
-    safeprint('Archived %d files into %s in %d seconds'
-              % (len(fnames) + 1, archive, dt))
+    safeprint('Archived %d calculations into %s in %d seconds'
+              % (len(fnames), archive, dt))
 
 
 dump.arg('archive', 'path to the zip file where to dump the calculations')
