@@ -1,5 +1,7 @@
   [Armando Scarpati]
-  * Fix webui error remove other user
+  * Added the error message in modal dialog with handle
+    status error when trying to remove calculation of the 
+    other user via the WebUI
   
   [Michele Simionato]
   * Better error message when running a risk file in absence of hazard
