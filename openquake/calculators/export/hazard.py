@@ -606,7 +606,7 @@ def save_np(fname, dic, mesh, *extras):
     :param extras: optional triples (field, dtype, values)
     """
     arr = dic[next(iter(dic))]
-    dtlist = [(encode(field), arr.dtype) for field in sorted(dic)]
+    dtlist = [(field, arr.dtype) for field in sorted(dic)]
     for field, dtype, values in extras:
         dtlist.append((encode(field), dtype))
     array = numpy.zeros(arr.shape, dtlist)
