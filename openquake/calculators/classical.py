@@ -277,6 +277,11 @@ class PSHACalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
+        try:
+            self.csm
+        except AttributeError:
+            raise RuntimeError('No CompositeSourceModel, did you forget to '
+                               'run the hazard or the --hc option?')
         monitor = self.monitor(self.core_task.__name__)
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, monitor)
