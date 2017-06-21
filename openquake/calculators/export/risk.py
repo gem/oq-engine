@@ -606,7 +606,7 @@ def export_bcr_map(ekey, dstore):
     bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
-        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_bcr_maps]
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
         tags = ['rlz-%03d' % r for r in range(R)]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
