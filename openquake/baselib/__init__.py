@@ -19,5 +19,5 @@
 from openquake.baselib.general import git_suffix
 
 # the version is managed by packager.sh with a sed
-__version__ = '2.5.0'
+__version__ = '2.6.0'
 __version__ += git_suffix(__file__)

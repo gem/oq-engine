@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import itertools
 import logging
 import numpy
 import h5py
@@ -372,49 +373,63 @@ def make_uhs(pmap, imtls, poes, nsites):
     return uhs
 
 
+def get_gmv_data(sids, gmfs):
+    """
+    Convert a list of arrays of shape (N, E, I) into a single array of type
+    gmv_data_dt
+    """
+    N, E, I = gmfs[0].shape
+    gmv_data_dt = numpy.dtype(
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+    it = ((r, sids[s], eid, gmfa[s, eid])
+          for r, gmfa in enumerate(gmfs)
+          for s, eid in itertools.product(range(N), range(E)))
+    return numpy.fromiter(it, gmv_data_dt)
+
+
 def get_gmfs(dstore, precalc=None):
     """
     :param dstore: a datastore
     :param precalc: a scenario calculator with attribute .gmfa
-    :returns: a dictionary grp_id, gsid -> gmfa
+    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
     oq = dstore['oqparam']
-    if 'gmfs' in oq.inputs:  # from file
-        logging.info('Reading gmfs from file')
-        sitecol, etags, gmfa = readinput.get_gmfs(oq)
-        # reduce the gmfa matrix to the filtered sites
-        return etags, [gmfa[sitecol.indices]]
-
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol']
     if dstore.parent:
         haz_sitecol = dstore.parent['sitecol']  # S sites
     else:
         haz_sitecol = sitecol  # N sites
-    S = len(haz_sitecol)
     N = len(haz_sitecol.complete)
     I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
-    etags = numpy.arange(E)
-    gmfs = numpy.zeros((len(rlzs_assoc), N, I, E))
+    eids = numpy.arange(E)
+    gmfs = numpy.zeros((len(rlzs_assoc), N, E, I))
     if precalc:
         for g, gsim in enumerate(precalc.gsims):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
-        return etags, gmfs
+        return eids, gmfs
 
-    # else read from the datastore
-    gsims = sorted(dstore['gmf_data/grp-00'])
-    imtis = range(len(oq.imtls))
-    for i, gsim in enumerate(gsims):
-        dset = dstore['gmf_data/grp-00/' + gsim]
-        for s, sid in enumerate(haz_sitecol.sids):
-            for imti in imtis:
-                idx = E * (S * imti + s)
-                array = dset[idx: idx + E]
+    if 'gmf_data/grp-00' in dstore:
+        # read from the datastore
+        dset = dstore['gmf_data/grp-00']
+        R = len(dstore['realizations'])
+        nrows = len(dset) // R
+        for r in range(R):
+            for s, sid in enumerate(haz_sitecol.sids):
+                start = r * nrows + E * s
+                array = dset[start: start + E]  # shape (E, I)
                 if numpy.unique(array['sid']) != [sid]:  # sanity check
                     raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[i, sid, imti] = array['gmv']
-    return etags, gmfs
+                gmfs[r, sid] = array['gmv']
+        return eids, gmfs
+
+    elif 'gmfs' in oq.inputs:  # from file
+        logging.info('Reading gmfs from file')
+        _sitecol, eids, gmfa = readinput.get_gmfs(oq)
+        dstore['gmf_data/grp-00'] = get_gmv_data(
+            haz_sitecol.sids, [gmfa[haz_sitecol.indices]])
+        return eids, [gmfa]
 
 
 def fix_minimum_intensity(min_iml, imts):
