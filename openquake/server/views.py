@@ -531,8 +531,6 @@ def get_result(request, result_id):
     try:
         job_id, job_status, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        if not job_status == 'complete':
-            return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 

@@ -58,7 +58,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         Raise an error if one PoE = 1, since it would produce a log(0) in
         :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`
         """
-        for rlz, curves in curves_by_rlz.items():
+        for curves in curves_by_rlz:
             for imt in self.oqparam.imtls:
                 for sid, poes in enumerate(curves[imt]):
                     if (poes == 1).any():
