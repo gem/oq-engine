@@ -19,7 +19,7 @@
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_bcr import case_1, case_2
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 
 
 class ClassicalBCRTestCase(CalculatorTestCase):
@@ -33,5 +33,7 @@ class ClassicalBCRTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_bcr')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
-        [fname] = out['bcr-stats', 'csv']
-        self.assertEqualFiles('expected/bcr-structural.csv', fname)
+        fnames = out['bcr-stats', 'csv']
+        assert fnames
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
