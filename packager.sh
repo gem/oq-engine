@@ -382,8 +382,8 @@ _devtest_innervm_run () {
                  fi
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
-                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
-                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
+                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine
+                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  /opt/openquake/bin/nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
@@ -608,6 +608,8 @@ celery_wait $GEM_MAXLOOP"
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
             set -x
         fi
+
+        /usr/share/openquake/engine/utils/celery-status 
 
         cd /usr/share/openquake/engine/demos
         for demo_dir in \$(find . -type d | sort); do
