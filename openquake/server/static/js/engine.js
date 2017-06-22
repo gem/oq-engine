@@ -195,7 +195,7 @@
                                     type: "POST",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 403) {
-                                            diaerror.show(false, "Error", "" + JSON.parse(jqXHR.responseText).error);
+                                            diaerror.show(false, "Error", "<br>" + JSON.parse(jqXHR.responseText).error);
                                         }
                                     },
                                     success: function(data, textStatus, jqXHR) {
@@ -203,7 +203,7 @@
                                         if(!err) {
                                             err = "removed.";
                                         }
-                                        diaerror.show(false, "Calculation removed", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
+                                        diaerror.show(false, "Calculation removed", "<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
                                         view.calculations.remove([view.calculations.get(calc_id)]);
                                     }});
             },
