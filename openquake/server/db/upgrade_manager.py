@@ -38,6 +38,7 @@ class VersionTooSmall(RuntimeError):
 class VersioningNotInstalled(RuntimeError):
     pass
 
+
 CREATE_VERSIONING = '''\
 CREATE TABLE %s(
 version TEXT PRIMARY KEY,
