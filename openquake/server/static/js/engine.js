@@ -195,7 +195,7 @@
                                     type: "POST",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 403) {
-                                            diaerror.show(false, "Error", "Calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + JSON.parse(jqXHR.responseText).error);
+                                            diaerror.show(false, "Error", "" + JSON.parse(jqXHR.responseText).error);
                                         }
                                     },
                                     success: function(data, textStatus, jqXHR) {
