@@ -58,10 +58,10 @@ class ScenarioCalculator(base.HazardCalculator):
         rupture.sidx = 0
         rupture.eidx1 = 0
         rupture.eidx2 = len(events)
-        self.datastore['sids'] = self.sitecol.sids
         self.datastore['events/grp-00'] = events
-        array, nbytes = calc.RuptureSerializer.get_array_nbytes([rupture])
-        self.datastore.extend('ruptures/grp-00', array, nbytes=nbytes)
+        rupser = calc.RuptureSerializer(self.datastore)
+        rupser.save([rupture], 0)
+        rupser.close()
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)

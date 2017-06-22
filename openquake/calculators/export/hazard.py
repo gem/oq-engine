@@ -779,32 +779,16 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
 
 @export.add(('gmf_scenario', 'csv'))
 def export_gmf_scenario_csv(ekey, dstore):
-    what = ekey[0].split('/')[1]
+    what = ekey[0].split('/')
+    if len(what) == 1:
+        raise ValueError('Missing "/rup-\d+"')
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     imts = list(oq.imtls)
-    if 'scenario' in oq.calculation_mode:
-        gsims = [str(rlz.gsim_rlz) for rlz in rlzs_assoc.realizations]
-        n_gmfs = oq.number_of_ground_motion_fields
-        fields = ['%03d' % i for i in range(n_gmfs)]
-        dt = numpy.dtype([(f, F32) for f in fields])
-        eids, gmfs_ = calc.get_gmfs(dstore)
-        sitemesh = get_mesh(dstore['sitecol'])
-        writer = writers.CsvWriter(fmt='%.5f')
-        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E, I)
-            for imti, imt in enumerate(imts):
-                gmfs = numpy.zeros(len(gmfa), dt)
-                for e, event in enumerate(dt.names):
-                    gmfs[event] = gmfa[:, e, imti]
-                dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
-                data = util.compose_arrays(sitemesh, gmfs)
-                writer.save(data, dest)
-        return writer.getsaved()
-
-    # event based export by rupture ID
-    mo = re.match('rup-(\d+)$', what)
+    mo = re.match('rup-(\d+)$', what[1])
     if mo is None:
-        raise ValueError('Invalid format: %s is not rup-(\d+)$' % what)
+        raise ValueError(
+            "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     rup_id = int(mo.group(1))
     grp_ids = sorted(int(grp[4:]) for grp in dstore['ruptures'])
     ruptures = list(calc._get_ruptures(dstore, grp_ids, rup_id))
@@ -818,7 +802,7 @@ def export_gmf_scenario_csv(ekey, dstore):
     correl_model = oq.get_correl_model()
     sitecol = dstore['sitecol']
     getter = GmfGetter(
-        ebr.grp_id, rlzs_by_gsim, ruptures, sitecol, imts,
+        ebr.grp_id, rlzs_by_gsim, ruptures, sitecol.complete, imts,
         min_iml, oq.truncation_level, correl_model, samples)
     getter.init()
     hazardr = getter.get_hazard()
