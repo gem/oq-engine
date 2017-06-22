@@ -777,6 +777,45 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
     return rows, comment
 
 
+@export.add(('gmf_scenario', 'csv'))
+def export_gmf_scenario_csv(ekey, dstore):
+    what = ekey[0].split('/')[1]
+    oq = dstore['oqparam']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    if 'scenario' in oq.calculation_mode:
+        imtls = oq.imtls
+        gsims = [str(rlz.gsim_rlz) for rlz in rlzs_assoc.realizations]
+        n_gmfs = oq.number_of_ground_motion_fields
+        fields = ['%03d' % i for i in range(n_gmfs)]
+        dt = numpy.dtype([(f, F32) for f in fields])
+        eids, gmfs_ = calc.get_gmfs(dstore)
+        sitemesh = get_mesh(dstore['sitecol'])
+        writer = writers.CsvWriter(fmt='%.5f')
+        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E, I)
+            for imti, imt in enumerate(imtls):
+                gmfs = numpy.zeros(len(gmfa), dt)
+                for e, event in enumerate(dt.names):
+                    gmfs[event] = gmfa[:, e, imti]
+                dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
+                data = util.compose_arrays(sitemesh, gmfs)
+                writer.save(data, dest)
+        return writer.getsaved()
+
+    rup_id = int(what)
+    grp_ids = sorted(dstore['ruptures'])
+    ruptures = list(calc.get_ruptures(dstore, grp_ids, rup_id))
+    if not ruptures:
+        logging.warn('There is no rupture %d', rup_id)
+        return []
+    [ebr] = ruptures
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
+    samples = rlzs_assoc.samples[ebr.grp_id]
+    getter = GmfGetter(grp_id, rlzs_by_gsim, ruptures, self.sitecol,
+                       oq.imtls, min_iml, oq.truncation_level,
+                       correl_model, samples)
+    getter.get_hazard()
+
+
 @export.add(('gmf_data', 'npz'))
 def export_gmf_scenario_npz(ekey, dstore):
     oq = dstore['oqparam']
