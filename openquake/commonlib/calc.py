@@ -375,10 +375,9 @@ def make_uhs(pmap, imtls, poes, nsites):
 
 def get_gmv_data(sids, gmfs):
     """
-    Convert a list of arrays of shape (N, E, I) into a single array of type
-    gmv_data_dt
+    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
     """
-    N, E, I = gmfs[0].shape
+    R, N, E, I = gmfs.shape
     gmv_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
     it = ((r, sids[s], eid, gmfa[s, eid])
@@ -426,10 +425,10 @@ def get_gmfs(dstore, precalc=None):
 
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        _sitecol, eids, gmfa = readinput.get_gmfs(oq)
+        eids, gmfs = readinput.get_gmfs(oq)
         dstore['gmf_data/grp-00'] = get_gmv_data(
-            haz_sitecol.sids, [gmfa[haz_sitecol.indices]])
-        return eids, [gmfa]
+            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
+        return eids, gmfs
 
 
 def fix_minimum_intensity(min_iml, imts):
