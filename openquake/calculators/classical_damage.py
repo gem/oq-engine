@@ -19,6 +19,7 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
+from openquake.hazardlib.stats import compute_stats2
 from openquake.calculators import base, classical_risk
 
 
@@ -79,3 +80,8 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
             for aid, fractions in result[r].items():
                 damages[aid, r] = tuple(fractions)
         self.datastore['damages-rlzs'] = damages
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        if len(weights) > 1:  # compute stats
+            snames, sfuncs = zip(*self.oqparam.risk_stats())
+            dmg_stats = compute_stats2(damages, sfuncs, weights)
+            self.datastore['damages-stats'] = dmg_stats
