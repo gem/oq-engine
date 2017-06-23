@@ -718,7 +718,7 @@ def export_gmf_data_csv(ekey, dstore):
         n_gmfs = oq.number_of_ground_motion_fields
         fields = ['%03d' % i for i in range(n_gmfs)]
         dt = numpy.dtype([(f, F32) for f in fields])
-        etags, gmfs_ = calc.get_gmfs(dstore)
+        eids, gmfs_ = calc.get_gmfs(dstore)
         sitemesh = get_mesh(dstore['sitecol'])
         writer = writers.CsvWriter(fmt='%.5f')
         for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E, I)
