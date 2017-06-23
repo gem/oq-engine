@@ -107,6 +107,7 @@ class Monitor(object):
         self.children = []
         self.counts = 0
         self.address = None
+        self._flush = True
 
     @property
     def dt(self):
@@ -192,6 +193,10 @@ class Monitor(object):
         """
         Save the measurements on the performance file (or on stdout)
         """
+        if not self._flush:
+            raise RuntimeError(
+                'Monitor(%r).flush() must not be called in a worker' %
+                self.operation)
         for child in self.children:
             child.flush()
         data = self.get_data()
@@ -223,6 +228,7 @@ class Monitor(object):
         del self_vars['operation']
         del self_vars['children']
         del self_vars['counts']
+        del self_vars['_flush']
         new = self.__class__(operation)
         vars(new).update(self_vars)
         vars(new).update(kw)

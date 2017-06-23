@@ -326,10 +326,16 @@ def calc_remove(request, calc_id):
         message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    if isinstance(message, list):  # list of removed files
+
+    if 'success' in message:
         return HttpResponse(content=json.dumps(message),
                             content_type=JSON, status=200)
-    else:  # FIXME: the error is not passed properly to the javascript
+    elif 'error' in message:
+        logging.error(message['error'])
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=403)
+    else:
+        # This is an untrapped server error
         logging.error(message)
         return HttpResponse(content=message,
                             content_type='text/plain', status=500)
@@ -525,8 +531,6 @@ def get_result(request, result_id):
     try:
         job_id, job_status, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        if not job_status == 'complete':
-            return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
@@ -621,4 +625,3 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
 @require_http_methods(['GET'])
 def license(request, **kwargs):
     return render(request, "engine/license.html")
-

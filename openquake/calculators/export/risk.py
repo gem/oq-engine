@@ -215,12 +215,12 @@ def export_agg_losses(ekey, dstore):
     """
     agg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    etags = calc.build_etags(dstore['events'], 0)
+    eids = calc.build_eids(dstore['events'], 0)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
         dest = dstore.build_fname('agg_losses', rlz, 'csv')
-        data = compose_arrays(etags, losses)
+        data = compose_arrays(eids, losses)
         writer.save(data, dest)
     return writer.getsaved()
 
@@ -287,7 +287,7 @@ def export_agg_losses_ebr(ekey, dstore):
 
 
 def get_eids_years_serials(events_by_grp, eids):
-    etags = []
+    eids_ok = []
     years = []
     serials = []
     for eid in eids:
@@ -297,11 +297,11 @@ def get_eids_years_serials(events_by_grp, eids):
             except KeyError:
                 continue
             else:
-                etags.append(event['eid'])
+                eids_ok.append(event['eid'])
                 years.append(event['year'])
                 serials.append(event['rup_id'])
                 break
-    return numpy.array(etags), numpy.array(years), numpy.array(serials)
+    return numpy.array(eids_ok), numpy.array(years), numpy.array(serials)
 
 
 # this is used by classical_risk
@@ -598,20 +598,24 @@ def export_losses_by_taxon_csv(ekey, dstore):
     return writer.getsaved()
 
 
-@export.add(('bcr-rlzs', 'csv'))
+@export.add(('bcr-rlzs', 'csv'), ('bcr-stats', 'csv'))
 def export_bcr_map(ekey, dstore):
+    oq = dstore['oqparam']
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
-    bcr_data = dstore['bcr-rlzs']
+    bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
-    realizations = dstore['csm_info'].get_rlzs_assoc().realizations
+    if ekey[0].endswith('stats'):
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    else:
+        tags = ['rlz-%03d' % r for r in range(R)]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in realizations:
+    for t, tag in enumerate(tags):
         for l, loss_type in enumerate(loss_types):
-            rlz_data = bcr_data[loss_type][:, rlz.ordinal]
-            path = dstore.build_fname('bcr-%s' % loss_type, rlz, 'csv')
+            rlz_data = bcr_data[loss_type][:, t]
+            path = dstore.build_fname('bcr-%s' % loss_type, tag, 'csv')
             data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
                      'average_annual_loss_retrofitted', 'bcr']]
             for ass, value in zip(assetcol, rlz_data):
@@ -623,8 +627,6 @@ def export_bcr_map(ekey, dstore):
             writer.save(data, path)
             fnames.append(path)
     return writer.getsaved()
-
-# TODO: add export_bcr_map_stats
 
 
 @reader
