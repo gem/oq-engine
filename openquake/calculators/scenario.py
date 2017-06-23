@@ -16,18 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import collections
-import itertools
 import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
-
-U16 = numpy.uint16
-U32 = numpy.uint32
-U64 = numpy.uint64
-F32 = numpy.float32
 
 
 @base.calculators.add('scenario')
@@ -77,15 +71,13 @@ class ScenarioCalculator(base.HazardCalculator):
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
 
     def init(self):
-        I = len(self.oqparam.imtls)
-        self.gmv_data_dt = numpy.dtype(
-            [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+        pass
 
     def execute(self):
         """
         Compute the GMFs and return a dictionary gsim -> array(N, E, I)
         """
-        self.gmfa = {}
+        self.gmfa = collections.OrderedDict()
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
             for gsim in self.gsims:
@@ -95,14 +87,6 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         with self.monitor('saving gmfs', autoflush=True):
-            self.datastore['gmf_data/data'] = numpy.fromiter(
-                self._gen_gmv_data(), self.gmv_data_dt)
+            self.datastore['gmf_data/data'] = calc.get_gmv_data(
+                self.sitecol.sids, numpy.array(list(self.gmfa.values())))
             self.datastore.set_nbytes('gmf_data')
-
-    def _gen_gmv_data(self):
-        sids = self.sitecol.sids
-        for g, gsim in enumerate(self.gsims):
-            gmfa = self.gmfa[gsim]
-            n, e, i = gmfa.shape
-            for s, eid in itertools.product(range(n), range(e)):
-                yield g, sids[s], eid, gmfa[s, eid]

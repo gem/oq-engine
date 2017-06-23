@@ -66,11 +66,12 @@ def classical_risk(riskinput, riskmodel, param, monitor):
     # compute statistics
     rlzs = riskinput.rlzs
     if len(rlzs) > 1 and param['stats']:
+        w = param['weights']
         statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
         for assets, rows in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [rlzs[row.r].weight for row in rows]
+            weights = [w[row.r] for row in rows]
             row = rows[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):
@@ -113,8 +114,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-            rlzs = self.rlzs_assoc.realizations
-            curves = {rlzs[0]: haz_curves}  # there is one realization
+            curves = [haz_curves]  # there is one realization
+            self.R = 1
+            weights = [1]
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             if 'poes' not in self.datastore:  # when building short report
@@ -125,16 +127,15 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             with self.monitor(
                     'combining hcurves', measuremem=True, autoflush=True):
                 pmaps = pgetter.get_pmaps(sids)
-                rlzs = self.rlzs_assoc.realizations
-                curves = {rlz: pmap.convert(oq.imtls, len(sids))
-                          for rlz, pmap in zip(rlzs, pmaps)}
+                curves = [pmap.convert(oq.imtls, len(sids)) for pmap in pmaps]
+            self.R = len(curves)
+            weights = self.datastore['realizations']['weight']
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
             self.riskinputs = self.build_riskinputs('poe', curves)
         self.param = dict(insured_losses=oq.insured_losses,
-                          stats=oq.risk_stats())
+                          stats=oq.risk_stats(), weights=weights)
         self.N = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
-        self.R = len(self.rlzs_assoc.realizations)
         self.I = oq.insured_losses
         self.S = len(oq.risk_stats())
 
