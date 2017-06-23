@@ -241,14 +241,15 @@ class EbrPostCalculator(base.RiskCalculator):
             mon = self.monitor('loss maps')
             if self.oqparam.hazard_calculation_id and (
                     'asset_loss_table' in self.datastore.parent):
-                Starmap = parallel.Starmap  # we can parallelize fully
                 lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
                 # avoid OSError: Can't read data (Wrong b-tree signature)
                 self.datastore.parent.close()
+                Starmap = parallel.Starmap
             else:  # there is a single datastore
-                # we cannot read from it in parallel while writing
-                Starmap = parallel.Sequential
                 lrgetter = riskinput.LossRatiosGetter(self.datastore)
+                Starmap = parallel.Sequential
+                # needed to avoid the HDF5 heisenbug; doing a .restart()
+                # is not enough :-(
             Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
