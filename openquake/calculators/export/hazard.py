@@ -800,28 +800,30 @@ def export_gmf_scenario_csv(ekey, dstore):
     samples = rlzs_assoc.samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     correl_model = oq.get_correl_model()
-    sitecol = dstore['sitecol']
+    sitecol = dstore['sitecol'].complete
     getter = GmfGetter(
-        ebr.grp_id, rlzs_by_gsim, ruptures, sitecol.complete, imts,
+        ebr.grp_id, rlzs_by_gsim, ruptures, sitecol, imts,
         min_iml, oq.truncation_level, correl_model, samples)
     getter.init()
     hazardr = getter.get_hazard()
     rlzs = rlzs_assoc.realizations
     fields = ['eid-%03d' % eid for eid in getter.eids]
     dt = numpy.dtype([(f, F32) for f in fields])
-    sitemesh = get_mesh(sitecol)
+    mesh = numpy.zeros(len(ebr.sids), [('lon', F64), ('lat', F64)])
+    mesh['lon'] = sitecol.lons[ebr.sids]
+    mesh['lat'] = sitecol.lats[ebr.sids]
     writer = writers.CsvWriter(fmt='%.5f')
     for rlzi in range(len(rlzs)):
         hazard = hazardr[rlzi]
         for imti, imt in enumerate(imts):
-            gmfs = numpy.zeros(len(sitemesh), dt)
-            for sid in sitecol.sids:
+            gmfs = numpy.zeros(len(ebr.sids), dt)
+            for s, sid in enumerate(ebr.sids):
                 for rec in hazard[sid]:
                     event = 'eid-%03d' % rec['eid']
-                    gmfs[sid][event] = rec['gmv'][imti]
+                    gmfs[s][event] = rec['gmv'][imti]
             dest = dstore.build_fname(
                 'gmf', 'rup-%s-rlz-%s-%s' % (rup_id, rlzi, imt), 'csv')
-            data = util.compose_arrays(sitemesh, gmfs)
+            data = util.compose_arrays(mesh, gmfs)
             writer.save(data, dest)
     return writer.getsaved()
 
