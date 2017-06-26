@@ -811,10 +811,9 @@ def export_gmf_scenario_npz(ekey, dstore):
             dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
     elif 'event_based' in oq.calculation_mode:
         dic['sitemesh'] = get_mesh(dstore['sitecol'])
-        for grp in sorted(dstore['gmf_data']):
-            data_by_rlzi = group_array(dstore['gmf_data/' + grp].value, 'rlzi')
-            for rlzi in data_by_rlzi:
-                dic['rlz-%03d' % rlzi] = data_by_rlzi[rlzi]
+        data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
+        for rlzi in data_by_rlzi:
+            dic['rlz-%03d' % rlzi] = data_by_rlzi[rlzi]
     else:  # nothing to export
         return []
     savez(fname, **dic)
