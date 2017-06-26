@@ -494,7 +494,8 @@ class EventBasedCalculator(ClassicalCalculator):
         allargs = list(self.gen_args(ruptures_by_grp))
         N = len(self.sitecol.complete)
         T = len(allargs)  # number of tasks
-        self.datastore.create_dset('gmf_data/indices', U32, (N, T, 2))
+        if oq.ground_motion_fields:
+            self.datastore.create_dset('gmf_data/indices', U32, (N, T, 2))
         res = parallel.Starmap(self.core_task.__func__, allargs).submit_all()
         self.gmdata = {}
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
