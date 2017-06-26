@@ -422,8 +422,8 @@ class EventBasedCalculator(ClassicalCalculator):
             with sav_mon:
                 for grp_id, array in res['gmfcoll'].items():
                     if len(array):
-                        key = 'gmf_data/grp-%02d' % grp_id
-                        hdf5.extend3(self.datastore.hdf5path, key, array)
+                        hdf5.extend3(
+                            self.datastore.hdf5path, 'gmf_data/data', array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
