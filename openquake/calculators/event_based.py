@@ -326,14 +326,13 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         getter.init()
     grp_id = getter.grp_id
     hcurves = {}  # key -> poes
-    gmfcoll = {}  # grp_id, rlz -> gmfa
     if oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         with monitor('building hazard', measuremem=True):
-            gmfcoll[grp_id] = data = numpy.fromiter(
+            gmfdata = numpy.fromiter(
                 getter.gen_gmv(), getter.gmf_data_dt)
-            hazard = sorted(getter.get_hazard(data).items())
+            hazard = sorted(getter.get_hazard(gmfdata).items())
         for rlzi, hazardr in hazard:
             for sid in getter.sids:
                 array = hazardr[sid]
@@ -348,9 +347,8 @@ def compute_gmfs_and_curves(getter, oq, monitor):
                         hcurves[rsi2str(rlzi, sid, imt)] = poes
     else:  # fast lane
         with monitor('building hazard', measuremem=True):
-            gmfcoll[grp_id] = numpy.fromiter(
-                getter.gen_gmv(), getter.gmf_data_dt)
-    return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
+            gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+    return dict(gmfdata=gmfdata if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
 
@@ -418,12 +416,10 @@ class EventBasedCalculator(ClassicalCalculator):
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         self.gmdata += res['gmdata']
-        if res['gmfcoll'] is not None:
+        data = res['gmfdata']
+        if data is not None:
             with sav_mon:
-                for grp_id, array in res['gmfcoll'].items():
-                    if len(array):
-                        hdf5.extend3(
-                            self.datastore.hdf5path, 'gmf_data/data', array)
+                hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
