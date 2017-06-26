@@ -672,15 +672,11 @@ class GmfDataGetter(GmfGetter):
 
     def gen_gmv(self):
         """
-        Yield gmv records from the datastore, if present
+        Yield gmv records from the datastore, if any
         """
-        key = 'grp-%02d' % self.grp_id
-        try:
-            dset = self.gmf_data[key]
-        except KeyError:
-            return
-        for rec in dset[self.start:self.stop]:
-            yield rec
+        for rec in self.gmf_data['data'][self.start:self.stop]:
+            if rec['eid'] // TWO48 == self.grp_id:
+                yield rec
 
     @classmethod
     def gen_gmfs(cls, gmf_data, rlzs_assoc, eid=None):

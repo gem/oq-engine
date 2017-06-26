@@ -650,25 +650,20 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     ruptures_by_rlz = collections.defaultdict(list)
+    data = gmf_data['data'].value
+    eventdict = {}
     for grp in sorted(dstore['events']):
         try:
             events = dstore['events/' + grp]
         except KeyError:  # source model producing zero ruptures
             continue
-        eventdict = dict(zip(events['eid'], events))
-        try:
-            data = gmf_data[grp].value
-        except KeyError:  # no GMFs for the given group
-            if grp == 'grp-00' and 'scenario' in oq.calculation_mode:
-                data = gmf_data['data'].value
-            else:
-                continue
-        for rlzi, gmf_arr in group_array(data, 'rlzi').items():
-            ruptures = ruptures_by_rlz[rlzi]
-            for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                ses_idx = eventdict[eid]['ses']
-                rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
-                ruptures.append(rup)
+        eventdict.update((zip(events['eid'], events)))
+    for rlzi, gmf_arr in group_array(data, 'rlzi').items():
+        ruptures = ruptures_by_rlz[rlzi]
+        for eid, gmfa in group_array(gmf_arr, 'eid').items():
+            ses_idx = eventdict[eid]['ses']
+            rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
+            ruptures.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     for rlzi in sorted(ruptures_by_rlz):
         ruptures_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
