@@ -727,13 +727,15 @@ def export_gmf_data_csv(ekey, dstore):
         return writer.getsaved()
     else:  # event based
         eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-        gmfa = GmfDataGetter.gen_gmfs(dstore['gmf_data'], rlzs_assoc, eid)
+        getter = GmfDataGetter(dstore['gmf_data'])
+        gmfa = getter.gen_gmv()
         if eid is None:  # new format
             fname = dstore.build_fname('gmf', 'data', 'csv')
             gmfa.sort(order=['rlzi', 'sid', 'eid'])
             writers.write_csv(fname, _expand_gmv(gmfa, imts))
             return [fname]
         # old format for single eid
+        gmfa = gmfa[gmfa['eid'] == eid]
         fnames = []
         for rlzi, array in group_array(gmfa, 'rlzi').items():
             rlz = rlzs_assoc.realizations[rlzi]
