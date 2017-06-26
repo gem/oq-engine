@@ -19,6 +19,7 @@
 import time
 import os.path
 import operator
+import itertools
 import logging
 import collections
 import mock
@@ -311,6 +312,9 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
+indices_dt = numpy.dtype([('sid', U32), ('start', U32), ('stop', U32)])
+
+
 def compute_gmfs_and_curves(getter, oq, monitor):
     """
     :param getter:
@@ -346,8 +350,17 @@ def compute_gmfs_and_curves(getter, oq, monitor):
     else:  # fast lane
         with monitor('building hazard', measuremem=True):
             gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+    gmfdata.sort(order=('sid', 'rlzi', 'eid'))
+    indices = []
+    start = stop = 0
+    for sid, rows in itertools.groupby(gmfdata['sid']):
+        for row in rows:
+            stop += 1
+        indices.append((sid, start, stop))
+        start = stop
     return dict(gmfdata=gmfdata if oq.ground_motion_fields else None,
-                hcurves=hcurves, gmdata=getter.gmdata)
+                hcurves=hcurves, gmdata=getter.gmdata, taskno=monitor.task_no,
+                indices=numpy.array(indices, indices_dt))
 
 
 def get_ruptures_by_grp(dstore):
@@ -418,6 +431,9 @@ class EventBasedCalculator(ClassicalCalculator):
         if data is not None:
             with sav_mon:
                 hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
+                idx = self.datastore['gmf_data/indices']
+                for sid, start, stop in res['indices']:
+                    idx[sid, res['taskno'] - 1] = (start, stop)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
@@ -475,9 +491,11 @@ class EventBasedCalculator(ClassicalCalculator):
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
         rlzs = self.rlzs_assoc.realizations
-        res = parallel.Starmap(
-            self.core_task.__func__, self.gen_args(ruptures_by_grp)
-        ).submit_all()
+        allargs = list(self.gen_args(ruptures_by_grp))
+        N = len(self.sitecol.complete)
+        T = len(allargs)  # number of tasks
+        self.datastore.create_dset('gmf_data/indices', U32, (N, T, 2))
+        res = parallel.Starmap(self.core_task.__func__, allargs).submit_all()
         self.gmdata = {}
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
             rlz.ordinal: ProbabilityMap(L, 1) for rlz in rlzs})
