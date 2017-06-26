@@ -20,19 +20,19 @@ Response:
       "status": "executing",
       "calculation_mode": "classical",
       "is_running": true,
-      "url": "http://localhost:8000/v1/calc/1"},
-     {"description": "Hazard Calculation for end-to-end hazard+risk",
+      "url": "http://localhost:8800/v1/calc/1"},
+     {"description": "Event based calculation",
       "id": 2,
       "status": "complete",
-      "calculation_mode": "classical",
+      "calculation_mode": "event_based",
       "is_running": true,
-      "url": "http://localhost:8000/v1/calc/2"},
-     {"description": "Hazard Calculation for end-to-end hazard+risk",
+      "url": "http://localhost:8800/v1/calc/2"},
+     {"description": "ScenarioRisk calculation",
       "id": 3,
       "status": "complete",
-      "calculation_mode": "classical",
+      "calculation_mode": "scenario_risk",
       "is_running": false,
-      "url": "http://localhost:8000/v1/calc/3"}]
+      "url": "http://localhost:8800/v1/calc/3"}]
 
 
 #### GET /v1/calc/:calc_id/status
@@ -48,7 +48,7 @@ Response:
       "status": "executing",
       "calculation_mode": "classical",
       "is_running": true,
-      "url": "http://localhost:8000/v1/calc/1"}
+      "url": "http://localhost:8800/v1/calc/1"}
 
 
 #### GET /v1/calc/:calc_id
@@ -76,7 +76,7 @@ Response:
     {"area_source_discretization": 10.0,
      "calculation_mode": "classical",
      "description": "Hazard Calculation for end-to-end hazard+risk",
-     "id": 2,
+     "id": 1,
      "intensity_measure_types_and_levels": {"SA(0.1)": [0.01, 0.04, 0.07, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.49, 0.52, 0.55, 0.58, 0.61, 0.64, 0.67, 0.7, 0.73, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.01, 1.04, 1.07, 1.1, 1.13, 1.16, 1.19, 1.22, 1.25, 1.28, 1.31, 1.34, 1.37, 1.4, 1.43, 1.46, 1.5]},
      "investigation_time": 50.0,
      "maximum_distance": 300.0,
@@ -120,10 +120,10 @@ Parameters: None
 
 Response:
 
-    [{"url": "http://localhost:8000/v1/calc/hazard/result/12", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-22", "id": 12},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/14", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-23", "id": 14},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/16", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-24", "id": 16},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/18", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-25", "id": 18}]
+    [{"url": "http://localhost:8800/v1/calc/hazard/result/12", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-22", "id": 12},
+     {"url": "http://localhost:8800/v1/calc/hazard/result/14", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-23", "id": 14},
+     {"url": "http://localhost:8800/v1/calc/hazard/result/16", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-24", "id": 16},
+     {"url": "http://localhost:8800/v1/calc/hazard/result/18", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-25", "id": 18}]
 
 
 #### GET /v1/calc/result/:result_id
