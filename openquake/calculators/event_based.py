@@ -324,14 +324,12 @@ def compute_gmfs_and_curves(getter, oq, monitor):
    """
     with monitor('making contexts', measuremem=True):
         getter.init()
-    grp_id = getter.grp_id
     hcurves = {}  # key -> poes
     if oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         with monitor('building hazard', measuremem=True):
-            gmfdata = numpy.fromiter(
-                getter.gen_gmv(), getter.gmf_data_dt)
+            gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
             hazard = sorted(getter.get_hazard(gmfdata).items())
         for rlzi, hazardr in hazard:
             for sid in getter.sids:
