@@ -433,7 +433,9 @@ class EventBasedCalculator(ClassicalCalculator):
                 hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
                 idx = self.datastore['gmf_data/indices']
                 for sid, start, stop in res['indices']:
-                    idx[sid, res['taskno'] - 1] = (start, stop)
+                    idx[sid, res['taskno'] - 1] = (start + self.offset,
+                                                   stop + self.offset)
+                self.offset += len(data)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
@@ -498,6 +500,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.datastore.create_dset('gmf_data/indices', U32, (N, T, 2))
         res = parallel.Starmap(self.core_task.__func__, allargs).submit_all()
         self.gmdata = {}
+        self.offset = 0
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
             rlz.ordinal: ProbabilityMap(L, 1) for rlz in rlzs})
         save_gmdata(self, len(rlzs))
