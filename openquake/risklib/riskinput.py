@@ -659,42 +659,29 @@ class GmfDataGetter(GmfGetter):
     """
     Extracts a dictionary of GMVs from the datastore
     """
-    def __init__(self, gmf_data, grp_id, rlzs_by_gsim, start=0, stop=None):
+    def __init__(self, gmf_data, start=0, stop=None):
         self.gmf_data = gmf_data
-        self.grp_id = grp_id
-        self.rlzs_by_gsim = rlzs_by_gsim
         self.start = start
         self.stop = stop
-        self.gmf_data_dt = gmf_data[next(iter(gmf_data))].dtype
 
     def init(self):
         pass
 
     def gen_gmv(self):
         """
-        Yield gmv records from the datastore, if any
+        Returns gmv records from the datastore, if any
         """
-        for rec in self.gmf_data['data'][self.start:self.stop]:
-            if rec['eid'] // TWO48 == self.grp_id:
-                yield rec
+        return self.gmf_data['data'][self.start:self.stop]
 
     @classmethod
-    def gen_gmfs(cls, gmf_data, rlzs_assoc, eid=None):
+    def gen_gmfs(cls, gmf_data, eid=None):
         """
         Returns a gmf_data_dt array
         """
-        if eid is not None:  # extract the grp_id from the eid
-            grp_ids = [eid // TWO48]  # see event_based.set_eids
-        else:
-            grp_ids = rlzs_assoc.gsims_by_grp_id
-        records = []
-        for grp_id in grp_ids:
-            rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            getter = cls(gmf_data, grp_id, rlzs_by_gsim)
-            for rec in getter.gen_gmv():
-                if eid is None or eid == rec['eid']:
-                    records.append(rec)
-        return numpy.array(records, getter.gmf_data_dt)
+        data = cls(gmf_data).gen_gmv()
+        if eid is None:
+            return data
+        return data[data['eid'] == eid]
 
 
 def get_rlzs(hazard_getter):
