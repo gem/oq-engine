@@ -353,14 +353,19 @@ def export_loss_maps_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('damages-rlzs', 'csv'))
-def export_rlzs_by_asset_csv(ekey, dstore):
+@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
+def export_damages_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    oq = dstore['oqparam']
     assets = get_assets(dstore)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname('damages', rlz, ekey[1])
+    if ekey[0].endswith('stats'):
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    else:
+        tags = ['rlz-%03d' % r for r in range(len(rlzs))]
+    for tag, values in zip(tags, value.T):
+        fname = dstore.build_fname('damages', tag, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
 
