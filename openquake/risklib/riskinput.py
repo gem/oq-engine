@@ -499,10 +499,9 @@ class HazardGetter(object):
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, kind, grp_id, hazards_by_rlz, imts):
+    def __init__(self, kind, hazards_by_rlz, imts):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
-        self.grp_id = grp_id
         self.imts = imts
         self.data = collections.OrderedDict()
         self.num_rlzs = len(hazards_by_rlz)

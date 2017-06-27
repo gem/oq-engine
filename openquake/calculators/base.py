@@ -640,8 +640,7 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.HazardGetter(
-                        kind, 0, hazards[:, sids], list(imtls)),
+                    riskinput.HazardGetter(kind, hazards[:, sids], imtls),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
