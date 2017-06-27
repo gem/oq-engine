@@ -499,24 +499,23 @@ class HazardGetter(object):
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, kind, grp_id, rlzs_by_gsim, hazards_by_rlz, imts):
+    def __init__(self, kind, grp_id, hazards_by_rlz, imts):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
         self.grp_id = grp_id
-        self.rlzs_by_gsim = rlzs_by_gsim
         self.imts = imts
         self.data = collections.OrderedDict()
-        for gsim in rlzs_by_gsim:
-            for rlzi in self.rlzs_by_gsim[gsim]:
-                self.data[rlzi] = datadict = {}
-                for idx, haz in enumerate(hazards_by_rlz[rlzi]):
-                    datadict[idx] = lst = [None for imt in imts]
-                    for imti, imt in enumerate(self.imts):
-                        if kind == 'poe':
-                            lst[imti] = haz[imt]  # imls
-                        else:  # gmf
-                            lst[imti] = e = haz[:, imti]
-                            num_events = len(e)
+        self.num_rlzs = len(hazards_by_rlz)
+        for rlzi, hazard in enumerate(hazards_by_rlz):
+            self.data[rlzi] = datadict = {}
+            for idx, haz in enumerate(hazards_by_rlz[rlzi]):
+                datadict[idx] = lst = [None for imt in imts]
+                for imti, imt in enumerate(self.imts):
+                    if kind == 'poe':
+                        lst[imti] = haz[imt]  # imls
+                    else:  # gmf
+                        lst[imti] = e = haz[:, imti]
+                        num_events = len(e)
 
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
@@ -548,6 +547,7 @@ class GmfGetter(object):
         assert sitecol is sitecol.complete
         self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
+        self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
         self.sitecol = sitecol
         self.imts = imts
@@ -640,8 +640,8 @@ class GmfGetter(object):
         """
         if data is None:
             data = self.gen_gmv()
-        rlzs = get_rlzs(self)
-        hazard = {rlzi: collections.defaultdict(list) for rlzi in rlzs}
+        hazard = {rlzi: collections.defaultdict(list)
+                  for rlzi in range(self.num_rlzs)}
         for rlzi, sid, eid, gmv in data:
             hazard[rlzi][sid].append((gmv, eid))
         for haz in hazard.values():
@@ -679,16 +679,6 @@ class GmfDataGetter(GmfGetter):
         return data[data['eid'] == eid]
 
 
-def get_rlzs(hazard_getter):
-    """
-    Returns the realizations contained in the riskinput object.
-    """
-    all_rlzs = []
-    for gsim, rlzs in sorted(hazard_getter.rlzs_by_gsim.items()):
-        all_rlzs.extend(rlzs)
-    return all_rlzs
-
-
 class RiskInput(object):
     """
     Contains all the assets and hazard values associated to a given
@@ -714,8 +704,6 @@ class RiskInput(object):
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.weight = len(self.aids)
-
-    rlzs = property(lambda self: get_rlzs(self.hazard_getter))
 
     @property
     def imt_taxonomies(self):
@@ -751,8 +739,6 @@ class RiskInputFromRuptures(object):
         self.weight = sum(sr.weight for sr in hazard_getter.ebruptures)
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
-
-    rlzs = property(lambda self: get_rlzs(self.hazard_getter))
 
     def epsilon_getter(self, asset_ordinals):
         """

@@ -607,7 +607,7 @@ class RiskCalculator(HazardCalculator):
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
         :param hazards:
-            a list with one array per realization
+            a (composite) array of shape (R, N, ...)
         :param eps:
             a matrix of epsilons (possibly empty)
         :returns:
@@ -621,18 +621,17 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
-        rlzs = range(len(hazards))
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
-            idx_weight_pairs = [
+            sid_weight_pairs = [
                 (i, len(assets))
                 for i, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
-                idx_weight_pairs, num_tasks, weight=operator.itemgetter(1))
+                sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
-                indices = numpy.array([idx for idx, _weight in block])
-                reduced_assets = assets_by_site[indices]
+                sids = numpy.array([sid for sid, _weight in block])
+                reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
                 if len(eps):
@@ -642,8 +641,7 @@ class RiskCalculator(HazardCalculator):
                 # build the riskinputs
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
-                        kind, 0, {None: rlzs},
-                        hazards[:, indices], list(imtls)),
+                        kind, 0, hazards[:, sids], list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
