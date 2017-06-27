@@ -568,8 +568,8 @@ def get_result(request, result_id):
     return response
 
 
-@require_http_methods(['GET'])
 @cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
 def get_export(request, calc_id, what):
     """
     Wrapper over the `oq export` command
@@ -588,7 +588,7 @@ def get_export(request, calc_id, what):
             shutil.rmtree(ds.export_dir)
             return HttpResponse(
                 content='Expected a single filename, got %s' % fnames,
-                content_type='text/plain', status=500)
+                content_type='text/plain', status=403)
         [fname] = fnames
     stream = FileWrapper(open(fname, 'rb'))
     stream.close = lambda: (
