@@ -60,8 +60,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
 
-        # check npy export
-        export(('hcurves', 'npy'), self.calc.datastore)
+        # check npz export
+        export(('hcurves', 'npz'), self.calc.datastore)
 
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
@@ -227,9 +227,9 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         self.assertEqualFiles(
             'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
 
-        # npy exports
-        export(('hmaps', 'npy'), self.calc.datastore)
-        export(('uhs', 'npy'), self.calc.datastore)
+        # npz exports
+        export(('hmaps', 'npz'), self.calc.datastore)
+        export(('uhs', 'npz'), self.calc.datastore)
 
         # check the size of assoc_by_grp for a complex logic tree
         # grp_id gsim_idx rlzis
