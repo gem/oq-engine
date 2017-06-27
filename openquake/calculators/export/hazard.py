@@ -31,7 +31,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
 from openquake.calculators.export import export
-from openquake.risklib.riskinput import GmfDataGetter
+from openquake.risklib.riskinput import GmfGetter, GmfDataGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -775,6 +775,57 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
             data['gmv'])
         rows.append(row)
     return rows, comment
+
+
+@export.add(('gmf_scenario', 'csv'))
+def export_gmf_scenario_csv(ekey, dstore):
+    what = ekey[0].split('/')
+    if len(what) == 1:
+        raise ValueError('Missing "/rup-\d+"')
+    oq = dstore['oqparam']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    imts = list(oq.imtls)
+    mo = re.match('rup-(\d+)$', what[1])
+    if mo is None:
+        raise ValueError(
+            "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
+    rup_id = int(mo.group(1))
+    grp_ids = sorted(int(grp[4:]) for grp in dstore['ruptures'])
+    ruptures = list(calc._get_ruptures(dstore, grp_ids, rup_id))
+    if not ruptures:
+        logging.warn('There is no rupture %d', rup_id)
+        return []
+    [ebr] = ruptures
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
+    samples = rlzs_assoc.samples[ebr.grp_id]
+    min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
+    correl_model = oq.get_correl_model()
+    sitecol = dstore['sitecol'].complete
+    getter = GmfGetter(
+        ebr.grp_id, rlzs_by_gsim, ruptures, sitecol, imts,
+        min_iml, oq.truncation_level, correl_model, samples)
+    getter.init()
+    hazardr = getter.get_hazard()
+    rlzs = rlzs_assoc.realizations
+    fields = ['eid-%03d' % eid for eid in getter.eids]
+    dt = numpy.dtype([(f, F32) for f in fields])
+    mesh = numpy.zeros(len(ebr.sids), [('lon', F64), ('lat', F64)])
+    mesh['lon'] = sitecol.lons[ebr.sids]
+    mesh['lat'] = sitecol.lats[ebr.sids]
+    writer = writers.CsvWriter(fmt='%.5f')
+    for rlzi in range(len(rlzs)):
+        hazard = hazardr[rlzi]
+        for imti, imt in enumerate(imts):
+            gmfs = numpy.zeros(len(ebr.sids), dt)
+            for s, sid in enumerate(ebr.sids):
+                for rec in hazard[sid]:
+                    event = 'eid-%03d' % rec['eid']
+                    gmfs[s][event] = rec['gmv'][imti]
+            dest = dstore.build_fname(
+                'gmf', 'rup-%s-rlz-%s-%s' % (rup_id, rlzi, imt), 'csv')
+            data = util.compose_arrays(mesh, gmfs)
+            writer.save(data, dest)
+    return writer.getsaved()
 
 
 @export.add(('gmf_data', 'npz'))
