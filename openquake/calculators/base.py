@@ -602,7 +602,7 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, hazards, eps=numpy.zeros(0)):
+    def build_riskinputs(self, kind, hazards, eps=numpy.zeros(0), eids=None):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
@@ -610,6 +610,8 @@ class RiskCalculator(HazardCalculator):
             a (composite) array of shape (R, N, ...)
         :param eps:
             a matrix of epsilons (possibly empty)
+        :param eids:
+            an array of event IDs (or None)
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -640,7 +642,8 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.HazardGetter(kind, hazards[:, sids], imtls),
+                    riskinput.HazardGetter(
+                        kind, hazards[:, sids], imtls, eids),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
