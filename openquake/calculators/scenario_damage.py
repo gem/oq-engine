@@ -98,7 +98,7 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
     """
     c_models = param['consequence_models']
     L = len(riskmodel.loss_types)
-    R = len(riskinput.rlzs)
+    R = riskinput.hazard_getter.num_rlzs
     D = len(riskmodel.damage_states)
     E = param['number_of_ground_motion_fields']
     T = len(param['taxonomies'])
@@ -146,8 +146,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.datastore['eids'], gmfs = calc.get_gmfs(
-            self.datastore, self.precalc)
+        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
         self.riskinputs = self.build_riskinputs('gmf', gmfs)
         self.param['taxonomies'] = sorted(self.taxonomies)
 
