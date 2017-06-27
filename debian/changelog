@@ -1,7 +1,7 @@
   [Michele Simionato]
   * Added an exporter gmf_scenario/rup-XXX working also for event based
+  * First version of the calculator gmf_ebrisk
   * Implemented risk statistics for the classical_damage calculator
-  * Parallelized the computation of loss curves in event_based_risk in all cases
   * Added a .csv importer for the ground motion fields
   * Implemented risk statistics for the classical_bcr calculator
 
