@@ -644,7 +644,7 @@ class GmfGetter(object):
         :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
         if data is None:
-            data = list(self.gen_gmv())
+            data = self.gen_gmv()
         rlzs = get_rlzs(self)
         hazard = {rlzi: collections.defaultdict(list) for rlzi in rlzs}
         for rlzi, sid, eid, gmv in data:
