@@ -307,9 +307,6 @@ class EbrPostCalculator(base.RiskCalculator):
 
             self.datastore['agg_curve-stats'] = agg_curve_stats
 
-
-elt_dt = numpy.dtype([('eid', U64), ('loss', F32)])
-
 save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
 
