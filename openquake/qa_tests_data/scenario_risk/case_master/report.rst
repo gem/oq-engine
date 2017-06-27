@@ -2,12 +2,11 @@ scenario risk
 =============
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26105.hdf5 Tue Jun  6 14:59:26 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29268.hdf5 Wed Jun 14 10:05:20 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 7, sitecol = 1.11 KB
+num_sites = 7, num_imts = 4
 
 Parameters
 ----------
@@ -43,6 +42,22 @@ occupants_vulnerability             `occupants_vulnerability_model.xml <occupant
 rupture_model                       `rupture_model.xml <rupture_model.xml>`_                                        
 structural_vulnerability            `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_      
 =================================== ================================================================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    simple(2)       2/2             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ===================================== =========== ======================= =================
+grp_id gsims                                 distances   siteparams              ruptparams       
+====== ===================================== =========== ======================= =================
+0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -86,7 +101,7 @@ computing gmfs          0.027     0.0       1
 reading exposure        0.007     0.0       1     
 filtering sites         0.007     0.0       1     
 saving gmfs             0.002     0.0       1     
-building riskinputs     5.677E-04 0.0       1     
-building epsilons       3.347E-04 0.0       1     
-reading site collection 5.484E-06 0.0       1     
+building riskinputs     5.789E-04 0.0       1     
+building epsilons       3.920E-04 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

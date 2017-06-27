@@ -31,9 +31,7 @@ from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.risklib.riskinput import (
-    GmfGetter, str2rsi, rsi2str, gmf_data_dt)
+from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
@@ -195,8 +193,6 @@ def _build_eb_ruptures(
 
 
 def _count(ruptures):
-    if isinstance(ruptures, int):  # passed the number of ruptures
-        return ruptures
     return sum(ebr.multiplicity for ebr in ruptures)
 
 
@@ -277,11 +273,13 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         self.rupser.close()
         num_events = sum(_count(ruptures) for ruptures in result.values())
+        num_ruptures = sum(len(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
                 'small or the maximum_distance is too small')
-        logging.info('Setting %d event years', num_events)
+        logging.info('Setting %d event years on %d ruptures',
+                     num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             inv_time = int(self.oqparam.investigation_time)
@@ -332,28 +330,26 @@ def compute_gmfs_and_curves(getter, oq, monitor):
     if oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
-        for gsim in getter.rlzs_by_gsim:
-            with monitor('building hazard', measuremem=True):
-                gmfcoll[grp_id, gsim] = data = numpy.fromiter(
-                    getter.gen_gmv(gsim), gmf_data_dt)
-                hazard = getter.get_hazard(gsim, data)
-            for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
-                hazardr = hazard[r]
-                for sid in getter.sids:
+        with monitor('building hazard', measuremem=True):
+            gmfcoll[grp_id] = data = numpy.fromiter(
+                getter.gen_gmv(), getter.gmf_data_dt)
+            hazard = sorted(getter.get_hazard(data).items())
+        for rlzi, hazardr in hazard:
+            for sid in getter.sids:
+                array = hazardr[sid]
+                if len(array) == 0:  # no data
+                    continue
+                with hc_mon:
+                    gmvs = array['gmv']
                     for imti, imt in enumerate(getter.imts):
-                        array = hazardr[sid, imti]
-                        if len(array) == 0:  # no data
-                            continue
-                        with hc_mon:
-                            poes = calc._gmvs_to_haz_curve(
-                                array['gmv'], oq.imtls[imt],
-                                oq.investigation_time, duration)
-                            hcurves[rsi2str(rlz.ordinal, sid, imt)] = poes
+                        poes = calc._gmvs_to_haz_curve(
+                            gmvs[:, imti], oq.imtls[imt],
+                            oq.investigation_time, duration)
+                        hcurves[rsi2str(rlzi, sid, imt)] = poes
     else:  # fast lane
-        for gsim in getter.rlzs_by_gsim:
-            with monitor('building hazard', measuremem=True):
-                gmfcoll[grp_id, gsim] = numpy.fromiter(
-                    getter.gen_gmv(gsim), gmf_data_dt)
+        with monitor('building hazard', measuremem=True):
+            gmfcoll[grp_id] = numpy.fromiter(
+                getter.gen_gmv(), getter.gmf_data_dt)
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
@@ -424,9 +420,9 @@ class EventBasedCalculator(ClassicalCalculator):
         self.gmdata += res['gmdata']
         if res['gmfcoll'] is not None:
             with sav_mon:
-                for (grp_id, gsim), array in res['gmfcoll'].items():
+                for grp_id, array in res['gmfcoll'].items():
                     if len(array):
-                        key = 'gmf_data/grp-%02d/%s' % (grp_id, gsim)
+                        key = 'gmf_data/grp-%02d' % grp_id
                         hdf5.extend3(self.datastore.hdf5path, key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
@@ -498,11 +494,8 @@ class EventBasedCalculator(ClassicalCalculator):
         """Save the attribute nbytes in the gmf_data datasets"""
         ds = self.datastore
         for sm_id in ds['gmf_data']:
-            for rlzno in ds['gmf_data/' + sm_id]:
-                ds.set_nbytes('gmf_data/%s/%s' % (sm_id, rlzno))
-            ds['gmf_data'].attrs['num_sites'] = len(self.sitecol.complete)
-            ds['gmf_data'].attrs['num_imts'] = len(self.oqparam.imtls)
-            ds.set_nbytes('gmf_data')
+            ds.set_nbytes('gmf_data/' + sm_id)
+        ds.set_nbytes('gmf_data')
 
     def post_execute(self, result):
         """

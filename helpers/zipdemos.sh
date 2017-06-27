@@ -32,4 +32,5 @@ for d in hazard risk; do
     for z in *; do
         if [ -d $z ]; then zip -q -r ${z}.zip $z; fi
     done
+    cd - > /dev/null
 done

@@ -2,12 +2,11 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 ==========================================================================================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_26078.hdf5 Tue Jun  6 14:58:42 2017
-engine_version                                   2.5.0-gitb270b98        
-hazardlib_version                                0.25.0-git6276f16       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_29241.hdf5 Wed Jun 14 10:04:34 2017
+engine_version                                   2.5.0-gite200a20        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -175,26 +174,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      1         AreaSource   375          0.002     1         1        
-2      5         AreaSource   425          0.002     1         1        
-5      1         AreaSource   375          0.001     1         1        
-3      5         AreaSource   375          0.001     1         1        
-2      1         AreaSource   375          0.001     1         1        
 5      5         AreaSource   375          0.001     1         1        
-1      5         AreaSource   375          0.001     1         1        
-6      1         AreaSource   425          0.001     1         1        
-6      5         AreaSource   375          0.001     1         1        
-2      2         AreaSource   450          0.001     1         1        
-4      5         AreaSource   325          0.001     1         1        
 3      1         AreaSource   325          0.001     1         1        
+5      1         AreaSource   375          0.001     1         1        
+1      1         AreaSource   375          0.001     1         1        
+4      1         AreaSource   375          0.001     1         1        
+3      5         AreaSource   375          0.001     1         1        
+0      1         AreaSource   325          0.001     1         1        
+2      5         AreaSource   425          0.001     1         1        
+0      2         AreaSource   450          0.001     1         1        
+6      5         AreaSource   375          0.001     1         1        
+3      4         AreaSource   375          0.001     1         1        
 0      5         AreaSource   375          0.001     1         1        
-5      3         AreaSource   450          0.001     1         1        
-1      3         AreaSource   450          0.001     1         1        
-1      2         AreaSource   450          0.001     1         1        
-4      3         AreaSource   450          0.001     1         1        
 5      2         AreaSource   510          0.001     1         1        
+1      3         AreaSource   450          0.001     1         1        
+4      3         AreaSource   450          0.001     1         1        
+0      4         AreaSource   325          0.001     1         1        
+1      2         AreaSource   450          0.001     1         1        
+3      2         AreaSource   450          0.001     1         1        
+4      2         AreaSource   390          0.001     1         1        
 0      3         AreaSource   450          0.001     1         1        
-4      4         AreaSource   325          0.001     1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -202,14 +201,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.061     50    
+AreaSource   0.057     50    
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.005 0.002  0.002 0.007 17       
+count_eff_ruptures 0.004 0.002  0.001 0.008 17       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -217,12 +216,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.234     0.0       1     
-total count_eff_ruptures       0.078     0.0       17    
-prefiltering source model      0.038     0.0       1     
-managing sources               0.021     0.0       1     
-store source_info              0.006     0.0       1     
-aggregate curves               4.349E-04 0.0       17    
-reading site collection        5.698E-05 0.0       1     
-saving probability maps        3.314E-05 0.0       1     
+reading composite source model 0.211     0.0       1     
+total count_eff_ruptures       0.073     0.199     17    
+managing sources               0.033     0.0       1     
+prefiltering source model      0.027     0.0       1     
+store source_info              0.007     0.0       1     
+aggregate curves               5.648E-04 0.0       17    
+reading site collection        4.005E-05 0.0       1     
+saving probability maps        3.839E-05 0.0       1     
 ============================== ========= ========= ======
