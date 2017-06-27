@@ -114,8 +114,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-            curves = [haz_curves]  # there is one realization
-            self.R = 1
+            curves = [haz_curves]
+            self.R = 1  # there is one realization
             weights = [1]
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
@@ -131,7 +131,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.R = len(curves)
             weights = self.datastore['realizations']['weight']
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs('poe', curves)
+            self.riskinputs = self.build_riskinputs('poe', numpy.array(curves))
         self.param = dict(insured_losses=oq.insured_losses,
                           stats=oq.risk_stats(), weights=weights)
         self.N = len(self.assetcol)
