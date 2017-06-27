@@ -55,7 +55,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     """
     E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
-    R = len(riskinput.rlzs)
+    R = riskinput.hazard_getter.num_rlzs
     I = param['insured_losses'] + 1
     asset_loss_table = param['asset_loss_table']
     lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))
@@ -108,10 +108,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        self.datastore['eids'], gmfs = calc.get_gmfs(
-            self.datastore, self.precalc)
-        hazard_by_rlz = gmfs
-        self.riskinputs = self.build_riskinputs('gmf', hazard_by_rlz, eps)
+        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
