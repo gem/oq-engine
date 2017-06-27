@@ -906,14 +906,6 @@ def get_hcurves_from_csv(oqparam, fname):
     return sitecol, curves
 
 
-def dict2curves(dic, imtls):
-    arr = dic[next(iter(dic))]
-    curves = numpy.zeros(len(arr), imtls.dt)
-    for imt_ in curves.dtype.names:
-        curves[imt_] = dic[imt_]
-    return curves
-
-
 def get_hcurves_from_nrml(oqparam, fname):
     """
     :param oqparam:
