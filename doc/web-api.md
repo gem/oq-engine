@@ -113,6 +113,19 @@ A list of error lines extracted from the log. If the calculation was
 successfull, the list is empty.
 
 
+#### GET /v1/calc/:calc_id/export/:out_key/:out_kind
+
+Get the exported file for the given output key and output kind.
+
+Parameters:
+
+    * export_type: the desired format for the file (`npz`, `csv`, etc.)
+
+Response:
+
+A single file or an error 406 if multiple files are generated.
+
+
 #### GET /v1/calc/:calc_id/results
 
 List a summary of results for the given `calc_id`. The [url](#get-v1calchazardresultresult_id) in each response item can be followed to retrieve the full result artifact.
