@@ -502,7 +502,7 @@ class EventBasedCalculator(ClassicalCalculator):
         self.gmdata = {}
         self.offset = 0
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
-            rlz.ordinal: ProbabilityMap(L, 1) for rlz in rlzs})
+            rlz.ordinal: ProbabilityMap(L) for rlz in rlzs})
         save_gmdata(self, len(rlzs))
         return acc
 
