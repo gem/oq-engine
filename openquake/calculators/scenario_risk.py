@@ -55,7 +55,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     """
     E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
-    R = len(riskinput.rlzs)
+    R = riskinput.hazard_getter.num_rlzs
     I = param['insured_losses'] + 1
     asset_loss_table = param['asset_loss_table']
     lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))

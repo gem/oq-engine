@@ -64,8 +64,8 @@ def classical_risk(riskinput, riskmodel, param, monitor):
                 result['loss_curves'].append((l, r, aid, lcurve))
 
     # compute statistics
-    rlzs = riskinput.rlzs
-    if len(rlzs) > 1 and param['stats']:
+    R = riskinput.hazard_getter.num_rlzs
+    if R > 1 and param['stats']:
         w = param['weights']
         statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
