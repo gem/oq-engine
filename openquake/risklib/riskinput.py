@@ -446,7 +446,7 @@ class CompositeRiskModel(collections.Mapping):
             hazard = hazard_getter.get_hazard()
         with mon_risk:
             for out in self._gen_outputs(
-                    hazard, imti, dic, getattr(hazard_getter, 'eids', None)):
+                    hazard, imti, dic, hazard_getter.eids):
                 yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
@@ -508,6 +508,7 @@ class HazardGetter(object):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
         self.imts = imts
+        self.eids = eids
         self.data = collections.OrderedDict()
         self.num_rlzs = len(hazards_by_rlz)
         for rlzi, hazard in enumerate(hazards_by_rlz):
@@ -523,7 +524,6 @@ class HazardGetter(object):
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
             # number of ground motion fields
-            self.eids = eids
             # dictionary rlzi -> array(imts, events, nbytes)
             self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
