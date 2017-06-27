@@ -132,9 +132,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        [fname] = export(('gmf_data/4294967296', 'csv'),
+        [fname] = export(('gmf_scenario/rup-1', 'csv'),
                          self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-65536.csv', fname)
+        self.assertEqualFiles('expected/gmf-rlz-0-PGA.csv', fname)
 
         # test that the .npz export runs
         export(('gmf_data', 'npz'), self.calc.datastore)
