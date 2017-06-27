@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Implemented risk statistics for the classical_damage calculator
+  * Added a .csv importer for the ground motion fields
   * Implemented risk statistics for the classical_bcr calculator
 
   [Armando Scarpati]
