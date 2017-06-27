@@ -38,6 +38,7 @@ class VersionTooSmall(RuntimeError):
 class VersioningNotInstalled(RuntimeError):
     pass
 
+
 CREATE_VERSIONING = '''\
 CREATE TABLE %s(
 version TEXT PRIMARY KEY,
@@ -114,7 +115,9 @@ def apply_sql_script(conn, fname):
     """
     sql = open(fname).read()
     try:
-        conn.executescript(sql)
+        # we cannot use conn.executescript which is non transactional
+        for query in sql.split('\n\n'):
+            conn.execute(query)
     except:
         logging.error('Error executing %s' % fname)
         raise

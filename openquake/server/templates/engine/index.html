@@ -35,8 +35,8 @@
         <tr>
           <th style="width: 50px;">ID</th>
           <th style="width: 50px;">User</th>
-          <th style="width: 50px;">Type</th>
-          <th style="width: 380px;">Description</th>
+          <th style="width: 130px;">Calculation mode</th>
+          <th style="width: 300px;">Description</th>
           <th style="width: 120px;">Status</th>
           <th style="width: 150px;">Action</th>
         </tr>
@@ -46,7 +46,7 @@
         <tr class="<%= (calc.get('status') == 'created' || calc.get('is_running') == true) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
           <td><%= calc.get('id') || 'New' %></td>
           <td><%= calc.get('owner') %></td>
-          <td><%= calc.get('job_type') %></td>
+          <td><%= calc.get('calculation_mode') %></td>
           <td><%= calc.get('description') %></td>
           <td>
             <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('is_running') == true) { %>

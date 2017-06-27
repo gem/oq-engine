@@ -20,7 +20,6 @@ import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.risklib.riskinput import gmf_data_dt
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
 
@@ -76,28 +75,18 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Compute the GMFs and return a dictionary gsim -> array gmf_data_dt
+        Compute the GMFs and return a dictionary gsim -> array(N, E, I)
         """
-        res = collections.defaultdict(list)
-        sids = self.sitecol.sids
-        self.gmfa = {}
+        self.gmfa = collections.OrderedDict()
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
             for gsim in self.gsims:
                 gmfa = self.computer.compute(gsim, n)  # shape (I, N, E)
-                self.gmfa[gsim] = gmfa.transpose(1, 0, 2)  # shape (N, I, E)
-                for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
-                    res[gsim].append((0, sids[sid], eid, imti, gmv))
-            return {gsim: numpy.array(res[gsim], gmf_data_dt)
-                    for gsim in res}
+                self.gmfa[gsim] = gmfa.transpose(1, 2, 0)  # shape (N, E, I)
+        return self.gmfa
 
-    def post_execute(self, gmfa_by_gsim):
-        """
-        :param gmfa: a dictionary gsim -> gmfa
-        """
+    def post_execute(self, dummy):
         with self.monitor('saving gmfs', autoflush=True):
-            for gsim in self.gsims:
-                rlzstr = 'gmf_data/grp-00/%s' % gsim
-                self.datastore[rlzstr] = gmfa_by_gsim[gsim]
-                self.datastore.set_attrs(rlzstr, gsim=str(gsim))
+            self.datastore['gmf_data/grp-00'] = calc.get_gmv_data(
+                self.sitecol.sids, numpy.array(list(self.gmfa.values())))
             self.datastore.set_nbytes('gmf_data')
