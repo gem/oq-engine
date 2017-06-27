@@ -643,7 +643,7 @@ class RiskCalculator(HazardCalculator):
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
                         kind, 0, {None: rlzs},
-                        hazards[:, indices], indices, list(imtls)),
+                        hazards[:, indices], list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)

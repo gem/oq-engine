@@ -496,30 +496,26 @@ class HazardGetter(object):
         a dictionary gsim -> realizations for that GSIM
     :param hazards_by_rlz:
         an array of curves of shape (R, N) or a GMF array of shape (R, N, E, I)
-    :params sids:
-        array of site IDs of interest
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, kind, grp_id, rlzs_by_gsim, hazards_by_rlz, sids, imts):
+    def __init__(self, kind, grp_id, rlzs_by_gsim, hazards_by_rlz, imts):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
         self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.sids = sids
         self.imts = imts
         self.data = collections.OrderedDict()
         for gsim in rlzs_by_gsim:
             for rlzi in self.rlzs_by_gsim[gsim]:
                 self.data[rlzi] = datadict = {}
-                hazards_by_imt = hazards_by_rlz[rlzi]
-                for idx, sid in enumerate(sids):
+                for idx, haz in enumerate(hazards_by_rlz[rlzi]):
                     datadict[idx] = lst = [None for imt in imts]
                     for imti, imt in enumerate(self.imts):
                         if kind == 'poe':
-                            lst[imti] = hazards_by_imt[idx][imt]  # imls
+                            lst[imti] = haz[imt]  # imls
                         else:  # gmf
-                            lst[imti] = e = hazards_by_imt[idx, :, imti]
+                            lst[imti] = e = haz[:, imti]
                             num_events = len(e)
 
         if kind == 'gmf':
