@@ -445,13 +445,14 @@ class CompositeRiskModel(collections.Mapping):
         with mon_hazard:
             hazard = hazard_getter.get_hazard()
         with mon_risk:
-            for out in self._gen_outputs(hazard, imti, dic):
+            for out in self._gen_outputs(
+                    hazard, imti, dic, hazard_getter.eids):
                 yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, hazard, imti, dic):
+    def _gen_outputs(self, hazard, imti, dic, eids):
         for taxonomy in sorted(dic):
             riskmodel = self[taxonomy]
             rangeI = [imti[riskmodel.risk_functions[lt].imt]
@@ -468,7 +469,9 @@ class CompositeRiskModel(collections.Mapping):
                         eids = haz['eid']
                         gmvs = haz['gmv']
                         data = {i: (gmvs[:, i], eids) for i in rangeI}
-                    else:
+                    elif eids is not None:  # gmf_ebrisk
+                        data = {i: (haz[i], eids) for i in rangeI}
+                    else:  # classical
                         data = haz
                     out = [None] * len(self.lti)
                     for lti, i in enumerate(rangeI):
@@ -498,11 +501,14 @@ class HazardGetter(object):
         an array of curves of shape (R, N) or a GMF array of shape (R, N, E, I)
     :param imts:
         a list of IMT strings
+    :param eids:
+        an array of event IDs (or None)
     """
-    def __init__(self, kind, hazards_by_rlz, imts):
+    def __init__(self, kind, hazards_by_rlz, imts, eids=None):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
         self.imts = imts
+        self.eids = eids
         self.data = collections.OrderedDict()
         self.num_rlzs = len(hazards_by_rlz)
         for rlzi, hazard in enumerate(hazards_by_rlz):
@@ -513,13 +519,11 @@ class HazardGetter(object):
                     if kind == 'poe':
                         lst[imti] = haz[imt]  # imls
                     else:  # gmf
-                        lst[imti] = e = haz[:, imti]
-                        num_events = len(e)
+                        lst[imti] = haz[:, imti]
 
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
             # number of ground motion fields
-            self.eids = numpy.arange(num_events, dtype=F32)
             # dictionary rlzi -> array(imts, events, nbytes)
             self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
