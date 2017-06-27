@@ -495,8 +495,7 @@ class HazardGetter(object):
     :param rlzs_by_gsim:
         a dictionary gsim -> realizations for that GSIM
     :param hazards_by_rlz:
-        a nested dictionary rlz -> imt -> PoE array or
-        a flat dictionary rlz -> GMF array of shape (N, E, I)
+        an array of curves of shape (R, N) or a GMF array of shape (R, N, E, I)
     :params sids:
         array of site IDs of interest
     :param imts:
@@ -518,9 +517,9 @@ class HazardGetter(object):
                     datadict[idx] = lst = [None for imt in imts]
                     for imti, imt in enumerate(self.imts):
                         if kind == 'poe':
-                            lst[imti] = hazards_by_imt[imt][sid]  # imls
+                            lst[imti] = hazards_by_imt[idx][imt]  # imls
                         else:  # gmf
-                            lst[imti] = e = hazards_by_imt[sid, :, imti]
+                            lst[imti] = e = hazards_by_imt[idx, :, imti]
                             num_events = len(e)
 
         if kind == 'gmf':
