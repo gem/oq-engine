@@ -33,7 +33,6 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, datastore, source, calc, riskmodels
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
@@ -603,18 +602,18 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, hazards_by_rlz, eps=numpy.zeros(0)):
+    def build_riskinputs(self, kind, hazards, eps=numpy.zeros(0)):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
-        :param hazards_by_rlz:
-            a dictionary rlz -> IMT -> array of length num_sites
+        :param hazards:
+            a list with one array per realization
         :param eps:
             a matrix of epsilons (possibly empty)
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        self.check_poes(hazards_by_rlz)
+        self.check_poes(hazards)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -622,7 +621,7 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
-        rlzs = range(len(hazards_by_rlz))
+        rlzs = range(len(hazards))
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
@@ -644,7 +643,7 @@ class RiskCalculator(HazardCalculator):
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
                         kind, 0, {None: rlzs},
-                        hazards_by_rlz, indices, list(imtls)),
+                        hazards, indices, list(imtls)),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
