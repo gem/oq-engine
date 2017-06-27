@@ -350,7 +350,6 @@ def compute_gmfs_and_curves(getter, oq, monitor):
     else:  # fast lane
         with monitor('building hazard', measuremem=True):
             gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
-    gmfdata.sort(order=('sid', 'rlzi', 'eid'))
     indices = []
     start = stop = 0
     for sid, rows in itertools.groupby(gmfdata['sid']):
@@ -358,7 +357,8 @@ def compute_gmfs_and_curves(getter, oq, monitor):
             stop += 1
         indices.append((sid, start, stop))
         start = stop
-    return dict(gmfdata=gmfdata if oq.ground_motion_fields else None,
+    return dict(gmfdata=numpy.sort(gmfdata, order=('sid', 'rlzi', 'eid'))
+                if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata, taskno=monitor.task_no,
                 indices=numpy.array(indices, indices_dt))
 
