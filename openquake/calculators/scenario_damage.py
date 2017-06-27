@@ -146,8 +146,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.datastore['eids'], gmfs = calc.get_gmfs(
-            self.datastore, self.precalc)
+        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
         self.riskinputs = self.build_riskinputs('gmf', gmfs)
         self.param['taxonomies'] = sorted(self.taxonomies)
 
