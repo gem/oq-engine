@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
-import glob
 import operator
 from datetime import datetime
 
@@ -223,6 +222,7 @@ def get_outputs(db, job_id):
     """
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
+
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset')
 
 
@@ -268,31 +268,30 @@ def del_calc(db, job_id, user):
     dependent = db(
         'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
     if dependent:
-        return ('Cannot delete calculation %d: there are calculations '
-                'dependent from it: %s' % (job_id, [j.id for j in dependent]))
+        return {"error": 'Cannot delete calculation %d: there '
+                'are calculations '
+                'dependent from it: %s' % (job_id, [j.id for j in dependent])}
     try:
         owner, path = db('SELECT user_name, ds_calc_dir FROM job WHERE id=?x',
                          job_id, one=True)
     except NotFound:
-        return ('Cannot delete calculation %d: ID does not exist' % job_id)
+        return {"error": 'Cannot delete calculation %d:'
+                ' ID does not exist' % job_id}
 
     deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
                  job_id, user).rowcount
     if not deleted:
-        return ('Cannot delete calculation %d: it belongs to '
-                '%s and you are %s' % (job_id, owner, user))
+        return {"error": 'Cannot delete calculation %d: it belongs to '
+                '%s and you are %s' % (job_id, owner, user)}
 
-    # try to delete datastore and associated files
+    # try to delete datastore and associated file
     # path has typically the form /home/user/oqdata/calc_XXX
-    fnames = []
-    for fname in glob.glob(path + '.*'):
-        try:
-            os.remove(fname)
-        except OSError as exc:  # permission error
-            print('Could not remove %s: %s' % (fname, exc))
-        else:
-            fnames.append(fname)
-    return fnames
+    fname = path + ".hdf5"
+    try:
+        os.remove(fname)
+    except OSError as exc:  # permission error
+        return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    return {"success": fname}
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -444,7 +443,7 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     :param id:
         if given, extract only the specified calculation
     :returns:
-        list of tuples (job_id, user_name, job_status, job_type,
+        list of tuples (job_id, user_name, job_status, calculation_mode,
                         job_is_running, job_description)
     """
     # helper to get job+calculation data from the oq-engine database
@@ -458,8 +457,9 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     if id is not None:
         filterdict['id'] = id
 
-    if 'job_type' in request_get_dict:
-        filterdict['job_type'] = request_get_dict.get('job_type')
+    if 'calculation_mode' in request_get_dict:
+        filterdict['calculation_mode'] = request_get_dict.get(
+            'calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
@@ -480,9 +480,9 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    jobs = db('SELECT *, %s FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
-              % (JOB_TYPE, time_filter, limit), filterdict)
-    return [(job.id, job.user_name, job.status, job.job_type,
+    jobs = db('SELECT * FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
+              % (time_filter, limit), filterdict)
+    return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description) for job in jobs]
 
 

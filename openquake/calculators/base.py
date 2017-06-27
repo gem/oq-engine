@@ -182,14 +182,16 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             logging.info('Running %s', self.oqparam.inputs['job_ini'])
             logging.info('Using engine version %s', engine_version)
             logversion = False
-        if concurrent_tasks is None:  # use the default
-            pass
-        elif concurrent_tasks == 0:  # disable distribution temporarily
+        if concurrent_tasks is None:  # use the job.ini parameter
+            ct = self.oqparam.concurrent_tasks
+        else:  # used the parameter passed in the command-line
+            ct = concurrent_tasks
+        if ct == 0:  # disable distribution temporarily
             oq_distribute = os.environ.get('OQ_DISTRIBUTE')
             os.environ['OQ_DISTRIBUTE'] = 'no'
-        elif concurrent_tasks != OqParam.concurrent_tasks.default:
-            # use the passed concurrent_tasks over the default
-            self.oqparam.concurrent_tasks = concurrent_tasks
+        if ct != self.oqparam.concurrent_tasks:
+            # save the used concurrent_tasks
+            self.oqparam.concurrent_tasks = ct
         self.save_params(**kw)
         exported = {}
         try:
@@ -214,7 +216,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 logging.critical('', exc_info=True)
                 raise
         finally:
-            if concurrent_tasks == 0:  # restore OQ_DISTRIBUTE
+            if ct == 0:  # restore OQ_DISTRIBUTE
                 if oq_distribute is None:  # was not set
                     del os.environ['OQ_DISTRIBUTE']
                 else:
@@ -620,7 +622,7 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
-        rlzs = sorted(hazards_by_rlz)
+        rlzs = range(len(hazards_by_rlz))
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
