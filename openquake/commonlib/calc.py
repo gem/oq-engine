@@ -409,9 +409,8 @@ def get_gmfs(dstore, precalc=None):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
         return eids, gmfs
 
-    if 'gmf_data/grp-00' in dstore:
-        # read from the datastore
-        dset = dstore['gmf_data/grp-00']
+    if 'gmf_data/data' in dstore:
+        dset = dstore['gmf_data/data']
         R = len(dstore['realizations'])
         nrows = len(dset) // R
         for r in range(R):
@@ -426,7 +425,7 @@ def get_gmfs(dstore, precalc=None):
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)
-        dstore['gmf_data/grp-00'] = get_gmv_data(
+        dstore['gmf_data/data'] = get_gmv_data(
             haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
         return eids, gmfs
 
