@@ -323,6 +323,7 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
     :param rlzs_assoc: a RlzsAssoc instance
     """
     key, fmt = ekey
+    key = key.split('/')[0]
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
               'uhs': 'hazard_uhs'}[key]
     if kind.startswith('quantile-'):  # strip the 7 characters 'hazard_'
