@@ -33,7 +33,6 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, datastore, source, calc, riskmodels
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
@@ -603,18 +602,18 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, hazards_by_rlz, eps=numpy.zeros(0)):
+    def build_riskinputs(self, kind, hazards, eps=numpy.zeros(0)):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
-        :param hazards_by_rlz:
-            a dictionary rlz -> IMT -> array of length num_sites
+        :param hazards:
+            a (composite) array of shape (R, N, ...)
         :param eps:
             a matrix of epsilons (possibly empty)
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        self.check_poes(hazards_by_rlz)
+        self.check_poes(hazards)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -622,18 +621,17 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
-        rlzs = range(len(hazards_by_rlz))
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
-            idx_weight_pairs = [
+            sid_weight_pairs = [
                 (i, len(assets))
                 for i, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
-                idx_weight_pairs, num_tasks, weight=operator.itemgetter(1))
+                sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
-                indices = numpy.array([idx for idx, _weight in block])
-                reduced_assets = assets_by_site[indices]
+                sids = numpy.array([sid for sid, _weight in block])
+                reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
                 if len(eps):
@@ -642,9 +640,7 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.HazardGetter(
-                        kind, 0, {None: rlzs},
-                        hazards_by_rlz, indices, list(imtls)),
+                    riskinput.HazardGetter(kind, hazards[:, sids], imtls),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
