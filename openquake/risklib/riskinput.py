@@ -640,8 +640,7 @@ class GmfGetter(object):
         """
         if data is None:
             data = self.gen_gmv()
-        hazard = {rlzi: collections.defaultdict(list)
-                  for rlzi in range(self.num_rlzs)}
+        hazard = collections.defaultdict(lambda: collections.defaultdict(list))
         for rlzi, sid, eid, gmv in data:
             hazard[rlzi][sid].append((gmv, eid))
         for haz in hazard.values():
