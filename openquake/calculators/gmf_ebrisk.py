@@ -24,6 +24,7 @@ from openquake.calculators import base, event_based_risk as ebr
 
 U16 = numpy.uint16
 F32 = numpy.float32
+U64 = numpy.uint64
 F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
@@ -42,32 +43,37 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         logging.info('Building the epsilons')
         oq = self.oqparam
-        A = len(self.assetcol)
-        E = oq.number_of_ground_motion_fields
+        self.L = len(self.riskmodel.lti)
+        self.T = len(self.assetcol.taxonomies)
+        self.A = len(self.assetcol)
+        self.E = oq.number_of_ground_motion_fields
+        self.I = oq.insured_losses + 1
         if oq.ignore_covs:
-            eps = numpy.zeros((A, E), numpy.float32)
+            eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
-            eps = self.make_eps(E)
-        self.datastore['eids'], gmfs = calc.get_gmfs(
-            self.datastore, self.precalc)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
+            eps = self.make_eps(self.E)
+        eids, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        self.R = len(gmfs)
+        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps, eids)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['asset_loss_table'] = oq.asset_loss_table or oq.loss_ratios
+        self.param['elt_dt'] = numpy.dtype(
+            [('eid', U64), ('loss', (F32, (self.L, self.I)))])
         self.taskno = 0
         self.start = 0
-        self.R = len(gmfs)
-        self.L = len(self.riskmodel.lti)
-        self.T = len(self.assetcol.taxonomies)
-        self.A = len(self.assetcol)
-        self.I = I = self.oqparam.insured_losses + 1
         self.datastore.create_dset('losses_by_taxon-rlzs', F32,
-                                   (self.T, self.R, self.L * I))
+                                   (self.T, self.R, self.L * self.I))
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
+                'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
+
+        events = numpy.zeros(oq.number_of_ground_motion_fields,
+                             calc.stored_event_dt)
+        events['eid'] = eids
+        self.datastore['events/grp-00'] = events
 
     def post_execute(self, result):
         pass
