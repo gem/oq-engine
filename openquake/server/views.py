@@ -588,7 +588,7 @@ def get_export(request, calc_id, what):
             shutil.rmtree(ds.export_dir)
             return HttpResponse(
                 content='Expected a single filename, got %s' % fnames,
-                content_type='text/plain', status=403)
+                content_type='text/plain', status=406)
         [fname] = fnames
     stream = FileWrapper(open(fname, 'rb'))
     stream.close = lambda: (
