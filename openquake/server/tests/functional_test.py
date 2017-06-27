@@ -189,6 +189,7 @@ class EngineServerTestCase(unittest.TestCase):
         url = 'http://%s/v1/calc/%s/export/hcurves/rlz-000' % (
             self.hostport, job_id)
         resp = requests.get(url, dict(export_type='npz'))
+        self.assertEqual(resp.status, 200)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
