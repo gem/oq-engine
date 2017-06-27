@@ -150,8 +150,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     L = len(riskmodel.lti)
     taxid = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
     T = len(taxid)
-    R = sum(len(rlzs)
-            for gsim, rlzs in riskinput.hazard_getter.rlzs_by_gsim.items())
+    R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
