@@ -591,7 +591,7 @@ def _extract(hmap, imt, j):
     return tup
 
 
-def save_np(fname, dic, mesh, *extras):
+def save_np(fname, dic, mesh, *extras, **kw):
     """
     Save a dictionary of arrays as a single .npy file containing a
     structured array with fields which are they keys of the dictionary,
@@ -604,6 +604,7 @@ def save_np(fname, dic, mesh, *extras):
     :param dic: dictionary of arrays of the same shape
     :param mesh: a mesh array with lon, lat fields of the same length
     :param extras: optional triples (field, dtype, values)
+    :param kw: dictionary of parameters (like investigation_time)
     """
     arr = dic[next(iter(dic))]
     dtlist = [(field, arr.dtype) for field in sorted(dic)]
@@ -617,11 +618,11 @@ def save_np(fname, dic, mesh, *extras):
     if fname.endswith('.npy'):
         numpy.save(fname, util.compose_arrays(mesh, array))
     else:  # npz
-        numpy.savez(fname, all=util.compose_arrays(mesh, array))
+        numpy.savez(fname, all=util.compose_arrays(mesh, array), **kw)
     return [fname]
 
 
-@export.add(('hcurves', 'npy'), ('hcurves', 'npz'))
+@export.add(('hcurves', 'npz'))
 def export_hcurves_np(ekey, dstore):
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
@@ -629,11 +630,11 @@ def export_hcurves_np(ekey, dstore):
     dic = {}
     for kind, hcurves in calc.PmapGetter(dstore).items():
         dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
-    save_np(fname, dic, mesh)
+    save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
     return [fname]
 
 
-@export.add(('uhs', 'npy'), ('uhs', 'npz'))
+@export.add(('uhs', 'npz'))
 def export_uhs_np(ekey, dstore):
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
@@ -641,11 +642,11 @@ def export_uhs_np(ekey, dstore):
     dic = {}
     for kind, hcurves in calc.PmapGetter(dstore).items():
         dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
-    save_np(fname, dic, mesh)
+    save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
     return [fname]
 
 
-@export.add(('hmaps', 'npy'), ('hmaps', 'npz'))
+@export.add(('hmaps', 'npz'))
 def export_hmaps_np(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
@@ -656,7 +657,8 @@ def export_hmaps_np(ekey, dstore):
     for kind, hcurves in calc.PmapGetter(dstore).items():
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
         dic[kind] = convert_to_array(hmap, mesh, pdic)
-    save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30))
+    save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30),
+            investigation_time=oq.investigation_time)
     return [fname]
 
 
