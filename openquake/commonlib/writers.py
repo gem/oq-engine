@@ -121,6 +121,7 @@ htranslator = HeaderTranslator(
     '(slight):float32',
     '(moderate):float32',
     '(extensive):float32',
+    '(extreme):float32',
     '(complete):float32',
     '(\d+):float32',  # realization column, used in the GMF scenario exporter
 )
