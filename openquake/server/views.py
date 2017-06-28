@@ -77,7 +77,7 @@ DEFAULT_LOG_LEVEL = 'info'
 #: XML by default.
 DEFAULT_EXPORT_TYPE = 'xml'
 
-EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
+EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON, npy=HDF5)
 DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquake.server')
@@ -580,7 +580,7 @@ def get_export(request, calc_id, what):
         return HttpResponseNotFound()
 
     fname = job.ds_calc_dir + '.hdf5'
-    etype = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
+    etype = request.GET.get('export_type', 'npy')
     with datastore.read(fname) as ds:
         ds.export_dir = tempfile.mkdtemp()
         fnames = export((what, etype), ds)
