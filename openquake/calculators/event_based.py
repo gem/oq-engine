@@ -502,13 +502,18 @@ class EventBasedCalculator(ClassicalCalculator):
         self.indices = collections.defaultdict(list)  # sid -> indices
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
             rlz.ordinal: ProbabilityMap(L) for rlz in rlzs})
-        if self.indices:
-            sids = numpy.array(sorted(self.indices))
-            self.datastore['gmf_data/sids'] = sids
-            self.datastore.save_vlen(
-                'gmf_data/indices', [numpy.array(self.indices[sid], indices_dt)
-                                     for sid in sids])
         save_gmdata(self, len(rlzs))
+        if self.indices:
+            logging.info('Saving gmf_data/indices')
+            with self.monitor('saving gmf_data/indices', measuremem=True,
+                              autoflush=True):
+                sids = numpy.array(self.indices)
+                sids.sort()
+                self.datastore['gmf_data/sids'] = sids
+                self.datastore.save_vlen(
+                    'gmf_data/indices',
+                    [numpy.array(self.indices[sid], indices_dt)
+                     for sid in sids])
         return acc
 
     def save_gmf_bytes(self):
