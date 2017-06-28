@@ -625,15 +625,9 @@ class RuptureSerializer(object):
         Flush the ruptures and the site IDs on the datastore
         """
         self.sids.clear()
-        dset = self.datastore.create_dset(
-            'sids', sids_dt, (len(self.data),), fillvalue=None)
-        nbytes = 0
-        for i, val in enumerate(self.data):
-            dset[i] = val
-            nbytes += val.nbytes
-        self.datastore.set_attrs('sids', nbytes=nbytes)
-        self.datastore.flush()
-        del self.data[:]
+        if self.data:
+            self.datastore.save_vlen('sids', self.data)
+            del self.data[:]
 
 
 def get_ruptures(dstore, grp_id):
