@@ -23,7 +23,6 @@ import itertools
 import logging
 import collections
 import mock
-import h5py
 import numpy
 
 from openquake.baselib import hdf5
