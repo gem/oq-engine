@@ -31,7 +31,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
 from openquake.calculators.export import export
-from openquake.risklib.riskinput import GmfDataGetter
+from openquake.risklib.riskinput import GmfGetter, GmfDataGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -679,22 +679,20 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     ruptures_by_rlz = collections.defaultdict(list)
+    data = gmf_data['data'].value
+    eventdict = {}
     for grp in sorted(dstore['events']):
         try:
             events = dstore['events/' + grp]
         except KeyError:  # source model producing zero ruptures
             continue
-        eventdict = dict(zip(events['eid'], events))
-        try:
-            data = gmf_data[grp].value
-        except KeyError:  # no GMFs for the given group
-            continue
-        for rlzi, gmf_arr in group_array(data, 'rlzi').items():
-            ruptures = ruptures_by_rlz[rlzi]
-            for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                ses_idx = eventdict[eid]['ses']
-                rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
-                ruptures.append(rup)
+        eventdict.update((zip(events['eid'], events)))
+    for rlzi, gmf_arr in group_array(data, 'rlzi').items():
+        ruptures = ruptures_by_rlz[rlzi]
+        for eid, gmfa in group_array(gmf_arr, 'eid').items():
+            ses_idx = eventdict[eid]['ses']
+            rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
+            ruptures.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     for rlzi in sorted(ruptures_by_rlz):
         ruptures_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
@@ -758,13 +756,15 @@ def export_gmf_data_csv(ekey, dstore):
         return writer.getsaved()
     else:  # event based
         eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-        gmfa = GmfDataGetter.gen_gmfs(dstore['gmf_data'], rlzs_assoc, eid)
+        getter = GmfDataGetter(dstore['gmf_data'])
+        gmfa = getter.gen_gmv()
         if eid is None:  # new format
             fname = dstore.build_fname('gmf', 'data', 'csv')
             gmfa.sort(order=['rlzi', 'sid', 'eid'])
             writers.write_csv(fname, _expand_gmv(gmfa, imts))
             return [fname]
         # old format for single eid
+        gmfa = gmfa[gmfa['eid'] == eid]
         fnames = []
         for rlzi, array in group_array(gmfa, 'rlzi').items():
             rlz = rlzs_assoc.realizations[rlzi]
@@ -806,6 +806,57 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
     return rows, comment
 
 
+@export.add(('gmf_scenario', 'csv'))
+def export_gmf_scenario_csv(ekey, dstore):
+    what = ekey[0].split('/')
+    if len(what) == 1:
+        raise ValueError('Missing "/rup-\d+"')
+    oq = dstore['oqparam']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    imts = list(oq.imtls)
+    mo = re.match('rup-(\d+)$', what[1])
+    if mo is None:
+        raise ValueError(
+            "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
+    rup_id = int(mo.group(1))
+    grp_ids = sorted(int(grp[4:]) for grp in dstore['ruptures'])
+    ruptures = list(calc._get_ruptures(dstore, grp_ids, rup_id))
+    if not ruptures:
+        logging.warn('There is no rupture %d', rup_id)
+        return []
+    [ebr] = ruptures
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
+    samples = rlzs_assoc.samples[ebr.grp_id]
+    min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
+    correl_model = oq.get_correl_model()
+    sitecol = dstore['sitecol'].complete
+    getter = GmfGetter(
+        ebr.grp_id, rlzs_by_gsim, ruptures, sitecol, imts,
+        min_iml, oq.truncation_level, correl_model, samples)
+    getter.init()
+    hazardr = getter.get_hazard()
+    rlzs = rlzs_assoc.realizations
+    fields = ['eid-%03d' % eid for eid in getter.eids]
+    dt = numpy.dtype([(f, F32) for f in fields])
+    mesh = numpy.zeros(len(ebr.sids), [('lon', F64), ('lat', F64)])
+    mesh['lon'] = sitecol.lons[ebr.sids]
+    mesh['lat'] = sitecol.lats[ebr.sids]
+    writer = writers.CsvWriter(fmt='%.5f')
+    for rlzi in range(len(rlzs)):
+        hazard = hazardr[rlzi]
+        for imti, imt in enumerate(imts):
+            gmfs = numpy.zeros(len(ebr.sids), dt)
+            for s, sid in enumerate(ebr.sids):
+                for rec in hazard[sid]:
+                    event = 'eid-%03d' % rec['eid']
+                    gmfs[s][event] = rec['gmv'][imti]
+            dest = dstore.build_fname(
+                'gmf', 'rup-%s-rlz-%s-%s' % (rup_id, rlzi, imt), 'csv')
+            data = util.compose_arrays(mesh, gmfs)
+            writer.save(data, dest)
+    return writer.getsaved()
+
+
 @export.add(('gmf_data', 'npz'))
 def export_gmf_scenario_npz(ekey, dstore):
     oq = dstore['oqparam']
@@ -840,10 +891,9 @@ def export_gmf_scenario_npz(ekey, dstore):
             dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
     elif 'event_based' in oq.calculation_mode:
         dic['sitemesh'] = get_mesh(dstore['sitecol'])
-        for grp in sorted(dstore['gmf_data']):
-            data_by_rlzi = group_array(dstore['gmf_data/' + grp].value, 'rlzi')
-            for rlzi in data_by_rlzi:
-                dic['rlz-%03d' % rlzi] = data_by_rlzi[rlzi]
+        data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
+        for rlzi in data_by_rlzi:
+            dic['rlz-%03d' % rlzi] = data_by_rlzi[rlzi]
     else:  # nothing to export
         return []
     savez(fname, **dic)
