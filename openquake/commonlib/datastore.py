@@ -267,6 +267,23 @@ class DataStore(collections.MutableMapping):
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 
+    def save_vlen(self, key, data):
+        """
+        Save a sequence of variable-length arrays
+
+        :param key: name of the dataset
+        :param data: data to store as vlen arrays
+        """
+        dt = data[0].dtype
+        dset = self.create_dset(
+            key, h5py.special_dtype(vlen=dt), (len(data),), fillvalue=None)
+        nbytes = 0
+        for i, val in enumerate(data):
+            dset[i] = val
+            nbytes += val.nbytes
+        self.set_attrs(key, nbytes=nbytes)
+        self.flush()
+
     def extend(self, key, array, **attrs):
         """
         Extend the dataset associated to the given key; create it if needed

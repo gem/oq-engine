@@ -23,7 +23,7 @@ import itertools
 import logging
 import collections
 import mock
-
+import h5py
 import numpy
 
 from openquake.baselib import hdf5
@@ -47,6 +47,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 TWO48 = 2 ** 48  # 281,474,976,710,656
+
 
 # ######################## rupture calculator ############################ #
 
@@ -312,7 +313,7 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-indices_dt = numpy.dtype([('sid', U32), ('start', U32), ('stop', U32)])
+indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 def compute_gmfs_and_curves(getter, oq, monitor):
@@ -351,16 +352,18 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         with monitor('building hazard', measuremem=True):
             gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
     indices = []
-    start = stop = 0
-    for sid, rows in itertools.groupby(gmfdata['sid']):
-        for row in rows:
-            stop += 1
-        indices.append((sid, start, stop))
-        start = stop
-    return dict(gmfdata=numpy.sort(gmfdata, order=('sid', 'rlzi', 'eid'))
-                if oq.ground_motion_fields else None,
-                hcurves=hcurves, gmdata=getter.gmdata, taskno=monitor.task_no,
-                indices=numpy.array(indices, indices_dt))
+    if oq.ground_motion_fields:
+        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
+        start = stop = 0
+        for sid, rows in itertools.groupby(gmfdata['sid']):
+            for row in rows:
+                stop += 1
+            indices.append((sid, start, stop))
+            start = stop
+    else:
+        gmfdata = None
+    return dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
+                taskno=monitor.task_no, indices=numpy.array(indices, (U32, 3)))
 
 
 def get_ruptures_by_grp(dstore):
@@ -431,10 +434,9 @@ class EventBasedCalculator(ClassicalCalculator):
         if data is not None:
             with sav_mon:
                 hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
-                idx = self.datastore['gmf_data/indices']
                 for sid, start, stop in res['indices']:
-                    idx[sid, res['taskno'] - 1] = (start + self.offset,
-                                                   stop + self.offset)
+                    self.indices[sid].append(
+                        (start + self.offset, stop + self.offset))
                 self.offset += len(data)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
@@ -494,15 +496,18 @@ class EventBasedCalculator(ClassicalCalculator):
         L = len(oq.imtls.array)
         rlzs = self.rlzs_assoc.realizations
         allargs = list(self.gen_args(ruptures_by_grp))
-        N = len(self.sitecol.complete)
-        T = len(allargs)  # number of tasks
-        if oq.ground_motion_fields:
-            self.datastore.create_dset('gmf_data/indices', U32, (N, T, 2))
         res = parallel.Starmap(self.core_task.__func__, allargs).submit_all()
         self.gmdata = {}
         self.offset = 0
+        self.indices = collections.defaultdict(list)  # sid -> indices
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
             rlz.ordinal: ProbabilityMap(L) for rlz in rlzs})
+        if self.indices:
+            sids = sorted(self.indices)
+            self.datastore['gmf_data/sids'] = numpy.array(sids, U32)
+            self.datastore.save_vlen(
+                'gmf_data/indices', [numpy.array(self.indices[sid], indices_dt)
+                                     for sid in sids])
         save_gmdata(self, len(rlzs))
         return acc
 
