@@ -54,14 +54,14 @@ class ScenarioCalculator(base.HazardCalculator):
         events = numpy.zeros(oq.number_of_ground_motion_fields,
                              calc.stored_event_dt)
         events['eid'] = numpy.arange(oq.number_of_ground_motion_fields)
+        self.datastore['events/grp-00'] = events
         rupture = calc.EBRupture(rup, self.sitecol.sids, events, 0, 0)
         rupture.sidx = 0
         rupture.eidx1 = 0
         rupture.eidx2 = len(events)
-        self.datastore['sids'] = self.sitecol.sids
-        self.datastore['events/grp-00'] = events
-        array, nbytes = calc.RuptureSerializer.get_array_nbytes([rupture])
-        self.datastore.extend('ruptures/grp-00', array, nbytes=nbytes)
+        rupser = calc.RuptureSerializer(self.datastore)
+        rupser.save([rupture], 0)
+        rupser.close()
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
@@ -87,6 +87,6 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         with self.monitor('saving gmfs', autoflush=True):
-            self.datastore['gmf_data/grp-00'] = calc.get_gmv_data(
+            self.datastore['gmf_data/data'] = calc.get_gmv_data(
                 self.sitecol.sids, numpy.array(list(self.gmfa.values())))
             self.datastore.set_nbytes('gmf_data')

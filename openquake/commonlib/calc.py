@@ -409,9 +409,8 @@ def get_gmfs(dstore, precalc=None):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
         return eids, gmfs
 
-    if 'gmf_data/grp-00' in dstore:
-        # read from the datastore
-        dset = dstore['gmf_data/grp-00']
+    if 'gmf_data/data' in dstore:
+        dset = dstore['gmf_data/data']
         R = len(dstore['realizations'])
         nrows = len(dset) // R
         for r in range(R):
@@ -426,7 +425,7 @@ def get_gmfs(dstore, precalc=None):
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)
-        dstore['gmf_data/grp-00'] = get_gmv_data(
+        dstore['gmf_data/data'] = get_gmv_data(
             haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
         return eids, gmfs
 
@@ -626,64 +625,67 @@ class RuptureSerializer(object):
         Flush the ruptures and the site IDs on the datastore
         """
         self.sids.clear()
-        dset = self.datastore.create_dset(
-            'sids', sids_dt, (len(self.data),), fillvalue=None)
-        nbytes = 0
-        for i, val in enumerate(self.data):
-            dset[i] = val
-            nbytes += val.nbytes
-        self.datastore.set_attrs('sids', nbytes=nbytes)
-        self.datastore.flush()
-        del self.data[:]
+        if self.data:
+            self.datastore.save_vlen('sids', self.data)
+            del self.data[:]
 
 
 def get_ruptures(dstore, grp_id):
     """
     Extracts the ruptures of the given grp_id
     """
+    return _get_ruptures(dstore, [grp_id], None)
+
+
+def _get_ruptures(dstore, grp_ids, rup_id):
     oq = dstore['oqparam']
-    trt = dstore['csm_info'].grp_trt()[grp_id]
-    grp = 'grp-%02d' % grp_id
-    if grp not in dstore['events']:
-        return
-    events = dstore['events/' + grp]
-    for rec in dstore['ruptures/' + grp]:
-        mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
-        rupture_cls, surface_cls, source_cls = BaseRupture.types[rec['code']]
-        rupture = object.__new__(rupture_cls)
-        rupture.surface = object.__new__(surface_cls)
-        # MISSING: test with complex_fault_mesh_spacing != rupture_mesh_spacing
-        if 'Complex' in surface_cls.__name__:
-            mesh_spacing = oq.complex_fault_mesh_spacing
-        else:
-            mesh_spacing = oq.rupture_mesh_spacing
-        rupture.source_typology = source_cls
-        rupture.mag = rec['mag']
-        rupture.rake = rec['rake']
-        rupture.seed = rec['seed']
-        rupture.hypocenter = geo.Point(*rec['hypo'])
-        rupture.occurrence_rate = rec['occurrence_rate']
-        rupture.tectonic_region_type = trt
-        pmfx = rec['pmfx']
-        if pmfx != -1:
-            rupture.pmf = dstore['pmfs/' + grp][pmfx]
-        if surface_cls is geo.PlanarSurface:
-            rupture.surface = geo.PlanarSurface.from_array(
-                mesh_spacing, rec['points'])
-        elif surface_cls.__name__.endswith('MultiSurface'):
-            rupture.surface.__init__([
-                geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
-                for m1 in mesh])
-        else:  # fault surface, strike and dip will be computed
-            rupture.surface.strike = rupture.surface.dip = None
-            m = mesh[0]
-            rupture.surface.mesh = RectangularMesh(
-                m['lon'], m['lat'], m['depth'])
-        sids = dstore['sids'][rec['sidx']]
-        evs = events[rec['eidx1']:rec['eidx2']]
-        ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
-        ebr.eidx1 = rec['eidx1']
-        ebr.eidx2 = rec['eidx2']
-        ebr.sidx = rec['sidx']
-        # not implemented: rupture_slip_direction
-        yield ebr
+    grp_trt = dstore['csm_info'].grp_trt()
+    for grp_id in grp_ids:
+        trt = grp_trt[grp_id]
+        grp = 'grp-%02d' % grp_id
+        if grp not in dstore['events']:
+            continue
+        events = dstore['events/' + grp]
+        for rec in dstore['ruptures/' + grp]:
+            if rup_id is not None and rup_id != rec['serial']:
+                continue
+            mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+            rupture_cls, surface_cls, source_cls = BaseRupture.types[
+                rec['code']]
+            rupture = object.__new__(rupture_cls)
+            rupture.surface = object.__new__(surface_cls)
+            # MISSING: case complex_fault_mesh_spacing != rupture_mesh_spacing
+            if 'Complex' in surface_cls.__name__:
+                mesh_spacing = oq.complex_fault_mesh_spacing
+            else:
+                mesh_spacing = oq.rupture_mesh_spacing
+            rupture.source_typology = source_cls
+            rupture.mag = rec['mag']
+            rupture.rake = rec['rake']
+            rupture.seed = rec['seed']
+            rupture.hypocenter = geo.Point(*rec['hypo'])
+            rupture.occurrence_rate = rec['occurrence_rate']
+            rupture.tectonic_region_type = trt
+            pmfx = rec['pmfx']
+            if pmfx != -1:
+                rupture.pmf = dstore['pmfs/' + grp][pmfx]
+            if surface_cls is geo.PlanarSurface:
+                rupture.surface = geo.PlanarSurface.from_array(
+                    mesh_spacing, rec['points'])
+            elif surface_cls.__name__.endswith('MultiSurface'):
+                rupture.surface.__init__([
+                    geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
+                    for m1 in mesh])
+            else:  # fault surface, strike and dip will be computed
+                rupture.surface.strike = rupture.surface.dip = None
+                m = mesh[0]
+                rupture.surface.mesh = RectangularMesh(
+                    m['lon'], m['lat'], m['depth'])
+            sids = dstore['sids'][rec['sidx']]
+            evs = events[rec['eidx1']:rec['eidx2']]
+            ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
+            ebr.eidx1 = rec['eidx1']
+            ebr.eidx2 = rec['eidx2']
+            ebr.sidx = rec['sidx']
+            # not implemented: rupture_slip_direction
+            yield ebr
