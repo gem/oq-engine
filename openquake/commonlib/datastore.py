@@ -278,10 +278,12 @@ class DataStore(collections.MutableMapping):
         dset = self.create_dset(
             key, h5py.special_dtype(vlen=dt), (len(data),), fillvalue=None)
         nbytes = 0
+        totlen = 0
         for i, val in enumerate(data):
             dset[i] = val
             nbytes += val.nbytes
-        self.set_attrs(key, nbytes=nbytes)
+            totlen += len(val)
+        self.set_attrs(key, nbytes=nbytes, avg_len=totlen / len(data))
         self.flush()
 
     def extend(self, key, array, **attrs):
