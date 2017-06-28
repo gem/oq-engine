@@ -113,7 +113,8 @@ def export_ses_csv(ekey, dstore):
                  trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
     rows.sort()  # by rupture serial
-    writers.write_csv(dest, rows, header=header, sep='\t')
+    writers.write_csv(dest, rows, header=header, sep='\t',
+                      comment='investigation_time=%s' % oq.investigation_time)
     return [dest]
 
 
