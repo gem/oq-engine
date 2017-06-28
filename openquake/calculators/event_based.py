@@ -19,10 +19,10 @@
 import time
 import os.path
 import operator
+import itertools
 import logging
 import collections
 import mock
-
 import numpy
 
 from openquake.baselib import hdf5
@@ -46,6 +46,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 TWO48 = 2 ** 48  # 281,474,976,710,656
+
 
 # ######################## rupture calculator ############################ #
 
@@ -311,6 +312,9 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
+indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
+
+
 def compute_gmfs_and_curves(getter, oq, monitor):
     """
     :param getter:
@@ -324,16 +328,13 @@ def compute_gmfs_and_curves(getter, oq, monitor):
    """
     with monitor('making contexts', measuremem=True):
         getter.init()
-    grp_id = getter.grp_id
     hcurves = {}  # key -> poes
-    gmfcoll = {}  # grp_id, rlz -> gmfa
     if oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         with monitor('building hazard', measuremem=True):
-            gmfcoll[grp_id] = data = numpy.fromiter(
-                getter.gen_gmv(), getter.gmf_data_dt)
-            hazard = sorted(getter.get_hazard(data).items())
+            gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+            hazard = sorted(getter.get_hazard(gmfdata).items())
         for rlzi, hazardr in hazard:
             for sid in getter.sids:
                 array = hazardr[sid]
@@ -348,10 +349,20 @@ def compute_gmfs_and_curves(getter, oq, monitor):
                         hcurves[rsi2str(rlzi, sid, imt)] = poes
     else:  # fast lane
         with monitor('building hazard', measuremem=True):
-            gmfcoll[grp_id] = numpy.fromiter(
-                getter.gen_gmv(), getter.gmf_data_dt)
-    return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
-                hcurves=hcurves, gmdata=getter.gmdata)
+            gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+    indices = []
+    if oq.ground_motion_fields:
+        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
+        start = stop = 0
+        for sid, rows in itertools.groupby(gmfdata['sid']):
+            for row in rows:
+                stop += 1
+            indices.append((sid, start, stop))
+            start = stop
+    else:
+        gmfdata = None
+    return dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
+                taskno=monitor.task_no, indices=numpy.array(indices, (U32, 3)))
 
 
 def get_ruptures_by_grp(dstore):
@@ -418,12 +429,14 @@ class EventBasedCalculator(ClassicalCalculator):
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         self.gmdata += res['gmdata']
-        if res['gmfcoll'] is not None:
+        data = res['gmfdata']
+        if data is not None:
             with sav_mon:
-                for grp_id, array in res['gmfcoll'].items():
-                    if len(array):
-                        key = 'gmf_data/grp-%02d' % grp_id
-                        hdf5.extend3(self.datastore.hdf5path, key, array)
+                hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
+                for sid, start, stop in res['indices']:
+                    self.indices[sid].append(
+                        (start + self.offset, stop + self.offset))
+                self.offset += len(data)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
@@ -481,13 +494,24 @@ class EventBasedCalculator(ClassicalCalculator):
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
         rlzs = self.rlzs_assoc.realizations
-        res = parallel.Starmap(
-            self.core_task.__func__, self.gen_args(ruptures_by_grp)
-        ).submit_all()
+        allargs = list(self.gen_args(ruptures_by_grp))
+        res = parallel.Starmap(self.core_task.__func__, allargs).submit_all()
         self.gmdata = {}
+        self.offset = 0
+        self.indices = collections.defaultdict(list)  # sid -> indices
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
-            rlz.ordinal: ProbabilityMap(L, 1) for rlz in rlzs})
+            rlz.ordinal: ProbabilityMap(L) for rlz in rlzs})
         save_gmdata(self, len(rlzs))
+        if self.indices:
+            logging.info('Saving gmf_data/indices')
+            with self.monitor('saving gmf_data/indices', measuremem=True,
+                              autoflush=True):
+                sids = numpy.array(sorted(self.indices))
+                self.datastore['gmf_data/sids'] = sids
+                self.datastore.save_vlen(
+                    'gmf_data/indices',
+                    [numpy.array(self.indices[sid], indices_dt)
+                     for sid in sids])
         return acc
 
     def save_gmf_bytes(self):
