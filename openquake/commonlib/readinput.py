@@ -29,7 +29,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.baselib.general import groupby, AccumDict, writetmp
-from openquake.baselib.python3compat import configparser, encode, decode
+from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
@@ -38,9 +38,8 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, read_nrml
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import logictree
+from openquake.commonlib import logictree, source, writers
 from openquake.commonlib.riskmodels import get_risk_models
-from openquake.commonlib import source
 
 read_nrml.update_validators()
 
@@ -202,8 +201,6 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
-    elif 'gmfs' in oqparam.inputs:
-        return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
         return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
@@ -836,21 +833,35 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, etags, gmf array of shape (N, I, E)
+        sitecol, eids, gmf array of shape (G, N, E, I)
     """
+    I = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
-    if fname.endswith('.txt'):
-        sitecol, etags, gmfs_by_imt = get_gmfs_from_txt(oqparam, fname)
+    if fname.endswith('.csv'):
+        array = writers.read_composite_array(fname)
+        R = len(numpy.unique(array['rlzi']))
+        # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
+        dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
+        num_gmv = len(array.dtype.names[3:])
+        assert num_gmv == I, (num_gmv, I)
+        dtlist.append(('gmv', (F32, num_gmv)))
+        eids = numpy.unique(array['eid'])
+        assert len(eids) == oqparam.number_of_ground_motion_fields, (
+            len(eids), oqparam.number_of_ground_motion_fields)
+        eidx = {eid: e for e, eid in enumerate(eids)}
+        sids = numpy.unique(array['sid'])
+        gmfs = numpy.zeros((R, len(sids), len(eids), I), F32)
+        for row in array.view(dtlist):
+            gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
     elif fname.endswith('.xml'):
-        sitecol, etags, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
+        eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
+        N, E = gmfs_by_imt.shape
+        gmfs = numpy.zeros((1, N, E, I), F32)
+        for imti, imtstr in enumerate(oqparam.imtls):
+            gmfs[0, :, :, imti] = gmfs_by_imt[imtstr]
     else:
         raise NotImplemented('Reading from %s' % fname)
-    N, E = gmfs_by_imt.shape
-    I = len(oqparam.imtls)
-    gmfs = numpy.zeros((N, I, E), F32)
-    for imti, imtstr in enumerate(oqparam.imtls):
-        gmfs[:, imti, :] = gmfs_by_imt[imtstr]
-    return sitecol, etags, gmfs
+    return eids, gmfs
 
 
 def get_hcurves(oqparam):
@@ -866,7 +877,7 @@ def get_hcurves(oqparam):
     elif fname.endswith('.xml'):
         return get_hcurves_from_nrml(oqparam, fname)
     else:
-        raise NotImplemented('Reading from %s' % fname)
+        raise NotImplementedError('Reading from %s' % fname)
 
 
 def get_hcurves_from_csv(oqparam, fname):
@@ -924,73 +935,15 @@ def get_hcurves_from_nrml(oqparam, fname):
     return sitecol, curves
 
 
-def get_gmfs_from_txt(oqparam, fname):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param fname:
-        the full path of the CSV file
-    :returns:
-        a composite array of shape (N, R) read from a CSV file with format
-        `etag indices [gmv1 ... gmvN] * num_imts`
-    """
-    with open(fname) as csvfile:
-        firstline = next(csvfile)
-        try:
-            coords = valid.coordinates(firstline)
-        except:
-            raise InvalidFile(
-                'The first line of %s is expected to contain comma separated'
-                'ordered coordinates, got %s instead' % (fname, firstline))
-        lons, lats, depths = zip(*coords)
-        sitecol = site.SiteCollection.from_points(lons, lats, depths, oqparam)
-        if not oqparam.imtls:
-            oqparam.set_risk_imtls(get_risk_models(oqparam))
-        imts = list(oqparam.imtls)
-        imt_dt = numpy.dtype([(imt, F32) for imt in imts])
-        num_gmfs = oqparam.number_of_ground_motion_fields
-        gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
-        etags = []
-
-        for lineno, line in enumerate(csvfile, 2):
-            row = line.split(',')
-            try:
-                indices = list(map(valid.positiveint, row[1].split()))
-            except:
-                raise InvalidFile(
-                    'The second column in %s is expected to contain integer '
-                    'indices, got %s' % (fname, row[1]))
-            r_sites = (
-                sitecol if not indices else
-                site.FilteredSiteCollection(indices, sitecol))
-            for i in range(len(imts)):
-                try:
-                    array = numpy.array(valid.positivefloats(row[i + 2]))
-                    # NB: i + 2 because the first 2 fields are etag and indices
-                except:
-                    raise InvalidFile(
-                        'The column #%d in %s is expected to contain positive '
-                        'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]][lineno - 2][r_sites.sids] = array
-            etags.append(row[0])
-    if lineno < num_gmfs + 1:
-        raise InvalidFile('%s contains %d rows, expected %d' % (
-            fname, lineno, num_gmfs + 1))
-    if etags != sorted(etags):
-        raise InvalidFile('The etags in %s are not ordered: %s'
-                          % (fname, etags))
-    return sitecol, numpy.array([encode(e) for e in etags]), gmf_by_imt.T
-
-
 # used in get_scenario_from_nrml
-def _extract_etags_sitecounts(gmfset):
-    etags = set()
+def _extract_eids_sitecounts(gmfset):
+    eids = set()
     counter = collections.Counter()
     for gmf in gmfset:
-        etags.add(gmf['ruptureId'])
+        eids.add(gmf['ruptureId'])
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
-    return numpy.array(sorted(etags), numpy.uint64), counter
+    return numpy.array(sorted(eids), numpy.uint64), counter
 
 
 def get_scenario_from_nrml(oqparam, fname):
@@ -1000,7 +953,7 @@ def get_scenario_from_nrml(oqparam, fname):
     :param fname:
         the NRML files containing the GMFs
     :returns:
-        a triple (sitecol, etags, gmf array)
+        a triple (sitecol, eids, gmf array)
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
@@ -1008,12 +961,11 @@ def get_scenario_from_nrml(oqparam, fname):
     num_imts = len(imts)
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
-    etags, sitecounts = _extract_etags_sitecounts(gmfset)
+    eids, sitecounts = _extract_eids_sitecounts(gmfset)
     coords = sorted(sitecounts)
     oqparam.sites = [(lon, lat, 0) for lon, lat in coords]
     site_idx = {lonlat: i for i, lonlat in enumerate(coords)}
-    oqparam.number_of_ground_motion_fields = num_events = len(etags)
-    sitecol = get_site_collection(oqparam)
+    oqparam.number_of_ground_motion_fields = num_events = len(eids)
     num_sites = len(oqparam.sites)
     gmf_by_imt = numpy.zeros((num_events, num_sites), imt_dt)
     counts = collections.Counter()
@@ -1036,13 +988,13 @@ def get_scenario_from_nrml(oqparam, fname):
         elif count > num_imts:
             raise InvalidFile("Found a duplicated etag '%s' in %s" %
                               (etag, fname))
-    expected_gmvs_per_site = num_imts * len(etags)
+    expected_gmvs_per_site = num_imts * len(eids)
     for lonlat, counts in sitecounts.items():
         if counts != expected_gmvs_per_site:
             raise InvalidFile(
                 '%s: expected %d gmvs at location %s, found %d' %
                 (fname, expected_gmvs_per_site, lonlat, counts))
-    return sitecol, etags, gmf_by_imt.T
+    return eids, gmf_by_imt.T
 
 
 def get_mesh_hcurves(oqparam):

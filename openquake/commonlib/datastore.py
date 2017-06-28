@@ -306,7 +306,7 @@ class DataStore(collections.MutableMapping):
         :param relname: relative file name
         :param export_dir: export directory (if None use .export_dir)
         """
-        assert not os.path.dirname(relname), relname
+        relname = relname.replace('/', '-')
         name, ext = relname.rsplit('.', 1)
         newname = '%s_%s.%s' % (name, self.calc_id, ext)
         if export_dir is None:
