@@ -900,7 +900,10 @@ def get_hcurves_from_csv(oqparam, fname):
             csvfile, list(oqparam.imtls), num_values,
             valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, hcurves_by_imt
+    curves = zero_curves(len(mesh), oqparam.imtls)
+    for imt_ in oqparam.imtls:
+        curves[imt_] = hcurves_by_imt[imt_]
+    return sitecol, curves
 
 
 def get_hcurves_from_nrml(oqparam, fname):

@@ -93,7 +93,7 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmf = group_array(dstore['gmf_data/grp-00'], 'sid')
+            gmf = group_array(dstore['gmf_data/data'], 'sid')
             gmvs_site_0 = gmf[0]['gmv']
             gmvs_site_1 = gmf[1]['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
@@ -132,9 +132,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        [fname] = export(('gmf_data/4294967296', 'csv'),
+        [fname] = export(('gmf_scenario/rup-1', 'csv'),
                          self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-65536.csv', fname)
+        self.assertEqualFiles('expected/gmf-rlz-0-PGA.csv', fname)
 
         # test that the .npz export runs
         export(('gmf_data', 'npz'), self.calc.datastore)
