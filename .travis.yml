@@ -30,19 +30,28 @@ jobs:
         - pip install sphinx==1.3.6 && cd doc/sphinx && make html
   - stage: tests
     env: DEMOS
-    script: 
-        - bin/run-demos.sh
-  - stage: tests
-    env: SCRIPTS
     script:
+        - bin/run-demos.sh $TRAVIS_BUILD_DIR/demos
+        - bin/check_demos
+        - oq dump /tmp/oqdata.zip
+        - oq restore /tmp/oqdata.zip /tmp/oqdata
         - helpers/zipdemos.sh $(pwd)/demos
+    after_success:
+        # Upload oqdata.zip to http://artifacts.openquake.org/travis/
+        - openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in .deploy_rsa.enc -out .deploy_rsa -d;
+            chmod 600 .deploy_rsa;
+            eval $(ssh-agent -s) && ssh-add .deploy_rsa;
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip;
+
+before_install:
+  - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
 
 install:
   - pip -q install -r requirements-py35-linux64.txt
   - pip -q install -e .
 
 before_script:
-  - python -c'import platform; print(platform.platform())'
+  - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
 
 after_script:
   - bin/oq reset --yes

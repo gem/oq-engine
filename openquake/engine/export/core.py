@@ -34,15 +34,16 @@ class DataStoreExportError(Exception):
     pass
 
 
-def zipfiles(fnames, archive):
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
     """
     Build a zip archive from the given file names.
 
     :param fnames: list of path names
     :param archive: path of the archive
     """
-    z = zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, allowZip64=True)
+    z = zipfile.ZipFile(archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True)
     for f in fnames:
+        log('Archiving %s' % f)
         z.write(f, os.path.basename(f))
     z.close()
 
