@@ -503,8 +503,8 @@ class EventBasedCalculator(ClassicalCalculator):
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
             rlz.ordinal: ProbabilityMap(L) for rlz in rlzs})
         if self.indices:
-            sids = sorted(self.indices)
-            self.datastore['gmf_data/sids'] = numpy.array(sids, U32)
+            sids = numpy.array(sorted(self.indices))
+            self.datastore['gmf_data/sids'] = sids
             self.datastore.save_vlen(
                 'gmf_data/indices', [numpy.array(self.indices[sid], indices_dt)
                                      for sid in sids])
