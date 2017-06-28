@@ -186,11 +186,14 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp['calculation_mode'], 'classical')
 
         # check the /export endpoint
-        url = 'http://%s/v1/valid/%s/export/hcurves/rlz-000' % (
+        url = 'http://%s/v1/calc/%s/export/hcurves/rlz-000' % (
             self.hostport, job_id)
+        resp = requests.get(url, dict(export_type='npz'))
+        self.assertEqual(resp.status_code, 200)
+
         resp = requests.get(url, dict(export_type='csv'))
-        # for some reason one gets a 405: Method Now Allowed
-        # but it works in the browser!?
+        # multiple files, not acceptable
+        self.assertEqual(resp.status_code, 406)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
