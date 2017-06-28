@@ -25,7 +25,6 @@ from openquake.qa_tests_data.gmf_ebrisk import case_1
 class GmfEbRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_1(self):
-        raise unittest.SkipTest('Not working yet')
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
         [fname] = out['losses_by_taxon-rlzs', 'csv']
         self.assertEqualFiles('expected/losses_by_taxon.csv', fname)
