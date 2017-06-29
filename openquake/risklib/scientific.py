@@ -1485,3 +1485,29 @@ def return_periods(max_period):
             periods.append(period * val)
         period *= 10
     return numpy.array(periods, numpy.uint32)
+
+
+def losses_by_period(losses, return_periods):
+    """
+    Reads an array of losses and returns a subset of them
+
+    :param losses: array of simulated losses
+    :param return_periods: return periods at which the loss curve is computed
+
+    NB: the return period must be ordered integers >= 1. Here is an example:
+
+
+    >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
+    >>> losses_by_period(losses, return_periods(100))
+    array([  1.,   5.,  11.,  23.,  23.,  23.,  23.])
+    """
+    n = len(losses)
+    sorted_losses = numpy.sort(losses)
+    out = []
+    for period in return_periods:
+        if period >= n:
+            out.append(sorted_losses[-1])  # maximum loss
+        else:
+            idx = n - n // period  # 0 <= idx <= n - 1
+            out.append(sorted_losses[idx])
+    return numpy.array(out)
