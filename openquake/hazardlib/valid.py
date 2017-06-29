@@ -470,6 +470,17 @@ def positiveint(value):
     return i
 
 
+def positiveints(value):
+    """
+    :param value: input string
+    :returns: array of positive integers >= 1
+    """
+    ints = numpy.uint32(value.split())
+    if (ints <= 0).any():
+        raise ValueError('there are integers <= 0 in %s' % ints)
+    return ints
+
+
 def positivefloat(value):
     """
     :param value: input string
