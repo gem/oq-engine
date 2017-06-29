@@ -554,7 +554,7 @@ class RuptureSerializer(object):
             # sanity checks
             assert sx < TWO16, 'Too many multisurfaces: %d' % sx
             assert sy < 256, 'The rupture mesh spacing is too small'
-            assert sz < 256, 'The rupture mesh spacing is too small'
+            assert sz < TWO16, 'The rupture mesh spacing is too small'
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
             tup = (ebrupture.serial, rup.code, ebrupture.sidx,
