@@ -531,7 +531,7 @@ class RuptureSerializer(object):
         ('serial', U32), ('code', U8), ('sidx', U32),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U8),
+        ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U16),
         ('points', h5py.special_dtype(vlen=point3d)),
         ])
 
