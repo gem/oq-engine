@@ -1501,11 +1501,12 @@ def losses_by_period(losses, return_periods):
     >>> losses_by_period(losses, return_periods(100))
     array([  1.,   4.,  11.,  13.,  23.,  23.,  23.])
     """
+    assert return_periods[0] >= 1, return_periods
     n = len(losses)
     idxs = U32(n - numpy.around(n / return_periods))  # idx >= 0
     sorted_losses = numpy.sort(losses)
     out = []
-    for idx, period in zip(idxs, return_periods):
+    for idx in idxs:
         if idx >= n:
             out.append(sorted_losses[-1])  # maximum loss
         else:
