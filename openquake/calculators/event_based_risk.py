@@ -238,17 +238,18 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
+            Starmap = parallel.Starmap
             if self.oqparam.hazard_calculation_id and (
                     'asset_loss_table' in self.datastore.parent):
                 lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
                 # avoid OSError: Can't read data (Wrong b-tree signature)
                 self.datastore.parent.close()
-                Starmap = parallel.Starmap
             else:  # there is a single datastore
                 lrgetter = riskinput.LossRatiosGetter(self.datastore)
-                Starmap = parallel.Sequential
-                # needed to avoid the HDF5 heisenbug; doing a .restart()
-                # is not enough :-(
+                if parallel.oq_distribute() == 'futures':
+                    Starmap = parallel.Sequential
+                    # needed to avoid the HDF5 heisenbug; doing a .restart()
+                    # of the ProcessPool is not enough :-(
             Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),

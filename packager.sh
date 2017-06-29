@@ -615,8 +615,8 @@ celery_wait $GEM_MAXLOOP"
         for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
-            OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
-            oq engine --run job_risk.ini --exports csv,npz --hazard-calculation-id -1
+            oq engine --run job_hazard.ini
+            OQ_DISTRIBUTE=celery oq engine --run job_risk.ini --exports csv,npz --hazard-calculation-id -1
             cd -
             fi
         done
