@@ -28,7 +28,7 @@ files and on the headers that the user should be aware of.
 
 
 Names of the CSV files
-------------------------
+----------------------
 
 When you run a computation you will see an output like the following:
 
