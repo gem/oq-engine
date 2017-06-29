@@ -626,7 +626,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, [], set(), [], cc)
+        area.attrib, [], set(), [], cc, collections.defaultdict(list))
     return exp, exposure.assets
 
 
@@ -692,6 +692,9 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
+            tag = asset.attrib.get('tag')
+            if tag:
+                exposure.assets_by_tag[tag].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
@@ -759,7 +762,7 @@ Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
                  'area', 'assets', 'taxonomies', 'asset_refs',
-                 'cost_calculator'])
+                 'cost_calculator', 'assets_by_tag'])
 
 
 def get_sitecol_assetcol(oqparam, exposure):
@@ -778,7 +781,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = riskinput.AssetCollection(
-        assets_by_site, exposure.cost_calculator,
+        assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
     return sitecol, assetcol

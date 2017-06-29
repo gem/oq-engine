@@ -73,14 +73,19 @@ def get_refs(assets, hdf5path):
 class AssetCollection(object):
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
-    def __init__(self, assets_by_site, cost_calculator, time_event,
-                 time_events=''):
+    def __init__(self, assets_by_site, assets_by_tag, cost_calculator,
+                 time_event, time_events=''):
         self.cc = cost_calculator
         self.time_event = time_event
         self.time_events = time_events
         self.tot_sites = len(assets_by_site)
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
+        dic = dict(zip(self.array['idx'], range(len(self.array))))
+        self.aids_by_tag = {}
+        for tag, idxs in assets_by_tag.items():
+            aids = numpy.array([dic[idx] for idx in idxs], U32)
+            self.aids_by_tag[tag] = aids
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
@@ -155,7 +160,8 @@ class AssetCollection(object):
                  'retro': ' '.join(self.retro),
                  'tot_sites': self.tot_sites,
                  'nbytes': self.array.nbytes}
-        return dict(array=self.array, taxonomies=self.taxonomies,
+        return dict(array=self.array, tag=self.aids_by_tag,
+                    taxonomies=self.taxonomies,
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
@@ -167,6 +173,8 @@ class AssetCollection(object):
         self.array = dic['array'].value
         self.taxonomies = dic['taxonomies'].value
         self.cc = dic['cost_calculator']
+        items = dic.get('tag', {}).items()
+        self.aids_by_tag = {tag: dset.value for tag, dset in items}
 
     @staticmethod
     def build_asset_collection(assets_by_site, time_event=None):
