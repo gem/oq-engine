@@ -160,7 +160,7 @@ class AssetCollection(object):
                  'retro': ' '.join(self.retro),
                  'tot_sites': self.tot_sites,
                  'nbytes': self.array.nbytes}
-        return dict(array=self.array, tag=self.aids_by_tag,
+        return dict(array=self.array, aids_by_tag=self.aids_by_tag,
                     taxonomies=self.taxonomies,
                     cost_calculator=self.cc), attrs
 
@@ -173,7 +173,7 @@ class AssetCollection(object):
         self.array = dic['array'].value
         self.taxonomies = dic['taxonomies'].value
         self.cc = dic['cost_calculator']
-        items = dic.get('tag', {}).items()
+        items = dic.get('aids_by_tag', {}).items()
         self.aids_by_tag = {tag: dset.value for tag, dset in items}
 
     @staticmethod
