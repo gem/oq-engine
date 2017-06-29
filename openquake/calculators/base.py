@@ -356,9 +356,11 @@ class HazardCalculator(BaseCalculator):
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), riskinput.AssetCollection(
-            assets_by_site, self.exposure.cost_calculator,
-            self.oqparam.time_event, time_events=hdf5.array_of_vstr(
-                sorted(self.exposure.time_events)))
+            assets_by_site,
+            self.exposure.assets_by_tag,
+            self.exposure.cost_calculator,
+            self.oqparam.time_event,
+            time_events=hdf5.array_of_vstr(sorted(self.exposure.time_events)))
 
     def count_assets(self):
         """
