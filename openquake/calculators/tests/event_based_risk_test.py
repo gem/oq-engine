@@ -164,7 +164,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         grp03 = self.calc.datastore.get_attr('ruptures/grp-03', 'nbytes')
         self.assertEqual(grp00, 550)
         self.assertEqual(grp02, 550)
-        self.assertEqual(grp03, 218)
+        self.assertEqual(grp03, 220)
 
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
