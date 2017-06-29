@@ -23,7 +23,6 @@ from __future__ import division
 import abc
 import copy
 import bisect
-import itertools
 import collections
 
 import numpy
@@ -1505,10 +1504,39 @@ def losses_by_period(losses, return_periods):
     n = len(losses)
     idxs = U32(n - numpy.around(n / return_periods))  # idx >= 0
     sorted_losses = numpy.sort(losses)
-    out = []
-    for idx in idxs:
+    out = numpy.zeros(len(return_periods), F32)
+    for i, idx in numpy.ndenumerate(idxs):
         if idx >= n:
-            out.append(sorted_losses[-1])  # maximum loss
+            out[i] = sorted_losses[-1]  # maximum loss
         else:
-            out.append(sorted_losses[idx])
-    return numpy.array(out)
+            out[i] = sorted_losses[idx]
+    return out
+
+
+class LossesByPeriodFactory(object):
+    """
+    Build losses by period for all loss types at the same time.
+
+    :param insured_losses: insured losses flag from the job.ini
+    """
+    def __init__(self, return_periods, loss_dt, num_rlzs):
+        self.return_periods = return_periods
+        self.loss_dt = loss_dt
+        self.num_rlzs = num_rlzs
+
+    def __call__(self, assets, loss_ratios):
+        """
+        :param assets: a list of assets
+        :param loss_ratios: an array of dtype lrs_dt
+        :returns: a composite array of shape (A, R, P)
+        """
+        A, R, P = len(assets), self.num_rlzs, len(self.return_periods)
+        array = numpy.zeros((A, R, P), self.loss_dt)
+        for a, asset in enumerate(assets):
+            r_recs = group_array(loss_ratios[a], 'rlzi').items()
+            for li, lt in enumerate(self.loss_dt.names):
+                aval = asset.value(lt.replace('_ins', ''))
+                for r, recs in r_recs:
+                    array[a, r][lt] = aval * losses_by_period(
+                        recs['ratios'][:, li], self.return_periods)
+        return array
