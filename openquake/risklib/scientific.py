@@ -23,6 +23,7 @@ from __future__ import division
 import abc
 import copy
 import bisect
+import itertools
 import collections
 
 import numpy
@@ -1454,3 +1455,33 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
     loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
     return loss_curve_dt, loss_maps_dt
+
+
+def return_periods(max_period):
+    """
+    >>> return_periods(1)
+    Traceback (most recent call last):
+       ...
+    AssertionError: 1
+    >>> return_periods(2)
+    array([1, 2], dtype=uint32)
+    >>> return_periods(9)
+    array([1, 2, 5, 9], dtype=uint32)
+    >>> return_periods(10)
+    array([ 1,  2,  5, 10], dtype=uint32)
+    >>> return_periods(1000)
+    array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000], dtype=uint32)
+    """
+    assert max_period >= 2, max_period
+    period = 1
+    periods = []
+    loop = True
+    while loop:
+        for val in [1, 2, 5]:
+            if period * val >= max_period:
+                periods.append(max_period)
+                loop = False
+                break
+            periods.append(period * val)
+        period *= 10
+    return numpy.array(periods, numpy.uint32)
