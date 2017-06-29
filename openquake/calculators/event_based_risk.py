@@ -246,9 +246,10 @@ class EbrPostCalculator(base.RiskCalculator):
                 Starmap = parallel.Starmap
             else:  # there is a single datastore
                 lrgetter = riskinput.LossRatiosGetter(self.datastore)
-                Starmap = parallel.Sequential
-                # needed to avoid the HDF5 heisenbug; doing a .restart()
-                # is not enough :-(
+                if parallel.oq_distribute() == 'futures':
+                    Starmap = parallel.Sequential
+                    # needed to avoid the HDF5 heisenbug; doing a .restart()
+                    # of the ProcessPool is not enough :-(
             Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),
