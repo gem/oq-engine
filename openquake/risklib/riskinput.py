@@ -810,7 +810,7 @@ class LossRatiosGetter(object):
     def __init__(self, dstore, aids=None, lazy=True):
         self.dstore = dstore
         self.aids = aids or range(len(self.indices))
-        dset = dstore['all_loss_ratios/indices']
+        dset = self.dstore['all_loss_ratios/indices']
         self.indices = [dset[aid] for aid in aids]
         self.data = None if lazy else self.get_all()
 
@@ -839,6 +839,7 @@ class LossRatiosGetter(object):
         data = self.dstore['all_loss_ratios/data']
         loss_ratio_data = []
         for aid, idxs in zip(self.aids, self.indices):
-            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
-            loss_ratio_data.append(arr)
+            if len(idxs):
+                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+                loss_ratio_data.append(arr)
         return loss_ratio_data
