@@ -980,16 +980,16 @@ class CurveBuilder(object):
     def __len__(self):
         return len(self.cbs)
 
-    def build_curves(self, assets, loss_ratios, time_event):
+    def build_curves(self, avalues, loss_ratios):
         """
-        :param assets: a list of assets
+        :param avalues: array of asset values
         :param loss_ratios: a list of dictionaries aid -> loss ratios
         :returns: A curves of dtype loss_curve_dt
         """
-        curves = numpy.zeros(len(assets), self.loss_curve_dt)
+        curves = numpy.zeros(len(avalues), self.loss_curve_dt)
         L = len(self.cbs)
         LI = L * self.I
-        for a, asset in enumerate(assets):
+        for a, avalue in enumerate(avalues):
             try:
                 data = numpy.concatenate(loss_ratios[a])
             except KeyError:  # no ratios for the given realization
@@ -997,7 +997,7 @@ class CurveBuilder(object):
             ratios = data.reshape(-1, LI)
             for cb in self.cbs:
                 lt = cb.loss_type
-                losses = asset.value(lt, time_event) * cb.ratios
+                losses = avalue[lt] * cb.ratios
                 for i in range(self.I):
                     arr = curves[a][lt + '_ins' * i]
                     lrs = ratios[:, cb.index + L * i]
