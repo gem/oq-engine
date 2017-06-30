@@ -423,7 +423,8 @@ class EbriskCalculator(base.RiskCalculator):
 
         self.vals = self.assetcol.values()
         taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
-        ires = Starmap(event_based_risk, allargs, name=taskname).submit_all()
+        ires = parallel.Starmap(
+            event_based_risk, allargs, name=taskname).submit_all()
         ires.num_ruptures = {
             sg_id: len(rupts) for sg_id, rupts in ruptures_by_grp.items()}
         ires.num_events = num_events
