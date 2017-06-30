@@ -807,11 +807,12 @@ class LossRatiosGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore, aids=None):
+    def __init__(self, dstore, aids=None, lazy=True):
         self.dstore = dstore
         self.aids = aids or range(len(self.indices))
         dset = dstore['all_loss_ratios/indices']
         self.indices = [dset[aid] for aid in aids]
+        self.data = None if lazy else self.get_all()
 
     # used in the loss curves exporter
     def get(self, rlzi):
@@ -833,6 +834,8 @@ class LossRatiosGetter(object):
         """
         :returns: a list of A composite arrays of dtype `lrs_dt`
         """
+        if getattr(self, 'data', None) is not None:
+            return self.data
         data = self.dstore['all_loss_ratios/data']
         loss_ratio_data = []
         for aid, idxs in zip(self.aids, self.indices):
