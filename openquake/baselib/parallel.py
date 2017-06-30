@@ -278,7 +278,10 @@ class Pickled(object):
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
-        self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+        try:
+            self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+        except TypeError as exc:  # can't pickle
+            raise TypeError('%s: %s' % (exc, obj))
 
     def __repr__(self):
         """String representation of the pickled object"""

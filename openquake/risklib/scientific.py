@@ -1009,10 +1009,10 @@ class CurveBuilder(object):
                     arr['avg'] = average_loss([losses, poes])
         return curves
 
-    def build_maps(self, assets, getter, rlzs, stats, mon):
+    def build_maps(self, avalues, getter, rlzs, stats, mon):
         """
-        :param assets:
-            a list of assets
+        :param avalues:
+            an array of asset values
         :param getter:
             a :class:`openquake.risklib.riskinput.LossRatiosGetter` instance
         :param rlzs:
@@ -1029,15 +1029,14 @@ class CurveBuilder(object):
         for lt, i in sorted(lti.items()):
             lti[lt + '_ins'] = i
         with mon('getting loss ratios'):
-            aids = [asset.ordinal for asset in assets]
-            loss_ratios = getter.get_all(aids)
+            loss_ratios = getter.get_all()
         losses = {}
         for cb in self.cbs:
-            losses[cb.loss_type] = [asset.value(cb.loss_type, mon.time_event) *
-                                    cb.ratios for asset in assets]
+            losses[cb.loss_type] = [avalue[cb.loss_type] * cb.ratios
+                                    for avalue in avalues]
             if self.I == 2:
                 losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
-        all_poes = self.build_all_poes(aids, loss_ratios, rlzs)
+        all_poes = self.build_all_poes(getter.aids, loss_ratios, rlzs)
         loss_maps = self._build_maps(losses, all_poes)
         if len(rlzs) > 1 and stats:
             statnames, statfuncs = zip(*stats)
@@ -1046,7 +1045,7 @@ class CurveBuilder(object):
             loss_maps_stats = self._build_maps(losses, stat_poes)
         else:
             loss_maps_stats = None
-        return aids, loss_maps, loss_maps_stats
+        return loss_maps, loss_maps_stats
 
     def _build_maps(self, losses, all_poes):
         loss_maps = numpy.zeros(all_poes.shape, self.loss_maps_dt)

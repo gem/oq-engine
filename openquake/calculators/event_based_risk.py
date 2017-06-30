@@ -23,7 +23,8 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import (
+    AccumDict, block_splitter, split_in_blocks)
 from openquake.hazardlib.stats import compute_stats
 from openquake.commonlib import util
 from openquake.calculators import base, event_based
@@ -177,16 +178,16 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
 
 
 @util.reader
-def build_loss_maps(assets, builder, getter, rlzs, stats, monitor):
+def build_loss_maps(avalues, builder, getter, rlzs, stats, monitor):
     """
     Thin wrapper over :meth:
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
     getter.dstore.open()  # if not already open
-    aids, loss_maps, loss_maps_stats = builder.build_maps(
-        assets, getter, rlzs, stats, monitor)
-    res = {'aids': aids, 'loss_maps-rlzs': loss_maps}
+    loss_maps, loss_maps_stats = builder.build_maps(
+        avalues, getter, rlzs, stats, monitor)
+    res = {'aids': getter.aids, 'loss_maps-rlzs': loss_maps}
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
     return res
@@ -222,12 +223,12 @@ class EbrPostCalculator(base.RiskCalculator):
         pass
 
     def execute(self):
+        oq = self.oqparam
         # build loss maps
-        if ('all_loss_ratios' in self.datastore
-                 and self.oqparam.conditional_loss_poes):
+        if 'all_loss_ratios' in self.datastore and oq.conditional_loss_poes:
             assetcol = self.assetcol
             rlzs = self.rlzs_assoc.realizations
-            stats = self.oqparam.risk_stats()
+            stats = oq.risk_stats()
             builder = self.riskmodel.curve_builder
             A = len(assetcol)
             R = len(self.datastore['realizations'])
@@ -239,24 +240,22 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
-            if self.oqparam.hazard_calculation_id and (
+            if oq.hazard_calculation_id and (
                     'asset_loss_table' in self.datastore.parent):
-                lrgetter = riskinput.LossRatiosGetter(self.datastore.parent)
                 # avoid OSError: Can't read data (Wrong b-tree signature)
                 self.datastore.parent.close()
                 Starmap = parallel.Starmap
             else:  # there is a single datastore
-                lrgetter = riskinput.LossRatiosGetter(self.datastore)
                 Starmap = parallel.Sequential
-                # needed to avoid the HDF5 heisenbug; doing a .restart()
-                # is not enough :-(
-            mon.time_event = assetcol.time_event
-            Starmap.apply(
-                build_loss_maps,
-                (assetcol, builder, lrgetter, rlzs, stats, mon),
-                self.oqparam.concurrent_tasks
-            ).reduce(self.save_loss_maps)
-            if self.oqparam.hazard_calculation_id:
+                # needed to avoid the HDF5 heisenbug happening when reading
+                # while writing
+            allargs = []
+            for aids in split_in_blocks(range(A), oq.concurrent_tasks):
+                lrgetter = riskinput.LossRatiosGetter(self.datastore, aids)
+                allargs.append((assetcol.values(aids), builder, lrgetter,
+                                rlzs, stats, mon))
+            Starmap(build_loss_maps, allargs).reduce(self.save_loss_maps)
+            if oq.hazard_calculation_id:
                 self.datastore.parent.open()
 
         # build an aggregate loss curve per realization

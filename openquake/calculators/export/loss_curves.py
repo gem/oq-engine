@@ -130,18 +130,17 @@ class LossCurveExporter(object):
         crm = riskinput.read_composite_risk_model(self.dstore)
         builder = crm.curve_builder
         avalues = self.assetcol.values(aids)
-        lrgetter = riskinput.LossRatiosGetter(self.dstore)
+        lrgetter = riskinput.LossRatiosGetter(self.dstore, aids)
         if key.startswith('rlz-'):
             rlzi = int(key[4:])
-            ratios = lrgetter.get(aids, rlzi)
-            return {'rlz-%03d' % rlzi: builder.build_curves(
-                avalues, ratios)}
+            ratios = lrgetter.get(rlzi)
+            return {'rlz-%03d' % rlzi: builder.build_curves(avalues, ratios)}
         else:  # key is 'rlzs', return a dictionary will all realizations
             # this may be disabled in the future unless an asset is specified
             dic = {}
             for rlzi in range(self.R):
                 dic['rlz-%03d' % rlzi] = builder.build_curves(
-                    avalues, lrgetter.get(aids, rlzi))
+                    avalues, lrgetter.get(rlzi))
             return dic
 
     def export_curves_stats(self, aids, key):
