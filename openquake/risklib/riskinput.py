@@ -99,17 +99,19 @@ class AssetCollection(object):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
-    def values(self):
+    def values(self, aids=None):
         """
+        :param: asset indices where to compute the values (default all)
         :returns: a composite array of asset values by loss type
         """
+        if aids is None:
+            aids = range(len(self))
         loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
-        vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
-        for assets in self.assets_by_site():
-            for asset in assets:
-                for ltype in self.loss_types:
-                    vals[ltype][asset.ordinal] = asset.value(
-                        ltype, self.time_event)
+        vals = numpy.zeros(len(aids), loss_dt)  # asset values by loss_type
+        for aid in aids:
+            asset = self[aid]
+            for lt in self.loss_types:
+                vals[lt][asset.ordinal] = asset.value(lt, self.time_event)
         return vals
 
     def __iter__(self):
