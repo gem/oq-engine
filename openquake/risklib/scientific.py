@@ -1057,7 +1057,7 @@ class CurveBuilder(object):
                     for poe in self.clp:
                         clratio = conditional_loss_ratio(alosses, poes_, poe)
                         clratios.append(clratio)
-                    loss_maps[lt][a, r] = tuple(clratios)
+                    loss_maps[a, r][lt] = tuple(clratios)
         return loss_maps
 
     def build_all_poes(self, aids, loss_ratios, rlzs):
