@@ -1051,13 +1051,14 @@ class CurveBuilder(object):
         loss_maps = numpy.zeros(all_poes.shape, self.loss_maps_dt)
         for a, poes in enumerate(all_poes):
             for lt in all_poes.dtype.names:
-                alosses = losses[lt][a]
+                alosses = losses[lt][a]  # lt before a is necessary
+                lm = loss_maps[a][lt]
                 for r, poes_ in enumerate(poes[lt]):
                     clratios = []
                     for poe in self.clp:
                         clratio = conditional_loss_ratio(alosses, poes_, poe)
                         clratios.append(clratio)
-                    loss_maps[a, r][lt] = tuple(clratios)
+                    lm[r] = tuple(clratios)
         return loss_maps
 
     def build_all_poes(self, aids, loss_ratios, rlzs):
