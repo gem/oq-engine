@@ -1051,8 +1051,9 @@ class CurveBuilder(object):
         loss_maps = numpy.zeros(all_poes.shape, self.loss_maps_dt)
         for lt in all_poes.dtype.names:
             loss_lt = losses[lt]
+            loss_maps_lt = loss_maps[lt]
             for a, poes in enumerate(all_poes):
-                lm = loss_maps[lt][a]
+                lm = loss_maps_lt[a]
                 losses_ = loss_lt[a]
                 for r, poes_ in enumerate(poes[lt]):
                     clratios = []
