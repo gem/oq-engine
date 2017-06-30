@@ -1524,12 +1524,13 @@ class LossesByPeriodFactory(object):
         self.loss_dt = loss_dt
         self.num_rlzs = num_rlzs
 
-    def __call__(self, assets, loss_ratios):
+    def build_rlzs(self, assets, loss_ratios):
         """
         :param assets: a list of assets
         :param loss_ratios: an array of dtype lrs_dt
         :returns: a composite array of shape (A, R, P)
         """
+        # loss_ratios from lrgetter.get_all
         A, R, P = len(assets), self.num_rlzs, len(self.return_periods)
         array = numpy.zeros((A, R, P), self.loss_dt)
         for a, asset in enumerate(assets):
@@ -1539,4 +1540,21 @@ class LossesByPeriodFactory(object):
                 for r, recs in r_recs:
                     array[a, r][lt] = aval * losses_by_period(
                         recs['ratios'][:, li], self.return_periods)
+        return array
+
+    def build(self, assets, loss_ratios, rlzi):
+        """
+        :param assets: a list of assets
+        :param loss_ratios: an array of dtype lrs_dt
+        :returns: a composite array of shape (A, P)
+        """
+        # loss_ratios from lrgetter.get, aid -> list of ratios
+        A, P = len(assets), len(self.return_periods)
+        array = numpy.zeros((A, P), self.loss_dt)
+        for a, asset in enumerate(assets):
+            ratios = numpy.concatenate(loss_ratios[a])
+            for li, lt in enumerate(self.loss_dt.names):
+                aval = asset.value(lt.replace('_ins', ''))
+                array[a][lt] = aval * losses_by_period(
+                    ratios[:, li], self.return_periods)
         return array
