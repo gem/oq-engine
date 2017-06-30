@@ -240,23 +240,19 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
-            if oq.hazard_calculation_id and (
-                    'asset_loss_table' in self.datastore.parent):
-                # avoid OSError: Can't read data (Wrong b-tree signature)
-                self.datastore.parent.close()
-                lazy = True  # read the loss ratios from the workers
-            else:  # there is a single datastore
-                lazy = False  # read the loss ratios upfront
-                # needed to avoid the HDF5 heisenbug happening when reading
-                # while writing
+            # the following logic is needed to avoid the HDF5 heisenbug
+            # happening when reading while writing
+            lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
+                    in self.datastore.parent)
             allargs = []
             for aids in split_in_blocks(range(A), oq.concurrent_tasks):
-                lrgetter = riskinput.LossRatiosGetter(
-                    self.datastore, aids, lazy)
-                allargs.append((assetcol.values(aids), builder, lrgetter,
+                getter = riskinput.LossRatiosGetter(self.datastore, aids, lazy)
+                allargs.append((assetcol.values(aids), builder, getter,
                                 rlzs, stats, mon))
+            if lazy:  # avoid OSError: Can't read data (Wrong b-tree signature)
+                self.datastore.parent.close()
             Starmap(build_loss_maps, allargs).reduce(self.save_loss_maps)
-            if oq.hazard_calculation_id:
+            if lazy:  # the parent was closed, reopen it
                 self.datastore.parent.open()
 
         # build an aggregate loss curve per realization

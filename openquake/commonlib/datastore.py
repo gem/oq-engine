@@ -469,7 +469,8 @@ class DataStore(collections.MutableMapping):
         return sum(1 for f in self)
 
     def __repr__(self):
-        return '<%s %d>' % (self.__class__.__name__, self.calc_id)
+        status = 'open' if self.hdf5 else 'close'
+        return '<%s %d, %s>' % (self.__class__.__name__, self.calc_id, status)
 
 
 def persistent_attribute(key):
