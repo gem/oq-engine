@@ -30,7 +30,6 @@ from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
-from openquake.baselib.parallel import Starmap
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -253,6 +252,7 @@ class EbrPostCalculator(base.RiskCalculator):
                                 rlzs, stats, mon))
             if lazy:  # avoid OSError: Can't read data (Wrong b-tree signature)
                 self.datastore.parent.close()
+                Starmap = parallel.Starmap
             else:
                 Starmap = parallel.Sequential  # avoid heisenbug
             Starmap(build_loss_maps, allargs).reduce(self.save_loss_maps)
