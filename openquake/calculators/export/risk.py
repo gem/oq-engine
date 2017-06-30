@@ -635,10 +635,10 @@ def export_bcr_map(ekey, dstore):
 
 
 @reader
-def get_loss_ratios(lrgetter, aids, monitor):
+def get_loss_ratios(lrgetter, monitor):
     with lrgetter.dstore:
-        loss_ratios = lrgetter.get_all(aids)  # list of arrays of dtype lrs_dt
-    return zip(aids, loss_ratios)
+        loss_ratios = lrgetter.get_all()  # list of arrays of dtype lrs_dt
+    return list(zip(lrgetter.aids, loss_ratios))
 
 
 @export.add(('asset_loss_table', 'hdf5'))
@@ -666,9 +666,8 @@ def export_asset_loss_table(ekey, dstore):
     lrs_dt = numpy.dtype([('rlzi', U16), ('losses', dtlist)])
     fname = dstore.export_path('%s.%s' % ekey)
     monitor = performance.Monitor(key, fname)
-    lrgetter = riskinput.LossRatiosGetter(dstore)
     aids = range(len(assetcol))
-    allargs = [(lrgetter, list(block), monitor)
+    allargs = [(riskinput.LossRatiosGetter(dstore, block), monitor)
                for block in split_in_blocks(aids, oq.concurrent_tasks)]
     dstore.close()  # avoid OSError: Can't read data (Wrong b-tree signature)
     L = len(loss_types)

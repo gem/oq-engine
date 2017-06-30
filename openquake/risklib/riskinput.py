@@ -108,10 +108,10 @@ class AssetCollection(object):
             aids = range(len(self))
         loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
         vals = numpy.zeros(len(aids), loss_dt)  # asset values by loss_type
-        for aid in aids:
+        for i, aid in enumerate(aids):
             asset = self[aid]
             for lt in self.loss_types:
-                vals[lt][asset.ordinal] = asset.value(lt, self.time_event)
+                vals[i][lt] = asset.value(lt, self.time_event)
         return vals
 
     def __iter__(self):
@@ -807,20 +807,21 @@ class LossRatiosGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore):
+    def __init__(self, dstore, aids=None):
         self.dstore = dstore
+        self.aids = aids or range(len(self.indices))
+        dset = dstore['all_loss_ratios/indices']
+        self.indices = [dset[aid] for aid in aids]
 
     # used in the loss curves exporter
-    def get(self, aids, rlzi):
+    def get(self, rlzi):
         """
-        :param aids: a list of A asset ordinals
         :param rlzi: a realization ordinal
         :returns: a dictionary aid -> list of loss ratios
         """
         data = self.dstore['all_loss_ratios/data']
-        indices = self.dstore['all_loss_ratios/indices'][aids]  # (A, T, 2)
         dic = collections.defaultdict(list)  # aid -> ratios
-        for aid, idxs in zip(aids, indices):
+        for aid, idxs in zip(self.aids, self.indices):
             for idx in idxs:
                 for rec in data[idx[0]: idx[1]]:
                     if rlzi == rec['rlzi']:
@@ -828,15 +829,13 @@ class LossRatiosGetter(object):
         return dic
 
     # used in the calculator
-    def get_all(self, aids):
+    def get_all(self):
         """
-        :param aids: a list of A asset ordinals
         :returns: a list of A composite arrays of dtype `lrs_dt`
         """
         data = self.dstore['all_loss_ratios/data']
-        indices = self.dstore['all_loss_ratios/indices'][aids]
         loss_ratio_data = []
-        for aid, idxs in zip(aids, indices):
+        for aid, idxs in zip(self.aids, self.indices):
             arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
             loss_ratio_data.append(arr)
         return loss_ratio_data
