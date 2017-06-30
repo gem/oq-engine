@@ -211,10 +211,11 @@ class EbrPostCalculator(base.RiskCalculator):
         Save the loss maps by opening and closing the datastore and
         return the total number of stored bytes.
         """
+        dt = self.riskmodel.curve_builder.loss_maps_dt
         for key in res:
             if key.startswith('loss_maps'):
                 acc += {key: res[key].nbytes}
-                self.datastore[key][res['aids']] = res[key]
+                self.datastore[key][res['aids']] = res[key].view(dt)
                 self.datastore.set_attrs(key, nbytes=acc[key])
         return acc
 
@@ -245,7 +246,7 @@ class EbrPostCalculator(base.RiskCalculator):
                     in self.datastore.parent)
             logging.info('Instantiating LossRatiosGetters')
             allargs = []
-            for aids in split_in_blocks(range(A), oq.concurrent_tasks):
+            for aids in split_in_blocks(range(A), oq.concurrent_tasks or 1):
                 dstore = self.datastore.parent if lazy else self.datastore
                 getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
                 allargs.append((assetcol.values(aids), builder, getter,
