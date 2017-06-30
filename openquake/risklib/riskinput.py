@@ -841,5 +841,8 @@ class LossRatiosGetter(object):
         for aid, idxs in zip(self.aids, self.indices):
             if len(idxs):
                 arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
-                loss_ratio_data.append(arr)
+            else:
+                # FIXME: a test for this case is missing
+                arr = numpy.array([], data.dtype)
+            loss_ratio_data.append(arr)
         return loss_ratio_data
