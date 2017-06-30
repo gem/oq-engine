@@ -178,16 +178,16 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
 
 
 @util.reader
-def build_loss_maps(avalues, builder, getter, rlzs, stats, monitor):
+def build_loss_maps(avalues, builder, lrgetter, rlzs, stats, monitor):
     """
     Thin wrapper over :meth:
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
-    getter.dstore.open()  # if not already open
+    lrgetter.dstore.open()  # if not already open
     loss_maps, loss_maps_stats = builder.build_maps(
-        avalues, getter, rlzs, stats, monitor)
-    res = {'aids': getter.aids, 'loss_maps-rlzs': loss_maps}
+        avalues, lrgetter, rlzs, stats, monitor)
+    res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
     return res
