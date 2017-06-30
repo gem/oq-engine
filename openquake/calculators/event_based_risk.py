@@ -250,6 +250,7 @@ class EbrPostCalculator(base.RiskCalculator):
                 Starmap = parallel.Sequential
                 # needed to avoid the HDF5 heisenbug; doing a .restart()
                 # is not enough :-(
+            mon.time_event = assetcol.time_event
             Starmap.apply(
                 build_loss_maps,
                 (assetcol, builder, lrgetter, rlzs, stats, mon),

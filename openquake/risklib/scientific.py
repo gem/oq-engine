@@ -980,7 +980,7 @@ class CurveBuilder(object):
     def __len__(self):
         return len(self.cbs)
 
-    def build_curves(self, assets, loss_ratios):
+    def build_curves(self, assets, loss_ratios, time_event):
         """
         :param assets: a list of assets
         :param loss_ratios: a list of dictionaries aid -> loss ratios
@@ -997,7 +997,7 @@ class CurveBuilder(object):
             ratios = data.reshape(-1, LI)
             for cb in self.cbs:
                 lt = cb.loss_type
-                losses = asset.value(lt) * cb.ratios
+                losses = asset.value(lt, time_event) * cb.ratios
                 for i in range(self.I):
                     arr = curves[a][lt + '_ins' * i]
                     lrs = ratios[:, cb.index + L * i]
@@ -1033,8 +1033,8 @@ class CurveBuilder(object):
             loss_ratios = getter.get_all(aids)
         losses = {}
         for cb in self.cbs:
-            losses[cb.loss_type] = [asset.value(cb.loss_type) * cb.ratios
-                                    for asset in assets]
+            losses[cb.loss_type] = [asset.value(cb.loss_type, mon.time_event) *
+                                    cb.ratios for asset in assets]
             if self.I == 2:
                 losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
         all_poes = self.build_all_poes(aids, loss_ratios, rlzs)
