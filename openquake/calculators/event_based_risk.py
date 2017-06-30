@@ -244,9 +244,11 @@ class EbrPostCalculator(base.RiskCalculator):
             # happening when reading while writing
             lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
                     in self.datastore.parent)
+            logging.info('Instantiating LossRatiosGetters')
             allargs = []
             for aids in split_in_blocks(range(A), oq.concurrent_tasks):
-                getter = riskinput.LossRatiosGetter(self.datastore, aids, lazy)
+                dstore = self.datastore.parent if lazy else self.datastore
+                getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
                 allargs.append((assetcol.values(aids), builder, getter,
                                 rlzs, stats, mon))
             if lazy:  # avoid OSError: Can't read data (Wrong b-tree signature)
