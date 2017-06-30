@@ -477,7 +477,7 @@ class ClassicalCalculator(PSHACalculator):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
                 pgetter = calc.PmapGetter(
-                    self.datastore.parent, fromworker=True)
+                    self.datastore.parent, lazy=True)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:
