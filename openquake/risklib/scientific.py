@@ -965,7 +965,7 @@ class CurveBuilder(object):
         self.clp = conditional_loss_poes
         loss_ratios = {cb.loss_type: len(cb.ratios)
                        for cb in cbs if cb.user_provided}
-        self.loss_curve_dt, self.loss_maps_dt = build_loss_dtypes(
+        self.loss_curve_dt = build_loss_curve_dt(
             loss_ratios, conditional_loss_poes, insured_losses)
         dtlist = []
         for i in range(self.I):
@@ -1427,8 +1427,8 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def build_loss_dtypes(curve_resolution, conditional_loss_poes,
-                      insured_losses=False):
+def build_loss_curve_dt(curve_resolution, conditional_loss_poes,
+                        insured_losses=False):
     """
     :param curve_resolution:
         dictionary loss_type -> curve_resolution
@@ -1437,25 +1437,19 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
     :param insured_losses:
         configuration parameter
     :returns:
-       loss_curve_dt and loss_maps_dt
+       loss_curve_dt
     """
-    P = len(conditional_loss_poes)
-    lm_dt = numpy.dtype((F32, (P,)))
     lc_list = []
-    lm_list = []
     for lt in sorted(curve_resolution):
         C = curve_resolution[lt]
         pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
         lc_dt = numpy.dtype(pairs)
         lc_list.append((str(lt), lc_dt))
-        lm_list.append((str(lt), lm_dt))
     if insured_losses:
         for lt in sorted(curve_resolution):
             C = curve_resolution[lt]
             pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
             lc_dt = numpy.dtype(pairs)
             lc_list.append((str(lt) + '_ins', lc_dt))
-            lm_list.append((str(lt) + '_ins', lm_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
-    loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
-    return loss_curve_dt, loss_maps_dt
+    return loss_curve_dt
