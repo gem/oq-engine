@@ -23,7 +23,6 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
-import textwrap
 import collections
 from decimal import Decimal
 import numpy
@@ -1148,8 +1147,9 @@ class ParamSet(with_metaclass(MetaParamSet, hdf5.LiteralAttrs)):
                   if valid.startswith('is_valid_')]
         for is_valid in valids:
             if not is_valid():
-                docstring = is_valid.__doc__.strip()
-                doc = textwrap.fill(docstring.format(**vars(self)))
+                docstring = '\n'.join(
+                    line.strip() for line in is_valid.__doc__.splitlines())
+                doc = docstring.format(**vars(self))
                 raise ValueError(doc)
 
     def __iter__(self):
