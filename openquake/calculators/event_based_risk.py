@@ -177,7 +177,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
 
 
 @util.reader
-def build_loss_maps(avalues, builder, lrgetter, rlzs, stats, monitor):
+def build_loss_maps(avalues, builder, lrgetter, weights, stats, monitor):
     """
     Thin wrapper over :meth:
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
@@ -185,7 +185,7 @@ def build_loss_maps(avalues, builder, lrgetter, rlzs, stats, monitor):
     """
     lrgetter.dstore.open()  # if not already open
     loss_maps, loss_maps_stats = builder.build_maps(
-        avalues, lrgetter, rlzs, stats, monitor)
+        avalues, lrgetter, weights, stats, monitor)
     res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
@@ -198,7 +198,6 @@ class EbrPostCalculator(base.RiskCalculator):
         self.oqparam = calc.oqparam
         self._monitor = calc._monitor
         self.riskmodel = calc.riskmodel
-        self.rlzs_assoc = calc.rlzs_assoc
         P = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
 
@@ -232,11 +231,11 @@ class EbrPostCalculator(base.RiskCalculator):
         # build loss maps
         if 'all_loss_ratios' in self.datastore and oq.conditional_loss_poes:
             assetcol = self.assetcol
-            rlzs = self.rlzs_assoc.realizations
             stats = oq.risk_stats()
             builder = self.riskmodel.curve_builder
             A = len(assetcol)
-            R = len(self.datastore['realizations'])
+            weights = self.datastore['realizations']['weight']
+            R = len(weights)
             # create loss_maps datasets
             self.datastore.create_dset(
                 'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
@@ -257,7 +256,7 @@ class EbrPostCalculator(base.RiskCalculator):
                     # a lazy getter will read the loss_ratios from the workers
                     # an eager getter reads the loss_ratios upfront
                     allargs.append((assetcol.values(aids), builder, getter,
-                                    rlzs, stats, mon))
+                                    weights, stats, mon))
             if lazy:
                 # avoid OSError: Can't read data (Wrong b-tree signature)
                 self.datastore.parent.close()
@@ -281,6 +280,7 @@ class EbrPostCalculator(base.RiskCalculator):
         generating the loss curves, directly from the the aggregate losses.
         """
         oq = self.oqparam
+        weights = self.datastore['realizations']['weight']
         cr = {cb.loss_type: cb.curve_resolution
               for cb in self.riskmodel.curve_builder}
         loss_curve_dt = scientific.build_loss_curve_dt(
@@ -288,7 +288,7 @@ class EbrPostCalculator(base.RiskCalculator):
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
         I = oq.insured_losses + 1
-        R = len(self.rlzs_assoc.realizations)
+        R = len(weights)
         # NB: using the Processmap since celery is hanging; the computation
         # is fast anyway and this part will likely be removed in the future
         result = parallel.Processmap.apply(
@@ -301,7 +301,6 @@ class EbrPostCalculator(base.RiskCalculator):
 
         if R > 1:  # save stats too
             statnames, stats = zip(*oq.risk_stats())
-            weights = self.datastore['realizations']['weight']
             agg_curve_stats = numpy.zeros((I, len(stats)), agg_curve.dtype)
             for l, loss_type in enumerate(agg_curve.dtype.names):
                 acs = agg_curve_stats[loss_type]
