@@ -259,7 +259,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
         return split_in_slices(sequence, hint)
 
     if hint == 0:  # do not split
-        return sequence
+        return [sequence]
     items = list(sequence) if key is nokey else sorted(sequence, key=key)
     assert hint > 0, hint
     assert len(items) > 0, len(items)
