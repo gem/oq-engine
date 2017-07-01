@@ -810,7 +810,7 @@ class LossRatiosGetter(object):
     def __init__(self, dstore, aids=None, lazy=True):
         self.dstore = dstore
         dset = self.dstore['all_loss_ratios/indices']
-        self.aids = aids or range(len(dset))
+        self.aids = list(aids or range(len(dset)))
         self.indices = [dset[aid] for aid in self.aids]
         self.data = None if lazy else self.get_all()
 
