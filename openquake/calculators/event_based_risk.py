@@ -259,11 +259,8 @@ class EbrPostCalculator(base.RiskCalculator):
             if lazy:
                 # avoid OSError: Can't read data (Wrong b-tree signature)
                 self.datastore.parent.close()
-                Starmap = parallel.Starmap
-            else:
-                # sequentially because there is still an heisenbug (??)
-                Starmap = parallel.Sequential
-            Starmap(build_loss_maps, allargs).reduce(self.save_loss_maps)
+            parallel.Starmap(build_loss_maps, allargs).reduce(
+                self.save_loss_maps)
             if lazy:  # the parent was closed, reopen it
                 self.datastore.parent.open()
 
