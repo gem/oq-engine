@@ -199,6 +199,8 @@ class EbrPostCalculator(base.RiskCalculator):
         self._monitor = calc._monitor
         self.riskmodel = calc.riskmodel
         self.rlzs_assoc = calc.rlzs_assoc
+        P = len(self.oqparam.conditional_loss_poes)
+        self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
 
     def cb_inputs(self, table):
         loss_table = self.datastore[table]
@@ -211,12 +213,11 @@ class EbrPostCalculator(base.RiskCalculator):
         Save the loss maps by opening and closing the datastore and
         return the total number of stored bytes.
         """
-        dt = self.riskmodel.curve_builder.loss_maps_dt
         for key in res:
             if key.startswith('loss_maps'):
                 array = res[key]  # shape (A, R, P, LI)
-                loss_maps = numpy.zeros(array.shape[:2], dt)
-                for lti, lt in enumerate(dt.names):
+                loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
+                for lti, lt in enumerate(self.loss_maps_dt.names):
                     loss_maps[lt] = array[:, :, :, lti]
                 acc += {key: loss_maps.nbytes}
                 self.datastore[key][res['aids']] = loss_maps
@@ -238,10 +239,10 @@ class EbrPostCalculator(base.RiskCalculator):
             R = len(self.datastore['realizations'])
             # create loss_maps datasets
             self.datastore.create_dset(
-                'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
+                'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
             if R > 1:
                 self.datastore.create_dset(
-                    'loss_maps-stats', builder.loss_maps_dt, (A, len(stats)),
+                    'loss_maps-stats', self.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
             # the following logic is needed to avoid the HDF5 heisenbug
@@ -281,7 +282,7 @@ class EbrPostCalculator(base.RiskCalculator):
         oq = self.oqparam
         cr = {cb.loss_type: cb.curve_resolution
               for cb in self.riskmodel.curve_builder}
-        loss_curve_dt, _ = scientific.build_loss_dtypes(
+        loss_curve_dt = scientific.build_loss_curve_dt(
             cr, oq.conditional_loss_poes)
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
