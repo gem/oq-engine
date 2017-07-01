@@ -1009,14 +1009,14 @@ class CurveBuilder(object):
                     arr['avg'] = average_loss([losses, poes])
         return curves
 
-    def build_maps(self, avalues, getter, rlzs, stats, mon):
+    def build_maps(self, avalues, getter, weights, stats, mon):
         """
         :param avalues:
             an array of asset values
         :param getter:
             a :class:`openquake.risklib.riskinput.LossRatiosGetter` instance
-        :param rlzs:
-            a list of realizations
+        :param weights:
+            a list of realization weights
         :param stats:
             a record of statistic functions
         :param mon:
@@ -1036,11 +1036,10 @@ class CurveBuilder(object):
                                     for avalue in avalues]
             if self.I == 2:
                 losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
-        all_poes = self.build_all_poes(getter.aids, loss_ratios, rlzs)
+        all_poes = self.build_all_poes(getter.aids, loss_ratios, len(weights))
         loss_maps = self._build_maps(losses, all_poes)
-        if len(rlzs) > 1 and stats:
+        if len(weights) > 1 and stats:
             statnames, statfuncs = zip(*stats)
-            weights = [rlz.weight for rlz in rlzs]
             stat_poes = compute_stats2(all_poes, statfuncs, weights)
             loss_maps_stats = self._build_maps(losses, stat_poes)
         else:
@@ -1060,24 +1059,23 @@ class CurveBuilder(object):
                         loss_maps[a, r, p, lti] = clratio
         return loss_maps
 
-    def build_all_poes(self, aids, loss_ratios, rlzs):
+    def build_all_poes(self, aids, loss_ratios, num_rlzs):
         """
         :param aids:
             a list of asset IDs
         :param loss_ratios:
             a list of loss ratios
-        :param rlzs:
-            a list of realizations
+        :param num_rlzs:
+            the total number of realizations
         :yields:
             a matrix of shape (A, R) of PoEs
         """
         L = len(self.cbs)
         LI = L * self.I
-        poes = numpy.zeros((len(aids), len(rlzs)), self.dt)
+        poes = numpy.zeros((len(aids), num_rlzs), self.dt)
         for a, aid in enumerate(aids):
             dic = group_array(loss_ratios[a], 'rlzi')
-            for rlz in rlzs:
-                r = rlz.ordinal
+            for r in range(num_rlzs):
                 try:
                     ratios = dic[r]['ratios'].reshape(-1, LI)
                 except KeyError:
