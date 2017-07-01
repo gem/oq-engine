@@ -245,8 +245,6 @@ class EbrPostCalculator(base.RiskCalculator):
                     'loss_maps-stats', self.loss_maps_dt, (A, len(stats)),
                     fillvalue=None)
             mon = self.monitor('loss maps')
-            # the following logic is needed to avoid the HDF5 heisenbug
-            # happening when reading while writing
             lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
                     in self.datastore.parent)
             logging.info('Instantiating LossRatiosGetters')
@@ -254,13 +252,17 @@ class EbrPostCalculator(base.RiskCalculator):
             for aids in split_in_blocks(range(A), oq.concurrent_tasks or 1):
                 dstore = self.datastore.parent if lazy else self.datastore
                 getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
+                # a lazy getter will read the loss_ratios from the workers
+                # an eager getter reads the loss_ratios upfront
                 allargs.append((assetcol.values(aids), builder, getter,
                                 rlzs, stats, mon))
-            if lazy:  # avoid OSError: Can't read data (Wrong b-tree signature)
+            if lazy:
+                # avoid OSError: Can't read data (Wrong b-tree signature)
                 self.datastore.parent.close()
                 Starmap = parallel.Starmap
             else:
-                Starmap = parallel.Sequential  # avoid heisenbug
+                # sequentially because there is still an heisenbug (??)
+                Starmap = parallel.Sequential
             Starmap(build_loss_maps, allargs).reduce(self.save_loss_maps)
             if lazy:  # the parent was closed, reopen it
                 self.datastore.parent.open()
