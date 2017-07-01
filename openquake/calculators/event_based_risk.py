@@ -217,8 +217,7 @@ class EbrPostCalculator(base.RiskCalculator):
                 array = res[key]  # shape (A, R, P, LI)
                 loss_maps = numpy.zeros(array.shape[:2], dt)
                 for lti, lt in enumerate(dt.names):
-                    for p, poe in enumerate(dt[lt].names):
-                        loss_maps[lt][poe] = array[:, :, p, lti]
+                    loss_maps[lt] = array[:, :, :, lti]
                 acc += {key: loss_maps.nbytes}
                 self.datastore[key][res['aids']] = loss_maps
                 self.datastore.set_attrs(key, nbytes=acc[key])
