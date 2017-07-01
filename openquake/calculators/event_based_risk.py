@@ -214,8 +214,13 @@ class EbrPostCalculator(base.RiskCalculator):
         dt = self.riskmodel.curve_builder.loss_maps_dt
         for key in res:
             if key.startswith('loss_maps'):
-                acc += {key: res[key].nbytes}
-                self.datastore[key][res['aids']] = res[key].view(dt)
+                array = res[key]  # shape (A, R, P, LI)
+                loss_maps = numpy.zeros(array.shape[:2], dt)
+                for lti, lt in enumerate(dt.names):
+                    for p, poe in enumerate(dt[lt].names):
+                        loss_maps[lt][poe] = array[:, :, p, lti]
+                acc += {key: loss_maps.nbytes}
+                self.datastore[key][res['aids']] = loss_maps
                 self.datastore.set_attrs(key, nbytes=acc[key])
         return acc
 
