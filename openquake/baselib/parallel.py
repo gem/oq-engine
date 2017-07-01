@@ -280,7 +280,7 @@ class Pickled(object):
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
         try:
             self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-        except TypeError as exc:  # can't pickle
+        except TypeError as exc:  # can't pickle, show the obj in the message
             raise TypeError('%s: %s' % (exc, obj))
 
     def __repr__(self):
