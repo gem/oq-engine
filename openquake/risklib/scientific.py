@@ -1439,8 +1439,8 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
     :returns:
        loss_curve_dt and loss_maps_dt
     """
-    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-    lm_dt = numpy.dtype(lst)
+    P = len(conditional_loss_poes)
+    lm_dt = numpy.dtype((F32, (P,)))
     lc_list = []
     lm_list = []
     for lt in sorted(curve_resolution):
