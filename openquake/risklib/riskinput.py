@@ -101,8 +101,8 @@ class AssetCollection(object):
 
     def values(self, aids=None):
         """
-        :param: asset indices where to compute the values (default all)
-        :returns: a composite array of asset values by loss type
+        :param aids: asset indices where to compute the values (None means all)
+        :returns: a structured array of asset values by loss type
         """
         if aids is None:
             aids = range(len(self))
