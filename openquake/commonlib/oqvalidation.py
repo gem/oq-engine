@@ -564,6 +564,15 @@ class OqParam(valid.ParamSet):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
 
+    def is_valid_loss_ratios(self):
+        """
+        The loss types in the loss_ratios dictionary {loss_ratios} are not
+        the ones for which there are risk functions: {_risk_files}
+        """
+        ltypes = sorted(self.loss_ratios)
+        expected_ltypes = sorted(self.risk_files)
+        return not ltypes or ltypes == expected_ltypes
+
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
