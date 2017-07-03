@@ -136,8 +136,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
-        # check losses_by_taxon
-        fnames = export(('losses_by_taxon-rlzs', 'csv'), self.calc.datastore)
+        # check losses_by_tag
+        fnames = export(('losses_by_tag-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 

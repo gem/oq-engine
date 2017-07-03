@@ -63,7 +63,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             [('eid', U64), ('loss', (F32, (self.L, self.I)))])
         self.taskno = 0
         self.start = 0
-        self.datastore.create_dset('losses_by_taxon-rlzs', F32,
+        self.datastore.create_dset('losses_by_tag-rlzs', F32,
                                    (self.T, self.R, self.L * self.I))
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
