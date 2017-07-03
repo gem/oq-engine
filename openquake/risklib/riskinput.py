@@ -722,9 +722,10 @@ class RiskInput(object):
     :param eps_dict:
         dictionary of epsilons
     """
-    def __init__(self, hazard_getter, assets_by_site, eps_dict):
+    def __init__(self, hazard_getter, assets_by_site, tagmask, eps_dict):
         self.hazard_getter = hazard_getter
         self.assets_by_site = assets_by_site
+        self.tagmask = tagmask
         self.eps = eps_dict
         taxonomies_set = set()
         aids = []
