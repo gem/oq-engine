@@ -46,9 +46,9 @@ def check_total_losses(calc):
             i = int(lt.endswith('_ins'))  # the cast avoids a numpy warning
             data1[l] += dset['loss'][:, l - L * i, i].sum()
 
-    # check the sums are consistent with the ones coming from losses_by_taxon
+    # check the sums are consistent with the ones coming from losses_by_tag
     data2 = numpy.zeros(L1, numpy.float32)
-    lbt = dstore['losses_by_taxon-rlzs']
+    lbt = dstore['losses_by_tag-rlzs']
     for l in range(L1):
         data2[l] += lbt[:, :, l].sum()
     numpy.testing.assert_allclose(data1, data2, 1E-6)
@@ -217,8 +217,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
-        fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'losses_by_taxon-stats not exported?'
+        fnames = export(('losses_by_tag-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'losses_by_tag-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 

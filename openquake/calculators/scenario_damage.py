@@ -42,7 +42,7 @@ def dist_by_asset(data, multi_stat_dt):
     return out
 
 
-def dist_by_taxon(data, multi_stat_dt):
+def dist_by_tag(data, multi_stat_dt):
     """
     :param data: array of shape (T, R, L, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
@@ -173,7 +173,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = dist_by_asset(
             d_asset, multi_stat_dt)
-        self.datastore['dmg_by_taxon'] = dist_by_taxon(
+        self.datastore['dmg_by_tag'] = dist_by_tag(
             result['d_taxon'], multi_stat_dt)
         self.datastore['dmg_total'] = dist_total(
             result['d_taxon'], multi_stat_dt)
@@ -186,7 +186,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 c_asset[a, r, l] = stat
             multi_stat_dt = self.oqparam.loss_dt(stat_dt)
             self.datastore['losses_by_asset'] = c_asset
-            self.datastore['losses_by_taxon'] = dist_by_taxon(
+            self.datastore['losses_by_tag'] = dist_by_tag(
                 result['c_taxon'], multi_stat_dt)
             self.datastore['losses_total'] = dist_total(
                 result['c_taxon'], multi_stat_dt)
