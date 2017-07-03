@@ -95,6 +95,12 @@ class AssetCollection(object):
         self.i_lim = [n for n in fields if n.startswith('insurance_limit-')]
         self.retro = [n for n in fields if n.startswith('retrofitted-')]
 
+    def tags(self):
+        """
+        :returns: list of sorted tags
+        """
+        return sorted(set(self.taxonomies) | set(self.aids_by_tag))
+
     def assets_by_site(self):
         """
         :returns: numpy array of lists with the assets by each site
@@ -121,7 +127,7 @@ class AssetCollection(object):
         """
         :returns: array of booleans of shape (A, T)
         """
-        tags = sorted(set(self.taxonomies) | set(self.aids_by_tag))
+        tags = self.tags()
         tagidx = {t: i for i, t in enumerate(tags)}
         mask = numpy.zeros((len(self), len(tags)), bool)
         for tag, aids in self.aids_by_tag.items():
