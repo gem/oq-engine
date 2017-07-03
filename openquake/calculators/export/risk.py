@@ -392,6 +392,7 @@ def build_damage_dt(dstore, mean_std=True):
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     dt_list = []
     for ds in damage_states:
+        ds = str(ds)
         if mean_std:
             dt_list.append(('%s_mean' % ds, F32))
             dt_list.append(('%s_stdv' % ds, F32))
@@ -399,7 +400,7 @@ def build_damage_dt(dstore, mean_std=True):
             dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    return numpy.dtype([(lt, damage_dt) for lt in loss_types])
+    return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
 
 
 def build_damage_array(data, damage_dt):
