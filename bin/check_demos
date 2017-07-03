@@ -77,10 +77,10 @@ def main():
         got = get_outputs(db, job_id)
         missing = set(expected_outputs[job_dir]) - got
         if missing:
-            outs = ', '.join(got)
-            exps = ', '.join(expected_outputs[job_dir])
+            outs = ', '.join(sorted(got))
+            exps = ', '.join(sorted(expected_outputs[job_dir]))
             raise RuntimeError(
-                'Missing outputs for job %d, %s: expected %s, got %s' %
+                'Missing outputs for job %d, %s\nexpected %s\ngot %s' %
                 (job_id, job_dir, exps, outs))
     print('Checked the outputs of %d demos: all OK' % len(items))
 
