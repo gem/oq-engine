@@ -61,7 +61,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     asset_loss_table = param['asset_loss_table']
     lbt = numpy.zeros((T, R, L * I), F32)
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
-                  losses_by_taxon=lbt, all_losses=AccumDict(accum={}))
+                  losses_by_tag=lbt, all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
         assets = outputs.assets
@@ -136,7 +136,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             agglosses['stddev'] = F32(std)
 
             # losses by tag
-            self.datastore['losses_by_taxon-rlzs'] = result['losses_by_taxon']
+            self.datastore['losses_by_tag-rlzs'] = result['losses_by_tag']
 
             # losses by asset
             losses_by_asset = numpy.zeros((A, R, L * I), stat_dt)
