@@ -10,9 +10,9 @@ jobs:
   - stage: tests
     env: HAZARDLIB
     script:
-        - nosetests --with-doctest -xvs -a'!slow' openquake.baselib
-        - nosetests --with-doctest -xvs -a'!slow' openquake.hazardlib
-        - nosetests --with-doctest -xvs -a'!slow' openquake.hmtk
+        - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[hazardlib\]' || test "$BRANCH" == "master"; then
+          nosetests --with-doctest -xvs -a'!slow' openquake.baselib openquake.hazardlib
+          fi
   - stage: tests
     env: ENGINE
     before_script:
