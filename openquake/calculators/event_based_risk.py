@@ -68,7 +68,7 @@ def build_agg_curve(cb_inputs, monitor):
     return result
 
 
-def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
+def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
     # update the result dictionary and the agg array with each output
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
@@ -98,9 +98,9 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                 aggr[indices, l] += losses
 
                 # losses by taxonomy
-                t = taxid[asset.taxonomy]
                 for i in range(I):
-                    losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
+                    tot = losses[:, i].sum()
+                    losses_by_taxon[tagmask[aid], r, l + L * i] += tot
 
                 if param['asset_loss_table']:
                     for i in range(I):
@@ -111,22 +111,23 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
 
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
-    data = sorted(ass)  # sort by aid, r
-    lrs_idx = result['lrs_idx']  # aid -> indices
-    n = 0
-    all_ratios = []
-    for aid, agroup in itertools.groupby(data, operator.itemgetter(0)):
-        for r, rgroup in itertools.groupby(agroup, operator.itemgetter(1)):
-            for e, egroup in itertools.groupby(
-                    rgroup, operator.itemgetter(2)):
-                ratios = numpy.zeros(L * I, F32)
-                for rec in egroup:
-                    ratios[rec[3]] = rec[4]
-                all_ratios.append((r, ratios))
-        n1 = len(all_ratios)
-        lrs_idx[aid].append((n, n1))
-        n = n1
-    result['assratios'] = numpy.array(all_ratios, param['lrs_dt'])
+    if param['asset_loss_table']:
+        data = sorted(ass)  # sort by aid, r
+        lrs_idx = result['lrs_idx']  # aid -> indices
+        n = 0
+        all_ratios = []
+        for aid, agroup in itertools.groupby(data, operator.itemgetter(0)):
+            for r, rgroup in itertools.groupby(agroup, operator.itemgetter(1)):
+                for e, egroup in itertools.groupby(
+                        rgroup, operator.itemgetter(2)):
+                    ratios = numpy.zeros(L * I, F32)
+                    for rec in egroup:
+                        ratios[rec[3]] = rec[4]
+                    all_ratios.append((r, ratios))
+            n1 = len(all_ratios)
+            lrs_idx[aid].append((n, n1))
+            n = n1
+        result['assratios'] = numpy.array(all_ratios, param['lrs_dt'])
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -144,13 +145,12 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     """
     riskinput.hazard_getter.init()
     assetcol = param['assetcol']
-    A = len(assetcol)
     I = param['insured_losses'] + 1
     eids = riskinput.hazard_getter.eids
     E = len(eids)
     L = len(riskmodel.lti)
-    taxid = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
-    T = len(taxid)
+    tagmask = assetcol.tagmask()
+    A, T = tagmask.shape
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     idx = dict(zip(eids, range(E)))
@@ -164,7 +164,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, taxid, agg, idx, result, param)
+    _aggregate(outputs, riskmodel, tagmask, agg, idx, result, param)
     for r in sorted(agg):
         records = [(eids[i], loss) for i, loss in enumerate(agg[r])
                    if loss.sum() > 0]
