@@ -176,7 +176,7 @@ python-oq-engine (2.4.0-0~precise01) precise; urgency=low
     number of source groups (65,536) has been added
   * Added an output `losses_by_event` to the scenario_risk calculator
   * Changed the output `ruptures.csv` to avoid duplications
-  * Added an output `losses_by_taxon` to the scenario_risk calculator
+  * Added an output `losses_by_tag` to the scenario_risk calculator
   * Fixed a performance bug in `get_gmfs`: now the scenario risk and damage
     calculators are orders of magnitude faster for big arrays
   * Added an export test for the event loss table in the case of multiple TRTs
@@ -205,7 +205,7 @@ python-oq-engine (2.4.0-0~precise01) precise; urgency=low
     again, and it is not extracted from the avg_losses output anymore
   * Made the `fullreport` exportable
   * Fixed the `rup_data` export, since the boundary field was broken
-  * Restored the output `losses_by_taxon` in the event_based_risk calculator
+  * Restored the output `losses_by_tag` in the event_based_risk calculator
   * Fixed the calculator event based UCERF so that average losses can
     be stored
 

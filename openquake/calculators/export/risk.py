@@ -452,17 +452,17 @@ def export_dmg_by_asset_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('dmg_by_taxon', 'csv'))
-def export_dmg_by_taxon_csv(ekey, dstore):
+@export.add(('dmg_by_tag', 'csv'))
+def export_dmg_by_tag_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
     taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
-        dmg_by_taxon = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        dmg_by_tag = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonomy')
+        array = compose_arrays(taxonomies, dmg_by_tag, 'taxonomy')
         writer.save(array, fname)
     return writer.getsaved()
 
@@ -564,8 +564,8 @@ def get_paths(rlz):
 
 
 # used by scenario_damage
-@export.add(('losses_by_taxon', 'csv'))
-def export_csq_by_taxon_csv(ekey, dstore):
+@export.add(('losses_by_tag', 'csv'))
+def export_csq_by_tag_csv(ekey, dstore):
     tags = add_quotes(dstore['assetcol'].tags())
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     value = dstore[ekey[0]].value  # matrix T x R
@@ -577,8 +577,8 @@ def export_csq_by_taxon_csv(ekey, dstore):
 
 
 # used by event_based_risk and scenario_risk
-@export.add(('losses_by_taxon-rlzs', 'csv'), ('losses_by_taxon-stats', 'csv'))
-def export_losses_by_taxon_csv(ekey, dstore):
+@export.add(('losses_by_tag-rlzs', 'csv'), ('losses_by_tag-stats', 'csv'))
+def export_losses_by_tag_csv(ekey, dstore):
     oq = dstore['oqparam']
     tags = add_quotes(dstore['assetcol'].tags())
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
