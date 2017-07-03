@@ -570,7 +570,7 @@ class OqParam(valid.ParamSet):
         the ones for which there are risk functions: {_risk_files}
         """
         ltypes = sorted(self.loss_ratios)
-        expected_ltypes = sorted(self.all_cost_types)
+        expected_ltypes = sorted(self.risk_files)
         return not ltypes or ltypes == expected_ltypes
 
     def check_uniform_hazard_spectra(self):
