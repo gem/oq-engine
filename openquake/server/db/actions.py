@@ -628,5 +628,5 @@ def find(db, description):
 SELECT id, description, user_name,
   (julianday(stop_time) - julianday(start_time)) * 24 AS hours
 FROM job WHERE status='complete' AND description LIKE lower(?x)
-ORDER BY id desc'''
+ORDER BY julianday(stop_time) - julianday(start_time)'''
     return db(query, description.lower())
