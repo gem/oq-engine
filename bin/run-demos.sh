@@ -27,3 +27,6 @@ MPLBACKEND=Agg python -m openquake.commands plot_uhs -2
 python -m openquake.commands db set_status 1 executing
 # repeat the failed/executing calculation, which is useful for QGIS
 python -m openquake.commands engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini
+
+# display the calculations
+python -m openquake.commands db find %
