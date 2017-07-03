@@ -38,6 +38,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
+indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 def build_agg_curve(cb_inputs, monitor):
@@ -111,7 +112,7 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
     data = sorted(ass)  # sort by aid, r
-    lrs_idx = result['lrs_idx']  # shape (A, 2)
+    lrs_idx = result['lrs_idx']  # aid -> indices
     n = 0
     all_ratios = []
     for aid, agroup in itertools.groupby(data, operator.itemgetter(0)):
@@ -123,7 +124,7 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                     ratios[rec[3]] = rec[4]
                 all_ratios.append((r, ratios))
         n1 = len(all_ratios)
-        lrs_idx[aid] = [n, n1]
+        lrs_idx[aid].append((n, n1))
         n = n1
     result['assratios'] = numpy.array(all_ratios, param['lrs_dt'])
 
@@ -155,7 +156,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
     result = dict(agglosses=AccumDict(), assratios=[],
-                  lrs_idx=numpy.zeros((A, 2), U32),
+                  lrs_idx=AccumDict(accum=[]),  # aid -> start_stop list
                   losses_by_taxon=numpy.zeros((T, R, L * I), F32),
                   aids=None)
     if param['avg_losses']:
@@ -513,10 +514,8 @@ class EbriskCalculator(base.RiskCalculator):
 
         if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
             # save all_loss_ratios
-            self.T = sum(ires.num_tasks for ires in allres)
             self.alr_nbytes = 0
-            self.datastore.create_dset(
-                'all_loss_ratios/indices', U32, (self.A, self.T, 2))
+            self.indices = collections.defaultdict(list)  # sid -> pairs
 
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
@@ -568,10 +567,11 @@ class EbriskCalculator(base.RiskCalculator):
 
         if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
             with self.monitor('saving loss ratios', autoflush=True):
-                lrs_idx += self.start
+                for aid, pairs in lrs_idx.items():
+                    self.indices[aid].extend(
+                        (start + self.start, stop + self.start)
+                        for start, stop in pairs)
                 self.start += len(assratios)
-                self.datastore['all_loss_ratios/indices'][
-                    :, self.taskno] = lrs_idx
                 assratios['rlzi'] += offset
                 self.datastore.extend('all_loss_ratios/data', assratios)
                 self.alr_nbytes += assratios.nbytes
@@ -618,13 +618,16 @@ class EbriskCalculator(base.RiskCalculator):
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
         if 'all_loss_ratios' in self.datastore:
+            self.datastore.save_vlen(
+                'all_loss_ratios/indices',
+                [numpy.array(self.indices[aid], indices_dt)
+                 for aid in range(self.A)])
             self.datastore.set_attrs(
                 'all_loss_ratios',
                 loss_types=' '.join(self.riskmodel.loss_types))
-            for name in ('indices', 'data'):
-                dset = self.datastore['all_loss_ratios/' + name]
-                nbytes = dset.size * dset.dtype.itemsize
-                self.datastore.set_attrs(
-                    'all_loss_ratios/' + name,
-                    nbytes=nbytes, bytes_per_asset=nbytes / self.A)
+            dset = self.datastore['all_loss_ratios/data']
+            nbytes = dset.size * dset.dtype.itemsize
+            self.datastore.set_attrs(
+                'all_loss_ratios/data',
+                nbytes=nbytes, bytes_per_asset=nbytes / self.A)
             EbrPostCalculator(self).run(close=False)
