@@ -611,16 +611,10 @@ celery_wait $GEM_MAXLOOP"
 
         /usr/share/openquake/engine/utils/celery-status 
 
-        cd /usr/share/openquake/engine/demos
-        for demo_dir in \$(find . -type d | sort); do
-            if [ -f \$demo_dir/job_hazard.ini ]; then
-            cd \$demo_dir
-            OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
-            oq engine --run job_risk.ini --exports csv,npz --hazard-calculation-id -1
-            cd -
-            fi
-        done
-
+        cd /usr/share/openquake/engine/demos/risk/EventBasedRisk
+        OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
+        oq engine --run job_risk.ini --exports csv,npz --hazard-calculation-id -1
+        cd -
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
         echo \"Exporting output #1\"
