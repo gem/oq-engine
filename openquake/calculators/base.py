@@ -585,6 +585,14 @@ class HazardCalculator(BaseCalculator):
         """For compatibility with the engine"""
 
 
+def get_aids(assets_by_site):
+    aids = []
+    for assets in assets_by_site:
+        for asset in assets:
+            aids.append(asset.ordinal)
+    return sorted(aids)
+
+
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -626,6 +634,7 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
         assets_by_site = self.assetcol.assets_by_site()
+        self.tagmask = self.assetcol.tagmask()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             sid_weight_pairs = [
@@ -642,11 +651,12 @@ class RiskCalculator(HazardCalculator):
                     for assets in reduced_assets:
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
+                reduced_mask = self.tagmask[get_aids(reduced_assets)]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
                         kind, hazards[:, sids], imtls, eids),
-                    reduced_assets, reduced_eps)
+                    reduced_assets, reduced_mask, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
