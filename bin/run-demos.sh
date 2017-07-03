@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
-# commented out some demos that are run on Jenkins with celery
-#for demo_dir in $(find $1 -type d | sort); do
-#   if [ -f $demo_dir/job_hazard.ini ]; then
-#       python -m openquake.commands engine --run $demo_dir/job_hazard.ini
-#       python -m openquake.commands engine --run $demo_dir/job_risk.ini --hc -1
-#   fi
-#done
+# run demos with job_hazard.ini and job_risk.ini
+for demo_dir in $(find $1 -type d | sort); do
+   if [ -f $demo_dir/job_hazard.ini ]; then
+       python -m openquake.commands engine --run $demo_dir/job_hazard.ini
+       python -m openquake.commands engine --run $demo_dir/job_risk.ini --hc -1
+   fi
+done
 # run the other demos
 if [ ! -d "$1" ]; then
     echo "Please specify the location of the folder containing the demos. Aborting." >&2
