@@ -117,6 +117,22 @@ class AssetCollection(object):
                         ltype, self.time_event)
         return vals
 
+    def tagmask(self):
+        """
+        :returns: array of booleans of shape (A, T)
+        """
+        tags = sorted(set(self.taxonomies) | set(self.aids_by_tag))
+        tagidx = {t: i for i, t in enumerate(tags)}
+        mask = numpy.zeros((len(self), len(tags)), bool)
+        for tag, aids in self.aids_by_tag.items():
+            mask[aids, tagidx[tag]] = True
+        for tax in self.taxonomies:
+            t = tagidx[tax]
+            for asset in self:
+                if asset.taxonomy == tax:
+                    mask[asset.ordinal, t] = True
+        return mask
+
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]
