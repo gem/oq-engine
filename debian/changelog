@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the format of array `all_loss_ratios/indices`
+  * The size in bytes of the GMFs was saved incorrectly
   * Added an exporter gmf_scenario/rup-XXX working also for event based
   * First version of the calculator gmf_ebrisk
   * Implemented risk statistics for the classical_damage calculator
