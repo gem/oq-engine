@@ -621,12 +621,16 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
+    assets = []
+    taxonomies = set()
+    asset_refs = []
+    assets_by_tag = collections.defaultdict(list)
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, [], set(), [], cc, collections.defaultdict(list))
+        area.attrib, assets, taxonomies, asset_refs, cc, assets_by_tag)
     return exp, exposure.assets
 
 
@@ -752,9 +756,11 @@ def get_exposure(oqparam):
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
 
-    # sanity check
+    # sanity checks
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
     assert values, 'Could not find any value??'
+    common = exposure.taxonomies & set(exposure.assets_by_tag)
+    assert not common, 'tags %s are overriding taxonomies' % common
     return exposure
 
 
