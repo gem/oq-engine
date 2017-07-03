@@ -23,8 +23,8 @@ python -m openquake.commands engine --lhc
 MPLBACKEND=Agg python -m openquake.commands plot -2
 MPLBACKEND=Agg python -m openquake.commands plot_uhs -2
 
-# fake a wrong calculation still in executing status
-python -m openquake.commands db set_status 1 executing
+# fake a wrong calculation still in executing status (AreaSource)
+python -m openquake.commands db set_status 26 executing
 # repeat the failed/executing calculation, which is useful for QGIS
 python -m openquake.commands engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini
 
@@ -33,4 +33,4 @@ python -m openquake.commands engine --run $1/hazard/AreaSourceClassicalPSHA/job.
 python -m openquake.commands db find %
 
 # build an HTML report
-python -m openquake.engine --make-html-report today
+python -m openquake.commands engine --make-html-report today
