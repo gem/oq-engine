@@ -331,6 +331,15 @@ class OqParamTestCase(unittest.TestCase):
             oq.set_risk_imtls(rm)
         self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))
 
+    def test_invalid_loss_ratios(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(calculation_mode='event_based',
+                    sites='0.1 0.2',
+                    inputs=dict(structural_vulnerability=None,
+                                nonstructural_vulnerability=None),
+                    loss_ratios="{'structural': [.1, .2]}").validate()
+        self.assertIn('loss types in the loss_ratios', str(ctx.exception))
+
     def test_disaggregation(self):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
