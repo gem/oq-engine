@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Renamed `oq engine --version-db` to `oq engine --db-version`, to avoid
+  * Renamed `--version-db` to `--db-version`, to avoid
     confusions between `oq --version` and `oq engine -version`
  *  Extended the `sz` field in the rupture surface to 2 bytes, making it
     possible to use a smaller mesh spacing
