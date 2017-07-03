@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Extended the `sz` field in the rupture surface to 2 bytes, making it
+  * Renamed `oq engine --version-db` to `oq engine --db-version`, to avoid
+    confusions between `oq --version` and `oq engine -version`
+ *  Extended the `sz` field in the rupture surface to 2 bytes, making it
     possible to use a smaller mesh spacing
   * Changed the format of array `all_loss_ratios/indices`
   * The size in bytes of the GMFs was saved incorrectly
