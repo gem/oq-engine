@@ -35,12 +35,12 @@ expected_outputs = {
     'ScenarioCase1': ['gmf_data'],
     'ScenarioCase2': ['gmf_data'],
     'SimpleFaultSourceClassicalPSHA': ['hcurves', 'uhs'],
-    'ClassicalBCR': ['hcurves', 'bcr-rlzs'],
-    'ClassicalRisk': ['hcurves', 'hmaps', 'loss_maps-rlzs'],
+    'ClassicalBCR': ['bcr-rlzs'],
+    'ClassicalRisk': ['loss_maps-rlzs'],
     'ScenarioDamage': ['dmg_by_asset', 'dmg_by_taxon', 'dmg_total', 'losses_by_asset', 'losses_by_taxon', 'losses_total'],
-    'ClassicalDamage': ['hcurves', 'damages-rlzs'],
-    'EventBasedRisk': ['agg_loss_table', 'avg_losses-rlzs', 'avg_losses-stats', 'loss_maps-rlzs', 'loss_maps-stats', 'losses_by_taxon-rlzs', 'ruptures'],
-    'ScenarioRisk': ['gmf_data', 'losses_by_asset', 'losses_by_event', 'losses_by_taxon-rlzs']}
+    'ClassicalDamage': ['damages-rlzs'],
+    'EventBasedRisk': ['agg_loss_table', 'avg_losses-rlzs', 'avg_losses-stats', 'loss_maps-rlzs', 'loss_maps-stats', 'losses_by_taxon-rlzs'],
+    'ScenarioRisk': ['losses_by_asset', 'losses_by_event', 'losses_by_taxon-rlzs']}
 
 
 def get_job_dir_job_id(db, user):
