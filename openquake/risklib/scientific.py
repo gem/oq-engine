@@ -1448,7 +1448,11 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
         lc_dt = numpy.dtype(pairs)
         lc_list.append((str(lt), lc_dt))
         lm_list.append((str(lt), lm_dt))
-        if insured_losses:
+    if insured_losses:
+        for lt in sorted(curve_resolution):
+            C = curve_resolution[lt]
+            pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+            lc_dt = numpy.dtype(pairs)
             lc_list.append((str(lt) + '_ins', lc_dt))
             lm_list.append((str(lt) + '_ins', lm_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None

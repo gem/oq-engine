@@ -38,6 +38,7 @@ import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+F32 = numpy.float32
 F64 = numpy.float64
 
 
