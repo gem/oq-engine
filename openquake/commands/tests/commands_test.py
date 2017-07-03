@@ -320,7 +320,7 @@ class DbTestCase(unittest.TestCase):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
                 'openquake.commonlib.logs.dbcmd', manage.dbcmd):
-            db('version_db')
+            db('db_version')
             try:
                 db('calc_info', (1,))
             except dbapi.NotFound:  # happens on an empty db
