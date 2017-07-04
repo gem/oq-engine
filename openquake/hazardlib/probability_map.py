@@ -18,6 +18,7 @@
 from openquake.baselib.python3compat import zip
 import numpy
 
+F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
 
@@ -208,6 +209,31 @@ class ProbabilityMap(dict):
                     imtls.slicedic[imt], idx]
         return curves
 
+    # used when exporting to npy
+    def convert_npy(self, imtls, nsites, idx=0):
+        """
+        Convert a probability map into a composite array of length `nsites`
+        and dtype `imtls.dt`.
+
+        :param imtls:
+            DictArray instance
+        :param nsites:
+            the total number of sites
+        :param idx:
+            index on the z-axis (default 0)
+        """
+        dtlist = [(imt, [(str(iml), F32) for iml in imtls[imt]])
+                  for imt in imtls]
+        curves = numpy.zeros(nsites, dtlist)
+        for sid in self:
+            array = self[sid].array
+            for imt in imtls:
+                imls = curves.dtype[imt].names
+                values = array[imtls.slicedic[imt], idx]
+                for iml, val in zip(imls, values):
+                    curves[sid][imt][iml] = val
+        return curves
+
     def convert2(self, imtls, sids):
         """
         Convert a probability map into a composite array of shape (N, Z)
@@ -221,7 +247,7 @@ class ProbabilityMap(dict):
             an array of curves of shape (N, Z)
         """
         if sids is None:
-            sids = numpy.array(sorted(self), numpy.float32)
+            sids = numpy.array(sorted(self), F32)
         curves = numpy.zeros((len(sids), self.shape_z), imtls.dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]

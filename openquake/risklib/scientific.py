@@ -965,7 +965,7 @@ class CurveBuilder(object):
         self.clp = conditional_loss_poes
         loss_ratios = {cb.loss_type: len(cb.ratios)
                        for cb in cbs if cb.user_provided}
-        self.loss_curve_dt, self.loss_maps_dt = build_loss_dtypes(
+        self.loss_curve_dt = build_loss_curve_dt(
             loss_ratios, conditional_loss_poes, insured_losses)
         dtlist = []
         for i in range(self.I):
@@ -980,16 +980,16 @@ class CurveBuilder(object):
     def __len__(self):
         return len(self.cbs)
 
-    def build_curves(self, assets, loss_ratios):
+    def build_curves(self, avalues, loss_ratios):
         """
-        :param assets: a list of assets
+        :param avalues: array of asset values
         :param loss_ratios: a list of dictionaries aid -> loss ratios
         :returns: A curves of dtype loss_curve_dt
         """
-        curves = numpy.zeros(len(assets), self.loss_curve_dt)
+        curves = numpy.zeros(len(avalues), self.loss_curve_dt)
         L = len(self.cbs)
         LI = L * self.I
-        for a, asset in enumerate(assets):
+        for a, avalue in enumerate(avalues):
             try:
                 data = numpy.concatenate(loss_ratios[a])
             except KeyError:  # no ratios for the given realization
@@ -997,7 +997,7 @@ class CurveBuilder(object):
             ratios = data.reshape(-1, LI)
             for cb in self.cbs:
                 lt = cb.loss_type
-                losses = asset.value(lt) * cb.ratios
+                losses = avalue[lt] * cb.ratios
                 for i in range(self.I):
                     arr = curves[a][lt + '_ins' * i]
                     lrs = ratios[:, cb.index + L * i]
@@ -1009,14 +1009,14 @@ class CurveBuilder(object):
                     arr['avg'] = average_loss([losses, poes])
         return curves
 
-    def build_maps(self, assets, getter, rlzs, stats, mon):
+    def build_maps(self, avalues, getter, weights, stats, mon):
         """
-        :param assets:
-            a list of assets
+        :param avalues:
+            an array of asset values
         :param getter:
             a :class:`openquake.risklib.riskinput.LossRatiosGetter` instance
-        :param rlzs:
-            a list of realizations
+        :param weights:
+            a list of realization weights
         :param stats:
             a record of statistic functions
         :param mon:
@@ -1029,54 +1029,53 @@ class CurveBuilder(object):
         for lt, i in sorted(lti.items()):
             lti[lt + '_ins'] = i
         with mon('getting loss ratios'):
-            aids = [asset.ordinal for asset in assets]
-            loss_ratios = getter.get_all(aids)
+            loss_ratios = getter.get_all()
         losses = {}
         for cb in self.cbs:
-            losses[cb.loss_type] = [asset.value(cb.loss_type) * cb.ratios
-                                    for asset in assets]
+            losses[cb.loss_type] = [avalue[cb.loss_type] * cb.ratios
+                                    for avalue in avalues]
             if self.I == 2:
                 losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
-        all_poes = self.build_all_poes(aids, loss_ratios, rlzs)
+        all_poes = self.build_all_poes(getter.aids, loss_ratios, len(weights))
         loss_maps = self._build_maps(losses, all_poes)
-        if len(rlzs) > 1 and stats:
+        if len(weights) > 1 and stats:
             statnames, statfuncs = zip(*stats)
-            weights = [rlz.weight for rlz in rlzs]
             stat_poes = compute_stats2(all_poes, statfuncs, weights)
             loss_maps_stats = self._build_maps(losses, stat_poes)
         else:
             loss_maps_stats = None
-        return aids, loss_maps, loss_maps_stats
+        return loss_maps, loss_maps_stats
 
     def _build_maps(self, losses, all_poes):
-        loss_maps = numpy.zeros(all_poes.shape, self.loss_maps_dt)
-        for a, poes in enumerate(all_poes):
-            for lt in all_poes.dtype.names:
-                alosses = losses[lt][a]
-                for r, the_poes in enumerate(poes[lt]):
-                    loss_maps[lt][a, r] = tuple(
-                        conditional_loss_ratio(alosses, the_poes, poe)
-                        for poe in self.clp)
+        shp = all_poes.shape + (len(self.clp), len(self.dt))  # (A, R, P, LI)
+        loss_maps = numpy.zeros(shp, F32)
+        for lti, lt in enumerate(all_poes.dtype.names):
+            loss_lt = losses[lt]
+            for a, poes in enumerate(all_poes):
+                losses_ = loss_lt[a]
+                for r, poes_ in enumerate(poes[lt]):
+                    for p, poe in enumerate(self.clp):
+                        clratio = conditional_loss_ratio(losses_, poes_, poe)
+                        loss_maps[a, r, p, lti] = clratio
         return loss_maps
 
-    def build_all_poes(self, aids, loss_ratios, rlzs):
+    def build_all_poes(self, aids, loss_ratios, num_rlzs):
         """
         :param aids:
             a list of asset IDs
         :param loss_ratios:
             a list of loss ratios
-        :param rlzs:
-            a list of realizations
+        :param num_rlzs:
+            the total number of realizations
         :yields:
             a matrix of shape (A, R) of PoEs
         """
         L = len(self.cbs)
         LI = L * self.I
-        poes = numpy.zeros((len(aids), len(rlzs)), self.dt)
+        poes = numpy.zeros((len(aids), num_rlzs), self.dt)
         for a, aid in enumerate(aids):
             dic = group_array(loss_ratios[a], 'rlzi')
-            for rlz in rlzs:
-                r = rlz.ordinal
+            for r in range(num_rlzs):
                 try:
                     ratios = dic[r]['ratios'].reshape(-1, LI)
                 except KeyError:
@@ -1426,8 +1425,8 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def build_loss_dtypes(curve_resolution, conditional_loss_poes,
-                      insured_losses=False):
+def build_loss_curve_dt(curve_resolution, conditional_loss_poes,
+                        insured_losses=False):
     """
     :param curve_resolution:
         dictionary loss_type -> curve_resolution
@@ -1436,21 +1435,19 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
     :param insured_losses:
         configuration parameter
     :returns:
-       loss_curve_dt and loss_maps_dt
+       loss_curve_dt
     """
-    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-    lm_dt = numpy.dtype(lst)
     lc_list = []
-    lm_list = []
     for lt in sorted(curve_resolution):
         C = curve_resolution[lt]
         pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
         lc_dt = numpy.dtype(pairs)
         lc_list.append((str(lt), lc_dt))
-        lm_list.append((str(lt), lm_dt))
-        if insured_losses:
+    if insured_losses:
+        for lt in sorted(curve_resolution):
+            C = curve_resolution[lt]
+            pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+            lc_dt = numpy.dtype(pairs)
             lc_list.append((str(lt) + '_ins', lc_dt))
-            lm_list.append((str(lt) + '_ins', lm_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
-    loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
-    return loss_curve_dt, loss_maps_dt
+    return loss_curve_dt
