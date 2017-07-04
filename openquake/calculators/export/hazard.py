@@ -340,7 +340,7 @@ def _comment(rlzs_assoc, kind, investigation_time):
         return '%s, investigation_time=%s' % (kind, investigation_time)
     else:
         return (
-            'source_model_tree_path=%s,gsim_tree_path=%s,'
+            'source_model_tree_path=%s, gsim_tree_path=%s, '
             'investigation_time=%s' % (
                 rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time))
 
@@ -397,6 +397,19 @@ def export_hcurves_rlzs(ekey, dstore):
     return [fname]
 
 
+def get_kkf(ekey):
+    """
+    :param ekey: export key, for instance ('uhs/rlz-1', 'xml')
+    :returns: key, kind and fmt from the export key, i.e. 'uhs', 'rlz-1', 'xml'
+    """
+    key, fmt = ekey
+    if '/' in key:
+        key, kind = key.split('/', 1)
+    else:
+        kind = ''
+    return key, kind, fmt
+
+
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
 def export_hcurves_csv(ekey, dstore):
     """
@@ -409,17 +422,12 @@ def export_hcurves_csv(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
-    key, fmt = ekey
-    if '/' in key:
-        key, kind = key.rsplit('/', 1)
-        ekey = (key, fmt)
-    else:
-        kind = ''
+    key, kind, fmt = get_kkf(ekey)
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     for kind, hcurves in calc.PmapGetter(dstore).items(kind):
-        fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
+        fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
             uhs_curves = calc.make_uhs(
@@ -477,16 +485,16 @@ def export_uhs_xml(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     pgetter = calc.PmapGetter(dstore)
     sitemesh = get_mesh(dstore['sitecol'].complete)
-    key, fmt = ekey
+    key, kind, fmt = get_kkf(ekey)
     fnames = []
     periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
-    for kind, hcurves in pgetter.items():
+    for kind, hcurves in pgetter.items(kind):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
         _, periods = calc.get_imts_periods(oq.imtls)
         uhs = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(sitemesh))
         for poe in oq.poes:
             fname = hazard_curve_name(
-                dstore, ekey, kind + '-%s' % poe, rlzs_assoc)
+                dstore, (key, fmt), kind + '-%s' % poe, rlzs_assoc)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
@@ -509,16 +517,16 @@ HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 @export.add(('hcurves', 'xml'), ('hcurves', 'geojson'))
 def export_hcurves_xml_json(ekey, dstore):
-    export_type = ekey[1]
-    len_ext = len(export_type) + 1
+    key, kind, fmt = get_kkf(ekey)
+    len_ext = len(fmt) + 1
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
     writercls = (hazard_writers.HazardCurveGeoJSONWriter
-                 if export_type == 'geojson' else
+                 if fmt == 'geojson' else
                  hazard_writers.HazardCurveXMLWriter)
-    for kind, hcurves in calc.PmapGetter(dstore).items():
+    for kind, hcurves in calc.PmapGetter(dstore).items(kind):
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
@@ -530,7 +538,7 @@ def export_hcurves_xml_json(ekey, dstore):
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         for imt in oq.imtls:
             imtype, sa_period, sa_damping = from_string(imt)
-            fname = name[:-len_ext] + '-' + imt + '.' + export_type
+            fname = name[:-len_ext] + '-' + imt + '.' + fmt
             data = [HazardCurve(Location(site), poes[imt])
                     for site, poes in zip(sitemesh, curves)]
             writer = writercls(fname,
@@ -545,14 +553,14 @@ def export_hcurves_xml_json(ekey, dstore):
 
 @export.add(('hmaps', 'xml'), ('hmaps', 'geojson'))
 def export_hmaps_xml_json(ekey, dstore):
-    export_type = ekey[1]
+    key, kind, fmt = get_kkf(ekey)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
     writercls = (hazard_writers.HazardMapGeoJSONWriter
-                 if export_type == 'geojson' else
+                 if fmt == 'geojson' else
                  hazard_writers.HazardMapXMLWriter)
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     nsites = len(sitemesh)
