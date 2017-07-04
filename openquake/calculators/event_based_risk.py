@@ -183,7 +183,8 @@ def build_loss_maps(avalues, builder, lrgetter, weights, stats, monitor):
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
-    lrgetter.dstore.open()  # if not already open
+    if lrgetter.dstore.hdf5 is None:  # not open yet
+        lrgetter.dstore.open()
     loss_maps, loss_maps_stats = builder.build_maps(
         avalues, lrgetter, weights, stats, monitor)
     res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
