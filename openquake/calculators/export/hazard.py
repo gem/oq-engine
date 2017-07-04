@@ -340,7 +340,7 @@ def _comment(rlzs_assoc, kind, investigation_time):
         return '%s, investigation_time=%s' % (kind, investigation_time)
     else:
         return (
-            'source_model_tree_path=%s,gsim_tree_path=%s,'
+            'source_model_tree_path=%s, gsim_tree_path=%s, '
             'investigation_time=%s' % (
                 rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time))
 
