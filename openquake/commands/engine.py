@@ -91,7 +91,7 @@ def del_calculation(job_id, confirmed=False):
 
 @sap.Script
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
-           upgrade_db, version_db, what_if_I_upgrade,
+           upgrade_db, db_version, what_if_I_upgrade,
            run_hazard, run_risk, run,
            list_hazard_calculations, list_risk_calculations,
            delete_calculation, delete_uncompleted_calculations,
@@ -137,8 +137,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             logs.dbcmd('upgrade_db')
         sys.exit(0)
 
-    if version_db:
-        safeprint(logs.dbcmd('version_db'))
+    if db_version:
+        safeprint(logs.dbcmd('db_version'))
         sys.exit(0)
 
     if what_if_I_upgrade:
@@ -257,7 +257,7 @@ engine._add('make_html_report', '--make-html-report', '-r',
             help='Build an HTML report of the computation at the given date',
             metavar='YYYY-MM-DD|today')
 engine.flg('upgrade_db', 'Upgrade the openquake database')
-engine.flg('version_db', 'Show the current version of the openquake database')
+engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
 engine._add('run_hazard', '--run-hazard', '--rh', help='Run a hazard job with '
