@@ -1495,7 +1495,7 @@ def losses_by_period(losses, return_periods):
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, return_periods(100))
-    array([  1.,   4.,  11.,  13.,  23.,  23.,  23.])
+    array([  1.,   4.,  11.,  13.,  23.,  23.,  23.], dtype=float32)
     """
     assert return_periods[0] >= 1, return_periods
     n = len(losses)
