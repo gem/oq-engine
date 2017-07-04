@@ -613,7 +613,7 @@ celery_wait $GEM_MAXLOOP"
         cd /usr/share/openquake/engine/demos
         for demo_dir in \$(find . -type d | sort); do
            if [ -f \$demo_dir/job_hazard.ini ]; then
-               OQ_DISTRIBUTE=celery oq engine --run \$demo_dir/job_hazard.ini && oq --run \$demo_dir/job_risk.ini --hc -1
+               OQ_DISTRIBUTE=celery oq engine --run \$demo_dir/job_hazard.ini && oq engine --run \$demo_dir/job_risk.ini --hc -1
            fi
         done
         
