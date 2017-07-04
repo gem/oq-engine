@@ -34,15 +34,15 @@ jobs:
         # Upload oqdata.zip to http://artifacts.openquake.org/travis/ only if
         # the commit message includes a [demos] tag at the end or branch is master
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[demos\]' || test "$BRANCH" == "master"; then
-            bin/run-demos.sh $TRAVIS_BUILD_DIR/demos;
-            bin/check_demos;
-            oq dump /tmp/oqdata.zip;
-            oq restore /tmp/oqdata.zip /tmp/oqdata;
-            helpers/zipdemos.sh $(pwd)/demos;
-            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in .deploy_rsa.enc -out .deploy_rsa -d;
-            chmod 600 .deploy_rsa;
-            eval $(ssh-agent -s) && ssh-add .deploy_rsa;
-            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip;
+            bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
+            bin/check_demos &&
+            oq dump /tmp/oqdata.zip &&
+            oq restore /tmp/oqdata.zip /tmp/oqdata &&
+            helpers/zipdemos.sh $(pwd)/demos &&
+            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in .deploy_rsa.enc -out .deploy_rsa -d &&
+            chmod 600 .deploy_rsa &&
+            eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
             bin/oq reset --yes;
           fi
 
