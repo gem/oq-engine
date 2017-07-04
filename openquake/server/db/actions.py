@@ -398,11 +398,11 @@ def what_if_I_upgrade(db, extract_scripts):
         db.conn, extract_scripts=extract_scripts)
 
 
-def version_db(db):
+def db_version(db):
     """
     :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    return upgrade_manager.version_db(db.conn)
+    return upgrade_manager.db_version(db.conn)
 
 
 def upgrade_db(db):
