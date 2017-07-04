@@ -1510,7 +1510,7 @@ def losses_by_period(losses, return_periods):
     return out
 
 
-class LossesByPeriodFactory(object):
+class LossesByPeriodBuilder(object):
     """
     Build losses by period for all loss types at the same time.
 
@@ -1521,37 +1521,37 @@ class LossesByPeriodFactory(object):
         self.loss_dt = loss_dt
         self.num_rlzs = num_rlzs
 
-    def build_rlzs(self, assets, loss_ratios):
+    def build_rlzs(self, asset_values, loss_ratios):
         """
-        :param assets: a list of assets
+        :param asset_values: a list of asset values
         :param loss_ratios: an array of dtype lrs_dt
         :returns: a composite array of shape (A, R, P)
         """
         # loss_ratios from lrgetter.get_all
-        A, R, P = len(assets), self.num_rlzs, len(self.return_periods)
+        A, R, P = len(asset_values), self.num_rlzs, len(self.return_periods)
         array = numpy.zeros((A, R, P), self.loss_dt)
-        for a, asset in enumerate(assets):
+        for a, asset in enumerate(asset_values):
             r_recs = group_array(loss_ratios[a], 'rlzi').items()
             for li, lt in enumerate(self.loss_dt.names):
-                aval = asset.value(lt.replace('_ins', ''))
+                aval = asset_values[lt.replace('_ins', '')]
                 for r, recs in r_recs:
                     array[a, r][lt] = aval * losses_by_period(
                         recs['ratios'][:, li], self.return_periods)
         return array
 
-    def build(self, assets, loss_ratios, rlzi):
+    def build(self, asset_values, loss_ratios, rlzi):
         """
-        :param assets: a list of assets
+        :param asset_values: a list of asset values
         :param loss_ratios: an array of dtype lrs_dt
         :returns: a composite array of shape (A, P)
         """
         # loss_ratios from lrgetter.get, aid -> list of ratios
-        A, P = len(assets), len(self.return_periods)
+        A, P = len(asset_values), len(self.return_periods)
         array = numpy.zeros((A, P), self.loss_dt)
-        for a, asset in enumerate(assets):
+        for a, asset in enumerate(asset_values):
             ratios = numpy.concatenate(loss_ratios[a])
             for li, lt in enumerate(self.loss_dt.names):
-                aval = asset.value(lt.replace('_ins', ''))
+                aval = asset_values[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(
                     ratios[:, li], self.return_periods)
         return array
