@@ -453,7 +453,8 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.ignore_missing_costs = []
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("contains whitespace chars, line 11", str(ctx.exception))
+        self.assertIn("'RM ' contains whitespace chars, line 11",
+                      str(ctx.exception))
 
 
 class ReadCsvTestCase(unittest.TestCase):
