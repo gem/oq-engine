@@ -38,23 +38,6 @@ F32 = numpy.float32
 U32 = numpy.uint32
 
 
-def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
-    """
-    Returns loss_curve_dt and loss_maps_dt
-    """
-    pairs = [('losses', (F32, curve_resolution)),
-             ('poes', (F32, curve_resolution)),
-             ('avg', F32)]
-    if insured:
-        pairs += [(name + '_ins', pair) for name, pair in pairs]
-    loss_curve_dt = numpy.dtype(pairs)
-    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-    if insured:
-        lst += [(name + '_ins', pair) for name, pair in lst]
-    loss_maps_dt = numpy.dtype(lst) if lst else None
-    return loss_curve_dt, loss_maps_dt
-
-
 def fine_graining(points, steps):
     """
     :param points: a list of floats
