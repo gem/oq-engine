@@ -137,6 +137,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
             # losses by tag
             self.datastore['losses_by_tag-rlzs'] = result['losses_by_tag']
+            tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+            self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
+                                     nbytes=result['losses_by_tag'].nbytes)
 
             # losses by asset
             losses_by_asset = numpy.zeros((A, R, L * I), stat_dt)
