@@ -836,6 +836,7 @@ class LossRatiosGetter(object):
         """
         if getattr(self, 'data', None) is not None:
             return self.data
+        self.dstore.open()  # if closed
         data = self.dstore['all_loss_ratios/data']
         loss_ratio_data = []
         for aid, idxs in zip(self.aids, self.indices):
