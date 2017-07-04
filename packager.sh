@@ -611,9 +611,9 @@ celery_wait $GEM_MAXLOOP"
 
         /usr/share/openquake/engine/utils/celery-status 
         cd /usr/share/openquake/engine/demos
-        for demo_dir in $(find . -type d | sort); do
-           if [ -f $demo_dir/job_hazard.ini ]; then
-               OQ_DISTRIBUTE=celery python -m openquake.commands engine --run $demo_dir/job_hazard.ini && python -m openquake.commands engine --run $demo_dir/job_risk.ini --hc -1
+        for demo_dir in \$(find . -type d | sort); do
+           if [ -f \$demo_dir/job_hazard.ini ]; then
+               OQ_DISTRIBUTE=celery python -m openquake.commands engine --run \$demo_dir/job_hazard.ini && python -m openquake.commands engine --run \$demo_dir/job_risk.ini --hc -1
            fi
         done
         
