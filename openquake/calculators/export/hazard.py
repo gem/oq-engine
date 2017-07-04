@@ -429,7 +429,7 @@ def export_hcurves_csv(ekey, dstore):
     for kind, hcurves in calc.PmapGetter(dstore).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
-        if key == 'uhs' and oq.poes:
+        if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
             uhs_curves = calc.make_uhs(
                 hcurves, oq.imtls, oq.poes, len(sitemesh))
             writers.write_csv(
