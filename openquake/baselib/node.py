@@ -862,7 +862,6 @@ class ValidatingXmlParser(object):
             return
         try:
             val = self.validators[tag]
-            print('****************', tag)
         except KeyError:
             return
         try:
