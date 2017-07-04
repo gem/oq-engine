@@ -1513,10 +1513,10 @@ class LossesByPeriodBuilder(object):
         # loss_ratios from lrgetter.get_all
         A, R, P = len(asset_values), self.num_rlzs, len(self.return_periods)
         array = numpy.zeros((A, R, P), self.loss_dt)
-        for a, asset in enumerate(asset_values):
+        for a, asset_value in enumerate(asset_values):
             r_recs = group_array(loss_ratios[a], 'rlzi').items()
             for li, lt in enumerate(self.loss_dt.names):
-                aval = asset_values[lt.replace('_ins', '')]
+                aval = asset_value[lt.replace('_ins', '')]
                 for r, recs in r_recs:
                     array[a, r][lt] = aval * losses_by_period(
                         recs['ratios'][:, li], self.return_periods)
@@ -1531,10 +1531,21 @@ class LossesByPeriodBuilder(object):
         # loss_ratios from lrgetter.get, aid -> list of ratios
         A, P = len(asset_values), len(self.return_periods)
         array = numpy.zeros((A, P), self.loss_dt)
-        for a, asset in enumerate(asset_values):
+        for a, asset_value in enumerate(asset_values):
             ratios = numpy.concatenate(loss_ratios[a])
             for li, lt in enumerate(self.loss_dt.names):
-                aval = asset_values[lt.replace('_ins', '')]
+                aval = asset_value[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(
                     ratios[:, li], self.return_periods)
         return array
+
+    def from_losses(self, losses):
+        """
+        :param losses: array of losses
+        :returns: an array of P values of dtype loss_dt
+        """
+        P = len(self.return_periods)
+        arr = numpy.zeros(P, self.loss_dt)
+        for lti, lt in enumerate(self.loss_dt.names):
+            arr[lt] = losses_by_period(losses[:, lti], self.return_periods)
+        return arr
