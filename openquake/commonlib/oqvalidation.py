@@ -31,6 +31,7 @@ from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
+F32 = numpy.float32
 
 
 class OqParam(valid.ParamSet):
@@ -318,13 +319,13 @@ class OqParam(valid.ParamSet):
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
-    def loss_dt(self, dtype=numpy.float32):
+    def loss_dt(self, dtype=F32):
         """
         Return a composite dtype based on the loss types, including occupants
         """
         return numpy.dtype(self.loss_dt_list(dtype))
 
-    def loss_dt_list(self, dtype=numpy.float32):
+    def loss_dt_list(self, dtype=F32):
         """
         Return a data type list [(loss_name, dtype), ...]
         """
@@ -334,6 +335,14 @@ class OqParam(valid.ParamSet):
             for lt in loss_types:
                 dts.append((str(lt) + '_ins', dtype))
         return dts
+
+    def loss_maps_dt(self, dtype=F32):
+        """
+        Return a composite data type for loss maps
+        """
+        ltypes = self.loss_dt(dtype).names
+        lst = [('poe-%s' % poe, dtype) for poe in self.conditional_loss_poes]
+        return numpy.dtype([(lt, lst) for lt in ltypes])
 
     def no_imls(self):
         """
@@ -563,6 +572,15 @@ class OqParam(valid.ParamSet):
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
+
+    def is_valid_loss_ratios(self):
+        """
+        The loss types in the loss_ratios dictionary {loss_ratios} are not
+        the ones for which there are risk functions: {_risk_files}
+        """
+        ltypes = sorted(self.loss_ratios)
+        expected_ltypes = sorted(self.risk_files)
+        return not ltypes or ltypes == expected_ltypes
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or

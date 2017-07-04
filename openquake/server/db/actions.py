@@ -398,11 +398,11 @@ def what_if_I_upgrade(db, extract_scripts):
         db.conn, extract_scripts=extract_scripts)
 
 
-def version_db(db):
+def db_version(db):
     """
     :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    return upgrade_manager.version_db(db.conn)
+    return upgrade_manager.db_version(db.conn)
 
 
 def upgrade_db(db):
@@ -628,5 +628,5 @@ def find(db, description):
 SELECT id, description, user_name,
   (julianday(stop_time) - julianday(start_time)) * 24 AS hours
 FROM job WHERE status='complete' AND description LIKE lower(?x)
-ORDER BY id desc'''
+ORDER BY julianday(stop_time) - julianday(start_time)'''
     return db(query, description.lower())
