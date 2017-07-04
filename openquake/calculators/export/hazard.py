@@ -398,6 +398,10 @@ def export_hcurves_rlzs(ekey, dstore):
 
 
 def get_kkf(ekey):
+    """
+    :param ekey: export key, for instance ('uhs/rlz-1', 'xml')
+    :returns: key, kind and fmt from the export key, i.e. 'uhs', 'rlz-1', 'xml'
+    """
     key, fmt = ekey
     if '/' in key:
         key, kind = key.rsplit('/', 1)
