@@ -277,6 +277,12 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
+        # check exporting a single realization in XML and CSV
+        [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
+        self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
+        [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
+        self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
+
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
         self.assert_curves_ok([

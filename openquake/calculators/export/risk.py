@@ -392,6 +392,7 @@ def build_damage_dt(dstore, mean_std=True):
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     dt_list = []
     for ds in damage_states:
+        ds = str(ds)
         if mean_std:
             dt_list.append(('%s_mean' % ds, F32))
             dt_list.append(('%s_stdv' % ds, F32))
@@ -399,7 +400,7 @@ def build_damage_dt(dstore, mean_std=True):
             dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    return numpy.dtype([(lt, damage_dt) for lt in loss_types])
+    return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
 
 
 def build_damage_array(data, damage_dt):
@@ -504,7 +505,7 @@ def get_loss_maps(dstore, kind):
     oq = dstore['oqparam']
     name = 'loss_maps-%s' % kind
     if name in dstore:  # event_based risk
-        return dstore[name].value
+        return dstore[name].value.view(oq.loss_maps_dt())
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
         loss_curves = dstore[name]
@@ -635,10 +636,10 @@ def export_bcr_map(ekey, dstore):
 
 
 @reader
-def get_loss_ratios(lrgetter, aids, monitor):
+def get_loss_ratios(lrgetter, monitor):
     with lrgetter.dstore:
-        loss_ratios = lrgetter.get_all(aids)  # list of arrays of dtype lrs_dt
-    return zip(aids, loss_ratios)
+        loss_ratios = lrgetter.get_all()  # list of arrays of dtype lrs_dt
+    return list(zip(lrgetter.aids, loss_ratios))
 
 
 @export.add(('asset_loss_table', 'hdf5'))
@@ -666,9 +667,8 @@ def export_asset_loss_table(ekey, dstore):
     lrs_dt = numpy.dtype([('rlzi', U16), ('losses', dtlist)])
     fname = dstore.export_path('%s.%s' % ekey)
     monitor = performance.Monitor(key, fname)
-    lrgetter = riskinput.LossRatiosGetter(dstore)
     aids = range(len(assetcol))
-    allargs = [(lrgetter, list(block), monitor)
+    allargs = [(riskinput.LossRatiosGetter(dstore, block), monitor)
                for block in split_in_blocks(aids, oq.concurrent_tasks)]
     dstore.close()  # avoid OSError: Can't read data (Wrong b-tree signature)
     L = len(loss_types)
