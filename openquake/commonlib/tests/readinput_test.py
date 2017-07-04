@@ -314,7 +314,28 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')  # wrong cost type "aggregate"
 
-    def test_get_exposure_metadata(self):
+    exposure3 = general.writetmp('''\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="per_asset"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM " number="3000">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>''')
+
+    def test_get_metadata(self):
         exp, _assets = readinput._get_exposure(
             self.exposure, ['structural'], stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
@@ -323,7 +344,7 @@ class ExposureTestCase(unittest.TestCase):
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
                          [('structural', 'per_asset', 'USD')])
 
-    def test_exposure_missing_number(self):
+    def test_missing_number(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
@@ -338,7 +359,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("node asset: 'number', line 17 of", str(ctx.exception))
 
-    def test_exposure_zero_number(self):
+    def test_zero_number(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
@@ -356,7 +377,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
                       "(positivefloat,nonzero): '0' is zero, line 17",
                       str(ctx.exception))
 
-    def test_exposure_invalid_asset_id(self):
+    def test_invalid_asset_id(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
@@ -371,7 +392,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
                       "a-zA-Z0-9_-, line 11", str(ctx.exception))
 
-    def test_exposure_no_insured_data(self):
+    def test_no_insured_data(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
@@ -387,7 +408,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("node cost: 'deductible', line 14", str(ctx.exception))
 
-    def test_exposure_no_assets(self):
+    def test_no_assets(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
@@ -404,7 +425,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         self.assertIn('Could not find any asset within the region!',
                       str(ctx.exception))
 
-    def test_exposure_wrong_cost_type(self):
+    def test_wrong_cost_type(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
@@ -418,6 +439,21 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         self.assertIn("Got 'aggregate', expected "
                       "aggregated|per_area|per_asset, line 7",
                       str(ctx.exception))
+
+    def test_invalid_taxonomy(self):
+        oqparam = mock.Mock()
+        oqparam.base_path = '/'
+        oqparam.calculation_mode = 'scenario_damage'
+        oqparam.all_cost_types = ['structural']
+        oqparam.inputs = {'exposure': self.exposure3}
+        oqparam.region_constraint = '''\
+POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
+        oqparam.time_event = None
+        oqparam.insured_losses = False
+        oqparam.ignore_missing_costs = []
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_exposure(oqparam)
+        self.assertIn("contains whitespace chars, line 11", str(ctx.exception))
 
 
 class ReadCsvTestCase(unittest.TestCase):
