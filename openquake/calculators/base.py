@@ -302,12 +302,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Collect the realizations and set the attributes nbytes
         """
-        sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
-            self.rlzs_assoc.realizations) or collections.defaultdict(
-                lambda: 'NA')
-        self.datastore['realizations'] = numpy.array(
-            [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
-             for r in self.rlzs_assoc.realizations], rlz_dt)
+        if hasattr(self, 'rlzs_assoc'):
+            sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
+                self.rlzs_assoc.realizations) or collections.defaultdict(
+                    lambda: 'NA')
+            self.datastore['realizations'] = numpy.array(
+                [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
+                 for r in self.rlzs_assoc.realizations], rlz_dt)
         if 'hcurves' in set(self.datastore):
             self.datastore.set_nbytes('hcurves')
         self.datastore.flush()
