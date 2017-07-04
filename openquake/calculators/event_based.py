@@ -506,12 +506,10 @@ class EventBasedCalculator(ClassicalCalculator):
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
-                sids = numpy.array(sorted(self.indices))
-                self.datastore['gmf_data/sids'] = sids
                 self.datastore.save_vlen(
                     'gmf_data/indices',
                     [numpy.array(self.indices[sid], indices_dt)
-                     for sid in sids])
+                     for sid in self.sitecol.complete.sids])
         return acc
 
     def save_gmf_bytes(self):

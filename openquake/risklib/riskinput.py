@@ -99,17 +99,19 @@ class AssetCollection(object):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
-    def values(self):
+    def values(self, aids=None):
         """
-        :returns: a composite array of asset values by loss type
+        :param aids: asset indices where to compute the values (None means all)
+        :returns: a structured array of asset values by loss type
         """
+        if aids is None:
+            aids = range(len(self))
         loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
-        vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
-        for assets in self.assets_by_site():
-            for asset in assets:
-                for ltype in self.loss_types:
-                    vals[ltype][asset.ordinal] = asset.value(
-                        ltype, self.time_event)
+        vals = numpy.zeros(len(aids), loss_dt)  # asset values by loss_type
+        for i, aid in enumerate(aids):
+            asset = self[aid]
+            for lt in self.loss_types:
+                vals[i][lt] = asset.value(lt, self.time_event)
         return vals
 
     def __iter__(self):
@@ -607,7 +609,6 @@ class GmfGetter(object):
                                 for s in range(sample, sample + len(rlzs))]
                 else:
                     all_eids = [rup.events['eid']] * len(rlzs)
-                size = itemsize * len(sids)
                 num_events = sum(len(eids) for eids in all_eids)
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
@@ -629,9 +630,9 @@ class GmfGetter(object):
                             continue
                         for i, val in enumerate(tot):
                             gmdata[i] += val
-                        gmdata[NBYTES] += size
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
+                                gmdata[NBYTES] += itemsize
                                 yield rlzi, sid, eid, gmv
                     n += e
             sample += len(rlzs)
@@ -806,20 +807,22 @@ class LossRatiosGetter(object):
 
     :param dstore: a DataStore instance
     """
-    def __init__(self, dstore):
+    def __init__(self, dstore, aids=None, lazy=True):
         self.dstore = dstore
+        dset = self.dstore['all_loss_ratios/indices']
+        self.aids = list(aids or range(len(dset)))
+        self.indices = [dset[aid] for aid in self.aids]
+        self.data = None if lazy else self.get_all()
 
     # used in the loss curves exporter
-    def get(self, aids, rlzi):
+    def get(self, rlzi):
         """
-        :param aids: a list of A asset ordinals
         :param rlzi: a realization ordinal
         :returns: a dictionary aid -> list of loss ratios
         """
         data = self.dstore['all_loss_ratios/data']
-        indices = self.dstore['all_loss_ratios/indices'][aids]  # (A, T, 2)
         dic = collections.defaultdict(list)  # aid -> ratios
-        for aid, idxs in zip(aids, indices):
+        for aid, idxs in zip(self.aids, self.indices):
             for idx in idxs:
                 for rec in data[idx[0]: idx[1]]:
                     if rlzi == rec['rlzi']:
@@ -827,15 +830,19 @@ class LossRatiosGetter(object):
         return dic
 
     # used in the calculator
-    def get_all(self, aids):
+    def get_all(self):
         """
-        :param aids: a list of A asset ordinals
         :returns: a list of A composite arrays of dtype `lrs_dt`
         """
+        if getattr(self, 'data', None) is not None:
+            return self.data
         data = self.dstore['all_loss_ratios/data']
-        indices = self.dstore['all_loss_ratios/indices'][aids]  # (A, T, 2)
         loss_ratio_data = []
-        for aid, idxs in zip(aids, indices):
-            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+        for aid, idxs in zip(self.aids, self.indices):
+            if len(idxs):
+                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+            else:
+                # FIXME: a test for this case is missing
+                arr = numpy.array([], data.dtype)
             loss_ratio_data.append(arr)
         return loss_ratio_data

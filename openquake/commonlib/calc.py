@@ -63,11 +63,11 @@ class PmapGetter(object):
     specific realization.
 
     :param dstore: a DataStore instance
-    :param fromworker: if True, read directly from the datastore
+    :param lazy: if True, read directly from the datastore
     """
-    def __init__(self, dstore, fromworker=False):
+    def __init__(self, dstore, lazy=False):
         self.dstore = dstore
-        self.fromworker = fromworker
+        self.lazy = lazy
         self.assoc_by_grp = dstore['csm_info/assoc_by_grp'].value
         self.weights = self.dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
@@ -76,12 +76,12 @@ class PmapGetter(object):
         self.nbytes = 0
 
     def __enter__(self):
-        if self.fromworker:
+        if self.lazy:
             self.dstore.__enter__()
         return self
 
     def __exit__(self, *args):
-        if self.fromworker:
+        if self.lazy:
             self.dstore.__exit__(*args)
 
     def new(self, sids):
@@ -92,7 +92,7 @@ class PmapGetter(object):
         newgetter = object.__new__(self.__class__, self.dstore)
         vars(newgetter).update(vars(self))
         newgetter.sids = sids
-        if not self.fromworker:  # populate the cache
+        if not self.lazy:  # populate the cache
             newgetter.get_pmap_by_grp(sids)
         return newgetter
 
@@ -531,7 +531,7 @@ class RuptureSerializer(object):
         ('serial', U32), ('code', U8), ('sidx', U32),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U8),
+        ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U16),
         ('points', h5py.special_dtype(vlen=point3d)),
         ])
 
@@ -554,7 +554,7 @@ class RuptureSerializer(object):
             # sanity checks
             assert sx < TWO16, 'Too many multisurfaces: %d' % sx
             assert sy < 256, 'The rupture mesh spacing is too small'
-            assert sz < 256, 'The rupture mesh spacing is too small'
+            assert sz < TWO16, 'The rupture mesh spacing is too small'
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
             tup = (ebrupture.serial, rup.code, ebrupture.sidx,
