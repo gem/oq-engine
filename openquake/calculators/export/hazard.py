@@ -404,7 +404,7 @@ def get_kkf(ekey):
     """
     key, fmt = ekey
     if '/' in key:
-        key, kind = key.rsplit('/', 1)
+        key, kind = key.split('/', 1)
     else:
         kind = ''
     return key, kind, fmt
