@@ -469,17 +469,6 @@ def positiveint(value):
     return i
 
 
-def positiveints(value):
-    """
-    :param value: input string
-    :returns: array of positive integers >= 1
-    """
-    ints = numpy.uint32(value.split())
-    if (ints <= 0).any():
-        raise ValueError('there are integers <= 0 in %s' % ints)
-    return ints
-
-
 def positivefloat(value):
     """
     :param value: input string
@@ -933,6 +922,8 @@ def integers(value):
        ...
     ValueError: Not a list of integers: ' '
     """
+    if '.' in value:
+        raise ValueError('There are decimal points in %s' % value)
     values = value.replace(',', ' ').split()
     if not values:
         raise ValueError('Not a list of integers: %r' % value)
