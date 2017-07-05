@@ -1470,6 +1470,17 @@ def return_periods(max_period):
     return numpy.array(periods, numpy.uint32)
 
 
+def idx(periods, n, m, M):
+    """
+    :param periods: array of P return periods
+    :param n: number of losses
+    :param m: minimum loss
+    :param M: maximum loss
+    :returns: array of P indices from 0 to n - 1
+    """
+    return U32(numpy.around((n - 1) / (M - m) * (periods - m)))
+
+
 def losses_by_period(losses, return_periods):
     """
     Reads an array of losses and returns a subset of them
@@ -1479,22 +1490,14 @@ def losses_by_period(losses, return_periods):
 
     NB: the return period must be ordered integers >= 1. Here is an example:
 
-
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, return_periods(100))
-    array([  1.,   4.,  11.,  13.,  23.,  23.,  23.], dtype=float32)
+    array([  1.,   1.,   2.,   2.,   3.,   4.,  23.])
     """
-    assert return_periods[0] >= 1, return_periods
+    minp = return_periods[0]
+    maxp = return_periods[-1]
     n = len(losses)
-    idxs = U32(n - numpy.around(n / return_periods))  # idx >= 0
-    sorted_losses = numpy.sort(losses)
-    out = numpy.zeros(len(return_periods), F32)
-    for i, idx in numpy.ndenumerate(idxs):
-        if idx >= n:
-            out[i] = sorted_losses[-1]  # maximum loss
-        else:
-            out[i] = sorted_losses[idx]
-    return out
+    return numpy.sort(losses)[idx(return_periods, n, minp, maxp)]
 
 
 class LossesByPeriodBuilder(object):
@@ -1503,11 +1506,9 @@ class LossesByPeriodBuilder(object):
 
     :param insured_losses: insured losses flag from the job.ini
     """
-    def __init__(self, agg_loss_table, loss_dt, num_rlzs):
-        self.agg_loss_table = agg_loss_table
-        num_events = max(len(agg_loss_table['rlz-%03d' % r])
-                         for r in range(num_rlzs))
-        self.return_periods = return_periods(num_events)
+    def __init__(self, itime, loss_dt, num_rlzs):
+        self.itime = itime
+        self.return_periods = return_periods(itime)
         self.loss_dt = loss_dt
         self.num_rlzs = num_rlzs
 
@@ -1546,15 +1547,15 @@ class LossesByPeriodBuilder(object):
                     ratios[:, li], self.return_periods)
         return array
 
-    def build(self):
+    def build(self, agg_loss_table):
         """
         :returns: an array of (P, R) values of dtype loss_dt
         """
         P = len(self.return_periods)
         arr = numpy.zeros((P, self.num_rlzs), self.loss_dt)
-        for rlzstr in self.agg_loss_table:
+        for rlzstr in agg_loss_table:
             r = int(rlzstr[4:])
-            losses = self.agg_loss_table[rlzstr]['loss']
+            losses = agg_loss_table[rlzstr]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 arr[:, r][lt] = losses_by_period(
                     losses[:, lti], self.return_periods)
