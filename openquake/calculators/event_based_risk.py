@@ -202,14 +202,6 @@ class EbrPostCalculator(base.RiskCalculator):
         P = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
 
-    def get_return_periods(self):
-        if self.oqparam.return_periods is None:
-            num_events = max(len(dset) for dset in
-                             self.datastore['agg_loss_table'].values())
-            return scientific.return_periods(num_events)
-        else:
-            return self.oqparam.return_periods
-
     def cb_inputs(self, table):
         loss_table = self.datastore[table]
         cb = self.riskmodel.curve_builder

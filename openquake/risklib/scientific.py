@@ -1499,8 +1499,11 @@ class LossesByPeriodBuilder(object):
 
     :param insured_losses: insured losses flag from the job.ini
     """
-    def __init__(self, return_periods, loss_dt, num_rlzs):
-        self.return_periods = return_periods
+    def __init__(self, agg_loss_table, loss_dt, num_rlzs):
+        self.agg_loss_table = agg_loss_table
+        num_events = max(len(agg_loss_table['rlz-%03d' % r])
+                         for r in range(num_rlzs))
+        self.return_periods = return_periods(num_events)
         self.loss_dt = loss_dt
         self.num_rlzs = num_rlzs
 
@@ -1522,7 +1525,7 @@ class LossesByPeriodBuilder(object):
                         recs['ratios'][:, li], self.return_periods)
         return array
 
-    def build(self, asset_values, loss_ratios, rlzi):
+    def build_rlz(self, asset_values, loss_ratios, rlzi):
         """
         :param asset_values: a list of asset values
         :param loss_ratios: an array of dtype lrs_dt
@@ -1539,13 +1542,16 @@ class LossesByPeriodBuilder(object):
                     ratios[:, li], self.return_periods)
         return array
 
-    def from_losses(self, losses):
+    def build(self):
         """
-        :param losses: array of losses
-        :returns: an array of P values of dtype loss_dt
+        :returns: an array of (P, R) values of dtype loss_dt
         """
         P = len(self.return_periods)
-        arr = numpy.zeros(P, self.loss_dt)
-        for lti, lt in enumerate(self.loss_dt.names):
-            arr[lt] = losses_by_period(losses[:, lti], self.return_periods)
+        arr = numpy.zeros((P, self.num_rlzs), self.loss_dt)
+        for rlzstr in self.agg_loss_table:
+            r = int(rlzstr[4:])
+            losses = self.agg_loss_table[rlzstr]['loss']
+            for lti, lt in enumerate(self.loss_dt.names):
+                arr[:, r][lt] = losses_by_period(
+                    losses[:, lti], self.return_periods)
         return arr
