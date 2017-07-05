@@ -38,19 +38,17 @@ from openquake.qa_tests_data.event_based_risk import (
 def check_total_losses(calc):
     dstore = calc.datastore
     loss_dt = calc.oqparam.loss_dt()
-    L1 = len(loss_dt.names)
-    L = L1 // 2
-    data1 = numpy.zeros(L1, numpy.float32)
+    LI = len(loss_dt.names)
+    data1 = numpy.zeros(LI, numpy.float32)
     for dset in dstore['agg_loss_table'].values():
-        for l, lt in enumerate(loss_dt.names):
-            i = int(lt.endswith('_ins'))  # the cast avoids a numpy warning
-            data1[l] += dset['loss'][:, l - L * i, i].sum()
+        for li, lt in enumerate(loss_dt.names):
+            data1[li] += dset['loss'][:, li].sum()
 
     # check the sums are consistent with the ones coming from losses_by_taxon
-    data2 = numpy.zeros(L1, numpy.float32)
+    data2 = numpy.zeros(LI, numpy.float32)
     lbt = dstore['losses_by_taxon-rlzs']
-    for l in range(L1):
-        data2[l] += lbt[:, :, l].sum()
+    for li in range(LI):
+        data2[li] += lbt[:, :, li].sum()
     numpy.testing.assert_allclose(data1, data2, 1E-6)
 
     # test the asset_loss_table exporter; notice that I need to disable
