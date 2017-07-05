@@ -203,25 +203,6 @@ def export_all_losses_npz(ekey, dstore):
     return [fname]
 
 
-# this is used by classical_risk
-@export.add(('agg_losses-rlzs', 'csv'))
-def export_agg_losses(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    agg_losses = dstore[ekey[0]].value
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    eids = calc.build_eids(dstore['events'], 0)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        losses = agg_losses[:, rlz.ordinal]
-        dest = dstore.build_fname('agg_losses', rlz, 'csv')
-        data = compose_arrays(eids, losses)
-        writer.save(data, dest)
-    return writer.getsaved()
-
-
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
 def export_agg_losses_ebr(ekey, dstore):
