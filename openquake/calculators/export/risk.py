@@ -233,6 +233,7 @@ def export_agg_losses_ebr(ekey, dstore):
     :param dstore: datastore object
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    L = len(loss_types)
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     has_rup_data = 'ruptures' in dstore
@@ -279,7 +280,7 @@ def export_agg_losses_ebr(ekey, dstore):
             for i, ins in enumerate(
                     ['', '_ins'] if oq.insured_losses else ['']):
                 for l, loss_type in enumerate(loss_types):
-                    elt[loss_type + ins][:] = losses[:, l, i]
+                    elt[loss_type + ins][:] = losses[:, l + L * i]
             elt.sort(order=['year', 'event_id'])
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             writer.save(elt, dest)
