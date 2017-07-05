@@ -73,22 +73,19 @@ def copy_to(elt, rup_data, rup_ids):
 
 
 # this is used by event_based_risk
-@export.add(('agg_curve-rlzs', 'csv'), ('agg_curve-stats', 'csv'))
+@export.add(('agg_loss-rlzs', 'csv'), ('agg_loss-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     agg_curve = dstore[ekey[0]]
+    periods = dstore.get_attr(ekey[0], 'return_periods')
     if ekey[0].endswith('stats'):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
-        tags = ['rlz-%03d' % r for r in range(len(agg_curve))]
+        tags = ['rlz-%03d' % r for r in range(agg_curve.shape[1])]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for r, tag in enumerate(tags):
-        data = [['loss_type', 'loss', 'poe']]
-        for loss_type in agg_curve.dtype.names:
-            array = agg_curve[r][loss_type]
-            for loss, poe in zip(array['losses'], array['poes']):
-                data.append((loss_type, loss, poe))
-        dest = dstore.build_fname('agg_curve', tag, 'csv')
+        data = compose_arrays(periods, agg_curve[:, r], 'return_periods')
+        dest = dstore.build_fname('agg_loss', tag, 'csv')
         writer.save(data, dest)
     return writer.getsaved()
 
