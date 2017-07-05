@@ -112,7 +112,7 @@ def get_params(job_inis):
     cp = configparser.ConfigParser()
     cp.read(job_inis)
 
-    # drectory containing the config files we're parsing
+    # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
     base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
