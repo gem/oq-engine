@@ -53,18 +53,18 @@ def build_agg_curve(cb_inputs, monitor):
     :param monitor:
         a Monitor instance
     :returns:
-        a dictionary (r, l, i) -> (losses, poes, avg)
+        a dictionary (r, li) -> (losses, poes, avg)
     """
     result = {}
     for cbs, rlzname, data in cb_inputs:
         if len(data) == 0:  # realization with no losses
             continue
+        LI = data['loss'].shape[1]
         r = int(rlzname[4:])  # strip rlz-
-        for cb in cbs:
-            l = cb.index
-            losses = data['loss'][:, l]  # shape (E, I)
-            for i in range(cb.insured_losses + 1):
-                result[l, r, i] = cb.calc_agg_curve(losses[:, i])
+        for li in range(LI):
+            cb = cbs[li // I]
+            losses = data['loss'][:, li]  # shape E
+            result[li, r] = cb.calc_agg_curve(losses)
     return result
 
 
@@ -95,7 +95,8 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                         result['avglosses'][l + L * i, r][aid] += rat[i]
 
                 # agglosses
-                aggr[indices, l] += losses
+                for i in range(I):
+                    aggr[indices, l + L * i] += losses[:, i]
 
                 # losses by taxonomy
                 t = taxid[asset.taxonomy]
@@ -154,7 +155,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     idx = dict(zip(eids, range(E)))
-    agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
+    agg = AccumDict(accum=numpy.zeros((E, L * I), F32))  # r -> array
     result = dict(agglosses=AccumDict(), assratios=[],
                   lrs_idx=AccumDict(accum=[]),  # aid -> start_stop list
                   losses_by_taxon=numpy.zeros((T, R, L * I), F32),
