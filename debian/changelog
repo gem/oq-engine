@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Replace the agg_curve outputs with losses by return period outputs
+  * Replaced the agg_curve outputs with losses by return period outputs
   * Made the demo LogicTreeCase2ClassicalPSHA faster
   * Fixed the export by realization of the hazard outputs
   * Changed the generation of loss_maps in event based risk, without the option

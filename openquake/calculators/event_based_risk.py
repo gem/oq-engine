@@ -241,7 +241,7 @@ class EbrPostCalculator(base.RiskCalculator):
             self.datastore.set_attrs(
                 'agg_loss-rlzs', return_periods=b.return_periods)
             statnames, stats = zip(*oq.risk_stats())
-            if stats:
+            if R > 1 and stats:
                 self.datastore['agg_loss-stats'] = compute_stats2(
                     array, stats, weights)
                 self.datastore.set_attrs(
