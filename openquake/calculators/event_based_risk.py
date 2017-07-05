@@ -283,11 +283,10 @@ class EbrPostCalculator(base.RiskCalculator):
         loss_curve_dt = scientific.build_loss_curve_dt(
             cr, oq.conditional_loss_poes, oq.insured_losses)
         cb_inputs = self.cb_inputs('agg_loss_table')
-        I = oq.insured_losses + 1
         R = len(weights)
         # NB: using the Processmap since celery is hanging; the computation
         # is fast anyway and this part will likely be removed in the future
-        result = parallel.Sequential.apply(
+        result = parallel.Processmap.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros(R, loss_curve_dt)
