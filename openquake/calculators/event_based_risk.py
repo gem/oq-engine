@@ -53,7 +53,7 @@ def build_agg_curve(cb_inputs, monitor):
     :param monitor:
         a Monitor instance
     :returns:
-        a dictionary (r, li) -> (losses, poes, avg)
+        a dictionary (li, r) -> (losses, poes, avg)
     """
     result = {}
     for cbs, rlzname, data in cb_inputs:
