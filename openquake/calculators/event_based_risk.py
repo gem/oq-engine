@@ -59,10 +59,14 @@ def build_agg_curve(cb_inputs, monitor):
     for cbs, rlzname, data in cb_inputs:
         if len(data) == 0:  # realization with no losses
             continue
+        L = len(cbs)
         LI = data['loss'].shape[1]
         r = int(rlzname[4:])  # strip rlz-
         for li in range(LI):
-            cb = cbs[li // I]
+            if li < L:
+                cb = cbs[li]
+            else:
+                cb = cbs[li - L]
             losses = data['loss'][:, li]  # shape E
             result[li, r] = cb.calc_agg_curve(losses)
     return result
@@ -285,7 +289,6 @@ class EbrPostCalculator(base.RiskCalculator):
               for cb in self.riskmodel.curve_builder}
         loss_curve_dt = scientific.build_loss_curve_dt(
             cr, oq.conditional_loss_poes)
-        lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
         I = oq.insured_losses + 1
         R = len(weights)
@@ -295,8 +298,8 @@ class EbrPostCalculator(base.RiskCalculator):
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros((I, R), loss_curve_dt)
-        for l, r, i in result:
-            agg_curve[lts[l]][i, r] = result[l, r, i]
+        for li, r in result:
+            agg_curve[li, r] = result[li, r]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
         if R > 1:  # save stats too
@@ -449,7 +452,7 @@ class EbriskCalculator(base.RiskCalculator):
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
-        elt_dt = numpy.dtype([('eid', U64), ('loss', (F32, (self.L, self.I)))])
+        elt_dt = numpy.dtype([('eid', U64), ('loss', (F32, self.L * self.I))])
         csm_info = self.datastore['csm_info']
         mon = self.monitor('risk')
         for sm in csm_info.source_models:
