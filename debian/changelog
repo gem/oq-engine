@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made the demo LogicTreeCase2ClassicalPSHA faster
   * Fixed the export by realization of the hazard outputs
   * Changed the generation of loss_maps in event based risk, without the option
     `--hc`: now it is done in parallel, except when reading the loss ratios
