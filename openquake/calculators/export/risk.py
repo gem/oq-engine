@@ -80,12 +80,12 @@ def export_agg_curve_rlzs(ekey, dstore):
     if ekey[0].endswith('stats'):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
-        tags = ['rlz-%03d' % r for r in range(agg_curve.shape[1])]
+        tags = ['rlz-%03d' % r for r in range(len(agg_curve))]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for r, tag in enumerate(tags):
         data = [['loss_type', 'loss', 'poe']]
         for loss_type in agg_curve.dtype.names:
-            array = agg_curve[0, r][loss_type]
+            array = agg_curve[r][loss_type]
             for loss, poe in zip(array['losses'], array['poes']):
                 data.append((loss_type, loss, poe))
         dest = dstore.build_fname('agg_curve', tag, 'csv')
