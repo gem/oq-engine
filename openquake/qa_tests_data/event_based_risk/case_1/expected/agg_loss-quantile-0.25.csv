@@ -1,4 +1,4 @@
-return_periods:uint32,nonstructural,structural
+return_periods,nonstructural,structural
 1,0.00000E+00,9.02629E+01
 2,0.00000E+00,9.02629E+01
 5,0.00000E+00,9.02629E+01
