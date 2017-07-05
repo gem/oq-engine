@@ -20,6 +20,7 @@ from __future__ import division
 import os
 import csv
 import gzip
+import zlib
 import zipfile
 import logging
 import operator
@@ -1036,3 +1037,20 @@ def get_mesh_hcurves(oqparam):
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
+
+
+def get_checksum32(oqparam):
+    """
+    Build an unsigned 32 bit integer from the input files of the calculation
+    """
+    checksum = 0
+    for fname in oqparam.inputs.values():
+        if isinstance(fname, list):  # list of fnames and/or strings
+            for f in fname:
+                if os.path.exists(f):
+                    checksum = zlib.adler32(open(f, 'rb').read(), checksum)
+        elif os.path.exists(fname):
+            checksum = zlib.adler32(open(fname, 'rb').read(), checksum)
+        else:
+            raise ValueError('%s is not a file' % fname)
+    return checksum
