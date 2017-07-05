@@ -23,6 +23,7 @@ from __future__ import division
 import abc
 import copy
 import bisect
+import logging
 import collections
 
 import numpy
@@ -873,15 +874,12 @@ class LossTypeCurveBuilder(object):
                  user_provided, conditional_loss_poes=(),
                  insured_losses=False):
         self.loss_type = loss_type
-        self.curve_resolution = C = curve_resolution
+        self.curve_resolution = curve_resolution
         self.ratios = numpy.array(loss_ratios, F32)
         self.ses_ratio = ses_ratio
         self.user_provided = user_provided
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
-        self.agg_curve_dt = numpy.dtype([('losses', (F32, C)),
-                                         ('poes', (F32, C)),
-                                         ('avg', F32)])
 
     def __call__(self, assets, ratios_by_aid):
         """"
@@ -910,23 +908,6 @@ class LossTypeCurveBuilder(object):
             all_poes.append(poes.T)
             aids.append(aid)
         return numpy.array(aids), numpy.array(all_poes)
-
-    def calc_agg_curve(self, losses):
-        """
-        :param losses: array of length E
-        :returns: curve of dtype agg_curve_dt
-        """
-        reference_losses = numpy.linspace(
-            0, numpy.max(losses), self.curve_resolution)
-        # counts how many loss_values are bigger than the reference loss
-        counts = [(losses > loss).sum() for loss in reference_losses]
-        # NB: (loss_values > loss).sum() is MUCH more efficient than
-        # sum(loss_values > loss). Incredibly more efficient in memory.
-        curve = numpy.zeros(1, self.agg_curve_dt)
-        curve['losses'][0] = reference_losses
-        curve['poes'][0] = poes = build_poes(counts, 1. / self.ses_ratio)
-        curve['avg'][0] = average_loss([reference_losses, poes])
-        return curve[0]
 
     def __repr__(self):
         return '<%s %s=%s user_provided=%s>' % (
@@ -1470,17 +1451,6 @@ def return_periods(max_period):
     return numpy.array(periods, numpy.uint32)
 
 
-def idx(periods, n, m, M):
-    """
-    :param periods: array of P return periods
-    :param n: number of losses
-    :param m: minimum loss
-    :param M: maximum loss
-    :returns: array of P indices from 0 to n - 1
-    """
-    return U32(numpy.around((n - 1) / (M - m) * (periods - m)))
-
-
 def losses_by_period(losses, return_periods):
     """
     Reads an array of losses and returns a subset of them
@@ -1494,10 +1464,13 @@ def losses_by_period(losses, return_periods):
     >>> losses_by_period(losses, return_periods(100))
     array([  1.,   1.,   2.,   2.,   3.,   4.,  23.])
     """
+    n = len(losses)
+    if n < 2:
+        logging.error('There are not enough losses: %d', n)
     minp = return_periods[0]
     maxp = return_periods[-1]
-    n = len(losses)
-    return numpy.sort(losses)[idx(return_periods, n, minp, maxp)]
+    idxs = U32(numpy.around((n - 1) / (maxp - minp) * (return_periods - minp)))
+    return numpy.sort(losses)[idxs]
 
 
 class LossesByPeriodBuilder(object):
@@ -1512,6 +1485,7 @@ class LossesByPeriodBuilder(object):
         self.loss_dt = loss_dt
         self.num_rlzs = num_rlzs
 
+    # not used yet
     def build_rlzs(self, asset_values, loss_ratios):
         """
         :param asset_values: a list of asset values
@@ -1530,6 +1504,7 @@ class LossesByPeriodBuilder(object):
                         recs['ratios'][:, li], self.return_periods)
         return array
 
+    # not used yet
     def build_rlz(self, asset_values, loss_ratios, rlzi):
         """
         :param asset_values: a list of asset values
