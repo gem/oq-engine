@@ -1039,14 +1039,21 @@ def get_mesh_hcurves(oqparam):
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
 
 
+def _normalize(oqparam, uncertainty_models):
+    for model in uncertainty_models:
+        for fname in model.split():
+            yield os.path.join(oqparam.base_path, fname)
+
+
 def get_checksum32(oqparam):
     """
     Build an unsigned 32 bit integer from the input files of the calculation
     """
     checksum = 0
-    for fname in oqparam.inputs.values():
+    for key in sorted(oqparam.inputs):
+        fname = oqparam.inputs[key]
         if isinstance(fname, list):  # list of fnames and/or strings
-            for f in fname:
+            for f in _normalize(oqparam, fname):
                 if os.path.exists(f):
                     checksum = zlib.adler32(open(f, 'rb').read(), checksum)
         elif os.path.exists(fname):
