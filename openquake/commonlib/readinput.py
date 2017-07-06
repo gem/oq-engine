@@ -132,9 +132,18 @@ def get_params(job_inis):
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
         params['inputs']['source'] = sorted(
-            _normalize(base_path, source.collect_source_model_paths(smlt)))
+            _get_paths(base_path, source.collect_source_model_paths(smlt)))
 
     return params
+
+
+def _get_paths(base_path, uncertainty_models):
+    # extract the path names for the source models listed in the smlt file
+    for model in uncertainty_models:
+        for name in model.split():
+            fname = os.path.abspath(os.path.join(base_path, name))
+            if os.path.exists(fname):  # consider only real paths
+                yield fname
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
@@ -1038,14 +1047,6 @@ def get_mesh_hcurves(oqparam):
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
-
-
-def _normalize(base_path, uncertainty_models):
-    for model in uncertainty_models:
-        for name in model.split():
-            fname = os.path.join(base_path, name)
-            if os.path.exists(fname):
-                yield fname
 
 
 def get_checksum32(oqparam):
