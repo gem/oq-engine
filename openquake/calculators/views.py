@@ -388,6 +388,7 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
+    tax_idx = dstore['assetcol'].get_tax_idx()
     loss_dt = oq.loss_dt()
     losses_by_tag = dstore['losses_by_tag-rlzs']
     R = losses_by_tag.shape[1]  # shape (T, R, L')
@@ -395,7 +396,7 @@ def view_portfolio_loss(token, dstore):
     rlzids = [str(r) for r in range(R)]
     for r in range(R):
         for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = losses_by_tag[:, r, l].sum()
+            data[r][lt] = losses_by_tag[tax_idx, r, l].sum()
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')

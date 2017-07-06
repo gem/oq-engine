@@ -101,6 +101,15 @@ class AssetCollection(object):
         """
         return sorted(set(self.taxonomies) | set(self.aids_by_tag))
 
+    def get_tax_idx(self, tags=None):
+        """
+        :returns: an array of booleans with True for taxonomy indices
+        """
+        if tags is None:
+            tags = self.tags()
+        taxonomies = set(self.taxonomies)
+        return numpy.array([tag in taxonomies for tag in tags])
+
     def assets_by_site(self):
         """
         :returns: numpy array of lists with the assets by each site
