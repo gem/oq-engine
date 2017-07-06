@@ -22,17 +22,17 @@ from openquake.commonlib import datastore, readinput
 
 
 @sap.Script
-def checksum(job_ini_or_job_id):
+def checksum(job_file_or_job_id):
     """
     Get the checksum of a calculation from the calculation ID (if already
-    done) or from the job.ini file (if not done yet).
+    done) or from the job.ini/job.zip file (if not done yet).
     """
     try:
-        job_id = int(job_ini_or_job_id)
+        job_id = int(job_file_or_job_id)
         job_ini = None
     except ValueError:
         job_id = None
-        job_ini = job_ini_or_job_id
+        job_ini = job_file_or_job_id
         if not os.path.exists(job_ini):
             sys.exit('%s does not correspond to an existing file' % job_ini)
     if job_id:
@@ -43,4 +43,4 @@ def checksum(job_ini_or_job_id):
         checksum = readinput.get_checksum32(oq)
     print(checksum)
 
-checksum.arg('job_ini_or_job_id', 'job.ini or job ID')
+checksum.arg('job_file_or_job_id', 'job.ini, job.zip or job ID')
