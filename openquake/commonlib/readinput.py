@@ -1034,14 +1034,18 @@ def get_checksum32(oqparam):
     """
     Build an unsigned 32 bit integer from the input files of the calculation
     """
+    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
+    # which is the same between Python 2 and Python 3
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
         if key == 'source':  # list of fnames and/or strings
             for f in fname:
-                checksum = zlib.adler32(open(f, 'rb').read(), checksum)
+                data = open(f, 'rb').read()
+                checksum = zlib.adler32(data, checksum) & 0xffffffff
         elif os.path.exists(fname):
-            checksum = zlib.adler32(open(fname, 'rb').read(), checksum)
+            data = open(fname, 'rb').read()
+            checksum = zlib.adler32(data, checksum) & 0xffffffff
         else:
             raise ValueError('%s is not a file' % fname)
     return checksum
