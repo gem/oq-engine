@@ -974,6 +974,10 @@ class CurveBuilder(object):
                 dtlist.append((lt, (F32, len(cb.ratios))))
         self.dt = numpy.dtype(dtlist)
 
+    def __getitem__(self, li):
+        L = len(self.cbs)
+        return self.cbs[li % L]
+
     def __iter__(self):
         return iter(self.cbs)
 
