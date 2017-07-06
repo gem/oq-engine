@@ -131,9 +131,8 @@ def get_params(job_inis):
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = [
-            os.path.join(base_path, src_path)
-            for src_path in sorted(source.collect_source_model_paths(smlt))]
+        params['inputs']['source'] = sorted(
+            _normalize(base_path, source.collect_source_model_paths(smlt)))
 
     return params
 
@@ -345,8 +344,10 @@ def possibly_gunzip(fname):
     is_gz = os.path.exists(fname) and fname.endswith('.gz')
     there_is_gz = not os.path.exists(fname) and os.path.exists(fname + '.gz')
     if is_gz:
+        1 / 0  # not tested
         return writetmp(gzip.open(fname).read())
     elif there_is_gz:
+        1 / 0  # not tested
         return writetmp(gzip.open(fname + '.gz').read())
     return fname
 
@@ -1039,10 +1040,12 @@ def get_mesh_hcurves(oqparam):
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
 
 
-def _normalize(oqparam, uncertainty_models):
+def _normalize(base_path, uncertainty_models):
     for model in uncertainty_models:
-        for fname in model.split():
-            yield os.path.join(oqparam.base_path, fname)
+        for name in model.split():
+            fname = os.path.join(base_path, name)
+            if os.path.exists(fname):
+                yield fname
 
 
 def get_checksum32(oqparam):
@@ -1053,9 +1056,8 @@ def get_checksum32(oqparam):
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
         if key == 'source':  # list of fnames and/or strings
-            for f in sorted(_normalize(oqparam, fname)):
-                if os.path.exists(f):
-                    checksum = zlib.adler32(open(f, 'rb').read(), checksum)
+            for f in fname:
+                checksum = zlib.adler32(open(f, 'rb').read(), checksum)
         elif os.path.exists(fname):
             checksum = zlib.adler32(open(fname, 'rb').read(), checksum)
         else:
