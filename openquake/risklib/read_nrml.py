@@ -393,7 +393,7 @@ def update_validators():
         'vulnerabilityFunction.id': valid.utf8,  # taxonomy
         'consequenceFunction.id': valid.utf8,  # taxonomy
         'asset.id': valid.asset_id,
-        'asset.tag': valid.simple_id,
+        'asset.tag': valid.namelist,
         'costType.name': valid.cost_type,
         'costType.type': valid.cost_type_type,
         'cost.type': valid.cost_type,
