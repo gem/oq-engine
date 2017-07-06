@@ -44,13 +44,6 @@ def check_total_losses(calc):
         for li, lt in enumerate(loss_dt.names):
             data1[li] += dset['loss'][:, li].sum()
 
-    # check the sums are consistent with the ones coming from losses_by_tag
-    data2 = numpy.zeros(LI, numpy.float32)
-    lbt = dstore['losses_by_tag-rlzs']
-    for li in range(LI):
-        data2[li] += lbt[:, :, li].sum()
-    numpy.testing.assert_allclose(data1, data2, 1E-6)
-
     # test the asset_loss_table exporter; notice that I need to disable
     # the parallelism to avoid reading bogus data: this is the usual
     # heisenbug when reading in parallel an .hdf5 generated in process
