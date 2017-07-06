@@ -53,18 +53,15 @@ def build_agg_curve(cb_inputs, monitor):
     :param monitor:
         a Monitor instance
     :returns:
-        a dictionary (r, l, i) -> (losses, poes, avg)
+        a dictionary (li, r) -> (losses, poes, avg)
     """
     result = {}
     for cbs, rlzname, data in cb_inputs:
         if len(data) == 0:  # realization with no losses
             continue
         r = int(rlzname[4:])  # strip rlz-
-        for cb in cbs:
-            l = cb.index
-            losses = data['loss'][:, l]  # shape (E, I)
-            for i in range(cb.insured_losses + 1):
-                result[l, r, i] = cb.calc_agg_curve(losses[:, i])
+        for li, losses in enumerate(data['loss'].T):
+            result[li, r] = cbs[li].calc_agg_curve(losses)
     return result
 
 
@@ -76,7 +73,7 @@ def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
     ass = result['assratios']
     for outs in outputs:
         r = outs.r
-        aggr = agg[r]  # array of zeros of shape (E, L, I)
+        aggr = agg[r]  # array of zeros of shape (E, L * I)
         for l, out in enumerate(outs):
             if out is None:  # for GMFs below the minimum_intensity
                 continue
@@ -95,7 +92,8 @@ def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
                         result['avglosses'][l + L * i, r][aid] += rat[i]
 
                 # agglosses
-                aggr[indices, l] += losses
+                for i in range(I):
+                    aggr[indices, l + L * i] += losses[:, i]
 
                 # losses by taxonomy
                 for i in range(I):
@@ -154,7 +152,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     idx = dict(zip(eids, range(E)))
-    agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
+    agg = AccumDict(accum=numpy.zeros((E, L * I), F32))  # r -> array
     result = dict(agglosses=AccumDict(), assratios=[],
                   lrs_idx=AccumDict(accum=[]),  # aid -> start_stop list
                   losses_by_tag=numpy.zeros((T, R, L * I), F32),
@@ -183,7 +181,6 @@ def build_loss_maps(avalues, builder, lrgetter, weights, stats, monitor):
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
-    lrgetter.dstore.open()  # if not already open
     loss_maps, loss_maps_stats = builder.build_maps(
         avalues, lrgetter, weights, stats, monitor)
     res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
@@ -284,34 +281,32 @@ class EbrPostCalculator(base.RiskCalculator):
         cr = {cb.loss_type: cb.curve_resolution
               for cb in self.riskmodel.curve_builder}
         loss_curve_dt = scientific.build_loss_curve_dt(
-            cr, oq.conditional_loss_poes)
-        lts = self.riskmodel.loss_types
+            cr, oq.conditional_loss_poes, oq.insured_losses)
         cb_inputs = self.cb_inputs('agg_loss_table')
-        I = oq.insured_losses + 1
         R = len(weights)
         # NB: using the Processmap since celery is hanging; the computation
         # is fast anyway and this part will likely be removed in the future
         result = parallel.Processmap.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
-        agg_curve = numpy.zeros((I, R), loss_curve_dt)
-        for l, r, i in result:
-            agg_curve[lts[l]][i, r] = result[l, r, i]
+        agg_curve = numpy.zeros(R, loss_curve_dt)
+        for li, r in result:
+            lt = loss_curve_dt.names[li]
+            agg_curve[r][lt] = result[li, r]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
         if R > 1:  # save stats too
             statnames, stats = zip(*oq.risk_stats())
-            agg_curve_stats = numpy.zeros((I, len(stats)), agg_curve.dtype)
-            for l, loss_type in enumerate(agg_curve.dtype.names):
+            agg_curve_stats = numpy.zeros(len(stats), agg_curve.dtype)
+            for loss_type in agg_curve.dtype.names:
                 acs = agg_curve_stats[loss_type]
                 data = agg_curve[loss_type]
-                for i in range(I):
-                    avg = data['avg'][i]
-                    losses, all_poes = scientific.normalize_curves_eb(
-                        [(c['losses'], c['poes']) for c in data[i]])
-                    acs['losses'][i] = losses
-                    acs['poes'][i] = compute_stats(all_poes, stats, weights)
-                    acs['avg'][i] = compute_stats(avg, stats, weights)
+                avg = data['avg']
+                losses, all_poes = scientific.normalize_curves_eb(
+                    [(c['losses'], c['poes']) for c in data])
+                acs['losses'] = losses
+                acs['poes'] = compute_stats(all_poes, stats, weights)
+                acs['avg'] = compute_stats(avg, stats, weights)
 
             self.datastore['agg_curve-stats'] = agg_curve_stats
 
@@ -449,7 +444,8 @@ class EbriskCalculator(base.RiskCalculator):
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
-        elt_dt = numpy.dtype([('eid', U64), ('loss', (F32, (self.L, self.I)))])
+        elt_dt = numpy.dtype(
+            [('eid', U64), ('loss', (F32, (self.L * self.I,)))])
         csm_info = self.datastore['csm_info']
         mon = self.monitor('risk')
         for sm in csm_info.source_models:

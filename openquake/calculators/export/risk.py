@@ -80,12 +80,12 @@ def export_agg_curve_rlzs(ekey, dstore):
     if ekey[0].endswith('stats'):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
-        tags = ['rlz-%03d' % r for r in range(agg_curve.shape[1])]
+        tags = ['rlz-%03d' % r for r in range(len(agg_curve))]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for r, tag in enumerate(tags):
         data = [['loss_type', 'loss', 'poe']]
         for loss_type in agg_curve.dtype.names:
-            array = agg_curve[0, r][loss_type]
+            array = agg_curve[r][loss_type]
             for loss, poe in zip(array['losses'], array['poes']):
                 data.append((loss_type, loss, poe))
         dest = dstore.build_fname('agg_curve', tag, 'csv')
@@ -233,6 +233,7 @@ def export_agg_losses_ebr(ekey, dstore):
     :param dstore: datastore object
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    L = len(loss_types)
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     has_rup_data = 'ruptures' in dstore
@@ -279,7 +280,7 @@ def export_agg_losses_ebr(ekey, dstore):
             for i, ins in enumerate(
                     ['', '_ins'] if oq.insured_losses else ['']):
                 for l, loss_type in enumerate(loss_types):
-                    elt[loss_type + ins][:] = losses[:, l, i]
+                    elt[loss_type + ins][:] = losses[:, l + L * i]
             elt.sort(order=['year', 'event_id'])
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             writer.save(elt, dest)
