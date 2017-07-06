@@ -29,7 +29,7 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib.general import groupby, AccumDict, writetmp
+from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
