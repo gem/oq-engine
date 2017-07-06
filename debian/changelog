@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the automatic gunzip functionality and added an automatic
+    checksum functionality plus an `oq checksum` command
   * Made the demo LogicTreeCase2ClassicalPSHA faster
   * Fixed the export by realization of the hazard outputs
   * Changed the generation of loss_maps in event based risk, without the option
