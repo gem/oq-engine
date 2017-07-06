@@ -512,12 +512,12 @@ class EbriskCalculator(base.RiskCalculator):
         """
         self.R = num_rlzs
         self.A = len(self.assetcol)
-        num_tax = len(self.assetcol.taxonomies)
-        self.datastore.create_dset('losses_by_tag-rlzs', F32,
-                                   (num_tax, self.R, self.L * self.I))
         tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+        T = len(tags)
+        self.datastore.create_dset('losses_by_tag-rlzs', F32,
+                                   (T, self.R, self.L * self.I))
         self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
-                                 nbytes=4 * num_tax * self.R * self.L * self.I)
+                                 nbytes=4 * T * self.R * self.L * self.I)
         if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
             # save all_loss_ratios
             self.alr_nbytes = 0
