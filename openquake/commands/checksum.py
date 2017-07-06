@@ -29,17 +29,17 @@ def checksum(job_file_or_job_id):
     """
     try:
         job_id = int(job_file_or_job_id)
-        job_ini = None
+        job_file = None
     except ValueError:
         job_id = None
-        job_ini = job_file_or_job_id
-        if not os.path.exists(job_ini):
-            sys.exit('%s does not correspond to an existing file' % job_ini)
+        job_file = job_file_or_job_id
+        if not os.path.exists(job_file):
+            sys.exit('%s does not correspond to an existing file' % job_file)
     if job_id:
         dstore = datastore.read(job_id)
         checksum = dstore['/'].attrs['checksum32']
     else:
-        oq = readinput.get_oqparam(job_ini)
+        oq = readinput.get_oqparam(job_file)
         checksum = readinput.get_checksum32(oq)
     print(checksum)
 
