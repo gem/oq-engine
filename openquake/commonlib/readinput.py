@@ -1052,8 +1052,8 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if isinstance(fname, list):  # list of fnames and/or strings
-            for f in _normalize(oqparam, fname):
+        if key == 'source':  # list of fnames and/or strings
+            for f in sorted(_normalize(oqparam, fname)):
                 if os.path.exists(f):
                     checksum = zlib.adler32(open(f, 'rb').read(), checksum)
         elif os.path.exists(fname):
