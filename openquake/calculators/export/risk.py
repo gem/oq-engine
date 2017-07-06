@@ -457,14 +457,14 @@ def export_dmg_by_asset_npz(ekey, dstore):
 @export.add(('dmg_by_tag', 'csv'))
 def export_dmg_by_tag_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
+    tags = add_quotes(dstore['assetcol'].tags())
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
         dmg_by_tag = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        array = compose_arrays(taxonomies, dmg_by_tag, 'taxonomy')
+        array = compose_arrays(tags, dmg_by_tag, 'tag')
         writer.save(array, fname)
     return writer.getsaved()
 
