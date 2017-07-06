@@ -696,7 +696,7 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
-            for tag in asset.attrib.get('tag', '').split():
+            for tag in asset.attrib.get('tag', []):
                 exposure.assets_by_tag[tag].append(idx)
         try:
             costs = asset.costs
