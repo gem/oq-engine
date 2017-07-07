@@ -1,10 +1,11 @@
 oq-test03, depth=15km
 =====================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_29175.hdf5 Wed Jun 14 10:03:48 2017
-engine_version                            2.5.0-gite200a20        
-========================================= ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1761.hdf5 Fri Jul  7 07:32:10 2017
+checksum32                               3,074,586,051           
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
 num_sites = 1, num_imts = 2
 
@@ -87,5 +88,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.006     0.0       1     
 filtering sites         0.001     0.0       1     
-reading site collection 6.437E-06 0.0       1     
+reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======
