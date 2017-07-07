@@ -1,10 +1,11 @@
 Classical Hazard QA Test, Case 6
 ================================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29223.hdf5 Wed Jun 14 10:04:16 2017
-engine_version                                   2.5.0-gite200a20        
-================================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1810.hdf5 Fri Jul  7 07:32:34 2017
+checksum32                                      3,056,992,103           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
 num_sites = 1, num_imts = 1
 
@@ -72,17 +73,17 @@ source_model.xml 0      Active Shallow Crust 2           140          140
 Informational data
 ------------------
 ============================== =============================================================================
-count_eff_ruptures.received    tot 1.13 KB, max_per_task 579 B                                              
-count_eff_ruptures.sent        sources 2.17 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 626 B, gsims 182 B
-hazard.input_weight            287                                                                          
-hazard.n_imts                  1 B                                                                          
-hazard.n_levels                3 B                                                                          
-hazard.n_realizations          1 B                                                                          
-hazard.n_sites                 1 B                                                                          
-hazard.n_sources               2 B                                                                          
-hazard.output_weight           3.000                                                                        
+count_eff_ruptures.received    tot 1.15 KB, max_per_task 591 B                                              
+count_eff_ruptures.sent        sources 2.17 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 644 B, gsims 182 B
+hazard.input_weight            287.0                                                                        
+hazard.n_imts                  1                                                                            
+hazard.n_levels                3                                                                            
+hazard.n_realizations          1                                                                            
+hazard.n_sites                 1                                                                            
+hazard.n_sources               2                                                                            
+hazard.output_weight           3.0                                                                          
 hostname                       tstation.gem.lan                                                             
-require_epsilons               0 B                                                                          
+require_epsilons               False                                                                        
 ============================== =============================================================================
 
 Slowest sources
@@ -107,7 +108,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.004 2.163E-04 0.004 0.004 2        
+count_eff_ruptures 0.004 2.343E-04 0.003 0.004 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -120,7 +121,7 @@ total count_eff_ruptures       0.007     0.0       2
 store source_info              0.004     0.0       1     
 prefiltering source model      0.003     0.0       1     
 managing sources               0.002     0.0       1     
-reading site collection        4.888E-05 0.0       1     
-aggregate curves               4.125E-05 0.0       2     
-saving probability maps        3.004E-05 0.0       1     
+aggregate curves               4.005E-05 0.0       2     
+reading site collection        3.862E-05 0.0       1     
+saving probability maps        3.123E-05 0.0       1     
 ============================== ========= ========= ======
