@@ -6,8 +6,8 @@ the most important one being `oq engine`, which is documented in the
 manual.
 
 The commands documented here are not in the manual because they have
-not reached the level of maturity and stability of the `oq engine`
-command.
+not reached the same level of maturity and stability. Still, some of
+them are quite stable and quite useful for the final users.
 
 You can see the full list of commands accepted by `oq` by running `oq help`:
 
@@ -26,7 +26,7 @@ optional arguments:
 ```
 
 This is the output that you get at the present time (engine 2.6); depending
-on your version of the code you may get a different help. As you see, there
+on your version of the code you may get a different output. As you see, there
 are several commands, like `purge`, `show_attrs`, `export`, `restore`, ...
 You can get information about each one with the help command; for instance,
 here is the help for `purge`:
@@ -48,7 +48,7 @@ optional arguments:
 Some of this commands are highly experimental and may disappear; other are
 meant for debugging and should not be used by final users. Here I will
 document only the commands that are useful for the general public and
-have reached a minimum level of stability.
+have reached some level of stability.
 
 Probably the most important command is `oq info`. It has several
 features.
@@ -57,9 +57,9 @@ features.
 logic tree of a calculation.
 
 2. When invoked with the `--report` option produces a `.rst` report with
-several important information about the computation. It is ESSENTIAL in
+several important informations about the computation. It is ESSENTIAL in
 case of large calculations, since it will give you an idea of the feasibility
-of the computation without running it fully. Here is an example of usage:
+of the computation without running it. Here is an example of usage:
 
 ```bash
 $ oq info --report job.ini
@@ -67,7 +67,8 @@ $ oq info --report job.ini
 Generated /tmp/report_1644.rst
 <Monitor info, duration=10.910529613494873s, memory=60.16 MB>
 ```
-You can open `/tmp/report_1644.rst` and read the informations listed there.
+You can open `/tmp/report_1644.rst` and read the informations listed there
+(`1644` is the calculation ID, the number will be different each time).
 
 3. It can be invoked without a `job.ini` file and it that case it provides
 global information about the engine and its libraries. Try for instance
@@ -104,7 +105,8 @@ optional arguments:
   -d ., --export-dir .  export directory
 ```
 
-The list of available exports can be extracted with the `oq info --exports`
+The list of available exports (i.e. the datastore keys and the available export
+formats) can be extracted with the `oq info --exports`
 command; at the moment (engine 2.6) there are 52 exporters defined, but
 this number changes at each version:
 
@@ -151,7 +153,7 @@ There are 52 exporters defined.
 
 At the present the supported export types are `xml`, `csv`, `geojson`,
 `npz` and `hdf5`. `geojson` will likely disappear soon; `xml` will not
-disappear, but it is still recommended for large exports. For large exports
+disappear, but it is not recommended for large exports. For large exports
 the recommended formats are `npz` (which is a binary format for numpy arrays)
 and `hdf5`. For instance if you want to export the full bulk of hazard curves
 for all realizations the command to use is
@@ -165,4 +167,14 @@ the entire calculation. In this case you should export only the sites you
 are interested in, while this command exports everything.
 The export system will be extended in the near future, right now several
 features are missing; for instance there is no hdf5 export for hazard maps and
-uniform hazard spectra.
+uniform hazard spectra. You can export them in `.npz` format, but then
+only the statistics will be exported. If you want the data for a specific
+realization (say the first one`, you can use
+
+```
+$ oq export hcurves/rlz-0 --exports csv
+$ oq export hmaps/rlz-0 --exports csv
+$ oq export uhs/rlz-0 --exports csv
+```
+
+but currently this only works for `csv` and `xml`.
