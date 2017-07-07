@@ -1,10 +1,11 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29241.hdf5 Wed Jun 14 10:04:34 2017
-engine_version                                   2.5.0-gite200a20        
-================================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1828.hdf5 Fri Jul  7 07:32:51 2017
+checksum32                                      1,751,642,476           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
 num_sites = 1, num_imts = 1
 
@@ -33,46 +34,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `1.8 0.8 <1.8 0.8>`_                                        
-source                  `1.8 0.8 <1.8 0.8>`_                                        
-source                  `1.8 0.8 <1.8 0.8>`_                                        
-source                  `1.8 0.8 <1.8 0.8>`_                                        
-source                  `1.8 0.8 <1.8 0.8>`_                                        
-source                  `1.9 0.9 <1.9 0.9>`_                                        
-source                  `1.9 0.9 <1.9 0.9>`_                                        
-source                  `1.9 0.9 <1.9 0.9>`_                                        
-source                  `1.9 0.9 <1.9 0.9>`_                                        
-source                  `1.9 0.9 <1.9 0.9>`_                                        
-source                  `2.0 1.0 <2.0 1.0>`_                                        
-source                  `2.0 1.0 <2.0 1.0>`_                                        
-source                  `2.0 1.0 <2.0 1.0>`_                                        
-source                  `2.0 1.0 <2.0 1.0>`_                                        
-source                  `2.0 1.0 <2.0 1.0>`_                                        
-source                  `2.1 1.1 <2.1 1.1>`_                                        
-source                  `2.1 1.1 <2.1 1.1>`_                                        
-source                  `2.1 1.1 <2.1 1.1>`_                                        
-source                  `2.1 1.1 <2.1 1.1>`_                                        
-source                  `2.1 1.1 <2.1 1.1>`_                                        
-source                  `2.2 1.2 <2.2 1.2>`_                                        
-source                  `2.2 1.2 <2.2 1.2>`_                                        
-source                  `2.2 1.2 <2.2 1.2>`_                                        
-source                  `2.2 1.2 <2.2 1.2>`_                                        
-source                  `2.2 1.2 <2.2 1.2>`_                                        
-source                  `6.3 <6.3>`_                                                
-source                  `6.3 <6.3>`_                                                
-source                  `6.3 <6.3>`_                                                
-source                  `6.3 <6.3>`_                                                
-source                  `6.3 <6.3>`_                                                
-source                  `6.5 <6.5>`_                                                
-source                  `6.5 <6.5>`_                                                
-source                  `6.5 <6.5>`_                                                
-source                  `6.5 <6.5>`_                                                
-source                  `6.5 <6.5>`_                                                
-source                  `6.7 <6.7>`_                                                
-source                  `6.7 <6.7>`_                                                
-source                  `6.7 <6.7>`_                                                
-source                  `6.7 <6.7>`_                                                
-source                  `6.7 <6.7>`_                                                
 source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
@@ -155,45 +116,45 @@ source_model.xml 9      Active Shallow Crust 5           2025         2,025
 
 Informational data
 ------------------
-============================== ===================================================================================
-count_eff_ruptures.received    tot 10.19 KB, max_per_task 649 B                                                   
-count_eff_ruptures.sent        sources 56.78 KB, srcfilter 11.36 KB, param 10.03 KB, monitor 5.2 KB, gsims 1.69 KB
-hazard.input_weight            2,026                                                                              
-hazard.n_imts                  1 B                                                                                
-hazard.n_levels                3 B                                                                                
-hazard.n_realizations          10 B                                                                               
-hazard.n_sites                 1 B                                                                                
-hazard.n_sources               50 B                                                                               
-hazard.output_weight           9.000                                                                              
-hostname                       tstation.gem.lan                                                                   
-require_epsilons               0 B                                                                                
-============================== ===================================================================================
+============================== ====================================================================================
+count_eff_ruptures.received    tot 10.39 KB, max_per_task 661 B                                                    
+count_eff_ruptures.sent        sources 56.78 KB, srcfilter 11.36 KB, param 10.03 KB, monitor 5.35 KB, gsims 1.69 KB
+hazard.input_weight            2026.0                                                                              
+hazard.n_imts                  1                                                                                   
+hazard.n_levels                3                                                                                   
+hazard.n_realizations          10                                                                                  
+hazard.n_sites                 1                                                                                   
+hazard.n_sources               50                                                                                  
+hazard.output_weight           9.0                                                                                 
+hostname                       tstation.gem.lan                                                                    
+require_epsilons               False                                                                               
+============================== ====================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-5      5         AreaSource   375          0.001     1         1        
+0      1         AreaSource   325          0.002     1         1        
+5      5         AreaSource   375          0.002     1         1        
+2      1         AreaSource   375          0.002     1         1        
+4      1         AreaSource   375          0.002     1         1        
+1      1         AreaSource   375          0.002     1         1        
+5      1         AreaSource   375          0.002     1         1        
+1      5         AreaSource   375          0.001     1         1        
 3      1         AreaSource   325          0.001     1         1        
-5      1         AreaSource   375          0.001     1         1        
-1      1         AreaSource   375          0.001     1         1        
-4      1         AreaSource   375          0.001     1         1        
-3      5         AreaSource   375          0.001     1         1        
-0      1         AreaSource   325          0.001     1         1        
 2      5         AreaSource   425          0.001     1         1        
-0      2         AreaSource   450          0.001     1         1        
-6      5         AreaSource   375          0.001     1         1        
-3      4         AreaSource   375          0.001     1         1        
-0      5         AreaSource   375          0.001     1         1        
+6      1         AreaSource   425          0.001     1         1        
+7      1         AreaSource   375          0.001     1         1        
+9      5         AreaSource   375          0.001     1         1        
 5      2         AreaSource   510          0.001     1         1        
-1      3         AreaSource   450          0.001     1         1        
-4      3         AreaSource   450          0.001     1         1        
+2      4         AreaSource   375          0.001     1         1        
+4      4         AreaSource   325          0.001     1         1        
+0      2         AreaSource   450          0.001     1         1        
+3      5         AreaSource   375          0.001     1         1        
 0      4         AreaSource   325          0.001     1         1        
-1      2         AreaSource   450          0.001     1         1        
-3      2         AreaSource   450          0.001     1         1        
+3      3         AreaSource   510          0.001     1         1        
 4      2         AreaSource   390          0.001     1         1        
-0      3         AreaSource   450          0.001     1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -201,14 +162,14 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.057     50    
+AreaSource   0.065     50    
 ============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.004 0.002  0.001 0.008 17       
+count_eff_ruptures 0.005 0.002  0.002 0.008 17       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -216,12 +177,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.211     0.0       1     
-total count_eff_ruptures       0.073     0.199     17    
-managing sources               0.033     0.0       1     
-prefiltering source model      0.027     0.0       1     
-store source_info              0.007     0.0       1     
-aggregate curves               5.648E-04 0.0       17    
-reading site collection        4.005E-05 0.0       1     
-saving probability maps        3.839E-05 0.0       1     
+reading composite source model 0.255     0.0       1     
+total count_eff_ruptures       0.083     0.0       17    
+prefiltering source model      0.033     0.0       1     
+managing sources               0.023     0.0       1     
+store source_info              0.006     0.0       1     
+aggregate curves               4.082E-04 0.0       17    
+reading site collection        6.890E-05 0.0       1     
+saving probability maps        3.290E-05 0.0       1     
 ============================== ========= ========= ======
