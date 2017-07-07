@@ -7,9 +7,10 @@ manual.
 
 The commands documented here are not in the manual because they have
 not reached the same level of maturity and stability. Still, some of
-them are quite stable and quite useful for the final users.
+them are quite stable and quite useful for the final users, so feel free
+to use them.
 
-You can see the full list of commands accepted by `oq` by running `oq help`:
+You can see the full list of commands by running `oq help`:
 
 ```bash
 $ oq help
@@ -26,10 +27,10 @@ optional arguments:
 ```
 
 This is the output that you get at the present time (engine 2.6); depending
-on your version of the code you may get a different output. As you see, there
+on your version of the engine you may get a different output. As you see, there
 are several commands, like `purge`, `show_attrs`, `export`, `restore`, ...
-You can get information about each one with the help command; for instance,
-here is the help for `purge`:
+You can get information about each command with `oq help <command>`;
+for instance, here is the help for `purge`:
 
 ```bash
 $ oq help purge
@@ -45,7 +46,7 @@ optional arguments:
   -h, --help  show this help message and exit
 ```
 
-Some of this commands are highly experimental and may disappear; other are
+Some of this commands are highly experimental and may disappear; others are
 meant for debugging and should not be used by final users. Here I will
 document only the commands that are useful for the general public and
 have reached some level of stability.
@@ -151,7 +152,7 @@ uhs ['csv', 'xml', 'npz']
 There are 52 exporters defined.
 ```
 
-At the present the supported export types are `xml`, `csv`, `geojson`,
+At the present the supported export types are `xml`, `csv`, `rst`, `geojson`,
 `npz` and `hdf5`. `geojson` will likely disappear soon; `xml` will not
 disappear, but it is not recommended for large exports. For large exports
 the recommended formats are `npz` (which is a binary format for numpy arrays)
@@ -162,14 +163,15 @@ for all realizations the command to use is
 $ oq export hcurves-rlzs --exports hdf5
 ```
 
-Be warned that for large calculations this export will likely be slower than
-the entire calculation. In this case you should export only the sites you
-are interested in, while this command exports everything.
-The export system will be extended in the near future, right now several
-features are missing; for instance there is no hdf5 export for hazard maps and
-uniform hazard spectra. You can export them in `.npz` format, but then
-only the statistics will be exported. If you want the data for a specific
-realization (say the first one), you can use
+Be warned that for large calculations the export will likely be slower
+than the entire calculation. In this case you should export only the
+sites you are interested in, while this command exports everything.
+The export system will be extended in the near future, right now
+several features are missing; for instance there is no `.hdf5` export
+for hazard maps and uniform hazard spectra. You can export them in
+`.npz` format, but then only the statistics will be exported. If you
+want the data for a specific realization (say the first one), you can
+use
 
 ```
 $ oq export hcurves/rlz-0 --exports csv
