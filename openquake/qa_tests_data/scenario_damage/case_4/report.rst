@@ -1,10 +1,11 @@
 Scenario Damage QA Test 4
 =========================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_29177.hdf5 Wed Jun 14 10:03:48 2017
-engine_version                            2.5.0-gite200a20        
-========================================= ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1763.hdf5 Fri Jul  7 07:32:10 2017
+checksum32                               1,284,787,561           
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
 num_sites = 3, num_imts = 3
 
@@ -83,7 +84,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
+reading exposure        0.005     0.0       1     
 filtering sites         0.005     0.0       1     
-reading site collection 7.391E-06 0.0       1     
+reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======

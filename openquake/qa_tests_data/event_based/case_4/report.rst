@@ -1,10 +1,11 @@
 Event-Based Hazard QA Test, Case 4
 ==================================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29255.hdf5 Wed Jun 14 10:04:47 2017
-engine_version                                   2.5.0-gite200a20        
-================================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1842.hdf5 Fri Jul  7 07:33:03 2017
+checksum32                                      2,872,781,101           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
 num_sites = 1, num_imts = 1
 
@@ -72,17 +73,17 @@ source_model.xml 0      Active Shallow Crust 1           10           10
 Informational data
 ------------------
 ============================ =========================================================================
-compute_ruptures.received    max_per_task 7.31 KB, tot 7.31 KB                                        
-compute_ruptures.sent        sources 1.23 KB, src_filter 684 B, param 605 B, monitor 311 B, gsims 91 B
-hazard.input_weight          10                                                                       
-hazard.n_imts                1 B                                                                      
-hazard.n_levels              3 B                                                                      
-hazard.n_realizations        1 B                                                                      
-hazard.n_sites               1 B                                                                      
-hazard.n_sources             1 B                                                                      
-hazard.output_weight         0.500                                                                    
+compute_ruptures.received    max_per_task 7.33 KB, tot 7.33 KB                                        
+compute_ruptures.sent        sources 1.23 KB, src_filter 684 B, param 605 B, monitor 320 B, gsims 91 B
+hazard.input_weight          10.0                                                                     
+hazard.n_imts                1                                                                        
+hazard.n_levels              3                                                                        
+hazard.n_realizations        1                                                                        
+hazard.n_sites               1                                                                        
+hazard.n_sources             1                                                                        
+hazard.output_weight         0.5                                                                      
 hostname                     tstation.gem.lan                                                         
-require_epsilons             0 B                                                                      
+require_epsilons             False                                                                    
 ============================ =========================================================================
 
 Slowest sources
@@ -118,8 +119,8 @@ store source_info              0.003     0.0       1
 reading composite source model 0.003     0.0       1     
 saving ruptures                0.003     0.0       1     
 filtering ruptures             0.002     0.0       10    
-prefiltering source model      0.002     0.0       1     
+prefiltering source model      0.001     0.0       1     
 setting event years            0.001     0.0       1     
-managing sources               9.215E-04 0.0       1     
-reading site collection        3.552E-05 0.0       1     
+managing sources               0.001     0.0       1     
+reading site collection        3.266E-05 0.0       1     
 ============================== ========= ========= ======
