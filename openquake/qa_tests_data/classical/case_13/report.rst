@@ -1,10 +1,11 @@
 Classical PSHA QA test
 ======================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29224.hdf5 Wed Jun 14 10:04:18 2017
-engine_version                                   2.5.0-gite200a20        
-================================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1811.hdf5 Fri Jul  7 07:32:37 2017
+checksum32                                      2,024,827,974           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
 num_sites = 21, num_imts = 2
 
@@ -87,45 +88,45 @@ bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2046      
 
 Informational data
 ------------------
-============================== ===================================================================================
-count_eff_ruptures.received    tot 18.48 KB, max_per_task 941 B                                                   
-count_eff_ruptures.sent        sources 1.34 MB, srcfilter 25.51 KB, param 17.68 KB, monitor 6.42 KB, gsims 3.67 KB
-hazard.input_weight            3,894                                                                              
-hazard.n_imts                  2 B                                                                                
-hazard.n_levels                26 B                                                                               
-hazard.n_realizations          4 B                                                                                
-hazard.n_sites                 21 B                                                                               
-hazard.n_sources               354 B                                                                              
-hazard.output_weight           546                                                                                
-hostname                       tstation.gem.lan                                                                   
-require_epsilons               0 B                                                                                
-============================== ===================================================================================
+============================== ==================================================================================
+count_eff_ruptures.received    tot 18.73 KB, max_per_task 953 B                                                  
+count_eff_ruptures.sent        sources 1.34 MB, srcfilter 25.51 KB, param 17.68 KB, monitor 6.6 KB, gsims 3.67 KB
+hazard.input_weight            3894.0                                                                            
+hazard.n_imts                  2                                                                                 
+hazard.n_levels                26                                                                                
+hazard.n_realizations          4                                                                                 
+hazard.n_sites                 21                                                                                
+hazard.n_sources               354                                                                               
+hazard.output_weight           546.0                                                                             
+hostname                       tstation.gem.lan                                                                  
+require_epsilons               False                                                                             
+============================== ==================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-0      60_1      CharacteristicFaultSource 11           0.025     7         1        
-1      82_0      CharacteristicFaultSource 11           0.014     6         1        
-0      4_1       CharacteristicFaultSource 11           0.013     6         1        
-1      41_0      CharacteristicFaultSource 11           0.013     16        1        
-0      74_1      CharacteristicFaultSource 11           0.008     19        1        
-0      26_0      CharacteristicFaultSource 11           0.007     9         1        
-0      0_0       CharacteristicFaultSource 11           0.004     8         1        
-0      68_1      CharacteristicFaultSource 11           0.004     17        1        
-0      1_0       CharacteristicFaultSource 11           0.004     6         1        
+1      79_0      CharacteristicFaultSource 11           0.006     3         1        
+1      100_1     CharacteristicFaultSource 11           0.005     13        1        
+1      103_0     CharacteristicFaultSource 11           0.004     11        1        
 0      2_0       CharacteristicFaultSource 11           0.004     5         1        
-1      0_0       CharacteristicFaultSource 11           0.004     8         1        
-0      50_0      CharacteristicFaultSource 11           0.004     19        1        
-0      71_0      CharacteristicFaultSource 11           0.004     18        1        
-1      102_1     CharacteristicFaultSource 11           0.004     11        1        
+0      1_0       CharacteristicFaultSource 11           0.004     6         1        
+0      47_0      CharacteristicFaultSource 11           0.004     7         1        
 0      63_0      CharacteristicFaultSource 11           0.004     17        1        
-0      38_0      CharacteristicFaultSource 11           0.004     11        1        
+0      80_0      CharacteristicFaultSource 11           0.004     9         1        
+0      81_0      CharacteristicFaultSource 11           0.004     6         1        
+0      0_0       CharacteristicFaultSource 11           0.004     8         1        
 0      20_0      CharacteristicFaultSource 11           0.004     2         1        
+0      48_0      CharacteristicFaultSource 11           0.004     6         1        
 0      2_1       CharacteristicFaultSource 11           0.004     5         1        
-0      39_0      CharacteristicFaultSource 11           0.004     7         1        
-0      0_1       CharacteristicFaultSource 11           0.004     8         1        
+0      1_1       CharacteristicFaultSource 11           0.004     6         1        
+0      39_1      CharacteristicFaultSource 11           0.004     7         1        
+0      47_1      CharacteristicFaultSource 11           0.004     7         1        
+0      39_0      CharacteristicFaultSource 11           0.003     7         1        
+0      71_0      CharacteristicFaultSource 11           0.003     18        1        
+0      38_1      CharacteristicFaultSource 11           0.003     11        1        
+0      20_1      CharacteristicFaultSource 11           0.003     2         1        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -133,14 +134,14 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.921     354   
+CharacteristicFaultSource 0.907     354   
 ========================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.045 0.015  0.010 0.073 21       
+count_eff_ruptures 0.045 0.013  0.009 0.057 21       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -148,12 +149,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 2.026     0.0       1     
-total count_eff_ruptures       0.955     0.0       21    
-prefiltering source model      0.592     0.0       1     
-managing sources               0.032     0.0       1     
-store source_info              0.007     0.0       1     
-aggregate curves               0.001     0.0       21    
-reading site collection        2.372E-04 0.0       1     
-saving probability maps        3.195E-05 0.0       1     
+reading composite source model 1.881     0.0       1     
+total count_eff_ruptures       0.939     0.219     21    
+prefiltering source model      0.575     0.0       1     
+managing sources               0.078     0.0       1     
+store source_info              0.006     0.0       1     
+aggregate curves               7.715E-04 0.0       21    
+reading site collection        2.234E-04 0.0       1     
+saving probability maps        2.670E-05 0.0       1     
 ============================== ========= ========= ======
