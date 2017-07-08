@@ -148,7 +148,8 @@ import functools
 import subprocess
 import multiprocessing.dummy
 from multiprocessing.connection import Client, Listener
-from concurrent.futures import as_completed, ProcessPoolExecutor, Future
+from concurrent.futures import (
+    as_completed, ThreadPoolExecutor, ProcessPoolExecutor, Future)
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
@@ -511,6 +512,8 @@ class Starmap(object):
         self.results = []
         self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
+        if self.distribute == 'threadpool':
+            self.executor = ThreadPoolExecutor()
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(oqtask):
             self.argnames = inspect.getargspec(oqtask).args
