@@ -1,10 +1,11 @@
 Scenario Risk for Nepal with 20 assets
 ======================================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29267.hdf5 Wed Jun 14 10:05:20 2017
-engine_version                                   2.5.0-gite200a20        
-================================================ ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1854.hdf5 Fri Jul  7 07:33:34 2017
+checksum32                                      2,254,713,843           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
 num_sites = 20, num_imts = 1
 
@@ -66,7 +67,7 @@ Informational data
 ------------------
 ================ ================
 hostname         tstation.gem.lan
-require_epsilons 1 B             
+require_epsilons True            
 ================ ================
 
 Exposure model
@@ -92,11 +93,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.009     0.0       1     
-computing gmfs          0.007     0.0       1     
-filtering sites         0.004     0.0       1     
-saving gmfs             0.001     0.0       1     
-building riskinputs     9.730E-04 0.0       1     
-building epsilons       5.198E-04 0.0       1     
-reading site collection 5.960E-06 0.0       1     
+reading exposure        0.011     0.0       1     
+filtering sites         0.005     0.0       1     
+saving gmfs             0.004     0.0       1     
+computing gmfs          0.001     0.0       1     
+building riskinputs     9.127E-04 0.0       1     
+building epsilons       6.752E-04 0.0       1     
+reading site collection 6.437E-06 0.0       1     
 ======================= ========= ========= ======
