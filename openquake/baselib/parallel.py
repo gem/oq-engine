@@ -513,7 +513,7 @@ class Starmap(object):
         self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
         if self.distribute == 'threadpool':
-            self.executor = ThreadPoolExecutor()
+            self.executor = ThreadPoolExecutor(executor.num_tasks_hint)
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(oqtask):
             self.argnames = inspect.getargspec(oqtask).args
