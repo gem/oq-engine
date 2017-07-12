@@ -111,7 +111,9 @@ class Afteran(BaseCatalogueDecluster):
                     catalogue.data['latitude'],
                     catalogue.data['longitude'][imarker],
                     catalogue.data['latitude'][imarker]).flatten()
-
+                delta_depth = (catalogue.data["depth"] -
+                               catalogue.data["depth"][imarker]) ** 2.
+                mdist = np.sqrt(mdist ** 2. + delta_depth)
                 # Select earthquakes inside distance window, later than
                 # mainshock and not already assigned to a cluster
                 vsel1 = np.where(
