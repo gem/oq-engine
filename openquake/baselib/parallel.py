@@ -87,11 +87,11 @@ available at the moment:
 `OQ_DISTRIBUTE` set tp "ipython"
    use the ipyparallel concurrency mechanism (experimental)
 
-There is no also an OQ_DISTRIBUTE="threadpool"; however the
-performance of using threads instead of processes is terrible for the
+There is also an `OQ_DISTRIBUTE`="threadpool"; however the
+performance of using threads instead of processes is normally bad for the
 kind of applications we are interested in (CPU-dominated, which large
 tasks such that the time to spawn a new process is negligible with
-respect to the time to perform the task).
+respect to the time to perform the task), so it is not recommended.
 
 The Starmap.apply API
 ====================================
