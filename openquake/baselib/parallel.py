@@ -173,6 +173,8 @@ if OQ_DISTRIBUTE == 'celery':
     from celery.task import task
     from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
     app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+elif OQ_DISTRIBUTE == 'scoop':
+    from scoop import futures as scoop_futures
 
 elif OQ_DISTRIBUTE == 'ipython':
     import ipyparallel as ipp
@@ -561,6 +563,9 @@ class Starmap(object):
             res = safe_task.delay(self.task_func, piks, True)
             self.task_ids.append(res.task_id)
             return res
+        elif self.distribute == 'scoop':
+            return scoop_futures.submit(
+                safely_call, self.task_func, piks, True)
         else:  # submit tasks by using the ProcessPoolExecutor or ipyparallel
             return self.executor.submit(
                 safely_call, self.task_func, piks, True)
@@ -581,6 +586,10 @@ class Starmap(object):
                 # work around a celery/rabbitmq bug
                 if CELERY_RESULT_BACKEND.startswith('rpc:'):
                     del app.backend._cache[task_id]
+                yield fut
+
+        elif self.distribute == 'scoop':
+            for fut in scoop_futures.as_completed(self.results):
                 yield fut
 
         else:  # future interface
