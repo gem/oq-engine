@@ -320,10 +320,8 @@ def _humansize(literal):
         items = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         lst = ['%s %s' % (k, humansize(v)) for k, v in items]
         return ', '.join(lst)
-    elif isinstance(dic, int):
-        return humansize(dic)
     else:
-        return dic
+        return str(dic)
 
 
 @view.add('job_info')
