@@ -1,10 +1,10 @@
 # Internal commands
 
-This commands and internals are meant to be used for debug and development. DO NOT USE them in production. They MAY CHANGE ANYTIME, without notice.
+This commands and internals are meant to be used for debug and development. They MAY CHANGE ANYTIME, without notice.
 
 ### Database creation
 
-Database is created by `oq` itself, it can be manually created via
+The database is automatically created when running a calculation, but it can also be manually created via
 
 ```bash
 $ python -m openquake.server.db.upgrade_manager ~/oqdata/db.sqlite3
