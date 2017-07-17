@@ -174,38 +174,7 @@ if OQ_DISTRIBUTE == 'celery':
     from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
     app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
 elif OQ_DISTRIBUTE == 'scoop':
-    from threading import Thread
-    from scoop import launcher, utils, futures as scoop_futures
-
-    def scoop_run(hostfile=None, hosts=None, n=None):
-        # Get a list of resources to launch worker(s) on
-        hosts = utils.getHosts(hostfile)
-        if n is None:
-            n = utils.getWorkerQte(hosts)
-        external_hostname = [utils.externalHostname(hosts)]
-
-        # Launch SCOOP
-        thisScoopApp = launcher.ScoopApp(
-            hosts, n, args.b, 0, sys.executable, external_hostname[0],
-            'oq', args.args, args.tunnel, args.path, args.debug, args.nice,
-            utils.getEnv(), args.profile, args.pythonpath[0],
-            args.prolog[0], args.backend)
-
-        rootTaskExitCode = False
-        interruptPreventer = Thread(target=thisScoopApp.close)
-        try:
-            rootTaskExitCode = thisScoopApp.run()
-        except Exception as e:
-            logging.error('Error while launching SCOOP subprocesses:%s', e)
-            logging.error(traceback.format_exc())
-            rootTaskExitCode = -1
-        finally:
-            interruptPreventer.start()
-            interruptPreventer.join()
-
-        # Exit with the proper exit code
-        if rootTaskExitCode:
-            sys.exit(rootTaskExitCode)
+    from scoop import futures as scoop_futures
 
 elif OQ_DISTRIBUTE == 'ipython':
     import ipyparallel as ipp
