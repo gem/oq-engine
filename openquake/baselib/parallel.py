@@ -624,8 +624,8 @@ class Starmap(object):
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, nargs)
 
-        elif self.distribute == 'multipool':
-            logging.warn('EXPERIMENTAL: sending tasks to the multipool')
+        elif self.distribute == 'zmq':
+            logging.warn('EXPERIMENTAL: sending tasks via zmq')
             allargs = list(self.task_args)
             start_addr = 'tcp://127.0.0.1:1909'
             end_addr = 'tcp://127.0.0.1:1910'
@@ -807,7 +807,7 @@ def sendall(func, allargs, start_addr, end_addr):
     receiver = context.socket(zmq.PULL)
     receiver.bind(end_addr)
     for args in allargs:
-        yield receiver.recv_pyob()
+        yield receiver.recv_pyobj()
 
 
 # ######################## support for grid engine ######################## #
