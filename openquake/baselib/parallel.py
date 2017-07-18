@@ -623,7 +623,15 @@ class Starmap(object):
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, nargs)
 
-        if self.distribute == 'qsub':
+        elif self.distribute == 'multipool':
+            logging.warn('EXPERIMENTAL: sending tasks to the multipool')
+            from openquake.baselib.multipool import MultiProcessPool
+            multipool = MultiProcessPool()
+            allargs = list(self.task_args)
+            return IterResult(multipool.sendall(self.task_func, iter(allargs)),
+                              self.name, len(allargs), self.progress)
+
+        elif self.distribute == 'qsub':
             logging.warn('EXPERIMENTAL: sending tasks to the grid engine')
             allargs = list(self.task_args)
             return IterResult(qsub(self.task_func, allargs),
