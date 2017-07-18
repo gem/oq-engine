@@ -152,6 +152,7 @@ from multiprocessing.connection import Client, Listener
 from concurrent.futures import (
     as_completed, ThreadPoolExecutor, ProcessPoolExecutor, Future)
 import numpy
+import zmq
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -625,11 +626,11 @@ class Starmap(object):
 
         elif self.distribute == 'multipool':
             logging.warn('EXPERIMENTAL: sending tasks to the multipool')
-            from openquake.baselib.multipool import MultiProcessPool
-            multipool = MultiProcessPool()
             allargs = list(self.task_args)
-            return IterResult(multipool.sendall(self.task_func, iter(allargs)),
-                              self.name, len(allargs), self.progress)
+            start_addr = 'tcp://127.0.0.1:1909'
+            end_addr = 'tcp://127.0.0.1:1910'
+            it = sendall(self.task_func, allargs, start_addr, end_addr)
+            return IterResult(it, self.name, len(allargs), self.progress)
 
         elif self.distribute == 'qsub':
             logging.warn('EXPERIMENTAL: sending tasks to the grid engine')
@@ -795,6 +796,19 @@ class Processmap(BaseStarmap):
     >>> sorted(c.items())
     [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """
+
+
+def sendall(func, allargs, start_addr, end_addr):
+    context = zmq.Context()
+    sender = context.socket(zmq.PUSH)
+    sender.bind(start_addr)
+    for args in allargs:
+        sender.send_pyobj((func, args))
+    receiver = context.socket(zmq.PULL)
+    receiver.bind(end_addr)
+    for args in allargs:
+        yield receiver.recv_pyob()
+
 
 # ######################## support for grid engine ######################## #
 

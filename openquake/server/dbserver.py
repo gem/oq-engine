@@ -25,7 +25,7 @@ import logging
 import subprocess
 from multiprocessing.connection import Listener
 from concurrent.futures import ThreadPoolExecutor
-
+import zmq
 from openquake.baselib import sap
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import valid
@@ -40,6 +40,28 @@ from openquake.server.settings import DATABASE
 executor = ThreadPoolExecutor(1)
 
 
+def worker(begin_addr, end_addr):
+    """
+    A worker receiving commands, executing them and sending back replies
+    """
+    context = zmq.Context()
+    receiver = context.socket(zmq.PULL)
+    receiver.connect(begin_addr)
+    sender = context.socket(zmq.PUSH)
+    sender.connect(end_addr)
+    while True:
+        try:
+            func, args = receiver.recv_pyobj()
+        except KeyboardInterrupt:
+            break
+        if func == 'stop':
+            break
+        triple = safely_call(func, args)
+        sender.send_pyobj(triple)
+
+WORKER = "from openquake.server.dbserver import worker; worker('%s', '%s')"
+
+
 class DbServer(object):
     """
     A server collecting the received commands into a queue
@@ -47,7 +69,34 @@ class DbServer(object):
     def __init__(self, db, address, authkey):
         self.db = db
         self.address = address
+        host, port = address
         self.authkey = authkey
+        self.host_cores = [('127.0.0.1', os.cpu_count())]
+        if host == 'localhost':
+            host = '127.0.0.1'
+        self.begin_address = 'tcp://%s:%s' % (host, port + 1)
+        self.end_address = 'tcp://%s:%s' % (host, port + 2)
+
+    def __enter__(self):
+        # create the workers
+        self.workers = 0
+        for host, cores in self.host_cores:
+            for core in range(cores):
+                args = [sys.executable, '-c', WORKER % (self.begin_address,
+                                                        self.end_address)]
+                if host != '127.0.0.1':
+                    args = ['ssh'] + args
+                logging.warn('Starting %s' % ' '.join(args))
+                subprocess.Popen(args)
+                self.workers += 1
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        context = zmq.Context()
+        sender = context.socket(zmq.PUSH)
+        sender.bind(self.begin_address)
+        for i in range(self.workers):
+            sender.send_pyobj(('stop', i))
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
@@ -173,7 +222,8 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    DbServer(db, addr, config.DBS_AUTHKEY).loop()
+    with DbServer(db, addr, config.DBS_AUTHKEY) as dbs:
+        dbs.loop()
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')
