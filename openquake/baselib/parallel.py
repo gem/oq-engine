@@ -87,11 +87,11 @@ available at the moment:
 `OQ_DISTRIBUTE` set tp "ipython"
    use the ipyparallel concurrency mechanism (experimental)
 
-There is no such a thing as OQ_DISTRIBUTE="threading"; it would be trivial
-to do, but the performance of using threads instead of processes is terrible
-for the kind of applications we are interested in (CPU-dominated, which large
-tasks such that the time to spawn a new process is negligible with respect
-to the time to perform the task).
+There is also an `OQ_DISTRIBUTE`="threadpool"; however the
+performance of using threads instead of processes is normally bad for the
+kind of applications we are interested in (CPU-dominated, which large
+tasks such that the time to spawn a new process is negligible with
+respect to the time to perform the task), so it is not recommended.
 
 The Starmap.apply API
 ====================================
@@ -133,6 +133,7 @@ having finished all the short tasks, but you have to wait for days for
 the single core processing the slow task). The OpenQuake engine does
 a great deal of work trying to split slow sources in more manageable
 fast sources.
+
 """
 from __future__ import print_function
 import os
@@ -148,7 +149,8 @@ import functools
 import subprocess
 import multiprocessing.dummy
 from multiprocessing.connection import Client, Listener
-from concurrent.futures import as_completed, ProcessPoolExecutor, Future
+from concurrent.futures import (
+    as_completed, ThreadPoolExecutor, ProcessPoolExecutor, Future)
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
@@ -511,6 +513,8 @@ class Starmap(object):
         self.results = []
         self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
+        if self.distribute == 'threadpool':
+            self.executor = ThreadPoolExecutor(executor.num_tasks_hint)
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(oqtask):
             self.argnames = inspect.getargspec(oqtask).args
