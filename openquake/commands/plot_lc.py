@@ -34,7 +34,7 @@ def make_figure(periods, losses):
         ax.set_ylabel(lt)
         for s, losses_ in enumerate(losses[lt].T):
             ax.plot(periods, losses_, label=str(s))
-    plt.legend(loc='left')
+    plt.legend(loc='lower right')
     return plt
 
 
