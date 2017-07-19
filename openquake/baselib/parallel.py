@@ -627,9 +627,8 @@ class Starmap(object):
         elif self.distribute == 'zmq':
             logging.warn('EXPERIMENTAL: sending tasks via zmq')
             allargs = list(self.task_args)
-            start_addr = 'tcp://127.0.0.1:1909'
-            end_addr = 'tcp://127.0.0.1:1910'
-            it = sendall(self.task_func, allargs, start_addr, end_addr)
+            it = sendall(self.task_func, allargs,
+                         os.environ['OQ_ZMQ1'], os.environ['OQ_ZMQ2'])
             return IterResult(it, self.name, len(allargs), self.progress)
 
         elif self.distribute == 'qsub':

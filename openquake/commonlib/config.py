@@ -22,7 +22,6 @@ Various utility functions concerned with configuration.
 
 import os
 import sys
-
 from openquake.baselib.python3compat import configparser, encode
 from openquake.hazardlib import valid
 
@@ -146,7 +145,27 @@ def flag_set(section, setting):
     return valid.boolean(get(section, setting) or '')
 
 
+def get_host_cores():
+    """
+    Yields pairs (hostname, number_of_available_cores)
+    """
+    out = []
+    for host_cores in get('dbserver', 'host_cores').split(','):
+        host, cores = host_cores.split()
+        out.append((host, int(cores)))
+    return out
+
+
+def zmq_addresses():
+    """
+    Returns a pair (start_point, end_point) of tcp:// addresses
+    """
+    return 'tcp://%s:%s' % (host, port + 1),  'tcp://%s:%s' % (host, port + 2)
+
+host = get('dbserver', 'host')
+if host == 'localhost':
+    host = '127.0.0.1'
 port = int(get('dbserver', 'port'))
-DBS_ADDRESS = (get('dbserver', 'host'), port)
+DBS_ADDRESS = (host, port)
 DBS_AUTHKEY = encode(get('dbserver', 'authkey'))
 SHARED_DIR_ON = bool(get('directory', 'shared_dir'))

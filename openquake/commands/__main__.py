@@ -37,6 +37,9 @@ if USE_CELERY and 'run' in sys.argv:
     sys.exit('You are on a cluster and you are using oq run?? '
              'Use oq engine --run instead!')
 
+if os.environ.get('OQ_DISTRIBUTE') == 'zmq':
+    os.environ['OQ_ZMQ1'], os.environ['OQ_ZMQ2'] = config.zmq_addresses()
+
 
 def oq():
     modnames = ['openquake.commands.%s' % mod[:-3]
