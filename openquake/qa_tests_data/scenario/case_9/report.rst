@@ -1,10 +1,11 @@
 Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_29183.hdf5 Wed Jun 14 10:03:49 2017
-engine_version                            2.5.0-gite200a20        
-========================================= ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1769.hdf5 Fri Jul  7 07:32:11 2017
+checksum32                               2,404,162,686           
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
 num_sites = 3, num_imts = 1
 
@@ -66,6 +67,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.014     0.0       1     
-reading site collection 4.554E-05 0.0       1     
+filtering sites         0.011     0.0       1     
+reading site collection 3.123E-05 0.0       1     
 ======================= ========= ========= ======

@@ -234,10 +234,12 @@ class EbrPostCalculator(base.RiskCalculator):
 
         # build aggregate loss curves
         if 'agg_loss_table' in self.datastore:
-            itime = oq.investigation_time * oq.ses_per_logic_tree_path
-            b = scientific.LossesByPeriodBuilder(itime, oq.loss_dt(), R)
-            self.datastore['agg_loss-rlzs'] = array = b.build(
-                self.datastore['agg_loss_table'])
+            alt = self.datastore['agg_loss_table']
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            num_losses = max(len(dset) for dset in alt.values())
+            periods = scientific.return_periods(eff_time, num_losses)
+            b = scientific.LossesByPeriodBuilder(periods, oq.loss_dt(), R)
+            self.datastore['agg_loss-rlzs'] = array = b.build(alt)
             self.datastore.set_attrs(
                 'agg_loss-rlzs', return_periods=b.return_periods)
             statnames, stats = zip(*oq.risk_stats())

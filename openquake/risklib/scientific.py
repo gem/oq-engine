@@ -1421,37 +1421,46 @@ def build_loss_curve_dt(curve_resolution, conditional_loss_poes,
     return loss_curve_dt
 
 
-def return_periods(max_period):
+def return_periods(eff_time, num_losses):
     """
-    >>> return_periods(1)
+    :param eff_time: ses_per_logic_tree_path * investigation_time
+    :param num_losses: used to determine the minimum period
+    ;returns: an array of 32 bit periods
+
+    Here are a few examples:
+
+    >>> return_periods(1, 1)
     Traceback (most recent call last):
        ...
-    AssertionError: 1
-    >>> return_periods(2)
+    AssertionError: eff_time too small: 1
+    >>> return_periods(2, 2)
     array([1, 2], dtype=uint32)
-    >>> return_periods(9)
-    array([1, 2, 5, 9], dtype=uint32)
-    >>> return_periods(10)
-    array([ 1,  2,  5, 10], dtype=uint32)
-    >>> return_periods(1000)
+    >>> return_periods(2, 10)
+    array([1, 2], dtype=uint32)
+    >>> return_periods(100, 2)
+    array([ 50, 100], dtype=uint32)
+    >>> return_periods(1000, 1000)
     array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000], dtype=uint32)
     """
-    assert max_period >= 2, max_period
+    assert eff_time >= 2, 'eff_time too small: %s' % eff_time
+    assert num_losses >= 2, 'num_losses too small: %s' % num_losses
+    min_time = eff_time / num_losses
     period = 1
     periods = []
     loop = True
     while loop:
         for val in [1, 2, 5]:
-            if period * val >= max_period:
-                periods.append(max_period)
-                loop = False
-                break
-            periods.append(period * val)
+            time = period * val
+            if time >= min_time:
+                if time > eff_time:
+                    loop = False
+                    break
+                periods.append(time)
         period *= 10
-    return numpy.array(periods, numpy.uint32)
+    return U32(periods)
 
 
-def losses_by_period(losses, return_periods):
+def losses_by_period(losses, return_periods, eff_time):
     """
     Reads an array of losses and returns a subset of them
 
@@ -1461,16 +1470,12 @@ def losses_by_period(losses, return_periods):
     NB: the return period must be ordered integers >= 1. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
-    >>> losses_by_period(losses, return_periods(100))
-    array([  1.,   1.,   2.,   2.,   3.,   4.,  23.])
+    >>> losses_by_period(losses, return_periods(100, 100), 100)
+    array([  1. ,   1. ,   1. ,   3.5,   8. ,  13. ,  23. ])
     """
-    n = len(losses)
-    if n < 2:
-        logging.error('There are not enough losses: %d', n)
-    minp = return_periods[0]
-    maxp = return_periods[-1]
-    idxs = U32(numpy.around((n - 1) / (maxp - minp) * (return_periods - minp)))
-    return numpy.sort(losses)[idxs]
+    periods = eff_time / numpy.arange(len(losses), 0., -1)
+    return numpy.interp(numpy.log(return_periods),
+                        numpy.log(periods), numpy.sort(losses))
 
 
 class LossesByPeriodBuilder(object):
@@ -1479,9 +1484,9 @@ class LossesByPeriodBuilder(object):
 
     :param insured_losses: insured losses flag from the job.ini
     """
-    def __init__(self, itime, loss_dt, num_rlzs):
-        self.itime = itime
-        self.return_periods = return_periods(itime)
+    def __init__(self, return_periods, loss_dt, num_rlzs):
+        self.return_periods = return_periods
+        self.eff_time = return_periods[-1]
         self.loss_dt = loss_dt
         self.num_rlzs = num_rlzs
 
@@ -1501,7 +1506,8 @@ class LossesByPeriodBuilder(object):
                 aval = asset_value[lt.replace('_ins', '')]
                 for r, recs in r_recs:
                     array[a, r][lt] = aval * losses_by_period(
-                        recs['ratios'][:, li], self.return_periods)
+                        recs['ratios'][:, li], self.return_periods,
+                        self.eff_time)
         return array
 
     # not used yet
@@ -1519,7 +1525,7 @@ class LossesByPeriodBuilder(object):
             for li, lt in enumerate(self.loss_dt.names):
                 aval = asset_value[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(
-                    ratios[:, li], self.return_periods)
+                    ratios[:, li], self.return_periods, self.eff_time)
         return array
 
     def build(self, agg_loss_table):
@@ -1533,5 +1539,5 @@ class LossesByPeriodBuilder(object):
             losses = agg_loss_table[rlzstr]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 arr[:, r][lt] = losses_by_period(
-                    losses[:, lti], self.return_periods)
+                    losses[:, lti], self.return_periods, self.eff_time)
         return arr
