@@ -19,7 +19,6 @@
 from __future__ import division
 import os
 import csv
-import gzip
 import zlib
 import zipfile
 import logging
@@ -688,8 +687,8 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
-            for tag in asset.attrib.get('tag', []):
-                exposure.assets_by_tag[tag].append(idx)
+            for item in asset.attrib.get('tag', []):
+                exposure.assets_by_tag['%s-%s' % item].append(idx)
         try:
             costs = asset.costs
         except AttributeError:

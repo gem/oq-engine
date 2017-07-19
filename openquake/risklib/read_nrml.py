@@ -356,19 +356,35 @@ def asset_mean_stddev(value, assetRef, mean, stdDev):
 def damage_triple(value, ds, mean, stddev):
     return ds, valid.positivefloat(mean), valid.positivefloat(stddev)
 
+TAG_CHARACTERS = re.compile(r'[a-zA-Z0-9\.`!#$%&\(\)\+/;@\[\]\^_{|}~-]+')
 
-def tag(value):
+
+def asset_tag(value):
     """
-    Any ASCII character goes into a taxonomy, including spaces.
-    There is also a limit of 100 characters.
+    >>> asset_tag("OCCUPANCY-RES, STATE-06, COUNTY-06075, TRACT-06075020500,"
+    ...     "ZIP-94110, CITY-SAN FRANCISCO, CRESTA-A.1")
+    [('OCCUPANCY', 'RES'), ('STATE', '06'), ('COUNTY', '06075'), ('TRACT', '06075020500'), ('ZIP', '94110'), ('CITY', 'SAN FRANCISCO'), ('CRESTA', 'A.1')]
+    >>> asset_tag("CITY-SAN FRANCISCO, OCCUPANCY")
+    Traceback (most recent call last):
+     ...
+    ValueError: CITY-SAN FRANCISCO, OCCUPANCY: Missing `-` in ' OCCUPANCY'
     """
-    try:
-        value.encode('ascii')
-    except UnicodeEncodeError:
-        raise ValueError('tag %r is not ASCII' % value)
-    if len(value) > 100:
-        raise ValueError('tag %r is longer than 100 characters' % value)
-    return value
+    if len(value) > 256:
+        raise ValueError('tag %r is longer than 256 characters' % value)
+    items = []
+    for item in value.split(','):
+        try:
+            name, val = item.split('-', 1)
+        except ValueError:
+            raise ValueError('%s: Missing `.` in %r' % (value, item))
+        name = name.strip()
+        val = val.strip()
+        valid.simple_id(name)
+        if TAG_CHARACTERS.match(val) is None:
+            raise ValueError('The tag %s contains invalid characters: %s'
+                             % (name, val))
+        items.append((name, val))
+    return items
 
 
 def taxonomy(value):
@@ -393,7 +409,6 @@ def update_validators():
         'vulnerabilityFunction.id': valid.utf8,  # taxonomy
         'consequenceFunction.id': valid.utf8,  # taxonomy
         'asset.id': valid.asset_id,
-        'asset.tag': valid.namelist,
         'costType.name': valid.cost_type,
         'costType.type': valid.cost_type_type,
         'cost.type': valid.cost_type,
@@ -437,6 +452,6 @@ def update_validators():
         'cf': asset_mean_stddev,
         'damage': damage_triple,
         'damageStates': valid.namelist,
-        'tag': tag,
+        'asset.tag': asset_tag,
         'taxonomy': taxonomy,
     })
