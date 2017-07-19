@@ -67,7 +67,7 @@ class DbServer(object):
                     args = [sys.executable, workerpath,
                             self.begin_address, self.end_address]
                     if host != '127.0.0.1':
-                        args = ['ssh'] + args
+                        args = ['ssh', host] + args
                     logging.warn('Starting %s' % ' '.join(args))
                     subprocess.Popen(args)
                     self.workers += 1
