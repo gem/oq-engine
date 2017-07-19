@@ -15,7 +15,7 @@
   </conversions>
   
   <assets>
-    <asset id="a1" number="1" area="100" taxonomy="tax1" tag="s01 c011" >
+    <asset id="a1" number="1" area="100" taxonomy="tax1" tag="state-01, cresta-0.11" >
       <location lon="-122.000" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -30,7 +30,7 @@
       </occupancies>
     </asset>
     
-    <asset id="a2" number="1" area="100" taxonomy="tax2" tag="s01 c012">
+    <asset id="a2" number="1" area="100" taxonomy="tax2" tag="state-01, cresta-0.12">
       <location lon="-122.114" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -45,7 +45,7 @@
       </occupancies>
     </asset>
     
-    <asset id="a3" number="1" area="100" taxonomy="tax1" tag="s02 c021">
+    <asset id="a3" number="1" area="100" taxonomy="tax1" tag="state-02, cresta-0.21">
       <location lon="-122.570" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -60,7 +60,7 @@
       </occupancies>
     </asset>
     
-    <asset id="a4" number="1" area="100" taxonomy="tax3" tag="s02 c022">
+    <asset id="a4" number="1" area="100" taxonomy="tax3" tag="state-02, cresta-0.22">
       <location lon="-122.000" lat="38.000" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -75,7 +75,7 @@
       </occupancies>
     </asset>
     
-    <asset id="a5" number="1" area="100" taxonomy="tax1" tag="s02 c023">
+    <asset id="a5" number="1" area="100" taxonomy="tax1" tag="state-02, cresta-0.23">
       <location lon="-122.000" lat="37.910" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -90,7 +90,7 @@
       </occupancies>
     </asset>
     
-    <asset id="a6" number="1" area="100" taxonomy="tax2" tag="s03 c031">
+    <asset id="a6" number="1" area="100" taxonomy="tax2" tag="state-03, cresta-0.31">
       <location lon="-122.000" lat="38.225" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -105,7 +105,7 @@
       </occupancies>
     </asset>
     
-    <asset id="a7" number="1" area="100" taxonomy="tax1" tag="s03 c032">
+    <asset id="a7" number="1" area="100" taxonomy="tax1" tag="state-03, cresta-0.32">
       <location lon="-121.886" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
