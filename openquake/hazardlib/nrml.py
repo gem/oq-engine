@@ -230,7 +230,7 @@ validators = {
     'epsBinEdges': valid.integers,
     'lonBinEdges': valid.longitudes,
     'latBinEdges': valid.latitudes,
-    'type': valid.namelist,
+    'type': valid.simple_id,
     'dims': valid.positiveints,
     'poE': valid.probability,
     'iml': valid.positivefloat,
