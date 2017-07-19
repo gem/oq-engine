@@ -36,33 +36,11 @@ from openquake.server.settings import DATABASE
 
 zmq = os.environ.get('OQ_DISTRIBUTE') == 'zmq'
 if zmq:
-    import zmq
+    from openquake.server import zmqworker
 
 # using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
 # ref: https://bugs.python.org/issue27126
 executor = ThreadPoolExecutor(1)
-
-
-def worker(begin_addr, end_addr):
-    """
-    A worker receiving commands, executing them and sending back replies
-    """
-    context = zmq.Context()
-    receiver = context.socket(zmq.PULL)
-    receiver.connect(begin_addr)
-    sender = context.socket(zmq.PUSH)
-    sender.connect(end_addr)
-    while True:
-        try:
-            func, args = receiver.recv_pyobj()
-        except KeyboardInterrupt:
-            break
-        if func == 'stop':
-            break
-        triple = safely_call(func, args)
-        sender.send_pyobj(triple)
-
-WORKER = "from openquake.server.dbserver import worker; worker('%s', '%s')"
 
 
 class DbServer(object):
@@ -81,12 +59,13 @@ class DbServer(object):
 
     def __enter__(self):
         if zmq:
+            workerpath = os.path.abspath(zmqworker.__file__)
             # create the workers
             self.workers = 0
             for host, cores in config.get_host_cores():
                 for core in range(cores):
-                    args = [sys.executable, '-c', WORKER % (self.begin_address,
-                                                            self.end_address)]
+                    args = [sys.executable, workerpath,
+                            self.begin_address, self.end_address]
                     if host != '127.0.0.1':
                         args = ['ssh'] + args
                     logging.warn('Starting %s' % ' '.join(args))
