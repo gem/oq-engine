@@ -1,5 +1,3 @@
-import sys
-import zmq
 from openquake.baselib.parallel import safely_call
 
 
@@ -25,4 +23,6 @@ def worker(begin_addr, end_addr):
     sender.close()
 
 if __name__ == '__main__':
+    import sys
+    import zmq  # imported only if used
     worker(*sys.argv[1:])
