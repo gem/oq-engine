@@ -34,7 +34,8 @@ def make_figure(periods, losses):
         ax.set_ylabel(lt)
         for s, losses_ in enumerate(losses[lt].T):
             ax.plot(periods, losses_, label=str(s))
-    plt.legend(loc='lower right')
+    if losses.shape[1] < 20:  # show legend only if < 20 realizations
+        plt.legend(loc='lower right')
     return plt
 
 
