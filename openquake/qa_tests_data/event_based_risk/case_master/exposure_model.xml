@@ -15,7 +15,7 @@
   </conversions>
   
   <assets>
-    <asset id="a1" number="1" area="100" taxonomy="tax1" tag="state-01, county-011" >
+    <asset id="a1" number="1" area="100" taxonomy="tax1">
       <location lon="-122.000" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -28,9 +28,10 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags state="01" cresta="0.11" />
     </asset>
     
-    <asset id="a2" number="1" area="100" taxonomy="tax2" tag="state-01, county-012">
+    <asset id="a2" number="1" area="100" taxonomy="tax2">
       <location lon="-122.114" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -43,9 +44,10 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags state="01" cresta="0.12" />
     </asset>
     
-    <asset id="a3" number="1" area="100" taxonomy="tax1" tag="state-02, county-021">
+    <asset id="a3" number="1" area="100" taxonomy="tax1">
       <location lon="-122.570" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -58,9 +60,10 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags state="02" cresta="0.21" />
     </asset>
     
-    <asset id="a4" number="1" area="100" taxonomy="tax3" tag="state-02, county-022">
+    <asset id="a4" number="1" area="100" taxonomy="tax3">
       <location lon="-122.000" lat="38.000" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -73,9 +76,10 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags state="02" cresta="0.22" />
     </asset>
     
-    <asset id="a5" number="1" area="100" taxonomy="tax1" tag="state-02, county-023">
+    <asset id="a5" number="1" area="100" taxonomy="tax1">
       <location lon="-122.000" lat="37.910" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -88,9 +92,10 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags state="02" cresta="0.23" />
     </asset>
     
-    <asset id="a6" number="1" area="100" taxonomy="tax2" tag="state-03, county-031">
+    <asset id="a6" number="1" area="100" taxonomy="tax2">
       <location lon="-122.000" lat="38.225" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -103,9 +108,10 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags state="03" cresta="0.31" />
     </asset>
     
-    <asset id="a7" number="1" area="100" taxonomy="tax1" tag="state-03, county-032">
+    <asset id="a7" number="1" area="100" taxonomy="tax1">
       <location lon="-121.886" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
@@ -118,6 +124,7 @@
         <occupancy occupants="4" period="transit" />
         <occupancy occupants="6" period="night" />
       </occupancies>
+      <tags state="03" cresta="0.32" />
     </asset>
     
   </assets>
