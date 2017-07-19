@@ -75,6 +75,7 @@ class DbServer(object):
 
     def __exit__(self, etype, exc, tb):
         if zmq:
+            import zmq
             sender = zmq.Context().socket(zmq.PUSH)
             sender.bind(self.begin_address)
             for i in range(self.workers):
