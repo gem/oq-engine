@@ -687,8 +687,12 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
-            for item in asset.attrib.get('tag', []):
-                exposure.assets_by_tag['%s-%s' % item].append(idx)
+            tagnode = getattr(asset, 'tags', None)
+            if tagnode is not None:
+                for item in tagnode.attrib.items():
+                    valid.simple_id(item[0])  # name
+                    valid.nice_string(item[1])  # value
+                    exposure.assets_by_tag['%s-%s' % item].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
