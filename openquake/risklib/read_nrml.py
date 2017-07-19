@@ -376,7 +376,7 @@ def asset_tag(value):
         try:
             name, val = item.split('-', 1)
         except ValueError:
-            raise ValueError('%s: Missing `.` in %r' % (value, item))
+            raise ValueError('%s: Missing `-` in %r' % (value, item))
         name = name.strip()
         val = val.strip()
         valid.simple_id(name)
