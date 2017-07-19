@@ -152,7 +152,6 @@ from multiprocessing.connection import Client, Listener
 from concurrent.futures import (
     as_completed, ThreadPoolExecutor, ProcessPoolExecutor, Future)
 import numpy
-import zmq
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -798,6 +797,7 @@ class Processmap(BaseStarmap):
 
 
 def sendall(func, allargs, start_addr, end_addr):
+    import zmq
     context = zmq.Context()
     sender = context.socket(zmq.PUSH)
     try:
