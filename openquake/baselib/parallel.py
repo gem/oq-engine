@@ -800,14 +800,23 @@ class Processmap(BaseStarmap):
 def sendall(func, allargs, start_addr, end_addr):
     context = zmq.Context()
     sender = context.socket(zmq.PUSH)
-    sender.bind(start_addr)
+    try:
+        sender.bind(start_addr)
+    except Exception as exc:  # invalid address
+        sender.close()
+        raise exc.__class__('%s: %s' % (exc, start_addr))
+    receiver = context.socket(zmq.PULL)
+    try:
+        receiver.bind(end_addr)
+    except Exception as exc:  # invalid address
+        receiver.close()
+        raise exc.__class__('%s: %s' % (exc, end_addr))
     for args in allargs:
         sender.send_pyobj((func, args))
-    receiver = context.socket(zmq.PULL)
-    receiver.bind(end_addr)
+    sender.close()
     for args in allargs:
         yield receiver.recv_pyobj()
-
+    receiver.close()
 
 # ######################## support for grid engine ######################## #
 
