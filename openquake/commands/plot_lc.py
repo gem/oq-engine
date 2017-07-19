@@ -45,9 +45,9 @@ def plot_lc(calc_id, aid=None):
     """
     # read the hazard data
     dstore = datastore.read(calc_id)
-    dset = dstore['losses_by_period']
+    dset = dstore['agg_loss-rlzs']
     if aid is None:  # plot the global curves
-        plt = make_figure(dset.attrs['periods'], dset.value)
+        plt = make_figure(dset.attrs['return_periods'], dset.value)
     else:
         sys.exit('Not implemented uyet')
     plt.show()
