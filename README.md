@@ -39,6 +39,7 @@ Current stable version is the **OpenQuake Engine 2.5** 'Fourier'. The documentat
 * [About](https://github.com/gem/oq-engine/blob/master/doc/about.md)
 * [FAQ](https://github.com/gem/oq-engine/blob/master/doc/faq.md)
 * [Manuals](http://www.globalquakemodel.org/openquake/support/documentation/engine/#manual-latest-stable)
+* [OQ Commands](https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
 * [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
