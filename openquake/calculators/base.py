@@ -24,7 +24,10 @@ import logging
 import operator
 import traceback
 import collections
-from urllib.parse import unquote_plus
+try:  # with Python 3
+    from urllib.parse import unquote_plus
+except ImportError:  # with Python 2
+    from urllib import unquote_plus
 import numpy
 
 from openquake.baselib import general, hdf5, __version__ as engine_version
