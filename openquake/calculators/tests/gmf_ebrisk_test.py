@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import unittest
 from nose.plugins.attrib import attr
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.gmf_ebrisk import case_1
