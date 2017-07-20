@@ -613,7 +613,6 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
     assets = []
-    taxonomies = set()
     asset_refs = []
     assets_by_tag = collections.defaultdict(list)
     exp = Exposure(
@@ -621,7 +620,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, assets, taxonomies, asset_refs, cc, assets_by_tag)
+        area.attrib, assets, asset_refs, cc, assets_by_tag)
     return exp, exposure.assets
 
 
@@ -693,6 +692,7 @@ def get_exposure(oqparam):
                     valid.simple_id(item[0])  # name
                     valid.nice_string(item[1])  # value
                     exposure.assets_by_tag['%s-%s' % item].append(idx)
+            exposure.assets_by_tag['taxonomy-' + taxonomy].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
@@ -742,7 +742,6 @@ def get_exposure(oqparam):
             deductibles, insurance_limits, retrofitteds,
             exposure.cost_calculator)
         exposure.assets.append(ass)
-        exposure.taxonomies.add(taxonomy)
     if region:
         logging.info('Read %d assets within the region_constraint '
                      'and discarded %d assets outside the region',
@@ -753,16 +752,14 @@ def get_exposure(oqparam):
     # sanity checks
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
     assert values, 'Could not find any value??'
-    common = exposure.taxonomies & set(exposure.assets_by_tag)
-    assert not common, 'tags %s are overriding taxonomies' % common
     return exposure
 
 
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies', 'asset_refs',
-                 'cost_calculator', 'assets_by_tag'])
+                 'area', 'assets', 'asset_refs', 'cost_calculator',
+                 'assets_by_tag'])
 
 
 def get_sitecol_assetcol(oqparam, exposure):

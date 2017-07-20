@@ -24,7 +24,7 @@ import logging
 import operator
 import traceback
 import collections
-
+from urllib.parse import unquote_plus
 import numpy
 
 from openquake.baselib import general, hdf5, __version__ as engine_version
@@ -137,7 +137,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     @property
     def taxonomies(self):
-        return self.datastore['assetcol/taxonomies'].value
+        L = len('taxonomy-')
+        return [unquote_plus(key[L:])
+                for key in self.datastore['assetcol/aids_by_tag']
+                if key.startswith('taxonomy-')]
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
