@@ -15,6 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import re
 import logging
 import itertools
 import numpy
@@ -356,6 +357,19 @@ def damage_triple(value, ds, mean, stddev):
     return ds, valid.positivefloat(mean), valid.positivefloat(stddev)
 
 
+def taxonomy(value):
+    """
+    Any ASCII character goes into a taxonomy, except spaces.
+    """
+    try:
+        value.encode('ascii')
+    except UnicodeEncodeError:
+        raise ValueError('tag %r is not ASCII' % value)
+    if re.search('\s', value):
+        raise ValueError('The taxonomy %r contains whitespace chars' % value)
+    return value
+
+
 def update_validators():
     """
     Call this to updade the global nrml.validators
@@ -408,4 +422,5 @@ def update_validators():
         'cf': asset_mean_stddev,
         'damage': damage_triple,
         'damageStates': valid.namelist,
+        'taxonomy': taxonomy,
     })
