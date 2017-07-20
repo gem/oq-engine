@@ -594,7 +594,7 @@ class HazardCalculator(BaseCalculator):
         """For compatibility with the engine"""
 
 
-def get_aids(assets_by_site):
+def _get_aids(assets_by_site):
     aids = []
     for assets in assets_by_site:
         for asset in assets:
@@ -660,7 +660,7 @@ class RiskCalculator(HazardCalculator):
                     for assets in reduced_assets:
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
-                reduced_mask = self.tagmask[get_aids(reduced_assets)]
+                reduced_mask = self.tagmask[_get_aids(reduced_assets)]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
