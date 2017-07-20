@@ -1534,7 +1534,8 @@ class LossesByPeriodBuilder(object):
         :returns: an array of (P, R) values of dtype loss_dt
         """
         P = len(self.return_periods)
-        arr = numpy.zeros((P, self.num_rlzs), self.loss_dt)
+        arr = numpy.empty((P, self.num_rlzs), self.loss_dt)
+        arr.fill(numpy.nan)
         for rlzstr in agg_loss_table:
             r = int(rlzstr[4:])
             losses = agg_loss_table[rlzstr]['loss']
