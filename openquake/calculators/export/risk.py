@@ -594,7 +594,7 @@ def export_losses_by_tag_csv(ekey, dstore):
     else:  # rlzs
         kinds = rlzs
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dt = numpy.dtype([('tag', (numpy.string_, 100))] + oq.loss_dt_list())
+    dt = numpy.dtype([('tag', tags.dtype)] + oq.loss_dt_list())
     for kind, values in zip(kinds, value.transpose(1, 0, 2)):
         fname = dstore.build_fname(key, kind, ekey[1])
         array = numpy.zeros(len(values), dt)
