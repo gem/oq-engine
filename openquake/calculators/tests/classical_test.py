@@ -117,6 +117,14 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__, kind='all')
 
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_7.__file__, 'job.ini', mean_hazard_curves='false',
+                hazard_maps='true', poes='0.1')
+        self.assertEqual(
+            'The job.ini says that no statistics should be computed, but then '
+            'there is no output!', str(ctx.exception))
+
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):
         self.assert_curves_ok(
