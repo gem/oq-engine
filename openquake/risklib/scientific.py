@@ -1471,7 +1471,7 @@ def losses_by_period(losses, return_periods, eff_time):
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, return_periods(100, 100), 100)
-    array([  1. ,   1. ,   1. ,   3.5,   8. ,  13. ,  23. ])
+    array([  3.5,   8. ,  13. ,  23. ])
     """
     periods = eff_time / numpy.arange(len(losses), 0., -1)
     return_periods = [rp for rp in return_periods if rp >= periods[0]]
