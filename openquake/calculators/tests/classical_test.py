@@ -119,7 +119,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(
-                case_7.__file__, 'job.ini', mean_hazard_curves='false')
+                case_7.__file__, 'job.ini', mean_hazard_curves='false',
+                hazard_maps='true')
         self.assertEqual(
             'The job.ini says that no statistics should be computed, but then '
             'there is no output!', str(ctx.exception))
