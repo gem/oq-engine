@@ -44,11 +44,12 @@ def check_total_losses(calc):
         for li, lt in enumerate(loss_dt.names):
             data1[li] += dset['loss'][:, li].sum()
 
-    # check the sums are consistent with the ones coming from losses_by_taxon
+    # check the sums are consistent with the ones coming from losses_by_tag
+    tax_idx = dstore['assetcol'].get_tax_idx()
     data2 = numpy.zeros(LI, numpy.float32)
-    lbt = dstore['losses_by_taxon-rlzs']
+    lbt = dstore['losses_by_tag-rlzs']
     for li in range(LI):
-        data2[li] += lbt[:, :, li].sum()
+        data2[li] += lbt[tax_idx, :, li].sum()
     numpy.testing.assert_allclose(data1, data2, 1E-6)
 
     # test the asset_loss_table exporter; notice that I need to disable
@@ -215,8 +216,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
-        fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'losses_by_taxon-stats not exported?'
+        fnames = export(('losses_by_tag-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'losses_by_tag-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
