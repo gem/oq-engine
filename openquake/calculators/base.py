@@ -24,7 +24,10 @@ import logging
 import operator
 import traceback
 import collections
-
+try:  # with Python 3
+    from urllib.parse import unquote_plus
+except ImportError:  # with Python 2
+    from urllib import unquote_plus
 import numpy
 
 from openquake.baselib import general, hdf5, __version__ as engine_version
@@ -137,7 +140,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     @property
     def taxonomies(self):
-        return self.datastore['assetcol/taxonomies'].value
+        L = len('taxonomy-')
+        return [unquote_plus(key[L:])
+                for key in self.datastore['assetcol/aids_by_tag']
+                if key.startswith('taxonomy-')]
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
@@ -359,9 +365,11 @@ class HazardCalculator(BaseCalculator):
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), riskinput.AssetCollection(
-            assets_by_site, self.exposure.cost_calculator,
-            self.oqparam.time_event, time_events=hdf5.array_of_vstr(
-                sorted(self.exposure.time_events)))
+            assets_by_site,
+            self.exposure.assets_by_tag,
+            self.exposure.cost_calculator,
+            self.oqparam.time_event,
+            time_events=hdf5.array_of_vstr(sorted(self.exposure.time_events)))
 
     def count_assets(self):
         """
@@ -586,6 +594,14 @@ class HazardCalculator(BaseCalculator):
         """For compatibility with the engine"""
 
 
+def _get_aids(assets_by_site):
+    aids = []
+    for assets in assets_by_site:
+        for asset in assets:
+            aids.append(asset.ordinal)
+    return sorted(aids)
+
+
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -627,6 +643,7 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
         assets_by_site = self.assetcol.assets_by_site()
+        self.tagmask = self.assetcol.tagmask()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             sid_weight_pairs = [
@@ -643,11 +660,12 @@ class RiskCalculator(HazardCalculator):
                     for assets in reduced_assets:
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
+                reduced_mask = self.tagmask[_get_aids(reduced_assets)]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
                         kind, hazards[:, sids], imtls, eids),
-                    reduced_assets, reduced_eps)
+                    reduced_assets, reduced_mask, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
