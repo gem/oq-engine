@@ -19,7 +19,6 @@
 from __future__ import division
 import os
 import csv
-import gzip
 import zlib
 import zipfile
 import logging
@@ -613,12 +612,15 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
+    assets = []
+    asset_refs = []
+    assets_by_tag = collections.defaultdict(list)
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, [], set(), [], cc)
+        area.attrib, assets, asset_refs, cc, assets_by_tag)
     return exp, exposure.assets
 
 
@@ -684,6 +686,13 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
+            tagnode = getattr(asset, 'tags', None)
+            if tagnode is not None:
+                for item in tagnode.attrib.items():
+                    valid.simple_id(item[0])  # name
+                    valid.nice_string(item[1])  # value
+                    exposure.assets_by_tag['%s-%s' % item].append(idx)
+            exposure.assets_by_tag['taxonomy-' + taxonomy].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
@@ -733,7 +742,6 @@ def get_exposure(oqparam):
             deductibles, insurance_limits, retrofitteds,
             exposure.cost_calculator)
         exposure.assets.append(ass)
-        exposure.taxonomies.add(taxonomy)
     if region:
         logging.info('Read %d assets within the region_constraint '
                      'and discarded %d assets outside the region',
@@ -741,7 +749,7 @@ def get_exposure(oqparam):
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
 
-    # sanity check
+    # sanity checks
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
     assert values, 'Could not find any value??'
     return exposure
@@ -750,8 +758,8 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies', 'asset_refs',
-                 'cost_calculator'])
+                 'area', 'assets', 'asset_refs', 'cost_calculator',
+                 'assets_by_tag'])
 
 
 def get_sitecol_assetcol(oqparam, exposure):
@@ -770,7 +778,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = riskinput.AssetCollection(
-        assets_by_site, exposure.cost_calculator,
+        assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
     return sitecol, assetcol
