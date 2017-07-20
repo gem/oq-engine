@@ -32,7 +32,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         test_dir = os.path.dirname(pkg.__file__)
         out = self.run_calc(test_dir, job_ini, exports=exports)
         got = (out[kind + '_by_asset', exports] +
-               out[kind + '_by_taxon', exports] +
+               out[kind + '_by_tag', exports] +
                out[kind + '_total', exports])
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
