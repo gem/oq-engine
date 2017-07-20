@@ -175,8 +175,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset, multi_stat_dt)
         self.datastore['dmg_by_tag'] = dist_by_tag(
             result['d_tag'], multi_stat_dt)
+        by_taxon = result['d_tag'][self.assetcol.get_tax_idx()]
         self.datastore['dmg_total'] = dist_total(
-            result['d_tag'], multi_stat_dt)
+            by_taxon, multi_stat_dt)
 
         # consequence distributions
         if result['c_asset']:
@@ -188,5 +189,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['losses_by_asset'] = c_asset
             self.datastore['losses_by_tag'] = dist_by_tag(
                 result['c_tag'], multi_stat_dt)
+            by_taxon = result['c_tag'][self.assetcol.get_tax_idx()]
             self.datastore['losses_total'] = dist_total(
-                result['c_tag'], multi_stat_dt)
+                by_taxon, multi_stat_dt)
