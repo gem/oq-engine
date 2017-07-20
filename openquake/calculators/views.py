@@ -463,7 +463,7 @@ def view_exposure_info(token, dstore):
     Display info about the exposure model
     """
     assetcol = dstore['assetcol/array'][:]
-    taxonomies = dstore['assetcol/taxonomies'][:]
+    taxonomies = sorted(set(dstore['assetcol'].taxonomies))
     cc = dstore['assetcol/cost_calculator']
     ra_flag = ['relative', 'absolute']
     data = [('#assets', len(assetcol)),
