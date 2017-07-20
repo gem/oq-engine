@@ -19,7 +19,10 @@
 import operator
 import logging
 import collections
-from urllib.parse import unquote_plus
+try:  # with Python 3
+    from urllib.parse import unquote_plus
+except ImportError:  # with Python 2
+    from urllib import unquote_plus
 import numpy
 
 from openquake.baselib import hdf5
