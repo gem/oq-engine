@@ -43,4 +43,4 @@ scenario_risk:
   losses_by_asset, agglosses-rlzs
 
 scenario_damage:
-  dmg_by_asset, dmg_by_taxon, dmg_total, losses_by_asset, losses_by_taxon, losses_total
+  dmg_by_asset, dmg_by_tag, dmg_total, losses_by_asset, losses_by_tag, losses_total
