@@ -87,11 +87,11 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
         dictionary of extra parameters
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_taxonomy': damage array of shape T, R, L, E, D,
+                      'd_tag': damage array of shape T, R, L, E, D,
                       'c_asset': [(l, r, a, mean-stddev), ...],
                       'c_tag': damage array of shape T, R, L, E}
 
-    `d_asset` and `d_taxonomy` are related to the damage distributions
+    `d_asset` and `d_tag` are related to the damage distributions
     whereas `c_asset` and `c_tag` are the consequence distributions.
     If there is no consequence model `c_asset` is an empty list and
     `c_tag` is a zero-valued array.
