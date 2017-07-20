@@ -1474,6 +1474,7 @@ def losses_by_period(losses, return_periods, eff_time):
     array([  1. ,   1. ,   1. ,   3.5,   8. ,  13. ,  23. ])
     """
     periods = eff_time / numpy.arange(len(losses), 0., -1)
+    return_periods = [rp for rp in return_periods if rp >= periods[0]]
     return numpy.interp(numpy.log(return_periods),
                         numpy.log(periods), numpy.sort(losses))
 
@@ -1538,6 +1539,7 @@ class LossesByPeriodBuilder(object):
             r = int(rlzstr[4:])
             losses = agg_loss_table[rlzstr]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
-                arr[:, r][lt] = losses_by_period(
+                lbp = losses_by_period(
                     losses[:, lti], self.return_periods, self.eff_time)
+                arr[slice(P - len(lbp), P), r][lt] = lbp
         return arr
