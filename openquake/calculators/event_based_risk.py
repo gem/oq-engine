@@ -41,11 +41,11 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
+def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
     # update the result dictionary and the agg array with each output
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
-    losses_by_taxon = result['losses_by_taxon']
+    losses_by_tag = result['losses_by_tag']
     ass = result['assratios']
     for outs in outputs:
         r = outs.r
@@ -72,9 +72,9 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                     aggr[indices, l + L * i] += losses[:, i]
 
                 # losses by taxonomy
-                t = taxid[asset.taxonomy]
                 for i in range(I):
-                    losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
+                    tot = losses[:, i].sum()
+                    losses_by_tag[tagmask[aid], r, l + L * i] += tot
 
                 if param['asset_loss_table']:
                     for i in range(I):
@@ -85,22 +85,23 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
 
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
-    data = sorted(ass)  # sort by aid, r
-    lrs_idx = result['lrs_idx']  # aid -> indices
-    n = 0
-    all_ratios = []
-    for aid, agroup in itertools.groupby(data, operator.itemgetter(0)):
-        for r, rgroup in itertools.groupby(agroup, operator.itemgetter(1)):
-            for e, egroup in itertools.groupby(
-                    rgroup, operator.itemgetter(2)):
-                ratios = numpy.zeros(L * I, F32)
-                for rec in egroup:
-                    ratios[rec[3]] = rec[4]
-                all_ratios.append((r, ratios))
-        n1 = len(all_ratios)
-        lrs_idx[aid].append((n, n1))
-        n = n1
-    result['assratios'] = numpy.array(all_ratios, param['lrs_dt'])
+    if param['asset_loss_table']:
+        data = sorted(ass)  # sort by aid, r
+        lrs_idx = result['lrs_idx']  # aid -> indices
+        n = 0
+        all_ratios = []
+        for aid, agroup in itertools.groupby(data, operator.itemgetter(0)):
+            for r, rgroup in itertools.groupby(agroup, operator.itemgetter(1)):
+                for e, egroup in itertools.groupby(
+                        rgroup, operator.itemgetter(2)):
+                    ratios = numpy.zeros(L * I, F32)
+                    for rec in egroup:
+                        ratios[rec[3]] = rec[4]
+                    all_ratios.append((r, ratios))
+            n1 = len(all_ratios)
+            lrs_idx[aid].append((n, n1))
+            n = n1
+        result['assratios'] = numpy.array(all_ratios, param['lrs_dt'])
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -118,27 +119,26 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     """
     riskinput.hazard_getter.init()
     assetcol = param['assetcol']
-    A = len(assetcol)
     I = param['insured_losses'] + 1
     eids = riskinput.hazard_getter.eids
     E = len(eids)
     L = len(riskmodel.lti)
-    taxid = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
-    T = len(taxid)
+    tagmask = assetcol.tagmask()
+    A, T = tagmask.shape
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L * I), F32))  # r -> array
     result = dict(agglosses=AccumDict(), assratios=[],
                   lrs_idx=AccumDict(accum=[]),  # aid -> start_stop list
-                  losses_by_taxon=numpy.zeros((T, R, L * I), F32),
+                  losses_by_tag=numpy.zeros((T, R, L * I), F32),
                   aids=None)
     if param['avg_losses']:
         result['avglosses'] = AccumDict(accum=numpy.zeros(A, F64))
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, taxid, agg, idx, result, param)
+    _aggregate(outputs, riskmodel, tagmask, agg, idx, result, param)
     for r in sorted(agg):
         records = [(eids[i], loss) for i, loss in enumerate(agg[r])
                    if loss.sum() > 0]
@@ -455,10 +455,12 @@ class EbriskCalculator(base.RiskCalculator):
         """
         self.R = num_rlzs
         self.A = len(self.assetcol)
-        num_tax = len(self.assetcol.taxonomies)
-        self.datastore.create_dset('losses_by_taxon-rlzs', F32,
-                                   (num_tax, self.R, self.L * self.I))
-
+        tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+        T = len(tags)
+        self.datastore.create_dset('losses_by_tag-rlzs', F32,
+                                   (T, self.R, self.L * self.I))
+        self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
+                                 nbytes=4 * T * self.R * self.L * self.I)
         if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
             # save all_loss_ratios
             self.alr_nbytes = 0
@@ -496,7 +498,7 @@ class EbriskCalculator(base.RiskCalculator):
         Save the event loss tables incrementally.
 
         :param dic:
-            dictionary with agglosses, assratios, losses_by_taxon, avglosses,
+            dictionary with agglosses, assratios, losses_by_tag, avglosses,
             lrs_idx
         :param offset:
             realization offset
@@ -504,7 +506,7 @@ class EbriskCalculator(base.RiskCalculator):
         aids = dic.pop('aids')
         agglosses = dic.pop('agglosses')
         assratios = dic.pop('assratios')
-        losses_by_taxon = dic.pop('losses_by_taxon')
+        losses_by_tag = dic.pop('losses_by_tag')
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
         with self.monitor('saving event loss table', autoflush=True):
@@ -524,12 +526,12 @@ class EbriskCalculator(base.RiskCalculator):
                 self.alr_nbytes += assratios.nbytes
 
         # saving losses by taxonomy is ultra-fast, so it is not monitored
-        dset = self.datastore['losses_by_taxon-rlzs']
-        for r in range(losses_by_taxon.shape[1]):
+        dset = self.datastore['losses_by_tag-rlzs']
+        for r in range(losses_by_tag.shape[1]):
             if aids is None:
-                dset[:, r + offset, :] += losses_by_taxon[:, r, :]
+                dset[:, r + offset, :] += losses_by_tag[:, r, :]
             else:
-                dset[aids, r + offset, :] += losses_by_taxon[:, r, :]
+                dset[aids, r + offset, :] += losses_by_tag[:, r, :]
 
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
