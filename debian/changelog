@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Implemented aggregation by asset tag in the risk calculators
+  * Fixed a small bug in the HMTK (in `get_depth_pmf`)
   * Extended the demo LogicTreeCase1ClassicalPSHA to two IMTs and points
   * Added a documentation page `oq-commands.md`
   * Removed the automatic gunzip functionality and added an automatic
