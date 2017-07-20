@@ -94,7 +94,7 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
     `d_asset` and `d_taxonomy` are related to the damage distributions
     whereas `c_asset` and `c_tag` are the consequence distributions.
     If there is no consequence model `c_asset` is an empty list and
-    `c_tag` is a zero-value array.
+    `c_tag` is a zero-valued array.
     """
     c_models = param['consequence_models']
     L = len(riskmodel.loss_types)
