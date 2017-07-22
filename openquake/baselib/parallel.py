@@ -624,10 +624,10 @@ class Starmap(object):
             return IterResult([fut], self.name, nargs)
 
         elif self.distribute == 'zmq':
+            from openquake.baselib import zeromq as z
             logging.warn('EXPERIMENTAL: sending tasks via zmq')
             allargs = list(self.task_args)
-            it = sendall(self.task_func, allargs,
-                         os.environ['OQ_ZMQ1'], os.environ['OQ_ZMQ2'])
+            it = z.starmap(os.environ['OQ_FRONTEND'], self.task_func, allargs)
             return IterResult(it, self.name, len(allargs), self.progress)
 
         elif self.distribute == 'qsub':
@@ -794,29 +794,6 @@ class Processmap(BaseStarmap):
     >>> sorted(c.items())
     [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """
-
-
-def sendall(func, allargs, start_addr, end_addr):
-    import zmq
-    context = zmq.Context()
-    sender = context.socket(zmq.PUSH)
-    try:
-        sender.bind(start_addr)
-    except Exception as exc:  # invalid address
-        sender.close()
-        raise exc.__class__('%s: %s' % (exc, start_addr))
-    receiver = context.socket(zmq.PULL)
-    try:
-        receiver.bind(end_addr)
-    except Exception as exc:  # invalid address
-        receiver.close()
-        raise exc.__class__('%s: %s' % (exc, end_addr))
-    for args in allargs:
-        sender.send_pyobj((func, args))
-    sender.close()
-    for args in allargs:
-        yield receiver.recv_pyobj()
-    receiver.close()
 
 # ######################## support for grid engine ######################## #
 

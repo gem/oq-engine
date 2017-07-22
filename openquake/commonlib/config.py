@@ -156,7 +156,7 @@ def get_host_cores():
     return out
 
 
-def zmq_addresses():
+def zmq_urls():
     """
     Returns a pair (start_point, end_point) of tcp:// addresses
     """

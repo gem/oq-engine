@@ -36,7 +36,7 @@ from openquake.server.settings import DATABASE
 
 zmq = os.environ.get('OQ_DISTRIBUTE') == 'zmq'
 if zmq:
-    from openquake.server import zmqworker
+    from openquake.baselib import zeromq as z
 
 # using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
 # ref: https://bugs.python.org/issue27126
@@ -50,37 +50,41 @@ class DbServer(object):
     def __init__(self, db, address, authkey):
         self.db = db
         self.address = address
-        host, port = address
+        host, self.port = address
         self.authkey = authkey
         if host == 'localhost':
             host = '127.0.0.1'
-        self.begin_address = 'tcp://%s:%s' % (host, port + 1)
-        self.end_address = 'tcp://%s:%s' % (host, port + 2)
+        self.frontend_url = 'tcp://%s:%s' % (host, self.port + 1)
+        self.backend_url = 'tcp://%s:%s' % (host, self.port + 2)
 
     def __enter__(self):
         if zmq:
-            workerpath = os.path.abspath(zmqworker.__file__)
+            workerpath = os.path.abspath(z.__file__)
             # create the workers
             self.workers = 0
             for host, cores in config.get_host_cores():
                 for core in range(cores):
-                    args = [sys.executable, workerpath,
-                            self.begin_address, self.end_address]
+                    args = [sys.executable, workerpath, self.backend_url]
                     if host != '127.0.0.1':
                         args = ['ssh', host] + args
-                    logging.warn('Starting %s' % ' '.join(args))
+                    logging.warn('zmq worker started with %s on %s',
+                                 sys.executable, self.backend_url)
                     subprocess.Popen(args)
                     self.workers += 1
+            self.context = z.Context()
+            z.Thread(
+                z.proxy, self.context, self.frontend_url, self.backend_url
+            ).start()
+            logging.warn('zmq proxy started on ports %d, %d',
+                         self.port + 1, self.port + 2)
         return self
 
     def __exit__(self, etype, exc, tb):
         if zmq:
-            import zmq
-            sender = zmq.Context().socket(zmq.PUSH)
-            sender.bind(self.begin_address)
-            for i in range(self.workers):
-                sender.send_pyobj(('stop', i))
-            sender.close()
+            with self.context, \
+                 self.context.bind(self.frontend_url, z.PUSH) as sender:
+                for i in range(self.workers):
+                    sender.send_pyobj(('stop', i))
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)

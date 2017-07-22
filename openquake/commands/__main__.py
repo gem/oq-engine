@@ -38,7 +38,7 @@ if USE_CELERY and 'run' in sys.argv:
              'Use oq engine --run instead!')
 
 if os.environ.get('OQ_DISTRIBUTE') == 'zmq':
-    os.environ['OQ_ZMQ1'], os.environ['OQ_ZMQ2'] = config.zmq_addresses()
+    os.environ['OQ_FRONTEND'], os.environ['OQ_BACKEND'] = config.zmq_urls()
 
 
 def oq():
