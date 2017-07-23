@@ -47,10 +47,10 @@ class _Context(zmq.Context):
 
 def context():
     """
-    Global context
+    Returns the global context. If the context is closed, recreate it.
     """
     global _context
-    if _context is None:
+    if _context is None or _context.closed:
         _context = _Context()
     return _context
 
