@@ -10,9 +10,13 @@ PUSH = zmq.PUSH
 PULL = zmq.PULL
 ROUTER = zmq.ROUTER
 DEALER = zmq.DEALER
+POLLIN = zmq.POLLIN
+POLLOUT = zmq.POLLOUT
+
+_context = None  # global context
 
 
-class Context(zmq.Context):
+class _Context(zmq.Context):
     """
     A zmq Context subclass with methods .bind and .connect
     """
@@ -41,14 +45,24 @@ class Context(zmq.Context):
         return socket
 
 
+def context():
+    """
+    Global context
+    """
+    global _context
+    if _context is None:
+        _context = _Context()
+    return _context
+
+
 class Process(multiprocessing.Process):
     """
     Process with a zmq socket
     """
     def __init__(self, func, *args, **kw):
         def newfunc(*args, **kw):
-            with Context() as context:
-                func(context, *args, **kw)
+            with context() as c:
+                func(c, *args, **kw)
         super(Process, self).__init__(target=newfunc, args=args, kwargs=kw)
 
     def __enter__(self):
@@ -69,6 +83,7 @@ class Thread(threading.Thread):
                 func(*args, **kw)
             except zmq.ContextTerminated:  # CTRL-C was given
                 pass
+        args = (context(), ) + args
         super(Thread, self).__init__(target=newfunc, args=args, kwargs=kw)
 
     def __enter__(self):
@@ -108,10 +123,7 @@ def proxy(context, frontend_url, backend_url):
     """
     with context.bind(frontend_url, zmq.ROUTER) as frontend, \
             context.bind(backend_url, zmq.DEALER) as backend:
-        try:
-            zmq.proxy(frontend, backend)
-        except zmq.ContextTerminated:  # CTRL-C was given
-            pass
+        zmq.proxy(frontend, backend)
 
 
 def worker(context, backend_url):
@@ -129,11 +141,11 @@ def worker(context, backend_url):
             socket.send_multipart([ident, pickle.dumps(res)])
 
 
-def starmap(frontend_url, func, allargs):
+def starmap(context, frontend_url, func, allargs):
     """
     starmap a function over an iterator of arguments by using a zmq socket
     """
-    with Context() as c, c.connect(frontend_url, zmq.DEALER) as socket:
+    with context.connect(frontend_url, zmq.DEALER) as socket:
         poll = poller(socket, zmq.POLLIN)
         n = len(allargs)
         for args in allargs:
@@ -146,5 +158,5 @@ def starmap(frontend_url, func, allargs):
 
 if __name__ == '__main__':  # run worker
     import sys
-    with Context() as context:
-        worker(context, sys.argv[1])
+    with context() as c:
+        worker(c, sys.argv[1])

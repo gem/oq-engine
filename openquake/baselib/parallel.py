@@ -627,7 +627,8 @@ class Starmap(object):
             from openquake.baselib import zeromq as z
             logging.warn('EXPERIMENTAL: sending tasks via zmq')
             allargs = list(self.task_args)
-            it = z.starmap(os.environ['OQ_FRONTEND'], self.task_func, allargs)
+            it = z.starmap(z.context(), os.environ['OQ_FRONTEND'],
+                           self.task_func, allargs)
             return IterResult(it, self.name, len(allargs), self.progress)
 
         elif self.distribute == 'qsub':

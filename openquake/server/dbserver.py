@@ -62,29 +62,32 @@ class DbServer(object):
             workerpath = os.path.abspath(z.__file__)
             # create the workers
             self.workers = 0
+            remote_python = (config.get('dbserver', 'remote_python') or
+                             sys.executable)
             for host, cores in config.get_host_cores():
                 for core in range(cores):
-                    args = [sys.executable, workerpath, self.backend_url]
-                    if host != '127.0.0.1':
-                        args = ['ssh', host] + args
+                    cmd = [workerpath, self.backend_url]
+                    if host == '127.0.0.1':  # localhost
+                        args = [sys.executable] + cmd
+                    else:
+                        args = ['ssh', host, remote_python] + cmd
                     logging.warn('zmq worker started with %s on %s',
                                  sys.executable, self.backend_url)
                     subprocess.Popen(args)
                     self.workers += 1
-            self.context = z.Context()
-            z.Thread(
-                z.proxy, self.context, self.frontend_url, self.backend_url
-            ).start()
+            z.Thread(z.proxy, self.frontend_url, self.backend_url).start()
             logging.warn('zmq proxy started on ports %d, %d',
                          self.port + 1, self.port + 2)
         return self
 
     def __exit__(self, etype, exc, tb):
         if zmq:
-            with self.context, \
-                 self.context.bind(self.frontend_url, z.PUSH) as sender:
+            with z.context() as c, c.connect(
+                    self.frontend_url, z.PUSH) as sender:
                 for i in range(self.workers):
+                    logging.warning('stopping zmq worker %d', i)
                     sender.send_pyobj(('stop', i))
+                time.sleep(1)  # wait a bit for the stop to be sent
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
