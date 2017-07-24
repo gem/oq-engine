@@ -616,6 +616,9 @@ class Starmap(object):
             nargs = len(self.task_args)
         except TypeError:  # generators have no len
             nargs = ''
+        for no, args in enumerate(self.task_args, 1):
+            add_task_no(args, no)
+
         if nargs == 1:
             [args] = self.task_args
             add_task_no(args, 0)
@@ -642,7 +645,6 @@ class Starmap(object):
             task_no += 1
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
-            add_task_no(args, task_no)
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
