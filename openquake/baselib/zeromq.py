@@ -10,6 +10,8 @@ PUSH = zmq.PUSH
 PULL = zmq.PULL
 ROUTER = zmq.ROUTER
 DEALER = zmq.DEALER
+PUB = zmq.PUB
+SUB = zmq.SUB
 POLLIN = zmq.POLLIN
 POLLOUT = zmq.POLLOUT
 
