@@ -22,6 +22,7 @@ Various utility functions concerned with configuration.
 
 import os
 import sys
+import multiprocessing
 from openquake.baselib.python3compat import configparser, encode
 from openquake.hazardlib import valid
 
@@ -152,6 +153,8 @@ def get_host_cores():
     out = []
     for host_cores in get('dbserver', 'host_cores').split(','):
         host_port, cores = host_cores.split()
+        if cores == 'default':
+            cores = multiprocessing.cpu_count()
         if ':' in host_port:
             host, port = host_port.split(':')
         else:
