@@ -121,8 +121,8 @@ def proxy(context, frontend_url, backend_url):
     """
     A zmq proxy routing messages from the frontend to the backend and back
     """
-    with context.bind(frontend_url, zmq.ROUTER) as frontend, \
-            context.bind(backend_url, zmq.DEALER) as backend:
+    with context.bind(frontend_url, ROUTER) as frontend, \
+            context.bind(backend_url, DEALER) as backend:
         zmq.proxy(frontend, backend)
 
 
@@ -131,7 +131,7 @@ def worker(context, backend_url):
     A worker reading messages of the form (cmd, args) and returning
     results to the backend via a zmq socket
     """
-    with context.connect(backend_url, zmq.DEALER) as socket:
+    with context.connect(backend_url, DEALER) as socket:
         while True:
             ident, pik = socket.recv_multipart()
             cmd, args = pickle.loads(pik)
@@ -145,8 +145,8 @@ def starmap(context, frontend_url, func, allargs):
     """
     starmap a function over an iterator of arguments by using a zmq socket
     """
-    with context.connect(frontend_url, zmq.DEALER) as socket:
-        poll = poller(socket, zmq.POLLIN)
+    with context.connect(frontend_url, DEALER) as socket:
+        poll = poller(socket, POLLIN)
         n = len(allargs)
         for args in allargs:
             socket.send_pyobj((func, args))
