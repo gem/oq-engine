@@ -61,7 +61,7 @@ install:
   - pip -q download -r requirements-py35-linux64.txt -d wheels
   - pip -q install wheels/*
   - pip -q install -e .
-  - pip install pyzmq
+  - pip -q install pyzmq
 
 before_script:
   - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
