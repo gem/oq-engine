@@ -39,7 +39,7 @@ USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
 
 if parallel.oq_distribute() == 'zmq':
     num_cores = sum(int(item[-1]) for item in config.get_host_cores())
-    OqParam.concurrent_tasks.default = num_cores
+    OqParam.concurrent_tasks.default = num_cores * 5
     logs.LOG.info('Using %d cores', num_cores)
 
 elif USE_CELERY:
