@@ -616,12 +616,9 @@ class Starmap(object):
             nargs = len(self.task_args)
         except TypeError:  # generators have no len
             nargs = ''
-        for no, args in enumerate(self.task_args, 1):
-            add_task_no(args, no)
 
         if nargs == 1:
-            [args] = self.task_args
-            add_task_no(args, 0)
+            [args] = add_task_no(self.task_args)
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, nargs)
@@ -629,14 +626,14 @@ class Starmap(object):
         elif self.distribute == 'zmq':
             from openquake.baselib import zeromq as z
             logging.warn('EXPERIMENTAL: sending tasks via zmq')
-            allargs = list(self.task_args)
+            allargs = list(add_task_no(self.task_args))
             it = z.starmap(z.context(), os.environ['OQ_FRONTEND'],
                            self.task_func, allargs)
             return IterResult(it, self.name, len(allargs), self.progress)
 
         elif self.distribute == 'qsub':
             logging.warn('EXPERIMENTAL: sending tasks to the grid engine')
-            allargs = list(self.task_args)
+            allargs = list(add_task_no(self.task_args))
             return IterResult(qsub(self.task_func, allargs),
                               self.name, len(allargs), self.progress)
 
@@ -662,11 +659,13 @@ class Starmap(object):
         return iter(self.submit_all())
 
 
-def add_task_no(args, task_no):
-    if isinstance(args[-1], Monitor):
-        # add incremental task number and task weight
-        args[-1].task_no = task_no
-        args[-1].weight = getattr(args[0], 'weight', 1.)
+def add_task_no(iterargs):
+    for task_no, args in enumerate(iterargs, 1):
+        if isinstance(args[-1], Monitor):
+            # add incremental task number and task weight
+            args[-1].task_no = task_no
+            args[-1].weight = getattr(args[0], 'weight', 1.)
+        yield args
 
 
 def do_not_aggregate(acc, value):
