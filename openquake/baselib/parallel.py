@@ -638,7 +638,7 @@ class Starmap(object):
                               self.name, len(allargs), self.progress)
 
         task_no = 0
-        for args in self.task_args:
+        for args in add_task_no(self.task_args):
             task_no += 1
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
