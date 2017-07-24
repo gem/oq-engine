@@ -1,7 +1,7 @@
 import multiprocessing
 import threading
-import pickle
 import zmq
+from openquake.baselib.python3compat import pickle
 from openquake.baselib.parallel import safely_call
 
 REQ = zmq.REQ
