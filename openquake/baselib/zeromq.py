@@ -51,7 +51,9 @@ class Process(multiprocessing.Process):
     """
     def __init__(self, func, *args, **kw):
         def newfunc(*args, **kw):
-            with Context.instance() as c:
+            # the only reason it is not .instance() is that there may be a
+            # stale Context instance already initialized, from the docs
+            with Context() as c:
                 func(c, *args, **kw)
         super(Process, self).__init__(target=newfunc, args=args, kwargs=kw)
 
@@ -73,7 +75,7 @@ class Thread(threading.Thread):
                 func(*args, **kw)
             except zmq.ContextTerminated:  # CTRL-C was given
                 pass
-        args = (context(), ) + args
+        args = (Context.instance(), ) + args
         super(Thread, self).__init__(target=newfunc, args=args, kwargs=kw)
 
     def __enter__(self):
@@ -136,12 +138,11 @@ def starmap(context, frontend_url, func, allargs):
     starmap a function over an iterator of arguments by using a zmq socket
     """
     with context.connect(frontend_url, DEALER) as socket:
-        poll = poller(socket, POLLIN)
         n = len(allargs)
         for args in allargs:
             socket.send_pyobj((func, args))
         while n:
-            if poll.poll(1000):
+            if socket.poll(1000):
                 yield socket.recv_pyobj()
                 n -= 1
 
