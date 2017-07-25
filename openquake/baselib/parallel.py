@@ -508,11 +508,18 @@ class Starmap(object):
         self.task_func = oqtask
         self.task_args = task_args
         self.name = name or oqtask.__name__
+        self.init(oqtask)
         self.results = []
-        self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
         if self.distribute == 'threadpool':
             self.executor = ThreadPoolExecutor(executor.num_tasks_hint)
+        if self.distribute == 'ipython' and isinstance(
+                self.executor, ProcessPoolExecutor):
+            client = ipp.Client()
+            self.__class__.executor = client.executor()
+
+    def init(self, oqtask):
+        self.sent = AccumDict()
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(oqtask):
             self.argnames = inspect.getargspec(oqtask).args
@@ -520,10 +527,6 @@ class Starmap(object):
             self.argnames = inspect.getargspec(oqtask.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(oqtask.__call__).args[1:]
-        if self.distribute == 'ipython' and isinstance(
-                self.executor, ProcessPoolExecutor):
-            client = ipp.Client()
-            self.__class__.executor = client.executor()
 
     def progress(self, *args):
         """
@@ -707,6 +710,7 @@ def wakeup_pool():
 class BaseStarmap(object):
     poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
     add_task_no = Starmap.__dict__['add_task_no']
+    init = Starmap.__dict__['init']
 
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
@@ -719,8 +723,7 @@ class BaseStarmap(object):
     def __init__(self, func, iterargs, poolsize=None):
         self.pool = self.poolfactory(poolsize)
         self.func = func
-        self.sent = AccumDict()
-        self.argnames = inspect.getargspec(func).args
+        self.init(func)
         allargs = list(self.add_task_no(iterargs))
         self.num_tasks = len(allargs)
         logging.info('Starting %d tasks', self.num_tasks)
