@@ -213,7 +213,7 @@ def check_mem_usage(monitor=Monitor(),
                      used_mem_percent, hostname)
 
 
-def safely_call(func, args, pickle=False, conn=None):
+def safely_call(func, args, conn=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -223,11 +223,9 @@ def safely_call(func, args, pickle=False, conn=None):
 
     :param func: the function to call
     :param args: the arguments
-    :param pickle:
-        if set, the input arguments are unpickled and the return value
-        is pickled; otherwise they are left unchanged
     """
     with Monitor('total ' + func.__name__, measuremem=True) as child:
+        pickle = hasattr(args[0], 'unpickle')
         if pickle:  # measure the unpickling time too
             args = [a.unpickle() for a in args]
         if args and isinstance(args[-1], Monitor):
@@ -546,7 +544,6 @@ class Starmap(object):
         check_mem_usage()
         # log a warning if too much memory is used
         if self.distribute == 'no':
-            sent = {}
             res = safely_call(self.task_func, args)
         else:
             res = self._submit(args)
@@ -554,12 +551,12 @@ class Starmap(object):
 
     def _submit(self, piks):
         if self.distribute == 'celery':
-            res = safe_task.delay(self.task_func, piks, True)
+            res = safe_task.delay(self.task_func, piks)
             self.task_ids.append(res.task_id)
             return res
         else:  # submit tasks by using the ProcessPoolExecutor or ipyparallel
             return self.executor.submit(
-                safely_call, self.task_func, piks, True)
+                safely_call, self.task_func, piks)
 
     def _iterfutures(self):
         # compatibility wrapper for different concurrency frameworks
@@ -867,7 +864,7 @@ def main(hostport):
     host, port = hostport.split(':')
     conn = Client((host, int(port)))
     func, args = conn.recv()
-    safely_call(func, args, False, conn)
+    safely_call(func, args, conn)
 
 if __name__ == '__main__':
     main(sys.argv[1])
