@@ -635,22 +635,13 @@ def view_task(token, dstore):
     """
     Display info about a given task. Here are a few examples of usage::
 
-     $ oq show task:min  # the fastest task
-     $ oq show task:max  # the slowest task
-     $ oq show task:42   # the task #42
+     $ oq show task:0  # the fastest task
+     $ oq show task:-1  # the slowest task
     """
-    which = token.split(':')[1]  # called as task:min|max|number
-    try:
-        i = int(which) - 1
-    except ValueError:
-        duration = dstore['task_info/classical']['duration']
-        if which == 'min':
-            i = duration.argmin()
-        elif which == 'max':
-            i = duration.argmax()
-        else:
-            raise ValueError(which)
-    taskno, weight, duration = dstore['task_info/classical'][i]
+    data = dstore['task_info/classical'].value
+    data.sort(order='duration')
+    i = int(token.split(':')[1])
+    taskno, weight, duration = data[i]
     arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
     st = [stats('nsites', arr['nsites']),
           stats('rupweight', arr['rupweight'])]
