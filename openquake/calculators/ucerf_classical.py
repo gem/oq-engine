@@ -118,7 +118,7 @@ def ucerf_classical(
 
     # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
     ucerf_source.rupset_idx = rupset_idx
-    ucerf_source.num_ruptures = len(rupset_idx)
+    ucerf_source.num_ruptures = nruptures = len(rupset_idx)
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     imtls = DictArray(imtls)
     ctx_mon = monitor('making contexts', measuremem=False)
@@ -127,7 +127,8 @@ def ucerf_classical(
     pmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
                    truncation_level, ctx_mon, pne_mons)
     nsites = len(s_sites)
-    pmap.calc_times = [(ucerf_source.source_id, nsites, time.time() - t0)]
+    pmap.calc_times = [
+        (ucerf_source.source_id, nruptures, nsites, time.time() - t0)]
     pmap.grp_id = ucerf_source.src_group_id
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
     return pmap
