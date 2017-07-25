@@ -769,6 +769,7 @@ class Sequential(BaseStarmap):
         self.num_tasks = len(allargs)
         logging.info('Starting %d sequential tasks', self.num_tasks)
         self.imap = [safely_call(func, args) for args in allargs]
+        self.sent = 0  # TODO: think about setting this in subclasses
 
 
 class Threadmap(BaseStarmap):
