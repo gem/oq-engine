@@ -706,6 +706,7 @@ def wakeup_pool():
 
 class BaseStarmap(object):
     poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
+    add_task_no = Starmap.__dict__['add_task_no']
 
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
@@ -718,13 +719,9 @@ class BaseStarmap(object):
     def __init__(self, func, iterargs, poolsize=None):
         self.pool = self.poolfactory(poolsize)
         self.func = func
-        allargs = []
-        for task_no, args in enumerate(iterargs):
-            if isinstance(args[-1], Monitor):
-                # add incremental task number and task weight
-                args[-1].task_no = task_no
-                args[-1].weight = getattr(args[0], 'weight', 1.)
-            allargs.append(args)
+        self.sent = AccumDict()
+        self.argnames = inspect.getargspec(func).args
+        allargs = list(self.add_task_no(iterargs))
         self.num_tasks = len(allargs)
         logging.info('Starting %d tasks', self.num_tasks)
         self.imap = self.pool.imap_unordered(
@@ -769,7 +766,6 @@ class Sequential(BaseStarmap):
         self.num_tasks = len(allargs)
         logging.info('Starting %d sequential tasks', self.num_tasks)
         self.imap = [safely_call(func, args) for args in allargs]
-        self.sent = 0  # TODO: think about setting this in subclasses
 
 
 class Threadmap(BaseStarmap):
