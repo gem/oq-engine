@@ -139,7 +139,7 @@ def worker(context, backend_url):
             cmd, args = pickle.loads(pik)
             if cmd == 'stop':
                 break
-            res = safely_call(cmd, args)
+            res = safely_call(cmd, args, pickle=True)
             socket.send_multipart([ident, pickle.dumps(res)])
 
 

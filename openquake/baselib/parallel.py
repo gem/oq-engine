@@ -359,7 +359,7 @@ class IterResult(object):
          ('duration', numpy.float32)])
 
     def __init__(self, futures, taskname, num_tasks=None,
-                 progress=logging.info):
+                 progress=logging.info, sent=0):
         self.futures = futures
         self.name = taskname
         self.num_tasks = num_tasks
@@ -367,7 +367,7 @@ class IterResult(object):
             self.progress = logging.debug
         else:
             self.progress = progress
-        self.sent = 0  # set in Starmap.submit_all
+        self.sent = sent
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
@@ -549,12 +549,8 @@ class Starmap(object):
             sent = {}
             res = safely_call(self.task_func, args)
         else:
-            piks = pickle_sequence(args)
-            sent = {arg: len(p) for arg, p in zip(self.argnames, piks)}
-            res = self._submit(piks)
-        self.sent += sent
+            res = self._submit(args)
         self.results.append(res)
-        return sent
 
     def _submit(self, piks):
         if self.distribute == 'celery':
@@ -618,27 +614,29 @@ class Starmap(object):
             nargs = ''
 
         if nargs == 1:
-            [args] = add_task_no(self.task_args)
+            [args] = self.add_task_no(self.task_args, pickle=False)
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, nargs)
 
         elif self.distribute == 'zmq':
             from openquake.baselib import zeromq as z
-            allargs = list(add_task_no(self.task_args))
+            allargs = list(self.add_task_no(self.task_args))
             logging.warn('Sending %d tasks via zmq', len(allargs))
             it = z.starmap(z.context(), os.environ['OQ_FRONTEND'],
                            self.task_func, allargs)
-            return IterResult(it, self.name, len(allargs), self.progress)
+            return IterResult(it, self.name, len(allargs),
+                              self.progress, self.sent)
 
         elif self.distribute == 'qsub':
-            allargs = list(add_task_no(self.task_args))
+            allargs = list(self.add_task_no(self.task_args, pickle=False))
             logging.warn('Sending %d tasks to the grid engine', len(allargs))
             return IterResult(qsub(self.task_func, allargs),
-                              self.name, len(allargs), self.progress)
+                              self.name, len(allargs),
+                              self.progress, self.sent)
 
         task_no = 0
-        for args in add_task_no(self.task_args):
+        for args in self.add_task_no(self.task_args):
             task_no += 1
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
@@ -647,8 +645,7 @@ class Starmap(object):
             self.progress('No %s tasks were submitted', self.name)
         # NB: keep self._iterfutures() an iterator, especially with celery!
         ir = IterResult(self._iterfutures(), self.name, task_no,
-                        self.progress)
-        ir.sent = self.sent  # for information purposes
+                        self.progress, self.sent)
         if self.sent:
             self.progress('Sent %s of data in %d task(s)',
                           humansize(sum(self.sent.values())),
@@ -658,14 +655,16 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-
-def add_task_no(iterargs):
-    for task_no, args in enumerate(iterargs, 1):
-        if isinstance(args[-1], Monitor):
-            # add incremental task number and task weight
-            args[-1].task_no = task_no
-            args[-1].weight = getattr(args[0], 'weight', 1.)
-        yield args
+    def add_task_no(self, iterargs, pickle=True):
+        for task_no, args in enumerate(iterargs, 1):
+            if isinstance(args[-1], Monitor):
+                # add incremental task number and task weight
+                args[-1].task_no = task_no
+                args[-1].weight = getattr(args[0], 'weight', 1.)
+            if pickle:
+                args = pickle_sequence(args)
+                self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
+            yield args
 
 
 def do_not_aggregate(acc, value):
@@ -739,7 +738,8 @@ class BaseStarmap(object):
         :returns: an :class:`IterResult` instance
         """
         futs = (mkfuture(res) for res in self.imap)
-        return IterResult(futs, self.func.__name__, self.num_tasks, progress)
+        return IterResult(futs, self.func.__name__, self.num_tasks,
+                          progress, self.sent)
 
     def __iter__(self):
         try:
