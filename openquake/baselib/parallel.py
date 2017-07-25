@@ -762,7 +762,9 @@ class Sequential(BaseStarmap):
     def __init__(self, func, iterargs, poolsize=None):
         self.pool = None
         self.func = func
-        allargs = list(iterargs)
+        self.sent = AccumDict()
+        self.argnames = inspect.getargspec(func).args
+        allargs = list(self.add_task_no(iterargs))
         self.num_tasks = len(allargs)
         logging.info('Starting %d sequential tasks', self.num_tasks)
         self.imap = [safely_call(func, args) for args in allargs]
