@@ -623,7 +623,7 @@ class Starmap(object):
             from openquake.baselib import zeromq as z
             allargs = list(self.add_task_no(self.task_args))
             logging.warn('Sending %d tasks via zmq', len(allargs))
-            it = z.starmap(z.context(), os.environ['OQ_FRONTEND'],
+            it = z.starmap(z.Context.instance(), os.environ['OQ_FRONTEND'],
                            self.task_func, allargs)
             return IterResult(it, self.name, len(allargs),
                               self.progress, self.sent)

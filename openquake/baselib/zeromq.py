@@ -15,10 +15,8 @@ SUB = zmq.SUB
 POLLIN = zmq.POLLIN
 POLLOUT = zmq.POLLOUT
 
-_context = None  # global context
 
-
-class _Context(zmq.Context):
+class Context(zmq.Context):
     """
     A zmq Context subclass with methods .bind and .connect
     """
@@ -47,23 +45,13 @@ class _Context(zmq.Context):
         return socket
 
 
-def context():
-    """
-    Returns the global context. If the context is closed, recreate it.
-    """
-    global _context
-    if _context is None or _context.closed:
-        _context = _Context()
-    return _context
-
-
 class Process(multiprocessing.Process):
     """
     Process with a zmq socket
     """
     def __init__(self, func, *args, **kw):
         def newfunc(*args, **kw):
-            with context() as c:
+            with Context.instance() as c:
                 func(c, *args, **kw)
         super(Process, self).__init__(target=newfunc, args=args, kwargs=kw)
 
@@ -160,5 +148,5 @@ def starmap(context, frontend_url, func, allargs):
 
 if __name__ == '__main__':  # run worker
     import sys
-    with context() as c:
+    with Context.instance() as c:
         worker(c, sys.argv[1])
