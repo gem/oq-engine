@@ -37,6 +37,7 @@ from openquake.commonlib import datastore, source, calc, util
 from openquake.calculators import base
 
 U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
@@ -201,16 +202,23 @@ def classical(sources, src_filter, gsims, param, monitor):
     pmap.bbs = bbs
     return pmap
 
+source_data_dt = numpy.dtype(
+    [('taskno', U16), ('nsites', U32), ('rupweight', F32)])
+
 
 def saving_sources_by_task(iterargs, dstore):
     """
     Yield the iterargs again by populating 'task_info/source_ids'
     """
     source_ids = []
-    for args in iterargs:
+    data = []
+    for i, args in enumerate(iterargs, 1):
         source_ids.append(' ' .join(src.source_id for src in args[0]))
+        for src in args[0]:  # collect source data
+            data.append((i, src.nsites, src.weight))
         yield args
     dstore['task_sources'] = numpy.array([encode(s) for s in source_ids])
+    dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
 
 
 @base.calculators.add('psha')
