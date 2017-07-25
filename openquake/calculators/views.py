@@ -29,6 +29,7 @@ import numpy
 from openquake.baselib.general import (
     humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
+from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib import valid, stats as hstats
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -609,8 +610,9 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
-        val = dstore['task_info/' + task]['duration']
-        data.append(stats(task, val))
+        if task != 'source_data':  # this is special
+            val = dstore['task_info/' + task]['duration']
+            data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
@@ -628,17 +630,35 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task_slowest')
-def view_task_slowest(token, dstore):
+@view.add('task')
+def view_task(token, dstore):
     """
-    Display info about the slowest classical task.
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task:min  # the fastest task
+     $ oq show task:max  # the slowest task
+     $ oq show task:42   # the task #42
     """
-    i = dstore['task_info/classical']['duration'].argmax()
+    which = token.split(':')[1]  # called as task:min|max|number
+    try:
+        i = int(which) - 1
+    except ValueError:
+        duration = dstore['task_info/classical']['duration']
+        if which == 'min':
+            i = duration.argmin()
+        elif which == 'max':
+            i = duration.argmax()
+        else:
+            raise ValueError(which)
     taskno, weight, duration = dstore['task_info/classical'][i]
+    arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
+    st = [stats('nsites', arr['nsites']),
+          stats('rupweight', arr['rupweight'])]
     sources = dstore['task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
-    return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
+    res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
+    return res + rst_table(st, header='variable mean stddev min max n'.split())
 
 
 @view.add('hmap')
