@@ -51,7 +51,7 @@ def reset(yes):
 
         try:
             os.remove(dbpath)
-            print('Removed %s. You must re-apply any existing migration.'
+            print('Removed %s'
                   % dbpath)
         except OSError as exc:
             print(exc, file=sys.stderr)
