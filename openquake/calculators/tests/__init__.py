@@ -63,7 +63,7 @@ def columns(line):
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = True
+    OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
 
     def get_calc(self, testfile, job_ini, **kw):
