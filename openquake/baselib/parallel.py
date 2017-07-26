@@ -604,20 +604,22 @@ class Starmap(object):
         """
         return self.reduce(self, lambda acc, res: acc + 1, 0)
 
+    @property
+    def num_tasks(self):
+        try:
+            return len(self.task_args)
+        except TypeError:  # generators have no len
+            return ''
+
     def submit_all(self):
         """
         :returns: an IterResult object
         """
-        try:
-            self.nargs = len(self.task_args)
-        except TypeError:  # generators have no len
-            self.nargs = ''
-
-        if self.nargs == 1:
+        if self.num_tasks == 1:
             [args] = self.add_task_no(self.task_args, pickle=False)
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
-            return IterResult([fut], self.name, self.nargs)
+            return IterResult([fut], self.name, self.num_tasks)
 
         elif self.distribute == 'zmq':
             from openquake.baselib import zeromq as z
@@ -667,7 +669,7 @@ class Starmap(object):
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
             if task_no == 1:  # first time
                 self.progress(
-                    'Submitting %s "%s" tasks', self.nargs, self.name)
+                    'Submitting %s "%s" tasks', self.num_tasks, self.name)
             yield args
 
 
@@ -715,6 +717,7 @@ class BaseStarmap(object):
     poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
     add_task_no = Starmap.__dict__['add_task_no']
     init = Starmap.__dict__['init']
+    num_tasks = Starmap.__dict__['num_tasks']
 
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
@@ -727,11 +730,12 @@ class BaseStarmap(object):
     def __init__(self, func, iterargs, poolsize=None, progress=logging.info):
         self.pool = self.poolfactory(poolsize)
         self.func = func
+        self.name = func.__name__
+        self.task_args = iterargs
         self.progress = progress
         self.init(func)
         allargs = list(self.add_task_no(iterargs))
-        self.num_tasks = len(allargs)
-        progress('Starting %d tasks', self.num_tasks)
+        progress('Starting %s tasks', self.num_tasks)
         self.imap = self.pool.imap_unordered(
             functools.partial(safely_call, func), allargs)
 
@@ -752,10 +756,10 @@ class BaseStarmap(object):
                 self.pool.close()
                 self.pool.join()
 
-    def reduce(self, agg=operator.add, acc=None, progress=logging.info):
+    def reduce(self, agg=operator.add, acc=None):
         if acc is None:
             acc = AccumDict()
-        for res in self.submit_all(progress):
+        for res in self.submit_all():
             acc = agg(acc, res)
         if self.pool:
             self.pool.close()
@@ -770,12 +774,13 @@ class Sequential(BaseStarmap):
     def __init__(self, func, iterargs, poolsize=None, progress=logging.info):
         self.pool = None
         self.func = func
+        self.name = func.__name__
+        self.task_args = iterargs
         self.progress = progress
         self.sent = AccumDict()
         self.argnames = inspect.getargspec(func).args
         allargs = list(self.add_task_no(iterargs))
-        self.num_tasks = len(allargs)
-        progress('Starting %d sequential tasks', self.num_tasks)
+        progress('Starting %s sequential tasks', self.num_tasks)
         self.imap = [safely_call(func, args) for args in allargs]
 
 
