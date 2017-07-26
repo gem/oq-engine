@@ -215,8 +215,7 @@ def saving_sources_by_task(iterargs, dstore):
     for i, args in enumerate(iterargs, 1):
         source_ids.append(' ' .join(src.source_id for src in args[0]))
         for src in args[0]:  # collect source data
-            # UCERF sources have no attribute .nsites
-            data.append((i, getattr(src, 'nsites', 0), src.weight))
+            data.append((i, src.nsites, src.weight))
         yield args
     dstore['task_sources'] = numpy.array([encode(s) for s in source_ids])
     dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
