@@ -225,7 +225,7 @@ def safely_call(func, args, conn=None):
     :param args: the arguments
     """
     with Monitor('total ' + func.__name__, measuremem=True) as child:
-        pickle = hasattr(args[0], 'unpickle')
+        pickle = args and hasattr(args[0], 'unpickle')
         if pickle:  # measure the unpickling time too
             args = [a.unpickle() for a in args]
         if args and isinstance(args[-1], Monitor):
