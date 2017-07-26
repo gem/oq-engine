@@ -788,6 +788,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [sm] = ssm.source_models
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
+            for src in srcs:
+                src.nsites = len(self.sitecol)
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
