@@ -664,6 +664,7 @@ class CompositeSourceModel(collections.Sequence):
         :param maxweight: weight used to decide if a source is light
         :yields: blocks of sources of weight around maxweight
         """
+        sources.sort(key=operator.attrgetter('weight'))
         light = [src for src in sources if src.weight <= maxweight]
         self.add_infos(light)
         for block in block_splitter(
@@ -673,6 +674,7 @@ class CompositeSourceModel(collections.Sequence):
         self.add_infos(heavy)
         for src in heavy:
             srcs = split_filter_source(src, src_filter)
+            srcs.sort(key=operator.attrgetter('weight'))
             for block in block_splitter(
                     srcs, maxweight, weight=operator.attrgetter('weight')):
                 yield block
