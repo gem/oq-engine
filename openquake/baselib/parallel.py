@@ -724,23 +724,24 @@ class BaseStarmap(object):
             cls = Sequential
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
-    def __init__(self, func, iterargs, poolsize=None):
+    def __init__(self, func, iterargs, poolsize=None, progress=logging.info):
         self.pool = self.poolfactory(poolsize)
         self.func = func
+        self.progress = progress
         self.init(func)
         allargs = list(self.add_task_no(iterargs))
         self.num_tasks = len(allargs)
-        logging.info('Starting %d tasks', self.num_tasks)
+        progress('Starting %d tasks', self.num_tasks)
         self.imap = self.pool.imap_unordered(
             functools.partial(safely_call, func), allargs)
 
-    def submit_all(self, progress=logging.info):
+    def submit_all(self):
         """
         :returns: an :class:`IterResult` instance
         """
         futs = (mkfuture(res) for res in self.imap)
         return IterResult(futs, self.func.__name__, self.num_tasks,
-                          progress, self.sent)
+                          self.progress, self.sent)
 
     def __iter__(self):
         try:
@@ -766,14 +767,15 @@ class Sequential(BaseStarmap):
     """
     A sequential Starmap, useful for debugging purpose.
     """
-    def __init__(self, func, iterargs, poolsize=None):
+    def __init__(self, func, iterargs, poolsize=None, progress=logging.info):
         self.pool = None
         self.func = func
+        self.progress = progress
         self.sent = AccumDict()
         self.argnames = inspect.getargspec(func).args
         allargs = list(self.add_task_no(iterargs))
         self.num_tasks = len(allargs)
-        logging.info('Starting %d sequential tasks', self.num_tasks)
+        progress('Starting %d sequential tasks', self.num_tasks)
         self.imap = [safely_call(func, args) for args in allargs]
 
 
