@@ -52,7 +52,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        return self.num_ruptures * self.RUPTURE_WEIGHT
+        return self.num_ruptures * self.RUPTURE_WEIGHT * self.nsites
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
