@@ -138,9 +138,11 @@ def starmap(context, frontend_url, func, allargs):
     starmap a function over an iterator of arguments by using a zmq socket
     """
     with context.connect(frontend_url, DEALER) as socket:
-        n = len(allargs)
+        n = 0
         for args in allargs:
             socket.send_pyobj((func, args))
+            n += 1
+        yield n
         while n:
             if socket.poll(1000):
                 yield socket.recv_pyobj()

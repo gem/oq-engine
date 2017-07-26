@@ -609,24 +609,23 @@ class Starmap(object):
         :returns: an IterResult object
         """
         try:
-            nargs = len(self.task_args)
+            self.nargs = len(self.task_args)
         except TypeError:  # generators have no len
-            nargs = ''
+            self.nargs = ''
 
-        if nargs == 1:
+        if self.nargs == 1:
             [args] = self.add_task_no(self.task_args, pickle=False)
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
-            return IterResult([fut], self.name, nargs)
+            return IterResult([fut], self.name, self.nargs)
 
         elif self.distribute == 'zmq':
             from openquake.baselib import zeromq as z
-            allargs = list(self.add_task_no(self.task_args))
-            logging.warn('Sending %d tasks via zmq', len(allargs))
+            allargs = self.add_task_no(self.task_args)
             it = z.starmap(z.Context.instance(), os.environ['OQ_FRONTEND'],
                            self.task_func, allargs)
-            return IterResult(it, self.name, len(allargs),
-                              self.progress, self.sent)
+            ntasks = next(it)
+            return IterResult(it, self.name, ntasks, self.progress, self.sent)
 
         elif self.distribute == 'qsub':
             allargs = list(self.add_task_no(self.task_args, pickle=False))
@@ -638,8 +637,6 @@ class Starmap(object):
         task_no = 0
         for args in self.add_task_no(self.task_args):
             task_no += 1
-            if task_no == 1:  # first time
-                self.progress('Submitting %s "%s" tasks', nargs, self.name)
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
@@ -656,6 +653,10 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def add_task_no(self, iterargs, pickle=True):
+        """
+        Add .task_no and .weight to the monitor and yields back
+        the arguments by pickling them if pickle is True.
+        """
         for task_no, args in enumerate(iterargs, 1):
             if isinstance(args[-1], Monitor):
                 # add incremental task number and task weight
@@ -664,6 +665,9 @@ class Starmap(object):
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
+            if task_no == 1:  # first time
+                self.progress(
+                    'Submitting %s "%s" tasks', self.nargs, self.name)
             yield args
 
 
