@@ -24,11 +24,11 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
-    GMPE, IPE, SitesContext, RuptureContext, DistancesContext,
+    GMPE, IPE, CoeffsTable, SitesContext, RuptureContext, DistancesContext,
     NonInstantiableError, NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.imt import PGA, PGV
+from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -634,3 +634,50 @@ class GsimOrderingTestCase(unittest.TestCase):
         self.assertEqual(a, a1)
         self.assertEqual(b, b1)
         self.assertNotEqual(a, b1)
+
+
+class CoeffsTableTestCase(unittest.TestCase):
+    def setUp(self):
+        self.coefficient_string = """\
+            imt      a     b
+            pgv   0.10   0.2
+            pga   0.05   0.1
+            0.10  1.00   2.0
+            1.00  5.00  10.0
+            10.0  10.0  20.0
+            """
+
+    def test_table_string_instantiation(self):
+        # Check that the table instantiates in the conventional way
+        table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
+        self.assertDictEqual(
+            table1.non_sa_coeffs,
+            {PGV(): {"a": 0.1, "b": 0.2}, PGA(): {"a": 0.05, "b": 0.1}}
+            )
+        self.assertDictEqual(
+            table1.sa_coeffs,
+            {SA(period=0.1, damping=5): {"a": 1.0, "b": 2.0},
+             SA(period=1.0, damping=5): {"a": 5.0, "b": 10.0},
+             SA(period=10.0, damping=5): {"a": 10.0, "b": 20.0}}
+            )
+
+    def test_table_tuple_instantiation(self):
+        # Check that the table instantiates with pre-defined dictionaries
+        table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
+        table2 = CoeffsTable(sa_damping=5,
+                             table=(table1.sa_coeffs, table1.non_sa_coeffs))
+        self.assertDictEqual(table1.sa_coeffs, table2.sa_coeffs)
+        self.assertDictEqual(table1.non_sa_coeffs, table2.non_sa_coeffs)
+
+        # Additional case when sa_coeffs is missing
+        table3 = CoeffsTable(sa_damping=5, table=(None, table1.non_sa_coeffs))
+        self.assertDictEqual(table3.sa_coeffs, {})
+
+    def test_table_bad_instantiation(self):
+        # If instantiated with anything other than string or tuple should
+        # raise an error
+        with self.assertRaises(ValueError) as ve:
+            CoeffsTable(sa_damping=5, table=5)
+        self.assertEqual(str(ve.exception),
+                         "CoeffsTable cannot be constructed with "
+                         "inputs of the form <type 'int'>")
