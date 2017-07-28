@@ -127,10 +127,8 @@ def starmap(context, frontend_url, func, allargs):
             socket.send_pyobj((func, args))
             n += 1
         yield n
-        while n:
-            if socket.poll(1000):
-                yield socket.recv_pyobj()
-                n -= 1
+        for _ in range(n):
+            yield socket.recv_pyobj()
 
 
 if __name__ == '__main__':  # run worker
