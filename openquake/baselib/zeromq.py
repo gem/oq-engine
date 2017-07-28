@@ -100,15 +100,6 @@ def startmany(cls, func, iterargs):
     return procs
 
 
-def poller(socket, polling_type):
-    """
-    A zmq Poller associated to the given socket and poller type
-    """
-    poll = zmq.Poller()
-    poll.register(socket, polling_type)
-    return poll
-
-
 def proxy(context, frontend_url, backend_url):
     """
     A zmq proxy routing messages from the frontend to the backend and back
@@ -118,19 +109,26 @@ def proxy(context, frontend_url, backend_url):
         zmq.proxy(frontend, backend)
 
 
-def worker(context, backend_url):
+def worker(context, backend_url, func=None):
     """
-    A worker reading messages of the form (cmd, args) and returning
-    results to the backend via a zmq socket
+    A worker reading tuples and returning results to the backend via a zmq
+    socket.
+
+    :param context: zmq context
+    :param backend_url: URL where to connect
+    :param func: if None, expects message to be pairs (cmd, args) else args
     """
-    with context.connect(backend_url, DEALER) as socket:
-        while True:
-            ident, pik = socket.recv_multipart()
+    socket = context.connect(backend_url, DEALER)
+    while True:
+        ident, pik = socket.recv_multipart()
+        if func is None:  # retrieve the cmd from the message
             cmd, args = pickle.loads(pik)
-            if cmd == 'stop':
-                break
-            res = safely_call(cmd, args)
-            socket.send_multipart([ident, pickle.dumps(res)])
+        else:  # use the provided func as cmd
+            cmd, args = func, pickle.loads(pik)
+        if cmd == 'stop':
+            break
+        res = safely_call(cmd, args)
+        socket.send_multipart([ident, pickle.dumps(res)])
 
 
 def starmap(context, frontend_url, func, allargs):
