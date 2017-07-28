@@ -86,20 +86,6 @@ class Thread(threading.Thread):
         self.join()
 
 
-@classmethod
-def startmany(cls, func, iterargs):
-    """
-    :param cls: Thread or Process
-    :param func: a callable func(*args)
-    :param iterargs: an iterator over argument tuples
-    :returns: a list of started Thread/Process instances
-    """
-    procs = [cls(func, *args) for args in iterargs]
-    for proc in procs:
-        proc.start()
-    return procs
-
-
 def proxy(context, frontend_url, backend_url):
     """
     A zmq proxy routing messages from the frontend to the backend and back
