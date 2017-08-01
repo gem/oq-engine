@@ -13,13 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.panckow_pechmann_2004 import PanckowPechmann2004
+from openquake.hazardlib.gsim.pankow_pechmann_2004 import PankowPechmann2004
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# Test data obtained from Table 2 of Panckow and Pechmann (2004)
+# Test data obtained from Table 2 of Pankow and Pechmann (2004)
 
-class PanckowPechmann2004TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = PanckowPechmann2004
+class PankowPechmann2004TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = PankowPechmann2004
 
     def test_mean(self):
         self.check('PP2004/PP2004_MEAN.csv',
