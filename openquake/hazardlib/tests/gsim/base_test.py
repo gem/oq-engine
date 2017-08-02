@@ -21,6 +21,7 @@ import collections
 import mock
 
 import numpy
+from copy import deepcopy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
@@ -652,8 +653,8 @@ class CoeffsTableTestCase(unittest.TestCase):
         table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
         self.assertDictEqual(
             table1.non_sa_coeffs,
-            {PGV(): {"a": 0.1, "b": 0.2}, PGA(): {"a": 0.05, "b": 0.1}}
-            )
+            {PGV(): {"a": 0.1, "b": 0.2},
+             PGA(): {"a": 0.05, "b": 0.1}})
         self.assertDictEqual(
             table1.sa_coeffs,
             {SA(period=0.1, damping=5): {"a": 1.0, "b": 2.0},
@@ -661,17 +662,16 @@ class CoeffsTableTestCase(unittest.TestCase):
              SA(period=10.0, damping=5): {"a": 10.0, "b": 20.0}}
             )
 
-    def test_table_tuple_instantiation(self):
+    def test_table_dict_instantiation(self):
         # Check that the table instantiates with pre-defined dictionaries
         table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
+        # Create target dictionatu
+        coeffs = deepcopy(table1.non_sa_coeffs)
+        coeffs.update(table1.sa_coeffs)
         table2 = CoeffsTable(sa_damping=5,
-                             table=(table1.sa_coeffs, table1.non_sa_coeffs))
+                             table=coeffs)
         self.assertDictEqual(table1.sa_coeffs, table2.sa_coeffs)
         self.assertDictEqual(table1.non_sa_coeffs, table2.non_sa_coeffs)
-
-        # Additional case when sa_coeffs is missing
-        table3 = CoeffsTable(sa_damping=5, table=(None, table1.non_sa_coeffs))
-        self.assertDictEqual(table3.sa_coeffs, {})
 
     def test_table_bad_instantiation(self):
         # If instantiated with anything other than string or tuple should

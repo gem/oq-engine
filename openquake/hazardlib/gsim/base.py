@@ -916,15 +916,11 @@ class CoeffsTable(object):
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
 
-    >>> sa_coeffs = {SA(0.1): {"a": 1.0, "b": 2.0},
-    ...              SA(1.0): {"a": 3.0, "b": 4.0}}
-    >>> non_sa_coeffs = {PGA(): {"a": 0.1, "b": 1.0},
-    ...                  PGV(): {"a": 0.5, "b": 10.0}}
-    >>> ct = CoeffsTable(sa_damping=5, table=(sa_coeffs, non_sa_coeffs))
-
-    Even if one of those is missing:
-
-    >>> ct = CoeffsTable(sa_damping=5, table=(None, non_sa_coeffs))
+    >>> coeffs = {SA(0.1): {"a": 1.0, "b": 2.0},
+    ...           SA(1.0): {"a": 3.0, "b": 4.0},
+    ...           PGA(): {"a": 0.1, "b": 1.0},
+    ...           PGV(): {"a": 0.5, "b": 10.0}}
+    >>> ct = CoeffsTable(sa_damping=5, table=coeffs)
     """
     def __init__(self, **kwargs):
         if 'table' not in kwargs:
@@ -937,12 +933,12 @@ class CoeffsTable(object):
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
         if isinstance(table, str):
             self._setup_table_from_str(table, sa_damping)
-        elif isinstance(table, tuple):
-            sa_coeffs, non_sa_coeffs = table
-            if sa_coeffs:
-                self.sa_coeffs = sa_coeffs
-            if non_sa_coeffs:
-                self.non_sa_coeffs = non_sa_coeffs
+        elif isinstance(table, dict):
+            for key in table:
+                if isinstance(key, imt_module.SA):
+                    self.sa_coeffs[key] = table[key]
+                else:
+                    self.non_sa_coeffs[key] = table[key]
         else:
             raise ValueError('CoeffsTable cannot be constructed with inputs '
                              'of the form %s' % type(table))
