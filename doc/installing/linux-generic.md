@@ -69,7 +69,7 @@ rm -Rf ~/openquake
 If _make the 'oq' command available by default_ as been set to 'Y' (default) during the installation
 the 'oq' command will be available by default after the terminal has been restarted.
 
-To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, yum must run
+To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, you must run
 
 ```bash
 # default is ~/openquake
