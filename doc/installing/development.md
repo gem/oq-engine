@@ -69,10 +69,10 @@ source oqenv/bin/activate
 
 ## Install the code
 
-Inside the *virtualenv* (the prompt shows something like `(oqenv)user@myhost:~$`) upgrade `pip` first
+Inside the *virtualenv* (the prompt shows something like `(oqenv)user@myhost:~$`) upgrade `pip` and `setuptools` first
 
 ```bash
-pip install -U pip
+pip install -U pip setuptools
 ```
 
 ### Download the OpenQuake source code
