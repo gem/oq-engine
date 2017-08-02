@@ -84,11 +84,22 @@ git clone https://github.com/gem/oq-engine.git
 
 ### Install OpenQuake 
 
-You may want to install binary dependencies (in the form of python wheels: see [1](#note1) and [2](#note2).
+It's strongly recommended to install Python dependencies using our Python wheels distribution: all the external dependencies (`geos`, `proj4`, `hdf5`, `blas`, and many other) are already included as pre-compiled binaries and are tested before every release.
+
+```bash
+# For Linux
+pip install -r oq-engine/requirements-py27-linux64.txt
+```
+
+```bash
+# For macOS
+pip install -r oq-engine/requirements-py27-macos.txt
+```
 
 ```bash
 pip install -e oq-engine/
 ```
+To install extra features see [1](#note1).
 
 Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` code will be reflected in the environment.
 
@@ -146,19 +157,7 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ### Notes ###
 
-*<a name="note1">[1]</a>: if you want to use binary dependencies (python wheels: they do not require any compiler, development library...) before installing `oq-engine` run:*
-
-```bash
-# For Linux
-pip install -r oq-engine/requirements-py27-linux64.txt
-```
-
-```bash
-# For macOS
-pip install -r oq-engine/requirements-py27-macos.txt
-```
-
-*<a name="note2">[2]</a>: extra features, like celery and rtree support can be installed running:*
+*<a name="note1">[1]</a>: extra features, like celery and rtree support can be installed running:*
 
 ```bash
 # oq-engine with Rtree support
