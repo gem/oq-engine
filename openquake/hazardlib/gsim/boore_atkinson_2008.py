@@ -349,3 +349,60 @@ class BooreAtkinson2008(GMPE):
     7.500  -0.692  -0.247  -0.00
     10.00  -0.650  -0.215  -0.00
     """)
+
+
+class Atkinson2008Hawaii(BooreAtkinson2008):
+    """
+    Modification of the original base class adjusted for application
+    to the Hawaii region as described in:
+    Atkinson, G. M. (2010) 'Ground-Motion Prediction Equations for Hawaii
+    from a Referenced Empirical Approach", Bulletin of the Seismological
+    Society of America, Vol. 100, No. 2, pp. 751–761
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        Using a frequency dependent correction for the mean ground motion.
+        Standard deviation is fixed.
+        """
+
+        # Adding hypocentral depth as required rupture parameter
+        REQUIRES_RUPTURE_PARAMETERS = set(('hypo_depth'))
+
+        base = super(Atkinson2008Hawaii, self)
+        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        # Defining frequency
+        if imt == PGA():
+            freq = 50.0
+        elif imt == PGV():
+            freq = 2.0
+        else:
+            freq = 1./imt.period
+
+        # Equation 3 of Atkinson (2010)
+        x1 = np.min([-0.18+0.17*np.log10(freq),0])
+
+        # Equation 4 a-b-c of Atkinson (2010)
+        if rup.hypo_depth < 20.0:
+            x0 = np.max([0.217-0.321*np.log10(freq), 0])
+        elif rup.hypo_depth > 35.0:
+            x0 = np.min([0.263+0.0924*np.log10(freq), 0.35])
+        else:
+            x0 = 0.2
+
+        l10e = np.log10(np.e)
+
+        # Equation 2 and 5 of Atkinson (2010)
+        mean += (x0 + x1*np.log10(dists.rjb))/l10e
+
+        # Using a frequency independent value of sigma as recommended
+        # in the caption of Table 2 of Atkinson (2010)
+        stddevs = [0.26/l10e + np.zeros_like(mean)]
+
+        return mean, stddevs
+
+
+
+
+
