@@ -351,7 +351,7 @@ class BooreAtkinson2008(GMPE):
     """)
 
 
-class Atkinson2008Hawaii(BooreAtkinson2008):
+class Atkinson2010Hawaii(BooreAtkinson2008):
     """
     Modification of the original base class adjusted for application
     to the Hawaii region as described in:
@@ -369,7 +369,7 @@ class Atkinson2008Hawaii(BooreAtkinson2008):
         # Adding hypocentral depth as required rupture parameter
         REQUIRES_RUPTURE_PARAMETERS = set(('hypo_depth'))
 
-        base = super(Atkinson2008Hawaii, self)
+        base = super(Atkinson2010Hawaii, self)
         mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
 
         # Defining frequency
