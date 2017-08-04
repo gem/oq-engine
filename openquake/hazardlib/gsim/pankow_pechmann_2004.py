@@ -26,7 +26,7 @@ from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 class PankowPechmann2004(GMPE):
     """
@@ -40,7 +40,8 @@ class PankowPechmann2004(GMPE):
     #: TO CHECK PSV!
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
-        PGV
+        PGV,
+        SA
     ])
 
     #: Supported intensity measure component is VECTORIAL
@@ -71,31 +72,34 @@ class PankowPechmann2004(GMPE):
         """
         C = self.COEFFS[imt]
 
-        mag = rup.mag - 6
-        d = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
+        M = rup.mag - 6
+        R = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
 
         # In the original formulation of the GMPE, distinction is only made
         # between rock and soil sites, which I assumed are separated by the Vs30
         # value of 910m/s (see equation 5 of the paper)
         gamma = 0 if sites.vs30.any() > 910 else 1
 
-        mean = np.zeros_like(d)
+        mean = np.zeros_like(R)
 
         mean += C['b1'] + \
-                C['b2'] * mag + \
-                C['b3'] * mag ** 2 + \
-                C['b5'] * np.log10(d) + \
+                C['b2'] * M + \
+                C['b3'] * M ** 2 + \
+                C['b5'] * np.log10(R) + \
                 C['b6'] * gamma
 
+        # Converting PSV ground motion in PSA
+        if imt != PGA() and imt != PGV():
+            mean *= 2.*np.pi/imt.period
+
+        # Convert from base 10 to base e
+        mean /= np.log10(np.e)
+
+        # Computing standard deviation
         stddevs = self._get_stddevs(C, stddev_types,  dists.rjb.shape[0])
 
         # Convert from base 10 to base e
-        mean = np.log(10.0 ** np.array(mean))
-        stddevs = np.log(10.0 ** np.array(stddevs))
-
-        # Maximum distance limit (Optional)
-        # idx = d > 100.
-        # mean[idx] = -1E100
+        stddevs = [sd/np.log10(np.e) for sd in stddevs]
 
         return mean, stddevs
 
