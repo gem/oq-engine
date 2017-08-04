@@ -360,14 +360,29 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     Society of America, Vol. 100, No. 2, pp. 751–761
     """
 
+    #: Supported tectonic region type is active volcanic, see
+    #: paragraph 'Introduction', page 99.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
+
+    #: Supported intensity measure component is geometric mean, see paragraph
+    #: 'Response Variables', page 100 and table 8, pag 121.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VECTORIAL
+
+    #: Supported standard deviation types is total
+    #: see equation 2, pag 106.
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
+
+    # Adding hypocentral depth as required rupture parameter
+    REQUIRES_RUPTURE_PARAMETERS = set(('hypo_depth'))
+
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Using a frequency dependent correction for the mean ground motion.
         Standard deviation is fixed.
         """
-
-        # Adding hypocentral depth as required rupture parameter
-        REQUIRES_RUPTURE_PARAMETERS = set(('hypo_depth'))
 
         base = super(Atkinson2010Hawaii, self)
         mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
@@ -391,18 +406,21 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
         else:
             x0 = 0.2
 
-        l10e = np.log10(np.e)
-
         # Equation 2 and 5 of Atkinson (2010)
-        mean += (x0 + x1*np.log10(dists.rjb))/l10e
-
-        # Using a frequency independent value of sigma as recommended
-        # in the caption of Table 2 of Atkinson (2010)
-        stddevs = [0.26/l10e + np.zeros_like(mean)]
+        mean += (x0 + x1*np.log10(dists.rjb))/np.log10(np.e)
 
         return mean, stddevs
 
+    def _get_stddevs(self, C, stddev_types, num_sites):
+        """
+        Return total standard deviation.
+        """
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                   for stddev_type in stddev_types)
 
+        # Using a frequency independent value of sigma as recommended
+        # in the caption of Table 2 of Atkinson (2010)
+        stddevs = [0.26/np.log10(np.e) + np.zeros(num_sites)]
 
-
+        return stddevs
 
