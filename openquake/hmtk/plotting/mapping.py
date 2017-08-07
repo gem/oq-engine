@@ -27,7 +27,7 @@
 # risk and software design communities. 
 # 
 # The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
+# (https://www.globalquakemodel.org/tools-products) and must be considered as a 
 # separate entity. The software provided herein is designed and implemented 
 # by scientific staff. It is not developed to the design standards, nor 
 # subject to same level of critical review by professional software 
