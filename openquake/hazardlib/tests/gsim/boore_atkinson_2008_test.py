@@ -51,3 +51,13 @@ class BooreAtkinson2008TestCase(BaseGSIMTestCase):
     def test_std_total_strike_slip(self):
         self.check('NGA/BA08/BA08_SIGTM_SS.csv',
                     max_discrep_percentage=0.1)
+
+
+class Atkinson2010HawaiiTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = Atkinson2010Hawaii
+    
+    # Test data were kindly provided by Gail Atkinson
+
+    def test_mean_normal(self):
+        self.check('NGA/BA08/A10H_MEDIAN.csv',
+                    max_discrep_percentage=0.6)
