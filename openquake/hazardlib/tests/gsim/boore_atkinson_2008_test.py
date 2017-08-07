@@ -58,6 +58,10 @@ class Atkinson2010HawaiiTestCase(BaseGSIMTestCase):
     
     # Test data were kindly provided by Gail Atkinson
 
-    def test_mean_normal(self):
+    def test_mean(self):
         self.check('NGA/BA08/A10H_MEDIAN.csv',
                     max_discrep_percentage=0.6)
+
+    def test_std_total(self):
+        self.check('NGA/BA08/A10H_STD_TOTAL.csv',
+                    max_discrep_percentage=0.1)
