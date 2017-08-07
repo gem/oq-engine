@@ -19,7 +19,7 @@ Requirements are:
 
 ## Install packages from the OpenQuake website
 
-Download the installer from http://www.globalquakemodel.org/pkgs/macos/oq-engine/openquake-setup-macos-2.4.0-1.run using any browser
+Download the installer from http://storage.globalquakemodel.org/pkgs/macos/oq-engine/openquake-setup-macos-2.4.0-1.run using any browser
 
 From the Terminal app (or using iTerm) run
 
