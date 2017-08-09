@@ -940,8 +940,8 @@ class CoeffsTable(object):
                 else:
                     self.non_sa_coeffs[key] = table[key]
         else:
-            raise ValueError('CoeffsTable cannot be constructed with inputs '
-                             'of the form %s' % type(table))
+            raise TypeError("CoeffsTable cannot be constructed with inputs "
+                            "of the form '%s'" % table.__class__.__name__)
 
     def _setup_table_from_str(self, table, sa_damping):
         """
