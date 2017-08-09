@@ -31,14 +31,13 @@ Some software prerequisites are needed to build the development environment. Pyt
 ### Ubuntu
 
 ```bash
-sudo apt-get install build-essential git libhdf5-dev libgeos-dev python-virtualenv python-pip
+sudo apt-get install git python-virtualenv python-pip
 ```
 
 ### RedHat
 
 ```bash
-sudo yum groupinstall "Development tools"
-sudo yum install git hdf5-devel geos-devel python-virtualenv python-pip
+sudo yum install git python-virtualenv python-pip
 ```
 
 ### macOS
@@ -99,7 +98,7 @@ pip install -r oq-engine/requirements-py27-macos.txt
 ```bash
 pip install -e oq-engine/
 ```
-To install extra features see [1](#note1).
+To install extra features see [1](#note1). If your system does not support the provided binary dependencies you'll need to manually install them, using tools provided by your python distribution [2](#note2).
 
 Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` code will be reflected in the environment.
 
@@ -167,6 +166,17 @@ pip install -e oq-engine/[celery]
 # oq-engine with support for both
 pip install -e oq-engine/[rtree,celery]
 ```
+
+*<a name="note2">[2]</a>: unsupported systems:*
+
+If your system does not support the provided binary dependencies (python wheels)
+
+```bash
+pip install -e oq-engine/
+```
+
+will try to download the required dependencies from [pypi](http://pypi.python.org/), this may require some extra work to get all the external C dependencies resolved.
+If you are using a non-standard python distribution (like _macports_ or _anaconda_) you should use tools provided by such distribution to get the required dependencies.
 
 ***
 
