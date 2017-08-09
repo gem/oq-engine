@@ -1,3 +1,6 @@
+  [Valerio Poggi]
+  * Implemented the Munson and Thurber 1997 (Volcanic) GMPE
+
   [Daniele Viganò]
   * Extended the 'oq reset' command to work on multi user installations
 
