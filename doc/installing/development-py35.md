@@ -32,6 +32,8 @@ sudo apt install git python3.5 python3.5-venv python3-pip
 
 ### RedHat and clones
 
+On RedHat and its clones (CentOS/SL) Python 3.5 isn't available in the standard repositories, but it can be installed via [RedHat Software Collections](https://access.redhat.com/documentation/en-US/Red_Hat_Developer_Toolset/1/html-single/Software_Collections_Guide/).
+
 ```bash
 ## RedHat
 sudo yum install git scl-utils scl-utils-build
