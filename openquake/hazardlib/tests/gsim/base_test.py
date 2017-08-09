@@ -665,7 +665,7 @@ class CoeffsTableTestCase(unittest.TestCase):
     def test_table_dict_instantiation(self):
         # Check that the table instantiates with pre-defined dictionaries
         table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
-        # Create target dictionatu
+        # Create target dictionary
         coeffs = deepcopy(table1.non_sa_coeffs)
         coeffs.update(table1.sa_coeffs)
         table2 = CoeffsTable(sa_damping=5,
@@ -675,9 +675,9 @@ class CoeffsTableTestCase(unittest.TestCase):
 
     def test_table_bad_instantiation(self):
         # If instantiated with anything other than string or tuple should
-        # raise an error
-        with self.assertRaises(ValueError) as ve:
+        # raise a TypeError
+        with self.assertRaises(TypeError) as te:
             CoeffsTable(sa_damping=5, table=5)
-        self.assertEqual(str(ve.exception),
+        self.assertEqual(str(te.exception),
                          "CoeffsTable cannot be constructed with "
-                         "inputs of the form <type 'int'>")
+                         "inputs of the form 'int'")
