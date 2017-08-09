@@ -23,14 +23,12 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 class MunsonThurber1997TestCase(BaseGSIMTestCase):
     GSIM_CLASS = MunsonThurber1997
-    
+
     # Test data were taken from Table 5 of Munson and Thurber (1997)
     # Standard deviation is a fixed value
 
     def test_mean_normal(self):
-        self.check('MT97/MT97_MEAN.csv',
-                    max_discrep_percentage=0.6)
+        self.check('MT97/MT97_MEAN.csv', max_discrep_percentage=0.6)
 
     def test_std_total(self):
-        self.check('MT97/MT97_STD_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+        self.check('MT97/MT97_STD_TOTAL.csv', max_discrep_percentage=0.1)
