@@ -113,11 +113,8 @@ class MunsonThurber1997Vector(MunsonThurber1997):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         base = super(MunsonThurber1997Vector, self)
-        mean, stddevs = base.get_mean_and_stddevs(sites,
-                                                  rup,
-                                                  dists,
-                                                  imt,
-                                                  stddev_types)
+        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists,
+                                                  imt, stddev_types)
 
         # Conversion to geometric mean of horizontal components
         # using the coefficient in Beyer and Bommer, 2006
