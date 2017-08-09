@@ -24,7 +24,7 @@ from __future__ import division
 
 import numpy as np
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 
@@ -90,6 +90,10 @@ class MunsonThurber1997(GMPE):
         # Converting to natural log
         mean /= np.log10(np.e)
 
+        # Check for standard deviation type
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                   for stddev_type in stddev_types)
+
         # Constant (total) standard deviation
         stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
 
@@ -109,7 +113,11 @@ class MunsonThurber1997Vector(MunsonThurber1997):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 
         base = super(MunsonThurber1997Vector, self)
-        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = base.get_mean_and_stddevs(sites,
+                                                  rup,
+                                                  dists,
+                                                  imt,
+                                                  stddev_types)
 
         # Conversion to geometric mean of horizontal components
         # using the coefficient in Beyer and Bommer, 2006
