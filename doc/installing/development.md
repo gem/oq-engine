@@ -2,9 +2,6 @@
 
 To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
 
-*The source installation will conflict with the package installation, so you
-must remove the openquake package if it was already installed.*
-
 The official supported distributions to develop the OpenQuake Engine and its libraries are
 
 ### Linux
