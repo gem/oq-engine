@@ -25,6 +25,8 @@ $ nosetests -v -a '!slow' openquake.hazardlib
 $ nosetests -v -a '!slow' openquake.server
 ```
 
+See the [man page](http://nose.readthedocs.io/en/latest/man.html) of `nosetests` for further information and command options.
+
 ***
 
 ## Getting help
