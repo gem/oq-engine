@@ -1,4 +1,4 @@
-# Installing the OpenQuake Engine for development
+# Installing the OpenQuake Engine for development (Python 3.5)
 
 To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
 
@@ -9,7 +9,6 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 
 ### Linux
 
-- Ubuntu 14.04 LTS (Trusty) 
 - Ubuntu 16.04 LTS (Xenial)
 - RedHat Enterprise Linux 7 
 - CentOS 7
@@ -26,18 +25,25 @@ This guide may work also on other Linux releases/distributions.
 
 Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
-Some software prerequisites are needed to build the development environment. Python 2.7 is used in this guide; for Python 3.5 see [Installing the OpenQuake Engine for development (Python 3.5)](development-py35.md).
+Some software prerequisites are needed to build the development environment. Python 3.5 is used in this guide; for Python 2.7 see [Installing the OpenQuake Engine for development (Python 2.7)](development.md).
 
 ### Ubuntu
 
 ```bash
-sudo apt-get install git python-virtualenv python-pip
+sudo apt install git python3.5 python3.5-venv python3-pip
 ```
 
-### RedHat
+### RedHat and clones
 
 ```bash
-sudo yum install git python-virtualenv python-pip
+## RedHat
+sudo yum install git scl-utils scl-utils-build
+
+## CentOS/SL
+sudo yum install git centos-release-scl
+
+sudo yum install rh-python35
+scl enable rh-python35 bash
 ```
 
 ### macOS
@@ -49,7 +55,7 @@ You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) f
 
 #### Python 
 
-You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/2.7.13/python-2.7.13-macosx10.6.pkg
+You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.5.3/python-3.5.3-macosx10.6.pkg
 
 ## Build the development environment
 
@@ -62,7 +68,7 @@ mkdir $HOME/openquake && cd $HOME/openquake
 then build a development environment using python *virtualenv*
 
 ```bash
-python -m virtualenv oqenv 
+python3 -m venv oqenv 
 source oqenv/bin/activate
 ```
 
@@ -87,12 +93,12 @@ It's strongly recommended to install Python dependencies using our Python wheels
 
 ```bash
 # For Linux
-pip install -r oq-engine/requirements-py27-linux64.txt
+pip install -r oq-engine/requirements-py35-linux64.txt
 ```
 
 ```bash
 # For macOS
-pip install -r oq-engine/requirements-py27-macos.txt
+pip install -r oq-engine/requirements-py35-macos.txt
 ```
 
 ```bash
