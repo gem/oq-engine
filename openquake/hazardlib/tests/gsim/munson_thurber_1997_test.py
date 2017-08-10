@@ -25,6 +25,7 @@ class MunsonThurber1997TestCase(BaseGSIMTestCase):
     GSIM_CLASS = MunsonThurber1997
 
     # Test data were taken from Table 5 of Munson and Thurber (1997)
+    # (some decimals are added manually, due to lack of precision)
     # Standard deviation is a fixed value
 
     def test_mean_normal(self):
