@@ -28,7 +28,7 @@ class MunsonThurber1997TestCase(BaseGSIMTestCase):
     # (some decimals are added manually, due to lack of precision)
     # Standard deviation is a fixed value
 
-    def test_mean_normal(self):
+    def test_mean(self):
         self.check('MT97/MT97_MEAN.csv', max_discrep_percentage=0.6)
 
     def test_std_total(self):
