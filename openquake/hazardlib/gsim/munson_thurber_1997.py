@@ -89,7 +89,6 @@ class MunsonThurber1997(GMPE):
 
         # Converting to natural log
         mean /= np.log10(np.e)
-        print np.exp(mean[0])
 
         # Check for standard deviation type
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
