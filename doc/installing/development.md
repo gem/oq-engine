@@ -113,7 +113,7 @@ cd ..
 
 ## Loading and unloading the development environment
 
-To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source oqenv/bin/activate`(assuming that it has been installed under 'oqenv'). For more information about *virtualenv* and its you see http://docs.python-guide.org/en/latest/dev/virtualenvs/
+To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be reloaded running `source oqenv/bin/activate`(assuming that it has been installed under 'oqenv'). For more information about *virtualenv*, see http://docs.python-guide.org/en/latest/dev/virtualenvs/.
 
 To load the virtual environment automatically at every login, add the following line at the bottom of your `~/.bashrc` (Linux) or `~/.profile` (macOS):
 
@@ -147,7 +147,7 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 
 ## Uninstall the OpenQuake Engine
 
-To uninstall the OpenQuake development make sure that its environment is not loaded typing `deactivate` and the remove the folder where it has been installed: `rm -Rf openquake`.
+To uninstall the OpenQuake development make sure that its environment is not loaded, typing `deactivate`, and then remove the folder where it has been installed: `rm -Rf openquake`.
 
 ***
 
@@ -172,7 +172,7 @@ If your system does not support the provided binary dependencies (python wheels)
 pip install -e oq-engine/
 ```
 
-will try to download the required dependencies from [pypi](http://pypi.python.org/), this may require some extra work to get all the external C dependencies resolved.
+will try to download the required dependencies from [pypi](http://pypi.python.org/). This may require some extra work to get all the external C dependencies resolved.
 If you are using a non-standard python distribution (like _macports_ or _anaconda_) you should use tools provided by such distribution to get the required dependencies.
 
 ***
