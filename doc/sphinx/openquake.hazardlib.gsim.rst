@@ -547,6 +547,14 @@ montalva_2016
     :undoc-members:
     :show-inheritance:
 
+munson_thurber_1997
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.munson_thurber_1997
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nath_2012
 -----------------------------------------
 
