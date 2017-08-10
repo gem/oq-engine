@@ -377,7 +377,6 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     # Adding hypocentral depth as required rupture parameter
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
 
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Using a frequency dependent correction for the mean ground motion.
@@ -385,7 +384,8 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
         """
 
         base = super(Atkinson2010Hawaii, self)
-        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists,
+                                                  imt, stddev_types)
 
         # Defining frequency
         if imt == PGA():
@@ -396,7 +396,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
             freq = 1./imt.period
 
         # Equation 3 of Atkinson (2010)
-        x1 = np.min([-0.18+0.17*np.log10(freq),0])
+        x1 = np.min([-0.18+0.17*np.log10(freq), 0])
 
         # Equation 4 a-b-c of Atkinson (2010)
         if rup.hypo_depth < 20.0:
@@ -423,4 +423,3 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
         stddevs = [0.26/np.log10(np.e) + np.zeros(num_sites)]
 
         return stddevs
-
