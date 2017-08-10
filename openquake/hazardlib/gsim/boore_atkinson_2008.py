@@ -375,7 +375,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     ])
 
     # Adding hypocentral depth as required rupture parameter
-    REQUIRES_RUPTURE_PARAMETERS = set(('hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
 
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
