@@ -1,4 +1,12 @@
+  [Daniele Viganò]
+  * Extended the 'oq reset' command to work on multi user installations
+
   [Michele Simionato]
+  * Fixed a bug: if there are multiple realizations and no hazard stats,
+    it is an error to set hazard_maps=true or uniform_hazard_spectra=true
+  * Implemented aggregation by asset tag in the risk calculators
+  * Fixed a small bug in the HMTK (in `get_depth_pmf`)
+  * Extended the demo LogicTreeCase1ClassicalPSHA to two IMTs and points
   * Added a documentation page `oq-commands.md`
   * Removed the automatic gunzip functionality and added an automatic
     checksum functionality plus an `oq checksum` command
