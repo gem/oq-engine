@@ -453,9 +453,14 @@ class ClassicalCalculator(PSHACalculator):
             return
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-        if len(rlzs) == 1 or not oq.hazard_stats():
+        if len(rlzs) == 1:  # no stats to compute
             return {}
-
+        elif not oq.hazard_stats():
+            if oq.hazard_maps or oq.uniform_hazard_spectra:
+                raise ValueError('The job.ini says that no statistics should '
+                                 'be computed, but then there is no output!')
+            else:
+                return {}
         # initialize datasets
         N = len(self.sitecol)
         L = len(oq.imtls.array)

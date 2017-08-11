@@ -21,7 +21,7 @@ from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -116,6 +116,14 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__, kind='all')
+
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_7.__file__, 'job.ini', mean_hazard_curves='false',
+                hazard_maps='true', poes='0.1')
+        self.assertEqual(
+            'The job.ini says that no statistics should be computed, but then '
+            'there is no output!', str(ctx.exception))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):
@@ -279,7 +287,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
 
         # check exporting a single realization in XML and CSV
         [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
-        self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
+        if REFERENCE_OS:  # broken on macOS
+            self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
         [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
