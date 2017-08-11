@@ -87,6 +87,22 @@ sudo yum install yum-plugin-remove-with-leaves
 sudo yum erase --remove-leaves python-oq-*
 ```
 
+## Data cleanup
+
+To reset the database `oq reset` command can be used:
+
+```bash
+sudo systemctl stop openquake-dbserver.service
+sudo -u openquake oq reset
+sudo systemctl start openquake-dbserver.service
+```
+
+To remove **all** the data produced by the OpenQuake Engine (including datastores) you must also remove `~/oqdata` in each users' home. The `reset-db` bash script is provided, as a reference, in `/usr/share/openquake/engine/utils`.
+
+
+
+If the packages have been already uninstalled, it's safe to remove `/var/lib/openquake`.
+
 ***
 
 ## Getting help
