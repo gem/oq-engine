@@ -66,7 +66,7 @@ else:
     CELERY_RESULT_PERSISTENT = False
 
     # Redis result backend (works only on Trusty)
-    # CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
+    #CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
 
     # CELERY_ACKS_LATE and CELERYD_PREFETCH_MULTIPLIER settings help evenly
     # distribute tasks across the cluster. This configuration is intended

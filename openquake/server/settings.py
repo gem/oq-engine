@@ -51,7 +51,7 @@ TEMPLATES = [
 STATIC_URL = '/static/'
 
 MEDIA_ROOT = '%(mediaroot)s'
-STATIC_ROOT = '%(staticroot)s'
+STATIC_ROOT = '/var/www/webui'
 
 # Additional directories which hold static files
 STATICFILES_DIRS = [
