@@ -146,7 +146,6 @@ def upgrade_nrml(directory, dry_run):
                             print(exc)
                     else:
                         print('Not upgrading', path)
-                ip._file.close()
 
 
 upgrade_nrml.arg('directory', 'directory to consider')
