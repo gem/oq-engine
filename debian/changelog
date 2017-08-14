@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Extended the 'oq reset' command to work on multi user installations
+
   [Michele Simionato]
   * Fixed a bug: if there are multiple realizations and no hazard stats,
     it is an error to set hazard_maps=true or uniform_hazard_spectra=true

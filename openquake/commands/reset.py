@@ -19,9 +19,8 @@
 from __future__ import print_function
 import os
 import sys
-import shutil
 from openquake.baselib import sap
-from openquake.commonlib import datastore, config
+from openquake.commonlib import config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
@@ -37,26 +36,27 @@ def reset(yes):
     if not ok:
         return
 
-    if config.flag_set('dbserver', 'multi_user'):
-        purge_all()  # remove data of the current user only
-        return
-
-    # else: fast way of removing everything
-
-    if dbserver.get_status() == 'running':
-        logs.dbcmd('stop')
-        print('dbserver stopped')
-
     dbpath = os.path.realpath(
         os.path.expanduser(config.get('dbserver', 'file')))
-    try:
-        os.remove(dbpath)  # database of the current user
-        print('Removed %s' % dbpath)
-    except OSError as exc:
-        print(exc, file=sys.stderr)
-    datadir = os.path.realpath(datastore.DATADIR)
-    if os.path.exists(datadir):
-        shutil.rmtree(datadir)  # datastore of the current user
-    print('Removed %s' % datadir)
+
+    # user must be able to access and write the databse file to remove it
+    if os.path.isfile(dbpath) and os.access(dbpath, os.W_OK):
+        if dbserver.get_status() == 'running':
+            if config.flag_set('dbserver', 'multi_user'):
+                sys.exit('The oq dbserver must be stopped '
+                         'before proceeding')
+            else:
+                logs.dbcmd('stop')
+                print('dbserver stopped')
+
+        try:
+            os.remove(dbpath)
+            print('Removed %s'
+                  % dbpath)
+        except OSError as exc:
+            print(exc, file=sys.stderr)
+
+    # fast way of removing everything
+    purge_all(fast=True)  # datastore of the current user
 
 reset.flg('yes', 'confirmation')

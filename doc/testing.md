@@ -2,16 +2,34 @@
 
 ### Automatic testing
 
-The OpenQuake code is automatically tested by a [Continuous integration](https://ci.openquake.org) system at every merge and every night. This system uses [Jenkins](http://jenkins-ci.org/).
-
-Current build status is  [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
+The OpenQuake code is automatically tested by Continuous integration systems, [Jenkins](https://ci.openquake.org) and [Travis](https://travis-ci.org/gem/oq-engine), at every merge and every night.
 
 ### Manual testing
 
-The full suite of tests for the OpenQuake Engine can be run using `nose`
+The full suite of tests for the OpenQuake Engine can be run using `nose`:
 
-```
-nosetests -v -a '!slow'
+```bash
+$ nosetests -v -a '!slow' openquake
 ```
 
-The command must be run from the OpenQuake Engine code location. On a development installation this is usually `oq-engine`. On production system it can be `/usr/lib/python2.7/site-packages/openquake` or `/usr/lib/python2.7/dist-packages/openquake`.
+Python packages can also be specified to run only a subset of tests. Some examples are:
+
+```bash
+# Hazardlib
+$ nosetests -v -a '!slow' openquake.hazardlib
+
+# Calculators
+$ nosetests -v -a '!slow' openquake.hazardlib
+
+# Engine server
+$ nosetests -v -a '!slow' openquake.server
+```
+
+See the [man page](http://nose.readthedocs.io/en/latest/man.html) of `nosetests` for further information and command options.
+
+***
+
+## Getting help
+If you need help or have questions/comments/feedback for us, you can:
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Contact us on IRC: irc.freenode.net, channel #openquake
