@@ -62,19 +62,19 @@ class DbServer(object):
             workerpath = os.path.abspath(z.__file__)
             # create the workers
             self.workers = 0
-            remote_python = (config.get('dbserver', 'remote_python') or
-                             sys.executable)
-            for host, port, cores in config.get_host_cores():
+            rpython = (config.get('dbserver', 'remote_python') or
+                       sys.executable)
+            for host, sshport, cores in config.get_host_cores():
                 for core in range(cores):
                     cmd = [workerpath, self.backend_url]
                     if host == '127.0.0.1':  # localhost
                         args = [sys.executable] + cmd
                     else:
-                        args = ['ssh', host, '-p', port, remote_python] + cmd
+                        args = ['ssh', host, '-p', sshport, rpython] + cmd
                     subprocess.Popen(args)
                     self.workers += 1
-                logging.warn('starting %d workers on %s:%s listening on %s',
-                             cores, host, port, self.backend_url)
+                logging.warn('starting %d workers on %s listening on %s',
+                             cores, host, sshport, self.backend_url)
             z.Thread(z.proxy, self.frontend_url, self.backend_url).start()
             logging.warn('zmq proxy started on ports %d, %d',
                          self.port + 1, self.port + 2)
