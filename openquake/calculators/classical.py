@@ -220,9 +220,6 @@ def saving_sources_by_task(iterargs, dstore):
     dstore['task_sources'] = numpy.array([encode(s) for s in source_ids])
     dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
 
-src_data_dt = numpy.dtype(
-    [('rupweight', F32), ('nsites', U32), ('calc_time', F32)])
-
 
 @base.calculators.add('psha')
 class PSHACalculator(base.HazardCalculator):
@@ -240,21 +237,16 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap: a ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            src_data = numpy.zeros(len(pmap.calc_times), src_data_dt)
-            i = 0
             for src_id, src_weight, nsites, calc_time in pmap.calc_times:
                 src_id = src_id.split(':', 1)[0]
                 info = self.csm.infos[pmap.grp_id, src_id]
                 info.calc_time += calc_time
                 info.num_sites = max(info.num_sites, nsites)
                 info.num_split += 1
-                src_data[i] = (src_weight, nsites, calc_time)
-                i += 1
             acc.eff_ruptures += pmap.eff_ruptures
             for bb in getattr(pmap, 'bbs', []):  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
             acc[pmap.grp_id] |= pmap
-        self.datastore.extend('src_data', src_data)
         return acc
 
     def count_eff_ruptures(self, result_dict, src_group):
