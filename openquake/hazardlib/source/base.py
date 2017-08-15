@@ -38,7 +38,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'seed', 'id']
-    RUPTURE_WEIGHT = 1.  # overridden in PointSource
+    RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
