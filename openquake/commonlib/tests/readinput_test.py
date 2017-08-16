@@ -314,7 +314,28 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')  # wrong cost type "aggregate"
 
-    def test_get_exposure_metadata(self):
+    exposure3 = general.writetmp('''\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="per_asset"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM " number="3000">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>''')
+
+    def test_get_metadata(self):
         exp, _assets = readinput._get_exposure(
             self.exposure, ['structural'], stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
@@ -323,7 +344,7 @@ class ExposureTestCase(unittest.TestCase):
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
                          [('structural', 'per_asset', 'USD')])
 
-    def test_exposure_missing_number(self):
+    def test_missing_number(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
@@ -338,7 +359,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("node asset: 'number', line 17 of", str(ctx.exception))
 
-    def test_exposure_zero_number(self):
+    def test_zero_number(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
@@ -356,7 +377,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
                       "(positivefloat,nonzero): '0' is zero, line 17",
                       str(ctx.exception))
 
-    def test_exposure_invalid_asset_id(self):
+    def test_invalid_asset_id(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
@@ -371,7 +392,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
                       "a-zA-Z0-9_-, line 11", str(ctx.exception))
 
-    def test_exposure_no_insured_data(self):
+    def test_no_insured_data(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
@@ -387,7 +408,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("node cost: 'deductible', line 14", str(ctx.exception))
 
-    def test_exposure_no_assets(self):
+    def test_no_assets(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
@@ -404,7 +425,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         self.assertIn('Could not find any asset within the region!',
                       str(ctx.exception))
 
-    def test_exposure_wrong_cost_type(self):
+    def test_wrong_cost_type(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
@@ -417,6 +438,22 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("Got 'aggregate', expected "
                       "aggregated|per_area|per_asset, line 7",
+                      str(ctx.exception))
+
+    def test_invalid_taxonomy(self):
+        oqparam = mock.Mock()
+        oqparam.base_path = '/'
+        oqparam.calculation_mode = 'scenario_damage'
+        oqparam.all_cost_types = ['structural']
+        oqparam.inputs = {'exposure': self.exposure3}
+        oqparam.region_constraint = '''\
+POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
+        oqparam.time_event = None
+        oqparam.insured_losses = False
+        oqparam.ignore_missing_costs = []
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_exposure(oqparam)
+        self.assertIn("'RM ' contains whitespace chars, line 11",
                       str(ctx.exception))
 
 
@@ -561,88 +598,6 @@ PGA 12.0 42.2 0.64 0.65
                                       [0.55, 0.51, 0.5]])
 
 
-class TestReadGmfCsvTestCase(unittest.TestCase):
-    def setUp(self):
-        self.oqparam = mock.Mock()
-        self.oqparam.base_path = '/'
-        self.oqparam.inputs = {}
-        self.oqparam.imtls = {'PGA': None}
-        self.oqparam.number_of_ground_motion_fields = 3
-
-    def test_gmf_ok(self):
-        fname = general.writetmp('''\
-0 0,0 1
-col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
-col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
-col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
-''')
-        _, _, gmfs = readinput.get_gmfs_from_txt(self.oqparam, fname)
-        gmvs1, gmvs2 = gmfs['PGA']
-        assert_allclose(gmvs1, [0.305128, 0.267031, 0.159434])
-        assert_allclose(gmvs2, [0.604032, 0.334878, 0.392602])
-
-    def test_missing_indices_are_ok(self):
-        fname = general.writetmp('''\
-0 0,0 1
-col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
-col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
-col=00|ses=0001|src=test|rup=001-02,0,2.67031000E-01
-''')
-        _, _, gmfs = readinput.get_gmfs_from_txt(self.oqparam, fname)
-        gmvs1, gmvs2 = gmfs['PGA']
-        assert_allclose(gmvs1, [0.159434, 0.305128, 0.267031])
-        assert_allclose(gmvs2, [0.392602, 0.604032, 0.])
-
-    def test_negative_gmf(self):
-        fname = general.writetmp('''\
-0 0,0 1
-col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
-col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
-col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 -3.92602000E-01
-''')
-        with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_txt(self.oqparam, fname)
-
-    def test_missing_line(self):
-        fname = general.writetmp('''\
-0 0,0 1
-col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
-col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
-''')
-        with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_txt(self.oqparam, fname)
-
-    def test_not_ordered_eids(self):
-        fname = general.writetmp('''\
-0 0,0 1
-col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
-col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
-col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
-''')
-        with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_txt(self.oqparam, fname)
-
-    def test_negative_indices(self):
-        fname = general.writetmp('''\
-0 0,0 1
-col=00|ses=0001|src=test|rup=001-00,0 -1,1.59434000E-01 3.92602000E-01
-col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
-col=00|ses=0001|src=test|rup=001-02,0 1,2.67031000E-01 3.34878000E-01
-''')
-        with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_txt(self.oqparam, fname)
-
-    def test_missing_bad_indices(self):
-        fname = general.writetmp('''\
-0 0,0 1
-col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
-col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
-col=00|ses=0001|src=test|rup=001-02,X,2.67031000E-01
-''')
-        with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_txt(self.oqparam, fname)
-
-
 class TestReadGmfXmlTestCase(unittest.TestCase):
     """
     Read the GMF from a NRML file
@@ -656,13 +611,7 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
 
     def test_ok(self):
         fname = os.path.join(DATADIR,  'gmfdata.xml')
-        sitecol, eids, gmfa = readinput.get_scenario_from_nrml(
-            self.oqparam, fname)
-        coords = list(zip(sitecol.mesh.lons, sitecol.mesh.lats))
-        self.assertEqual(writers.write_csv(StringIO(), coords), '''\
-0.000000E+00,0.000000E+00
-0.000000E+00,1.000000E-01
-0.000000E+00,2.000000E-01''')
+        eids, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
         assert_allclose(eids, range(5))
         self.assertEqual(
             writers.write_csv(StringIO(), gmfa), '''\
@@ -685,31 +634,6 @@ PGA:float32,PGV:float32
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_scenario_from_nrml(self.oqparam, fname)
         self.assertIn("Expected 4 sites, got 3 nodes in", str(ctx.exception))
-
-    def test_tricky_ordering(self):
-        # see https://github.com/gem/oq-risklib/issues/546
-        fname = general.writetmp('''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-      xmlns:gml="http://www.opengis.net/gml">
-<gmfCollection gsimTreePath="" sourceModelTreePath="">
-  <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="0">
-      <node gmv="0.0124783118478" lon="12.1244171" lat="43.58248037"/>
-      <node gmv="0.0126515007046" lon="12.12477995" lat="43.58217888"/>
-      <node gmv="0.0124056290492" lon="12.12478193" lat="43.58120146"/>
-    </gmf>
-  </gmfSet>
-</gmfCollection>
-</nrml>''')
-        self.oqparam.imtls = {'PGA': None}
-        sitecol, _, _ = readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertEqual(list(zip(sitecol.lons, sitecol.lats)),
-                         [(12.12442, 43.58248),
-                          (12.12478, 43.5812),
-                          (12.12478, 43.58218)])
-        # notice that the last two lats 43.5812, 43.58218 are inverted with
-        # respect to the original ordering, 43.58217888, 43.58120146
 
     def test_two_nodes_on_the_same_point(self):
         # after rounding of the coordinates two points can collide

@@ -1,6 +1,6 @@
 # OpenQuake Engine
 
-![OpenQuake Logo](https://www.globalquakemodel.org/media/storage/oq-logo.png)
+![OpenQuake Logo](https://github.com/gem/oq-infrastructure/raw/master/logos/oq-logo.png)
 
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
@@ -38,7 +38,8 @@ Current stable version is the **OpenQuake Engine 2.5** 'Fourier'. The documentat
 
 * [About](https://github.com/gem/oq-engine/blob/master/doc/about.md)
 * [FAQ](https://github.com/gem/oq-engine/blob/master/doc/faq.md)
-* [Manuals](http://www.globalquakemodel.org/openquake/support/documentation/engine/#manual-latest-stable)
+* [Manuals](http://storage.globalquakemodel.org/openquake/support/documentation/engine/#manual-latest-stable)
+* [OQ Commands](https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
 * [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
@@ -73,7 +74,7 @@ Current stable version is the **OpenQuake Engine 2.5** 'Fourier'. The documentat
 
 #### VirtualBox
 
-* [Download OVA appliance](https://www.globalquakemodel.org/ova/stable/)
+* [Download OVA appliance](https://storage.globalquakemodel.org/ova/stable/)
 
 #### Docker
 
@@ -99,48 +100,48 @@ The OpenQuake Engine is released under the **[GNU Affero Public License 3](https
 ## Thanks
 
 The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (GEM)](http://gem.foundation)** with the support of
-![](https://www.globalquakemodel.org/media/sponsor/aus.png)
-![](https://www.globalquakemodel.org/media/sponsor/cidigen.png)
-![](https://www.globalquakemodel.org/media/sponsor/sg_170x104.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/gfz.png)
-![](https://www.globalquakemodel.org/media/sponsor/pcn.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/nied.png)
-![](https://www.globalquakemodel.org/media/sponsor/nset.png)
-![](https://www.globalquakemodel.org/media/sponsor/morst.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/RCN.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/swiss_1.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/tem.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/TCIP-01.png)
-![](https://www.globalquakemodel.org/media/sponsor/nerc.png)
-![](https://www.globalquakemodel.org/media/sponsor/usaid_BsOsE8Z_QZnaG6c.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/FUNVISIS_GEM_logo.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/aus.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/cidigen.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/sg_170x104.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/gfz.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/pcn.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/nied.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/nset.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/morst.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/RCN.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/swiss_1.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/tem.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/TCIP-01.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/nerc.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/usaid_BsOsE8Z_QZnaG6c.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/FUNVISIS_GEM_logo.png)
 
 ***
 
-![](https://www.globalquakemodel.org/media/sponsor/FMGlobal.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/hannoverRe.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/Nephila.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/munichre_HwOCwR4.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/zurich_3eh504q.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/Air_JlQh6Ke.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/sur_170x104.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/EUCENTRE_BRAw8x4.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/GiroJ.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/arup.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/OYO_1.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/FMGlobal.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/hannoverRe.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/Nephila.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/munichre_HwOCwR4.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/zurich_3eh504q.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/Air_JlQh6Ke.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/sur_170x104.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/EUCENTRE_BRAw8x4.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/GiroJ.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/arup.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/OYO_1.jpg)
 
 ***
 
-![](https://www.globalquakemodel.org/media/sponsor/OECD.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/worldbank_2.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/ISDR.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/Unesco.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/iaspei.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/iaee.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/istructe.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/cssc.jpg)
-![](https://www.globalquakemodel.org/media/sponsor/IRDRICSU.png)
-![](https://www.globalquakemodel.org/media/sponsor/EERI_GEM.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/OECD.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/worldbank_2.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/ISDR.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/Unesco.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/iaspei.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/iaee.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/istructe.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/cssc.jpg)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/IRDRICSU.png)
+![](https://github.com/gem/oq-infrastructure/raw/master/logos/EERI_GEM.png)
 
 If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
-For more info visit the GEM website at https://www.globalquakemodel.org/gem/organisation/partners/
+For more info visit the GEM website at https://www.globalquakemodel.org/partners
