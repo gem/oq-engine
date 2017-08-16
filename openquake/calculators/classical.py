@@ -202,7 +202,7 @@ def classical(sources, src_filter, gsims, param, monitor):
     return pmap
 
 source_data_dt = numpy.dtype(
-    [('taskno', U16), ('nsites', U32), ('rupweight', F32)])
+    [('taskno', U16), ('nsites', U32), ('weight', F32)])
 
 
 def saving_sources_by_task(iterargs, dstore):
