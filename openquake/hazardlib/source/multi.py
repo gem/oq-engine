@@ -16,6 +16,7 @@
 """
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
+import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.point import (
     PointSource, angular_distance, KM_TO_DEGREES)
@@ -92,8 +93,12 @@ class MultiPointSource(ParametricSeismicSource):
         """Filter on the bounding box"""
         min_lon, min_lat, max_lon, max_lat = self.get_bounding_box(
             integration_distance)
-        mask = (min_lon <= sites.lons <= max_lon) * (
-            min_lat <= sites.lats <= max_lat)
+        n = len(sites)
+        mask = numpy.zeros(n, bool)
+        for i in range(n):
+            lon, lat = sites.lons[i], sites.lats[i]
+            if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat:
+                mask[i] = True
         return sites.filter(mask)
 
     def get_rupture_enclosing_polygon(self, dilation=0):
