@@ -41,7 +41,7 @@ provided in the configuration file:
 \begin{enumerate}
 \setcounter{enumi}{4}
 
-  \item \Verb+csq_by_asset+: this file contains the scenario consequence
+  \item \Verb+losses_by_asset+: this file contains the scenario consequence
     statistics for each of the individual \glspl{asset} defined in the
     \gls{exposuremodel} that fall within the \Verb+region_constraint+ and have
     a computed \gls{acr:gmf} value available within the defined
@@ -49,13 +49,13 @@ provided in the configuration file:
     (\Verb+mean+) and associated standard deviation (\Verb+stddev+) are listed
     in this file.
 
-  \item \Verb+csq_by_taxon+: this file contains the aggregated scenario
-    consequence statistics for each of the \glspl{taxonomy} defined in the
-    \gls{exposuremodel}. For each \gls{taxonomy}, the mean consequences
+  \item \Verb+losses_by_tag+: this file contains the aggregated scenario
+    consequence statistics for each of the \glspl{tags} defined in the
+    \gls{exposuremodel}. For each \gls{tags}, the mean consequences
     (\Verb+mean+) and associated standard deviation (\Verb+stddev+) are listed
     in this file.
 
-  \item \Verb+csq_total+: this file contains the aggregated scenario
+  \item \Verb+losses_total+: this file contains the aggregated scenario
     consequence statistics for the entire portfolio of \glspl{asset} defined
     in the \gls{exposuremodel}. The mean consequences (\Verb+mean+) and 
     associated standard deviation (\Verb+stddev+) are listed in this file.

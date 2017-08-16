@@ -22,7 +22,6 @@ import mock
 import shutil
 import tempfile
 import unittest
-import shapefile
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import writetmp
@@ -33,15 +32,17 @@ from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
+from openquake.commands.engine import run_job
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands import run
-from openquake.commands.upgrade_nrml import get_vulnerability_functions_04
+from openquake.commands.upgrade_nrml import upgrade_nrml
 from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
+from openquake.qa_tests_data.event_based_risk import case_master
 from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -51,7 +52,7 @@ class Print(object):
     def __init__(self):
         self.lst = []
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kw):
         self.lst.append(b' '.join(encode(str(a)) for a in args))
 
     def __str__(self):
@@ -66,7 +67,7 @@ class Print(object):
 class InfoTestCase(unittest.TestCase):
     EXPECTED = '''<CompositionInfo
 b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
-See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
+See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
 0,AkkarBommer2010(): ['<0,b1~@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>
 =============== ======
@@ -133,16 +134,13 @@ xmlns:gml="http://www.opengis.net/gml"
     gsimTreePath=""
     sourceModelTreePath=""
     >
-        
         <gmfSet
         stochasticEventSetId="1"
         >
-            
             <gmf
             IMT="PGA"
             ruptureId="scenario-0"
             >
-                
                 <node gmv="1.26515E-02" lat="4.35812E+01" lon="1.21248E+01"/>
                 <node gmv="1.24056E-02" lat="4.35812E+01" lon="1.21248E+01"/>
             </gmf>
@@ -183,6 +181,7 @@ class RunShowExportTestCase(unittest.TestCase):
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})
+            calc.datastore.open()  # if closed
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
@@ -204,12 +203,8 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_show_attrs(self):
         with Print.patch() as p:
-            show_attrs('hcurve', self.calc_id)
-        self.assertEqual("'hcurve' is not in <DataStore %d>" %
-                         self.calc_id, str(p))
-        with Print.patch() as p:
-            show_attrs('hcurves', self.calc_id)
-        self.assertEqual("nbytes 24", str(p))
+            show_attrs('poes', self.calc_id)
+        self.assertEqual('nbytes 48', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
@@ -263,7 +258,11 @@ class ReduceTestCase(unittest.TestCase):
 
 
 class UpgradeNRMLTestCase(unittest.TestCase):
-    vf = writetmp('''\
+    def test(self):
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'vf.xml')
+        with open(path, 'w') as f:
+            f.write('''\
 <?xml version="1.0"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
     <vulnerabilityModel>
@@ -276,10 +275,8 @@ class UpgradeNRMLTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
     </vulnerabilityModel>
 </nrml>''')
-
-    def test(self):
-        get_vulnerability_functions_04(self.vf)
-        # NB: look also at nrml.get_vulnerability_functions_04
+        upgrade_nrml(tmpdir, False)
+        shutil.rmtree(tmpdir)
 
 
 class SourceModelShapefileConverterTestCase(unittest.TestCase):
@@ -288,9 +285,6 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
     - more tests will follow
     """
     def setUp(self):
-        if not hasattr(shapefile, '__version__'):
-            # for versions < 1.2.3
-            raise unittest.SkipTest('shapefile library too old')
         self.OUTDIR = tempfile.mkdtemp()
 
     def test_roundtrip_invalid(self):
@@ -322,9 +316,22 @@ class DbTestCase(unittest.TestCase):
     def test_db(self):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
-                'openquake.engine.logs.dbcmd', manage.dbcmd):
-            db('version_db')
+                'openquake.commonlib.logs.dbcmd', manage.dbcmd):
+            db('db_version')
             try:
-                db('calc_info 1')
+                db('calc_info', (1,))
             except dbapi.NotFound:  # happens on an empty db
                 pass
+
+
+class EngineRunJobTestCase(unittest.TestCase):
+    """
+    Test a single case of `run_job`, but it is the most complex one,
+    event based risk with post processing
+    """
+    def test_ebr(self):
+        job_ini = os.path.join(
+            os.path.dirname(case_master.__file__), 'job.ini')
+        with Print.patch() as p:
+            run_job(job_ini, log_level='error')
+        self.assertIn('id | name', str(p))

@@ -35,10 +35,9 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 
-from openquake.baselib import node
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
-import openquake.hazardlib
+import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
@@ -341,7 +340,6 @@ class BranchSet(object):
         Apply filters to ``source`` and return ``True`` if uncertainty should
         be applied to it.
         """
-        ohs = openquake.hazardlib.source
         for key, value in self.filters.items():
             if key == 'applyToTectonicRegionType':
                 if value != source.tectonic_region_type:
@@ -1181,7 +1179,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return node.tostring(self._ltnode).decode('utf-8')
+        return nrml.convert(self._ltnode)
 
     def reduce(self, trts):
         """

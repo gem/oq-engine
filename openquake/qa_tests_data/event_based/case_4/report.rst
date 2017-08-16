@@ -1,31 +1,31 @@
 Event-Based Hazard QA Test, Case 4
 ==================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81086.hdf5 Thu Jan 26 14:29:56 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1842.hdf5 Fri Jul  7 07:33:03 2017
+checksum32                                      2,872,781,101           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
-num_sites = 1, sitecol = 762 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
-=============================== ===============================
-calculation_mode                'event_based'                  
-number_of_logic_tree_samples    0                              
-maximum_distance                {'active shallow crust': 200.0}
-investigation_time              1.0                            
-ses_per_logic_tree_path         50                             
-truncation_level                0.0                            
-rupture_mesh_spacing            1.0                            
-complex_fault_mesh_spacing      1.0                            
-width_of_mfd_bin                1.0                            
-area_source_discretization      10.0                           
-ground_motion_correlation_model None                           
-random_seed                     1066                           
-master_seed                     0                              
-=============================== ===============================
+=============================== ==================
+calculation_mode                'event_based'     
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              1.0               
+ses_per_logic_tree_path         50                
+truncation_level                0.0               
+rupture_mesh_spacing            1.0               
+complex_fault_mesh_spacing      1.0               
+width_of_mfd_bin                1.0               
+area_source_discretization      10.0              
+ground_motion_correlation_model None              
+random_seed                     42                
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -72,32 +72,19 @@ source_model.xml 0      Active Shallow Crust 1           10           10
 
 Informational data
 ------------------
-========================================= ============
-compute_ruptures_max_received_per_task    10,512      
-compute_ruptures_num_tasks                1           
-compute_ruptures_sent.gsims               91          
-compute_ruptures_sent.monitor             990         
-compute_ruptures_sent.sources             1,264       
-compute_ruptures_sent.src_filter          598         
-compute_ruptures_tot_received             10,512      
-hazard.input_weight                       10          
-hazard.n_imts                             1           
-hazard.n_levels                           3           
-hazard.n_realizations                     1           
-hazard.n_sites                            1           
-hazard.n_sources                          1           
-hazard.output_weight                      0.500       
-hostname                                  gem-tstation
-require_epsilons                          False       
-========================================= ============
-
-Specific information for event based
-------------------------------------
-======================== =====
-Total number of ruptures 10   
-Total number of events   44   
-Rupture multiplicity     4.400
-======================== =====
+============================ =========================================================================
+compute_ruptures.received    max_per_task 7.33 KB, tot 7.33 KB                                        
+compute_ruptures.sent        sources 1.23 KB, src_filter 684 B, param 605 B, monitor 320 B, gsims 91 B
+hazard.input_weight          10.0                                                                     
+hazard.n_imts                1                                                                        
+hazard.n_levels              3                                                                        
+hazard.n_realizations        1                                                                        
+hazard.n_sites               1                                                                        
+hazard.n_sources             1                                                                        
+hazard.output_weight         0.5                                                                      
+hostname                     tstation.gem.lan                                                         
+require_epsilons             False                                                                    
+============================ =========================================================================
 
 Slowest sources
 ---------------
@@ -119,21 +106,21 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.036 NaN    0.036 0.036 1        
+compute_ruptures   0.015 NaN    0.015 0.015 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-total compute_ruptures           0.036     0.0       1     
-filtering ruptures               0.014     0.0       10    
-reading composite source model   0.007     0.0       1     
-saving ruptures                  0.004     0.0       1     
-setting event years              0.003     0.0       1     
-filtering composite source model 0.003     0.0       1     
-managing sources                 0.002     0.0       1     
-store source_info                8.712E-04 0.0       1     
-reading site collection          4.125E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_ruptures         0.015     0.0       1     
+store source_info              0.003     0.0       1     
+reading composite source model 0.003     0.0       1     
+saving ruptures                0.003     0.0       1     
+filtering ruptures             0.002     0.0       10    
+prefiltering source model      0.001     0.0       1     
+setting event years            0.001     0.0       1     
+managing sources               0.001     0.0       1     
+reading site collection        3.266E-05 0.0       1     
+============================== ========= ========= ======

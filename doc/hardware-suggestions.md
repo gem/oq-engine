@@ -14,6 +14,6 @@ More serious calculations would be better handled by a single server with a hard
 
 Our cluster master node "wilson" is a Dell® PowerEdge™ R720 with 16 Xeon cores, 128GB of RAM and RAID arrays, This sort of machine would be able to handle some pretty large calculations as a single server but can also be used as the master node if you find you need to add more machines to form a cluster; so this might be a good starting point if it is compatible with your budget.
 
-For our largest calculations on a continental or global scale we use a cluster composed of "wilson" (see above) acting as a "master" and 4 worker nodes (Dell® PowerEdge™ M915 blades) each with 4x 16 cores AMD® Opteron™ and 128GB of RAM.  Worker nodes do not need much disk since the data is stored in the master filesystem.
+For our largest calculations on a continental or global scale we use a cluster composed of "wilson" (see above) acting as a "master" and 5 worker nodes (Dell® PowerEdge™ M915 blades) each with 4x 16 cores AMD® Opteron™ and 128GB of RAM.  Worker nodes do not need much disk since the data is stored in the master filesystem.
 
 Network is made with a link aggregation between four gigabit connections, in most cases a single gigabit connection is enough.

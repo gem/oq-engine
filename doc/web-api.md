@@ -18,21 +18,24 @@ Response:
     [{"description": "Hazard Calculation for end-to-end hazard+risk",
       "id": 1,
       "status": "executing",
-      "job_type": "hazard",
+      "calculation_mode": "classical",
       "is_running": true,
-      "url": "http://localhost:8000/v1/calc/1"},
-     {"description": "Hazard Calculation for end-to-end hazard+risk",
+      "owner: "michele",
+      "url": "http://localhost:8800/v1/calc/1"},
+     {"description": "Event based calculation",
       "id": 2,
       "status": "complete",
-      "job_type": "hazard",
+      "calculation_mode": "event_based",
       "is_running": true,
-      "url": "http://localhost:8000/v1/calc/2"},
-     {"description": "Hazard Calculation for end-to-end hazard+risk",
+      "owner: "armando",
+      "url": "http://localhost:8800/v1/calc/2"},
+     {"description": "ScenarioRisk calculation",
       "id": 3,
       "status": "complete",
-      "job_type": "hazard",
+      "calculation_mode": "scenario_risk",
       "is_running": false,
-      "url": "http://localhost:8000/v1/calc/3"}]
+      "owner: "armando",
+      "url": "http://localhost:8800/v1/calc/3"}]
 
 
 #### GET /v1/calc/:calc_id/status
@@ -46,14 +49,29 @@ Response:
     {"description": "Hazard Calculation for end-to-end hazard+risk",
       "id": 1,
       "status": "executing",
-      "job_type": "hazard",
+      "calculation_mode": "classical",
       "is_running": true,
-      "url": "http://localhost:8000/v1/calc/1"}
+      "owner: "michele",
+      "url": "http://localhost:8800/v1/calc/1"}
 
 
 #### GET /v1/calc/:calc_id
 
-Get calculation status and parameter summary for the given `calc_id`.
+Get calculation status and times for the given `calc_id`.
+
+Parameters: None
+
+Response:
+
+    {"user_name": "michele",
+    "is_running": 0,
+    "stop_time": "2017-06-05 12:01:28.575776",
+    "status": "failed",
+    "start_time": "2017-06-05 12:01:26"}
+
+#### GET /v1/calc/:calc_id/oqparam
+
+Get the parameters of the given `calc_id`.
 
 Parameters: None
 
@@ -62,12 +80,10 @@ Response:
     {"area_source_discretization": 10.0,
      "calculation_mode": "classical",
      "description": "Hazard Calculation for end-to-end hazard+risk",
-     "id": 2,
      "intensity_measure_types_and_levels": {"SA(0.1)": [0.01, 0.04, 0.07, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.49, 0.52, 0.55, 0.58, 0.61, 0.64, 0.67, 0.7, 0.73, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.01, 1.04, 1.07, 1.1, 1.13, 1.16, 1.19, 1.22, 1.25, 1.28, 1.31, 1.34, 1.37, 1.4, 1.43, 1.46, 1.5]},
      "investigation_time": 50.0,
      "maximum_distance": 300.0,
      "mean_hazard_curves": true,
-     "no_progress_timeout": 3600,
      "number_of_logic_tree_samples": 0,
      "poes": [0.1, 0.2],
      "is_running": false,
@@ -79,7 +95,6 @@ Response:
      "reference_vs30_value": 800.0,
      "rupture_mesh_spacing": 20.0,
      "sites": {"coordinates": [[-78.182, 15.615]], "type": "MultiPoint"},
-     "status": "complete",
      "truncation_level": 4.0,
      "uniform_hazard_spectra": false,
      "width_of_mfd_bin": 0.2}
@@ -106,10 +121,10 @@ Parameters: None
 
 Response:
 
-    [{"url": "http://localhost:8000/v1/calc/hazard/result/12", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-22", "id": 12},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/14", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-23", "id": 14},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/16", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-24", "id": 16},
-     {"url": "http://localhost:8000/v1/calc/hazard/result/18", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-25", "id": 18}]
+    [{"url": "http://localhost:8800/v1/calc/hazard/result/12", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-22", "id": 12},
+     {"url": "http://localhost:8800/v1/calc/hazard/result/14", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-23", "id": 14},
+     {"url": "http://localhost:8800/v1/calc/hazard/result/16", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-24", "id": 16},
+     {"url": "http://localhost:8800/v1/calc/hazard/result/18", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-25", "id": 18}]
 
 
 #### GET /v1/calc/result/:result_id
@@ -155,7 +170,7 @@ The number of lines of log
 
 #### POST /v1/calc/:calc_id/remove
 
-Remove the calculation specified by the parameter `calc_id`, by setting the field oq_job.relevant to False.
+Remove the calculation specified by the parameter `calc_id`.
 
 
 #### POST /v1/calc/run
@@ -177,7 +192,7 @@ Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `cal
 
 #### POST /v1/valid/
 
-Leverage oq-risklib to check if a given XML text is a valid NRML.
+Check if a given XML text is a valid NRML.
 
 Parameters:
 
@@ -186,22 +201,27 @@ Parameters:
 Response:
 
 a JSON object, containing:
+
     * valid: a boolean indicating if the provided text is a valid NRML
     * error_msg: the error message, if any error was found (None otherwise)
     * error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
 
 
-#### POST /v1/ajax_login/
+#### POST /accounts/ajax_login/
 
 Attempt to login, given the parameters `username` and `password`
 
 
-#### POST /v1/ajax_logout/
+#### POST /accounts/ajax_logout/
 
 Logout
 
 
-#### GET /v1/version/
+#### GET /engine_version
 
-Return a string with the openquake.engine version
+Return a string with the OpenQuake engine version
 
+
+#### GET /v1/available_gsims
+
+Return a list of strings with the available GSIMs

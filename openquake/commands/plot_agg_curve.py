@@ -22,8 +22,7 @@ from openquake.commonlib import datastore
 
 
 def make_figure(curves):
-    # NB: matplotlib is imported inside, otherwise nosetest would fail in an
-    # installation without matplotlib
+    # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
     loss_types = curves.dtype.names
     I, R = curves.shape

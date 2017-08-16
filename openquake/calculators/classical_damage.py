@@ -19,10 +19,11 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
+from openquake.hazardlib.stats import compute_stats2
 from openquake.calculators import base, classical_risk
 
 
-def classical_damage(riskinput, riskmodel, monitor):
+def classical_damage(riskinput, riskmodel, param, monitor):
     """
     Core function for a classical damage computation.
 
@@ -30,13 +31,16 @@ def classical_damage(riskinput, riskmodel, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
+    R = riskinput.hazard_getter.num_rlzs
     with monitor:
-        result = {i: AccumDict() for i in range(len(riskinput.rlzs))}
+        result = {i: AccumDict() for i in range(R)}
         for outputs in riskmodel.gen_outputs(riskinput, monitor):
             for l, out in enumerate(outputs):
                 ordinals = [a.ordinal for a in outputs.assets]
@@ -56,7 +60,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         Raise an error if one PoE = 1, since it would produce a log(0) in
         :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`
         """
-        for rlz, curves in curves_by_rlz.items():
+        for curves in curves_by_rlz:
             for imt in self.oqparam.imtls:
                 for sid, poes in enumerate(curves[imt]):
                     if (poes == 1).any():
@@ -77,3 +81,8 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
             for aid, fractions in result[r].items():
                 damages[aid, r] = tuple(fractions)
         self.datastore['damages-rlzs'] = damages
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        if len(weights) > 1:  # compute stats
+            snames, sfuncs = zip(*self.oqparam.risk_stats())
+            dmg_stats = compute_stats2(damages, sfuncs, weights)
+            self.datastore['damages-stats'] = dmg_stats

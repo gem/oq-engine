@@ -1,13 +1,13 @@
 scenario hazard
 ===============
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81016.hdf5 Thu Jan 26 14:28:13 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1764.hdf5 Fri Jul  7 07:32:10 2017
+checksum32                               3,204,585,490           
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
-num_sites = 1, sitecol = 762 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -37,6 +37,22 @@ job_ini       `job_h.ini <job_h.ini>`_
 rupture_model `rupture_model.xml <rupture_model.xml>`_  
 ============= ==========================================
 
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== =================== ========= ========== ==========
+grp_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      BooreAtkinson2008() rjb       vs30       mag rake  
+====== =================== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -64,7 +80,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading exposure        0.003     0.0       1     
-reading site collection 7.629E-06 0.0       1     
+filtering sites         0.007     0.0       1     
+reading exposure        0.005     0.0       1     
+reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

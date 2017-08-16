@@ -27,23 +27,23 @@ import zipfile
 import traceback
 
 from openquake.calculators.export import export
-from openquake.commonlib import datastore
-from openquake.engine import logs, __version__
+from openquake.commonlib import datastore, logs, __version__
 
 
 class DataStoreExportError(Exception):
     pass
 
 
-def zipfiles(fnames, archive):
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
     """
     Build a zip archive from the given file names.
 
     :param fnames: list of path names
     :param archive: path of the archive
     """
-    z = zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, allowZip64=True)
+    z = zipfile.ZipFile(archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True)
     for f in fnames:
+        log('Archiving %s' % f)
         z.write(f, os.path.basename(f))
     z.close()
 
@@ -54,7 +54,7 @@ def check_version(dstore):
     :returns:
         a message if the stored version is different from the current version
     """
-    ds_version = dstore.attrs['engine_version']
+    ds_version = dstore.hdf5.attrs['engine_version']
     if ds_version != __version__:
         return (': the datastore is at version %s, but the exporter at '
                 'version %s' % (ds_version, __version__))

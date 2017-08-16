@@ -38,14 +38,14 @@ from django.shortcuts import render
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.baselib.parallel import Starmap, safely_call
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, logs
+from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import executor, utils, dbapi
 
@@ -121,7 +121,7 @@ def _get_base_url(request):
     return base_url
 
 
-def _prepare_job(request, hazard_job_id, candidates):
+def _prepare_job(request, candidates):
     """
     Creates a temporary directory, move uploaded files there and
     select the job file by looking at the candidate names.
@@ -190,6 +190,16 @@ def get_engine_version(request):
     Return a string with the openquake.engine version
     """
     return HttpResponse(oqversion)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_available_gsims(request):
+    """
+    Return a list of strings with the available GSIMs
+    """
+    gsims = list(gsim.get_available_gsims())
+    return HttpResponse(content=json.dumps(gsims), content_type=JSON)
 
 
 def _make_response(error_msg, error_line, valid):
@@ -275,7 +285,7 @@ def calc_info(request, calc_id):
 @cross_domain_ajax
 def calc(request, id=None):
     """
-    Get a list of calculations and report their id, status, job_type,
+    Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
     can be accessed. This is called several times by the Javascript.
 
@@ -289,10 +299,11 @@ def calc(request, id=None):
                            user['name'], user['acl_on'], id)
 
     response_data = []
-    for hc_id, owner, status, job_type, is_running, desc in calc_data:
+    for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
-            dict(id=hc_id, owner=owner, status=status, job_type=job_type,
+            dict(id=hc_id, owner=owner,
+                 calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url))
 
     # if id is specified the related dictionary is returned instead the list
@@ -312,11 +323,22 @@ def calc_remove(request, calc_id):
     """
     user = utils.get_user_data(request)['name']
     try:
-        logs.dbcmd('del_calc', calc_id, user)
+        message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps([]),
-                        content_type=JSON, status=200)
+
+    if 'success' in message:
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=200)
+    elif 'error' in message:
+        logging.error(message['error'])
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=403)
+    else:
+        # This is an untrapped server error
+        logging.error(message)
+        return HttpResponse(content=message,
+                            content_type='text/plain', status=500)
 
 
 def log_to_json(log):
@@ -372,11 +394,11 @@ def run_calc(request):
     hazard_job_id = request.POST.get('hazard_job_id')
 
     if hazard_job_id:
+        hazard_job_id = int(hazard_job_id)
         candidates = ("job_risk.ini", "job.ini")
     else:
         candidates = ("job_hazard.ini", "job_haz.ini", "job.ini")
-    einfo, exctype, monitor = safely_call(
-        _prepare_job, (request, hazard_job_id, candidates))
+    einfo, exctype, monitor = safely_call(_prepare_job, (request, candidates))
     if exctype:
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
@@ -509,8 +531,6 @@ def get_result(request, result_id):
     try:
         job_id, job_status, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        if not job_status == 'complete':
-            return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
@@ -532,21 +552,20 @@ def get_result(request, result_id):
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
-    try:
-        bname = os.path.basename(exported)
-        if bname.startswith('.'):
-            # the "." is added by `export_from_db`, strip it
-            bname = bname[1:]
-        fname = 'output-%s-%s' % (result_id, bname)
-        # 'b' is needed when running the WebUI on Windows
-        data = open(exported, 'rb').read()
-        response = HttpResponse(data, content_type=content_type)
-        response['Content-Length'] = len(data)
-        response['Content-Disposition'] = (
-            'attachment; filename=%s' % os.path.basename(fname))
-        return response
-    finally:
-        shutil.rmtree(tmpdir)
+
+    bname = os.path.basename(exported)
+    if bname.startswith('.'):
+        # the "." is added by `export_from_db`, strip it
+        bname = bname[1:]
+    fname = 'output-%s-%s' % (result_id, bname)
+    # 'b' is needed when running the WebUI on Windows
+    stream = FileWrapper(open(exported, 'rb'))
+    stream.close = lambda: (
+        FileWrapper.close(stream), shutil.rmtree(tmpdir))
+    response = FileResponse(stream, content_type=content_type)
+    response['Content-Disposition'] = (
+        'attachment; filename=%s' % os.path.basename(fname))
+    return response
 
 
 @cross_domain_ajax
@@ -574,6 +593,21 @@ def get_datastore(request, job_id):
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
     return response
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_oqparam(request, job_id):
+    """
+    Return the calculation parameters as a JSON
+    """
+    try:
+        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        oq = ds['oqparam']
+    return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)
 
 
 def web_engine(request, **kwargs):

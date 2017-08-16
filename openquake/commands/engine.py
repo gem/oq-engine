@@ -21,8 +21,9 @@ import sys
 import getpass
 import logging
 from openquake.baselib import sap
-from openquake.commonlib import datastore, config
-from openquake.engine import engine as eng, logs
+from openquake.baselib.general import safeprint
+from openquake.commonlib import datastore, config, logs
+from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
@@ -40,8 +41,8 @@ def get_job_id(job_id, username=None):
     return job_id
 
 
-def run_job(cfg_file, log_level, log_file, exports='',
-            hazard_calculation_id=None):
+def run_job(cfg_file, log_level='info', log_file=None, exports='',
+            hazard_calculation_id=None, **kw):
     """
     Run a job using the specified config file and other options.
 
@@ -61,11 +62,18 @@ def run_job(cfg_file, log_level, log_file, exports='',
     job_id, oqparam = eng.job_from_file(
         job_ini, getpass.getuser(), hazard_calculation_id)
     calc = eng.run_calc(job_id, oqparam, log_level, log_file, exports,
-                        hazard_calculation_id=hazard_calculation_id)
-    calc.monitor.flush()
+                        hazard_calculation_id=hazard_calculation_id, **kw)
+    calc._monitor.flush()
     for line in logs.dbcmd('list_outputs', job_id, False):
-        print(line)
+        safeprint(line)
     return job_id
+
+
+def run_tile(job_ini, sites_slice):
+    """
+    Used in tiling calculations
+    """
+    return run_job(job_ini, sites_slice=(sites_slice.start, sites_slice.stop))
 
 
 def del_calculation(job_id, confirmed=False):
@@ -78,12 +86,12 @@ def del_calculation(job_id, confirmed=False):
         try:
             logs.dbcmd('del_calc', job_id, getpass.getuser())
         except RuntimeError as err:
-            print(err)
+            safeprint(err)
 
 
 @sap.Script
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
-           upgrade_db, version_db, what_if_I_upgrade,
+           upgrade_db, db_version, what_if_I_upgrade,
            run_hazard, run_risk, run,
            list_hazard_calculations, list_risk_calculations,
            delete_calculation, delete_uncompleted_calculations,
@@ -115,6 +123,10 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         os.makedirs(datastore.DATADIR)
 
     dbserver.ensure_on()
+    # check if we are talking to the right server
+    err = dbserver.check_foreign()
+    if err:
+        sys.exit(err)
 
     if upgrade_db:
         logs.set_level('info')
@@ -125,12 +137,12 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             logs.dbcmd('upgrade_db')
         sys.exit(0)
 
-    if version_db:
-        print(logs.dbcmd('version_db'))
+    if db_version:
+        safeprint(logs.dbcmd('db_version'))
         sys.exit(0)
 
     if what_if_I_upgrade:
-        print(logs.dbcmd('what_if_I_upgrade', 'extract_upgrade_scripts'))
+        safeprint(logs.dbcmd('what_if_I_upgrade', 'extract_upgrade_scripts'))
         sys.exit(0)
 
     # check if the db is outdated
@@ -168,10 +180,10 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     elif list_hazard_calculations:
         for line in logs.dbcmd(
                 'list_calculations', 'hazard', getpass.getuser()):
-            print(line)
+            safeprint(line)
     elif run_hazard is not None:
-        print('WARN: --rh/--run-hazard are deprecated, use --run instead',
-              file=sys.stderr)
+        safeprint('WARN: --rh/--run-hazard are deprecated, use --run instead',
+                  file=sys.stderr)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         run_job(os.path.expanduser(run_hazard), log_level,
@@ -181,10 +193,10 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     # risk
     elif list_risk_calculations:
         for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):
-            print(line)
+            safeprint(line)
     elif run_risk is not None:
-        print('WARN: --rr/--run-risk are deprecated, use --run instead',
-              file=sys.stderr)
+        safeprint('WARN: --rr/--run-risk are deprecated, use --run instead',
+                  file=sys.stderr)
         if hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
         log_file = os.path.expanduser(log_file) \
@@ -196,17 +208,17 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
 
     # export
     elif make_html_report:
-        print('Written %s' % make_report(make_html_report))
+        safeprint('Written %s' % make_report(make_html_report))
         sys.exit(0)
 
     elif list_outputs is not None:
         hc_id = get_job_id(list_outputs)
         for line in logs.dbcmd('list_outputs', hc_id):
-            print(line)
+            safeprint(line)
     elif show_log is not None:
         hc_id = get_job_id(show_log)
         for line in logs.dbcmd('get_log', hc_id):
-            print(line)
+            safeprint(line)
 
     elif export_output is not None:
         output_id, target_dir = export_output
@@ -214,14 +226,14 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         for line in core.export_output(
                 dskey, calc_id, datadir, os.path.expanduser(target_dir),
                 exports or 'csv,xml'):
-            print(line)
+            safeprint(line)
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
         hc_id = get_job_id(job_id)
         for line in core.export_outputs(
                 hc_id, os.path.expanduser(target_dir), exports or 'csv,xml'):
-            print(line)
+            safeprint(line)
 
     elif delete_uncompleted_calculations:
         logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
@@ -245,7 +257,7 @@ engine._add('make_html_report', '--make-html-report', '-r',
             help='Build an HTML report of the computation at the given date',
             metavar='YYYY-MM-DD|today')
 engine.flg('upgrade_db', 'Upgrade the openquake database')
-engine.flg('version_db', 'Show the current version of the openquake database')
+engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
 engine._add('run_hazard', '--run-hazard', '--rh', help='Run a hazard job with '

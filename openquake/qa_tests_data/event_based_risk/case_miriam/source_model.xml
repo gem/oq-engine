@@ -1,6 +1,39 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <sourceModel name="DISS Fault Model">
+
+        <complexFaultSource
+        id="D"
+        name="Zone D"
+        tectonicRegion="Subduction Interface"
+        >
+            <complexFaultGeometry>
+                <faultTopEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            -77.00 15.55 5.00 -77.25 13.32 5.00
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTopEdge>
+                <faultBottomEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            -77.78 15.61 50.00 -78.57 13.56 50.00
+                        </gml:posList>
+                    </gml:LineString>
+                </faultBottomEdge>
+            </complexFaultGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                2.0
+            </ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="3.455" bValue="0.56" maxMag="8.9" minMag="5.0"/>
+            <rake>
+                90.0
+            </rake>
+        </complexFaultSource>
     <complexFaultSource id="F" name="Zone F" tectonicRegion="Active Shallow Crust">
       <complexFaultGeometry>
         <faultTopEdge>

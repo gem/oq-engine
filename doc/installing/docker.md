@@ -1,6 +1,6 @@
 # Deploying the OpenQuake Engine Docker container
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px"> [![Build Status](https://ci.openquake.org/view/Builders/job/docker-builder/badge/icon)](https://ci.openquake.org/view/Builders/job/docker-builder/)
+<img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px"> [![Build Status](https://ci.openquake.org/buildStatus/icon?job=builders/docker-builder)](https://ci.openquake.org/job/builders/docker-builder)
 
 To be able to deploy and run the OpenQuake Engine Docker container you need **at least** Docker version **1.10**. 
 
@@ -16,7 +16,7 @@ Currently two different set of *TAGS* are provided. Images are hosted on [Docker
 This container is updated on weekly basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
 
 ```bash
-$ docker pull docker.io/openquake/engine:master
+$ docker pull docker.io/openquake/engine:latest
 ```
 
 ### X.Y
@@ -57,7 +57,7 @@ $ docker pull docker.io/openquake/engine:[TAG]
 This modality is recommended when only the [WebUI or the API server](../running/server.md) is used (for example as the backend for the [OpenQuake QGIS plugin](https://plugins.qgis.org/plugins/svir/)).
 
 ```bash
-$ docker run --name pleasegiveaname -p 8800:8800 openquake/engine:master
+$ docker run --name pleasegiveaname -d -p 8800:8800 openquake/engine:latest
 ```
 
 Then you can connect to [http://localhost:8800](http://localhost:8800) to be able to access the [WebUI or the API server](../running/server.md).
@@ -77,7 +77,7 @@ $ docker start pleasegiveaname
 This modality provides the same features as the headless mode plus the ability to drive the OpenQuake Engine via the `oq` command on a terminal.
 
 ```bash
-$ docker run --name pleasegiveaname -t -i -p 8800:8800 openquake/engine:master
+$ docker run --name pleasegiveaname -t -i -p 8800:8800 openquake/engine:latest
 ```
 
 The container prompt will appear, here you play with the `oq` [shell command](../running/unix.md).

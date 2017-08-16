@@ -20,6 +20,7 @@ import logging
 
 import numpy
 
+from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict
 from openquake.commonlib import calc
 from openquake.risklib import scientific
@@ -28,9 +29,10 @@ from openquake.calculators import base
 
 F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
+stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def scenario_risk(riskinput, riskmodel, monitor):
+def scenario_risk(riskinput, riskmodel, param, monitor):
     """
     Core function for a scenario computation.
 
@@ -38,6 +40,8 @@ def scenario_risk(riskinput, riskmodel, monitor):
         a of :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
@@ -49,30 +53,35 @@ def scenario_risk(riskinput, riskmodel, monitor):
         R the number of realizations  and statistics is an array of shape
         (n, R, 4), with n the number of assets in the current riskinput object
     """
-    E = monitor.oqparam.number_of_ground_motion_fields
+    E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
-    R = len(riskinput.rlzs)
-    I = monitor.oqparam.insured_losses + 1
-    all_losses = monitor.oqparam.all_losses
-    result = dict(agg=numpy.zeros((E, L, R, I), F64), avg=[],
-                  all_losses=AccumDict(accum={}))
+    T = riskinput.tagmask.shape[1]
+    R = riskinput.hazard_getter.num_rlzs
+    I = param['insured_losses'] + 1
+    asset_loss_table = param['asset_loss_table']
+    lbt = numpy.zeros((T, R, L * I), F32)
+    result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
+                  losses_by_tag=lbt, all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
         assets = outputs.assets
-        for l, out in enumerate(outputs):
-            if out is None:  # this may happen
+        for l, losses in enumerate(outputs):
+            if losses is None:  # this may happen
                 continue
-            stats = numpy.zeros((len(assets), 2), (F32, I))  # mean, stddev
-            stats[:, 0] = out.mean(axis=1)  # shape (A, I)
-            stats[:, 1] = out.std(ddof=1, axis=1)
-            for asset, stat in zip(assets, stats):
-                result['avg'].append((l, r, asset.ordinal, stat))
-            agglosses = out.sum(axis=0)  # shape E, I
+            stats = numpy.zeros((len(assets), I), stat_dt)  # mean, stddev
+            for a, asset in enumerate(assets):
+                stats['mean'][a] = losses[a].mean()
+                stats['stddev'][a] = losses[a].std(ddof=1)
+                result['avg'].append((l, r, asset.ordinal, stats[a]))
+                t = riskinput.tagmask[a]
+                for i in range(I):
+                    lbt[t, r, l + L * i] += losses[a].sum()
+            agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
-                result['agg'][:, l, r, i] += agglosses[:, i]
-            if all_losses:
+                result['agg'][:, r, l + L * i] += agglosses[:, i]
+            if asset_loss_table:
                 aids = [asset.ordinal for asset in outputs.assets]
-                result['all_losses'][l, r] = AccumDict(zip(aids, out))
+                result['all_losses'][l, r] += AccumDict(zip(aids, losses))
     return result
 
 
@@ -95,53 +104,60 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
 
         logging.info('Building the epsilons')
+        A = len(self.assetcol)
+        E = self.oqparam.number_of_ground_motion_fields
         if self.oqparam.ignore_covs:
-            eps = None
+            eps = numpy.zeros((A, E), numpy.float32)
         else:
-            eps = self.make_eps(self.oqparam.number_of_ground_motion_fields)
-        self.datastore['etags'], gmfs = calc.get_gmfs(
-            self.datastore, self.precalc)
-        hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
-                         for rlz in self.rlzs_assoc.realizations}
-        self.riskinputs = self.build_riskinputs(hazard_by_rlz, eps)
+            eps = self.make_eps(E)
+        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
+        self.param['number_of_ground_motion_fields'] = E
+        self.param['insured_losses'] = self.oqparam.insured_losses
+        self.param['asset_loss_table'] = self.oqparam.asset_loss_table
 
     def post_execute(self, result):
         """
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
-        ltypes = self.riskmodel.loss_types
+        loss_dt = self.oqparam.loss_dt()
         I = self.oqparam.insured_losses + 1
-        stat_dt = numpy.dtype([('mean', (F32, I)), ('stddev', (F32, I))])
-        multi_stat_dt = numpy.dtype([(lt, stat_dt) for lt in ltypes])
         with self.monitor('saving outputs', autoflush=True):
-            A = len(self.assetcol)
+            A, T = self.tagmask.shape
 
             # agg losses
             res = result['agg']
-            E, L, R, I = res.shape
-            if I == 1:
-                res = res.reshape(E, L, R)
-            mean, std = scientific.mean_std(res)
-            agglosses = numpy.zeros(R, multi_stat_dt)
-            for l, lt in enumerate(ltypes):
-                agglosses[lt]['mean'] = numpy.float32(mean[l])
-                agglosses[lt]['stddev'] = numpy.float32(std[l])
+            E, R, LI = res.shape
+            L = LI // I
+            mean, std = scientific.mean_std(res)  # shape (R, LI)
+            agglosses = numpy.zeros((R, L * I), stat_dt)
+            agglosses['mean'] = F32(mean)
+            agglosses['stddev'] = F32(std)
 
-            # average losses
-            avglosses = numpy.zeros((A, R), multi_stat_dt)
+            # losses by tag
+            self.datastore['losses_by_tag-rlzs'] = result['losses_by_tag']
+            tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+            self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
+                                     nbytes=result['losses_by_tag'].nbytes)
+
+            # losses by asset
+            losses_by_asset = numpy.zeros((A, R, L * I), stat_dt)
             for (l, r, aid, stat) in result['avg']:
-                avglosses[ltypes[l]][aid, r] = stat
-            self.datastore['losses_by_asset'] = avglosses
+                for i in range(I):
+                    losses_by_asset[aid, r, l + L * i] = stat[i]
+            self.datastore['losses_by_asset'] = losses_by_asset
             self.datastore['agglosses-rlzs'] = agglosses
 
-            if self.oqparam.all_losses:
-                loss_dt = self.oqparam.loss_dt()
+            # losses by event
+            self.datastore['losses_by_event'] = res  # shape (E, R, LI)
+
+            if self.oqparam.asset_loss_table:
                 array = numpy.zeros((A, E, R), loss_dt)
                 for (l, r), losses_by_aid in result['all_losses'].items():
                     for aid in losses_by_aid:
                         lba = losses_by_aid[aid]  # (E, I)
-                        array[ltypes[l]][aid, :, r] = lba[:, 0]
-                        if I == 2:
-                            array[ltypes[l] + '_ins'][aid, :, r] = lba[:, 1]
+                        for i in range(I):
+                            lt = loss_dt.names[l + L * i]
+                            array[lt][aid, :, r] = lba[:, i]
                 self.datastore['all_losses-rlzs'] = array
