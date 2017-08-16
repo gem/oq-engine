@@ -101,7 +101,7 @@ class BoundingBox(object):
         :param lats:
             a sequence of latitudes
         """
-        if self.min_dist:
+        if self.min_dist or self.max_dist:
             dists = [self.min_dist, self.max_dist] + dists
         if self.west:
             lons = [self.west, self.east] + lons
@@ -143,7 +143,6 @@ class BoundingBox(object):
         dist_edges = dist_bin_width * numpy.arange(
             int(self.min_dist / dist_bin_width),
             int(numpy.ceil(self.max_dist / dist_bin_width) + 1))
-
         west = numpy.floor(self.west / coord_bin_width) * coord_bin_width
         east = numpy.ceil(self.east / coord_bin_width) * coord_bin_width
         lon_extent = get_longitudinal_extent(west, east)
