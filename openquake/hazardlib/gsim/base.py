@@ -916,10 +916,10 @@ class CoeffsTable(object):
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
 
-    >>> coeffs = {SA(0.1): {"a": 1.0, "b": 2.0},
-    ...           SA(1.0): {"a": 3.0, "b": 4.0},
-    ...           PGA(): {"a": 0.1, "b": 1.0},
-    ...           PGV(): {"a": 0.5, "b": 10.0}}
+    >>> coeffs = {imt.SA(0.1): {"a": 1.0, "b": 2.0},
+    ...           imt.SA(1.0): {"a": 3.0, "b": 4.0},
+    ...           imt.PGA(): {"a": 0.1, "b": 1.0},
+    ...           imt.PGV(): {"a": 0.5, "b": 10.0}}
     >>> ct = CoeffsTable(sa_damping=5, table=coeffs)
     """
     def __init__(self, **kwargs):
