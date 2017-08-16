@@ -236,7 +236,7 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap: a ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            for src_id, nsites, calc_time in pmap.calc_times:
+            for src_id, nsites, srcweight, calc_time in pmap.calc_times:
                 src_id = src_id.split(':', 1)[0]
                 info = self.csm.infos[pmap.grp_id, src_id]
                 info.calc_time += calc_time
