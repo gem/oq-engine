@@ -704,3 +704,20 @@ def view_dupl_sources(token, dstore):
         if len(records) > 1:  # dupl
             tbl.append((source_id, sorted(rec['grp_id'] for rec in records)))
     return rst_table(tbl, header=['source_id', 'src_group_ids'])
+
+
+@view.add('global_poes')
+def view_global_poes(token, dstore):
+    """
+    Display global probabilities averaged on all sites and all GMPEs
+    """
+    tbl = []
+    imtls = dstore['oqparam'].imtls
+    header = ['grp_id'] + [str(poe) for poe in imtls.array]
+    for grp in sorted(dstore['poes']):
+        poes = dstore['poes/' + grp]
+        nsites = len(poes)
+        site_avg = sum(poes[sid].array for sid in poes) / nsites
+        gsim_avg = site_avg.sum(axis=1) / poes.shape_z
+        tbl.append([grp] + list(gsim_avg))
+    return rst_table(tbl, header=header)
