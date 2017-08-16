@@ -30,6 +30,7 @@ from openquake.baselib.general import (
     humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
+from openquake.baselib.general import group_array
 from openquake.hazardlib import valid, stats as hstats
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
@@ -689,3 +690,17 @@ def view_synthetic_hcurves(token, dstore):
                 array += pmap[sid].array.sum(axis=1) / pmap.shape_z
     array /= (ngroups * nsites)
     return oq.imtls.new(array)
+
+
+@view.add('dupl_sources')
+def view_dupl_sources(token, dstore):
+    """
+    Display the duplicated sources from source_info
+    """
+    info = dstore['source_info'].value
+    items = sorted(group_array(info, 'source_id').items())
+    tbl = []
+    for source_id, records in items:
+        if len(records) > 1:  # dupl
+            tbl.append((source_id, sorted(rec['grp_id'] for rec in records)))
+    return rst_table(tbl, header=['source_id', 'src_group_ids'])
