@@ -23,6 +23,7 @@ from __future__ import division
 import abc
 import copy
 import bisect
+import warnings
 import collections
 
 import numpy
@@ -1123,10 +1124,14 @@ def scenario_damage(fragility_functions, gmv):
 
 def annual_frequency_of_exceedence(poe, t_haz):
     """
-    :param poe: hazard probability of exceedence
+    :param poe: array of probabilities of exceedence
     :param t_haz: hazard investigation time
+    :returns: array of frequencies (with +inf values where poe=1)
     """
-    return - numpy.log(1. - poe) / t_haz
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # avoid RuntimeWarning: divide by zero encountered in log
+        return - numpy.log(1. - poe) / t_haz
 
 
 def classical_damage(

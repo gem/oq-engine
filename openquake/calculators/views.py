@@ -31,6 +31,7 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import unicode, decode
+from openquake.baselib.general import group_array
 from openquake.hazardlib import valid, stats as hstats
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
@@ -700,3 +701,34 @@ def view_synthetic_hcurves(token, dstore):
                 array += pmap[sid].array.sum(axis=1) / pmap.shape_z
     array /= (ngroups * nsites)
     return oq.imtls.new(array)
+
+
+@view.add('dupl_sources')
+def view_dupl_sources(token, dstore):
+    """
+    Display the duplicated sources from source_info
+    """
+    info = dstore['source_info'].value
+    items = sorted(group_array(info, 'source_id').items())
+    tbl = []
+    for source_id, records in items:
+        if len(records) > 1:  # dupl
+            tbl.append((source_id, sorted(rec['grp_id'] for rec in records)))
+    return rst_table(tbl, header=['source_id', 'src_group_ids'])
+
+
+@view.add('global_poes')
+def view_global_poes(token, dstore):
+    """
+    Display global probabilities averaged on all sites and all GMPEs
+    """
+    tbl = []
+    imtls = dstore['oqparam'].imtls
+    header = ['grp_id'] + [str(poe) for poe in imtls.array]
+    for grp in sorted(dstore['poes']):
+        poes = dstore['poes/' + grp]
+        nsites = len(poes)
+        site_avg = sum(poes[sid].array for sid in poes) / nsites
+        gsim_avg = site_avg.sum(axis=1) / poes.shape_z
+        tbl.append([grp] + list(gsim_avg))
+    return rst_table(tbl, header=header)
