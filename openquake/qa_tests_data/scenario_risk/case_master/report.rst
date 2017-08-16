@@ -1,13 +1,13 @@
 scenario risk
 =============
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81099.hdf5 Thu Jan 26 14:30:38 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1855.hdf5 Fri Jul  7 07:33:34 2017
+checksum32                                      1,456,040,772           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
-num_sites = 7, sitecol = 1.01 KB
+num_sites = 7, num_imts = 4
 
 Parameters
 ----------
@@ -44,6 +44,22 @@ rupture_model                       `rupture_model.xml <rupture_model.xml>`_
 structural_vulnerability            `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_      
 =================================== ================================================================================
 
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    simple(2)       2/2             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ===================================== =========== ======================= =================
+grp_id gsims                                 distances   siteparams              ruptparams       
+====== ===================================== =========== ======================= =================
+0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ===================================== =========== ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -52,6 +68,13 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=2, rlzs=2)
   0,BooreAtkinson2008(): ['<0,b_1~b1,w=0.75>']
   0,ChiouYoungs2008(): ['<1,b_1~b2,w=0.25>']>
+
+Informational data
+------------------
+================ ================
+hostname         tstation.gem.lan
+require_epsilons True            
+================ ================
 
 Exposure model
 --------------
@@ -75,11 +98,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.021     0.0       1     
-filtering sites         0.008     0.0       1     
-reading exposure        0.006     0.0       1     
-saving gmfs             0.003     0.0       1     
-building riskinputs     8.295E-04 0.0       1     
-building epsilons       2.108E-04 0.0       1     
-reading site collection 1.025E-05 0.0       1     
+computing gmfs          0.011     0.0       1     
+reading exposure        0.007     0.0       1     
+filtering sites         0.007     0.0       1     
+saving gmfs             0.002     0.0       1     
+building riskinputs     3.865E-04 0.0       1     
+building epsilons       3.536E-04 0.0       1     
+reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======

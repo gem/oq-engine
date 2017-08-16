@@ -21,6 +21,8 @@ import os
 import mock
 import logging
 import operator
+import collections
+import numpy
 from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
@@ -33,6 +35,34 @@ from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 
 
+def source_model_info(node):
+    """
+    Extract information about a NRML/0.5 source model
+    """
+    trts = []
+    counters = []
+    src_classes = set()
+    for src_group in node:
+        c = collections.Counter()
+        trts.append(src_group['tectonicRegion'])
+        for src in src_group:
+            tag = src.tag.split('}')[1]
+            c[tag] += 1
+        counters.append(c)
+        src_classes.update(c)
+    dtlist = [('TRT', (bytes, 30))] + [
+        (name, int) for name in sorted(src_classes)]
+    out = numpy.zeros(len(node) + 1, dtlist)
+    for i, c in enumerate(counters):
+        out[i]['TRT'] = trts[i]
+        for name in src_classes:
+            out[i][name] = c[name]
+    out[-1]['TRT'] = 'Total'
+    for name in out.dtype.names[1:]:
+        out[-1][name] = out[name][:-1].sum()
+    return rst_table(out)
+
+
 def print_csm_info(fname):
     """
     Parse the composite source model without instantiating the sources and
@@ -41,8 +71,8 @@ def print_csm_info(fname):
     oqparam = readinput.get_oqparam(fname)
     csm = readinput.get_composite_source_model(oqparam, in_memory=False)
     print(csm.info)
-    print('See https://github.com/gem/oq-risklib/blob/master/doc/'
-          'effective-realizations.rst for an explanation')
+    print('See http://docs.openquake.org/oq-engine/stable/'
+          'effective-realizations.html for an explanation')
     rlzs_assoc = csm.info.get_rlzs_assoc()
     print(rlzs_assoc)
     tot, pairs = get_pickled_sizes(rlzs_assoc)
@@ -58,8 +88,11 @@ def do_build_reports(directory):
         for f in sorted(files):
             if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
-                print(job_ini)
-                reportwriter.build_report(job_ini, cwd)
+                logging.info(job_ini)
+                try:
+                    reportwriter.build_report(job_ini, cwd)
+                except Exception as e:
+                    logging.error(str(e))
 
 
 # the documentation about how to use this feature can be found
@@ -94,7 +127,12 @@ def info(calculators, gsims, views, exports, report, input_file=''):
                 do_build_reports(input_file)
         print(mon)
     elif input_file.endswith('.xml'):
-        print(nrml.read(input_file).to_str())
+        node = nrml.read(input_file)
+        if node[0].tag.endswith('sourceModel'):
+            assert node['xmlns'].endswith('nrml/0.5'), node['xmlns']
+            print(source_model_info(node[0]))
+        else:
+            print(node.to_str())
     elif input_file.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:

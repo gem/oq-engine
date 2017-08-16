@@ -1,31 +1,31 @@
 Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 =====================================================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81083.hdf5 Thu Jan 26 14:29:55 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1838.hdf5 Fri Jul  7 07:33:02 2017
+checksum32                                      1,772,213,365           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
-num_sites = 2, sitecol = 808 B
+num_sites = 2, num_imts = 1
 
 Parameters
 ----------
-=============================== ===============================
-calculation_mode                'event_based'                  
-number_of_logic_tree_samples    0                              
-maximum_distance                {'Active Shallow Crust': 200.0}
-investigation_time              50.0                           
-ses_per_logic_tree_path         300                            
-truncation_level                None                           
-rupture_mesh_spacing            2.0                            
-complex_fault_mesh_spacing      2.0                            
-width_of_mfd_bin                0.1                            
-area_source_discretization      10.0                           
-ground_motion_correlation_model None                           
-random_seed                     123456789                      
-master_seed                     0                              
-=============================== ===============================
+=============================== ==================
+calculation_mode                'event_based'     
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              50.0              
+ses_per_logic_tree_path         300               
+truncation_level                None              
+rupture_mesh_spacing            2.0               
+complex_fault_mesh_spacing      2.0               
+width_of_mfd_bin                0.1               
+area_source_discretization      10.0              
+ground_motion_correlation_model None              
+random_seed                     42                
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== =================== ========= ========== ==========
 grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       rake mag  
+0      BooreAtkinson2008() rjb       vs30       mag rake  
 ====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -72,32 +72,19 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 
 Informational data
 ------------------
-========================================= ============
-compute_ruptures_max_received_per_task    728,617     
-compute_ruptures_num_tasks                1           
-compute_ruptures_sent.gsims               102         
-compute_ruptures_sent.monitor             928         
-compute_ruptures_sent.sources             1,319       
-compute_ruptures_sent.src_filter          618         
-compute_ruptures_tot_received             728,617     
-hazard.input_weight                       0.100       
-hazard.n_imts                             1           
-hazard.n_levels                           1           
-hazard.n_realizations                     1           
-hazard.n_sites                            2           
-hazard.n_sources                          1           
-hazard.output_weight                      300         
-hostname                                  gem-tstation
-require_epsilons                          False       
-========================================= ============
-
-Specific information for event based
-------------------------------------
-======================== ======
-Total number of ruptures 1     
-Total number of events   45,319
-Rupture multiplicity     45,319
-======================== ======
+============================ ==========================================================================
+compute_ruptures.received    max_per_task 710.52 KB, tot 710.52 KB                                     
+compute_ruptures.sent        sources 1.29 KB, src_filter 712 B, param 545 B, monitor 320 B, gsims 102 B
+hazard.input_weight          0.1                                                                       
+hazard.n_imts                1                                                                         
+hazard.n_levels              1                                                                         
+hazard.n_realizations        1                                                                         
+hazard.n_sites               2                                                                         
+hazard.n_sources             1                                                                         
+hazard.output_weight         300.0                                                                     
+hostname                     tstation.gem.lan                                                          
+require_epsilons             False                                                                     
+============================ ==========================================================================
 
 Slowest sources
 ---------------
@@ -119,21 +106,21 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.043 NaN    0.043 0.043 1        
+compute_ruptures   0.019 NaN    0.019 0.019 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-setting event years              0.766     5.250     1     
-saving ruptures                  0.240     0.0       1     
-total compute_ruptures           0.043     0.398     1     
-reading composite source model   0.003     0.0       1     
-managing sources                 0.002     0.0       1     
-filtering composite source model 0.002     0.0       1     
-filtering ruptures               6.089E-04 0.0       1     
-store source_info                5.317E-04 0.0       1     
-reading site collection          4.101E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+setting event years            0.182     0.0       1     
+saving ruptures                0.103     0.0       1     
+total compute_ruptures         0.019     1.168     1     
+store source_info              0.004     0.0       1     
+reading composite source model 0.002     0.0       1     
+managing sources               0.001     0.0       1     
+prefiltering source model      5.927E-04 0.0       1     
+filtering ruptures             3.016E-04 0.0       1     
+reading site collection        4.506E-05 0.0       1     
+============================== ========= ========= ======

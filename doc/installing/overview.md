@@ -6,6 +6,8 @@ The OpenQuake Engine can be installed in several different ways. This page will 
 
 See the **[Installing the OpenQuake Engine for development](development.md)** guide.
 
+A pre-configured VirtualBox appliance may be also [downloaded](https://storage.globalquakemodel.org/ova/stable/). It contains all the OpenQuake software pre-installed and pre-configured.
+
 ## Single user
 
 ### Linux
@@ -35,6 +37,10 @@ Multi-user is not supported on macOS.
 ### Windows
 
 Multi-user is not supported on Windows.
+
+## Cloud
+
+A [Docker container](docker.md) is available.
 
 ***
 

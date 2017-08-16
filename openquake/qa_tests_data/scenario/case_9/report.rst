@@ -1,31 +1,31 @@
 Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81021.hdf5 Thu Jan 26 14:28:13 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1769.hdf5 Fri Jul  7 07:32:11 2017
+checksum32                               2,404,162,686           
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
-num_sites = 3, sitecol = 854 B
+num_sites = 3, num_imts = 1
 
 Parameters
 ----------
-=============================== ================
-calculation_mode                'scenario'      
-number_of_logic_tree_samples    0               
-maximum_distance                {'default': 200}
-investigation_time              None            
-ses_per_logic_tree_path         1               
-truncation_level                1.0             
-rupture_mesh_spacing            1.0             
-complex_fault_mesh_spacing      1.0             
-width_of_mfd_bin                None            
-area_source_discretization      None            
-ground_motion_correlation_model None            
-random_seed                     3               
-master_seed                     0               
-=============================== ================
+=============================== ==================
+calculation_mode                'scenario'        
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              None              
+ses_per_logic_tree_path         1                 
+truncation_level                1.0               
+rupture_mesh_spacing            1.0               
+complex_fault_mesh_spacing      1.0               
+width_of_mfd_bin                None              
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     3                 
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -36,6 +36,22 @@ gsim_logic_tree `gsim_logic_tree.xml <gsim_logic_tree.xml>`_
 job_ini         `job.ini <job.ini>`_                        
 rupture_model   `rupture_model.xml <rupture_model.xml>`_    
 =============== ============================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    simple(2)       2/2             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ======================================= ========== ========== ==============
+grp_id gsims                                   distances  siteparams ruptparams    
+====== ======================================= ========== ========== ==============
+0      LinLee2008SSlab() YoungsEtAl1997SSlab() rhypo rrup vs30       hypo_depth mag
+====== ======================================= ========== ========== ==============
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -52,5 +68,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.011     0.0       1     
-reading site collection 3.171E-05 0.0       1     
+reading site collection 3.123E-05 0.0       1     
 ======================= ========= ========= ======

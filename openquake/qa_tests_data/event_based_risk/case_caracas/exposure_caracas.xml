@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ex1"
+    taxonomySource="GEM taxonomy"
+    >
+        
+        <description>
+            Caracas residential exposure
+        </description>
+        <conversions>
+            
+            <costTypes>
+                
+                <costType name="structural" type="per_asset" unit="USD"/>
+            </costTypes>
+        </conversions>
+        <assets>
+            <asset
+            id="101"
+            number="6.0000000E+00"
+            taxonomy="MUR+ADO_H1"
+            >
+                
+                <location lat="1.0540600E+01" lon="-6.6913400E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.4000000E+04"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="5.8300000E+00" period="day"/>
+                    <occupancy occupants="2.3070000E+01" period="night"/>
+                    <occupancy occupants="1.2870000E+01" period="transit"/>
+                </occupancies>
+            </asset>
+            <asset
+            id="125"
+            number="1.1000000E+01"
+            taxonomy="S1M_MC"
+            >
+                
+                <location lat="1.0540600E+01" lon="-6.6913400E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="5.7600000E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.0680000E+01" period="day"/>
+                    <occupancy occupants="4.2290000E+01" period="night"/>
+                    <occupancy occupants="2.3590000E+01" period="transit"/>
+                </occupancies>
+            </asset>
+          </assets>
+    </exposureModel>
+</nrml>

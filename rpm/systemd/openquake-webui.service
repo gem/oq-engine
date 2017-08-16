@@ -6,10 +6,11 @@ After=network.target openquake-dbserver.service
 [Service]
 User=openquake
 Group=openquake
-WorkingDirectory=/usr/lib/python2.7/site-packages/openquake/server/
-ExecStart=/usr/bin/env python manage.py runserver 127.0.0.1:8800 --noreload
+Environment=PYTHONPATH=/opt/openquake/lib/python2.7/site-packages
+WorkingDirectory=/usr/share/openquake/engine
+ExecStart=/usr/bin/env python -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
 # Using gunicorn (Nginx or another webserver is needed for static content)
-# ExecStart=/usr/bin/env gunicorn -w 2 wsgi:application
+# ExecStart=/opt/openquake/bin/gunicorn -w 2 openquake.server.wsgi:application
 Restart=always
 RestartSec=30
 KillMode=control-group

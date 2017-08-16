@@ -16,109 +16,28 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import h5py
-import numpy as np
-import copy
 import time
+import socket
 import logging
 import functools
 from datetime import datetime
+import numpy
+import h5py
 
-from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
-from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo.geodetic import min_geodetic_distance
-from openquake.hazardlib.source import PointSource
-from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import pmap_from_grp, poe_map
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib import valid, nrml
-from openquake.commonlib import source, readinput, config
+from openquake.hazardlib import valid
+from openquake.commonlib import source, readinput, util
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFSESControl, DEFAULT_TRT)
+    UCERFControl, get_composite_source_model)
 # FIXME: the counting of effective ruptures has to be revised completely
-
-
-class UCERFControl(UCERFSESControl):
-    """
-    General control file for a UCERF branch for the classical calculator.
-    Here we add a new method to generate a set of background sources per
-    branch
-    """
-    def get_background_sources(self, background_sids):
-        """
-        Turn the background model of a given branch into a set of point sources
-
-        :param str branch_id:
-            Valid ID of a UCERF branch
-        :param background_sids:
-            Site IDs affected by the background sources
-        """
-        with h5py.File(self.source_file, "r") as hdf5:
-            grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
-            mags = hdf5[grid_loc + "/Magnitude"][:]
-            mmax = hdf5[grid_loc + "/MMax"][background_sids]
-            rates = hdf5[grid_loc + "/RateArray"][background_sids, :]
-            locations = hdf5["Grid/Locations"][background_sids, :]
-            sources = []
-            for i, bg_idx in enumerate(background_sids):
-                src_id = "_".join([self.idx_set["grid_key"], str(bg_idx)])
-                src_name = "|".join([self.idx_set["total_key"], str(bg_idx)])
-                # Get MFD
-                mag_idx = np.logical_and(mags >= self.min_mag, mags < mmax[i])
-                src_mags = mags[mag_idx]
-                src_rates = rates[i, :]
-                src_mfd = EvenlyDiscretizedMFD(
-                    src_mags[0], src_mags[1] - src_mags[0],
-                    src_rates[mag_idx].tolist())
-                ps = PointSource(
-                    src_id, src_name, self.tectonic_region_type, src_mfd,
-                    self.mesh_spacing, self.msr, self.aspect, self.tom,
-                    self.usd, self.lsd,
-                    Point(locations[i, 0], locations[i, 1]),
-                    self.npd, self.hdd)
-                sources.append(ps)
-        return sources
-
-    def filter_sites_by_distance_from_rupture_set(
-            self, rupset_idx, sites, max_dist):
-        """
-        Filter sites by distances from a set of ruptures
-        """
-        with h5py.File(self.source_file, "r") as hdf5:
-            rup_index_key = "/".join([self.idx_set["geol_idx"],
-                                      "RuptureIndex"])
-
-            # Find the combination of rupture sections used in this model
-            rupture_set = set()
-            # Determine which of the rupture sections used in this set
-            # of indices
-            rup_index = hdf5[rup_index_key]
-            for i in rupset_idx:
-                rupture_set.update(rup_index[i])
-            centroids = np.empty([1, 3])
-            # For each of the identified rupture sections, retreive the
-            # centroids
-            for ridx in rupture_set:
-                trace_idx = "{:s}/{:s}".format(self.idx_set["sec_idx"],
-                                               str(ridx))
-                centroids = np.vstack([
-                    centroids,
-                    hdf5[trace_idx + "/Centroids"][:].astype("float64")])
-            distance = min_geodetic_distance(centroids[1:, 0],
-                                             centroids[1:, 1],
-                                             sites.lons, sites.lats)
-            idx = distance <= max_dist
-            if np.any(idx):
-                return rupset_idx, sites.filter(idx)
-            else:
-                return [], []
 
 
 def convert_UCERFSource(self, node):
@@ -156,44 +75,14 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-def _hazard_curves_per_rupture_subset(
-        rupset_idx, ucerf_source, sites, imtls, cmaker,
-        truncation_level=None, monitor=Monitor()):
-    """
-    Calculates the probabilities of exceedence from a set of rupture indices
-    """
-    imtls = DictArray(imtls)
-    ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mon = monitor('computing poes', measuremem=False)
-    pmap = ProbabilityMap(len(imtls.array), len(cmaker.gsims))
-    pmap.calc_times = []
-    pmap.grp_id = ucerf_source.src_group_id
-    nsites = len(sites)
-    ucerf_source.rupset_idx = rupset_idx
-    ucerf_source.num_ruptures = len(rupset_idx)
-    pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
-    # NB: the effective ruptures can be less, some may have zero probability
-    t0 = time.time()
-    upmap = poe_map(ucerf_source, sites, imtls, cmaker,
-                    truncation_level, ctx_mon, pne_mon)
-    pmap |= upmap
-    pmap.calc_times.append(
-        (ucerf_source.source_id, nsites, time.time() - t0))
-    return pmap
-
-
-def ucerf_classical_hazard_by_rupture_set(
-        rupset_idx, branchname, ucerf_source, src_group_id, src_filter,
-        gsims, monitor):
+@util.reader
+def ucerf_classical(
+        rupset_idx, ucerf_source, src_filter, gsims, monitor):
     """
     :param rupset_idx:
         indices of the rupture sets
-    :param branchname:
-        name of the branch
     :param ucerf_source:
         an object taking the place of a source for UCERF
-    :param src_group_id:
-        source group index
     :param src_filter:
         a source filter returning the sites affected by the source
     :param gsims:
@@ -201,86 +90,47 @@ def ucerf_classical_hazard_by_rupture_set(
     :param monitor:
         a monitor instance
     :returns:
-        an AccumDict rlz -> curves
+        a ProbabilityMap
     """
+    t0 = time.time()
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    max_dist = src_filter.integration_distance[DEFAULT_TRT]
+    ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
 
-    # Apply the initial rupture to site filtering
-    rupset_idx, s_sites = \
-        ucerf_source.filter_sites_by_distance_from_rupture_set(
-            rupset_idx, src_filter.sitecol, max_dist)
-    ucerf_source.src_filter = src_filter
-    if len(s_sites):
-        cmaker = ContextMaker(gsims, max_dist)
-        pmap = _hazard_curves_per_rupture_subset(
-            rupset_idx, ucerf_source, s_sites, imtls, cmaker,
-            truncation_level, monitor=monitor)
-    else:
-        pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        pmap.calc_times = []
-        pmap.eff_ruptures = {src_group_id: 0}
+    # prefilter the sites close to the rupture set
+    with h5py.File(ucerf_source.control.source_file, "r") as hdf5:
+        mag = hdf5[ucerf_source.idx_set["mag_idx"]][rupset_idx].max()
+        ridx = set()
+        # find the combination of rupture sections used in this model
+        rup_index_key = "/".join(
+            [ucerf_source.idx_set["geol_idx"], "RuptureIndex"])
+        # determine which of the rupture sections used in this set of indices
+        rup_index = hdf5[rup_index_key]
+        for i in rupset_idx:
+            ridx.update(rup_index[i])
+        s_sites = ucerf_source.get_rupture_sites(hdf5, ridx, src_filter, mag)
+        if s_sites is None:  # return an empty probability map
+            pm = ProbabilityMap(len(imtls.array), len(gsims))
+            pm.calc_times = []  # TODO: fix .calc_times
+            pm.eff_ruptures = {ucerf_source.src_group_id: 0}
+            pm.grp_id = ucerf_source.src_group_id
+            return pm
+
+    # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
+    ucerf_source.rupset_idx = rupset_idx
+    ucerf_source.num_ruptures = len(rupset_idx)
+    cmaker = ContextMaker(gsims, src_filter.integration_distance)
+    imtls = DictArray(imtls)
+    ctx_mon = monitor('making contexts', measuremem=False)
+    pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
+                for gsim in gsims]
+    pmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
+                   truncation_level, ctx_mon, pne_mons)
+    nsites = len(s_sites)
+    pmap.calc_times = [(ucerf_source.source_id, nsites, time.time() - t0)]
     pmap.grp_id = ucerf_source.src_group_id
+    pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
     return pmap
-ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
-
-
-def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
-                                     src_filter, gsims, monitor):
-    """
-    :param branchname:
-        a branch name
-    :param ucerf_source:
-        a source-like object for the UCERF model
-    :param src_group_id:
-        an ordinal number for the source
-    :param source filter:
-        a filter returning the sites affected by the source
-    :param gsims:
-        a list of GSIMs
-    :param monitor:
-        a monitor instance
-    :returns:
-        an AccumDict rlz -> curves
-    """
-    truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.imtls
-    trt = ucerf_source.tectonic_region_type
-    max_dist = monitor.oqparam.maximum_distance[trt]
-    ucerf_source.src_group_id = src_group_id
-    ucerf_source.src_filter = src_filter
-
-    # Two step process here - the first generates the hazard curves from
-    # the rupture sets
-    # Apply the initial rupture to site filtering
-    rupset_idx = ucerf_source.get_rupture_indices(branchname)
-    rupset_idx, s_sites = \
-        ucerf_source.filter_sites_by_distance_from_rupture_set(
-            rupset_idx, src_filter.sitecol, max_dist)
-
-    if len(s_sites):
-        cmaker = ContextMaker(gsims, max_dist)
-        pm = _hazard_curves_per_rupture_subset(
-            rupset_idx, ucerf_source, s_sites, imtls, cmaker,
-            truncation_level, monitor=monitor)
-    else:
-        pm = ProbabilityMap(len(imtls.array), len(gsims))
-        pm.eff_ruptures = {src_group_id: 0}
-    logging.info('Branch %s', branchname)
-    # Get the background point sources
-    background_sids = ucerf_source.get_background_sids(src_filter)
-    bckgnd_sources = ucerf_source.get_background_sources(background_sids)
-    if bckgnd_sources:
-        bckgnd_sources[0].src_group_id = src_group_id
-        pmap = pmap_from_grp(
-            bckgnd_sources, src_filter, imtls, gsims, truncation_level,
-            (), monitor=monitor)
-        pm |= pmap
-        pm.eff_ruptures += AccumDict(pmap.eff_ruptures)
-    # TODO: should I add a .calc_times attribute?
-    return pm
-ucerf_classical_hazard_by_branch.shared_dir_on = config.SHARED_DIR_ON
 
 
 @base.calculators.add('ucerf_psha')
@@ -288,7 +138,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
     """
     UCERF classical calculator.
     """
-    core_task = ucerf_classical_hazard_by_branch
+    core_task = ucerf_classical
     is_stochastic = False
 
     def pre_execute(self):
@@ -297,40 +147,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
         self.sitecol = readinput.get_site_collection(self.oqparam)
-        self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
-        self.smlt = readinput.get_source_model_lt(self.oqparam)
-        parser = nrml.SourceModelParser(
-            SourceConverter(self.oqparam.investigation_time,
-                            self.oqparam.rupture_mesh_spacing))
-        [self.src_group] = parser.parse_src_groups(
-            self.oqparam.inputs["source_model"])
-        source_models = []
-        for sm in self.smlt.gen_source_models(self.gsim_lt):
-            sg = copy.copy(self.src_group)
-            sm.src_groups = [sg]
-            [src] = sg
-            # Update the event set
-            src.src_group_id = sg.id = sm.ordinal
-            src.nsites = len(self.sitecol)
-            src.branch_id = sm.name
-            src.build_idx_set()
-            source_models.append(sm)
-        self.csm = source.CompositeSourceModel(
-            self.gsim_lt, self.smlt, source_models, set_weight=False)
+        self.csm = get_composite_source_model(self.oqparam)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
-        self.num_tiles = 1
-        self.infos = {}
-
-    def gen_args(self, branches, ucerf_source, monitor):
-        """
-        :yields: (branch, ucerf_source, grp_id, self.sitecol, gsims, monitor)
-        """
-        for grp_id, branch in enumerate(branches):
-            gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-            self.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
-                ucerf_source)
-            yield branch, ucerf_source, grp_id, self.src_filter, gsims, monitor
 
     def execute(self):
         """
@@ -338,9 +157,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor.new(self.core_task.__name__)
+        monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq = self.oqparam
-        ucerf_source = self.src_group.sources[0]
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         acc = AccumDict({
             grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
@@ -349,58 +167,46 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
 
-        if len(self.csm) > 1:
-            # when multiple branches, parallelise by branch
-            branches = [rlz.value for rlz in self.smlt]
-            rup_res = parallel.Starmap(
-                ucerf_classical_hazard_by_branch,
-                self.gen_args(branches, ucerf_source, monitor)).submit_all()
-        else:
-            # single branch
-            gsims = self.rlzs_assoc.gsims_by_grp_id[0]
-            [(branch_id, branch)] = self.smlt.branches.items()
-            branchname = branch.value
-            ucerf_source.src_group_id = 0
-            ucerf_source.weight = 1
+        for sm in self.csm.source_models:  # one branch at the time
+            grp_id = sm.ordinal
+            gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+            [[ucerf_source]] = sm.src_groups
             ucerf_source.nsites = len(self.sitecol)
-            self.infos[0, ucerf_source.source_id] = source.SourceInfo(
+            self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
-            with self.monitor('getting background sources', autoflush=True):
-                background_sids = ucerf_source.get_background_sids(
-                    self.src_filter)
-                bckgnd_sources = ucerf_source.get_background_sources(
-                    background_sids)
+            bckgnd_sources = ucerf_source.get_background_sources(
+                self.src_filter)
+
+            # since there are two kinds of tasks (background and rupture_set)
+            # we divide the concurrent_tasks parameter by 2;
+            # notice the "or 1" below, to avoid issues when
+            # self.oqparam.concurrent_tasks is 0 or 1
+            ct2 = (self.oqparam.concurrent_tasks // 2) or 1
 
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.src_filter, oq.imtls,
                     gsims, self.oqparam.truncation_level, (), monitor)
             bg_res = parallel.Starmap.apply(
-                pmap_from_grp, args,
-                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
+                pmap_from_grp, args, name='background_sources_%d' % grp_id,
+                concurrent_tasks=ct2).submit_all()
 
             # parallelize by rupture subsets
-            tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
-            rup_sets = ucerf_source.get_rupture_indices(branchname)
-            rup_res = parallel.Starmap.apply(
-                ucerf_classical_hazard_by_rupture_set,
-                (rup_sets, branchname, ucerf_source, self.src_group.id,
-                 self.src_filter, gsims, monitor),
-                concurrent_tasks=tasks).submit_all()
+            rup_sets = numpy.arange(ucerf_source.num_ruptures)
+            taskname = 'ucerf_classical_%d' % grp_id
+            acc = parallel.Starmap.apply(
+                ucerf_classical,
+                (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
+                concurrent_tasks=ct2, name=taskname
+            ).reduce(self.agg_dicts, acc)
 
             # compose probabilities from background sources
             for pmap in bg_res:
-                acc[0] |= pmap
-            self.save_data_transfer(bg_res)
+                acc[grp_id] |= pmap
 
-        pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.infos)
-            self.save_data_transfer(rup_res)
-        self.datastore['csm_info'] = self.csm.info
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            functools.partial(self.count_eff_ruptures, pmap_by_grp_id))
-        return pmap_by_grp_id
+            self.store_source_info(self.csm.infos, acc)
+        return acc  # {grp_id: pmap}
 
 
 @base.calculators.add('ucerf_classical')

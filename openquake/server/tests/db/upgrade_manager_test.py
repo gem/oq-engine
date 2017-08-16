@@ -26,7 +26,7 @@ import urllib
 from contextlib import contextmanager
 
 from openquake.server.db.upgrade_manager import (
-    upgrade_db, version_db, what_if_I_upgrade,
+    upgrade_db, db_version, what_if_I_upgrade,
     VersionTooSmall, DuplicatedVersion)
 
 pkg = 'openquake.server.tests.db.upgrades'
@@ -114,7 +114,6 @@ class UpgradeManagerTestCase(unittest.TestCase):
         # check that the rollback works: the version
         # table contains only the base script and the
         # tables are not populated, i.e. '0001' has to be rolled back
-        raise unittest.SkipTest
         self.assertEqual(count(conn, 'test_version'), 1)
         self.assertEqual(count(conn, 'test_hazard_calculation'), 0)
         self.assertEqual(count(conn, 'test_lt_source_model'), 0)
@@ -125,8 +124,8 @@ class UpgradeManagerTestCase(unittest.TestCase):
             with temp_script('0001-do-nothing.sql', 'SELECT 1'):
                 upgrade_db(conn, pkg)
 
-    def test_version_db(self):
-        self.assertEqual(version_db(conn, pkg), '0000')
+    def test_db_version(self):
+        self.assertEqual(db_version(conn, pkg), '0000')
 
     def check_message(self, html, expected):
         if hasattr(urllib, 'urlopen'):  # Python 2

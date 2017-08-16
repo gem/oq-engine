@@ -1,128 +1,104 @@
 Ucerf test
 ==========
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81011.hdf5 Thu Jan 26 14:28:12 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1759.hdf5 Fri Jul  7 07:32:10 2017
+checksum32                               2,080,369,829           
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
-num_sites = 1588, sitecol = 72.08 KB
+num_sites = 155, num_imts = 1
 
 Parameters
 ----------
-=============================== ===============================
-calculation_mode                'ucerf_rupture'                
-number_of_logic_tree_samples    0                              
-maximum_distance                {'Active Shallow Crust': 200.0}
-investigation_time              10000.0                        
-ses_per_logic_tree_path         1                              
-truncation_level                None                           
-rupture_mesh_spacing            1.0                            
-complex_fault_mesh_spacing      1.0                            
-width_of_mfd_bin                1.0                            
-area_source_discretization      None                           
-ground_motion_correlation_model None                           
-random_seed                     1066                           
-master_seed                     0                              
-=============================== ===============================
+=============================== ==================
+calculation_mode                'ucerf_rupture'   
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              200.0             
+ses_per_logic_tree_path         1                 
+truncation_level                None              
+rupture_mesh_spacing            1.0               
+complex_fault_mesh_spacing      1.0               
+width_of_mfd_bin                1.0               
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     1066              
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
-======================= ==================================================================================================================
-Name                    File                                                                                                              
-======================= ==================================================================================================================
-gsim_logic_tree         `gmpe_logic_tree_ucerf_mean.xml <gmpe_logic_tree_ucerf_mean.xml>`_                                                
-job_ini                 `job.ini <job.ini>`_                                                                                              
-sites                   `bay_area.csv <bay_area.csv>`_                                                                                    
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source_model            `dummy_ucerf_bg_source_redux.xml <dummy_ucerf_bg_source_redux.xml>`_                                              
-source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>`_                                                        
-======================= ==================================================================================================================
+======================= ====================================================================
+Name                    File                                                                
+======================= ====================================================================
+gsim_logic_tree         `gmpe_logic_tree_ucerf_mean.xml <gmpe_logic_tree_ucerf_mean.xml>`_  
+job_ini                 `job.ini <job.ini>`_                                                
+sites                   `bay_area.csv <bay_area.csv>`_                                      
+source_model            `dummy_ucerf_bg_source_redux.xml <dummy_ucerf_bg_source_redux.xml>`_
+source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>`_          
+======================= ====================================================================
 
 Composite source model
 ----------------------
-========= ====== ====================== =============== ================
-smlt_path weight source_model_file      gsim_logic_tree num_realizations
-========= ====== ====================== =============== ================
-ltbr0001  0.006  `ltbr0001 <ltbr0001>`_ simple(2)       2/2             
-ltbr0002  0.006  `ltbr0002 <ltbr0002>`_ simple(2)       2/2             
-ltbr0003  0.050  `ltbr0003 <ltbr0003>`_ simple(2)       2/2             
-ltbr0037  0.006  `ltbr0037 <ltbr0037>`_ simple(2)       2/2             
-ltbr0038  0.006  `ltbr0038 <ltbr0038>`_ simple(2)       2/2             
-ltbr0039  0.050  `ltbr0039 <ltbr0039>`_ simple(2)       2/2             
-ltbr0541  0.019  `ltbr0541 <ltbr0541>`_ simple(2)       2/2             
-ltbr0542  0.019  `ltbr0542 <ltbr0542>`_ simple(2)       2/2             
-ltbr0543  0.150  `ltbr0543 <ltbr0543>`_ simple(2)       2/2             
-ltbr0577  0.019  `ltbr0577 <ltbr0577>`_ simple(2)       2/2             
-ltbr0578  0.019  `ltbr0578 <ltbr0578>`_ simple(2)       2/2             
-ltbr0579  0.150  `ltbr0579 <ltbr0579>`_ simple(2)       2/2             
-ltbr0721  0.006  `ltbr0721 <ltbr0721>`_ simple(2)       2/2             
-ltbr0722  0.006  `ltbr0722 <ltbr0722>`_ simple(2)       2/2             
-ltbr0723  0.050  `ltbr0723 <ltbr0723>`_ simple(2)       2/2             
-ltbr0757  0.006  `ltbr0757 <ltbr0757>`_ simple(2)       2/2             
-ltbr0758  0.006  `ltbr0758 <ltbr0758>`_ simple(2)       2/2             
-ltbr0759  0.050  `ltbr0759 <ltbr0759>`_ simple(2)       2/2             
-ltbr1261  0.019  `ltbr1261 <ltbr1261>`_ simple(2)       2/2             
-ltbr1262  0.019  `ltbr1262 <ltbr1262>`_ simple(2)       2/2             
-ltbr1263  0.150  `ltbr1263 <ltbr1263>`_ simple(2)       2/2             
-ltbr1297  0.019  `ltbr1297 <ltbr1297>`_ simple(2)       2/2             
-ltbr1298  0.019  `ltbr1298 <ltbr1298>`_ simple(2)       2/2             
-ltbr1299  0.150  `ltbr1299 <ltbr1299>`_ simple(2)       2/2             
-========= ====== ====================== =============== ================
+========= ====== ============================================================================================================================================================ =============== ================
+smlt_path weight source_model_file                                                                                                                                            gsim_logic_tree num_realizations
+========= ====== ============================================================================================================================================================ =============== ================
+ltbr0001  0.006  `FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_   simple(2)       2/2             
+ltbr0002  0.006  `FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_   simple(2)       2/2             
+ltbr0003  0.050  `FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_   simple(2)       2/2             
+ltbr0037  0.006  `FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_             simple(2)       2/2             
+ltbr0038  0.006  `FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_             simple(2)       2/2             
+ltbr0039  0.050  `FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_             simple(2)       2/2             
+ltbr0541  0.019  `FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_ simple(2)       2/2             
+ltbr0542  0.019  `FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_ simple(2)       2/2             
+ltbr0543  0.150  `FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_ simple(2)       2/2             
+ltbr0577  0.019  `FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_           simple(2)       2/2             
+ltbr0578  0.019  `FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_           simple(2)       2/2             
+ltbr0579  0.150  `FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_           simple(2)       2/2             
+ltbr0721  0.006  `FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_   simple(2)       2/2             
+ltbr0722  0.006  `FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_   simple(2)       2/2             
+ltbr0723  0.050  `FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_   simple(2)       2/2             
+ltbr0757  0.006  `FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_             simple(2)       2/2             
+ltbr0758  0.006  `FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_             simple(2)       2/2             
+ltbr0759  0.050  `FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_             simple(2)       2/2             
+ltbr1261  0.019  `FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_ simple(2)       2/2             
+ltbr1262  0.019  `FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_ simple(2)       2/2             
+ltbr1263  0.150  `FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_ simple(2)       2/2             
+ltbr1297  0.019  `FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_           simple(2)       2/2             
+ltbr1298  0.019  `FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_           simple(2)       2/2             
+ltbr1299  0.150  `FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_           simple(2)       2/2             
+========= ====== ============================================================================================================================================================ =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ===================================== =========== ======================= =======================
 grp_id gsims                                 distances   siteparams              ruptparams             
 ====== ===================================== =========== ======================= =======================
-0      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-1      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-2      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-3      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-4      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-5      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-6      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-7      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-8      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-9      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-10     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-11     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-12     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-13     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-14     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-15     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-16     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-17     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-18     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-19     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-20     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-21     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-22     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-23     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
+0      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+1      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+2      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+3      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+4      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+5      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+6      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+7      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+8      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+9      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+10     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+11     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+12     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+13     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+14     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+15     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+16     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+17     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+18     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+19     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+20     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+21     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+22     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
+23     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake width ztor
 ====== ===================================== =========== ======================= =======================
 
 Realizations per (TRT, GSIM)
@@ -180,16 +156,10 @@ Realizations per (TRT, GSIM)
   23,AbrahamsonSilva2008(): ['<46,ltbr1299~AS08,w=0.09000000055879352>']
   23,BooreEtAl2014(): ['<47,ltbr1299~BA14,w=0.06000000037252902>']>
 
-Informational data
-------------------
-=========== ============
-hostname    gem-tstation
-=========== ============
-
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-reading site collection 0.007    0.0       1     
-======================= ======== ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+reading site collection 6.893E-04 0.0       1     
+======================= ========= ========= ======

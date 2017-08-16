@@ -17,12 +17,12 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
-import glob
 import operator
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from openquake.hazardlib import valid
 from openquake.commonlib import datastore
+from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
@@ -59,20 +59,21 @@ def reset_is_running(db):
 
 def set_status(db, job_id, status):
     """
-    Set the status 'created', 'executing', 'successful', 'failed'
+    Set the status 'created', 'executing', 'complete', 'failed'
     consistently with `is_running`.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
     :param status: status string
     """
-    assert status in ('created', 'executing', 'successful', 'failed'), status
-    if status in ('created', 'successful', 'failed'):
+    assert status in ('created', 'executing', 'complete', 'failed'), status
+    if status in ('created', 'complete', 'failed'):
         is_running = 0
     else:  # 'executing'
         is_running = 1
-    db('UPDATE job SET status=?x, is_running=?x WHERE id=?x',
-       status, is_running, job_id)
+    cursor = db('UPDATE job SET status=?x, is_running=?x WHERE id=?x',
+                status, is_running, job_id)
+    return cursor.rowcount
 
 
 def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
@@ -177,16 +178,9 @@ def list_calculations(db, job_type, user_name):
                '        description')
         for job in jobs:
             descr = job.description
-            if job.is_running:
-                status = 'pending'
-            else:
-                if job.status == 'complete':
-                    status = 'successful'
-                else:
-                    status = 'failed'
             start_time = job.start_time
-            yield ('%6d | %10s | %s| %s' % (
-                job.id, status, start_time, descr)).encode('utf-8')
+            yield ('%6d | %10s | %s | %s' % (
+                job.id, job.status, start_time, descr))
 
 
 def list_outputs(db, job_id, full=True):
@@ -228,7 +222,8 @@ def get_outputs(db, job_id):
     """
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
-DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
+
+DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset')
 
 
 def create_outputs(db, job_id, dskeys):
@@ -265,38 +260,38 @@ def del_calc(db, job_id, user):
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
-    :param job_id: job ID
+    :param job_id: job ID, can be an integer or a string
     :param user: username
     :returns: None if everything went fine or an error message
     """
+    job_id = int(job_id)
     dependent = db(
         'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
     if dependent:
-        return ('Cannot delete calculation %d: there are calculations '
-                'dependent from it: %s' % (job_id, [j.id for j in dependent]))
+        return {"error": 'Cannot delete calculation %d: there '
+                'are calculations '
+                'dependent from it: %s' % (job_id, [j.id for j in dependent])}
     try:
-        path = db('SELECT ds_calc_dir FROM job WHERE id=?x', job_id,
-                  scalar=True)
+        owner, path = db('SELECT user_name, ds_calc_dir FROM job WHERE id=?x',
+                         job_id, one=True)
     except NotFound:
-        return ('Cannot delete calculation %d: ID does not exist' % job_id)
+        return {"error": 'Cannot delete calculation %d:'
+                ' ID does not exist' % job_id}
 
     deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
                  job_id, user).rowcount
     if not deleted:
-        return ('Cannot delete calculation %d: belongs to a different user'
-                % job_id)
+        return {"error": 'Cannot delete calculation %d: it belongs to '
+                '%s and you are %s' % (job_id, owner, user)}
 
-    # try to delete datastore and associated files
+    # try to delete datastore and associated file
     # path has typically the form /home/user/oqdata/calc_XXX
-    fnames = []
-    for fname in glob.glob(path + '.*'):
-        try:
-            os.remove(fname)
-        except OSError as exc:  # permission error
-            print('Could not remove %s: %s' % (fname, exc))
-        else:
-            fnames.append(fname)
-    return fnames
+    fname = path + ".hdf5"
+    try:
+        os.remove(fname)
+    except OSError as exc:  # permission error
+        return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    return {"success": fname}
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -373,6 +368,15 @@ def fetch(db, templ, *args):
     return db(templ, *args)
 
 
+def get_path(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :returns: the full path to the dbserver codebase
+    """
+    return server_path
+
+
 def get_dbpath(db):
     """
     :param db: a :class:`openquake.server.dbapi.Db` instance
@@ -394,11 +398,11 @@ def what_if_I_upgrade(db, extract_scripts):
         db.conn, extract_scripts=extract_scripts)
 
 
-def version_db(db):
+def db_version(db):
     """
     :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    return upgrade_manager.version_db(db.conn)
+    return upgrade_manager.db_version(db.conn)
 
 
 def upgrade_db(db):
@@ -439,7 +443,7 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     :param id:
         if given, extract only the specified calculation
     :returns:
-        list of tuples (job_id, user_name, job_status, job_type,
+        list of tuples (job_id, user_name, job_status, calculation_mode,
                         job_is_running, job_description)
     """
     # helper to get job+calculation data from the oq-engine database
@@ -453,8 +457,9 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     if id is not None:
         filterdict['id'] = id
 
-    if 'job_type' in request_get_dict:
-        filterdict['job_type'] = request_get_dict.get('job_type')
+    if 'calculation_mode' in request_get_dict:
+        filterdict['calculation_mode'] = request_get_dict.get(
+            'calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
@@ -470,14 +475,14 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
         limit = 100
 
     if 'start_time' in request_get_dict:
-        start = request_get_dict.get('start_time')  # assume an ISO string
-    else:  # consider only calculations younger than 1 month
-        # ISO string with format YYYY-MM-DD
-        start = (datetime.today() - timedelta(30)).isoformat()[:10]
-    time_filter = "start_time >= '%s'" % start
-    jobs = db('SELECT *, %s FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
-              % (JOB_TYPE, time_filter, limit), filterdict)
-    return [(job.id, job.user_name, job.status, job.job_type,
+        # assume an ISO date string
+        time_filter = "start_time >= '%s'" % request_get_dict.get('start_time')
+    else:
+        time_filter = 1
+
+    jobs = db('SELECT * FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
+              % (time_filter, limit), filterdict)
+    return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description) for job in jobs]
 
 
@@ -493,6 +498,14 @@ def set_relevant(db, job_id, flag):
         flag for the field job.relevant
     """
     db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
+
+
+def update_parent_child(db, parent_child):
+    """
+    Set hazard_calculation_id (parent) on a job_id (child)
+    """
+    db('UPDATE job SET hazard_calculation_id=?x WHERE id=?x',
+       *parent_child)
 
 
 def get_log_slice(db, job_id, start, stop):
@@ -615,5 +628,5 @@ def find(db, description):
 SELECT id, description, user_name,
   (julianday(stop_time) - julianday(start_time)) * 24 AS hours
 FROM job WHERE status='complete' AND description LIKE lower(?x)
-ORDER BY id desc'''
+ORDER BY julianday(stop_time) - julianday(start_time)'''
     return db(query, description.lower())

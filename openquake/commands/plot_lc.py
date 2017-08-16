@@ -23,8 +23,7 @@ from openquake.commonlib import datastore
 
 
 def make_figure(asset, loss_ratios, rcurves):
-    # NB: matplotlib is imported inside, otherwise nosetest would fail in an
-    # installation without matplotlib
+    # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
     loss_types = rcurves.dtype.names
     S, I = rcurves.shape

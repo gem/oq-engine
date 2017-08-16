@@ -1,32 +1,32 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81051.hdf5 Thu Jan 26 14:28:43 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1800.hdf5 Fri Jul  7 07:32:33 2017
+checksum32                                      2,582,625,613           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
-num_sites = 281, sitecol = 83.46 KB
+num_sites = 281, num_imts = 1
 
 Parameters
 ----------
-=============================== ==============================================================
-calculation_mode                'event_based_risk'                                            
-number_of_logic_tree_samples    0                                                             
-maximum_distance                {'Active Shallow Crust': 200.0, 'Subduction Interface': 200.0}
-investigation_time              50.0                                                          
-ses_per_logic_tree_path         2                                                             
-truncation_level                4.0                                                           
-rupture_mesh_spacing            10.0                                                          
-complex_fault_mesh_spacing      10.0                                                          
-width_of_mfd_bin                0.2                                                           
-area_source_discretization      None                                                          
-ground_motion_correlation_model None                                                          
-random_seed                     1024                                                          
-master_seed                     100                                                           
-avg_losses                      True                                                          
-=============================== ==============================================================
+=============================== ==================
+calculation_mode                'event_based_risk'
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              50.0              
+ses_per_logic_tree_path         2                 
+truncation_level                4.0               
+rupture_mesh_spacing            10.0              
+complex_fault_mesh_spacing      10.0              
+width_of_mfd_bin                0.2               
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     1024              
+master_seed                     100               
+avg_losses                      True              
+=============================== ==================
 
 Input files
 -----------
@@ -46,65 +46,63 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1,0)    1/1             
+b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================= ========= ========== ==========
-grp_id gsims             distances siteparams ruptparams
-====== ================= ========= ========== ==========
-0      AkkarBommer2010() rjb       vs30       mag rake  
-====== ================= ========= ========== ==========
+====== ========================= ========= ========== ==============
+grp_id gsims                     distances siteparams ruptparams    
+====== ========================= ========= ========== ==============
+0      AkkarBommer2010()         rjb       vs30       mag rake      
+1      AtkinsonBoore2003SInter() rrup      vs30       hypo_depth mag
+====== ========================= ========= ========== ==============
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=1)
-  0,AkkarBommer2010(): ['<0,b1~b1_@,w=1.0>']>
+  <RlzsAssoc(size=2, rlzs=1)
+  0,AkkarBommer2010(): ['<0,b1~b1_b6,w=1.0>']
+  1,AtkinsonBoore2003SInter(): ['<0,b1~b1_b6,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ============
 source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           44           2,558       
+source_model.xml 0      Active Shallow Crust 1           2558         2,558       
+source_model.xml 1      Subduction Interface 1           3945         3,945       
 ================ ====== ==================== =========== ============ ============
+
+============= =====
+#TRT models   2    
+#sources      2    
+#eff_ruptures 6,503
+#tot_ruptures 6,503
+#tot_weight   0    
+============= =====
 
 Informational data
 ------------------
-========================================= ============
-compute_ruptures_max_received_per_task    13,147      
-compute_ruptures_num_tasks                15          
-compute_ruptures_sent.gsims               1,470       
-compute_ruptures_sent.monitor             21,090      
-compute_ruptures_sent.sources             30,514      
-compute_ruptures_sent.src_filter          582,465     
-compute_ruptures_tot_received             100,226     
-hazard.input_weight                       10,232      
-hazard.n_imts                             1           
-hazard.n_levels                           50          
-hazard.n_realizations                     1           
-hazard.n_sites                            281         
-hazard.n_sources                          1           
-hazard.output_weight                      14,050      
-hostname                                  gem-tstation
-require_epsilons                          1           
-========================================= ============
-
-Specific information for event based
-------------------------------------
-======================== =====
-Total number of ruptures 44   
-Total number of events   45   
-Rupture multiplicity     1.023
-======================== =====
+============================ =====================================================================================
+compute_ruptures.received    tot 311.56 KB, max_per_task 76.54 KB                                                 
+compute_ruptures.sent        src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.44 KB, gsims 1.12 KB
+hazard.input_weight          26012.0                                                                              
+hazard.n_imts                1                                                                                    
+hazard.n_levels              50                                                                                   
+hazard.n_realizations        1                                                                                    
+hazard.n_sites               281                                                                                  
+hazard.n_sources             2                                                                                    
+hazard.output_weight         14050.0                                                                              
+hostname                     tstation.gem.lan                                                                     
+require_epsilons             True                                                                                 
+============================ =====================================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-548 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 50 tasks = 214.06 KB
+548 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 8 tasks = 34.25 KB
 
 Exposure model
 --------------
@@ -128,7 +126,7 @@ PCR-RCSM-5 1.000 0.0    1   1   2         2
 PCR-SLSB-1 1.000 0.0    1   1   3         3         
 W-FLFB-2   1.222 0.502  1   3   54        66        
 W-SLFB-1   1.265 0.520  1   3   83        105       
-*ALL*      1.950 1.306  1   10  281       548       
+*ALL*      0.306 0.877  0   10  1,792     548       
 ========== ===== ====== === === ========= ==========
 
 Slowest sources
@@ -137,6 +135,7 @@ Slowest sources
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
 0      F         ComplexFaultSource 2,558        0.0       281       0        
+1      D         ComplexFaultSource 3,945        0.0       281       0        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -144,30 +143,30 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.0       1     
+ComplexFaultSource 0.0       2     
 ================== ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.270 0.038  0.192 0.366 15       
+compute_ruptures   0.926 0.465  0.612 2.130 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-total compute_ruptures           4.049     1.281     15    
-managing sources                 0.603     0.0       1     
-split/filter heavy sources       0.600     0.0       1     
-reading site collection          0.199     0.0       1     
-reading composite source model   0.111     0.0       1     
-reading exposure                 0.082     0.0       1     
-saving ruptures                  0.015     0.0       15    
-filtering ruptures               0.013     0.0       57    
-setting event years              0.002     0.0       1     
-filtering composite source model 0.002     0.0       1     
-store source_info                5.314E-04 0.0       1     
-================================ ========= ========= ======
+============================== ======== ========= ======
+operation                      time_sec memory_mb counts
+============================== ======== ========= ======
+total compute_ruptures         10       0.461     11    
+managing sources               1.379    0.0       1     
+filtering ruptures             0.388    0.0       489   
+assoc_assets_sites             0.165    0.0       1     
+reading site collection        0.160    0.0       1     
+reading composite source model 0.146    0.0       1     
+saving ruptures                0.075    0.0       11    
+reading exposure               0.072    0.0       1     
+prefiltering source model      0.008    0.0       1     
+setting event years            0.007    0.0       1     
+store source_info              0.007    0.0       1     
+============================== ======== ========= ======

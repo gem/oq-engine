@@ -1,31 +1,31 @@
 oq-test03, depth=15km
 =====================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81013.hdf5 Thu Jan 26 14:28:13 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1761.hdf5 Fri Jul  7 07:32:10 2017
+checksum32                               3,074,586,051           
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
-num_sites = 1, sitecol = 762 B
+num_sites = 1, num_imts = 2
 
 Parameters
 ----------
-=============================== =================
-calculation_mode                'scenario_damage'
-number_of_logic_tree_samples    0                
-maximum_distance                {'default': 300} 
-investigation_time              None             
-ses_per_logic_tree_path         1                
-truncation_level                3.0              
-rupture_mesh_spacing            0.1              
-complex_fault_mesh_spacing      0.1              
-width_of_mfd_bin                None             
-area_source_discretization      None             
-ground_motion_correlation_model None             
-random_seed                     3                
-master_seed                     0                
-=============================== =================
+=============================== ==================
+calculation_mode                'scenario_damage' 
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 300.0}
+investigation_time              None              
+ses_per_logic_tree_path         1                 
+truncation_level                3.0               
+rupture_mesh_spacing            0.1               
+complex_fault_mesh_spacing      0.1               
+width_of_mfd_bin                None              
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     3                 
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -37,6 +37,22 @@ job_ini              `job_h.ini <job_h.ini>`_
 rupture_model        `rupture_Romeral_15km.xml <rupture_Romeral_15km.xml>`_                      
 structural_fragility `fragility_model_test03.xml <fragility_model_test03.xml>`_                  
 ==================== ============================================================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================ ========= ========== ==========
+grp_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       mag rake  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -70,7 +86,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.003     0.0       1     
-filtering sites         0.002     0.0       1     
-reading site collection 7.629E-06 0.0       1     
+reading exposure        0.006     0.0       1     
+filtering sites         0.001     0.0       1     
+reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======

@@ -23,7 +23,6 @@ from openquake.hazardlib import InvalidFile
 from openquake.baselib.node import scientificformat
 
 FIVEDIGITS = '%.5E'
-OLD_NUMPY = tuple(int(s) for s in numpy.__version__.split('.')) < (1, 11, 0)
 
 
 class HeaderTranslator(object):
@@ -83,17 +82,28 @@ class HeaderTranslator(object):
         return names
 
 htranslator = HeaderTranslator(
+    '(rlzi):uint16',
+    '(sid):uint32',
+    '(eid):uint64',
+    '(imti):uint8',
+    '(gmv_.+):float32',
     '(aid):uint32',
     '(boundary):object',
     '(tectonic_region_type):object',
     '(asset_ref):\|S100',
-    '(event_tag):\|S100',
+    '(rup_id):uint32',
+    '(event_id):uint64',
     '(event_set):uint32',
     '(eid):uint32',
+    '(eid-\d+):float32',
     '(year):uint32',
     '(taxonomy):\|S100',
-    '(rupserial):uint32',
+    '(tag):\|S100',
     '(multiplicity):uint16',
+    '(magnitude):float32',
+    '(centroid_lon):float32',
+    '(centroid_lat):float32',
+    '(centroid_depth):float32',
     '(numsites):uint32',
     '(losses):float32',
     '(poes):float32',
@@ -106,11 +116,14 @@ htranslator = HeaderTranslator(
     '(nonstructural.*):float32',
     '(business_interruption.*):float32',
     '(contents.*):float32',
+    '(occupants):float32',
     '(occupants~.+):float32',
+    '(occupants_ins):float32',
     '(no_damage):float32',
     '(slight):float32',
     '(moderate):float32',
     '(extensive):float32',
+    '(extreme):float32',
     '(complete):float32',
     '(\d+):float32',  # realization column, used in the GMF scenario exporter
 )
@@ -124,9 +137,6 @@ def _build_header(dtype, root):
             return []
         return [root + (str(dtype), dtype.shape)]
     for field in dtype.names:
-        if OLD_NUMPY and field == 'vlen':
-            # workaround for a numpy bug with vlen fields
-            continue
         dt = dtype.fields[field][0]
         if dt.subdtype is None:  # nested
             header.extend(_build_header(dt, root + (field,)))
@@ -222,7 +232,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
         dest.write('# %s\n' % comment)
 
     someheader = header or autoheader
-    if someheader:
+    if header != 'no-header' and someheader:
         dest.write(sep.join(htranslator.write(someheader)) + u'\n')
 
     if autoheader:
