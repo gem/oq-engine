@@ -24,7 +24,10 @@ import logging
 import operator
 import traceback
 import collections
-
+try:  # with Python 3
+    from urllib.parse import unquote_plus
+except ImportError:  # with Python 2
+    from urllib import unquote_plus
 import numpy
 
 from openquake.baselib import general, hdf5, __version__ as engine_version
@@ -33,7 +36,6 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, datastore, source, calc, riskmodels
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import Starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
@@ -138,7 +140,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     @property
     def taxonomies(self):
-        return self.datastore['assetcol/taxonomies'].value
+        L = len('taxonomy-')
+        return [unquote_plus(key[L:])
+                for key in self.datastore['assetcol/aids_by_tag']
+                if key.startswith('taxonomy-')]
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
@@ -162,6 +167,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = engine_version
+        if 'checksum32' not in attrs:
+            attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
 
     def set_log_format(self):
@@ -303,12 +310,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Collect the realizations and set the attributes nbytes
         """
-        sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
-            self.rlzs_assoc.realizations) or collections.defaultdict(
-                lambda: 'NA')
-        self.datastore['realizations'] = numpy.array(
-            [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
-             for r in self.rlzs_assoc.realizations], rlz_dt)
+        if hasattr(self, 'rlzs_assoc'):
+            sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
+                self.rlzs_assoc.realizations) or collections.defaultdict(
+                    lambda: 'NA')
+            self.datastore['realizations'] = numpy.array(
+                [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
+                 for r in self.rlzs_assoc.realizations], rlz_dt)
         if 'hcurves' in set(self.datastore):
             self.datastore.set_nbytes('hcurves')
         self.datastore.flush()
@@ -357,9 +365,11 @@ class HazardCalculator(BaseCalculator):
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), riskinput.AssetCollection(
-            assets_by_site, self.exposure.cost_calculator,
-            self.oqparam.time_event, time_events=hdf5.array_of_vstr(
-                sorted(self.exposure.time_events)))
+            assets_by_site,
+            self.exposure.assets_by_tag,
+            self.exposure.cost_calculator,
+            self.oqparam.time_event,
+            time_events=hdf5.array_of_vstr(sorted(self.exposure.time_events)))
 
     def count_assets(self):
         """
@@ -584,6 +594,14 @@ class HazardCalculator(BaseCalculator):
         """For compatibility with the engine"""
 
 
+def _get_aids(assets_by_site):
+    aids = []
+    for assets in assets_by_site:
+        for asset in assets:
+            aids.append(asset.ordinal)
+    return sorted(aids)
+
+
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -603,18 +621,20 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, hazards_by_rlz, eps=numpy.zeros(0)):
+    def build_riskinputs(self, kind, hazards, eps=numpy.zeros(0), eids=None):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
-        :param hazards_by_rlz:
-            a dictionary rlz -> IMT -> array of length num_sites
+        :param hazards:
+            a (composite) array of shape (R, N, ...)
         :param eps:
             a matrix of epsilons (possibly empty)
+        :param eids:
+            an array of event IDs (or None)
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        self.check_poes(hazards_by_rlz)
+        self.check_poes(hazards)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -622,30 +642,30 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
-        rlzs = range(len(hazards_by_rlz))
         assets_by_site = self.assetcol.assets_by_site()
+        self.tagmask = self.assetcol.tagmask()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
-            idx_weight_pairs = [
+            sid_weight_pairs = [
                 (i, len(assets))
                 for i, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
-                idx_weight_pairs, num_tasks, weight=operator.itemgetter(1))
+                sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
-                indices = numpy.array([idx for idx, _weight in block])
-                reduced_assets = assets_by_site[indices]
+                sids = numpy.array([sid for sid, _weight in block])
+                reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
                 if len(eps):
                     for assets in reduced_assets:
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
+                reduced_mask = self.tagmask[_get_aids(reduced_assets)]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
-                        kind, 0, {None: rlzs},
-                        hazards_by_rlz, indices, list(imtls)),
-                    reduced_assets, reduced_eps)
+                        kind, hazards[:, sids], imtls, eids),
+                    reduced_assets, reduced_mask, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
