@@ -1123,13 +1123,16 @@ def scenario_damage(fragility_functions, gmv):
 
 def annual_frequency_of_exceedence(poe, t_haz):
     """
-    :param poe: aaray of probabilities of exceedence
+    :param poe: array of probabilities of exceedence
     :param t_haz: hazard investigation time
     :returns: array of frequencies (with +inf values where poe=1)
     """
-    afe = - numpy.log(1. - poe) / t_haz
-    afe[poe == 1] = numpy.inf
-    return afe
+    if (poe == 1).all():
+        n = numpy.empty(len(poe))
+        n.fill(numpy.inf)
+        return n  # avoid warning for log(0) producing NaN
+    else:
+        return - numpy.log(1. - poe) / t_haz
 
 
 def classical_damage(
