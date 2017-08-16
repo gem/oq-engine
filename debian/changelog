@@ -1,6 +1,9 @@
   [Valerio Poggi]
   * Implemented the Munson and Thurber 1997 (Volcanic) GMPE
 
+  [Graeme Weatherill]
+  * Adapts CoeffsTable to be instantiated with dictionaries as well as strings
+  
   [Daniele Viganò]
   * Extended the 'oq reset' command to work on multi user installations
 
