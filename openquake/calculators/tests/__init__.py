@@ -18,7 +18,9 @@
 
 import os
 import re
+import shutil
 import logging
+import tempfile
 import unittest
 import platform
 
@@ -29,6 +31,9 @@ from openquake.baselib.performance import Monitor
 from openquake.commonlib import readinput, oqvalidation, datastore
 
 
+REFERENCE_OS = 'Ubuntu-16.04' in platform.platform()
+
+
 class DifferentFiles(Exception):
     pass
 
@@ -36,14 +41,6 @@ class DifferentFiles(Exception):
 def strip_calc_id(fname):
     name = os.path.basename(fname)
     return re.sub('_\d+\.', '.', name)
-
-
-def check_platform(*supported):
-    """
-    Skip the test if the platform is not the reference one
-    """
-    if platform.dist()[-1] not in supported:
-        raise unittest.SkipTest
 
 
 def columns(line):
@@ -67,6 +64,7 @@ def columns(line):
 
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
+    edir = None  # will be set to a temporary directory
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -93,17 +91,17 @@ class CalculatorTestCase(unittest.TestCase):
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
         self.calc = self.get_calc(testfile, inis[0], **kw)
-        with self.calc.monitor:
-            result = self.calc.run()
+        self.edir = tempfile.mkdtemp()
+        with self.calc._monitor:
+            result = self.calc.run(export_dir=self.edir)
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
-            with self.calc.monitor:
-                result.update(self.calc.run())
+            with self.calc._monitor:
+                result.update(self.calc.run(export_dir=self.edir))
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
-        dstore.export_dir = dstore['oqparam'].export_dir
         self.calc.datastore = dstore
         return result
 
@@ -126,7 +124,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,
-            delta=None):
+            delta=None, lastline=None):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -134,12 +132,13 @@ class CalculatorTestCase(unittest.TestCase):
         but in some tests a sorting function is passed, because some
         files can be equal only up to the ordering.
         """
-        expected = os.path.join(self.testdir, fname1)
+        expected = os.path.abspath(os.path.join(self.testdir, fname1))
         if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
             open(expected, 'w').write('')
-        actual = os.path.join(self.calc.oqparam.export_dir, fname2)
+        actual = os.path.abspath(
+            os.path.join(self.calc.oqparam.export_dir, fname2))
         expected_lines = make_comparable(open(expected).readlines())
-        actual_lines = make_comparable(open(actual).readlines())
+        actual_lines = make_comparable(open(actual).readlines()[:lastline])
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
             for exp, got in zip(expected_lines, actual_lines):
@@ -164,6 +163,13 @@ class CalculatorTestCase(unittest.TestCase):
         with open(os.path.join(self.calc.oqparam.export_dir, fname)) as actual:
             self.assertEqual(expected_content, actual.read())
 
-    def tearDown(self):
-        if hasattr(self, 'calc'):
-            self.calc.datastore.close()
+    def run(self, result=None):
+        res = super(CalculatorTestCase, self).run(result)
+        if res is not None:  # for Python 3
+            issues = len(res.errors) + len(res.failures)
+        else:
+            issues = 0  # this is bad, but Python 2 will die soon or later
+        # remove temporary dir only for success
+        if self.edir and not issues:
+            shutil.rmtree(self.edir)
+        return res

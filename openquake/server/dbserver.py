@@ -24,17 +24,20 @@ import os.path
 import logging
 import subprocess
 from multiprocessing.connection import Listener
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 from openquake.baselib import sap
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import valid
-from openquake.commonlib import config
+from openquake.commonlib import config, logs
 from openquake.server.db import actions
 from openquake.server import dbapi
+from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
 
-executor = ProcessPoolExecutor(1)  # there is a single db process
+# using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
+# ref: https://bugs.python.org/issue27126
+executor = ThreadPoolExecutor(1)
 
 
 class DbServer(object):
@@ -68,7 +71,7 @@ class DbServer(object):
                     conn.close()
                     break
                 func = getattr(actions, cmd)
-                fut = executor.submit(safely_call, func, (self.db, ) + args)
+                fut = executor.submit(safely_call, func, (self.db,) + args)
 
                 def sendback(fut, conn=conn):
                     res, etype, _mon = fut.result()
@@ -80,6 +83,13 @@ class DbServer(object):
                 fut.add_done_callback(sendback)
         finally:
             listener.close()
+
+
+def different_paths(path1, path2):
+    path1 = os.path.realpath(path1)  # expand symlinks
+    path2 = os.path.realpath(path2)  # expand symlinks
+    # don't care about the extension (it may be .py or .pyc)
+    return os.path.splitext(path1)[0] != os.path.splitext(path2)[0]
 
 
 def get_status(address=None):
@@ -95,6 +105,19 @@ def get_status(address=None):
     finally:
         sock.close()
     return 'not-running' if err else 'running'
+
+
+def check_foreign():
+    """
+    Check if we the DbServer is the right one
+    """
+    if not config.flag_set('dbserver', 'multi_user'):
+        remote_server_path = logs.dbcmd('get_path')
+        if different_paths(server_path, remote_server_path):
+            return('You are trying to contact a DbServer from another'
+                   ' instance (got %s, expected %s)\n'
+                   'Check the configuration or stop the foreign'
+                   ' DbServer instance') % (remote_server_path, server_path)
 
 
 def ensure_on():
@@ -120,18 +143,21 @@ def ensure_on():
 
 
 @sap.Script
-def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
+def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
+               loglevel='WARN'):
     """
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
     """
-    if dbpathport:  # assume a string of the form "dbpath:port"
-        dbpath, port = dbpathport.split(':')
-        addr = (DATABASE['HOST'], int(port))
-        DATABASE['NAME'] = dbpath
+    if dbhostport:  # assume a string of the form "dbhost:port"
+        dbhost, port = dbhostport.split(':')
+        addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
+
+    if dbpath:
+        DATABASE['NAME'] = dbpath
 
     # create the db directory if needed
     dirname = os.path.dirname(DATABASE['NAME'])
@@ -149,7 +175,8 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     DbServer(db, addr, config.DBS_AUTHKEY).loop()
 
-run_server.arg('dbpathport', 'dbpath:port')
+run_server.arg('dbhostport', 'dbhost:port')
+run_server.arg('dbpath', 'dbpath')
 run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 

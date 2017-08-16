@@ -2,10 +2,10 @@
 
 To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
 
-*The source installation will conflict with the package installation, so you
-must remove the openquake package if it was already installed.*
-
 The official supported distributions to develop the OpenQuake Engine and its libraries are
+
+### Linux
+
 - Ubuntu 14.04 LTS (Trusty) 
 - Ubuntu 16.04 LTS (Xenial)
 - RedHat Enterprise Linux 7 
@@ -14,58 +14,61 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 
 This guide may work also on other Linux releases/distributions.
 
-Guidelines are provided for *macOS* too.
+### macOS
+
+- macOS 10.11 (El Capitan)
+- macOS 10.12 (Sierra)
 
 ## Prerequisites
 
 Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
-Some software prerequisites are needed to build the development environment. Python 2.7 is used in this guide, but Python 3.5 can be also used with few adaptations to the following commands.
+Some software prerequisites are needed to build the development environment. Python 2.7 is used in this guide; for Python 3.5 see [Installing the OpenQuake Engine for development (Python 3.5)](development-py35.md).
 
 ### Ubuntu
 
 ```bash
-sudo apt-get install build-essential git libhdf5-dev libgeos-dev python-virtualenv python-pip
+sudo apt-get install git python-virtualenv python-pip
 ```
 
 ### RedHat
 
 ```bash
-sudo yum groupinstall "Development tools"
-sudo yum install git hdf5-devel geos-devel python-virtualenv python-pip
+sudo yum install git python-virtualenv python-pip
 ```
 
 ### macOS
-*This procedure refers to the stock Python shipped by Apple on macOS. If you are using a different python (from brew, macports, conda) you may need to adapt the following commands.*
+*This procedure refers to the official Python distribution from [python.org](https://python.org). If you are using a different python (from brew, macports, conda) you may need to adapt the following commands.*
+
+#### Xcode
 
 You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) first.
-`pip` needs to be manually installed too:
 
-```bash
-curl https://bootstrap.pypa.io/get-pip.py | sudo python
-```
+#### Python 
 
-and finally *virtualenv*
-
-```bash
-sudo pip install virtualenv
-```
+You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/2.7.13/python-2.7.13-macosx10.6.pkg
 
 ## Build the development environment
 
-A development environment will be built using a python *virtualenv*
+Let's create a working dir called openquake first
 
 ```bash
-virtualenv openquake
-source openquake/bin/activate
+mkdir $HOME/openquake && cd $HOME/openquake
+```
+
+then build a development environment using python *virtualenv*
+
+```bash
+python -m virtualenv oqenv 
+source oqenv/bin/activate
 ```
 
 ## Install the code
 
-Inside the *virtualenv* (the prompt shows something like `(openquake)user@myhost:~$`) upgrade `pip` first
+Inside the *virtualenv* (the prompt shows something like `(oqenv)user@myhost:~$`) upgrade `pip` and `setuptools` first
 
 ```bash
-pip install -U pip
+pip install -U pip setuptools
 ```
 
 ### Download the OpenQuake source code
@@ -73,54 +76,11 @@ pip install -U pip
 ```bash
 mkdir src && cd src
 git clone https://github.com/gem/oq-engine.git
-git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-### Install OpenQuake <sup>[1](#note1)</sup> <sup>[2](#note2)</sup>
+### Install OpenQuake 
 
-
-```bash
-pip install -e oq-hazardlib/
-pip install -e oq-engine/
-```
-
-Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` or `oq-hazardlib` code will be reflected in the environment.
-
-Continue on [How to run the OpenQuake Engine](../running/unix.md)
-
-### Sync the source code with remote
-
-You can pull all the latest changes to the source code running
-
-```bash
-cd oq-engine
-git pull
-cd ..
-
-cd oq-hazardlib
-git pull
-cd ..
-```
-
-`oq-engine` and `oq-hazardlib` must be always synced at the same time.
-
-## Loading and unloading the development environment
-
-To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source openquake/bin/activate`(assuming that it has been installed under 'openquake'). For more information about *virtualenv* and its you see http://docs.python-guide.org/en/latest/dev/virtualenvs/
-
-## Running the tests
-
-To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
-
-## Uninstall the OpenQuake Engine
-
-To uninstall the OpenQuake development make sure that its environment is not loaded typing `deactivate` and the remove the folder where it has been installed: `rm -Rf openquake`.
-
-***
-
-### Notes ###
-
-*<a name="note1">[1]</a>: if you want to use binary dependencies (python wheels: they do not require any compiler, development library...) before installing `oq-engine` and `oq-hazardlib` run:*
+It's strongly recommended to install Python dependencies using our Python wheels distribution: all the external dependencies (`geos`, `proj4`, `hdf5`, `blas`, and many other) are already included as pre-compiled binaries and are tested before every release.
 
 ```bash
 # For Linux
@@ -132,7 +92,68 @@ pip install -r oq-engine/requirements-py27-linux64.txt
 pip install -r oq-engine/requirements-py27-macos.txt
 ```
 
-*<a name="note2">[2]</a>: extra features, like celery and rtree support can be installed running:*
+```bash
+pip install -e oq-engine/
+```
+To install extra features see [1](#note1). If your system does not support the provided binary dependencies you'll need to manually install them, using tools provided by your python distribution [2](#note2).
+
+Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` code will be reflected in the environment.
+
+Continue on [How to run the OpenQuake Engine](../running/unix.md)
+
+### Sync the source code with remote
+
+You can pull all the latest changes to the source code running
+
+```bash
+cd oq-engine
+git pull
+cd ..
+```
+
+## Loading and unloading the development environment
+
+To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be reloaded running `source oqenv/bin/activate`(assuming that it has been installed under 'oqenv'). For more information about *virtualenv*, see http://docs.python-guide.org/en/latest/dev/virtualenvs/.
+
+To load the virtual environment automatically at every login, add the following line at the bottom of your `~/.bashrc` (Linux) or `~/.profile` (macOS):
+
+```bash
+source $HOME/openquake/qoenv/bin/activate
+```
+
+You can also add a short-hand command to enable it:
+
+```bash
+alias oqenv="source $HOME/openquake/oqenv/bin/activate"
+```
+
+Put it again at the bottom of `~/.bashrc` or `~/.profile`; close and re-open the terminal. You can now load your environment just typing `oqenv`.
+
+### Multiple installations
+
+If any other installation of the Engine exists on the same machine, like a system-wide installation made with packages, you must change the DbServer port from the default one (1908) to any other unused port. Using a DbServer started from a different codebase (which may be out-of-sync) could lead to unexpected behaviours and errors. To change the DbServer port `oq-engine/openquake/engine/openquake.cfg` must be updated:
+
+```
+[dbserver]          |  [dbserver]
+## cut ##           |  ## cut ##
+port = 1908         >  port = 1909
+authkey = changeme  |  authkey = changeme
+## cut ##           |  ## cut ##
+```
+
+## Running the tests
+
+To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
+
+## Uninstall the OpenQuake Engine
+
+To uninstall the OpenQuake development make sure that its environment is not loaded, typing `deactivate`, and then remove the folder where it has been installed: `rm -Rf openquake`.
+
+***
+
+### Notes ###
+
+*<a name="note1">[1]</a>: extra features, like celery and rtree support can be installed running:*
 
 ```bash
 # oq-engine with Rtree support
@@ -142,6 +163,17 @@ pip install -e oq-engine/[celery]
 # oq-engine with support for both
 pip install -e oq-engine/[rtree,celery]
 ```
+
+*<a name="note2">[2]</a>: unsupported systems:*
+
+If your system does not support the provided binary dependencies (python wheels)
+
+```bash
+pip install -e oq-engine/
+```
+
+will try to download the required dependencies from [pypi](http://pypi.python.org/). This may require some extra work to get all the external C dependencies resolved.
+If you are using a non-standard python distribution (like _macports_ or _anaconda_) you should use tools provided by such distribution to get the required dependencies.
 
 ***
 

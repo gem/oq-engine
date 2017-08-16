@@ -35,7 +35,7 @@ xmlns:gml="http://www.opengis.net/gml"
             taxonomy="EMCA_PRIM_2L"
             >
                 
-                <location lat="4.148E+01" lon="7.232E+01"/>
+                <location lat="4.005E+01" lon="7.1681E+01"/>
                 <costs>
                     
                     <cost type="structural" value="2.5000000E+04"/>

@@ -17,15 +17,28 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from nose.plugins.attrib import attr
-
+import numpy
 from openquake.qa_tests_data.scenario_risk import (
-    case_1, case_2, case_2d, case_1g, case_3, case_4, case_5, occupants,
-    case_6a, case_master)
+    case_1, case_2, case_2d, case_1g, case_3, case_4, case_5,
+    case_6a, case_7, occupants, case_master)
 
 from openquake.baselib.general import writetmp
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.views import view
 from openquake.calculators.export import export
+
+
+def tot_loss(dstore):
+    all_losses = dstore['all_losses-rlzs'].value  # shape (A, E, R)
+    names = all_losses.dtype.names
+    R = all_losses.shape[-1]
+    tot = numpy.zeros(R, [('rlz', int)] + [(name, numpy.float32)
+                                           for name in names])
+    for r in range(R):
+        for name in names:
+            tot[name][r] = all_losses[name][:, :, r].sum()
+        tot['rlz'][r] = r
+    return tot
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -39,6 +52,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # check the exported GMFs
         [fname] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-FromFile-PGA.csv', fname)
+
+        [fname] = out['losses_by_event', 'csv']
+        self.assertEqualFiles('expected/losses_by_event.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
@@ -73,15 +89,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
         [fname] = out['agglosses-rlzs', 'csv']
-        self.assertEqualFiles('expected/agglosses.csv', fname)
+        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-6)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv,xml')
-
-        [fname] = out['losses_by_asset', 'xml']
-        self.assertEqualFiles('expected/loss_map.xml', fname)
+                            exports='csv')
 
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
@@ -99,9 +112,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_6a(self):
         # case with two gsims
-        out = self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv')
-        f1, f2 = out['agglosses-rlzs', 'csv']
+        self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
+                      exports='csv')
+        f1, f2 = export(('agglosses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg-gsimltp_b1_structural.csv', f1)
         self.assertEqualFiles('expected/agg-gsimltp_b2_structural.csv', f2)
 
@@ -123,3 +136,17 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
+        # check losses_by_tag
+        fnames = export(('losses_by_tag-rlzs', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_7(self):
+        # check independence from concurrent_tasks
+        self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='10')
+        tot10 = tot_loss(self.calc.datastore)
+        self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='20')
+        tot20 = tot_loss(self.calc.datastore)
+        for name in tot10.dtype.names:
+            numpy.testing.assert_almost_equal(tot10[name], tot20[name])

@@ -18,7 +18,6 @@
 
 from __future__ import division
 import numpy
-import unittest
 from numpy.testing import assert_almost_equal as aae
 from nose.plugins.attrib import attr
 
@@ -26,7 +25,6 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
 from openquake.baselib.node import floatformat
-from openquake.baselib.general import get_array
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -48,9 +46,8 @@ class ScenarioTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
         [gmfa] = self.execute(case.__file__, 'job.ini').values()
-        [imt] = self.calc.oqparam.imtls
-        gmvs0 = get_array(gmfa, sid=0, imti=0)['gmv']
-        gmvs1 = get_array(gmfa, sid=1, imti=0)['gmv']
+        gmvs0 = gmfa[0, :, 0]
+        gmvs1 = gmfa[1, :, 0]
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmvs0, gmvs1)
         gmvs_within_range_snd = count_close(snd_value, gmvs0, gmvs1)
@@ -61,38 +58,24 @@ class ScenarioTestCase(CalculatorTestCase):
         [gmfa] = self.execute(case.__file__, 'job.ini').values()
         median = {imt: [] for imt in self.calc.oqparam.imtls}
         for imti, imt in enumerate(self.calc.oqparam.imtls):
-            gmfa_by_imt = get_array(gmfa, imti=imti)
             for sid in self.calc.sitecol.sids:
-                gmvs = get_array(gmfa_by_imt, sid=sid)['gmv']
+                gmvs = gmfa[sid, :, imti]
                 median[imt].append(numpy.median(gmvs))
         return median
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_1(self):
-        # ROUNDING ERROR WARNING (MS): numbers such as 2.5 and 2.4999999999
-        # are extremely close (up to 4E-11) however they must be rounded to
-        # a single digit to compare equal in their string representation; for
-        # this reason the precision here has to be reduced a lot, even it the
-        # numbers are very close. It comes down to the known fact that
-        # comparing the XMLs is not a good idea; suboptimal choises
-        # sometimes have to be made, since we want this test to
-        # to run both on Ubuntu 12.04 and Ubuntu 14.04.
-        # Incidentally, when the approach of comparing the XML was taken,
-        # the idea of supporting at the same time different versions of the
-        # libraries was out of question, so it made a lot of sense to check
-        # the XMLs, since the numbers had to be exactly identical.
         with floatformat('%5.1E'):
             out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
-        raise unittest.SkipTest  # because of the rounding errors
         self.assertEqualFiles('expected.xml', out['gmf_data', 'xml'][0])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
         out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance='0.1', exports='txt')
+                            maximum_distance='0.1', exports='csv')
         self.assertEqualFiles(
-            'BooreAtkinson2008_gmf.txt', out['gmf_data', 'txt'][0])
+            'BooreAtkinson2008_gmf.csv', out['gmf_data', 'csv'][0])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_2(self):
@@ -147,10 +130,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
-        out = self.run_calc(case_9.__file__, 'job.ini', exports='txt,csv,npz')
-        f1, f2 = out['gmf_data', 'txt']
-        self.assertEqualFiles('LinLee2008SSlab_gmf.txt', f1)
-        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.txt', f2)
+        out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
+        f1, f2 = out['gmf_data', 'csv']
+        self.assertEqualFiles('LinLee2008SSlab_gmf.csv', f1)
+        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.csv', f2)
 
         f1, f2 = out['gmf_data', 'csv']
         self.assertEqualFiles('gmf-LinLee2008SSlab-PGA.csv', f1)

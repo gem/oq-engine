@@ -25,7 +25,7 @@ def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
-    package_init = 'openquake/risklib/__init__.py'
+    package_init = 'openquake/baselib/__init__.py'
     for line in open(package_init, 'r'):
         version_match = re.search(version_re, line, re.M)
         if version_match:
@@ -35,6 +35,7 @@ def get_version():
         sys.exit('__version__ variable not found in %s' % package_init)
 
     return version
+
 
 version = get_version()
 
@@ -51,7 +52,7 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'mock >=1.0, <1.4',
-    'h5py >=2.2, <2.7',
+    'h5py >=2.2, <2.8',
     'nose >=1.3, <1.4',
     'numpy >=1.8, <1.12',
     'scipy >=0.13, <0.18',
@@ -59,11 +60,12 @@ install_requires = [
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
-    'django >=1.6, <1.11',
+    'django >=1.6, <1.12',
+    'matplotlib >=1.5, <2.0',
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
-    'openquake.hazardlib ==0.23',
+    'PyYAML',
 ]
 
 if sys.version < '3':
@@ -75,7 +77,11 @@ extras_require = {
     'prctl': ["python-prctl ==1.6.1"],
     'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'celery':  ["celery >=3.1, <4.0"],
-    'plotting':  ["matplotlib >=1.5"],
+    'pam': ["python-pam", "django-pam"],
+    'plotting':  [
+        'basemap >=1.0',
+        'pyproj >=1.9',
+    ]
 }
 
 setup(

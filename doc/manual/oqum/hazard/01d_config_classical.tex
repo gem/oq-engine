@@ -36,7 +36,7 @@ In this section the user specifies the following parameters:
 This section is used to specify where the hazard will be computed. Two
 options are available:
 
-The first ooption is to define a polygon (usually a rectangle) and a distance
+The first option is to define a polygon (usually a rectangle) and a distance
 (in km) to be used to discretize the  polygon area. The polygon is defined by
 a list of longitude-latitude tuples.
 
@@ -49,7 +49,12 @@ region_grid_spacing = 10.0
 \end{minted}
 
 The second option allows the definition of a number of sites where the hazard
-will be computed. An example is provided below:
+will be computed. Each site is specified in terms of a longitude, latitude tuple.
+Optionally, if the user wants to consider the elevation of the sites, a value of
+depth [km] can also be specified, where positive values indicate below sea level,
+and negative values indicate above sea level (i.e. the topographic surface). If
+no value of depth is given for a site, it is assumed to be zero. An example is
+provided below:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=8,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 [geometry]
@@ -65,8 +70,8 @@ sites_csv = <name_of_the_csv_file>
 \end{minted}
 
 The format of the csv file containing the list of sites is a sequence of
-points (one per row) specified in terms of the longitude, latitude tuple. An
-example is provided below:
+points (one per row) specified in terms of the longitude, latitude tuple. Depth
+values are again optional. An example is provided below:
 
 \begin{minted}[firstline=1,linenos=false,firstnumber=10,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{text}
 179.0,90.0
@@ -197,11 +202,11 @@ export_dir = outputs/
 mean_hazard_curves = true
 quantile_hazard_curves = 0.1 0.5 0.9
 uniform_hazard_spectra = false
-individual_curves = false
+
 poes = 0.1
 \end{minted}
 
 The final section of the configuration file is the one that contains the
 parameters controlling the types of output to be produced. Providing an export directory will tell OpenQuake where to place the output files when the \texttt{-{}-exports} flag is used when running the program. Setting \verb=mean_hazard_curves= to true will result in a specific output containing the mean curves of the logic tree, likewise \verb=quantile_hazard_curves= will produce separate files containing the quantile hazard curves at the quantiles listed (0.1, 0.5 and 0.9 in the example above, leave blank or omit if no quantiles are required). Setting \verb=uniform_hazard_spectra= to true will output the uniform hazard spectra at the same probabilities of exceedence (poes) as those specified by the later option \verb=poes=. The probabilities specified here correspond to the set investigation time. 
 
-By default, OpenQuake will export the results for each of the logic tree end branches. If the logic tree contains a large number of end branches the process of exporting the results from each end branch can add a significant amount of computation time - and result in a large volume of disk spaced being used. If instead the user wishes only to export the hazard results for the mean and quantiles then the \verb=individual_curves= option should be set to false. 
+By default, OpenQuake will export only the statistical results, i.e. mean curves and quantiles. If the user requires the complete results for all realizations, there is a specific command for that, `oq export hcurves/all`. Beware that if the logic tree contains a large number of end branches the process of exporting the results from each end branch can add a significant amount of time - possibly longer than the computation time - and result in a large volume of disk spaced being used. In this case it is best to postprocess the data programmatically. Please contact us and we will be happy to give directions on how to do that in Python.

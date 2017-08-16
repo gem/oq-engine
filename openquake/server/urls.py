@@ -27,12 +27,18 @@ urlpatterns = [
     url(r'^engine_version$', views.get_engine_version),
     url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
     url(r'^v1/valid/', views.validate_nrml),
+    url(r'^v1/available_gsims$', views.get_available_gsims),
     url(r'^engine/?$', views.web_engine, name="index"),
     url(r'^engine/(\d+)/outputs$',
         views.web_engine_get_outputs, name="outputs"),
     url(r'^engine/license$', views.license,
         name="license"),
 ]
+
+for app in settings.STANDALONE_APPS:
+    app_name = app.split('_')[1]
+    urlpatterns.append(url(r'^%s/' % app_name, include('%s.urls' % app,
+                       namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
     from django.contrib import admin

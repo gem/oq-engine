@@ -161,20 +161,9 @@ class OqParamTestCase(unittest.TestCase):
         oq.validate()
         self.assertEqual(list(oq.imtls.keys()), ['PGA'])
 
-    def test_missing_hazard_curves_from_gmfs(self):
-        with self.assertRaises(ValueError) as ctx:
-            OqParam(
-                calculation_mode='event_based', inputs={},
-                intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
-                mean_hazard_curves='true', sites='0.1 0.2',
-                maximum_distance='400').validate()
-        self.assertIn('You must set `hazard_curves_from_gmfs`',
-                      str(ctx.exception))
-
     def test_create_export_dir(self):
-        if os.environ.get('TRAVIS'):
-            # this fails only when --with-doctest is set
-            raise unittest.SkipTest
+        # FIXME: apparently this fails only when --with-doctest is set
+        raise unittest.SkipTest
         EDIR = os.path.join(TMP, 'nonexisting')
         OqParam(
             calculation_mode='event_based',
@@ -187,9 +176,8 @@ class OqParamTestCase(unittest.TestCase):
         self.assertTrue(os.path.exists(EDIR))
 
     def test_invalid_export_dir(self):
-        if os.environ.get('TRAVIS'):
-            # this fails only when --with-doctest is set
-            raise unittest.SkipTest
+        # FIXME: apparently this fails only when --with-doctest is set
+        raise unittest.SkipTest
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='event_based', inputs=GST,
@@ -309,7 +297,7 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',
                 reference_vs30_value='200',
-                sites='0.1 0.2',
+                sites='0.1 0.2, 0.3 0.4',
                 poes='0.2',
                 maximum_distance='400',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
@@ -318,6 +306,20 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn("The `uniform_hazard_spectra` can be True only if "
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
+
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='classical',
+                gsim='BooreAtkinson2008',
+                reference_vs30_value='200',
+                sites='0.1 0.2, 0.3 0.4',
+                poes='0.2',
+                maximum_distance='400',
+                intensity_measure_types_and_levels="{'PGA': [0.1, 0.2, 0.3]}",
+                uniform_hazard_spectra='1',
+            ).set_risk_imtls({})
+        self.assertIn("There is a single IMT, uniform_hazard_spectra cannot "
+                      "be True", str(ctx.exception))
 
     def test_set_risk_imtls(self):
         oq = object.__new__(OqParam)
@@ -328,6 +330,15 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             oq.set_risk_imtls(rm)
         self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))
+
+    def test_invalid_loss_ratios(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(calculation_mode='event_based',
+                    sites='0.1 0.2',
+                    inputs=dict(structural_vulnerability=None,
+                                nonstructural_vulnerability=None),
+                    loss_ratios="{'structural': [.1, .2]}").validate()
+        self.assertIn('loss types in the loss_ratios', str(ctx.exception))
 
     def test_disaggregation(self):
         with self.assertRaises(ValueError) as ctx:
@@ -342,14 +353,3 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1')
         self.assertIn("poes_disagg or iml_disagg must be set",
                       str(ctx.exception))
-        with self.assertRaises(ValueError) as ctx:
-            OqParam(
-                calculation_mode='disaggregation',
-                individual_curves='false',
-                reference_vs30_value='200',
-                sites='0.1 0.2',
-                poes='0.2',
-                maximum_distance='400',
-                intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
-                uniform_hazard_spectra='1')
-        self.assertIn("`individual_curves` must be true", str(ctx.exception))

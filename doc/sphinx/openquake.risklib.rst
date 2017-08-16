@@ -33,14 +33,6 @@ openquake.risklib.utils module
     :undoc-members:
     :show-inheritance:
 
-openquake.risklib.valid module
-------------------------------
-
-.. automodule:: openquake.risklib.valid
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

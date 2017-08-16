@@ -10,17 +10,18 @@
 export DISTUTILS_DEBUG=1
 export DH_VERBOSE=1
 export DH_OPTIONS=-v
+export PREFIX=/opt/openquake
 
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
 bd=openquake/bin
 
-XENIAL_DEP = python-h5py, python-amqp, python-celery, python-celery-common
+XENIAL_DEP =
 XENIAL_REC =
-TRUSTY_DEP = python-h5py, python-amqp, python-celery
+TRUSTY_DEP =
 TRUSTY_REC =
-PRECISE_DEP = python-celery (>=2.4.6-1ubuntu0.2~gem03), python-h5py (= 2.2.1-1build3~precise03)
+PRECISE_DEP =
 PRECISE_REC =
 
 ifeq ($(shell lsb_release --codename --short),xenial)
@@ -37,8 +38,16 @@ else
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
 endif
 
-%:
-	dh --with python2 --with quilt --buildsystem=python_distutils $@
+override_dh_auto_install:
+	python setup.py install --force --root=$(PWD)/debian/python-oq-engine --prefix=$(PREFIX) --no-compile -O0
+
+override_dh_install:
+	python2 -m compileall $(PWD)/debian/python-oq-engine$(PREFIX) || true
+	dh_install
+	# Make a zipped copy of each demo
+	helpers/zipdemos.sh $(PWD)/debian/python-oq-engine/usr/share/openquake/engine/demos
+	mkdir -p $(PWD)/debian/python-oq-engine/usr/bin
+	ln -s $(PREFIX)/bin/oq $(PWD)/debian/python-oq-engine/usr/bin/oq
 
 override_dh_quilt_patch:
 	dh_quilt_patch
@@ -47,3 +56,6 @@ override_dh_quilt_patch:
 
 override_dh_gencontrol:
 	dh_gencontrol -- $(DEPENDS) $(RECOMMENDS)
+
+%:
+	dh --with python2 --with quilt --buildsystem=python_distutils $@

@@ -21,7 +21,6 @@ import numpy
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, source, calc
-from openquake.calculators.export.hazard import gmv_dt
 from openquake.calculators import base
 
 
@@ -52,13 +51,17 @@ class ScenarioCalculator(base.HazardCalculator):
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
         # eid, ses, occ, sample
-        events = numpy.array(
-            [(eid, 1, 1, 0)
-             for eid in range(oq.number_of_ground_motion_fields)],
-            calc.event_dt)
-        rupture = calc.EBRupture(
-            rup, self.sitecol.sids, events, 'single_rupture', 0, 0)
-        self.datastore['ruptures/grp-00/0'] = rupture
+        events = numpy.zeros(oq.number_of_ground_motion_fields,
+                             calc.stored_event_dt)
+        events['eid'] = numpy.arange(oq.number_of_ground_motion_fields)
+        self.datastore['events/grp-00'] = events
+        rupture = calc.EBRupture(rup, self.sitecol.sids, events, 0, 0)
+        rupture.sidx = 0
+        rupture.eidx1 = 0
+        rupture.eidx2 = len(events)
+        rupser = calc.RuptureSerializer(self.datastore)
+        rupser.save([rupture], 0)
+        rupser.close()
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
@@ -72,27 +75,18 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Compute the GMFs and return a dictionary rlzi -> array gmv_dt
+        Compute the GMFs and return a dictionary gsim -> array(N, E, I)
         """
-        res = collections.defaultdict(list)
-        sids = self.sitecol.sids
-        self.gmfa = {}
+        self.gmfa = collections.OrderedDict()
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
-            for i, gsim in enumerate(self.gsims):
-                gmfa = self.computer.compute(gsim, n)
-                self.gmfa[gsim] = gmfa
-                for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
-                    res[i].append((sids[sid], eid, imti, gmv))
-            return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
+            for gsim in self.gsims:
+                gmfa = self.computer.compute(gsim, n)  # shape (I, N, E)
+                self.gmfa[gsim] = gmfa.transpose(1, 2, 0)  # shape (N, E, I)
+        return self.gmfa
 
-    def post_execute(self, gmfa_by_rlzi):
-        """
-        :param gmfa: a dictionary rlzi -> gmfa
-        """
+    def post_execute(self, dummy):
         with self.monitor('saving gmfs', autoflush=True):
-            for rlzi, gsim in enumerate(self.gsims):
-                rlzstr = 'gmf_data/sm-0000/%04d' % rlzi
-                self.datastore[rlzstr] = gmfa_by_rlzi[rlzi]
-                self.datastore.set_attrs(rlzstr, gsim=str(gsim))
+            self.datastore['gmf_data/data'] = calc.get_gmv_data(
+                self.sitecol.sids, numpy.array(list(self.gmfa.values())))
             self.datastore.set_nbytes('gmf_data')

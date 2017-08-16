@@ -1,32 +1,32 @@
 classical risk
 ==============
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81009.hdf5 Thu Jan 26 14:28:12 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1757.hdf5 Fri Jul  7 07:32:10 2017
+checksum32                                      1,671,175,468           
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
-num_sites = 7, sitecol = 1.01 KB
+num_sites = 7, num_imts = 4
 
 Parameters
 ----------
-=============================== ==============================================================
-calculation_mode                'classical_risk'                                              
-number_of_logic_tree_samples    0                                                             
-maximum_distance                {'Active Shallow Crust': 200.0, 'Stable Shallow Crust': 200.0}
-investigation_time              50.0                                                          
-ses_per_logic_tree_path         1                                                             
-truncation_level                3.0                                                           
-rupture_mesh_spacing            2.0                                                           
-complex_fault_mesh_spacing      2.0                                                           
-width_of_mfd_bin                0.1                                                           
-area_source_discretization      10.0                                                          
-ground_motion_correlation_model None                                                          
-random_seed                     24                                                            
-master_seed                     0                                                             
-avg_losses                      False                                                         
-=============================== ==============================================================
+=============================== ==================
+calculation_mode                'classical_risk'  
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              50.0              
+ses_per_logic_tree_path         1                 
+truncation_level                3.0               
+rupture_mesh_spacing            2.0               
+complex_fault_mesh_spacing      2.0               
+width_of_mfd_bin                0.1               
+area_source_discretization      10.0              
+ground_motion_correlation_model None              
+random_seed                     24                
+master_seed                     0                 
+avg_losses                      False             
+=============================== ==================
 
 Input files
 -----------
@@ -60,10 +60,10 @@ Required parameters per tectonic region type
 ====== ===================================== =========== ======================= =================
 grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
-0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake
-1      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30measured vs30 z1pt0 rake dip ztor mag
-2      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake
-3      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30measured vs30 z1pt0 rake dip ztor mag
+0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+1      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+2      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+3      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 ====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -97,29 +97,24 @@ source_model_2.xml 3      Stable Shallow Crust 1           1            1
 #sources      4  
 #eff_ruptures 969
 #tot_ruptures 969
-#tot_weight   969
+#tot_weight   0  
 ============= ===
 
 Informational data
 ------------------
-=========================================== ============
-count_eff_ruptures_max_received_per_task    1,717       
-count_eff_ruptures_num_tasks                8           
-count_eff_ruptures_sent.gsims               1,424       
-count_eff_ruptures_sent.monitor             11,936      
-count_eff_ruptures_sent.sitecol             6,008       
-count_eff_ruptures_sent.sources             22,487      
-count_eff_ruptures_tot_received             13,733      
-hazard.input_weight                         969         
-hazard.n_imts                               4           
-hazard.n_levels                             40          
-hazard.n_realizations                       8           
-hazard.n_sites                              7           
-hazard.n_sources                            4           
-hazard.output_weight                        2,240       
-hostname                                    gem-tstation
-require_epsilons                            1           
-=========================================== ============
+============================== ==================================================================================
+count_eff_ruptures.received    tot 5.11 KB, max_per_task 735 B                                                   
+count_eff_ruptures.sent        sources 21.96 KB, param 8.73 KB, srcfilter 6.66 KB, monitor 2.52 KB, gsims 1.39 KB
+hazard.input_weight            969.0                                                                             
+hazard.n_imts                  4                                                                                 
+hazard.n_levels                40                                                                                
+hazard.n_realizations          8                                                                                 
+hazard.n_sites                 7                                                                                 
+hazard.n_sources               4                                                                                 
+hazard.output_weight           1120.0                                                                            
+hostname                       tstation.gem.lan                                                                  
+require_epsilons               True                                                                              
+============================== ==================================================================================
 
 Exposure model
 --------------
@@ -143,10 +138,10 @@ Slowest sources
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-0      1         SimpleFaultSource         482          0.0       7         0        
-1      2         SimpleFaultSource         4            0.0       7         0        
-3      2         CharacteristicFaultSource 1            0.0       7         0        
-2      1         SimpleFaultSource         482          0.0       7         0        
+0      1         SimpleFaultSource         482          0.051     7         15       
+2      1         SimpleFaultSource         482          0.045     7         15       
+1      2         SimpleFaultSource         4            0.005     7         1        
+3      2         CharacteristicFaultSource 1            0.004     7         1        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -154,30 +149,29 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.0       1     
-SimpleFaultSource         0.0       3     
+CharacteristicFaultSource 0.004     1     
+SimpleFaultSource         0.100     3     
 ========================= ========= ======
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ========= ===== =========
-operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 3.023E-04 8.519E-04 0.002 8        
-================== ===== ========= ========= ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_eff_ruptures 0.014 0.008  0.005 0.027 8        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-managing sources                 0.127     0.0       1     
-split/filter heavy sources       0.123     0.0       2     
-reading composite source model   0.027     0.0       1     
-total count_eff_ruptures         0.009     0.559     8     
-filtering composite source model 0.008     0.0       1     
-reading exposure                 0.004     0.0       1     
-store source_info                4.849E-04 0.0       1     
-aggregate curves                 1.035E-04 0.0       8     
-saving probability maps          2.360E-05 0.0       1     
-reading site collection          6.914E-06 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total count_eff_ruptures       0.114     3.660     8     
+managing sources               0.099     0.0       1     
+reading composite source model 0.013     0.0       1     
+reading exposure               0.007     0.0       1     
+prefiltering source model      0.005     0.0       1     
+store source_info              0.005     0.0       1     
+aggregate curves               1.628E-04 0.0       8     
+saving probability maps        2.718E-05 0.0       1     
+reading site collection        6.199E-06 0.0       1     
+============================== ========= ========= ======

@@ -4,22 +4,24 @@
 %define oqrelease ##_release_##
 %define oqname python-%{oqrepo}
 %define oqtimestamp ##_timestamp_##
+%define oqprefix /opt/openquake
 %define oquser openquake
+
+%if %{oqstable} == 1
+%define oqformat %{oqrepo}-%{oqversion}
+Release: %{oqrelease}
+%else
+%define oqformat %{oqrepo}-%{oqversion}-%{oqrelease}
+Release: %{oqtimestamp}_%{oqrelease}
+%endif
 
 Summary: Computes earthquake hazard and risk
 Name: %{oqname}
 Version: %{oqversion}
 License: AGPLv3
 Group: Applications/Engineering
-%if %{oqstable} == 1
-Release: %{oqrelease}
-Source0: %{oqrepo}-%{oqversion}.tar.gz
-BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-buildroot
-%else
-Release: %{oqtimestamp}_%{oqrelease}
-Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
-BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-%{oqrelease}-buildroot
-%endif
+Source0: %{oqformat}.tar.gz
+BuildRoot: %{_tmppath}/python-%{oqformat}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
@@ -29,44 +31,48 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-%define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-decorator python-mock python-futures h5py python-amqp python-celery python-django pyshp python-docutils python-requests python-prctl python-gunicorn rabbitmq-server
-%define oqlib_deps python-oq-hazardlib >= 0.23.0
-%define dev_deps python-nose python-coverage
+Requires: python-oq-libs >= 1.3.0
+Requires: sudo systemd python
 
-Requires: %{common_deps}
-Requires: %{oqlib_deps}
-Requires: %{dev_deps}
+BuildRequires: systemd python-setuptools zip
 
-# since tests are currently not enabled during the packaging phase, the following build dependencies are not required
-#BuildRequires: %{common_deps}
-#BuildRequires: %{dev_deps}
-#BuildRequires: %{oqlib_deps}
-
-BuildRequires: systemd python-setuptools
-
-Obsoletes: python-oq-risklib
-Provides: python-oq-risklib
+Obsoletes: python-oq-risklib python-oq-hazardlib
+Provides: python-oq-risklib python-oq-hazardlib
 
 %description
+OpenQuake is an open source application that allows users to
+compute seismic hazard and seismic risk of earthquakes on a global scale.
+
+Copyright (C) 2010-2017 GEM Foundation
+
+%package master
+Summary: OpenQuake Engine multi-node cluster support (master node)
+Group: Applications/Engineering
+Requires: %{name} = %{version}-%{release} rabbitmq-server
+
+%description master
+OpenQuake Engine multi-node cluster support (master node)
 
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
 Copyright (C) 2010-2017 GEM Foundation
 
-%pre
-getent group %{oquser} >/dev/null || groupadd -r %{oquser}
-getent passwd %{oquser} >/dev/null || \
-    useradd -r -g %{oquser} -m -d /var/lib/%{oquser} -s /bin/bash \
-    -c "The OpenQuake user" %{oquser}
-exit 0
+%package worker
+Summary: OpenQuake Engine multi-node cluster support (worker node)
+Group: Applications/Engineering
+Requires: %{name} = %{version}-%{release}
+
+%description worker
+OpenQuake Engine multi-node cluster support (worker node)
+
+OpenQuake is an open source application that allows users to
+compute seismic hazard and seismic risk of earthquakes on a global scale.
+
+Copyright (C) 2010-2017 GEM Foundation
 
 %prep
-%if %{oqstable} == 1
-%setup -n %{oqrepo}-%{oqversion} -n %{oqrepo}-%{oqversion}
-%else
-%setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
-%endif
+%setup -n %{oqformat}
 
 %patch1 -p1
 
@@ -76,24 +82,38 @@ python setup.py build
 %check
 #nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.engine
 
+%pre
+getent group %{oquser} >/dev/null || groupadd -r %{oquser}
+getent passwd %{oquser} >/dev/null || \
+    useradd -r -g %{oquser} -m -d /var/lib/%{oquser} -s /bin/bash \
+    -c "The OpenQuake user" %{oquser}
+
 %install
-sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
+sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
+install -p -m 755 -d %{buildroot}%{_bindir}
+install -p -m 755 -d %{buildroot}%{oqprefix}/bin
+python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
+ln -sf %{oqprefix}/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
+mkdir -p %{buildroot}%{_datadir}/applications
+mkdir -p %{buildroot}%{_datadir}/pixmaps
 mkdir -p %{buildroot}%{_unitdir}
 install -m 644 openquake/engine/openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
+install -m 644 debian/desktop/oq-engine-webui.desktop %{buildroot}%{_datadir}/applications
+install -m 644 debian/desktop/openquake.png %{buildroot}%{_datadir}/pixmaps
 install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
 install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
 install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
 cp -R demos %{buildroot}/%{_datadir}/openquake/engine
+# Make a zipped copy of each demo
+helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
 %systemd_post openquake-dbserver.service
 %systemd_post openquake-webui.service
-%systemd_post openquake-celery.service
 
 %clean
 rm -rf %{buildroot}
@@ -101,20 +121,58 @@ rm -rf %{buildroot}
 %preun
 %systemd_preun openquake-dbserver.service
 %systemd_preun openquake-webui.service
-%systemd_preun openquake-celery.service
 
 %postun
 %systemd_postun_with_restart openquake-dbserver.service
 %systemd_postun_with_restart openquake-webui.service
-%systemd_postun_with_restart openquake-celery.service
 
-%files -f INSTALLED_FILES
+%files
 %defattr(-,root,root)
-%doc README.md LICENSE CONTRIBUTORS.txt doc
+%doc README.md LICENSE CONTRIBUTORS.txt
+%doc doc/*.md
+%doc doc/img/*
+%doc doc/installing/*
+%doc doc/running/*
+%doc doc/upgrading/*
+%{oqprefix}/bin/oq
+%{oqprefix}/lib/python2.7/site-packages/openquake*
+%{_bindir}/oq
 %{_datadir}/openquake/engine
+%{_datadir}/applications/oq-engine-webui.desktop
+%{_datadir}/pixmaps/openquake.png
 %{_sysconfdir}/openquake/openquake.cfg
 %{_unitdir}/openquake-dbserver.service
 %{_unitdir}/openquake-webui.service
+
+%post master
+(if ! rabbitmqctl status &>/dev/null; then
+    systemctl start rabbitmq-server.service
+    rabbit_started=true
+fi
+if ! rabbitmqctl list_users | grep %{oquser}; then
+    rabbitmqctl add_user %{oquser} %{oquser}
+fi
+if ! rabbitmqctl list_vhosts | grep %{oquser}; then
+    rabbitmqctl add_vhost %{oquser}
+    rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
+fi
+if $rabbit_started; then
+    systemctl stop rabbitmq-server.service
+fi
+) >/dev/null || true
+
+%files master
+
+%post worker
+%systemd_post openquake-celery.service
+
+%preun worker
+%systemd_preun openquake-celery.service
+
+%postun worker
+%systemd_postun_with_restart openquake-celery.service
+
+%files worker
 %{_unitdir}/openquake-celery.service
 
 %changelog

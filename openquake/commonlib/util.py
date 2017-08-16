@@ -17,9 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import logging
 import numpy
-from openquake.baselib.python3compat import decode
+from openquake.commonlib import config
 
 F32 = numpy.float32
 
@@ -128,50 +127,22 @@ def get_assets(dstore):
     assetcol = dstore['assetcol']
     asset_refs = dstore['asset_refs'].value
     taxo = assetcol.taxonomies
-    asset_data = [(asset_refs[a['idx']], '"%s"' % taxo[a['taxonomy_id']],
-                   a['lon'], a['lat']) for a in assetcol.array]
+    asset_data = [(asset_refs[a['idx']], '"%s"' % t,
+                   a['lon'], a['lat']) for a, t in zip(assetcol.array, taxo)]
     return numpy.array(asset_data, asset_dt)
 
 
-def get_ses_idx(etag):
+def shared_dir_on():
     """
-    >>> get_ses_idx("grp=00~ses=0007~rup=018-01")
-    7
+    :returns: True if a shared_dir has been set in openquake.cfg, else False
     """
-    return int(decode(etag).split('~')[1][4:])
+    return config.SHARED_DIR_ON
 
 
-def get_serial(etag):
+def reader(func):
     """
-    >>> print(get_serial("grp=00~ses=0007~rup=018-01"))
-    18
+    Decorator used to mark functions that require read access to the
+    file system. It simply adds a thunk `shared_dir_on` to the function.
     """
-    try:
-        trt, ses, rup = decode(etag).split('~')
-    except ValueError:
-        trt, ses, rup, sample = decode(etag).split('~')
-    serial = rup.split('=')[1].split('-')[0]
-    return int(serial)
-
-
-class Rupture(object):
-    """
-    Simplified Rupture class with attributes etag, indices, ses_idx,
-    used in export.
-    """
-    def __init__(self, sm_id, eid, etag, indices=None):
-        self.sm_id = sm_id
-        self.eid = eid
-        if isinstance(etag, int):  # scenario
-            self.etag = 'scenario-%010d' % etag
-            self.indices = indices
-            self.ses_idx = 1
-            return
-        # event based
-        if len(etag) > 100:
-            logging.error(
-                'The etag %s is long %d characters, it will be truncated '
-                'to 100 characters in the /etags array', etag, len(etag))
-        self.etag = etag
-        self.indices = indices
-        self.ses_idx = get_ses_idx(etag)
+    func.shared_dir_on = shared_dir_on
+    return func

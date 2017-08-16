@@ -143,7 +143,7 @@ There are three other `?` parameters:
 
 The dictionary parameters are ordered per field name, just to make
 the templates reproducible. `?A` and `?O` are smart enough to
-treat specially `None` parameters, that are turned into `NULL`s:
+treat specially `None` parameters, that are turned into `NULL`:
 
   >>> match('SELECT * FROM job WHERE ?A', dict(value=None, id=5))
   ('SELECT * FROM job WHERE id=? AND value IS NULL', (5,))
@@ -302,6 +302,11 @@ class Db(object):
         except AttributeError:
             self.local.conn = self.connect(*self.args, **self.kw)
             return self.local.conn
+
+    @property
+    def path(self):
+        """Path to the underlying sqlite file"""
+        return self.args[0]
 
     def __enter__(self):
         return self

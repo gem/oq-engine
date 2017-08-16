@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Test Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        srcs_weights="0.6 0.4"
+        tectonicRegion="Stable Continental Crust"
+        >
+            <multiPointSource
+            id="mp1"
+            name="multi point source"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <multiPointGeometry>
+                    <gml:posList>
+                        0.0 1.0 0.5 1.0
+                    </gml:posList>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <multiMFD
+                kind="incrementalMFD"
+                size="2"
+                >
+                    <bin_width>
+                        0.1
+                    </bin_width>
+                    <min_mag>
+                        4.5
+                    </min_mag>
+                    <occurRates>
+                        0.1000000015 0.05000000075 0.400000006 0.200000003 0.1000000015
+                    </occurRates>
+                    <lengths>
+                        2 3
+                    </lengths>
+                </multiMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="20.0" probability="0.5" rake="3.0" strike="1.0"/>
+                    <nodalPlane dip="2.0" probability="0.5" rake="4.0" strike="2.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="14.0" probability="1.0"/>
+                </hypoDepthDist>
+            </multiPointSource>
+            <multiPointSource
+            id="mp2"
+            name="mps-with-GR"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <multiPointGeometry>
+                    <gml:posList>
+                        0.1 1.1
+                    </gml:posList>
+                    <upperSeismoDepth>
+                        5.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        10.0
+                    </lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <multiMFD
+                kind="truncGutenbergRichterMFD"
+                size="1"
+                >
+                    <a_val>
+                        -5.481
+                    </a_val>
+                    <b_val>
+                        0.9
+                    </b_val>
+                    <bin_width>
+                        0.1
+                    </bin_width>
+                    <max_mag>
+                        7.5
+                    </max_mag>
+                    <min_mag>
+                        5.0
+                    </min_mag>
+                </multiMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.5" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="90.0" probability="0.5" rake="0.0" strike="90.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="6.3" probability="1.0"/>
+                </hypoDepthDist>
+            </multiPointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
