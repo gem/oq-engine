@@ -87,11 +87,11 @@ available at the moment:
 `OQ_DISTRIBUTE` set tp "ipython"
    use the ipyparallel concurrency mechanism (experimental)
 
-There is no such a thing as OQ_DISTRIBUTE="threading"; it would be trivial
-to do, but the performance of using threads instead of processes is terrible
-for the kind of applications we are interested in (CPU-dominated, which large
-tasks such that the time to spawn a new process is negligible with respect
-to the time to perform the task).
+There is also an `OQ_DISTRIBUTE`="threadpool"; however the
+performance of using threads instead of processes is normally bad for the
+kind of applications we are interested in (CPU-dominated, which large
+tasks such that the time to spawn a new process is negligible with
+respect to the time to perform the task), so it is not recommended.
 
 The Starmap.apply API
 ====================================
@@ -133,6 +133,7 @@ having finished all the short tasks, but you have to wait for days for
 the single core processing the slow task). The OpenQuake engine does
 a great deal of work trying to split slow sources in more manageable
 fast sources.
+
 """
 from __future__ import print_function
 import os
@@ -148,7 +149,8 @@ import functools
 import subprocess
 import multiprocessing.dummy
 from multiprocessing.connection import Client, Listener
-from concurrent.futures import as_completed, ProcessPoolExecutor, Future
+from concurrent.futures import (
+    as_completed, ThreadPoolExecutor, ProcessPoolExecutor, Future)
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
@@ -278,7 +280,10 @@ class Pickled(object):
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
-        self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+        try:
+            self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+        except TypeError as exc:  # can't pickle, show the obj in the message
+            raise TypeError('%s: %s' % (exc, obj))
 
     def __repr__(self):
         """String representation of the pickled object"""
@@ -508,6 +513,8 @@ class Starmap(object):
         self.results = []
         self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
+        if self.distribute == 'threadpool':
+            self.executor = ThreadPoolExecutor(executor.num_tasks_hint)
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(oqtask):
             self.argnames = inspect.getargspec(oqtask).args
@@ -611,6 +618,7 @@ class Starmap(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
+            add_task_no(args, 0)
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, nargs)
@@ -626,10 +634,7 @@ class Starmap(object):
             task_no += 1
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
-            if isinstance(args[-1], Monitor):
-                # add incremental task number and task weight
-                args[-1].task_no = task_no
-                args[-1].weight = getattr(args[0], 'weight', 1.)
+            add_task_no(args, task_no)
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
@@ -645,6 +650,13 @@ class Starmap(object):
 
     def __iter__(self):
         return iter(self.submit_all())
+
+
+def add_task_no(args, task_no):
+    if isinstance(args[-1], Monitor):
+        # add incremental task number and task weight
+        args[-1].task_no = task_no
+        args[-1].weight = getattr(args[0], 'weight', 1.)
 
 
 def do_not_aggregate(acc, value):

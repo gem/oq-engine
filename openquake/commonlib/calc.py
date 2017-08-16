@@ -63,11 +63,11 @@ class PmapGetter(object):
     specific realization.
 
     :param dstore: a DataStore instance
-    :param fromworker: if True, read directly from the datastore
+    :param lazy: if True, read directly from the datastore
     """
-    def __init__(self, dstore, fromworker=False):
+    def __init__(self, dstore, lazy=False):
         self.dstore = dstore
-        self.fromworker = fromworker
+        self.lazy = lazy
         self.assoc_by_grp = dstore['csm_info/assoc_by_grp'].value
         self.weights = self.dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
@@ -76,12 +76,12 @@ class PmapGetter(object):
         self.nbytes = 0
 
     def __enter__(self):
-        if self.fromworker:
+        if self.lazy:
             self.dstore.__enter__()
         return self
 
     def __exit__(self, *args):
-        if self.fromworker:
+        if self.lazy:
             self.dstore.__exit__(*args)
 
     def new(self, sids):
@@ -92,7 +92,7 @@ class PmapGetter(object):
         newgetter = object.__new__(self.__class__, self.dstore)
         vars(newgetter).update(vars(self))
         newgetter.sids = sids
-        if not self.fromworker:  # populate the cache
+        if not self.lazy:  # populate the cache
             newgetter.get_pmap_by_grp(sids)
         return newgetter
 
@@ -375,10 +375,9 @@ def make_uhs(pmap, imtls, poes, nsites):
 
 def get_gmv_data(sids, gmfs):
     """
-    Convert a list of arrays of shape (N, E, I) into a single array of type
-    gmv_data_dt
+    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
     """
-    N, E, I = gmfs[0].shape
+    R, N, E, I = gmfs.shape
     gmv_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
     it = ((r, sids[s], eid, gmfa[s, eid])
@@ -410,9 +409,8 @@ def get_gmfs(dstore, precalc=None):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
         return eids, gmfs
 
-    if 'gmf_data/grp-00' in dstore:
-        # read from the datastore
-        dset = dstore['gmf_data/grp-00']
+    if 'gmf_data/data' in dstore:
+        dset = dstore['gmf_data/data']
         R = len(dstore['realizations'])
         nrows = len(dset) // R
         for r in range(R):
@@ -426,10 +424,10 @@ def get_gmfs(dstore, precalc=None):
 
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        _sitecol, eids, gmfa = readinput.get_gmfs(oq)
-        dstore['gmf_data/grp-00'] = get_gmv_data(
-            haz_sitecol.sids, [gmfa[haz_sitecol.indices]])
-        return eids, [gmfa]
+        eids, gmfs = readinput.get_gmfs(oq)
+        dstore['gmf_data/data'] = get_gmv_data(
+            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
+        return eids, gmfs
 
 
 def fix_minimum_intensity(min_iml, imts):
@@ -533,7 +531,7 @@ class RuptureSerializer(object):
         ('serial', U32), ('code', U8), ('sidx', U32),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U8),
+        ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U16),
         ('points', h5py.special_dtype(vlen=point3d)),
         ])
 
@@ -556,7 +554,7 @@ class RuptureSerializer(object):
             # sanity checks
             assert sx < TWO16, 'Too many multisurfaces: %d' % sx
             assert sy < 256, 'The rupture mesh spacing is too small'
-            assert sz < 256, 'The rupture mesh spacing is too small'
+            assert sz < TWO16, 'The rupture mesh spacing is too small'
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
             tup = (ebrupture.serial, rup.code, ebrupture.sidx,
@@ -627,64 +625,67 @@ class RuptureSerializer(object):
         Flush the ruptures and the site IDs on the datastore
         """
         self.sids.clear()
-        dset = self.datastore.create_dset(
-            'sids', sids_dt, (len(self.data),), fillvalue=None)
-        nbytes = 0
-        for i, val in enumerate(self.data):
-            dset[i] = val
-            nbytes += val.nbytes
-        self.datastore.set_attrs('sids', nbytes=nbytes)
-        self.datastore.flush()
-        del self.data[:]
+        if self.data:
+            self.datastore.save_vlen('sids', self.data)
+            del self.data[:]
 
 
 def get_ruptures(dstore, grp_id):
     """
     Extracts the ruptures of the given grp_id
     """
+    return _get_ruptures(dstore, [grp_id], None)
+
+
+def _get_ruptures(dstore, grp_ids, rup_id):
     oq = dstore['oqparam']
-    trt = dstore['csm_info'].grp_trt()[grp_id]
-    grp = 'grp-%02d' % grp_id
-    if grp not in dstore['events']:
-        return
-    events = dstore['events/' + grp]
-    for rec in dstore['ruptures/' + grp]:
-        mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
-        rupture_cls, surface_cls, source_cls = BaseRupture.types[rec['code']]
-        rupture = object.__new__(rupture_cls)
-        rupture.surface = object.__new__(surface_cls)
-        # MISSING: test with complex_fault_mesh_spacing != rupture_mesh_spacing
-        if 'Complex' in surface_cls.__name__:
-            mesh_spacing = oq.complex_fault_mesh_spacing
-        else:
-            mesh_spacing = oq.rupture_mesh_spacing
-        rupture.source_typology = source_cls
-        rupture.mag = rec['mag']
-        rupture.rake = rec['rake']
-        rupture.seed = rec['seed']
-        rupture.hypocenter = geo.Point(*rec['hypo'])
-        rupture.occurrence_rate = rec['occurrence_rate']
-        rupture.tectonic_region_type = trt
-        pmfx = rec['pmfx']
-        if pmfx != -1:
-            rupture.pmf = dstore['pmfs/' + grp][pmfx]
-        if surface_cls is geo.PlanarSurface:
-            rupture.surface = geo.PlanarSurface.from_array(
-                mesh_spacing, rec['points'])
-        elif surface_cls.__name__.endswith('MultiSurface'):
-            rupture.surface.__init__([
-                geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
-                for m1 in mesh])
-        else:  # fault surface, strike and dip will be computed
-            rupture.surface.strike = rupture.surface.dip = None
-            m = mesh[0]
-            rupture.surface.mesh = RectangularMesh(
-                m['lon'], m['lat'], m['depth'])
-        sids = dstore['sids'][rec['sidx']]
-        evs = events[rec['eidx1']:rec['eidx2']]
-        ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
-        ebr.eidx1 = rec['eidx1']
-        ebr.eidx2 = rec['eidx2']
-        ebr.sidx = rec['sidx']
-        # not implemented: rupture_slip_direction
-        yield ebr
+    grp_trt = dstore['csm_info'].grp_trt()
+    for grp_id in grp_ids:
+        trt = grp_trt[grp_id]
+        grp = 'grp-%02d' % grp_id
+        if grp not in dstore['events']:
+            continue
+        events = dstore['events/' + grp]
+        for rec in dstore['ruptures/' + grp]:
+            if rup_id is not None and rup_id != rec['serial']:
+                continue
+            mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+            rupture_cls, surface_cls, source_cls = BaseRupture.types[
+                rec['code']]
+            rupture = object.__new__(rupture_cls)
+            rupture.surface = object.__new__(surface_cls)
+            # MISSING: case complex_fault_mesh_spacing != rupture_mesh_spacing
+            if 'Complex' in surface_cls.__name__:
+                mesh_spacing = oq.complex_fault_mesh_spacing
+            else:
+                mesh_spacing = oq.rupture_mesh_spacing
+            rupture.source_typology = source_cls
+            rupture.mag = rec['mag']
+            rupture.rake = rec['rake']
+            rupture.seed = rec['seed']
+            rupture.hypocenter = geo.Point(*rec['hypo'])
+            rupture.occurrence_rate = rec['occurrence_rate']
+            rupture.tectonic_region_type = trt
+            pmfx = rec['pmfx']
+            if pmfx != -1:
+                rupture.pmf = dstore['pmfs/' + grp][pmfx]
+            if surface_cls is geo.PlanarSurface:
+                rupture.surface = geo.PlanarSurface.from_array(
+                    mesh_spacing, rec['points'])
+            elif surface_cls.__name__.endswith('MultiSurface'):
+                rupture.surface.__init__([
+                    geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
+                    for m1 in mesh])
+            else:  # fault surface, strike and dip will be computed
+                rupture.surface.strike = rupture.surface.dip = None
+                m = mesh[0]
+                rupture.surface.mesh = RectangularMesh(
+                    m['lon'], m['lat'], m['depth'])
+            sids = dstore['sids'][rec['sidx']]
+            evs = events[rec['eidx1']:rec['eidx2']]
+            ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
+            ebr.eidx1 = rec['eidx1']
+            ebr.eidx2 = rec['eidx2']
+            ebr.sidx = rec['sidx']
+            # not implemented: rupture_slip_direction
+            yield ebr

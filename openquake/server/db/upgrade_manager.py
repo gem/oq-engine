@@ -38,6 +38,7 @@ class VersionTooSmall(RuntimeError):
 class VersioningNotInstalled(RuntimeError):
     pass
 
+
 CREATE_VERSIONING = '''\
 CREATE TABLE %s(
 version TEXT PRIMARY KEY,
@@ -352,7 +353,7 @@ def upgrade_db(conn, pkg_name='openquake.server.db.schema.upgrades',
     return versions_applied
 
 
-def version_db(conn, pkg_name='openquake.server.db.schema.upgrades'):
+def db_version(conn, pkg_name='openquake.server.db.schema.upgrades'):
     """
     :param conn: a DB API 2 connection
     :param str pkg_name: the name of the package with the upgrade scripts

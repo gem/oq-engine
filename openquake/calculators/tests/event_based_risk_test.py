@@ -38,19 +38,18 @@ from openquake.qa_tests_data.event_based_risk import (
 def check_total_losses(calc):
     dstore = calc.datastore
     loss_dt = calc.oqparam.loss_dt()
-    L1 = len(loss_dt.names)
-    L = L1 // 2
-    data1 = numpy.zeros(L1, numpy.float32)
+    LI = len(loss_dt.names)
+    data1 = numpy.zeros(LI, numpy.float32)
     for dset in dstore['agg_loss_table'].values():
-        for l, lt in enumerate(loss_dt.names):
-            i = int(lt.endswith('_ins'))  # the cast avoids a numpy warning
-            data1[l] += dset['loss'][:, l - L * i, i].sum()
+        for li, lt in enumerate(loss_dt.names):
+            data1[li] += dset['loss'][:, li].sum()
 
-    # check the sums are consistent with the ones coming from losses_by_taxon
-    data2 = numpy.zeros(L1, numpy.float32)
-    lbt = dstore['losses_by_taxon-rlzs']
-    for l in range(L1):
-        data2[l] += lbt[:, :, l].sum()
+    # check the sums are consistent with the ones coming from losses_by_tag
+    tax_idx = dstore['assetcol'].get_tax_idx()
+    data2 = numpy.zeros(LI, numpy.float32)
+    lbt = dstore['losses_by_tag-rlzs']
+    for li in range(LI):
+        data2[li] += lbt[tax_idx, :, li].sum()
     numpy.testing.assert_allclose(data1, data2, 1E-6)
 
     # test the asset_loss_table exporter; notice that I need to disable
@@ -162,9 +161,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         grp00 = self.calc.datastore.get_attr('ruptures/grp-00', 'nbytes')
         grp02 = self.calc.datastore.get_attr('ruptures/grp-02', 'nbytes')
         grp03 = self.calc.datastore.get_attr('ruptures/grp-03', 'nbytes')
-        self.assertEqual(grp00, 545)
-        self.assertEqual(grp02, 545)
-        self.assertEqual(grp03, 218)
+        self.assertEqual(grp00, 550)
+        self.assertEqual(grp02, 550)
+        self.assertEqual(grp03, 220)
 
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
@@ -217,8 +216,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
-        fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'losses_by_taxon-stats not exported?'
+        fnames = export(('losses_by_tag-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'losses_by_tag-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 

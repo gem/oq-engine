@@ -33,7 +33,8 @@ from openquake.baselib.slots import with_slots
 
 
 def _corners(array):
-    # convert a composite array with fields lon, lat, depth into Points
+    # convert a composite array with fields lon, lat, depth into four Points
+    # [topleft, topright, bottomleft, bottomright]
     points = []
     for p in array:
         points.append(Point(p['lon'], p['lat'], p['depth']))
