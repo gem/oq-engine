@@ -318,9 +318,12 @@ class PSHACalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(self.csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
-                     maxweight, numheavy, len(tiles))
+        if oq.split_sources is False:
+            maxweight = numpy.inf  # do not split the sources
+        else:
+            numheavy = len(self.csm.get_sources('heavy', maxweight))
+            logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
+                         maxweight, numheavy, len(tiles))
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
