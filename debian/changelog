@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adapts CoeffsTable to be instantiated with dictionarys as well as strings
+  
   [Daniele Viganò]
   * Extended the 'oq reset' command to work on multi user installations
 
