@@ -6,8 +6,9 @@ After=network.target
 [Service]
 User=openquake
 Group=openquake
-WorkingDirectory=/usr/lib/python2.7/site-packages/openquake/server/
-ExecStart=/usr/bin/env python dbserver.py
+Environment=PYTHONPATH=/opt/openquake/lib/python2.7/site-packages
+WorkingDirectory=/usr/share/openquake/engine
+ExecStart=/usr/bin/env python -m openquake.server.dbserver
 Restart=always
 RestartSec=30
 KillMode=control-group

@@ -18,26 +18,31 @@
 
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
-from openquake.calculators.tests import CalculatorTestCase, check_platform
+from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25)
+    case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
+    case_26, case_27, case_28)
 
 
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
-        out = self.run_calc(test_dir, 'job.ini', exports='csv', **kw)
-        got = (out['hcurves', 'csv'] + out.get(('hmaps', 'csv'), []) +
-               out.get(('uhs', 'csv'), []))
-        self.assertEqual(len(expected), len(got))
+        self.run_calc(test_dir, 'job.ini', **kw)
+        ds = self.calc.datastore
+        kind = kw.get('kind', '')  # 'all' or ''
+        got = (export(('hcurves/' + kind, 'csv'), ds) +
+               export(('hmaps/' + kind, 'csv'), ds) +
+               export(('uhs/' + kind, 'csv'), ds))
+        self.assertEqual(len(expected), len(got), str(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual,
                                   delta=delta)
-        return out
+        return got
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
@@ -47,13 +52,16 @@ class ClassicalTestCase(CalculatorTestCase):
 
         if parallel.oq_distribute() != 'no':
             # make sure we saved the data transfer information in job_info
-            keys = set(self.calc.datastore['job_info'].__dict__)
-            self.assertIn('classical_max_received_per_task', keys)
-            self.assertIn('classical_tot_received', keys)
-            self.assertIn('classical_sent', keys)
+            keys = {decode(key) for key in dict(
+                self.calc.datastore['job_info'])}
+            self.assertIn('classical.received', keys)
+            self.assertIn('classical.sent', keys)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
+
+        # check npz export
+        export(('hcurves', 'npz'), self.calc.datastore)
 
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
@@ -83,31 +91,39 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_3.__file__)
 
-    @attr('qa', 'hazard', 'classical')  # a bit slow
+    @attr('qa', 'hazard', 'classical')
     def test_case_4(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_4.__file__)
 
-    @attr('qa', 'hazard', 'classical', 'slow')
+    @attr('qa', 'hazard', 'classical')
     def test_case_5(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_5.__file__)
 
-    @attr('qa', 'hazard', 'classical', 'slow')
+    @attr('qa', 'hazard', 'classical')
     def test_case_6(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_6.__file__)
 
-    @attr('qa', 'hazard', 'classical', 'slow')
+    @attr('qa', 'hazard', 'classical')
     def test_case_7(self):
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
-            case_7.__file__)
+            case_7.__file__, kind='all')
+
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_7.__file__, 'job.ini', mean_hazard_curves='false',
+                hazard_maps='true', poes='0.1')
+        self.assertEqual(
+            'The job.ini says that no statistics should be computed, but then '
+            'there is no output!', str(ctx.exception))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):
@@ -115,21 +131,21 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b4-gsimltp_b1.csv'],
-            case_8.__file__)
+            case_8.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_9(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
-            case_9.__file__)
+            case_9.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_10(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
-            case_10.__file__)
+            case_10.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_11(self):
@@ -140,7 +156,7 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b1_b4-gsimltp_b1.csv',
              'quantile_curve-0.1.csv',
              'quantile_curve-0.9.csv'],
-            case_11.__file__)
+            case_11.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_12(self):
@@ -151,15 +167,16 @@ class ClassicalTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_13(self):
         self.assert_curves_ok(
-            ['hazard_curve-mean.csv',
-             'hazard_map-mean.csv'],
+            ['hazard_curve-mean.csv', 'hazard_map-mean.csv'],
             case_13.__file__)
 
-        # test recomputing the hazard maps
-        out = self.run_calc(
+        # test recomputing the hazard maps, i.e. with --hc
+        # must be run sequentially to avoid the usual heisenbug
+        self.run_calc(
             case_13.__file__, 'job.ini', exports='csv', poes='0.2',
-            hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = out['hmaps', 'csv']
+            hazard_calculation_id=str(self.calc.datastore.calc_id),
+            concurrent_tasks='0')
+        [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
 
@@ -168,11 +185,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok([
             'hazard_curve-smltp_simple_fault-gsimltp_AbrahamsonSilva2008.csv',
             'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008.csv'
-        ], case_14.__file__)
+        ], case_14.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_15(self):  # full enumeration
         self.assert_curves_ok('''\
+hazard_curve-max.csv
 hazard_curve-mean.csv
 hazard_curve-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_curve-smltp_SM1-gsimltp_BA2008_T2002.csv
@@ -182,6 +200,7 @@ hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
 hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
 hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
 hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv
+hazard_uhs-max.csv
 hazard_uhs-mean.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
 hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
@@ -191,10 +210,7 @@ hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
 hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
 hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
 hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
-                              case_15.__file__, delta=1E-6)
-
-        # now some tests on the exact numbers
-        check_platform('xenial', 'trusty')
+                              case_15.__file__, kind='all', delta=1E-6)
 
         # test UHS XML export
         fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
@@ -219,6 +235,25 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         self.assertEqualFiles(
             'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
 
+        # npz exports
+        export(('hmaps', 'npz'), self.calc.datastore)
+        export(('uhs', 'npz'), self.calc.datastore)
+
+        # check the size of assoc_by_grp for a complex logic tree
+        # grp_id gsim_idx rlzis
+        # 0	0	 {0, 1}
+        # 0	1	 {2, 3}
+        # 1	0	 {0, 2}
+        # 1	1	 {1, 3}
+        # 2	0	 {4}
+        # 2	1	 {5}
+        # 3	0	 {6}
+        # 3	1	 {7}
+        # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
+        nbytes = self.calc.datastore.get_attr(
+            'csm_info/assoc_by_grp', 'nbytes')
+        self.assertEqual(nbytes, 120)
+
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
         self.assert_curves_ok(
@@ -226,6 +261,10 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
              'quantile_curve-0.1.csv',
              'quantile_curve-0.9.csv'],
             case_16.__file__)
+
+        # test single realization export
+        [fname] = export(('hcurves/rlz-3', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-rlz-003.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_17(self):  # oversampling
@@ -235,17 +274,23 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
-            case_17.__file__)
+            case_17.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_18(self):  # GMPEtable
-        out = self.assert_curves_ok(
+        self.assert_curves_ok(
             ['hazard_curve-mean.csv', 'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
             case_18.__file__, delta=1E-7)
-        # this also tests that UHS curves are really exported
-        [fname] = out['realizations', 'csv']
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
+
+        # check exporting a single realization in XML and CSV
+        [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
+        if REFERENCE_OS:  # broken on macOS
+            self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
+        [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
+        self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
@@ -255,7 +300,7 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
             'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b52_@_@.csv',
             'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b53_@_@.csv',
             'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b54_@_@.csv',
-        ], case_19.__file__, delta=1E-7)
+        ], case_19.__file__, kind='all', delta=1E-7)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_20(self):  # Source geometry enumeration
@@ -272,7 +317,7 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
             'hazard_curve-smltp_sm1_sg2_cog2_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
-            case_20.__file__, delta=1E-7)
+            case_20.__file__, kind='all', delta=1E-7)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_21(self):  # Simple fault dip and MFD enumeration
@@ -304,14 +349,16 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip30-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
-            case_21.__file__, delta=1E-7)
+            case_21.__file__, kind='all', delta=1E-7)
         [fname] = export(('sourcegroups', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/sourcegroups.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_22(self):  # crossing date line calculation for Alaska
-        self.assert_curves_ok(['hazard_curve-mean.csv'], case_22.__file__,
-                              individual_curves='false')
+        # this also tests the splitting of the source model in two files
+        self.assert_curves_ok(['hazard_curve-mean.csv'], case_22.__file__)
+        checksum = self.calc.datastore['/'].attrs['checksum32']
+        self.assertEqual(checksum, 4227047805)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT
@@ -326,3 +373,16 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
                               case_25.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_26(self):  # split YoungsCoppersmith1985MFD
+        self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_27(self):  # Nankai mutex model
+        self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_28(self):  # North Africa
+        # MultiPointSource with modify MFD logic tree
+        self.assert_curves_ok(['hazard_curve_mean.csv'], case_28.__file__)

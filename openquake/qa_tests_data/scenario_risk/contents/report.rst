@@ -1,31 +1,31 @@
 Scenario QA Test for contents
 =============================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81094.hdf5 Thu Jan 26 14:30:37 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1850.hdf5 Fri Jul  7 07:33:33 2017
+checksum32                               253,980,831             
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
-num_sites = 3, sitecol = 854 B
+num_sites = 3, num_imts = 3
 
 Parameters
 ----------
-=============================== ================
-calculation_mode                'scenario'      
-number_of_logic_tree_samples    0               
-maximum_distance                {'default': 300}
-investigation_time              None            
-ses_per_logic_tree_path         1               
-truncation_level                3.0             
-rupture_mesh_spacing            10.0            
-complex_fault_mesh_spacing      10.0            
-width_of_mfd_bin                None            
-area_source_discretization      None            
-ground_motion_correlation_model None            
-random_seed                     3               
-master_seed                     0               
-=============================== ================
+=============================== ==================
+calculation_mode                'scenario'        
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 300.0}
+investigation_time              None              
+ses_per_logic_tree_path         1                 
+truncation_level                3.0               
+rupture_mesh_spacing            10.0              
+complex_fault_mesh_spacing      10.0              
+width_of_mfd_bin                None              
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     3                 
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -37,6 +37,22 @@ exposure               `exposure_model.xml <exposure_model.xml>`_
 job_ini                `job_haz.ini <job_haz.ini>`_                                          
 rupture_model          `fault_rupture.xml <fault_rupture.xml>`_                              
 ====================== ======================================================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================= =========== ======================= =================
+grp_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -68,7 +84,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
+reading exposure        0.006     0.0       1     
 filtering sites         0.006     0.0       1     
-reading exposure        0.003     0.0       1     
-reading site collection 7.868E-06 0.0       1     
+reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

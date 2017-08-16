@@ -41,6 +41,14 @@ openquake.commonlib.logictree module
     :undoc-members:
     :show-inheritance:
 
+openquake.commonlib.logs module
+-------------------------------
+
+.. automodule:: openquake.commonlib.logs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 openquake.commonlib.oqvalidation module
 ---------------------------------------
 

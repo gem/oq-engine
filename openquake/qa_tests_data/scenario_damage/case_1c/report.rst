@@ -1,13 +1,13 @@
 Scenario Damage
 ===============
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81012.hdf5 Thu Jan 26 14:28:13 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+=============================================== ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_1760.hdf5 Fri Jul  7 07:32:10 2017
+checksum32                                      272,505,614             
+engine_version                                  2.6.0-git50066b9        
+=============================================== ========================
 
-num_sites = 1, sitecol = 1.04 KB
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -39,6 +39,22 @@ sites                `sites.csv <sites.csv>`_
 structural_fragility `fragility_model.xml <fragility_model.xml>`_
 ==================== ============================================
 
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== =================== ========= ========== ==========
+grp_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      BooreAtkinson2008() rjb       vs30       mag rake  
+====== =================== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -46,6 +62,13 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008(): ['<0,b_1~b1,w=1.0>']>
+
+Informational data
+------------------
+================ ================
+hostname         tstation.gem.lan
+require_epsilons False           
+================ ================
 
 Exposure model
 --------------
@@ -66,10 +89,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading exposure        0.003     0.0       1     
+filtering sites         0.007     0.0       1     
+reading exposure        0.005     0.0       1     
+assoc_assets_sites      0.005     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-reading site collection 1.674E-04 0.0       1     
-building riskinputs     1.407E-04 0.0       1     
+reading site collection 1.328E-04 0.0       1     
+building riskinputs     1.190E-04 0.0       1     
 ======================= ========= ========= ======

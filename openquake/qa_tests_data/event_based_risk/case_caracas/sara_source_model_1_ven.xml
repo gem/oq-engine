@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel>        
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultSource
+            id="CO-01"
+            name="Oca Oeste"
+            tectonicRegion="Active Shallow Crust"
+            >
+                
+                <simpleFaultGeometry>
+                    
+                    <gml:LineString>
+                        
+                        <gml:posList>
+                            -7.1858454E+01 1.1052947E+01 -7.1909625E+01 1.1078887E+01 -7.2066697E+01 1.1133028E+01 -7.2234793E+01 1.1177341E+01 -7.2580237E+01 1.1184658E+01 -7.2766696E+01 1.1207388E+01 -7.2815228E+01 1.1222149E+01 -7.2942662E+01 1.1239571E+01 -7.3105437E+01 1.1240334E+01 -7.3341925E+01 1.1266018E+01
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        7.2000000E+01
+                    </dip>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.0000000E+01
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="6.0500000E+00"
+                >
+                    
+                    <occurRates>
+                        4.2784077E-03 3.5112554E-03 2.8816596E-03 2.3649553E-03 1.9409001E-03 1.5928814E-03 1.3072652E-03 1.0728622E-03 8.8048954E-04 7.2261082E-04 5.9304099E-04 4.8670406E-04 3.9943418E-04 3.2781247E-04 2.6903311E-04 2.2079335E-04
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    1.3500000E+02
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

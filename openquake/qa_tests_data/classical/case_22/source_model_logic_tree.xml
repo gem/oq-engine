@@ -6,8 +6,11 @@
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="Alaska_asc_grid_NSHMP2007">
-                    <uncertaintyModel>Alaska_asc_grid_NSHMP2007.xml</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  <uncertaintyModel>
+                    Alaska_asc_grid_NSHMP2007.xml
+                    extra_source_model.xml
+                  </uncertaintyModel>
+                  <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>

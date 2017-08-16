@@ -24,11 +24,11 @@ from __future__ import print_function, unicode_literals
 from openquake.baselib.python3compat import decode
 import os
 import sys
+import ast
 import mock
 import time
 
-from openquake.baselib import parallel
-from openquake.baselib.general import humansize, AccumDict
+from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
@@ -39,16 +39,24 @@ def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-def count_eff_ruptures(sources, sitecol, gsims, monitor):
+def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     """
-    Count the number of ruptures contained in the given sources and return
-    a dictionary src_group_id -> num_ruptures. All sources belong to the
-    same tectonic region type.
+    Count the effective number of ruptures contained in the given sources
+    within the integration distance and return a dictionary src_group_id ->
+    num_ruptures. All sources must belong to the same tectonic region type.
     """
     acc = AccumDict()
     acc.grp_id = sources[0].src_group_id
     acc.calc_times = []
-    acc.eff_ruptures = {acc.grp_id: sum(src.num_ruptures for src in sources)}
+    count = 0
+    for src in sources:
+        t0 = time.time()
+        sites = srcfilter.get_close_sites(src)
+        if sites is not None:
+            count += src.num_ruptures
+            dt = time.time() - t0
+            acc.calc_times.append((src.source_id, len(sites), dt))
+    acc.eff_ruptures = {acc.grp_id: count}
     return acc
 
 
@@ -79,20 +87,19 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
-        info = dstore['job_info']
+        try:
+            info = {decode(k): ast.literal_eval(decode(v))
+                    for k, v in dict(dstore['job_info']).items()}
+        except KeyError:  # job_info not in the datastore (scenario hazard)
+            info = dict(hostname='localhost')
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
-        host = '%s:%s' % (info.hostname, decode(dpath))
+        host = '%s:%s' % (info['hostname'], decode(dpath))
         updated = str(time.ctime(mtime))
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
-        # NB: in the future, the sitecol could be transferred as
-        # an array by leveraging the HDF5 serialization protocol;
-        # for the moment however the size of the
-        # data to transfer is given by the usual pickle
-        sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
-        self.text += '\n\nnum_sites = %d, sitecol = %s' % (
-            len(dstore['sitecol']), sitecol_size)
+        self.text += '\n\nnum_sites = %d, num_imts = %d' % (
+            len(dstore['sitecol']), len(oq.imtls))
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -109,13 +116,13 @@ class ReportWriter(object):
         oq, ds = self.oq, self.dstore
         for name in ('params', 'inputs'):
             self.add(name)
-        if 'composite_source_model' in ds:
+        if 'csm_info' in ds:
             self.add('csm_info')
             self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
         if 'source_info' in ds:
             self.add('ruptures_per_trt')
-        if 'scenario' not in oq.calculation_mode:
+        if 'job_info' in ds:
             self.add('job_info')
         if 'rup_data' in ds:
             self.add('ruptures_events')
@@ -158,8 +165,9 @@ def build_report(job_ini, output_dir=None):
 
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
-    with mock.patch.object(PSHACalculator, 'core_task', count_eff_ruptures):
-        if calc.pre_calculator == 'ebrisk':
+    p = mock.patch.object
+    with p(PSHACalculator, 'core_task', count_eff_ruptures):
+        if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
         calc.pre_execute()

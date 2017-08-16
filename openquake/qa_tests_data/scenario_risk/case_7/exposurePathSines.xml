@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+	<exposureModel
+	  id="exp_mod_1"
+	  category="buildings"
+	  taxonomySource="GEM Taxonomy">
+	  <description>
+	    Exposure Model for buildings located in Pavia
+	  </description>
+	  <conversions>
+	    <costTypes>
+	      <costType name="structural" type="per_asset" unit="EUR"  />
+	    </costTypes>
+	  </conversions>
+	  <assets>
+	   <asset id="a0" number="1"  taxonomy="2" >
+	    <location lon="-8.818868" lat="37.934858" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a1" number="1"  taxonomy="4" >
+	    <location lon="-8.783687" lat="37.94281" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a2" number="1"  taxonomy="4" >
+	    <location lon="-8.765588" lat="37.956769" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a3" number="1"  taxonomy="3" >
+	    <location lon="-8.704188" lat="38.016464" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a4" number="1"  taxonomy="3" >
+	    <location lon="-8.70188" lat="38.021736" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a5" number="1"  taxonomy="4" >
+	    <location lon="-8.696258" lat="38.029678" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a6" number="1"  taxonomy="4" >
+	    <location lon="-8.672247" lat="38.024439" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a7" number="1"  taxonomy="4" >
+	    <location lon="-8.42016" lat="37.985128" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a8" number="1"  taxonomy="1" >
+	    <location lon="-8.406897" lat="37.953139" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a9" number="1"  taxonomy="2" >
+	    <location lon="-8.398052" lat="37.944137" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a10" number="1"  taxonomy="4" >
+	    <location lon="-8.389318" lat="37.941212" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a11" number="1"  taxonomy="4" >
+	    <location lon="-8.371507" lat="37.921206" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a12" number="1"  taxonomy="4" >
+	    <location lon="-8.366764" lat="37.903191" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a13" number="1"  taxonomy="4" >
+	    <location lon="-8.369288" lat="37.885799" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a14" number="1"  taxonomy="4" >
+	    <location lon="-8.369342" lat="37.844621" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a15" number="1"  taxonomy="2" >
+	    <location lon="-8.357623" lat="37.80059" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a16" number="1"  taxonomy="4" >
+	    <location lon="-8.340561" lat="37.7779" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a17" number="1"  taxonomy="4" >
+	    <location lon="-8.333999" lat="37.772802" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a18" number="1"  taxonomy="3" >
+	    <location lon="-8.318647" lat="37.760611" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a19" number="1"  taxonomy="1" >
+	    <location lon="-8.306116" lat="37.739464" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a20" number="1"  taxonomy="4" >
+	    <location lon="-8.269115" lat="37.743286" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a21" number="1"  taxonomy="3" >
+	    <location lon="-8.24263" lat="37.742204" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a22" number="1"  taxonomy="4" >
+	    <location lon="-8.227352" lat="37.745274" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a23" number="1"  taxonomy="4" >
+	    <location lon="-8.200997" lat="37.735029" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a24" number="1"  taxonomy="2" >
+	    <location lon="-8.120506" lat="37.68216" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a25" number="1"  taxonomy="3" >
+	    <location lon="-8.097114" lat="37.659292" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	   <asset id="a26" number="1"  taxonomy="4" >
+	    <location lon="-8.073858" lat="37.645329" />
+	    <costs>
+	      <cost type="structural" value="1"  />
+	    </costs>
+	    </asset>
+	  </assets>
+	</exposureModel>
+</nrml>

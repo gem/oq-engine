@@ -24,14 +24,17 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import group_array
+from openquake.baselib.general import group_array, writetmp
+from openquake.hazardlib import nrml
+from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_7,
+    blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_12, case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
@@ -90,7 +93,7 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmf = group_array(dstore['gmf_data/sm-0000/0000'], 'sid')
+            gmf = group_array(dstore['gmf_data/data'], 'sid')
             gmvs_site_0 = gmf[0]['gmv']
             gmvs_site_1 = gmf[1]['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
@@ -108,33 +111,30 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_blocksize(self):
         # here the <AreaSource 1> is light and not split
         out = self.run_calc(blocksize.__file__, 'job.ini',
-                            concurrent_tasks='3', exports='txt')
-        [fname] = out['gmf_data', 'txt']
-        self.assertEqualFiles('expected/0-ChiouYoungs2008.txt',
-                              fname, sorted)
+                            concurrent_tasks='3', exports='csv')
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         # here the <AreaSource 1> is heavy and split
         out = self.run_calc(blocksize.__file__, 'job.ini',
-                            concurrent_tasks='4', exports='txt')
-        [fname] = out['gmf_data', 'txt']
-        self.assertEqualFiles('expected/0-ChiouYoungs2008.txt',
-                              fname, sorted)
+                            concurrent_tasks='4', exports='csv')
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='txt,xml')
+        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
-        [fname] = out['gmf_data', 'txt']
-        self.assertEqualFiles(
-            'expected/0-SadighEtAl1997.txt', fname, sorted)
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        [fname] = export(('gmf_data:0', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/gmf-grp=00~ses=0002~src=1~rup=1-01-rlz-000.csv', fname)
+        [fname] = export(('gmf_scenario/rup-1', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-rlz-0-PGA.csv', fname)
 
         # test that the .npz export runs
         export(('gmf_data', 'npz'), self.calc.datastore)
@@ -145,19 +145,17 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_minimum_intensity(self):
-        out = self.run_calc(case_2.__file__, 'job.ini', exports='txt',
+        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.4')
 
-        [fname] = out['gmf_data', 'txt']
-        self.assertEqualFiles(
-            'expected/minimum-intensity-SadighEtAl1997.txt', fname, sorted)
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/minimum-intensity-gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job.ini', exports='txt,csv')
-        [fname] = out['gmf_data', 'txt']
-        self.assertEqualFiles(
-            'expected/SadighEtAl1997.txt', fname, sorted)
+        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles(
@@ -165,13 +163,9 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2bis(self):  # oversampling
-        out = self.run_calc(case_2.__file__, 'job_2.ini',
-                            exports='txt,csv,xml')
-        ltr = out['gmf_data', 'txt']  # 2 realizations, 1 TRT
-        self.assertEqualFiles(
-            'expected/gmf-smltp_b1-gsimltp_b1-ltr_0.txt', ltr[0])
-        self.assertEqualFiles(
-            'expected/gmf-smltp_b1-gsimltp_b1-ltr_1.txt', ltr[1])
+        out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
+        [fname] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
+        self.assertEqualFiles('expected/gmf-data-bis.csv', fname)
 
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
@@ -184,6 +178,12 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hc-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
 
     @attr('qa', 'hazard', 'event_based')
+    def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
+        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
+        [f] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', f)
+
+    @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
         [fname] = out['hcurves', 'csv']
@@ -192,20 +192,15 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
-        expected = '''\
-gmf-smltp_b2-gsimltp_@_b2_1_@_@.txt
-gmf-smltp_b2-gsimltp_@_b2_2_@_@.txt
-gmf-smltp_b2-gsimltp_@_b2_3_@_@.txt
-gmf-smltp_b2-gsimltp_@_b2_4_@_@.txt
-gmf-smltp_b2-gsimltp_@_b2_5_@_@.txt
-gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
-        out = self.run_calc(case_5.__file__, 'job.ini', exports='txt,csv')
-        fnames = out['gmf_data', 'txt']
-        for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted)
+        out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
+        [fname] = out['gmf_data', 'csv']
+        if REFERENCE_OS:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                                  delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname)
+        if REFERENCE_OS:
+            self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -221,6 +216,10 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
         [fname] = out['realizations', 'csv']
         self.assertEqualFiles('expected/realizations.csv', fname)
+
+        # test for the mean gmv
+        got = writetmp(rst_table(self.calc.datastore['gmdata'].value))
+        self.assertEqualFiles('expected/gmdata.csv', got)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
@@ -244,8 +243,9 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
     @attr('qa', 'hazard', 'event_based')
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
-        [fname] = out['rup_data', 'csv']
-        self.assertEqualFiles('expected/rup_data.csv', fname)
+        [fname] = out['ruptures', 'csv']
+        if REFERENCE_OS:
+            self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
@@ -256,10 +256,9 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_13(self):
-        out = self.run_calc(case_13.__file__, 'job.ini', exports='txt,csv')
-        [fname] = out['gmf_data', 'txt']
-        self.assertEqualFiles('expected/0-BooreAtkinson2008.txt',
-                              fname, sorted)
+        out = self.run_calc(case_13.__file__, 'job.ini', exports='csv')
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles(
@@ -268,6 +267,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling and save_ruptures
         expected = [
+            'hazard_curve-mean.csv',
             'hazard_curve-rlz-001.csv',
             'hazard_curve-rlz-002.csv',
             'hazard_curve-rlz-003.csv',
@@ -284,17 +284,17 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         [fname] = export(('ruptures', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/ses.xml', fname)
 
+        # check that the exported file is parseable
+        rupcoll = nrml.parse(fname, RuptureConverter(1))
+        self.assertEqual(list(rupcoll), [1])  # one group
+        self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
-        expected = [
-            'gmf-smltp_b1-gsimltp_AB-ltr_0.txt',
-            'gmf-smltp_b1-gsimltp_AB-ltr_1.txt',
-            'gmf-smltp_b1-gsimltp_CF-ltr_2.txt',
-        ]
-        out = self.run_calc(case_18.__file__, 'job.ini', exports='txt')
-        fnames = out['gmf_data', 'txt']
-        for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted)
+        out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
+        [fname] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-6)
 
     @attr('qa', 'hazard', 'event_based')
     def test_overflow(self):

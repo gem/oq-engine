@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="North Africa - Smoothed Seismicity"
+    >
+        <sourceGroup
+        tectonicRegion="Tectonic_Type_B"
+        >
+            <multiPointSource
+            id="21"
+            name=""
+            tectonicRegion="Tectonic_Type_B"
+            >
+                
+                <multiPointGeometry>
+                    
+                    <gml:posList>
+                        5.7000000E+00 3.3900000E+01 5.7000000E+00 3.4000000E+01
+                    </gml:posList>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        6.0000000E+01
+                    </lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5000000E+00
+                </ruptAspectRatio>
+                <multiMFD
+                    kind="truncGutenbergRichterMFD"
+                    size="2"
+                >                    
+                    <a_val>
+                        1.0984918E-03 1.1134770E-03
+                    </a_val>
+                    <b_val>
+                        9.3356032E-01
+                    </b_val>
+                    <max_mag>
+                        5.8300000E+00
+                    </max_mag>
+                    <min_mag>
+                        4.5000000E+00
+                    </min_mag>
+                </multiMFD>
+                <nodalPlaneDist>
+                    
+                    <nodalPlane dip="6.0000000E+01" probability="6.0000000E-01" rake="1.3500000E+02" strike="2.4000000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="4.0000000E-01" rake="9.0000000E+01" strike="2.4000000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    
+                    <hypoDepth depth="5.0000000E+00" probability="1.6279000E-01"/>
+                    <hypoDepth depth="1.5000000E+01" probability="3.2558100E-01"/>
+                    <hypoDepth depth="2.5000000E+01" probability="2.7907000E-01"/>
+                    <hypoDepth depth="3.5000000E+01" probability="1.8604700E-01"/>
+                    <hypoDepth depth="4.5000000E+01" probability="4.6512000E-02"/>
+                </hypoDepthDist>
+            </multiPointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

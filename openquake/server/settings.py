@@ -115,6 +115,8 @@ INSTALLED_APPS += (
     'openquake.server',
 )
 
+STANDALONE_APPS = ()
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.
@@ -143,12 +145,12 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'django.request': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'openquake.server': {
             'handlers': ['console'],
@@ -161,9 +163,19 @@ LOGGING = {
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
 try:
+    # Try to load a local_settings.py from the current folder; this is useful
+    # when packages are used. A custom local_settings.py can be placed in
+    # /usr/share/openquake/engine, avoiding changes inside the python package
     from local_settings import *
 except ImportError:
-    pass
+    # If no local_settings.py is availble in the current folder let's try to
+    # load it from openquake/server/local_settings.py
+    try:
+        from openquake.server.local_settings import *
+    except ImportError:
+        # If a local_setting.py does not exist
+        # settings in this file only will be used
+        pass
 
 if LOCKDOWN:
 

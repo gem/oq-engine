@@ -1,13 +1,13 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81102.hdf5 Thu Jan 26 14:30:38 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+======================================== ========================
+localhost:/mnt/ssd/oqdata/calc_1859.hdf5 Fri Jul  7 07:33:34 2017
+checksum32                               391,562,862             
+engine_version                           2.6.0-git50066b9        
+======================================== ========================
 
-num_sites = 7, sitecol = 1.01 KB
+num_sites = 7, num_imts = 3
 
 Parameters
 ----------
@@ -37,6 +37,22 @@ rupture_model `rupture_model.xml <rupture_model.xml>`_
 sites         `sites.csv <sites.csv>`_                
 ============= ========================================
 
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== =================== ========= ========== ==========
+grp_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      BooreAtkinson2008() rjb       vs30       mag rake  
+====== =================== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -50,6 +66,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
-reading site collection 1.292E-04 0.0       1     
+filtering sites         0.015     0.0       1     
+reading site collection 2.861E-04 0.0       1     
 ======================= ========= ========= ======

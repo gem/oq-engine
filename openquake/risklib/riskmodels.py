@@ -262,7 +262,11 @@ class RiskModel(object):
         if hasattr(self, 'retro_functions'):
             for lt, func in self.retro_functions.items():
                 risk_functions[lt + '_retrofitted'] = func
-        return risk_functions, {}
+        return risk_functions, {'taxonomy': self.taxonomy}
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.risk_functions = dic
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
@@ -357,7 +361,7 @@ class Classical(RiskModel):
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
-              'ebrisk', 'ucerf_rupture', 'ucerf_risk')
+              'ucerf_rupture', 'ucerf_risk', 'gmf_ebrisk')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel.
@@ -393,19 +397,16 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
+        gmvs, eids = gmvs_eids
         E = len(gmvs)
         I = self.insured_losses + 1
-        N = len(assets)
-        loss_ratios = numpy.zeros((N, E, I), F32)
+        A = len(assets)
+        loss_ratios = numpy.zeros((A, E, I), F32)
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
-            if epsilons is not None:
-                ratios = vf.sample(means, covs, idxs, epsilons)
-            else:
-                ratios = means
+            ratios = vf.sample(means, covs, idxs, epsilons)
             loss_ratios[i, idxs, 0] = ratios
             if self.insured_losses and loss_type != 'occupants':
                 loss_ratios[i, idxs, 1] = scientific.insured_losses(
@@ -498,9 +499,10 @@ class Scenario(RiskModel):
             assets = assets[ok]
             epsilons = epsilons[ok]
 
-        # a matrix of N x E x I elements
         E = len(epsilons[0])
         I = self.insured_losses + 1
+
+        # a matrix of A x E x I elements
         loss_matrix = numpy.empty((len(assets), E, I))
         loss_matrix.fill(numpy.nan)
 
@@ -509,7 +511,6 @@ class Scenario(RiskModel):
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         for i, eps in enumerate(epsilons):
             loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
-
         loss_matrix[:, :, 0] = (loss_ratio_matrix.T * values).T
 
         if self.insured_losses and loss_type != "occupants":
