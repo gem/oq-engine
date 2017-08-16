@@ -18,6 +18,7 @@
 
 from __future__ import division
 import itertools
+import warnings
 import logging
 import numpy
 import h5py
@@ -233,7 +234,11 @@ def compute_hazard_maps(curves, imls, poes):
         raise ValueError('The curves have %d levels, %d were passed' %
                          (L, len(imls)))
     result = []
-    imls = numpy.log(numpy.array(imls[::-1]))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # avoid RuntimeWarning: divide by zero encountered in log
+        # happening in the classical_tiling tests
+        imls = numpy.log(numpy.array(imls[::-1]))
     for curve in curves:
         # the hazard curve, having replaced the too small poes with EPSILON
         curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
