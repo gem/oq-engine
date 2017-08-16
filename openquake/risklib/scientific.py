@@ -23,6 +23,7 @@ from __future__ import division
 import abc
 import copy
 import bisect
+import warnings
 import collections
 
 import numpy
@@ -1127,11 +1128,9 @@ def annual_frequency_of_exceedence(poe, t_haz):
     :param t_haz: hazard investigation time
     :returns: array of frequencies (with +inf values where poe=1)
     """
-    if (poe == 1).all():
-        n = numpy.empty(len(poe))
-        n.fill(numpy.inf)
-        return n  # avoid warning for log(0) producing NaN
-    else:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # avoid RuntimeWarning: divide by zero encountered in log
         return - numpy.log(1. - poe) / t_haz
 
 
