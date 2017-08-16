@@ -181,6 +181,8 @@ class ClassicalDamageTestCase(CalculatorTestCase):
             'expected/damages-rlzs-AkkarBommer2010().csv', f2)
         self.assertEqualFiles(
             'expected/damages-rlzs-SadighEtAl1997().csv', f1)
+        [f] = export(('damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/damages-stats.csv', f)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_poe_1(self):

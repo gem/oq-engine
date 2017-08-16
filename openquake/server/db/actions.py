@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
-import glob
 import operator
 from datetime import datetime
 
@@ -223,6 +222,7 @@ def get_outputs(db, job_id):
     """
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
+
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset')
 
 
@@ -268,31 +268,30 @@ def del_calc(db, job_id, user):
     dependent = db(
         'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
     if dependent:
-        return ('Cannot delete calculation %d: there are calculations '
-                'dependent from it: %s' % (job_id, [j.id for j in dependent]))
+        return {"error": 'Cannot delete calculation %d: there '
+                'are calculations '
+                'dependent from it: %s' % (job_id, [j.id for j in dependent])}
     try:
         owner, path = db('SELECT user_name, ds_calc_dir FROM job WHERE id=?x',
                          job_id, one=True)
     except NotFound:
-        return ('Cannot delete calculation %d: ID does not exist' % job_id)
+        return {"error": 'Cannot delete calculation %d:'
+                ' ID does not exist' % job_id}
 
     deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
                  job_id, user).rowcount
     if not deleted:
-        return ('Cannot delete calculation %d: it belongs to '
-                '%s and you are %s' % (job_id, owner, user))
+        return {"error": 'Cannot delete calculation %d: it belongs to '
+                '%s and you are %s' % (job_id, owner, user)}
 
-    # try to delete datastore and associated files
+    # try to delete datastore and associated file
     # path has typically the form /home/user/oqdata/calc_XXX
-    fnames = []
-    for fname in glob.glob(path + '.*'):
-        try:
-            os.remove(fname)
-        except OSError as exc:  # permission error
-            print('Could not remove %s: %s' % (fname, exc))
-        else:
-            fnames.append(fname)
-    return fnames
+    fname = path + ".hdf5"
+    try:
+        os.remove(fname)
+    except OSError as exc:  # permission error
+        return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    return {"success": fname}
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -399,11 +398,11 @@ def what_if_I_upgrade(db, extract_scripts):
         db.conn, extract_scripts=extract_scripts)
 
 
-def version_db(db):
+def db_version(db):
     """
     :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    return upgrade_manager.version_db(db.conn)
+    return upgrade_manager.db_version(db.conn)
 
 
 def upgrade_db(db):
@@ -629,6 +628,5 @@ def find(db, description):
 SELECT id, description, user_name,
   (julianday(stop_time) - julianday(start_time)) * 24 AS hours
 FROM job WHERE status='complete' AND description LIKE lower(?x)
-ORDER BY id desc'''
+ORDER BY julianday(stop_time) - julianday(start_time)'''
     return db(query, description.lower())
-
