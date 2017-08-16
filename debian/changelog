@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Update the demos to the format NRML 0.5
+  * Updated the demos to the format NRML 0.5
 
   [Graeme Weatherill]
   * Adapts CoeffsTable to be instantiated with dictionaries as well as strings
