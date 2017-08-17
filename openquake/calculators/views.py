@@ -709,11 +709,13 @@ def view_dupl_sources(token, dstore):
             tbl.append((source_id, calc_time, grp_ids))
     if tbl:
         if info.attrs['has_dupl_sources']:
-            m = 'Total calc_time in duplicated sources: %d/%d\n' % (
-                tot_calc_time, info['calc_time'].sum())
+            tot = info['calc_time'].sum()
+            percent = tot_calc_time / tot * 100
+            m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
+                tot_calc_time, tot, percent)
         else:
-            m = 'Sources with the same ID but different parameters\n'
-        return m + rst_table(tbl, ['source_id', 'calc_time', 'src_group_ids'])
+            m = '\nSources with the same ID but different parameters'
+        return rst_table(tbl, ['source_id', 'calc_time', 'src_group_ids']) + m
     else:
         return 'There are no duplicated sources'
 

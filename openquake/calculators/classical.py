@@ -383,8 +383,11 @@ class PSHACalculator(base.HazardCalculator):
         # computing properly the length in bytes of a variable length array
         nbytes = array.nbytes + sum(rec['rlzis'].nbytes for rec in array)
         self.datastore.set_attrs('csm_info/assoc_by_grp', nbytes=nbytes)
-        self.datastore.set_attrs('source_info', nbytes=array.nbytes,
-                                 has_dupl_sources=self.csm.has_dupl_sources)
+        if 'source_info' in self.datastore:
+            # the table is missing for UCERF, we should fix that
+            self.datastore.set_attrs(
+                'source_info', nbytes=array.nbytes,
+                has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
