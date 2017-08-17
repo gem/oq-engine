@@ -552,9 +552,12 @@ class CompositeSourceModel(collections.Sequence):
         # populated by the split_sources method
         self.infos = {}
         try:
-            self.check_dupl_sources()
+            dupl_sources = self.check_dupl_sources()
         except AssertionError:
             logging.warn('Found different sources with the same ID')
+            self.has_dupl_sources = 0
+        else:
+            self.has_dupl_sources = len(dupl_sources)
 
     def get_model(self, sm_id):
         """
