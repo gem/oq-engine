@@ -128,7 +128,7 @@ def ucerf_classical(
                    truncation_level, ctx_mon, pne_mons)
     nsites = len(s_sites)
     pmap.calc_times = [
-        (ucerf_source.source_id, nruptures, nsites, time.time() - t0)]
+        (ucerf_source.source_id, nruptures * nsites, nsites, time.time() - t0)]
     pmap.grp_id = ucerf_source.src_group_id
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
     return pmap
