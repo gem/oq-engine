@@ -94,6 +94,13 @@ def capitalize(words):
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
 
+def _equal_nodes(nodes):
+    n0 = nodes[0].to_str()
+    for n in nodes[1:]:
+        assert n.to_str() == n0
+    return nodes
+
+
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -601,6 +608,20 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 yield src_group
+
+    def get_dupl_sources(self):  # used in print_csm_info
+        """
+        Extracts duplicated sources, i.e. sources with the same source_id in
+        different source groups.
+
+        :returns: a list of list of sources, ordered by source_id
+        """
+        dd = collections.defaultdict(list)
+        for src_group in self.src_groups:
+            for srcnode in src_group:
+                dd[srcnode['id']].append(srcnode)
+        return [_equal_nodes(srcs) for srcid, srcs in sorted(dd.items())
+                if len(srcs) > 1]
 
     def get_sources(self, kind='all', maxweight=None):
         """

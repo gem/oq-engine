@@ -703,7 +703,10 @@ def view_dupl_sources(token, dstore):
     for source_id, records in items:
         if len(records) > 1:  # dupl
             tbl.append((source_id, sorted(rec['grp_id'] for rec in records)))
-    return rst_table(tbl, header=['source_id', 'src_group_ids'])
+    if tbl:
+        return rst_table(tbl, header=['source_id', 'src_group_ids'])
+    else:
+        return 'There are no duplicated sources'
 
 
 @view.add('global_poes')
