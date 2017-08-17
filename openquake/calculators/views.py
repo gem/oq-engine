@@ -700,11 +700,17 @@ def view_dupl_sources(token, dstore):
     info = dstore['source_info'].value
     items = sorted(group_array(info, 'source_id').items())
     tbl = []
+    tot_calc_time = 0
     for source_id, records in items:
         if len(records) > 1:  # dupl
-            tbl.append((source_id, sorted(rec['grp_id'] for rec in records)))
+            calc_time = records['calc_time'].sum()
+            tot_calc_time += calc_time
+            grp_ids = sorted(rec['grp_id'] for rec in records)
+            tbl.append((source_id, calc_time, grp_ids))
     if tbl:
-        return rst_table(tbl, header=['source_id', 'src_group_ids'])
+        m = '\nTotal calc_time in duplicated sources: %d/%d' % (
+            tot_calc_time, info['calc_time'].sum())
+        return rst_table(tbl, ['source_id', 'calc_time', 'src_group_ids']) + m
     else:
         return 'There are no duplicated sources'
 
