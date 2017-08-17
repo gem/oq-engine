@@ -1,11 +1,11 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1807.hdf5 Fri Jul  7 07:32:34 2017
-checksum32                                      17,280,623              
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14456.hdf5 Thu Aug 17 11:47:57 2017
+checksum32                                       17,280,623              
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 3, num_imts = 2
 
@@ -97,9 +97,9 @@ source_model_2.xml 3      Active Shallow Crust     1           240          240
 Informational data
 ------------------
 ============================== ============================================================================
-count_eff_ruptures.received    tot 2.31 KB, max_per_task 591 B                                             
+count_eff_ruptures.received    tot 2.35 KB, max_per_task 602 B                                             
 count_eff_ruptures.sent        sources 6 KB, param 3.08 KB, srcfilter 2.89 KB, monitor 1.26 KB, gsims 730 B
-hazard.input_weight            51.0                                                                        
+hazard.input_weight            153.0                                                                       
 hazard.n_imts                  2                                                                           
 hazard.n_levels                17                                                                          
 hazard.n_realizations          12                                                                          
@@ -117,8 +117,8 @@ grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 3      1         AreaSource   240          0.002     3         1        
 2      1         AreaSource   240          0.002     3         1        
-0      1         PointSource  15           1.972E-04 3         1        
-1      2         PointSource  15           1.829E-04 3         1        
+1      2         PointSource  15           1.996E-04 3         1        
+0      1         PointSource  15           1.876E-04 3         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -127,14 +127,23 @@ Computation times by source typology
 source_class calc_time counts
 ============ ========= ======
 AreaSource   0.003     2     
-PointSource  3.800E-04 2     
+PointSource  3.872E-04 2     
 ============ ========= ======
+
+Duplicated sources
+------------------
+========= ========= =============
+source_id calc_time src_group_ids
+========= ========= =============
+1         0.003     0 2 3        
+========= ========= =============
+Sources with the same ID but different parameters
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 8.914E-04 0.001 0.003 4        
+count_eff_ruptures 0.002 8.544E-04 0.001 0.003 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -144,10 +153,10 @@ operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.009     0.0       1     
 total count_eff_ruptures       0.007     0.0       4     
-store source_info              0.005     0.0       1     
-managing sources               0.004     0.0       1     
+store source_info              0.006     0.0       1     
+managing sources               0.005     0.0       1     
 prefiltering source model      0.002     0.0       1     
-aggregate curves               8.678E-05 0.0       4     
-reading site collection        3.982E-05 0.0       1     
-saving probability maps        3.076E-05 0.0       1     
+aggregate curves               8.845E-05 0.0       4     
+reading site collection        3.958E-05 0.0       1     
+saving probability maps        2.909E-05 0.0       1     
 ============================== ========= ========= ======

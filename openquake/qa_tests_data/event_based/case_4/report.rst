@@ -1,11 +1,11 @@
 Event-Based Hazard QA Test, Case 4
 ==================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1842.hdf5 Fri Jul  7 07:33:03 2017
-checksum32                                      2,872,781,101           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14491.hdf5 Thu Aug 17 11:48:26 2017
+checksum32                                       2,872,781,101           
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 1, num_imts = 1
 
@@ -74,7 +74,7 @@ Informational data
 ------------------
 ============================ =========================================================================
 compute_ruptures.received    max_per_task 7.33 KB, tot 7.33 KB                                        
-compute_ruptures.sent        sources 1.23 KB, src_filter 684 B, param 605 B, monitor 320 B, gsims 91 B
+compute_ruptures.sent        sources 1.23 KB, src_filter 684 B, param 605 B, monitor 321 B, gsims 91 B
 hazard.input_weight          10.0                                                                     
 hazard.n_imts                1                                                                        
 hazard.n_levels              3                                                                        
@@ -102,11 +102,15 @@ source_class      calc_time counts
 SimpleFaultSource 0.0       1     
 ================= ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.015 NaN    0.015 0.015 1        
+compute_ruptures   0.009 NaN    0.009 0.009 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -114,13 +118,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.015     0.0       1     
+total compute_ruptures         0.009     0.0       1     
 store source_info              0.003     0.0       1     
 reading composite source model 0.003     0.0       1     
 saving ruptures                0.003     0.0       1     
-filtering ruptures             0.002     0.0       10    
+managing sources               0.001     0.0       1     
 prefiltering source model      0.001     0.0       1     
 setting event years            0.001     0.0       1     
-managing sources               0.001     0.0       1     
-reading site collection        3.266E-05 0.0       1     
+filtering ruptures             0.001     0.0       10    
+reading site collection        3.052E-05 0.0       1     
 ============================== ========= ========= ======
