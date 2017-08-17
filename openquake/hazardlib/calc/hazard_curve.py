@@ -198,6 +198,7 @@ def pmap_from_grp(
         else:
             srcs.append(src)
     del sources
+    srcs.sort(key=operator.attrgetter('source_id'))
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
         cmaker = ContextMaker(gsims, maxdist)
