@@ -437,7 +437,7 @@ def get_composite_source_model(oqparam, in_memory=True):
     def getid(src):
         try:
             return src.source_id
-        except:
+        except AttributeError:
             return src['id']
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
