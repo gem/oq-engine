@@ -39,7 +39,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'seed', 'id']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
-    nsites = 1  # must be overridden as instance attribute
+    nsites = 1  # FIXME: remove this and fix all hazardlib tests
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
