@@ -391,7 +391,7 @@ def export_hcurves_rlzs(ekey, dstore):
         dset = f.create_dataset('hcurves-rlzs', (N, R), imtls.dt)
         dset.attrs['investigation_time'] = oq.investigation_time
         logging.info('Building the hazard curves for %d sites, %d rlzs', N, R)
-        for sids, allcurves in parallel.Processmap(build_hcurves, allargs):
+        for sids, allcurves in parallel.Starmap(build_hcurves, allargs):
             for sid, curves in zip(sids, allcurves):
                 dset[sid] = curves
     return [fname]
