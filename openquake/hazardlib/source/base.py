@@ -39,6 +39,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'seed', 'id']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
+    nsites = 1
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -52,8 +53,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        nsites = getattr(self, 'nsites', 1)
-        return self.num_ruptures * self.RUPTURE_WEIGHT * nsites
+        return self.num_ruptures * self.RUPTURE_WEIGHT * self.nsites
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
