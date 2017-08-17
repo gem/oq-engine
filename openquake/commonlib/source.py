@@ -94,7 +94,7 @@ def capitalize(words):
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
 
-def _equal_sources(nodes):
+def _assert_equal_sources(nodes):
     if hasattr(nodes[0], 'source_id'):
         n0 = nodes[0]
         for n in nodes[1:]:
@@ -644,8 +644,8 @@ class CompositeSourceModel(collections.Sequence):
                 except AttributeError:  # src is a Node object
                     srcid = src['id']
                 dd[srcid].append(src)
-        return [_equal_sources(srcs) for srcid, srcs in sorted(dd.items())
-                if len(srcs) > 1]
+        return [_assert_equal_sources(srcs)
+                for srcid, srcs in sorted(dd.items()) if len(srcs) > 1]
 
     def get_sources(self, kind='all', maxweight=None):
         """
