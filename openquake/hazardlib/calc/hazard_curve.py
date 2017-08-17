@@ -222,7 +222,7 @@ def pmap_from_grp(
                     pcurve = pmap.setdefault(sid, 0)
                     pcurve += poemap[sid] * weight
             pmap.calc_times.append(
-                (src.source_id, len(s_sites), time.time() - t0))
+                (src.source_id, src.weight, len(s_sites), time.time() - t0))
         # storing the number of contributing ruptures too
         pmap.eff_ruptures = {pmap.grp_id: pne_mons[0].counts}
         if group.grp_probability is not None:

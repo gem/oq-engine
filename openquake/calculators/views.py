@@ -29,6 +29,7 @@ import numpy
 from openquake.baselib.general import (
     humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
+from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import unicode, decode
 from openquake.baselib.general import group_array
 from openquake.hazardlib import valid, stats as hstats
@@ -610,8 +611,9 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
-        val = dstore['task_info/' + task]['duration']
-        data.append(stats(task, val))
+        if task != 'source_data':  # this is special
+            val = dstore['task_info/' + task]['duration']
+            data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
@@ -629,17 +631,26 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task_slowest')
-def view_task_slowest(token, dstore):
+@view.add('task')
+def view_task(token, dstore):
     """
-    Display info about the slowest classical task.
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task:0  # the fastest task
+     $ oq show task:-1  # the slowest task
     """
-    i = dstore['task_info/classical']['duration'].argmax()
-    taskno, weight, duration = dstore['task_info/classical'][i]
+    data = dstore['task_info/classical'].value
+    data.sort(order='duration')
+    i = int(token.split(':')[1])
+    taskno, weight, duration = data[i]
+    arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
+    st = [stats('nsites', arr['nsites']),
+          stats('weight', arr['weight'])]
     sources = dstore['task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
-    return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
+    res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
+    return res + rst_table(st, header='variable mean stddev min max n'.split())
 
 
 @view.add('hmap')
