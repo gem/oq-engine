@@ -16,6 +16,7 @@
 """
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
+import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.point import (
     PointSource, angular_distance, KM_TO_DEGREES)
@@ -30,7 +31,7 @@ class MultiPointSource(ParametricSeismicSource):
     lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution
     """
     MODIFICATIONS = set(())
-    RUPTURE_WEIGHT = 1 / 10.
+    RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -89,13 +90,21 @@ class MultiPointSource(ParametricSeismicSource):
                 len(self.hypocenter_distribution.data))
 
     def filter_sites_by_distance_to_source(self, integration_distance, sites):
-        """Do not filter"""
-        return sites
+        """Filter on the bounding box"""
+        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box(
+            integration_distance)
+        n = len(sites)
+        mask = numpy.zeros(n, bool)
+        for i in range(n):
+            lon, lat = sites.lons[i], sites.lats[i]
+            if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat:
+                mask[i] = True
+        return sites.filter(mask)
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """No polygon"""
 
-    def get_bounding_box(self, maxdist):
+    def get_bounding_box(self, integration_distance):
         """
         Bounding box containing all points, enlarged by the maximum distance
         and the maximum rupture projection radius (upper limit).
@@ -107,9 +116,9 @@ class MultiPointSource(ParametricSeismicSource):
             min_lon, max_lon = max_lon, min_lon + 360
         min_lat = self.mesh.lats.min()
         max_lat = self.mesh.lats.max()
-        a1 = (maxdist + maxradius) * KM_TO_DEGREES
-        a2 = max(angular_distance(maxdist + maxradius, min_lat),
-                 angular_distance(maxdist + maxradius, max_lat))
+        a1 = (integration_distance + maxradius) * KM_TO_DEGREES
+        a2 = max(angular_distance(integration_distance + maxradius, min_lat),
+                 angular_distance(integration_distance + maxradius, max_lat))
         return min_lon - a2, min_lat - a1, max_lon + a2, max_lat + a1
 
     _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']

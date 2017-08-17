@@ -37,7 +37,8 @@ from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.commonlib import logictree
 
 
-MAXWEIGHT = sourceconverter.MAXWEIGHT
+MINWEIGHT = sourceconverter.MINWEIGHT
+MAXWEIGHT = 5E6  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
 U16 = numpy.uint16
@@ -690,7 +691,12 @@ class CompositeSourceModel(collections.Sequence):
         Return an appropriate maxweight for use in the block_splitter
         """
         ct = concurrent_tasks or 1
-        return max(math.ceil(self.weight / ct), MAXWEIGHT)
+        mw = math.ceil(self.weight / ct)
+        if mw < MINWEIGHT:
+            mw = MINWEIGHT
+        elif mw > MAXWEIGHT:
+            mw = MAXWEIGHT
+        return mw
 
     def add_infos(self, sources):
         """
@@ -699,7 +705,7 @@ class CompositeSourceModel(collections.Sequence):
         for src in sources:
             self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
 
-    def split_sources(self, sources, src_filter, maxweight=MAXWEIGHT):
+    def split_sources(self, sources, src_filter, maxweight):
         """
         Split a set of sources of the same source group; light sources
         (i.e. with weight <= maxweight) are not split.
