@@ -102,7 +102,12 @@ def _equal_sources(nodes):
     else:  # assume source nodes
         n0 = nodes[0].to_str()
         for n in nodes[1:]:
-            assert n.to_str() == n0, 'source id=%s' % n['id']
+            eq = n.to_str() == n0
+            if not eq:
+                f0 = writetmp(n0)
+                f1 = writetmp(n.to_str())
+            assert eq, 'different parameters for source %s, run meld %s %s' % (
+                n['id'], f0, f1)
     return nodes
 
 
