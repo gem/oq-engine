@@ -557,6 +557,8 @@ class CompositeSourceModel(collections.Sequence):
             logging.warn('Found different sources with the same ID')
             self.has_dupl_sources = 0
         else:
+            for srcs in dupl_sources:
+                logging.warn('Found duplicated source %s', srcs[0].source_id)
             self.has_dupl_sources = len(dupl_sources)
 
     def get_model(self, sm_id):
