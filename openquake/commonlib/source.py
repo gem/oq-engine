@@ -94,10 +94,15 @@ def capitalize(words):
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
 
-def _equal_nodes(nodes):
-    n0 = nodes[0].to_str()
-    for n in nodes[1:]:
-        assert n.to_str() == n0
+def _equal_sources(nodes):
+    if hasattr(nodes[0], 'source_id'):
+        n0 = nodes[0]._slots_
+        for n in nodes[1:]:
+            assert n._slots_ == n0, (n._slots_, n0)
+    else:  # assume source nodes
+        n0 = nodes[0].to_str()
+        for n in nodes[1:]:
+            assert n.to_str() == n0
     return nodes
 
 
@@ -546,6 +551,7 @@ class CompositeSourceModel(collections.Sequence):
         # dictionary src_group_id, source_id -> SourceInfo,
         # populated by the split_sources method
         self.infos = {}
+        self.check_dupl_sources()
 
     def get_model(self, sm_id):
         """
@@ -609,18 +615,23 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
-    def get_dupl_sources(self):  # used in print_csm_info
+    def check_dupl_sources(self):  # used in print_csm_info
         """
         Extracts duplicated sources, i.e. sources with the same source_id in
-        different source groups.
+        different source groups. Raise an exception if there are sources with
+        the same ID which are not duplicated.
 
         :returns: a list of list of sources, ordered by source_id
         """
         dd = collections.defaultdict(list)
         for src_group in self.src_groups:
-            for srcnode in src_group:
-                dd[srcnode['id']].append(srcnode)
-        return [_equal_nodes(srcs) for srcid, srcs in sorted(dd.items())
+            for src in src_group:
+                try:
+                    srcid = src.source_id
+                except AttributeError:  # src is a Node object
+                    srcid = src['id']
+                dd[srcid].append(src)
+        return [_equal_sources(srcs) for srcid, srcs in sorted(dd.items())
                 if len(srcs) > 1]
 
     def get_sources(self, kind='all', maxweight=None):
