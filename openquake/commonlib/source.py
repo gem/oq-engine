@@ -96,13 +96,13 @@ def capitalize(words):
 
 def _equal_sources(nodes):
     if hasattr(nodes[0], 'source_id'):
-        n0 = nodes[0]._slots_
+        n0 = nodes[0]
         for n in nodes[1:]:
-            assert n._slots_ == n0, (n._slots_, n0)
+            n.assert_equal(n0, ignore=('id', 'src_group_id'))
     else:  # assume source nodes
         n0 = nodes[0].to_str()
         for n in nodes[1:]:
-            assert n.to_str() == n0
+            assert n.to_str() == n0, 'source id=%s' % n['id']
     return nodes
 
 
@@ -551,7 +551,10 @@ class CompositeSourceModel(collections.Sequence):
         # dictionary src_group_id, source_id -> SourceInfo,
         # populated by the split_sources method
         self.infos = {}
-        self.check_dupl_sources()
+        try:
+            self.check_dupl_sources()
+        except AssertionError:
+            logging.warn('Found different sources with the same ID')
 
     def get_model(self, sm_id):
         """
