@@ -660,7 +660,7 @@ class CompositeSourceModel(collections.Sequence):
         for src in sources:
             self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
 
-    def split_sources(self, sources, src_filter, maxweight=MINWEIGHT):
+    def split_sources(self, sources, src_filter, maxweight):
         """
         Split a set of sources of the same source group; light sources
         (i.e. with weight <= maxweight) are not split.
