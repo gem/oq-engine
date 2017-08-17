@@ -25,7 +25,7 @@
 
   </simpleFaultSource>
   
-  <characteristicFaultSource id="3" name="characteristic fault" tectonicRegion="Stable Shallow Crust">
+  <characteristicFaultSource id="2" name="characteristic fault" tectonicRegion="Stable Shallow Crust">
 	<surface><simpleFaultGeometry>
 	  <gml:LineString>
 		<gml:posList>
