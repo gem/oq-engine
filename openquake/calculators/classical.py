@@ -37,6 +37,7 @@ from openquake.commonlib import datastore, source, calc, util
 from openquake.calculators import base
 
 U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
@@ -200,16 +201,23 @@ def classical(sources, src_filter, gsims, param, monitor):
     pmap.bbs = bbs
     return pmap
 
+source_data_dt = numpy.dtype(
+    [('taskno', U16), ('nsites', U32), ('weight', F32)])
+
 
 def saving_sources_by_task(iterargs, dstore):
     """
     Yield the iterargs again by populating 'task_info/source_ids'
     """
     source_ids = []
-    for args in iterargs:
+    data = []
+    for i, args in enumerate(iterargs, 1):
         source_ids.append(' ' .join(src.source_id for src in args[0]))
+        for src in args[0]:  # collect source data
+            data.append((i, src.nsites, src.weight))
         yield args
     dstore['task_sources'] = numpy.array([encode(s) for s in source_ids])
+    dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
 
 
 @base.calculators.add('psha')
@@ -228,7 +236,7 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap: a ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            for src_id, nsites, calc_time in pmap.calc_times:
+            for src_id, nsites, srcweight, calc_time in pmap.calc_times:
                 src_id = src_id.split(':', 1)[0]
                 info = self.csm.infos[pmap.grp_id, src_id]
                 info.calc_time += calc_time
@@ -238,7 +246,6 @@ class PSHACalculator(base.HazardCalculator):
             for bb in getattr(pmap, 'bbs', []):  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
             acc[pmap.grp_id] |= pmap
-        self.datastore.flush()
         return acc
 
     def count_eff_ruptures(self, result_dict, src_group):

@@ -55,7 +55,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
         if sites is not None:
             count += src.num_ruptures
             dt = time.time() - t0
-            acc.calc_times.append((src.source_id, len(sites), dt))
+            acc.calc_times.append((src.source_id, len(sites), src.weight, dt))
     acc.eff_ruptures = {acc.grp_id: count}
     return acc
 
@@ -64,25 +64,27 @@ class ReportWriter(object):
     """
     A particularly smart view over the datastore
     """
-    title = dict(
-        params='Parameters',
-        inputs='Input files',
-        csm_info='Composite source model',
-        dupl_sources='Duplicated sources',
-        required_params_per_trt='Required parameters per tectonic region type',
-        ruptures_per_trt='Number of ruptures per tectonic region type',
-        ruptures_events='Specific information for event based',
-        rlzs_assoc='Realizations per (TRT, GSIM)',
-        job_info='Informational data',
-        biggest_ebr_gmf='Maximum memory allocated for the GMFs',
-        avglosses_data_transfer='Estimated data transfer for the avglosses',
-        exposure_info='Exposure model',
-        short_source_info='Slowest sources',
-        task_slowest='Slowest task',
-        task_info='Information about the tasks',
-        times_by_source_class='Computation times by source typology',
-        performance='Slowest operations',
-    )
+    title = {
+        'params': 'Parameters',
+        'inputs': 'Input files',
+        'csm_info': 'Composite source model',
+        'dupl_sources': 'Duplicated sources',
+        'required_params_per_trt':
+        'Required parameters per tectonic region type',
+        'ruptures_per_trt': 'Number of ruptures per tectonic region type',
+        'ruptures_events': 'Specific information for event based',
+        'rlzs_assoc': 'Realizations per (TRT, GSIM)',
+        'job_info': 'Informational data',
+        'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
+        'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
+        'exposure_info': 'Exposure model',
+        'short_source_info': 'Slowest sources',
+        'task:0': 'Fastest task',
+        'task:-1': 'Slowest task',
+        'task_info': 'Information about the tasks',
+        'times_by_source_class': 'Computation times by source typology',
+        'performance': 'Slowest operations',
+    }
 
     def __init__(self, dstore):
         self.dstore = dstore
@@ -138,7 +140,8 @@ class ReportWriter(object):
         if 'task_info' in ds:
             self.add('task_info')
             if 'classical' in ds['task_info']:
-                self.add('task_slowest')
+                self.add('task:0')
+                self.add('task:-1')
         if 'performance_data' in ds:
             self.add('performance')
         return self.text
