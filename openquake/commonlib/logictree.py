@@ -1282,6 +1282,21 @@ class GsimLogicTree(object):
         idx = self.all_trts.index(trt)
         return rlz.value[idx]
 
+    def get_gsims(self, trt, rlzs=None):
+        """
+        :param trt: tectonic region type
+        :param rlzs: a sequence of realization indices (or None)
+        :returns: sorted list of available GSIMs for that trt
+        """
+        if rlzs is None:
+            gsims = self.values[trt]
+        else:
+            gsims = set()
+            for rlz in rlzs:
+                [gsim] = rlz.value
+                gsims.add(gsim)
+        return sorted(set(gsims))
+
     def __iter__(self):
         """
         Yield :class:`openquake.commonlib.logictree.Realization` instances
