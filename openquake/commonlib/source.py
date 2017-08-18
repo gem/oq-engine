@@ -589,7 +589,7 @@ def _get_assoc_by_grp(gsim_lt, rlzs, src_groups, offset):
     dic = collections.defaultdict(list)
     idx = {}
     for i, sg in enumerate(src_groups):
-        gsims = sorted(gsim_lt.values[sg.trt])
+        gsims = gsim_lt.get_gsims(sg.trt, rlzs)
         for j, gsim in enumerate(gsims):
             idx[i, gsim] = sg.id, j
     for rlzi, rlz in enumerate(rlzs):
