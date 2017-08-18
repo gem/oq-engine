@@ -587,12 +587,13 @@ class CompositionInfo(object):
 def _get_assoc_by_grp(rlzs, src_groups, offset):
     dic = collections.defaultdict(list)
     idx = {}
-    for i, sg in enumerate(src_groups):
-        gsims = sorted(set(rlz.value[i] for rlz in rlzs))
+    for sg in src_groups:
+        gsims = sorted(set(rlz.value[sg.id] for rlz in rlzs))
         for j, gsim in enumerate(gsims):
             idx[sg.id, gsim] = sg.id, j
     for rlzi, rlz in enumerate(rlzs):
-        for sg, gsim in zip(src_groups, rlz.value):
+        for sg in src_groups:
+            gsim = rlz.value[sg.id]
             dic[idx[sg.id, gsim]].append(rlzi + offset)
     return [(sgid, j, numpy.array(rlzis, U16))
             for (sgid, j), rlzis in sorted(dic.items())]
