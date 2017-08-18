@@ -490,13 +490,12 @@ class CompositionInfo(object):
         for i, smodel in enumerate(self.source_models):
             # collect the effective tectonic region types and ruptures
             trts = set()
-            src_groups = []
             for sg in smodel.src_groups:
                 if count_ruptures:
                     sg.eff_ruptures = count_ruptures(sg)
                 if sg.eff_ruptures:
                     trts.add(sg.trt)
-                    src_groups.append(sg)
+
             # recompute the GSIM logic tree if needed
             if trtset != trts:
                 before = self.gsim_lt.get_num_paths()
@@ -515,7 +514,7 @@ class CompositionInfo(object):
                 rlzs = logictree.get_effective_rlzs(gsim_lt)
             if rlzs:
                 indices = numpy.arange(idx, idx + len(rlzs))
-                lst.extend(_get_assoc_by_grp(rlzs, src_groups, idx))
+                lst.extend(_get_assoc_by_grp(rlzs, smodel.src_groups, idx))
                 idx += len(indices)
             elif trts:
                 logging.warn('No realizations for %s, %s',
@@ -587,14 +586,14 @@ class CompositionInfo(object):
 def _get_assoc_by_grp(rlzs, src_groups, offset):
     dic = collections.defaultdict(list)
     idx = {}
-    for sg in src_groups:
-        gsims = sorted(set(rlz.value[sg.id] for rlz in rlzs))
+    for i, sg in enumerate(src_groups):
+        gsims = sorted(set(rlz.value[i] for rlz in rlzs))
         for j, gsim in enumerate(gsims):
-            idx[sg.id, gsim] = sg.id, j
+            idx[i, gsim] = sg.id, j
     for rlzi, rlz in enumerate(rlzs):
-        for sg in src_groups:
-            gsim = rlz.value[sg.id]
-            dic[idx[sg.id, gsim]].append(rlzi + offset)
+        for i, sg in enumerate(src_groups):
+            gsim = rlz.value[i]
+            dic[idx[i, gsim]].append(rlzi + offset)
     return [(sgid, j, numpy.array(rlzis, U16))
             for (sgid, j), rlzis in sorted(dic.items())]
 
