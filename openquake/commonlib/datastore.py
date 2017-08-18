@@ -407,10 +407,10 @@ class DataStore(collections.MutableMapping):
                         'No %r found in %s and ancestors' % (key, self))
             else:
                 raise KeyError('No %r found in %s' % (key, self))
-        try:
-            shape = val.shape
-        except AttributeError:  # val is a group
-            return val
+        #try:
+        #    shape = val.shape
+        #except AttributeError:  # val is a group
+        #    return val
         #if not shape:
         #    val = pickle.loads(val.value)
         return val
