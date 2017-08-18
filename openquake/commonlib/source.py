@@ -514,7 +514,8 @@ class CompositionInfo(object):
                 rlzs = logictree.get_effective_rlzs(gsim_lt)
             if rlzs:
                 indices = numpy.arange(idx, idx + len(rlzs))
-                abg = _get_assoc_by_grp(gsim_lt, rlzs, smodel, idx)
+                abg = _get_assoc_by_grp(
+                    self.num_samples, gsim_lt, rlzs, smodel, idx)
                 lst.extend(abg)
                 idx += len(indices)
             elif trts:
@@ -584,11 +585,11 @@ class CompositionInfo(object):
             self.__class__.__name__, '\n'.join(summary))
 
 
-def _get_assoc_by_grp(gsim_lt, rlzs, smodel, offset):
+def _get_assoc_by_grp(num_samples, gsim_lt, rlzs, smodel, offset):
     dic = collections.defaultdict(list)
     idx = {}
     for i, sg in enumerate(smodel.src_groups):
-        gsims = gsim_lt.get_gsims(sg.trt, rlzs if smodel.samples > 1 else None)
+        gsims = gsim_lt.get_gsims(sg.trt, rlzs if num_samples else None)
         for j, gsim in enumerate(gsims):
             idx[i, gsim] = sg.id, j
     for rlzi, rlz in enumerate(rlzs):
