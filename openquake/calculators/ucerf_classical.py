@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import time
-import socket
 import logging
-import functools
 from datetime import datetime
 import numpy
 import h5py
