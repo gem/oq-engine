@@ -1289,13 +1289,15 @@ class GsimLogicTree(object):
         :returns: sorted list of available GSIMs for that trt
         """
         if rlzs is None:
+            if trt == '*':  # fake logictree
+                [trt] = self.values
             gsims = self.values[trt]
         else:
             gsims = set()
             for rlz in rlzs:
                 [gsim] = rlz.value
                 gsims.add(gsim)
-        return sorted(set(gsims))
+        return sorted(gsims)
 
     def __iter__(self):
         """
