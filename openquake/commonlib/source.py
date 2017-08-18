@@ -514,7 +514,7 @@ class CompositionInfo(object):
                 rlzs = logictree.get_effective_rlzs(gsim_lt)
             if rlzs:
                 indices = numpy.arange(idx, idx + len(rlzs))
-                abg = _get_assoc_by_grp(gsim_lt, rlzs, smodel.src_groups, idx)
+                abg = _get_assoc_by_grp(gsim_lt, rlzs, smodel, idx)
                 lst.extend(abg)
                 idx += len(indices)
             elif trts:
@@ -584,16 +584,15 @@ class CompositionInfo(object):
             self.__class__.__name__, '\n'.join(summary))
 
 
-def _get_assoc_by_grp(gsim_lt, rlzs, src_groups, offset):
-    # reduced_src_groups = [sg for sg in src_groups if sg.eff_ruptures]
+def _get_assoc_by_grp(gsim_lt, rlzs, smodel, offset):
     dic = collections.defaultdict(list)
     idx = {}
-    for i, sg in enumerate(src_groups):
-        gsims = gsim_lt.get_gsims(sg.trt, rlzs)
+    for i, sg in enumerate(smodel.src_groups):
+        gsims = gsim_lt.get_gsims(sg.trt, rlzs if smodel.samples > 1 else None)
         for j, gsim in enumerate(gsims):
             idx[i, gsim] = sg.id, j
     for rlzi, rlz in enumerate(rlzs):
-        for i, sg in enumerate(src_groups):
+        for i, sg in enumerate(smodel.src_groups):
             gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
             dic[idx[i, gsim]].append(rlzi + offset)
     return [(sgid, j, numpy.array(rlzis, U16))
