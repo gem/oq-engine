@@ -514,7 +514,8 @@ class CompositionInfo(object):
                 rlzs = logictree.get_effective_rlzs(gsim_lt)
             if rlzs:
                 indices = numpy.arange(idx, idx + len(rlzs))
-                lst.extend(_get_assoc_by_grp(rlzs, smodel.src_groups, idx))
+                abg = _get_assoc_by_grp(gsim_lt, rlzs, smodel.src_groups, idx)
+                lst.extend(abg)
                 idx += len(indices)
             elif trts:
                 logging.warn('No realizations for %s, %s',
@@ -583,16 +584,16 @@ class CompositionInfo(object):
             self.__class__.__name__, '\n'.join(summary))
 
 
-def _get_assoc_by_grp(rlzs, src_groups, offset):
+def _get_assoc_by_grp(gsim_lt, rlzs, src_groups, offset):
+    # reduced_src_groups = [sg for sg in src_groups if sg.eff_ruptures]
     dic = collections.defaultdict(list)
     idx = {}
     for i, sg in enumerate(src_groups):
-        gsims = sorted(set(rlz.value[i] for rlz in rlzs))
-        for j, gsim in enumerate(gsims):
+        for j, gsim in enumerate(sg.gsims):
             idx[i, gsim] = sg.id, j
     for rlzi, rlz in enumerate(rlzs):
         for i, sg in enumerate(src_groups):
-            gsim = rlz.value[i]
+            gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
             dic[idx[i, gsim]].append(rlzi + offset)
     return [(sgid, j, numpy.array(rlzis, U16))
             for (sgid, j), rlzis in sorted(dic.items())]
