@@ -385,11 +385,9 @@ class PSHACalculator(base.HazardCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
-        self.datastore['csm_info/assoc_by_grp'] = array = (
-            self.csm.info.get_assoc_by_grp(
-                partial(self.count_eff_ruptures, acc)))
+        self.datastore['csm_info/assoc_by_grp'] = arr = self.rlzs_assoc.array
         # computing properly the length in bytes of a variable length array
-        nbytes = array.nbytes + sum(rec['rlzis'].nbytes for rec in array)
+        nbytes = arr.nbytes + sum(rec['rlzis'].nbytes for rec in arr)
         self.datastore.set_attrs('csm_info/assoc_by_grp', nbytes=nbytes)
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that

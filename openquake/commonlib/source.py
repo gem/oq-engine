@@ -253,19 +253,6 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
-    def get_assoc_by_grp(self):
-        """
-        :returns: a numpy array of dtype assoc_by_grp_dt
-        """
-        lst = []
-        for grp_id, gsims in self.gsims_by_grp_id.items():
-            for gsim_idx, gsim in enumerate(gsims):
-                rlzis = numpy.array(
-                    [rlz.ordinal for rlz in self.rlzs_assoc[grp_id, gsim]],
-                    U16)
-                lst.append((grp_id, gsim_idx, rlzis))
-        return numpy.array(lst, assoc_by_grp_dt)
-
     def __iter__(self):
         return iter(self.rlzs_assoc)
 
@@ -425,64 +412,13 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    # the intention is to remove this in the future, but it is a lot of work
     def get_rlzs_assoc(self, count_ruptures=None):
-        """
-        Return a RlzsAssoc with fields realizations, gsim_by_trt,
-        rlz_idx and trt_gsims.
-
-        :param count_ruptures: a function src_group -> num_ruptures
-        """
-        assoc = RlzsAssoc(self)
-        random_seed = self.seed
-        idx = 0
-        trtset = set(self.gsim_lt.tectonic_region_types)
-        for i, smodel in enumerate(self.source_models):
-            # collect the effective tectonic region types and ruptures
-            trts = set()
-            for sg in smodel.src_groups:
-                if count_ruptures:
-                    sg.eff_ruptures = count_ruptures(sg)
-                if sg.eff_ruptures:
-                    trts.add(sg.trt)
-            # recompute the GSIM logic tree if needed
-            if trtset != trts:
-                before = self.gsim_lt.get_num_paths()
-                gsim_lt = self.gsim_lt.reduce(trts)
-                after = gsim_lt.get_num_paths()
-                if count_ruptures and before > after:
-                    logging.warn('Reducing the logic tree of %s from %d to %d '
-                                 'realizations', smodel.name, before, after)
-            else:
-                gsim_lt = self.gsim_lt
-            if self.num_samples:  # sampling
-                # the int is needed on Windows to convert numpy.uint32 objects
-                rnd = random.Random(int(random_seed + idx))
-                rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
-            else:  # full enumeration
-                rlzs = logictree.get_effective_rlzs(gsim_lt)
-            if rlzs:
-                indices = numpy.arange(idx, idx + len(rlzs))
-                idx += len(indices)
-                assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
-            elif trts:
-                logging.warn('No realizations for %s, %s',
-                             '_'.join(smodel.path), smodel.name)
-            if len(rlzs) > TWO16:
-                raise ValueError(
-                    'The source model %s has %d realizations, the maximum '
-                    'is %d' % (smodel.name, len(rlzs), TWO16))
-        # NB: realizations could be filtered away by logic tree reduction
-        if assoc.realizations:
-            assoc._init()
-        return assoc
-
-    def get_assoc_by_grp(self, count_ruptures=None):
         """
         Return an array assoc_by_grp
 
         :param count_ruptures: a function src_group -> num_ruptures
         """
+        assoc = RlzsAssoc(self)
         assoc_by_grp = []
         offset = 0
         trtset = set(self.gsim_lt.tectonic_region_types)
@@ -505,8 +441,12 @@ class CompositionInfo(object):
                                  'realizations', smodel.name, before, after)
             else:
                 gsim_lt = self.gsim_lt
-            offset = self._populate(assoc_by_grp, gsim_lt, smodel, offset)
-        return numpy.array(assoc_by_grp, assoc_by_grp_dt)
+            offset = self._populate(
+                assoc, assoc_by_grp, gsim_lt, smodel, offset)
+        assoc.array = numpy.array(assoc_by_grp, assoc_by_grp_dt)
+        if assoc.realizations:
+            assoc._init()
+        return assoc
 
     def get_source_model(self, src_group_id):
         """
@@ -565,7 +505,7 @@ class CompositionInfo(object):
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
 
-    def _populate(self, assoc_by_grp, gsim_lt, smodel, offset):
+    def _populate(self, assoc, assoc_by_grp, gsim_lt, smodel, offset):
         if self.num_samples:  # sampling
             # the int is needed on Windows to convert numpy.uint32 objects
             rnd = random.Random(int(self.seed + offset))
@@ -591,6 +531,7 @@ class CompositionInfo(object):
                     dic[idx[i, gsim]].append(rlzi + offset)
             assoc_by_grp.extend((sgid, j, numpy.array(rlzis, U16))
                                 for (sgid, j), rlzis in sorted(dic.items()))
+            assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             offset += len(indices)
         return offset
 
