@@ -138,6 +138,7 @@ class RlzsAssoc(collections.Mapping):
     (3, 'CampbellBozorgnia2008()') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self, csm_info):
+        self.array = None  # set by csm_info.get_rlzs_assoc()
         self.seed = csm_info.seed
         self.num_samples = csm_info.num_samples
         self.rlzs_assoc = collections.defaultdict(list)
@@ -204,16 +205,6 @@ class RlzsAssoc(collections.Mapping):
             if gid == grp_id:
                 rlzs_by_gsim[gsim] = [rlz.ordinal for rlz in self[gid, gsim]]
         return rlzs_by_gsim
-
-    def get_rlzs_by_grp_id(self):
-        """
-        Returns a dictionary grp_id > [sorted rlzs]
-        """
-        rlzs_by_grp_id = collections.defaultdict(set)
-        for (grp_id, gsim), rlzs in self.rlzs_assoc.items():
-            rlzs_by_grp_id[grp_id].update(rlzs)
-        return {grp_id: sorted(rlzs)
-                for grp_id, rlzs in rlzs_by_grp_id.items()}
 
     def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
         trts = gsim_lt.tectonic_region_types
