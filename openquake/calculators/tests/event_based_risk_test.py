@@ -231,9 +231,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check job_info is stored
-        job_info = dict(self.calc.datastore['job_info'])
-        self.assertIn(b'build_loss_maps.sent', job_info)
-        self.assertIn(b'build_loss_maps.received', job_info)
+        job_info = [str(k) for k in dict(self.calc.datastore['job_info'])]
+        self.assertIn('build_loss_maps.sent', job_info)
+        self.assertIn('build_loss_maps.received', job_info)
 
         check_total_losses(self.calc)
 
