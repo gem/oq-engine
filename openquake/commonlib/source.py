@@ -589,7 +589,8 @@ def _get_assoc_by_grp(gsim_lt, rlzs, src_groups, offset):
     dic = collections.defaultdict(list)
     idx = {}
     for i, sg in enumerate(src_groups):
-        for j, gsim in enumerate(sg.gsims):
+        gsims = sorted(gsim_lt.values[sg.trt])
+        for j, gsim in enumerate(gsims):
             idx[i, gsim] = sg.id, j
     for rlzi, rlz in enumerate(rlzs):
         for i, sg in enumerate(src_groups):
@@ -661,15 +662,12 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
+                for sg in sm.src_groups:
+                    sg.gsims = sorted(self.gsim_lt.values[sg.trt])
                 if self.source_model_lt.num_samples:
                     rnd = random.Random(seed + idx)
                     rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
                     idx += len(rlzs)
-                    for i, sg in enumerate(sm.src_groups):
-                        sg.gsims = sorted(set(rlz.value[i] for rlz in rlzs))
-                else:
-                    for sg in sm.src_groups:
-                        sg.gsims = sorted(self.gsim_lt.values[sg.trt])
                 sources = []
                 for src, sites in src_filter(src_group.sources):
                     sources.append(src)
