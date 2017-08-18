@@ -1,11 +1,11 @@
 Scenario QA Test for occupants
 ==============================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_1851.hdf5 Fri Jul  7 07:33:34 2017
-checksum32                               95,847,934              
-engine_version                           2.6.0-git50066b9        
-======================================== ========================
+========================================= ========================
+localhost:/mnt/ssd/oqdata/calc_14500.hdf5 Thu Aug 17 11:49:00 2017
+checksum32                                95,847,934              
+engine_version                            2.6.0-gitbdd9d17        
+========================================= ========================
 
 num_sites = 3, num_imts = 3
 
@@ -86,5 +86,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.006     0.0       1     
 filtering sites         0.006     0.0       1     
-reading site collection 5.484E-06 0.0       1     
+reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======
