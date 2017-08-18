@@ -483,9 +483,8 @@ class CompositionInfo(object):
 
         :param count_ruptures: a function src_group -> num_ruptures
         """
-        lst = []
-        random_seed = self.seed
-        idx = 0
+        assoc_by_grp = []
+        offset = 0
         trtset = set(self.gsim_lt.tectonic_region_types)
         for i, smodel in enumerate(self.source_models):
             # collect the effective tectonic region types and ruptures
@@ -506,26 +505,8 @@ class CompositionInfo(object):
                                  'realizations', smodel.name, before, after)
             else:
                 gsim_lt = self.gsim_lt
-            if self.num_samples:  # sampling
-                # the int is needed on Windows to convert numpy.uint32 objects
-                rnd = random.Random(int(random_seed + idx))
-                rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
-            else:  # full enumeration
-                rlzs = logictree.get_effective_rlzs(gsim_lt)
-            if rlzs:
-                indices = numpy.arange(idx, idx + len(rlzs))
-                abg = _get_assoc_by_grp(
-                    self.num_samples, gsim_lt, rlzs, smodel, idx)
-                lst.extend(abg)
-                idx += len(indices)
-            elif trts:
-                logging.warn('No realizations for %s, %s',
-                             '_'.join(smodel.path), smodel.name)
-            if len(rlzs) > TWO16:
-                raise ValueError(
-                    'The source model %s has %d realizations, the maximum '
-                    'is %d' % (smodel.name, len(rlzs), TWO16))
-        return numpy.array(lst, assoc_by_grp_dt)
+            offset = self._populate(assoc_by_grp, gsim_lt, smodel, offset)
+        return numpy.array(assoc_by_grp, assoc_by_grp_dt)
 
     def get_source_model(self, src_group_id):
         """
@@ -584,20 +565,34 @@ class CompositionInfo(object):
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
 
-
-def _get_assoc_by_grp(num_samples, gsim_lt, rlzs, smodel, offset):
-    dic = collections.defaultdict(list)
-    idx = {}
-    for i, sg in enumerate(smodel.src_groups):
-        gsims = gsim_lt.get_gsims(sg.trt, rlzs if num_samples else None)
-        for j, gsim in enumerate(gsims):
-            idx[i, gsim] = sg.id, j
-    for rlzi, rlz in enumerate(rlzs):
-        for i, sg in enumerate(smodel.src_groups):
-            gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
-            dic[idx[i, gsim]].append(rlzi + offset)
-    return [(sgid, j, numpy.array(rlzis, U16))
-            for (sgid, j), rlzis in sorted(dic.items())]
+    def _populate(self, assoc_by_grp, gsim_lt, smodel, offset):
+        if self.num_samples:  # sampling
+            # the int is needed on Windows to convert numpy.uint32 objects
+            rnd = random.Random(int(self.seed + offset))
+            rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
+        else:  # full enumeration
+            rlzs = logictree.get_effective_rlzs(gsim_lt)
+        if len(rlzs) > TWO16:
+            raise ValueError(
+                'The source model %s has %d realizations, the maximum '
+                'is %d' % (smodel.name, len(rlzs), TWO16))
+        elif rlzs:
+            indices = numpy.arange(offset, offset + len(rlzs))
+            dic = collections.defaultdict(list)
+            idx = {}
+            for i, sg in enumerate(smodel.src_groups):
+                gsims = gsim_lt.get_gsims(
+                    sg.trt, rlzs if self.num_samples else None)
+                for j, gsim in enumerate(gsims):
+                    idx[i, gsim] = sg.id, j
+            for rlzi, rlz in enumerate(rlzs):
+                for i, sg in enumerate(smodel.src_groups):
+                    gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
+                    dic[idx[i, gsim]].append(rlzi + offset)
+            assoc_by_grp.extend((sgid, j, numpy.array(rlzis, U16))
+                                for (sgid, j), rlzis in sorted(dic.items()))
+            offset += len(indices)
+        return offset
 
 
 class CompositeSourceModel(collections.Sequence):
