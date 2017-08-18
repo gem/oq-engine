@@ -707,7 +707,10 @@ class GMPE(GroundShakingIntensityModel):
         """
         Returns numpy array of natural logarithms of ``values``.
         """
-        return numpy.log(values)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            # avoid RuntimeWarning: divide by zero encountered in log
+            return numpy.log(values)
 
     def to_imt_unit_values(self, values):
         """

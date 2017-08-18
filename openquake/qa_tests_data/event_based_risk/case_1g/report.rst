@@ -1,11 +1,11 @@
 event based risk with PMF
 =========================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1803.hdf5 Fri Jul  7 07:32:33 2017
-checksum32                                      316,426,340             
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14452.hdf5 Thu Aug 17 11:47:56 2017
+checksum32                                       316,426,340             
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 1, num_imts = 1
 
@@ -76,8 +76,8 @@ source_model.xml 0      Active Shallow Crust 1           482          482
 Informational data
 ------------------
 ============================ ===========================================================================
-compute_ruptures.received    tot 28.83 KB, max_per_task 13.05 KB                                        
-compute_ruptures.sent        sources 7.78 KB, src_filter 2 KB, param 1.89 KB, monitor 960 B, gsims 306 B
+compute_ruptures.received    tot 28.84 KB, max_per_task 13.05 KB                                        
+compute_ruptures.sent        sources 7.78 KB, src_filter 2 KB, param 1.89 KB, monitor 963 B, gsims 306 B
 hazard.input_weight          482.0                                                                      
 hazard.n_imts                1                                                                          
 hazard.n_levels              8                                                                          
@@ -123,11 +123,15 @@ source_class      calc_time counts
 SimpleFaultSource 0.0       1     
 ================= ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.060 0.017  0.043 0.077 3        
+compute_ruptures   0.056 0.017  0.037 0.071 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,14 +139,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.179     0.0       3     
-managing sources               0.058     0.0       1     
-saving ruptures                0.012     0.0       3     
+total compute_ruptures         0.169     0.0       3     
+managing sources               0.056     0.0       1     
+saving ruptures                0.008     0.0       3     
 filtering ruptures             0.007     0.0       31    
-store source_info              0.006     0.0       1     
 reading exposure               0.006     0.0       1     
+store source_info              0.004     0.0       1     
 reading composite source model 0.004     0.0       1     
-setting event years            0.002     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        6.676E-06 0.0       1     
+setting event years            0.002     0.0       1     
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======
