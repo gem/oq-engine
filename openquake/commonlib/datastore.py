@@ -128,9 +128,9 @@ class DataStore(collections.MutableMapping):
     Here is a minimal example of usage:
 
     >>> ds = DataStore()
-    >>> ds['example'] = 'hello world'
-    >>> print(ds['example'])
-    hello world
+    >>> ds['example'] = 42
+    >>> print(ds['example'].value)
+    42
     >>> ds.clear()
 
     When reading the items, the DataStore will return a generator. The
