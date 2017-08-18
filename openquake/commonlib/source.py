@@ -662,12 +662,17 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
-                for sg in sm.src_groups:
-                    sg.gsims = sorted(self.gsim_lt.values[sg.trt])
+                # the difference in sg.gsims below has effect in the event
+                # based hazard tests
                 if self.source_model_lt.num_samples:
                     rnd = random.Random(seed + idx)
                     rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
                     idx += len(rlzs)
+                    for sg in sm.src_groups:
+                        sg.gsims = self.gsim_lt.get_gsims(sg.trt, rlzs)
+                else:
+                    for sg in sm.src_groups:
+                        sg.gsims = self.gsim_lt.get_gsims(sg.trt)
                 sources = []
                 for src, sites in src_filter(src_group.sources):
                     sources.append(src)
