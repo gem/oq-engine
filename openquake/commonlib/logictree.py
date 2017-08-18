@@ -1295,8 +1295,7 @@ class GsimLogicTree(object):
         else:
             gsims = set()
             for rlz in rlzs:
-                [gsim] = rlz.value
-                gsims.add(gsim)
+                gsims.update(rlz.value)
         return sorted(gsims)
 
     def __iter__(self):
