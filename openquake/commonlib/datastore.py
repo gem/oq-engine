@@ -20,10 +20,8 @@ import os
 import re
 import getpass
 import collections
-#import numpy
 import h5py
 
-#from openquake.baselib.python3compat import pickle
 from openquake.baselib import hdf5
 from openquake.commonlib import config
 from openquake.commonlib.writers import write_csv
@@ -407,20 +405,11 @@ class DataStore(collections.MutableMapping):
                         'No %r found in %s and ancestors' % (key, self))
             else:
                 raise KeyError('No %r found in %s' % (key, self))
-        #try:
-        #    shape = val.shape
-        #except AttributeError:  # val is a group
-        #    return val
-        #if not shape:
-        #    val = pickle.loads(val.value)
         return val
 
     def __setitem__(self, key, value):
         if isinstance(value, dict) or hasattr(value, '__toh5__'):
             val = value
-        #elif (not isinstance(value, numpy.ndarray) or
-        #        value.dtype is numpy.dtype(object)):
-        #    val = numpy.array(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
         else:
             val = value
         if key in self.hdf5:
