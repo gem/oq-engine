@@ -205,14 +205,14 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     dist_edges, lon_edges, lat_edges = bb.bins_edges(
                         oq.distance_bin_width, oq.coordinate_bin_width)
                     logging.info(
-                        '%d dist bins from %s to %s', len(dist_edges) - 1,
-                        min(dist_edges), max(dist_edges))
+                        '[sid=%d] %d dist bins from %s to %s', sid,
+                        len(dist_edges) - 1, min(dist_edges), max(dist_edges))
                     logging.info(
-                        '%d lon bins from %s to %s', len(lon_edges) - 1,
-                        bb.west, bb.east)
+                        '[sid=%d] %d lon bins from %s to %s', sid,
+                        len(lon_edges) - 1, bb.west, bb.east)
                     logging.info(
-                        '%d lat bins from %s to %s', len(lon_edges) - 1,
-                        bb.south, bb.north)
+                        '[sid=%d] %d lat bins from %s to %s', sid,
+                        len(lon_edges) - 1, bb.south, bb.north)
 
                     self.bin_edges[sm_id, sid] = (
                         mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
