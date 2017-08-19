@@ -66,6 +66,7 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
     sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
     gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(src_group_id)
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -83,7 +84,7 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
         with collecting_mon:
             bdata = disagg._collect_bins_data(
                 trt_num, sources, site, curves_dict[sid],
-                src_group_id, rlzs_assoc, gsims, oqparam.imtls,
+                src_group_id, rlzs_by_gsim, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor)

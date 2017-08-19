@@ -203,18 +203,12 @@ class RlzsAssoc(collections.Mapping):
         return rlzs_by_gsim
 
     def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
-        trts = gsim_lt.tectonic_region_types
         rlzs = []
         for i, gsim_rlz in enumerate(gsim_rlzs):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
             self.gsim_by_trt.append(
                 dict(zip(gsim_lt.all_trts, gsim_rlz.value)))
-            for src_group in lt_model.src_groups:
-                if src_group.trt in trts:
-                    # ignore the associations to discarded TRTs
-                    gs = gsim_lt.get_gsim_by_trt(gsim_rlz, src_group.trt)
-                    self.rlzs_assoc[src_group.id, gs].append(rlz)
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
