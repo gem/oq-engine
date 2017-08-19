@@ -461,7 +461,11 @@ class EventBasedCalculator(ClassicalCalculator):
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
         correl_model = oq.get_correl_model()
-        samples_by_grp = self.csm.info.get_samples_by_grp()
+        try:
+            csm_info = self.csm.info
+        except AttributeError:  # no csm
+            csm_info = self.datastore['csm_info']
+        samples_by_grp = csm_info.get_samples_by_grp()
         for grp_id in ruptures_by_grp:
             ruptures = ruptures_by_grp[grp_id]
             if not ruptures:
