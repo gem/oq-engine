@@ -330,6 +330,7 @@ class PSHACalculator(base.HazardCalculator):
             numheavy = len(self.csm.get_sources('heavy', maxweight))
             logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                          maxweight, numheavy, len(tiles))
+        gsims_by_grp = self.csm.info.get_gsims_by_grp()
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -349,6 +350,7 @@ class PSHACalculator(base.HazardCalculator):
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for sg in sm.src_groups:
+                    gsims = gsims_by_grp[sg.id]
                     if num_tiles <= 1:
                         logging.info(
                             'Sending source group #%d of %d (%s, %d sources)',
@@ -357,13 +359,13 @@ class PSHACalculator(base.HazardCalculator):
                         param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
                     if sg.src_interdep == 'mutex':  # do not split the group
                         self.csm.add_infos(sg.sources)
-                        yield sg, src_filter, sg.gsims, param, monitor
+                        yield sg, src_filter, gsims, param, monitor
                         num_tasks += 1
                         num_sources += len(sg)
                     else:
                         for block in self.csm.split_sources(
                                 sg.sources, src_filter, maxweight):
-                            yield block, src_filter, sg.gsims, param, monitor
+                            yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
                             num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)

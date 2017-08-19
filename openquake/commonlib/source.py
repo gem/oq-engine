@@ -144,7 +144,7 @@ class RlzsAssoc(collections.Mapping):
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
-        self.gsims_by_grp_id = {}
+        self.gsims_by_grp_id = csm_info.get_gsims_by_grp()
         self.sm_ids = {}
         self.samples = {}
         for sm in csm_info.source_models:
@@ -172,10 +172,6 @@ class RlzsAssoc(collections.Mapping):
                 # logic tree reduction; we ensure the sum of the weights is 1
                 for rlz in self.realizations:
                     rlz.weight = rlz.weight / tot_weight
-
-        self.gsims_by_grp_id = groupby(
-            self.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(gsim for grp_id, gsim in group))
 
     @property
     def realizations(self):
@@ -322,6 +318,26 @@ class CompositionInfo(object):
         num_samples = sm.samples if self.num_samples else 0
         return self.__class__(
             self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
+
+    def get_gsims_by_grp(self):
+        """
+        :returns: dictionary grp_id -> gsims
+        """
+        gsims_by_grp = {}
+        idx = 0
+        for sm in self.source_models:
+            for sg in sm.src_groups:
+                if self.num_samples:
+                    rnd = random.Random(self.seed + idx)
+                    rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
+                    idx += len(rlzs)
+                    for sg in sm.src_groups:
+                        gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(
+                            sg.trt, rlzs)
+                else:
+                    for sg in sm.src_groups:
+                        gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(sg.trt)
+        return gsims_by_grp
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -498,8 +514,7 @@ class CompositionInfo(object):
 
     def _populate(self, assoc, assoc_by_grp, gsim_lt, smodel, offset):
         if self.num_samples:  # sampling
-            # the int is needed on Windows to convert numpy.uint32 objects
-            rnd = random.Random(int(self.seed + offset))
+            rnd = random.Random(self.seed + offset)
             rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
         else:  # full enumeration
             rlzs = logictree.get_effective_rlzs(gsim_lt)
@@ -584,22 +599,9 @@ class CompositeSourceModel(collections.Sequence):
         """
         source_models = []
         weight = 0
-        idx = 0
-        seed = int(self.source_model_lt.seed)  # avoids F32 issues on Windows
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
-                # the difference in sg.gsims below has effect in the event
-                # based hazard tests
-                if self.source_model_lt.num_samples:
-                    rnd = random.Random(seed + idx)
-                    rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
-                    idx += len(rlzs)
-                    for sg in sm.src_groups:
-                        sg.gsims = self.gsim_lt.get_gsims(sg.trt, rlzs)
-                else:
-                    for sg in sm.src_groups:
-                        sg.gsims = self.gsim_lt.get_gsims(sg.trt)
                 sources = []
                 for src, sites in src_filter(src_group.sources):
                     sources.append(src)
