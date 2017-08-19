@@ -398,7 +398,7 @@ def get_gmfs(dstore, precalc=None):
     :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
     oq = dstore['oqparam']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    num_assocs = len(dstore['csm_info/assoc_by_grp'])
     sitecol = dstore['sitecol']
     if dstore.parent:
         haz_sitecol = dstore.parent['sitecol']  # S sites
@@ -408,7 +408,7 @@ def get_gmfs(dstore, precalc=None):
     I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
     eids = numpy.arange(E)
-    gmfs = numpy.zeros((len(rlzs_assoc), N, E, I))
+    gmfs = numpy.zeros((num_assocs, N, E, I))
     if precalc:
         for g, gsim in enumerate(precalc.gsims):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
