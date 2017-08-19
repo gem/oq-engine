@@ -145,12 +145,6 @@ class RlzsAssoc(object):
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.gsims_by_grp_id = csm_info.get_gsims_by_grp()
-        self.sm_ids = {}
-        self.samples = {}
-        for sm in csm_info.source_models:
-            for sg in sm.src_groups:
-                self.sm_ids[sg.id] = sm.ordinal
-                self.samples[sg.id] = sm.samples
 
     def _init(self):
         """
@@ -211,28 +205,6 @@ class RlzsAssoc(object):
                 dict(zip(gsim_lt.all_trts, gsim_rlz.value)))
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
-
-    def extract(self, rlz_indices, csm_info):
-        """
-        Extract a RlzsAssoc instance containing only the given realizations.
-
-        :param rlz_indices: a list of realization indices from 0 to R - 1
-        """
-        assoc = self.__class__(csm_info)
-        if len(rlz_indices) == 1:
-            realizations = [self.realizations[rlz_indices[0]]]
-        else:
-            realizations = operator.itemgetter(*rlz_indices)(self.realizations)
-        rlzs_smpath = groupby(realizations, operator.attrgetter('sm_lt_path'))
-        smodel_from = {sm.path: sm for sm in csm_info.source_models}
-        for smpath, rlzs in rlzs_smpath.items():
-            sm = smodel_from[smpath]
-            trts = set(sg.trt for sg in sm.src_groups)
-            assoc._add_realizations(
-                [r.ordinal for r in rlzs], sm,
-                csm_info.gsim_lt.reduce(trts), [rlz.gsim_rlz for rlz in rlzs])
-        assoc._init()
-        return assoc
 
     def __len__(self):
         return len(self.array)
@@ -328,6 +300,20 @@ class CompositionInfo(object):
                     for sg in sm.src_groups:
                         gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(sg.trt)
         return gsims_by_grp
+
+    def get_sm_ids(self):
+        """
+        :returns: a dictionary src_group_id -> source_model.ordinal
+        """
+        return {sg.id: sm.ordinal for sm in self.source_models
+                for sg in sm.src_groups}
+
+    def get_samples(self):
+        """
+        :returns: a dictionary src_group_id -> source_model.samples
+        """
+        return {sg.id: sm.samples for sm in self.source_models
+                for sg in sm.src_groups}
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly

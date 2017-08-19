@@ -402,9 +402,10 @@ class EbriskCalculator(base.RiskCalculator):
         ruptures_per_block = self.oqparam.ruptures_per_block
         start = 0
         ignore_covs = self.oqparam.ignore_covs
+        samples_by_grp = self.csm.info.get_samples()
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            samples = rlzs_assoc.samples[grp_id]
+            samples = samples_by_grp[grp_id]
             for rupts in block_splitter(
                     ruptures_by_grp.get(grp_id, []), ruptures_per_block):
                 if ignore_covs or not self.riskmodel.covs:
