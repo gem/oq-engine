@@ -402,7 +402,11 @@ class EbriskCalculator(base.RiskCalculator):
         ruptures_per_block = self.oqparam.ruptures_per_block
         start = 0
         ignore_covs = self.oqparam.ignore_covs
-        samples_by_grp = self.csm.info.get_samples()
+        try:
+            csm_info = self.csm.info
+        except AttributeError:  # there is no .csm if --hc was given
+            csm_info = self.datastore['csm_info']
+        samples_by_grp = csm_info.get_samples()
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
