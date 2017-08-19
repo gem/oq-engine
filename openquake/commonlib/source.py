@@ -523,8 +523,9 @@ class CompositionInfo(object):
                     idx[i, gsim] = sg.id, j
             for rlzi, rlz in enumerate(rlzs):
                 for i, sg in enumerate(smodel.src_groups):
-                    gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
-                    dic[idx[i, gsim]].append(rlzi + offset)
+                    if sg.eff_ruptures:
+                        gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
+                        dic[idx[i, gsim]].append(rlzi + offset)
             assoc_by_grp.extend((sgid, j, numpy.array(rlzis, U16))
                                 for (sgid, j), rlzis in sorted(dic.items()))
             assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
