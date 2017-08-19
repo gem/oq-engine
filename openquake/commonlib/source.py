@@ -112,7 +112,7 @@ def _assert_equal_sources(nodes):
     return nodes
 
 
-class RlzsAssoc(collections.Mapping):
+class RlzsAssoc(object):
     """
     Realization association class. It should not be instantiated directly,
     but only via the method :meth:
@@ -234,14 +234,8 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
-    def __iter__(self):
-        return iter(self.rlzs_assoc)
-
-    def __getitem__(self, key):
-        return self.rlzs_assoc[key]
-
     def __len__(self):
-        return len(self.rlzs_assoc)
+        return len(self.array)
 
     def __repr__(self):
         pairs = []
