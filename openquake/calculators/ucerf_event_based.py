@@ -827,7 +827,7 @@ def compute_losses(ssm, src_filter, param, riskmodel,
         grp, src_filter, gsims, param, monitor)
     [(grp_id, ebruptures)] = ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
-    samples = ssm.info.get_samples()
+    samples = ssm.info.get_samples_by_grp()
     num_rlzs = len(rlzs_assoc.realizations)
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
     getter = riskinput.GmfGetter(
