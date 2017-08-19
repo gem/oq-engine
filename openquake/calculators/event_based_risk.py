@@ -406,7 +406,7 @@ class EbriskCalculator(base.RiskCalculator):
             csm_info = self.csm.info
         except AttributeError:  # there is no .csm if --hc was given
             csm_info = self.datastore['csm_info']
-        samples_by_grp = csm_info.get_samples()
+        samples_by_grp = csm_info.get_samples_by_grp()
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
