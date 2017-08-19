@@ -461,14 +461,14 @@ class EventBasedCalculator(ClassicalCalculator):
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
         correl_model = oq.get_correl_model()
-        samples = self.csm.info.get_samples()
+        samples_by_grp = self.csm.info.get_samples_by_grp()
         for grp_id in ruptures_by_grp:
             ruptures = ruptures_by_grp[grp_id]
             if not ruptures:
                 continue
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             for block in block_splitter(ruptures, oq.ruptures_per_block):
-                samples = samples[grp_id]
+                samples = samples_by_grp[grp_id]
                 getter = GmfGetter(grp_id, rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
                                    correl_model, samples)

@@ -823,7 +823,7 @@ def export_gmf_scenario_csv(ekey, dstore):
     oq = dstore['oqparam']
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
-    samples = csm_info.get_samples()
+    samples = csm_info.get_samples_by_grp()
     imts = list(oq.imtls)
     mo = re.match('rup-(\d+)$', what[1])
     if mo is None:

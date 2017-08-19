@@ -308,7 +308,7 @@ class CompositionInfo(object):
         return {sg.id: sm.ordinal for sm in self.source_models
                 for sg in sm.src_groups}
 
-    def get_samples(self):
+    def get_samples_by_grp(self):
         """
         :returns: a dictionary src_group_id -> source_model.samples
         """
