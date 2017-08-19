@@ -331,6 +331,7 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                          maxweight, numheavy, len(tiles))
         gsims_by_grp = self.csm.info.get_gsims_by_grp()
+        sm_ids = self.csm.info.get_sm_ids()
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -356,7 +357,7 @@ class PSHACalculator(base.HazardCalculator):
                             'Sending source group #%d of %d (%s, %d sources)',
                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
                     if oq.poes_disagg or oq.iml_disagg:  # only for disagg
-                        param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
+                        param['sm_id'] = sm_ids[sg.id]
                     if sg.src_interdep == 'mutex':  # do not split the group
                         self.csm.add_infos(sg.sources)
                         yield sg, src_filter, gsims, param, monitor
