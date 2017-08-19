@@ -32,7 +32,7 @@ import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
-    groupby, group_array, block_splitter, writetmp)
+    groupby, get_array, group_array, block_splitter, writetmp)
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.commonlib import logictree
 
@@ -200,10 +200,10 @@ class RlzsAssoc(collections.Mapping):
         """
         Returns an orderd dictionary gsim > rlzs for the given grp_id
         """
-        rlzs_by_gsim = collections.OrderedDict()
-        for gid, gsim in sorted(self.rlzs_assoc):
-            if gid == grp_id:
-                rlzs_by_gsim[gsim] = [rlz.ordinal for rlz in self[gid, gsim]]
+        gsims = self.gsims_by_grp_id[grp_id]
+        arr = get_array(self.array, grp_id=grp_id)
+        rlzs_by_gsim = collections.OrderedDict(
+            (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
         return rlzs_by_gsim
 
     def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
