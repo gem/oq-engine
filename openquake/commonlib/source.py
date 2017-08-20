@@ -141,7 +141,6 @@ class RlzsAssoc(object):
         self.array = None  # set by csm_info.get_rlzs_assoc()
         self.seed = csm_info.seed
         self.num_samples = csm_info.num_samples
-        self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.gsims_by_grp_id = csm_info.get_gsims_by_grp()

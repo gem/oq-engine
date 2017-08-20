@@ -262,10 +262,11 @@ class PSHACalculator(base.HazardCalculator):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
+        gsims_by_grp = self.csm.info.get_gsims_by_grp()
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         for grp in self.csm.src_groups:
-            num_gsims = len(self.rlzs_assoc.gsims_by_grp_id[grp.id])
+            num_gsims = len(gsims_by_grp[grp.id])
             zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
@@ -468,8 +469,8 @@ class ClassicalCalculator(PSHACalculator):
         if 'poes' not in self.datastore:  # for short report
             return
         oq = self.oqparam
-        rlzs = self.rlzs_assoc.realizations
-        if len(rlzs) == 1:  # no stats to compute
+        num_rlzs = len(self.datastore['realizations'])
+        if num_rlzs == 1:  # no stats to compute
             return {}
         elif not oq.hazard_stats():
             if oq.hazard_maps or oq.uniform_hazard_spectra:
@@ -485,7 +486,7 @@ class ClassicalCalculator(PSHACalculator):
             sids=numpy.arange(N, dtype=numpy.uint32))
         nbytes = N * L * 4  # bytes per realization (32 bit floats)
         totbytes = 0
-        if len(rlzs) > 1:
+        if num_rlzs > 1:
             for name, stat in oq.hazard_stats():
                 self.datastore.create_dset(
                     'hcurves/' + name, F32, (N, L, 1), attrs=attrs)
