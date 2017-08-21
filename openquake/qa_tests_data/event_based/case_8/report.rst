@@ -1,11 +1,11 @@
 Event Based from NonParametric source
 =====================================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_1841.hdf5 Fri Jul  7 07:33:03 2017
-checksum32                               2,117,452,566           
-engine_version                           2.6.0-git50066b9        
-======================================== ========================
+========================================= ========================
+localhost:/mnt/ssd/oqdata/calc_14490.hdf5 Thu Aug 17 11:48:26 2017
+checksum32                                2,117,452,566           
+engine_version                            2.6.0-gitbdd9d17        
+========================================= ========================
 
 num_sites = 3, num_imts = 1
 
@@ -67,7 +67,7 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.041     0.0       1     
+reading composite source model 0.037     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        3.409E-05 0.0       1     
+reading site collection        3.481E-05 0.0       1     
 ============================== ========= ========= ======

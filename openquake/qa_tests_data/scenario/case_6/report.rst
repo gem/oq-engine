@@ -1,11 +1,11 @@
 Scenario QA Test with Spatial Correlation - Case 2
 ==================================================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_1768.hdf5 Fri Jul  7 07:32:11 2017
-checksum32                               2,135,006,889           
-engine_version                           2.6.0-git50066b9        
-======================================== ========================
+========================================= ========================
+localhost:/mnt/ssd/oqdata/calc_14417.hdf5 Thu Aug 17 11:47:33 2017
+checksum32                                2,135,006,889           
+engine_version                            2.6.0-gitbdd9d17        
+========================================= ========================
 
 num_sites = 2, num_imts = 1
 
@@ -65,6 +65,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading site collection 2.980E-05 0.0       1     
+filtering sites         0.010     0.0       1     
+reading site collection 3.934E-05 0.0       1     
 ======================= ========= ========= ======
