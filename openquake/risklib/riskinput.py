@@ -327,6 +327,10 @@ class CompositeRiskModel(collections.Mapping):
             if oqparam.calculation_mode in ('classical', 'scenario'):
                 # case when the risk files are in the job_hazard.ini file
                 oqparam.calculation_mode += '_damage'
+                if 'exposure' not in oqparam.inputs:
+                    raise RuntimeError(
+                        'There are risk files in %r but not '
+                        'an exposure' % oqparam.inputs['job_ini'])
             self.damage_states = ['no_damage'] + oqparam.limit_states
             delattr(oqparam, 'limit_states')
             for taxonomy, ffs_by_lt in rmdict.items():
