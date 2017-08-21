@@ -1250,16 +1250,21 @@ class GsimLogicTree(object):
                     weights.append(weight)
                     branch_id = branch['branchID']
                     uncertainty = branch.uncertaintyModel
-                    gsim_name = uncertainty.text.strip()
-                    if gsim_name == 'GMPETable':
-                        # a bit hackish: set the GMPE_DIR equal to the
-                        # directory where the gsim_logic_tree file is
-                        GMPETable.GMPE_DIR = os.path.dirname(self.fname)
-                    try:
-                        gsim = valid.gsim(gsim_name, **uncertainty.attrib)
-                    except:
-                        etype, exc, tb = sys.exc_info()
-                        raise_(etype, "%s in file %s" % (exc, self.fname), tb)
+                    if hasattr(uncertainty.text, 'strip'):  # a string
+                        gsim_name = uncertainty.text.strip()
+                        if gsim_name == 'GMPETable':
+                            # a bit hackish: set the GMPE_DIR equal to the
+                            # directory where the gsim_logic_tree file is
+                            GMPETable.GMPE_DIR = os.path.dirname(self.fname)
+                        try:
+                            gsim = valid.gsim(gsim_name, **uncertainty.attrib)
+                        except:
+                            etype, exc, tb = sys.exc_info()
+                            raise_(etype, "%s in file %s" % (exc, self.fname),
+                                   tb)
+                        uncertainty.text = gsim
+                    else:  # already converted GSIM
+                        gsim = uncertainty.text
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
                         branchset, branch_id, gsim, weight, effective)
@@ -1281,6 +1286,15 @@ class GsimLogicTree(object):
             return rlz.value[0]
         idx = self.all_trts.index(trt)
         return rlz.value[idx]
+
+    def get_sorted_gsims(self):
+        gsims = set()
+        for vals in self.values.values():
+            gsims.update(vals)
+        gsims = sorted(gsims)
+        for i, gsim in enumerate(gsims):
+            gsim.idx = i
+        return gsims
 
     def get_gsims(self, trt, rlzs=None):
         """
