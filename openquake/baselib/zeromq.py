@@ -131,7 +131,8 @@ def starmap(context, frontend_url, func, allargs):
             yield socket.recv_pyobj()
 
 
-if __name__ == '__main__':  # run worker
+if __name__ == '__main__':  # run workers
     import sys
-    with Context.instance() as c:
-        worker(c, sys.argv[1])
+    url, ncores = sys.argv[1:]
+    for _ in range(int(ncores)):
+        Process(worker, url).start()

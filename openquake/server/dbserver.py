@@ -66,14 +66,13 @@ class DbServer(object):
             rpython = (config.get('dbserver', 'remote_python') or
                        sys.executable)
             for host, sshport, cores in config.get_host_cores():
-                for core in range(cores):
-                    cmd = [workerpath, self.backend_url]
-                    if host == '127.0.0.1':  # localhost
-                        args = [sys.executable] + cmd
-                    else:
-                        args = ['ssh', host, '-p', sshport, rpython] + cmd
-                    subprocess.Popen(args)
-                    self.workers += 1
+                if host == '127.0.0.1':  # localhost
+                    args = []
+                else:
+                    args = ['ssh', host, '-p', sshport]
+                subprocess.Popen(args + [rpython, workerpath, self.backend_url,
+                                         str(cores)])
+                self.workers += 1
                 logging.warn('starting %d workers on %s listening on %s',
                              cores, host, self.backend_url)
             z.Thread(z.proxy, self.frontend_url, self.backend_url).start()
