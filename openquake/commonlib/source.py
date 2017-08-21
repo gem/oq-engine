@@ -499,7 +499,7 @@ class CompositionInfo(object):
         rlzs, gsims = self._get_rlzs_gsims(smodel, gsim_lt, self.seed + offset)
         if rlzs:
             indices = numpy.arange(offset, offset + len(rlzs))
-            dic = collections.defaultdict(list)
+            dic = collections.defaultdict(list)  # (sg.id, gsim_idx) -> rlzis
             idx = {}
             for i, sg in enumerate(smodel.src_groups):
                 for j, gsim in enumerate(gsims[i]):
