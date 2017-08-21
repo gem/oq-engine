@@ -403,7 +403,7 @@ class CompositionInfo(object):
         assoc_by_grp = []
         offset = 0
         trtset = set(self.gsim_lt.tectonic_region_types)
-        for i, smodel in enumerate(self.source_models):
+        for smodel in self.source_models:
             # collect the effective tectonic region types and ruptures
             trts = set()
             for sg in smodel.src_groups:
