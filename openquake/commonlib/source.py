@@ -287,16 +287,11 @@ class CompositionInfo(object):
         gsims_by_grp = {}
         idx = 0
         for sm in self.source_models:
-            if self.num_samples:
-                rnd = random.Random(self.seed + idx)
-                rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
-                idx += len(rlzs)
-                for sg in sm.src_groups:
-                    gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(
-                        sg.trt, rlzs)
-            else:
-                for sg in sm.src_groups:
-                    gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(sg.trt)
+            rlzs, allgsims = self._get_rlzs_gsims(
+                sm, self.gsim_lt, self.seed + idx)
+            idx += len(rlzs)
+            for sg, gsims in zip(sm.src_groups, allgsims):
+                gsims_by_grp[sg.id] = gsims
         return gsims_by_grp
 
     def get_sm_ids(self):
@@ -486,24 +481,28 @@ class CompositionInfo(object):
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
 
-    def _populate(self, assoc, assoc_by_grp, gsim_lt, smodel, offset):
+    def _get_rlzs_gsims(self, smodel, gsim_lt, seed):
         if self.num_samples:  # sampling
-            rnd = random.Random(self.seed + offset)
-            rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
+            rlzs = logictree.sample(
+                gsim_lt, smodel.samples, random.Random(seed))
         else:  # full enumeration
             rlzs = logictree.get_effective_rlzs(gsim_lt)
         if len(rlzs) > TWO16:
             raise ValueError(
                 'The source model %s has %d realizations, the maximum '
                 'is %d' % (smodel.name, len(rlzs), TWO16))
-        elif rlzs:
+        gsims = [gsim_lt.get_gsims(sg.trt, rlzs if self.num_samples else None)
+                 for sg in smodel.src_groups]
+        return rlzs, gsims
+
+    def _populate(self, assoc, assoc_by_grp, gsim_lt, smodel, offset):
+        rlzs, gsims = self._get_rlzs_gsims(smodel, gsim_lt, self.seed + offset)
+        if rlzs:
             indices = numpy.arange(offset, offset + len(rlzs))
             dic = collections.defaultdict(list)
             idx = {}
             for i, sg in enumerate(smodel.src_groups):
-                gsims = gsim_lt.get_gsims(
-                    sg.trt, rlzs if self.num_samples else None)
-                for j, gsim in enumerate(gsims):
+                for j, gsim in enumerate(gsims[i]):
                     idx[i, gsim] = sg.id, j
             for rlzi, rlz in enumerate(rlzs):
                 for i, sg in enumerate(smodel.src_groups):
