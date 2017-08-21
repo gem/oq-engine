@@ -34,7 +34,8 @@ from openquake.server import dbapi
 from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
 
-zmq = os.environ.get('OQ_DISTRIBUTE') == 'zmq'
+zmq = os.environ.get(
+    'OQ_DISTRIBUTE', config.get('distribution', 'oq_distribute')) == 'zmq'
 if zmq:
     from openquake.baselib import zeromq as z
 
