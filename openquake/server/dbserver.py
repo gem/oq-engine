@@ -74,7 +74,7 @@ class DbServer(object):
                     subprocess.Popen(args)
                     self.workers += 1
                 logging.warn('starting %d workers on %s listening on %s',
-                             cores, host, sshport, self.backend_url)
+                             cores, host, self.backend_url)
             z.Thread(z.proxy, self.frontend_url, self.backend_url).start()
             logging.warn('zmq proxy started on ports %d, %d',
                          self.port + 1, self.port + 2)
