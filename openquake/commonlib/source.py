@@ -287,17 +287,16 @@ class CompositionInfo(object):
         gsims_by_grp = {}
         idx = 0
         for sm in self.source_models:
-            for sg in sm.src_groups:
-                if self.num_samples:
-                    rnd = random.Random(self.seed + idx)
-                    rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
-                    idx += len(rlzs)
-                    for sg in sm.src_groups:
-                        gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(
-                            sg.trt, rlzs)
-                else:
-                    for sg in sm.src_groups:
-                        gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(sg.trt)
+            if self.num_samples:
+                rnd = random.Random(self.seed + idx)
+                rlzs = logictree.sample(self.gsim_lt, sm.samples, rnd)
+                idx += len(rlzs)
+                for sg in sm.src_groups:
+                    gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(
+                        sg.trt, rlzs)
+            else:
+                for sg in sm.src_groups:
+                    gsims_by_grp[sg.id] = self.gsim_lt.get_gsims(sg.trt)
         return gsims_by_grp
 
     def get_sm_ids(self):
