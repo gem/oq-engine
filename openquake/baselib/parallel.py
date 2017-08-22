@@ -371,8 +371,8 @@ class IterResult(object):
             self.log_percent = self._log_percent()
             next(self.log_percent)
         if sent:
-            self.progress('Sent %s of data in %d task(s)',
-                          humansize(sum(sent.values())), num_tasks)
+            self.progress('Sent %s of data in %s task(s)',
+                          humansize(sum(sent.values())), num_tasks or '?')
 
     def _log_percent(self):
         yield 0
