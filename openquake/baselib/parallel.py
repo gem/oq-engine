@@ -370,6 +370,9 @@ class IterResult(object):
         if self.num_tasks:
             self.log_percent = self._log_percent()
             next(self.log_percent)
+        if sent:
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(sum(sent.values())), num_tasks)
 
     def _log_percent(self):
         yield 0
@@ -645,10 +648,6 @@ class Starmap(object):
         # NB: keep self._iterfutures() an iterator, especially with celery!
         ir = IterResult(self._iterfutures(), self.name, task_no,
                         self.progress, self.sent)
-        if self.sent:
-            self.progress('Sent %s of data in %d task(s)',
-                          humansize(sum(self.sent.values())),
-                          ir.num_tasks)
         return ir
 
     def __iter__(self):
