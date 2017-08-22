@@ -70,8 +70,8 @@ class DbServer(object):
                     args = []
                 else:
                     args = ['ssh', host, '-p', sshport]
-                subprocess.Popen(args + [rpython, workerpath, self.backend_url,
-                                         str(cores)])
+                args += [rpython, workerpath, self.backend_url, str(cores)]
+                subprocess.Popen(args)
                 self.workers += 1
                 logging.warn('starting %d workers on %s listening on %s',
                              cores, host, self.backend_url)

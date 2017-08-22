@@ -1,4 +1,6 @@
+from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
+import functools
 import threading
 import zmq
 from openquake.baselib.python3compat import pickle
@@ -117,6 +119,32 @@ def worker(context, backend_url, func=None):
         socket.send_multipart([ident, pickle.dumps(res)])
 
 
+def master(context, backend_url, func=None):
+    """
+    A worker reading tuples and returning results to the backend via a zmq
+    socket.
+
+    :param context: zmq context
+    :param backend_url: URL where to connect
+    :param func: if None, expects message to be pairs (cmd, args) else args
+    """
+    socket = context.connect(backend_url, DEALER)
+    while True:
+        ident, pik = socket.recv_multipart()
+        if func is None:  # retrieve the cmd from the message
+            cmd, args = pickle.loads(pik)
+        else:  # use the provided func as cmd
+            cmd, args = func, pickle.loads(pik)
+        if cmd == 'stop':
+            break
+        fut = executor.submit(safely_call, cmd, args)
+        fut.add_done_callback(functools.partial(sendback, socket, ident))
+
+
+def sendback(socket, ident, fut):
+    socket.send_multipart([ident, pickle.dumps(fut.result())])
+
+
 def starmap(context, frontend_url, func, allargs):
     """
     starmap a function over an iterator of arguments by using a zmq socket
@@ -133,6 +161,12 @@ def starmap(context, frontend_url, func, allargs):
 
 if __name__ == '__main__':  # run workers
     import sys
-    url, ncores = sys.argv[1:]
-    for _ in range(int(ncores)):
-        Process(worker, url).start()
+    try:
+        url, _ncores = sys.argv[1:]
+        ncores = int(_ncores)
+    except ValueError:
+        url = sys.argv[1]
+        ncores = multiprocessing.cpu_count()
+    executor = ProcessPoolExecutor(ncores)
+    with Context() as context:
+        master(context, url)
