@@ -136,6 +136,7 @@ def master(context, backend_url, func=None):
         else:  # use the provided func as cmd
             cmd, args = func, pickle.loads(pik)
         if cmd == 'stop':
+            # kill all processes in the executor pool
             break
         fut = executor.submit(safely_call, cmd, args)
         fut.add_done_callback(functools.partial(sendback, socket, ident))
@@ -167,6 +168,5 @@ if __name__ == '__main__':  # run workers
     except ValueError:
         url = sys.argv[1]
         ncores = multiprocessing.cpu_count()
-    executor = ProcessPoolExecutor(ncores)
-    with Context() as context:
+    with Context() as context, ProcessPoolExecutor(ncores) as executor:
         master(context, url)
