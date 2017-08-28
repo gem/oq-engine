@@ -1,11 +1,11 @@
 Scenario QA Test 3
 ==================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1853.hdf5 Fri Jul  7 07:33:34 2017
-checksum32                                      3,085,599,105           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14502.hdf5 Thu Aug 17 11:49:00 2017
+checksum32                                       3,085,599,105           
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 4, num_imts = 3
 
@@ -93,10 +93,10 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 saving gmfs             0.010     0.0       1     
-reading exposure        0.006     0.0       1     
+reading exposure        0.007     0.0       1     
 filtering sites         0.006     0.0       1     
 computing gmfs          0.006     0.0       1     
-building epsilons       7.007E-04 0.0       1     
-building riskinputs     3.326E-04 0.0       1     
+building epsilons       7.279E-04 0.0       1     
+building riskinputs     3.328E-04 0.0       1     
 reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======
