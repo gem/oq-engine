@@ -37,7 +37,8 @@ from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.commonlib import logictree
 
 
-MAXWEIGHT = sourceconverter.MAXWEIGHT
+MINWEIGHT = sourceconverter.MINWEIGHT
+MAXWEIGHT = 5E6  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
 U16 = numpy.uint16
@@ -92,6 +93,23 @@ def capitalize(words):
     Capitalize words separated by spaces.
     """
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
+
+
+def _assert_equal_sources(nodes):
+    if hasattr(nodes[0], 'source_id'):
+        n0 = nodes[0]
+        for n in nodes[1:]:
+            n.assert_equal(n0, ignore=('id', 'src_group_id'))
+    else:  # assume source nodes
+        n0 = nodes[0].to_str()
+        for n in nodes[1:]:
+            eq = n.to_str() == n0
+            if not eq:
+                f0 = writetmp(n0)
+                f1 = writetmp(n.to_str())
+            assert eq, 'different parameters for source %s, run meld %s %s' % (
+                n['id'], f0, f1)
+    return nodes
 
 
 class RlzsAssoc(collections.Mapping):
@@ -539,6 +557,15 @@ class CompositeSourceModel(collections.Sequence):
         # dictionary src_group_id, source_id -> SourceInfo,
         # populated by the split_sources method
         self.infos = {}
+        try:
+            dupl_sources = self.check_dupl_sources()
+        except AssertionError:
+            logging.warn('Found different sources with the same ID')
+            self.has_dupl_sources = 0
+        else:
+            for srcs in dupl_sources:
+                logging.warn('Found duplicated source %s', srcs[0].source_id)
+            self.has_dupl_sources = len(dupl_sources)
 
     def get_model(self, sm_id):
         """
@@ -602,6 +629,25 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
+    def check_dupl_sources(self):  # used in print_csm_info
+        """
+        Extracts duplicated sources, i.e. sources with the same source_id in
+        different source groups. Raise an exception if there are sources with
+        the same ID which are not duplicated.
+
+        :returns: a list of list of sources, ordered by source_id
+        """
+        dd = collections.defaultdict(list)
+        for src_group in self.src_groups:
+            for src in src_group:
+                try:
+                    srcid = src.source_id
+                except AttributeError:  # src is a Node object
+                    srcid = src['id']
+                dd[srcid].append(src)
+        return [_assert_equal_sources(srcs)
+                for srcid, srcs in sorted(dd.items()) if len(srcs) > 1]
+
     def get_sources(self, kind='all', maxweight=None):
         """
         Extract the sources contained in the source models by optionally
@@ -645,7 +691,12 @@ class CompositeSourceModel(collections.Sequence):
         Return an appropriate maxweight for use in the block_splitter
         """
         ct = concurrent_tasks or 1
-        return max(math.ceil(self.weight / ct), MAXWEIGHT)
+        mw = math.ceil(self.weight / ct)
+        if mw < MINWEIGHT:
+            mw = MINWEIGHT
+        elif mw > MAXWEIGHT:
+            mw = MAXWEIGHT
+        return mw
 
     def add_infos(self, sources):
         """
@@ -654,7 +705,7 @@ class CompositeSourceModel(collections.Sequence):
         for src in sources:
             self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
 
-    def split_sources(self, sources, src_filter, maxweight=MAXWEIGHT):
+    def split_sources(self, sources, src_filter, maxweight):
         """
         Split a set of sources of the same source group; light sources
         (i.e. with weight <= maxweight) are not split.

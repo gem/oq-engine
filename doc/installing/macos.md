@@ -7,6 +7,7 @@ The OpenQuake Engine is available for macOS in the form of **self-installable bi
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
 - currently does not support Celery (and will never do)
+- Python from _Anaconda_ **is not supported**
 
 ## Requirements
 
