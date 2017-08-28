@@ -1,3 +1,15 @@
+  [Michele Simionato]
+  * Fixed `oq export hcurves-rlzs -e hdf5`
+  * Changed the source weighting algorithm: now it is proportional to the
+    the number of affected sites
+  * Added a command `oq show dupl_sources` and enhances `oq info job.ini`
+    to display information about the duplicated sources
+  * Added a flag `split_sources` in the job.ini (default False)
+  * Updated the demos to the format NRML 0.5
+
+  [Graeme Weatherill]
+  * Adapts CoeffsTable to be instantiated with dictionaries as well as strings
+
   [Valerio Poggi]
   * Implemented the Atkinson (2010) GMPE as subclass `Atkinson2010Hawaii`
     of `BooreAtkinson2008`
