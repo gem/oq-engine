@@ -28,7 +28,7 @@ from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib import valid, InvalidFile
 
-MAXWEIGHT = 200  # tuned by M. Simionato
+MINWEIGHT = 200  # tuned by M. Simionato
 U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
@@ -286,7 +286,7 @@ def split_fault_source(src):
             i += 1
             splitlist.append(new_src)
     elif hasattr(src, 'start'):  # split by slice of ruptures
-        for start, stop in _split_start_stop(src.num_ruptures, MAXWEIGHT):
+        for start, stop in _split_start_stop(src.num_ruptures, MINWEIGHT):
             new_src = copy.copy(src)
             new_src.start = start
             new_src.stop = stop
