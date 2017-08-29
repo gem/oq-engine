@@ -18,4 +18,5 @@ INSTALLED_APPS += STANDALONE_APPS
 FILE_PATH_FIELD_DIRECTORY = os.path.join(os.path.expanduser('~'), 'oqdata')
 
 CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
+CONTEXT_PROCESSORS.insert(0, 'django.template.context_processors.request')
 CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
