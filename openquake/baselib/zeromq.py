@@ -116,12 +116,12 @@ def master(context, backend_url, func=None):
         if cmd == 'stop':
             # kill all processes in the executor pool
             break
-        executor.submit(safely_call, cmd, args,
-                        functools.partial(sendback, socket, ident))
+        fut = executor.submit(safely_call, cmd, args)
+        fut.add_done_callback(functools.partial(sendback, socket, ident))
 
 
-def sendback(socket, ident, res):
-    socket.send_multipart([ident, pickle.dumps(res)])
+def sendback(socket, ident, fut):
+    socket.send_multipart([ident, pickle.dumps(fut.result())])
 
 
 def starmap(context, frontend_url, func, allargs):
