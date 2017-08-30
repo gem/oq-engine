@@ -116,6 +116,7 @@ nav.main-nav ul li a {
     color: #fff;
     text-transform: none;
     font-size: 18px;
+    min-width: 80px;
     padding: 4px 0 15px;
 }
 
@@ -127,7 +128,7 @@ nav.main-nav ul li.calc{
    border-bottom: solid #ffdc00 5px;
 }
 
-nav.main-nav ul li.calc:hover{
+nav.main-nav ul li:hover{
     border-bottom: solid #fff 5px;
 }
 
@@ -139,6 +140,10 @@ nav.main-nav ul li.calc label{
     padding: 4px 0 15px;
     margin: 0;
     font-size: 18px;
+}
+
+nav.main-nav ul li.tools {
+   border-bottom: solid #eb737d 5px;
 }
 
 #license p{
