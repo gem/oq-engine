@@ -11,6 +11,7 @@ INSTALLED_APPS += (
 STANDALONE_APPS += (
     'openquakeplatform_ipt',
     'openquakeplatform_taxtweb',
+    'openquakeplatform_taxonomy',
 )
 
 INSTALLED_APPS += STANDALONE_APPS
