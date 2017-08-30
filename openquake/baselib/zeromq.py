@@ -114,7 +114,9 @@ def master(context, backend_url, func=None):
         else:  # use the provided func as cmd
             cmd, args = func, pickle.loads(pik)
         if cmd == 'stop':
-            # kill all processes in the executor pool
+            print('Received stop command')
+            # TODO: kill all processes in the executor pool
+            executor.shutdown()
             break
         fut = executor.submit(safely_call, cmd, args)
         fut.add_done_callback(functools.partial(sendback, socket, ident))
