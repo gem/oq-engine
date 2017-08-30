@@ -97,28 +97,6 @@ def proxy(context, frontend_url, backend_url):
         zmq.proxy(frontend, backend)
 
 
-def worker(context, backend_url, func=None):
-    """
-    A worker reading tuples and returning results to the backend via a zmq
-    socket.
-
-    :param context: zmq context
-    :param backend_url: URL where to connect
-    :param func: if None, expects message to be pairs (cmd, args) else args
-    """
-    socket = context.connect(backend_url, DEALER)
-    while True:
-        ident, pik = socket.recv_multipart()
-        if func is None:  # retrieve the cmd from the message
-            cmd, args = pickle.loads(pik)
-        else:  # use the provided func as cmd
-            cmd, args = func, pickle.loads(pik)
-        if cmd == 'stop':
-            break
-        res = safely_call(cmd, args)
-        socket.send_multipart([ident, pickle.dumps(res)])
-
-
 def master(context, backend_url, func=None):
     """
     A worker reading tuples and returning results to the backend via a zmq
@@ -138,12 +116,12 @@ def master(context, backend_url, func=None):
         if cmd == 'stop':
             # kill all processes in the executor pool
             break
-        fut = executor.submit(safely_call, cmd, args)
-        fut.add_done_callback(functools.partial(sendback, socket, ident))
+        executor.submit(safely_call, cmd, args,
+                        functools.partial(sendback, socket, ident))
 
 
-def sendback(socket, ident, fut):
-    socket.send_multipart([ident, pickle.dumps(fut.result())])
+def sendback(socket, ident, res):
+    socket.send_multipart([ident, pickle.dumps(res)])
 
 
 def starmap(context, frontend_url, func, allargs):
