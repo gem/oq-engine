@@ -29,7 +29,7 @@
                 </li>
                 {% endblock nav-items %}
                 {% if app_list %}
-                {# FIXME for now we assume that IPT is always available and it's the landing page #}
+                {# Take the first app in STANDALONE_APPS as landing page for tools #}
                 <li class="tools"><a href="{{ app_list.0.url }}">Tools</a></li>
                 {% endif %}
               </ul>
