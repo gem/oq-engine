@@ -30,7 +30,7 @@
                 {% endblock nav-items %}
                 {% if app_list %}
                 {# FIXME for now we assume that IPT is always available and it's the landing page #}
-                <li class="calc"><a href="{% url 'ipt:home' %}">Open Tools</a></li>
+                <li class="calc"><a href="{{ app_list.0.url }}">Tools</a></li>
                 {% endif %}
               </ul>
             </nav>
