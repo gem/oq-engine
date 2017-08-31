@@ -678,9 +678,6 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
-        rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
-        if rlz_ids:
-            self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
         mon = self.monitor('risk')
         all_args = [(riskinput, self.riskmodel, self.param, mon)
                     for riskinput in self.riskinputs]
