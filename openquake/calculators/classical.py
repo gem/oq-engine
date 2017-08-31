@@ -332,7 +332,9 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                          maxweight, numheavy, len(tiles))
         gsims_by_grp = self.csm.info.get_gsims_by_grp()
-        sm_ids = self.csm.info.get_sm_ids()
+        sm_ids = {sg.id: sm.ordinal for sm in self.csm.info.source_models
+                  for sg in sm.src_groups}
+
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
