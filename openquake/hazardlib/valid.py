@@ -57,6 +57,11 @@ def disagg_outputs(value):
     return values
 
 
+class FromFile(object):  # fake GSIM
+    def __str__(self):
+        return 'FromFile'
+
+
 # more tests are in tests/valid_test.py
 def gsim(value, **kwargs):
     """
@@ -66,7 +71,7 @@ def gsim(value, **kwargs):
     'BooreAtkinson2011()'
     """
     if value == 'FromFile':
-        return 'FromFile'
+        return FromFile()
     elif value.endswith('()'):
         value = value[:-2]  # strip parenthesis
     try:
