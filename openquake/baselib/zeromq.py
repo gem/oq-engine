@@ -18,7 +18,7 @@ POLLIN = zmq.POLLIN
 POLLOUT = zmq.POLLOUT
 
 
-class Context(zmq.Context):
+class _Context(zmq.Context):
     """
     A zmq Context subclass with methods .bind and .connect
     """
@@ -46,6 +46,9 @@ class Context(zmq.Context):
             raise exc.__class__('%s: %s' % (exc, end_point))
         return socket
 
+# NB: using a global context is probably good: http://250bpm.com/blog:23
+context = _Context()
+
 
 class Process(multiprocessing.Process):
     """
@@ -55,8 +58,8 @@ class Process(multiprocessing.Process):
         def newfunc(*args, **kw):
             # the only reason it is not .instance() is that there may be a
             # stale Context instance already initialized, from the docs
-            with Context() as c:
-                func(c, *args, **kw)
+            with context:
+                func(*args, **kw)
         super(Process, self).__init__(target=newfunc, args=args, kwargs=kw)
 
     def __enter__(self):
@@ -77,7 +80,6 @@ class Thread(threading.Thread):
                 func(*args, **kw)
             except zmq.ContextTerminated:  # CTRL-C was given
                 pass
-        args = (Context.instance(), ) + args
         super(Thread, self).__init__(target=newfunc, args=args, kwargs=kw)
 
     def __enter__(self):
@@ -88,7 +90,7 @@ class Thread(threading.Thread):
         self.join()
 
 
-def proxy(context, frontend_url, backend_url):
+def proxy(frontend_url, backend_url):
     """
     A zmq proxy routing messages from the frontend to the backend and back
     """
@@ -97,12 +99,11 @@ def proxy(context, frontend_url, backend_url):
         zmq.proxy(frontend, backend)
 
 
-def master(context, backend_url, func=None):
+def master(backend_url, func=None):
     """
     A worker reading tuples and returning results to the backend via a zmq
     socket.
 
-    :param context: zmq context
     :param backend_url: URL where to connect
     :param func: if None, expects message to be pairs (cmd, args) else args
     """
@@ -126,7 +127,7 @@ def sendback(socket, ident, fut):
     socket.send_multipart([ident, pickle.dumps(fut.result())])
 
 
-def starmap(context, frontend_url, func, allargs):
+def starmap(frontend_url, func, allargs):
     """
     starmap a function over an iterator of arguments by using a zmq socket
     """
@@ -148,5 +149,5 @@ if __name__ == '__main__':  # run workers
     except ValueError:
         url = sys.argv[1]
         ncores = multiprocessing.cpu_count()
-    with Context() as context, ProcessPoolExecutor(ncores) as executor:
-        master(context, url)
+    with context, ProcessPoolExecutor(ncores) as executor:
+        master(url)

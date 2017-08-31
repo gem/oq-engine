@@ -82,11 +82,10 @@ class DbServer(object):
 
     def __exit__(self, etype, exc, tb):
         if zmq:
-            with z.Context.instance() as c, c.connect(
-                    self.frontend_url, z.DEALER) as sender:
+            with z.context as c, c.connect(self.frontend_url, z.DEALER) as s:
                 for i in range(self.workers):
                     logging.warning('stopping zmq worker %d', i)
-                    sender.send_pyobj(('stop', i))
+                    s.send_pyobj(('stop', i))
                 time.sleep(1)  # wait a bit for the stop to be sent
 
     def loop(self):
