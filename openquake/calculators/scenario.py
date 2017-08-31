@@ -69,7 +69,6 @@ class ScenarioCalculator(base.HazardCalculator):
         cinfo = source.CompositionInfo.fake(gsim_lt)
         self.datastore['csm_info'] = cinfo
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
-        self.datastore['csm_info/assoc_by_grp'] = self.rlzs_assoc.array
 
     def init(self):
         pass

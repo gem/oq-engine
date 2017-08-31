@@ -473,7 +473,6 @@ class HazardCalculator(BaseCalculator):
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-            self.datastore['csm_info/assoc_by_grp'] = self.rlzs_assoc.array
 
     def read_exposure(self):
         """
