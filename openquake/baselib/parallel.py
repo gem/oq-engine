@@ -213,7 +213,7 @@ def check_mem_usage(monitor=Monitor(),
                      used_mem_percent, hostname)
 
 
-def safely_call(func, args, sendback=None):
+def safely_call(func, args):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -252,9 +252,6 @@ def safely_call(func, args, sendback=None):
 
     if pickle:  # it is impossible to measure the pickling time :-(
         res = Pickled(res)
-    if sendback is not None:
-        sendback(res)
-        return
     return res
 
 
@@ -875,7 +872,8 @@ def main(hostport):
     host, port = hostport.split(':')
     conn = Client((host, int(port)))
     func, args = conn.recv()
-    safely_call(func, args, conn.send)
+    res = safely_call(func, args)
+    conn.send(res)
     conn.close()
 
 if __name__ == '__main__':
