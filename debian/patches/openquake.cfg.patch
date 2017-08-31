@@ -1,7 +1,7 @@
 Index: oq-engine/openquake/engine/openquake.cfg
 ===================================================================
---- oq-engine.orig/openquake/engine/openquake.cfg	2016-05-06 14:06:06.000000000 +0000
-+++ oq-engine/openquake/engine/openquake.cfg	2016-05-06 16:23:04.006138759 +0000
+--- oq-engine.orig/openquake/engine/openquake.cfg	2017-08-31 13:40:55.514163784 +0000
++++ oq-engine/openquake/engine/openquake.cfg	2017-08-31 13:40:55.514163784 +0000
 @@ -40,9 +40,9 @@
  
  [dbserver]
@@ -13,5 +13,5 @@ Index: oq-engine/openquake/engine/openquake.cfg
 +file = /var/lib/openquake/db.sqlite3
 +log = /var/lib/openquake/dbserver.log
  # dbserver master node ip address
- host = localhost
+ host = 127.0.0.1
  # port 1908 has a good reputation:
