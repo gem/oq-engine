@@ -144,6 +144,7 @@ class RlzsAssoc(object):
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.gsims_by_grp_id = csm_info.get_gsims_by_grp()
+        self.rlzs_by_gsim = {}  # dict grp_id -> dict
 
     def _init(self):
         """
@@ -166,6 +167,13 @@ class RlzsAssoc(object):
                 for rlz in self.realizations:
                     rlz.weight = rlz.weight / tot_weight
 
+        # populate rlzs_by_gsim
+        bygrp = operator.itemgetter(0)
+        for grp_id, arr in groupby(self.array, bygrp).items():
+            gsims = self.gsims_by_grp_id[grp_id]
+            self.rlzs_by_gsim[grp_id] = collections.OrderedDict(
+                (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
+
     @property
     def realizations(self):
         """Flat list with all the realizations"""
@@ -184,16 +192,6 @@ class RlzsAssoc(object):
         if not mo:
             return
         return self.realizations[int(mo.group(1))]
-
-    def get_rlzs_by_gsim(self, grp_id):
-        """
-        Returns an orderd dictionary gsim > rlzs for the given grp_id
-        """
-        gsims = self.gsims_by_grp_id[grp_id]
-        arr = get_array(self.array, grp_id=grp_id)
-        rlzs_by_gsim = collections.OrderedDict(
-            (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
-        return rlzs_by_gsim
 
     def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
         rlzs = []
