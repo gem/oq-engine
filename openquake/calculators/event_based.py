@@ -461,13 +461,18 @@ class EventBasedCalculator(ClassicalCalculator):
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
         correl_model = oq.get_correl_model()
+        try:
+            csm_info = self.csm.info
+        except AttributeError:  # no csm
+            csm_info = self.datastore['csm_info']
+        samples_by_grp = csm_info.get_samples_by_grp()
         for grp_id in ruptures_by_grp:
             ruptures = ruptures_by_grp[grp_id]
             if not ruptures:
                 continue
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            rlzs_by_gsim = self.rlzs_assoc.rlzs_by_gsim[grp_id]
             for block in block_splitter(ruptures, oq.ruptures_per_block):
-                samples = self.rlzs_assoc.samples[grp_id]
+                samples = samples_by_grp[grp_id]
                 getter = GmfGetter(grp_id, rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
                                    correl_model, samples)
@@ -493,15 +498,15 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
-        rlzs = self.rlzs_assoc.realizations
+        R = len(self.datastore['realizations'])
         allargs = list(self.gen_args(ruptures_by_grp))
         res = parallel.Starmap(self.core_task.__func__, allargs).submit_all()
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
         acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
-            rlz.ordinal: ProbabilityMap(L) for rlz in rlzs})
-        save_gmdata(self, len(rlzs))
+            r: ProbabilityMap(L) for r in range(R)})
+        save_gmdata(self, R)
         if self.indices:
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
@@ -529,7 +534,7 @@ class EventBasedCalculator(ClassicalCalculator):
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
         elif oq.hazard_curves_from_gmfs:
-            rlzs = self.rlzs_assoc.realizations
+            rlzs = self.datastore['realizations'].value
             # save individual curves
             for i in sorted(result):
                 key = 'hcurves/rlz-%03d' % i
@@ -541,7 +546,7 @@ class EventBasedCalculator(ClassicalCalculator):
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations
             # involves a "small" number of sites (<= 65,536)
-            weights = [rlz.weight for rlz in rlzs]
+            weights = [rlz['weight'] for rlz in rlzs]
             hstats = self.oqparam.hazard_stats()
             if len(hstats) and len(rlzs) > 1:
                 for kind, stat in hstats:

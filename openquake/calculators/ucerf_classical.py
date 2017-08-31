@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import time
-import socket
 import logging
-import functools
 from datetime import datetime
 import numpy
 import h5py
@@ -149,7 +147,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.csm = get_composite_source_model(self.oqparam)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        self.gsims_by_grp = self.csm.info.get_gsims_by_grp()
         self.rup_data = {}
 
     def execute(self):
@@ -163,14 +161,14 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         acc = AccumDict({
             grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
-            for grp_id, gsims in self.rlzs_assoc.gsims_by_grp_id.items()})
+            for grp_id, gsims in self.gsims_by_grp.items()})
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
 
         for sm in self.csm.source_models:  # one branch at the time
             grp_id = sm.ordinal
-            gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+            gsims = self.gsims_by_grp[grp_id]
             [[ucerf_source]] = sm.src_groups
             ucerf_source.nsites = len(self.sitecol)
             self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
