@@ -398,7 +398,7 @@ def get_gmfs(dstore, precalc=None):
     :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
     oq = dstore['oqparam']
-    num_assocs = len(dstore['csm_info/assoc_by_grp'])
+    num_assocs = dstore['csm_info'].get_num_rlzs()
     sitecol = dstore['sitecol']
     if dstore.parent:
         haz_sitecol = dstore.parent['sitecol']  # S sites
