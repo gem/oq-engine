@@ -767,7 +767,7 @@ def split_filter_source(src, src_filter):
     except KeyError:  # fill the cache
         splits = split_map[src] = list(sourceconverter.split_source(src))
         if len(splits) > 1:
-            logging.info(
+            logging.debug(
                 'Splitting %s "%s" in %d sources', src.__class__.__name__,
                 src.source_id, len(splits))
     for split in splits:
