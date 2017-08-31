@@ -470,7 +470,7 @@ class EventBasedCalculator(ClassicalCalculator):
             ruptures = ruptures_by_grp[grp_id]
             if not ruptures:
                 continue
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            rlzs_by_gsim = self.rlzs_assoc.rlzs_by_gsim[grp_id]
             for block in block_splitter(ruptures, oq.ruptures_per_block):
                 samples = samples_by_grp[grp_id]
                 getter = GmfGetter(grp_id, rlzs_by_gsim, block, self.sitecol,
