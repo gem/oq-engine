@@ -294,13 +294,6 @@ class CompositionInfo(object):
                 gsims_by_grp[sg.id] = gsims
         return gsims_by_grp
 
-    def get_sm_ids(self):
-        """
-        :returns: a dictionary src_group_id -> source_model.ordinal
-        """
-        return {sg.id: sm.ordinal for sm in self.source_models
-                for sg in sm.src_groups}
-
     def get_samples_by_grp(self):
         """
         :returns: a dictionary src_group_id -> source_model.samples
