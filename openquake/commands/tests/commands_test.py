@@ -69,7 +69,7 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): ['<0,b1~@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>
+0,AkkarBommer2010(): [0]>
 =============== ======
 attribute       nbytes
 =============== ======'''
