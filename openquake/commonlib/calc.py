@@ -67,10 +67,11 @@ class PmapGetter(object):
     :param lazy: if True, read directly from the datastore
     """
     def __init__(self, dstore, lazy=False):
+        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
-        self.assoc_by_grp = dstore['csm_info/assoc_by_grp'].value
-        self.weights = self.dstore['realizations']['weight']
+        self.assoc_by_grp = rlzs_assoc.array
+        self.weights = dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = None  # to be set

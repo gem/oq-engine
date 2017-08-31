@@ -1274,12 +1274,7 @@ class GsimLogicTree(object):
             raise InvalidLogicTree(
                 'Found duplicated applyToTectonicRegionType=%s' % trts)
         branches.sort(key=lambda b: (b.bset['branchSetID'], b.id))
-
-        # now sort the GSIMs by adding an .idx on each one
-        for gsims in self.values.values():
-            for idx, gsim in enumerate(gsims):
-                gsim.idx = idx
-
+        # TODO: added an .idx attribute to the GSIMs?
         return trts, branches
 
     def get_gsim_by_trt(self, rlz, trt):
