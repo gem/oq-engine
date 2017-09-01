@@ -341,7 +341,7 @@ class IterResult(object):
     :param taskname:
         the name of the task
     :param num_tasks:
-        the total number of expected futures (None if unknown)
+        the total number of expected futures
     :param progress:
         a logging function for the progress report
     """
@@ -349,7 +349,7 @@ class IterResult(object):
         [('taskno', numpy.uint32), ('weight', numpy.float32),
          ('duration', numpy.float32)])
 
-    def __init__(self, futures, taskname, num_tasks=None,
+    def __init__(self, futures, taskname, num_tasks,
                  progress=logging.info, sent=0):
         self.futures = futures
         self.name = taskname
@@ -617,7 +617,7 @@ class Starmap(object):
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, self.num_tasks)
 
-        elif self.distribute == 'qsub':
+        elif self.distribute == 'qsub':  # experimental
             allargs = list(self.add_task_no(self.task_args, pickle=False))
             logging.warn('Sending %d tasks to the grid engine', len(allargs))
             return IterResult(qsub(self.task_func, allargs),
