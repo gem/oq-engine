@@ -210,7 +210,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.before_export()
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
-            pids = ' '.join(str(p.pid) for p in executor._processes)
+            pids = ' '.join(str(p.pid) for p in executor.pids)
             sys.stderr.write(
                 'You can manually kill the workers with kill %s\n' % pids)
             raise
