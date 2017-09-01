@@ -225,8 +225,8 @@ def safely_call(func, args):
     :param args: the arguments
     """
     with Monitor('total ' + func.__name__, measuremem=True) as child:
-        pickle = args and hasattr(args[0], 'unpickle')
-        if pickle:  # measure the unpickling time too
+        if args and hasattr(args[0], 'unpickle'):
+            # args is a list of Pickled objects
             args = [a.unpickle() for a in args]
         if args and isinstance(args[-1], Monitor):
             mon = args[-1]
@@ -365,7 +365,7 @@ class IterResult(object):
             next(self.log_percent)
         if sent:
             self.progress('Sent %s of data in %s task(s)',
-                          humansize(sum(sent.values())), num_tasks or '?')
+                          humansize(sum(sent.values())), num_tasks)
 
     def _log_percent(self):
         yield 0
@@ -697,6 +697,7 @@ def wakeup_pool():
         executor.pids = list(pids)
 
 
+# TODO: remove this?
 class BaseStarmap(object):
     poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
     add_task_no = Starmap.__dict__['add_task_no']
