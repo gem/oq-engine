@@ -640,7 +640,7 @@ class Starmap(object):
 
     def add_task_no(self, iterargs, pickle=True):
         """
-        Add .task_no and .weight to the monitor and yields back
+        Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them if pickle is True.
         """
         for task_no, args in enumerate(iterargs, 1):
@@ -697,7 +697,8 @@ def wakeup_pool():
         executor.pids = list(pids)
 
 
-# TODO: remove this?
+# it would be nice to remove this in the future, but it is not easy: the
+# subclasses Sequential and Processmap are used
 class BaseStarmap(object):
     poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
     add_task_no = Starmap.__dict__['add_task_no']
