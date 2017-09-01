@@ -27,7 +27,7 @@ def kill(calc_id=None):  # NB: calc_id not None is not implemented yet
     """
     frontend, _backend = config.zmq_urls()
     ncores = sum(tup[-1] for tup in config.get_host_cores())
-    with zeromq.Context() as c, c.connect(frontend, zeromq.DEALER) as s:
+    with zeromq.context as c, c.connect(frontend, zeromq.DEALER) as s:
         for _ in range(ncores):
             s.send_pyobj(['stop', calc_id])
 
