@@ -249,9 +249,6 @@ def safely_call(func, args):
                    etype, mon)
         finally:
             mon._flush = True
-
-    if pickle:  # it is impossible to measure the pickling time :-(
-        res = Pickled(res)
     return res
 
 
