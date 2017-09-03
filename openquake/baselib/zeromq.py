@@ -149,7 +149,7 @@ if __name__ == '__main__':  # run workers
     try:
         url, _ncores = sys.argv[1:]
         ncores = int(_ncores)
-    except ValueError:
+    except ValueError:  # _ncores is the string 'default'
         url = sys.argv[1]
         ncores = None
     with context:

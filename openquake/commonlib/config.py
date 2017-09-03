@@ -148,18 +148,16 @@ def flag_set(section, setting):
 
 def get_host_cores():
     """
-    Yields triples (hostname, port, number_of_available_cores)
+    Yields string triples (hostname, port, number_of_available_cores)
     """
     out = []
     for host_cores in get('dbserver', 'host_cores').split(','):
         host_port, cores = host_cores.split()
-        if cores == 'default':
-            cores = multiprocessing.cpu_count()
         if ':' in host_port:
             host, port = host_port.split(':')
         else:
             host, port = host_port, '22'
-        out.append((host, port, int(cores)))
+        out.append((host, port, cores))
     return out
 
 
