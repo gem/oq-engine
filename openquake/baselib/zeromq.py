@@ -1,8 +1,12 @@
-from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
 import functools
 import threading
 import zmq
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.parallel import safely_call
 
@@ -99,7 +103,7 @@ def proxy(frontend_url, backend_url):
         zmq.proxy(frontend, backend)
 
 
-def master(backend_url, func=None):
+def workerpool(backend_url, ncores=None, func=None):
     """
     A worker reading tuples and returning results to the backend via a zmq
     socket.
@@ -107,6 +111,8 @@ def master(backend_url, func=None):
     :param backend_url: URL where to connect
     :param func: if None, expects message to be pairs (cmd, args) else args
     """
+    title = 'oq-worker'
+    pool = multiprocessing.Pool(ncores, setproctitle, (title,))
     socket = context.connect(backend_url, DEALER)
     while True:
         ident, pik = socket.recv_multipart()
@@ -116,15 +122,14 @@ def master(backend_url, func=None):
             cmd, args = func, pickle.loads(pik)
         if cmd == 'stop':
             print('Received stop command')
-            # TODO: kill all processes in the executor pool
-            executor.shutdown()
+            pool.terminate()
             break
-        fut = executor.submit(safely_call, cmd, args)
-        fut.add_done_callback(functools.partial(sendback, socket, ident))
+        pool.apply_async(safely_call, (cmd, args),
+                         callback=functools.partial(sendback, socket, ident))
 
 
-def sendback(socket, ident, fut):
-    socket.send_multipart([ident, pickle.dumps(fut.result())])
+def sendback(socket, ident, res):
+    socket.send_multipart([ident, pickle.dumps(res)])
 
 
 def starmap(frontend_url, func, allargs):
@@ -148,6 +153,6 @@ if __name__ == '__main__':  # run workers
         ncores = int(_ncores)
     except ValueError:
         url = sys.argv[1]
-        ncores = multiprocessing.cpu_count()
-    with context, ProcessPoolExecutor(ncores) as executor:
-        master(url)
+        ncores = None
+    with context:
+        workerpool(url, ncores)
