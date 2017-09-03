@@ -38,7 +38,13 @@ TERMINATE = valid.boolean(
 USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
 
 if parallel.oq_distribute() == 'zmq':
-    num_cores = sum(int(item[-1]) for item in config.get_host_cores())
+    import multiprocessing
+    # FIXME: one should get the cpu_count of the remote machines if any
+    default = multiprocessing.cpu_count()
+    num_cores = 0
+    for item in config.get_host_cores():
+        n = item[-1]
+        num_cores += default if n == 'default' else int(n)
     OqParam.concurrent_tasks.default = num_cores * 5
     logs.LOG.info('Using %d cores', num_cores)
 

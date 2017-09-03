@@ -66,13 +66,13 @@ class DbServer(object):
                        sys.executable)
             for host, sshport, cores in config.get_host_cores():
                 if host == '127.0.0.1':  # localhost
-                    args = []
+                    args = [sys.executable]
                 else:
-                    args = ['ssh', host, '-p', sshport]
-                subprocess.Popen(args)
-                args += [rpython, '-m', 'openquake.baselib.zeromq',
+                    args = ['ssh', host, '-p', sshport, rpython]
+                args += ['-m', 'openquake.baselib.zeromq',
                          self.backend_url, cores]
                 logging.warn('starting ' + ' '.join(args))
+                subprocess.Popen(args)
                 self.workers += 1
             z.Thread(z.proxy, self.frontend_url, self.backend_url).start()
             logging.warn('zmq proxy started on ports %d, %d',
