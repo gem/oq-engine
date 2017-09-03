@@ -23,9 +23,7 @@ import sqlite3
 import os.path
 import logging
 import subprocess
-from multiprocessing.connection import Listener
-from concurrent.futures import ThreadPoolExecutor
-from openquake.baselib import sap
+from openquake.baselib import sap, zeromq
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import valid
 from openquake.commonlib import config, logs
@@ -39,10 +37,6 @@ zmq = os.environ.get(
 if zmq:
     from openquake.baselib import zeromq as z
 
-# using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
-# ref: https://bugs.python.org/issue27126
-executor = ThreadPoolExecutor(1)
-
 
 class DbServer(object):
     """
@@ -50,7 +44,7 @@ class DbServer(object):
     """
     def __init__(self, db, address, authkey):
         self.db = db
-        self.address = address
+        self.address = 'tcp://%s:%s' % address
         host, self.port = address
         self.authkey = authkey
         if host == 'localhost':
@@ -88,39 +82,18 @@ class DbServer(object):
                 time.sleep(1)  # wait a bit for the stop to be sent
 
     def loop(self):
-        listener = Listener(self.address, backlog=5, authkey=self.authkey)
-        logging.warn('DB server started with %s, listening on %s:%d...',
-                     sys.executable, *self.address)
-        try:
-            while True:
-                try:
-                    conn = listener.accept()
-                except KeyboardInterrupt:
-                    break
-                except:
-                    # unauthenticated connection, for instance by a port
-                    # scanner such as the one in manage.py
-                    continue
-                cmd_ = conn.recv()  # a tuple (name, arg1, ... argN)
-                cmd, args = cmd_[0], cmd_[1:]
-                logging.debug('Got ' + str(cmd_))
-                if cmd == 'stop':
-                    conn.send((None, None))
-                    conn.close()
-                    break
-                func = getattr(actions, cmd)
-                fut = executor.submit(safely_call, func, (self.db,) + args)
-
-                def sendback(fut, conn=conn):
-                    res, etype, _mon = fut.result()
-                    if etype:
-                        logging.error(res)
-                    # send back the result and the exception class
-                    conn.send((res, etype))
-                    conn.close()
-                fut.add_done_callback(sendback)
-        finally:
-            listener.close()
+        logging.warn('DB server started with %s, listening on %s...',
+                     sys.executable, self.address)
+        sock = zeromq.ReplySocket(self.address)
+        for cmd_ in sock:
+            cmd, args = cmd_[0], cmd_[1:]
+            logging.debug('Got ' + str(cmd_))
+            if cmd == 'stop':
+                sock.reply((None, None, None))
+                break
+            func = getattr(actions, cmd)
+            res = safely_call(func, (self.db,) + args)
+            sock.reply(res)
 
 
 def different_paths(path1, path2):
@@ -207,7 +180,6 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
                   detect_types=sqlite3.PARSE_DECLTYPES)
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)
-    db.conn.close()
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)

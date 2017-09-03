@@ -60,8 +60,8 @@ install:
   # A second run of 'pip download' will download only the missing wheels. 
   - pip -q download -r requirements-py35-linux64.txt -d wheels
   - pip -q install wheels/*
-  - pip -q install -e .
   - pip -q install pyzmq
+  - pip -q install -e .
 
 before_script:
   - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
