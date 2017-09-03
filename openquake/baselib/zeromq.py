@@ -103,28 +103,26 @@ def proxy(frontend_url, backend_url):
         zmq.proxy(frontend, backend)
 
 
-def workerpool(backend_url, ncores=None, func=None):
+def workerpool(backend_url, ncores=None, func=safely_call):
     """
     A worker reading tuples and returning results to the backend via a zmq
     socket.
 
     :param backend_url: URL where to connect
-    :param func: if None, expects message to be pairs (cmd, args) else args
+    :param ncores: number of cores to use (default all)
+    :param func: function to call (default safely_call)
     """
     title = 'oq-worker'
     pool = multiprocessing.Pool(ncores, setproctitle, (title,))
     socket = context.connect(backend_url, DEALER)
     while True:
         ident, pik = socket.recv_multipart()
-        if func is None:  # retrieve the cmd from the message
-            cmd, args = pickle.loads(pik)
-        else:  # use the provided func as cmd
-            cmd, args = func, pickle.loads(pik)
-        if cmd == 'stop':
-            print('Received stop command')
+        args = pickle.loads(pik)
+        if args[0] == 'stop':
+            print('Terminating workerpool')
             pool.terminate()
             break
-        pool.apply_async(safely_call, (cmd, args),
+        pool.apply_async(func, args,
                          callback=functools.partial(sendback, socket, ident))
 
 
