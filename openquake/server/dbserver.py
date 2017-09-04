@@ -46,7 +46,7 @@ class DbServer(object):
         self.db = db
         self.address = 'tcp://%s:%s' % address
         host, self.port = address
-        self.authkey = authkey
+        self.authkey = authkey  # this is not used for the moment
         if host == 'localhost':
             host = '127.0.0.1'
         self.frontend_url = 'tcp://%s:%s' % (host, self.port + 1)
@@ -88,12 +88,13 @@ class DbServer(object):
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
             logging.debug('Got ' + str(cmd_))
-            if cmd == 'stop':
-                sock.reply((None, None, None))
-                break
-            func = getattr(actions, cmd)
-            res = safely_call(func, (self.db,) + args)
-            sock.reply(res)
+            try:
+                func = getattr(actions, cmd)
+            except AttributeError:
+                sock.reply(('Invalid command ' + cmd, ValueError, None))
+            else:
+                sock.reply(safely_call(func, (self.db,) + args))
+        logging.warn('DB server stopped')
 
 
 def different_paths(path1, path2):
@@ -183,8 +184,10 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    with DbServer(db, addr, config.DBS_AUTHKEY) as dbs:
-        dbs.loop()
+    try:
+        DbServer(db, addr, config.DBS_AUTHKEY).loop()
+    finally:
+        db.conn.close()
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')

@@ -1,7 +1,7 @@
 Index: oq-engine/openquake/engine/openquake.cfg
 ===================================================================
---- oq-engine.orig/openquake/engine/openquake.cfg	2017-08-31 13:40:55.514163784 +0000
-+++ oq-engine/openquake/engine/openquake.cfg	2017-08-31 13:40:55.514163784 +0000
+--- oq-engine.orig/openquake/engine/openquake.cfg	2017-09-04 14:36:12.000000000 +0000
++++ oq-engine/openquake/engine/openquake.cfg	2017-09-04 14:36:18.006138759 +0000
 @@ -40,9 +40,9 @@
  
  [dbserver]

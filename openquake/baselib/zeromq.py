@@ -70,7 +70,16 @@ class ReplySocket(object):
         self.zsocket.bind(self.end_point)
         with self.zsocket:
             while True:
-                yield self.zsocket.recv_pyobj()
+                try:
+                    args = self.zsocket.recv_pyobj()
+                except (KeyboardInterrupt, zmq.error.ZMQError):
+                    # sending SIGTERM raises ZMQError
+                    break
+                if args[0] == 'stop':
+                    self.reply((None, None, None))
+                    break
+                else:
+                    yield args
 
     def reply(self, obj):
         self.zsocket.send_pyobj(obj)
