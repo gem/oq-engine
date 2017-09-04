@@ -1,3 +1,4 @@
+import os
 import zmq
 
 context = zmq.Context()
@@ -19,7 +20,11 @@ class ReplySocket(object):
         self.zsocket.bind(self.end_point)
         with self.zsocket:
             while True:
-                args = self.zsocket.recv_pyobj()
+                try:
+                    args = self.zsocket.recv_pyobj()
+                except (KeyboardInterrupt, zmq.error.ZMQError):
+                    # sending SIGTERM raises ZMQError
+                    break
                 if args[0] == 'stop':
                     self.reply((None, None, None))
                     break
@@ -40,3 +45,9 @@ def request(end_point, *args):
     with zsocket:
         zsocket.send_pyobj(args)
         return zsocket.recv_pyobj()
+
+if __name__ == '__main__':
+    print('started echo server, pid=%d' % os.getpid())
+    sock = ReplySocket('tcp://127.0.0.1:9000')
+    for args in sock:  # echo server for testing purposes
+        sock.reply(args)
