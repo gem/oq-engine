@@ -78,7 +78,6 @@ extras_require = {
     'prctl': ["python-prctl ==1.6.1"],
     'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'celery':  ["celery >=3.1, <4.0"],
-    'zmq': ["zmq >= 15.2"],
     'pam': ["python-pam", "django-pam"],
     'plotting':  [
         'basemap >=1.0',
