@@ -50,12 +50,10 @@ class DbServer(object):
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
             logging.debug('Got ' + str(cmd_))
-            if cmd == 'stop':
-                sock.reply((None, None, None))
-                break
             func = getattr(actions, cmd)
             res = safely_call(func, (self.db,) + args)
             sock.reply(res)
+        logging.warn('DB server stopped')
 
 
 def different_paths(path1, path2):
