@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Used zmq in the DbServer
   * Fixed correct_complex_sources.py
   * Fixed `oq export hcurves-rlzs -e hdf5`
   * Changed the source weighting algorithm: now it is proportional to the
