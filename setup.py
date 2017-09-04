@@ -56,7 +56,7 @@ install_requires = [
     'nose >=1.3, <1.4',
     'numpy >=1.8, <1.12',
     'scipy >=0.13, <0.18',
-    'zeromq <17.0',
+    'pyzmq <17.0',
     'psutil >=1.2, <4.5',
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',

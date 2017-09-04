@@ -62,7 +62,6 @@ install:
   - pip -q install wheels/*
   - pip -q install -e .
 
-
 before_script:
   - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
 
