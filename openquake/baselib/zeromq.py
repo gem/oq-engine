@@ -19,7 +19,12 @@ class ReplySocket(object):
         self.zsocket.bind(self.end_point)
         with self.zsocket:
             while True:
-                yield self.zsocket.recv_pyobj()
+                args = self.zsocket.recv_pyobj()
+                if args[0] == 'stop':
+                    self.reply((None, None, None))
+                    break
+                else:
+                    yield args
 
     def reply(self, obj):
         self.zsocket.send_pyobj(obj)
