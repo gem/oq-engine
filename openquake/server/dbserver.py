@@ -185,7 +185,8 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     try:
-        DbServer(db, addr, config.DBS_AUTHKEY).loop()
+        with DbServer(db, addr, config.DBS_AUTHKEY) as dbs:
+            dbs.loop()
     finally:
         db.conn.close()
 
