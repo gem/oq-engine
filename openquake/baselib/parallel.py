@@ -344,6 +344,8 @@ class IterResult(object):
         the total number of expected futures
     :param progress:
         a logging function for the progress report
+    :param sent:
+        the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     """
     task_data_dt = numpy.dtype(
         [('taskno', numpy.uint32), ('weight', numpy.float32),
@@ -602,6 +604,9 @@ class Starmap(object):
 
     @property
     def num_tasks(self):
+        """
+        The number of tasks, if known, or the empty string.
+        """
         try:
             return len(self.task_args)
         except TypeError:  # generators have no len
@@ -864,8 +869,10 @@ def main(hostport):
     conn = Client((host, int(port)))
     func, args = conn.recv()
     res = safely_call(func, args)
-    conn.send(res)
-    conn.close()
+    try:
+        conn.send(res)
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     main(sys.argv[1])
