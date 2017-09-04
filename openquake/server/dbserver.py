@@ -50,9 +50,12 @@ class DbServer(object):
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
             logging.debug('Got ' + str(cmd_))
-            func = getattr(actions, cmd)
-            res = safely_call(func, (self.db,) + args)
-            sock.reply(res)
+            try:
+                func = getattr(actions, cmd)
+            except AttributeError:
+                sock.reply(('Invalid command ' + cmd, ValueError, None))
+            else:
+                sock.reply(safely_call(func, (self.db,) + args))
         logging.warn('DB server stopped')
 
 
@@ -143,7 +146,10 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    DbServer(db, addr, config.DBS_AUTHKEY).loop()
+    try:
+        DbServer(db, addr, config.DBS_AUTHKEY).loop()
+    finally:
+        db.conn.close()
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')
