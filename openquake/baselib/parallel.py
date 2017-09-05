@@ -213,7 +213,7 @@ def check_mem_usage(monitor=Monitor(),
                      used_mem_percent, hostname)
 
 
-def safely_call(func, args, pickle=False, conn=None):
+def safely_call(func, args):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -223,12 +223,10 @@ def safely_call(func, args, pickle=False, conn=None):
 
     :param func: the function to call
     :param args: the arguments
-    :param pickle:
-        if set, the input arguments are unpickled and the return value
-        is pickled; otherwise they are left unchanged
     """
     with Monitor('total ' + func.__name__, measuremem=True) as child:
-        if pickle:  # measure the unpickling time too
+        if args and hasattr(args[0], 'unpickle'):
+            # args is a list of Pickled objects
             args = [a.unpickle() for a in args]
         if args and isinstance(args[-1], Monitor):
             mon = args[-1]
@@ -251,13 +249,6 @@ def safely_call(func, args, pickle=False, conn=None):
                    etype, mon)
         finally:
             mon._flush = True
-
-    if pickle:  # it is impossible to measure the pickling time :-(
-        res = Pickled(res)
-    if conn:  # send the result via the connection
-        conn.send(res)
-        conn.close()
-        return None
     return res
 
 
@@ -350,16 +341,18 @@ class IterResult(object):
     :param taskname:
         the name of the task
     :param num_tasks:
-        the total number of expected futures (None if unknown)
+        the total number of expected futures
     :param progress:
         a logging function for the progress report
+    :param sent:
+        the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     """
     task_data_dt = numpy.dtype(
         [('taskno', numpy.uint32), ('weight', numpy.float32),
          ('duration', numpy.float32)])
 
-    def __init__(self, futures, taskname, num_tasks=None,
-                 progress=logging.info):
+    def __init__(self, futures, taskname, num_tasks,
+                 progress=logging.info, sent=0):
         self.futures = futures
         self.name = taskname
         self.num_tasks = num_tasks
@@ -367,11 +360,14 @@ class IterResult(object):
             self.progress = logging.debug
         else:
             self.progress = progress
-        self.sent = 0  # set in Starmap.submit_all
+        self.sent = sent
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
             next(self.log_percent)
+        if sent:
+            self.progress('Sent %s of data in %s task(s)',
+                          humansize(sum(sent.values())), num_tasks)
 
     def _log_percent(self):
         yield 0
@@ -510,11 +506,18 @@ class Starmap(object):
         self.task_func = oqtask
         self.task_args = task_args
         self.name = name or oqtask.__name__
+        self.init(oqtask)
         self.results = []
-        self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
         if self.distribute == 'threadpool':
             self.executor = ThreadPoolExecutor(executor.num_tasks_hint)
+        if self.distribute == 'ipython' and isinstance(
+                self.executor, ProcessPoolExecutor):
+            client = ipp.Client()
+            self.__class__.executor = client.executor()
+
+    def init(self, oqtask):
+        self.sent = AccumDict()
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(oqtask):
             self.argnames = inspect.getargspec(oqtask).args
@@ -522,10 +525,6 @@ class Starmap(object):
             self.argnames = inspect.getargspec(oqtask.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(oqtask.__call__).args[1:]
-        if self.distribute == 'ipython' and isinstance(
-                self.executor, ProcessPoolExecutor):
-            client = ipp.Client()
-            self.__class__.executor = client.executor()
 
     def progress(self, *args):
         """
@@ -546,24 +545,19 @@ class Starmap(object):
         check_mem_usage()
         # log a warning if too much memory is used
         if self.distribute == 'no':
-            sent = {}
             res = safely_call(self.task_func, args)
         else:
-            piks = pickle_sequence(args)
-            sent = {arg: len(p) for arg, p in zip(self.argnames, piks)}
-            res = self._submit(piks)
-        self.sent += sent
+            res = self._submit(args)
         self.results.append(res)
-        return sent
 
     def _submit(self, piks):
         if self.distribute == 'celery':
-            res = safe_task.delay(self.task_func, piks, True)
+            res = safe_task.delay(self.task_func, piks)
             self.task_ids.append(res.task_id)
             return res
         else:  # submit tasks by using the ProcessPoolExecutor or ipyparallel
             return self.executor.submit(
-                safely_call, self.task_func, piks, True)
+                safely_call, self.task_func, piks)
 
     def _iterfutures(self):
         # compatibility wrapper for different concurrency frameworks
@@ -608,55 +602,64 @@ class Starmap(object):
         """
         return self.reduce(self, lambda acc, res: acc + 1, 0)
 
+    @property
+    def num_tasks(self):
+        """
+        The number of tasks, if known, or -1 otherwise.
+        """
+        try:
+            return len(self.task_args)
+        except TypeError:  # generators have no len
+            return -1
+
     def submit_all(self):
         """
         :returns: an IterResult object
         """
-        try:
-            nargs = len(self.task_args)
-        except TypeError:  # generators have no len
-            nargs = ''
-        if nargs == 1:
-            [args] = self.task_args
-            add_task_no(args, 0)
+        if self.num_tasks == 1:
+            [args] = self.add_task_no(self.task_args, pickle=False)
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
-            return IterResult([fut], self.name, nargs)
+            return IterResult([fut], self.name, self.num_tasks)
 
-        if self.distribute == 'qsub':
-            logging.warn('EXPERIMENTAL: sending tasks to the grid engine')
-            allargs = list(self.task_args)
+        elif self.distribute == 'qsub':  # experimental
+            allargs = list(self.add_task_no(self.task_args, pickle=False))
+            logging.warn('Sending %d tasks to the grid engine', len(allargs))
             return IterResult(qsub(self.task_func, allargs),
-                              self.name, len(allargs), self.progress)
+                              self.name, len(allargs),
+                              self.progress, self.sent)
 
         task_no = 0
-        for args in self.task_args:
+        for args in self.add_task_no(self.task_args):
             task_no += 1
-            if task_no == 1:  # first time
-                self.progress('Submitting %s "%s" tasks', nargs, self.name)
-            add_task_no(args, task_no)
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
         # NB: keep self._iterfutures() an iterator, especially with celery!
         ir = IterResult(self._iterfutures(), self.name, task_no,
-                        self.progress)
-        ir.sent = self.sent  # for information purposes
-        if self.sent:
-            self.progress('Sent %s of data in %d task(s)',
-                          humansize(sum(self.sent.values())),
-                          ir.num_tasks)
+                        self.progress, self.sent)
         return ir
 
     def __iter__(self):
         return iter(self.submit_all())
 
-
-def add_task_no(args, task_no):
-    if isinstance(args[-1], Monitor):
-        # add incremental task number and task weight
-        args[-1].task_no = task_no
-        args[-1].weight = getattr(args[0], 'weight', 1.)
+    def add_task_no(self, iterargs, pickle=True):
+        """
+        Add .task_no and .weight to the monitor and yield back
+        the arguments by pickling them if pickle is True.
+        """
+        for task_no, args in enumerate(iterargs, 1):
+            if isinstance(args[-1], Monitor):
+                # add incremental task number and task weight
+                args[-1].task_no = task_no
+                args[-1].weight = getattr(args[0], 'weight', 1.)
+            if pickle:
+                args = pickle_sequence(args)
+                self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
+            if task_no == 1:  # first time
+                n = '' if self.num_tasks == -1 else self.num_tasks
+                self.progress('Submitting %s "%s" tasks', n, self.name)
+            yield args
 
 
 def do_not_aggregate(acc, value):
@@ -699,8 +702,13 @@ def wakeup_pool():
         executor.pids = list(pids)
 
 
+# it would be nice to remove this in the future, but it is not easy: the
+# subclasses Sequential and Processmap are used
 class BaseStarmap(object):
     poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
+    add_task_no = Starmap.__dict__['add_task_no']
+    init = Starmap.__dict__['init']
+    num_tasks = Starmap.__dict__['num_tasks']
 
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
@@ -710,27 +718,25 @@ class BaseStarmap(object):
             cls = Sequential
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
-    def __init__(self, func, iterargs, poolsize=None):
+    def __init__(self, func, iterargs, poolsize=None, progress=logging.info):
         self.pool = self.poolfactory(poolsize)
         self.func = func
-        allargs = []
-        for task_no, args in enumerate(iterargs):
-            if isinstance(args[-1], Monitor):
-                # add incremental task number and task weight
-                args[-1].task_no = task_no
-                args[-1].weight = getattr(args[0], 'weight', 1.)
-            allargs.append(args)
-        self.num_tasks = len(allargs)
-        logging.info('Starting %d tasks', self.num_tasks)
+        self.name = func.__name__
+        self.task_args = iterargs
+        self.progress = progress
+        self.init(func)
+        allargs = list(self.add_task_no(iterargs))
+        progress('Starting %s tasks', self.num_tasks)
         self.imap = self.pool.imap_unordered(
             functools.partial(safely_call, func), allargs)
 
-    def submit_all(self, progress=logging.info):
+    def submit_all(self):
         """
         :returns: an :class:`IterResult` instance
         """
         futs = (mkfuture(res) for res in self.imap)
-        return IterResult(futs, self.func.__name__, self.num_tasks, progress)
+        return IterResult(futs, self.func.__name__, self.num_tasks,
+                          self.progress, self.sent)
 
     def __iter__(self):
         try:
@@ -741,10 +747,10 @@ class BaseStarmap(object):
                 self.pool.close()
                 self.pool.join()
 
-    def reduce(self, agg=operator.add, acc=None, progress=logging.info):
+    def reduce(self, agg=operator.add, acc=None):
         if acc is None:
             acc = AccumDict()
-        for res in self.submit_all(progress):
+        for res in self.submit_all():
             acc = agg(acc, res)
         if self.pool:
             self.pool.close()
@@ -756,12 +762,16 @@ class Sequential(BaseStarmap):
     """
     A sequential Starmap, useful for debugging purpose.
     """
-    def __init__(self, func, iterargs, poolsize=None):
+    def __init__(self, func, iterargs, poolsize=None, progress=logging.info):
         self.pool = None
         self.func = func
-        allargs = list(iterargs)
-        self.num_tasks = len(allargs)
-        logging.info('Starting %d sequential tasks', self.num_tasks)
+        self.name = func.__name__
+        self.task_args = iterargs
+        self.progress = progress
+        self.sent = AccumDict()
+        self.argnames = inspect.getargspec(func).args
+        allargs = list(self.add_task_no(iterargs))
+        progress('Starting %s sequential tasks', self.num_tasks)
         self.imap = [safely_call(func, args) for args in allargs]
 
 
@@ -858,7 +868,11 @@ def main(hostport):
     host, port = hostport.split(':')
     conn = Client((host, int(port)))
     func, args = conn.recv()
-    safely_call(func, args, False, conn)
+    res = safely_call(func, args)
+    try:
+        conn.send(res)
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     main(sys.argv[1])
