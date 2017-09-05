@@ -22,7 +22,6 @@ Various utility functions concerned with configuration.
 
 import os
 import sys
-import multiprocessing
 from openquake.baselib.python3compat import configparser, encode
 from openquake.hazardlib import valid
 
