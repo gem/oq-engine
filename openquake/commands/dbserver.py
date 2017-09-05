@@ -15,7 +15,9 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
+import signal
 from openquake.hazardlib import valid
 from openquake.baselib import sap
 from openquake.commonlib import logs
@@ -36,7 +38,8 @@ def dbserver(cmd, dbhostport=None, dbpath=None):
         print('dbserver ' + status)
     elif cmd == 'stop':
         if status == 'running':
-            logs.dbcmd('stop')
+            pid = logs.dbcmd('getpid')
+            os.kill(pid, signal.SIGTERM)
             print('dbserver stopped')
         else:
             print('dbserver already stopped')
