@@ -46,16 +46,16 @@ class DbServer(object):
     def loop(self):
         logging.warn('DB server started with %s, listening on %s...',
                      sys.executable, self.address)
-        sock = zeromq.ReplySocket(self.address)
+        sock = zeromq.Socket(self.address)
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
             logging.debug('Got ' + str(cmd_))
             try:
                 func = getattr(actions, cmd)
             except AttributeError:
-                sock.reply(('Invalid command ' + cmd, ValueError, None))
+                sock.rep(('Invalid command ' + cmd, ValueError, None))
             else:
-                sock.reply(safely_call(func, (self.db,) + args))
+                sock.rep(safely_call(func, (self.db,) + args))
         logging.warn('DB server stopped')
 
 
