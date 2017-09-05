@@ -76,7 +76,7 @@ class Socket(object):
     def req(self, *args):
         """
         Make a request to a remote server with the given arguments and
-        returns the reply.
+        return the reply.
         """
         assert self.socket_type == zmq.REQ
         zsocket = connect(self.end_point, zmq.REQ)
@@ -86,7 +86,7 @@ class Socket(object):
 
     def push(self, *args):
         """
-        Make a push to a remote server with the given argument.
+        Make a push to a remote server with the given arguments
         """
         assert self.socket_type == zmq.PUSH
         zsocket = connect(self.end_point, zmq.PUSH)
