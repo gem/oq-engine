@@ -65,7 +65,7 @@ Current stable version is the **OpenQuake Engine 2.5** 'Fourier'. The documentat
 #### macOS
 
 * [Installing on macOS](https://github.com/gem/oq-engine/blob/master/doc/installing/macos.md)
-* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md#macos)
 
 #### Windows
 
