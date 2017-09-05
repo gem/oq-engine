@@ -46,7 +46,7 @@ class DbServer(object):
     def loop(self):
         logging.warn('DB server started with %s, listening on %s...',
                      sys.executable, self.address)
-        sock = zeromq.Socket(self.address)
+        sock = zeromq.Socket(self.address, zeromq.zmq.REP)
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
             logging.debug('Got ' + str(cmd_))
