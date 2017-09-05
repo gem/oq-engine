@@ -64,5 +64,4 @@ install:
 
 before_script:
   - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
-  - python -c'import zmq; print("zmq =", zmq.__version__)'
 
