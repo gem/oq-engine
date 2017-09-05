@@ -43,7 +43,7 @@ class DbServer(object):
     def __init__(self, db, address, authkey,  num_workers=5):
         self.db = db
         self.frontend = 'tcp://%s:%s' % address
-        self.backend = 'tcp://%s:%s' % (address[0], address[1] + 1)
+        self.backend = 'inproc://dbworkers'
         self.authkey = authkey
         self.num_workers = num_workers
         self.pid = os.getpid()
@@ -68,8 +68,8 @@ class DbServer(object):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
             threading.Thread(target=self.worker, args=(sock,)).start()
             workers.append(sock)
-        logging.warn('DB server started with %s on %s, %s, pid=%d',
-                     sys.executable, self.frontend, self.backend, self.pid)
+        logging.warn('DB server started with %s on %s, pid=%d',
+                     sys.executable, self.frontend, self.pid)
         # start frontend->backend proxy
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
