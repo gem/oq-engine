@@ -48,9 +48,6 @@ class DbServer(object):
         self.num_workers = num_workers
         self.pid = os.getpid()
 
-    def running(self):
-        return self._running
-
     def worker(self, sock):
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
@@ -73,7 +70,6 @@ class DbServer(object):
             workers.append(sock)
         logging.warn('DB server started with %s on %s, %s, pid=%d',
                      sys.executable, self.frontend, self.backend, self.pid)
-        self._running = True
         # start frontend->backend proxy
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
