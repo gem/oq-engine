@@ -610,7 +610,7 @@ class Starmap(object):
         try:
             return len(self.task_args)
         except TypeError:  # generators have no len
-            return -1
+            return
 
     def submit_all(self):
         """
@@ -657,7 +657,7 @@ class Starmap(object):
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
             if task_no == 1:  # first time
-                n = '' if self.num_tasks == -1 else self.num_tasks
+                n = '' if self.num_tasks is None else self.num_tasks
                 self.progress('Submitting %s "%s" tasks', n, self.name)
             yield args
 
