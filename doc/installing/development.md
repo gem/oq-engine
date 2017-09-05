@@ -48,6 +48,15 @@ You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) f
 
 You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/2.7.13/python-2.7.13-macosx10.6.pkg
 
+#### Encoding
+
+Make sure that the encoding set in the terminal is `en_US.UTF-8`. To force it, you should put the following lines in your `~/.profile`:
+
+```bash
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+```
+
 ## Build the development environment
 
 Let's create a working dir called openquake first
