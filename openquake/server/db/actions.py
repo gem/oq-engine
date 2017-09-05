@@ -604,6 +604,14 @@ def get_results(db, job_id):
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
 
 
+def get_data(db, job_id, hdf5path):
+    # NB: this can be really slow for large amounts of data
+    # everybody can read from everybody else for the moment
+    fname = db('SELECT ds_calc_dir FROM job WHERE id=?x', job_id, scalar=True)
+    with datastore.read(fname + '.hdf5') as dstore:
+        return dstore[hdf5path].value
+
+
 # ############################### db commands ########################### #
 
 def get_longest_jobs(db):
