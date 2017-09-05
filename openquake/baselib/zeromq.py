@@ -61,7 +61,7 @@ class Socket(object):
                     break
                 if args[0] == 'stop':
                     if self.socket_type == zmq.REP:
-                        self.reply((None, None, None))
+                        self.rep((None, None, None))
                     break
                 else:
                     yield args
@@ -93,8 +93,9 @@ class Socket(object):
         with zsocket:
             zsocket.send_pyobj(args)
 
+
 if __name__ == '__main__':
     print('started echo server, pid=%d' % os.getpid())
-    sock = Socket('tcp://127.0.0.1:9000', zmq.PULL)
+    sock = Socket('tcp://127.0.0.1:9000', zmq.PUSH)
     for args in sock:  # server for testing purposes
-        print(args)
+        sock.rep(args)
