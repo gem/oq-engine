@@ -34,11 +34,15 @@ def connect(end_point, socket_type):
 
 class Socket(object):
     """
-    A Socket class to be used with code like the following:
+    A Socket class to be used with code like the following::
 
-     sock = Socket('tcp://127.0.0.1:8000')
+     # server
+     sock = Socket('tcp://127.0.0.1:9000', zmq.REP)
      for cmd, *args in sock:
-         sock.reply(cmd(*args))
+         sock.rep(cmd(*args))
+
+     # client
+     Socket('tcp://127.0.0.1:9000', zmq.REQ).req(cmd, *args)
     """
     def __init__(self, end_point, socket_type):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
@@ -63,6 +67,9 @@ class Socket(object):
                     yield args
 
     def rep(self, obj):
+        """
+        Reply to a request with the given object
+        """
         assert self.socket_type == zmq.REP
         self.zsocket.send_pyobj(obj)
 
