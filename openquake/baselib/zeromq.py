@@ -1,12 +1,12 @@
 import os
-import threading
 import zmq
-from openquake.baselib.parallel import safely_call
 
 context = zmq.Context()
 
+# from integer socket_type to string
 SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
-            zmq.PUSH: 'PUSH', zmq.PULL: 'PULL'}
+            zmq.PUSH: 'PUSH', zmq.PULL: 'PULL',
+            zmq.ROUTER: 'ROUTER', zmq.DEALER: 'DEALER'}
 
 
 def bind(end_point, socket_type):
@@ -56,20 +56,33 @@ class Socket(object):
         self.socket_type = socket_type
         self.mode = mode
         self.timeout = timeout
-        self.running = True
+        self.running = False
 
-    def check_type(self, *socket_types):
+    def check_type(self, method, *socket_types):
+        """
+        Check that the socket is of the expected type
+        """
         if self.socket_type not in socket_types:
             expected = '|'.join(SOCKTYPE[st] for st in socket_types)
-            raise ValueError('The current socket is of type %s, expected %s' %
-                             (SOCKTYPE[self.socket_type], expected))
+            raise ValueError(
+                'Socket.%s: the current socket is of type %s, expected %s' %
+                (method, SOCKTYPE[self.socket_type], expected))
 
     def __iter__(self):
-        self.check_type(zmq.REP, zmq.PULL)
+        """
+        Iterate on the socket and yield the received arguments. Exits if
+
+        1. the flag .running is set to False
+        2. the message 'stop' is sent
+        3. SIGINT is sent
+        4. SIGTERM is sent
+        """
+        self.check_type('__iter__', zmq.REP, zmq.PULL)
         if self.mode == 'bind':
             self.zsocket = bind(self.end_point, self.socket_type)
         else:  # connect
             self.zsocket = connect(self.end_point, self.socket_type)
+        self.running = True
         with self.zsocket:
             while self.running:
                 try:
@@ -91,7 +104,7 @@ class Socket(object):
         """
         Reply to a request with the given object
         """
-        self.check_type(zmq.REP)
+        self.check_type('rep', zmq.REP)
         self.zsocket.send_pyobj(obj)
 
     def req(self, *args):
@@ -99,7 +112,7 @@ class Socket(object):
         Make a request to a remote server with the given arguments and
         return the reply.
         """
-        self.check_type(zmq.REQ)
+        self.check_type('req', zmq.REQ)
         zsocket = connect(self.end_point, zmq.REQ)
         with zsocket:
             zsocket.send_pyobj(args)
@@ -109,7 +122,7 @@ class Socket(object):
         """
         Make a push to a remote server with the given arguments
         """
-        self.check_type(zmq.PUSH)
+        self.check_type('push', zmq.PUSH)
         zsocket = connect(self.end_point, zmq.PUSH)
         with zsocket:
             zsocket.send_pyobj(args)
@@ -117,6 +130,6 @@ class Socket(object):
 
 if __name__ == '__main__':
     print('started echo server, pid=%d' % os.getpid())
-    sock = Socket('tcp://127.0.0.1:9000', zmq.PUSH)
+    sock = Socket('tcp://127.0.0.1:9000', zmq.REP)
     for args in sock:  # server for testing purposes
         sock.rep(args)
