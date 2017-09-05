@@ -209,11 +209,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
-        except KeyboardInterrupt:
-            pids = ' '.join(str(p.pid) for p in executor._processes)
-            sys.stderr.write(
-                'You can manually kill the workers with kill %s\n' % pids)
-            raise
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
