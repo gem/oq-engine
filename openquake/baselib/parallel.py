@@ -225,8 +225,8 @@ def safely_call(func, args):
     :param args: the arguments
     """
     with Monitor('total ' + func.__name__, measuremem=True) as child:
-        pickle = args and hasattr(args[0], 'unpickle')
-        if pickle:  # measure the unpickling time too
+        if args and hasattr(args[0], 'unpickle'):
+            # args is a list of Pickled objects
             args = [a.unpickle() for a in args]
         if args and isinstance(args[-1], Monitor):
             mon = args[-1]
@@ -249,9 +249,6 @@ def safely_call(func, args):
                    etype, mon)
         finally:
             mon._flush = True
-
-    if pickle:  # it is impossible to measure the pickling time :-(
-        res = Pickled(res)
     return res
 
 
@@ -344,15 +341,17 @@ class IterResult(object):
     :param taskname:
         the name of the task
     :param num_tasks:
-        the total number of expected futures (None if unknown)
+        the total number of expected futures
     :param progress:
         a logging function for the progress report
+    :param sent:
+        the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     """
     task_data_dt = numpy.dtype(
         [('taskno', numpy.uint32), ('weight', numpy.float32),
          ('duration', numpy.float32)])
 
-    def __init__(self, futures, taskname, num_tasks=None,
+    def __init__(self, futures, taskname, num_tasks,
                  progress=logging.info, sent=0):
         self.futures = futures
         self.name = taskname
@@ -368,7 +367,7 @@ class IterResult(object):
             next(self.log_percent)
         if sent:
             self.progress('Sent %s of data in %s task(s)',
-                          humansize(sum(sent.values())), num_tasks or '?')
+                          humansize(sum(sent.values())), num_tasks)
 
     def _log_percent(self):
         yield 0
@@ -610,6 +609,13 @@ class Starmap(object):
         except TypeError:  # generators have no len
             return ''
 
+        """
+        The number of tasks, if known, or -1 otherwise.
+        """
+        if self.num_tasks == 1:
+            return len(self.task_args)
+            return -1
+
     def submit_all(self):
         """
         :returns: an IterResult object
@@ -620,9 +626,9 @@ class Starmap(object):
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, self.num_tasks)
 
-        elif self.distribute == 'zmq':
-            from openquake.baselib import zeromq as z
-            allargs = self.add_task_no(self.task_args)
+        elif self.distribute == 'qsub':  # experimental
+            allargs = list(self.add_task_no(self.task_args, pickle=False))
+            logging.warn('Sending %d tasks to the grid engine', len(allargs))
             it = z.starmap(os.environ['OQ_FRONTEND'], self.task_func, allargs)
             ntasks = next(it)
             return IterResult(it, self.name, ntasks, self.progress, self.sent)
@@ -650,7 +656,7 @@ class Starmap(object):
 
     def add_task_no(self, iterargs, pickle=True):
         """
-        Add .task_no and .weight to the monitor and yields back
+        Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them if pickle is True.
         """
         for task_no, args in enumerate(iterargs, 1):
@@ -662,8 +668,8 @@ class Starmap(object):
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
             if task_no == 1:  # first time
-                self.progress(
-                    'Submitting %s "%s" tasks', self.num_tasks, self.name)
+                n = '' if self.num_tasks == -1 else self.num_tasks
+                self.progress('Submitting %s "%s" tasks', n, self.name)
             yield args
 
 
@@ -707,6 +713,8 @@ def wakeup_pool():
         executor.pids = list(pids)
 
 
+# it would be nice to remove this in the future, but it is not easy: the
+# subclasses Sequential and Processmap are used
 class BaseStarmap(object):
     poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
     add_task_no = Starmap.__dict__['add_task_no']
@@ -872,8 +880,10 @@ def main(hostport):
     conn = Client((host, int(port)))
     func, args = conn.recv()
     res = safely_call(func, args)
-    conn.send(res)
-    conn.close()
+    try:
+        conn.send(res)
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     main(sys.argv[1])
