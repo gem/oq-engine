@@ -32,19 +32,22 @@ def connect(end_point, socket_type):
     return sock
 
 
-class ReplySocket(object):
+class Socket(object):
     """
-    A ReplySocket class to be used with code like the following:
+    A Socket class to be used with code like the following:
 
-     sock = ReplySocket('tcp://127.0.0.1:8000')
+     sock = Socket('tcp://127.0.0.1:8000')
      for cmd, *args in sock:
          sock.reply(cmd(*args))
     """
-    def __init__(self, end_point):
+    def __init__(self, end_point, socket_type):
+        assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         self.end_point = end_point
+        self.socket_type = socket_type
 
     def __iter__(self):
-        self.zsocket = bind(self.end_point, zmq.REP)
+        assert self.socket_type in (zmq.REP, zmq.PULL)
+        self.zsocket = bind(self.end_point, self.socket_type)
         with self.zsocket:
             while True:
                 try:
@@ -53,26 +56,38 @@ class ReplySocket(object):
                     # sending SIGTERM raises ZMQError
                     break
                 if args[0] == 'stop':
-                    self.reply((None, None, None))
+                    if self.socket_type == zmq.REP:
+                        self.reply((None, None, None))
                     break
                 else:
                     yield args
 
-    def reply(self, obj):
+    def rep(self, obj):
+        assert self.socket_type == zmq.REP
         self.zsocket.send_pyobj(obj)
 
-    def request(self, *args):
+    def req(self, *args):
         """
         Make a request to a remote server with the given arguments and
         returns the reply.
         """
+        assert self.socket_type == zmq.REQ
         zsocket = connect(self.end_point, zmq.REQ)
         with zsocket:
             zsocket.send_pyobj(args)
             return zsocket.recv_pyobj()
 
+    def push(self, *args):
+        """
+        Make a push to a remote server with the given argument.
+        """
+        assert self.socket_type == zmq.PUSH
+        zsocket = connect(self.end_point, zmq.PUSH)
+        with zsocket:
+            zsocket.send_pyobj(args)
+
 if __name__ == '__main__':
     print('started echo server, pid=%d' % os.getpid())
-    sock = ReplySocket('tcp://127.0.0.1:9000')
-    for args in sock:  # echo server for testing purposes
-        sock.reply(args)
+    sock = Socket('tcp://127.0.0.1:9000', zmq.PULL)
+    for args in sock:  # server for testing purposes
+        print(args)
