@@ -8,7 +8,7 @@ CREATE TABLE job(
      is_running BOOL NOT NULL DEFAULT false,
      start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
      stop_time TIMESTAMP,
-     relevant BOOL DEFAULT true,
+     relevant BOOL DEFAULT 1,
      ds_calc_dir TEXT NOT NULL);
 
 CREATE TABLE log(
