@@ -605,12 +605,14 @@ class Starmap(object):
     @property
     def num_tasks(self):
         """
-        The number of tasks, if known, or -1 otherwise.
+        The number of tasks, if known, or the empty string otherwise.
         """
         try:
             return len(self.task_args)
         except TypeError:  # generators have no len
-            return -1
+            return ''
+        # NB: returning -1 breaks openquake.hazardlib.tests.calc.
+        # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
     def submit_all(self):
         """
@@ -664,8 +666,8 @@ class Starmap(object):
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
             if task_no == 1:  # first time
-                n = '' if self.num_tasks == -1 else self.num_tasks
-                self.progress('Submitting %s "%s" tasks', n, self.name)
+                self.progress('Submitting %s "%s" tasks', self.num_tasks,
+                              self.name)
             yield args
 
 
