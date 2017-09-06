@@ -232,23 +232,6 @@ class EbrPostCalculator(base.RiskCalculator):
             if lazy:  # the parent was closed, reopen it
                 self.datastore.parent.open()
 
-        # build aggregate loss curves
-        if 'agg_loss_table' in self.datastore:
-            alt = self.datastore['agg_loss_table']
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            num_losses = max(len(dset) for dset in alt.values())
-            periods = scientific.return_periods(eff_time, num_losses)
-            b = scientific.LossesByPeriodBuilder(periods, oq.loss_dt(), R)
-            self.datastore['agg_loss-rlzs'] = array = b.build(alt)
-            self.datastore.set_attrs(
-                'agg_loss-rlzs', return_periods=b.return_periods)
-            statnames, stats = zip(*oq.risk_stats())
-            if R > 1 and stats:
-                self.datastore['agg_loss-stats'] = compute_stats2(
-                    array, stats, weights)
-                self.datastore.set_attrs(
-                    'agg_loss-stats', return_periods=b.return_periods)
-
     def post_execute(self):
         # override the base class method to avoid doing bad stuff
         pass
@@ -570,6 +553,26 @@ class EbriskCalculator(base.RiskCalculator):
             agglt = self.datastore['agg_loss_table']
             for rlz, dset in agglt.items():
                 dset.attrs['nonzero_fraction'] = len(dset) / E
+
+        # build aggregate loss curves
+        oq = self.oqparam
+        weights = self.datastore['realizations']['weight']
+        R = len(weights)
+        if 'agg_loss_table' in self.datastore:
+            alt = self.datastore['agg_loss_table']
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            num_losses = max(len(dset) for dset in alt.values())
+            periods = scientific.return_periods(eff_time, num_losses)
+            b = scientific.LossesByPeriodBuilder(periods, oq.loss_dt(), R)
+            self.datastore['agg_loss-rlzs'] = array = b.build(alt)
+            self.datastore.set_attrs(
+                'agg_loss-rlzs', return_periods=b.return_periods)
+            statnames, stats = zip(*oq.risk_stats())
+            if R > 1 and stats:
+                self.datastore['agg_loss-stats'] = compute_stats2(
+                    array, stats, weights)
+                self.datastore.set_attrs(
+                    'agg_loss-stats', return_periods=b.return_periods)
 
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
