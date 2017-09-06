@@ -1,11 +1,11 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1800.hdf5 Fri Jul  7 07:32:33 2017
-checksum32                                      2,582,625,613           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14449.hdf5 Thu Aug 17 11:47:56 2017
+checksum32                                       2,582,625,613           
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 281, num_imts = 1
 
@@ -87,9 +87,9 @@ source_model.xml 1      Subduction Interface 1           3945         3,945
 Informational data
 ------------------
 ============================ =====================================================================================
-compute_ruptures.received    tot 311.56 KB, max_per_task 76.54 KB                                                 
-compute_ruptures.sent        src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.44 KB, gsims 1.12 KB
-hazard.input_weight          26012.0                                                                              
+compute_ruptures.received    tot 311.57 KB, max_per_task 76.54 KB                                                 
+compute_ruptures.sent        src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.45 KB, gsims 1.12 KB
+hazard.input_weight          7309372.0                                                                            
 hazard.n_imts                1                                                                                    
 hazard.n_levels              50                                                                                   
 hazard.n_realizations        1                                                                                    
@@ -146,11 +146,15 @@ source_class       calc_time counts
 ComplexFaultSource 0.0       2     
 ================== ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.926 0.465  0.612 2.130 11       
+compute_ruptures   0.881 0.455  0.591 2.041 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -158,15 +162,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         10       0.461     11    
-managing sources               1.379    0.0       1     
-filtering ruptures             0.388    0.0       489   
-assoc_assets_sites             0.165    0.0       1     
-reading site collection        0.160    0.0       1     
-reading composite source model 0.146    0.0       1     
-saving ruptures                0.075    0.0       11    
-reading exposure               0.072    0.0       1     
+total compute_ruptures         9.688    1.367     11    
+managing sources               1.357    0.0       1     
+filtering ruptures             0.376    0.0       489   
+reading site collection        0.201    0.0       1     
+assoc_assets_sites             0.180    0.0       1     
+reading composite source model 0.144    0.0       1     
+reading exposure               0.127    0.0       1     
+saving ruptures                0.074    0.0       11    
 prefiltering source model      0.008    0.0       1     
+store source_info              0.008    0.0       1     
 setting event years            0.007    0.0       1     
-store source_info              0.007    0.0       1     
 ============================== ======== ========= ======

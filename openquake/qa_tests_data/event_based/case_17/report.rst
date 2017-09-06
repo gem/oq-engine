@@ -1,11 +1,11 @@
 Event Based Hazard QA Test, Case 17
 ===================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1834.hdf5 Fri Jul  7 07:32:59 2017
-checksum32                                      1,177,921,015           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14483.hdf5 Thu Aug 17 11:48:23 2017
+checksum32                                       1,177,921,015           
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 1, num_imts = 1
 
@@ -87,7 +87,7 @@ Informational data
 ------------------
 ============================ ==============================================================================
 compute_ruptures.received    tot 5.03 KB, max_per_task 4.35 KB                                             
-compute_ruptures.sent        sources 3.03 KB, src_filter 1.34 KB, param 1.18 KB, monitor 640 B, gsims 182 B
+compute_ruptures.sent        sources 3.03 KB, src_filter 1.34 KB, param 1.18 KB, monitor 642 B, gsims 182 B
 hazard.input_weight          6.700000000000001                                                             
 hazard.n_imts                1                                                                             
 hazard.n_levels              3                                                                             
@@ -116,11 +116,15 @@ source_class calc_time counts
 PointSource  0.0       2     
 ============ ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.016 0.012  0.008 0.025 2        
+compute_ruptures   0.015 0.010  0.008 0.021 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -128,13 +132,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.033     0.0       2     
-store source_info              0.005     0.0       1     
+total compute_ruptures         0.029     0.0       2     
+store source_info              0.006     0.0       1     
 reading composite source model 0.004     0.0       1     
 saving ruptures                0.004     0.0       2     
-managing sources               0.002     0.0       1     
+managing sources               0.004     0.0       1     
 setting event years            0.002     0.0       1     
-filtering ruptures             0.002     0.0       3     
+filtering ruptures             0.001     0.0       3     
 prefiltering source model      0.001     0.0       1     
-reading site collection        5.293E-05 0.0       1     
+reading site collection        5.746E-05 0.0       1     
 ============================== ========= ========= ======
