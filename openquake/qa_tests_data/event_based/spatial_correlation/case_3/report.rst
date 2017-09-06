@@ -1,11 +1,11 @@
 Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 =====================================================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1838.hdf5 Fri Jul  7 07:33:02 2017
-checksum32                                      1,772,213,365           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14487.hdf5 Thu Aug 17 11:48:26 2017
+checksum32                                       1,772,213,365           
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 2, num_imts = 1
 
@@ -74,8 +74,8 @@ Informational data
 ------------------
 ============================ ==========================================================================
 compute_ruptures.received    max_per_task 710.52 KB, tot 710.52 KB                                     
-compute_ruptures.sent        sources 1.29 KB, src_filter 712 B, param 545 B, monitor 320 B, gsims 102 B
-hazard.input_weight          0.1                                                                       
+compute_ruptures.sent        sources 1.29 KB, src_filter 712 B, param 545 B, monitor 321 B, gsims 102 B
+hazard.input_weight          0.2                                                                       
 hazard.n_imts                1                                                                         
 hazard.n_levels              1                                                                         
 hazard.n_realizations        1                                                                         
@@ -102,11 +102,15 @@ source_class calc_time counts
 PointSource  0.0       1     
 ============ ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.019 NaN    0.019 0.019 1        
+compute_ruptures   0.032 NaN    0.032 0.032 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -114,13 +118,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-setting event years            0.182     0.0       1     
-saving ruptures                0.103     0.0       1     
-total compute_ruptures         0.019     1.168     1     
-store source_info              0.004     0.0       1     
+setting event years            0.165     0.0       1     
+saving ruptures                0.102     0.0       1     
+total compute_ruptures         0.032     0.480     1     
+store source_info              0.005     0.0       1     
+managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-managing sources               0.001     0.0       1     
-prefiltering source model      5.927E-04 0.0       1     
-filtering ruptures             3.016E-04 0.0       1     
-reading site collection        4.506E-05 0.0       1     
+prefiltering source model      5.937E-04 0.0       1     
+filtering ruptures             5.331E-04 0.0       1     
+reading site collection        4.196E-05 0.0       1     
 ============================== ========= ========= ======

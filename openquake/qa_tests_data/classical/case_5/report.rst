@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 5
 ================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1826.hdf5 Fri Jul  7 07:32:50 2017
-checksum32                                      2,343,185,032           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14475.hdf5 Thu Aug 17 11:48:14 2017
+checksum32                                       2,343,185,032           
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 1, num_imts = 1
 
@@ -73,8 +73,8 @@ source_model.xml 0      Active Shallow Crust 1           49           49
 Informational data
 ------------------
 ============================== ========================================================================
-count_eff_ruptures.received    max_per_task 591 B, tot 591 B                                           
-count_eff_ruptures.sent        sources 1.12 KB, srcfilter 684 B, param 604 B, monitor 322 B, gsims 91 B
+count_eff_ruptures.received    max_per_task 602 B, tot 602 B                                           
+count_eff_ruptures.sent        sources 1.12 KB, srcfilter 684 B, param 604 B, monitor 323 B, gsims 91 B
 hazard.input_weight            196.0                                                                   
 hazard.n_imts                  1                                                                       
 hazard.n_levels                3                                                                       
@@ -102,6 +102,10 @@ source_class       calc_time counts
 ComplexFaultSource 0.003     1     
 ================== ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
@@ -114,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.072     0.0       1     
+reading composite source model 0.071     0.0       1     
 total count_eff_ruptures       0.003     0.0       1     
 store source_info              0.003     0.0       1     
+managing sources               0.001     0.0       1     
 prefiltering source model      0.001     0.0       1     
-managing sources               8.042E-04 0.0       1     
-reading site collection        3.123E-05 0.0       1     
-saving probability maps        2.432E-05 0.0       1     
-aggregate curves               1.836E-05 0.0       1     
+reading site collection        3.386E-05 0.0       1     
+saving probability maps        2.265E-05 0.0       1     
+aggregate curves               1.764E-05 0.0       1     
 ============================== ========= ========= ======
