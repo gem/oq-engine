@@ -18,6 +18,7 @@
 
 from __future__ import division
 import itertools
+import warnings
 import logging
 import numpy
 import h5py
@@ -66,10 +67,11 @@ class PmapGetter(object):
     :param lazy: if True, read directly from the datastore
     """
     def __init__(self, dstore, lazy=False):
+        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
-        self.assoc_by_grp = dstore['csm_info/assoc_by_grp'].value
-        self.weights = self.dstore['realizations']['weight']
+        self.assoc_by_grp = rlzs_assoc.array
+        self.weights = dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = None  # to be set
@@ -233,7 +235,11 @@ def compute_hazard_maps(curves, imls, poes):
         raise ValueError('The curves have %d levels, %d were passed' %
                          (L, len(imls)))
     result = []
-    imls = numpy.log(numpy.array(imls[::-1]))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # avoid RuntimeWarning: divide by zero encountered in log
+        # happening in the classical_tiling tests
+        imls = numpy.log(numpy.array(imls[::-1]))
     for curve in curves:
         # the hazard curve, having replaced the too small poes with EPSILON
         curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
@@ -393,7 +399,7 @@ def get_gmfs(dstore, precalc=None):
     :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
     oq = dstore['oqparam']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    num_assocs = dstore['csm_info'].get_num_rlzs()
     sitecol = dstore['sitecol']
     if dstore.parent:
         haz_sitecol = dstore.parent['sitecol']  # S sites
@@ -403,7 +409,7 @@ def get_gmfs(dstore, precalc=None):
     I = len(oq.imtls)
     E = oq.number_of_ground_motion_fields
     eids = numpy.arange(E)
-    gmfs = numpy.zeros((len(rlzs_assoc), N, E, I))
+    gmfs = numpy.zeros((num_assocs, N, E, I))
     if precalc:
         for g, gsim in enumerate(precalc.gsims):
             gmfs[g, sitecol.sids] = precalc.gmfa[gsim]

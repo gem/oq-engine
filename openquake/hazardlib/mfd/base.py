@@ -49,7 +49,7 @@ class BaseMFD(with_metaclass(abc.ABCMeta)):
         :raises ValueError:
             If ``modification`` is missing from :attr:`MODIFICATIONS`.
         """
-        if not modification in self.MODIFICATIONS:
+        if modification not in self.MODIFICATIONS:
             raise ValueError('Modification %s is not supported by %s' %
                              (modification, type(self).__name__))
         meth = getattr(self, 'modify_%s' % modification)
