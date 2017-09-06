@@ -1,11 +1,11 @@
 Scenario QA Test, Case 2
 ========================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_1767.hdf5 Fri Jul  7 07:32:11 2017
-checksum32                               773,454,739             
-engine_version                           2.6.0-git50066b9        
-======================================== ========================
+========================================= ========================
+localhost:/mnt/ssd/oqdata/calc_14416.hdf5 Thu Aug 17 11:47:33 2017
+checksum32                                773,454,739             
+engine_version                            2.6.0-gitbdd9d17        
+========================================= ========================
 
 num_sites = 3, num_imts = 1
 
@@ -65,6 +65,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.009     0.0       1     
-reading site collection 3.195E-05 0.0       1     
+filtering sites         0.011     0.0       1     
+reading site collection 4.172E-05 0.0       1     
 ======================= ========= ========= ======

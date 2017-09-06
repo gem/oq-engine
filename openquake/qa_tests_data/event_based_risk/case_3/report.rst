@@ -1,11 +1,11 @@
 Event Based Risk Lisbon
 =======================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1796.hdf5 Fri Jul  7 07:32:20 2017
-checksum32                                      887,297,220             
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14445.hdf5 Thu Aug 17 11:47:43 2017
+checksum32                                       887,297,220             
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 1, num_imts = 1
 
@@ -99,8 +99,8 @@ SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 8           21381        21,381
 Informational data
 ------------------
 ============================ ======================================================================================
-compute_ruptures.received    tot 49.91 KB, max_per_task 5.9 KB                                                     
-compute_ruptures.sent        sources 988.43 KB, param 16.03 KB, src_filter 12.02 KB, monitor 5.62 KB, gsims 3.15 KB
+compute_ruptures.received    tot 49.95 KB, max_per_task 5.9 KB                                                     
+compute_ruptures.sent        sources 988.46 KB, param 16.03 KB, src_filter 12.02 KB, monitor 5.64 KB, gsims 3.15 KB
 hazard.input_weight          13980.399999999998                                                                    
 hazard.n_imts                1                                                                                     
 hazard.n_levels              40                                                                                    
@@ -135,26 +135,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      5         AreaSource   2,349        0.0       1         0        
-0      1         AreaSource   4,163        0.0       1         0        
-1      4         AreaSource   1,280        0.0       1         0        
-2      0         AreaSource   24,435       0.0       1         0        
-3      3         AreaSource   3,509        0.0       1         0        
-2      1         AreaSource   4,163        0.0       1         0        
-1      7         AreaSource   1,690        0.0       1         0        
-3      10        AreaSource   4,482        0.0       1         0        
-1      10        AreaSource   4,482        0.0       1         0        
-2      2         AreaSource   19,923       0.0       1         0        
-3      5         AreaSource   2,349        0.0       1         0        
-3      6         AreaSource   4,123        0.0       1         0        
-0      2         AreaSource   19,923       0.0       1         0        
-3      9         AreaSource   2,508        0.0       1         0        
 1      6         AreaSource   4,123        0.0       1         0        
-1      8         AreaSource   1,440        0.0       1         0        
-3      8         AreaSource   1,440        0.0       1         0        
+3      6         AreaSource   4,123        0.0       1         0        
+2      0         AreaSource   24,435       0.0       1         0        
+1      5         AreaSource   2,349        0.0       1         0        
+1      4         AreaSource   1,280        0.0       1         0        
+0      2         AreaSource   19,923       0.0       1         0        
+1      7         AreaSource   1,690        0.0       1         0        
+2      1         AreaSource   4,163        0.0       1         0        
+2      2         AreaSource   19,923       0.0       1         0        
+1      3         AreaSource   3,509        0.0       1         0        
+3      5         AreaSource   2,349        0.0       1         0        
+3      7         AreaSource   1,690        0.0       1         0        
 3      4         AreaSource   1,280        0.0       1         0        
+3      10        AreaSource   4,482        0.0       1         0        
+0      1         AreaSource   4,163        0.0       1         0        
+1      10        AreaSource   4,482        0.0       1         0        
 0      0         AreaSource   24,435       0.0       1         0        
+3      9         AreaSource   2,508        0.0       1         0        
 1      9         AreaSource   2,508        0.0       1         0        
+3      8         AreaSource   1,440        0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -165,11 +165,30 @@ source_class calc_time counts
 AreaSource   0.0       22    
 ============ ========= ======
 
+Duplicated sources
+------------------
+========= ========= =============
+source_id calc_time src_group_ids
+========= ========= =============
+0         0.0       0 2          
+1         0.0       0 2          
+10        0.0       1 3          
+2         0.0       0 2          
+3         0.0       1 3          
+4         0.0       1 3          
+5         0.0       1 3          
+6         0.0       1 3          
+7         0.0       1 3          
+8         0.0       1 3          
+9         0.0       1 3          
+========= ========= =============
+Sources with the same ID but different parameters
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.649 0.663  0.314 2.515 18       
+compute_ruptures   1.631 0.654  0.307 2.482 18       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -177,14 +196,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         29        0.730     18    
-managing sources               0.917     0.0       1     
-reading composite source model 0.824     0.0       1     
-saving ruptures                0.028     0.0       18    
+total compute_ruptures         29        0.602     18    
+reading composite source model 0.949     0.0       1     
+managing sources               0.858     0.0       1     
+saving ruptures                0.027     0.0       18    
 prefiltering source model      0.012     0.0       1     
-store source_info              0.008     0.0       1     
+store source_info              0.009     0.0       1     
+reading exposure               0.006     0.0       1     
 setting event years            0.006     0.0       1     
-reading exposure               0.005     0.0       1     
 filtering ruptures             0.003     0.0       12    
-reading site collection        4.530E-06 0.0       1     
+reading site collection        7.153E-06 0.0       1     
 ============================== ========= ========= ======

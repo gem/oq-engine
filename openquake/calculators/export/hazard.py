@@ -391,7 +391,7 @@ def export_hcurves_rlzs(ekey, dstore):
         dset = f.create_dataset('hcurves-rlzs', (N, R), imtls.dt)
         dset.attrs['investigation_time'] = oq.investigation_time
         logging.info('Building the hazard curves for %d sites, %d rlzs', N, R)
-        for sids, allcurves in parallel.Processmap(build_hcurves, allargs):
+        for sids, allcurves in parallel.Starmap(build_hcurves, allargs):
             for sid, curves in zip(sids, allcurves):
                 dset[sid] = curves
     return [fname]
@@ -821,7 +821,9 @@ def export_gmf_scenario_csv(ekey, dstore):
     if len(what) == 1:
         raise ValueError('Missing "/rup-\d+"')
     oq = dstore['oqparam']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    csm_info = dstore['csm_info']
+    rlzs_assoc = csm_info.get_rlzs_assoc()
+    samples = csm_info.get_samples_by_grp()
     imts = list(oq.imtls)
     mo = re.match('rup-(\d+)$', what[1])
     if mo is None:
@@ -834,8 +836,8 @@ def export_gmf_scenario_csv(ekey, dstore):
         logging.warn('There is no rupture %d', rup_id)
         return []
     [ebr] = ruptures
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
-    samples = rlzs_assoc.samples[ebr.grp_id]
+    rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[ebr.grp_id]
+    samples = samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     correl_model = oq.get_correl_model()
     sitecol = dstore['sitecol'].complete
