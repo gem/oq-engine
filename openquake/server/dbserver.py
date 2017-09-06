@@ -144,6 +144,10 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     with db:
         db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
         actions.upgrade_db(db)
+    db.conn.close()
+
+    db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+                  detect_types=sqlite3.PARSE_DECLTYPES)
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
