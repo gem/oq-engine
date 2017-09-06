@@ -48,6 +48,13 @@ class Socket(object):
 
      # client
      Socket('tcp://127.0.0.1:9000', zmq.REQ).req(cmd, *args)
+
+    It also support zmq.PULL/zmq.PUSH sockets, which are asynchronous.
+
+    :param end_point: zmq end point string
+    :param socket_type: zmq socket type (integer)
+    :param mode: default 'bind', accepts also 'connect'
+    :param timeout: default 1000 ms, used when polling the underlying socket
     """
     def __init__(self, end_point, socket_type, mode='bind', timeout=1000):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
