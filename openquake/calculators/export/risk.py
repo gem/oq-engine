@@ -84,7 +84,8 @@ def export_agg_curve_rlzs(ekey, dstore):
         tags = ['rlz-%03d' % r for r in range(agg_curve.shape[1])]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for r, tag in enumerate(tags):
-        data = compose_arrays(periods, agg_curve[:, r], 'return_periods')
+        d = compose_arrays(periods, agg_curve[:, r], 'return_periods')
+        data = compose_arrays(1 / periods, d, 'annual_frequency_of_exceedence')
         dest = dstore.build_fname('agg_loss', tag, 'csv')
         writer.save(data, dest)
     return writer.getsaved()

@@ -1466,21 +1466,26 @@ def return_periods(eff_time, num_losses):
 
 def losses_by_period(losses, return_periods, eff_time):
     """
-    Reads an array of losses and returns a subset of them
-
     :param losses: array of simulated losses
-    :param return_periods: return periods at which the loss curve is computed
+    :param return_periods: return periods of interest
+    :param eff_time: investigation_time * ses_per_logic_tree_path
+    :returns: interpolated losses for the return periods, possibly with NaN
 
-    NB: the return period must be ordered integers >= 1. Here is an example:
+    NB: the return periods must be ordered integers >= 1. The interpolated
+    losses are defined inside the interval min_time < time < eff_time
+    where min_time = eff_time /len(losses). Outsided the interval they
+    have NaN values. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
-    >>> losses_by_period(losses, return_periods(100, 100), 100)
-    array([  3.5,   8. ,  13. ,  23. ])
+    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 100)
+    array([  nan,   nan,   nan,   3.5,   8. ,  13. ,  23. ])
     """
     periods = eff_time / numpy.arange(len(losses), 0., -1)
-    return_periods = [rp for rp in return_periods if rp >= periods[0]]
-    return numpy.interp(numpy.log(return_periods),
-                        numpy.log(periods), numpy.sort(losses))
+    rperiods = [rp if periods[0] <= rp <= periods[-1] else numpy.nan
+                for rp in return_periods]
+    curve = numpy.interp(
+        numpy.log(rperiods), numpy.log(periods), numpy.sort(losses))
+    return curve
 
 
 class LossesByPeriodBuilder(object):
@@ -1538,13 +1543,12 @@ class LossesByPeriodBuilder(object):
         :returns: an array of (P, R) values of dtype loss_dt
         """
         P = len(self.return_periods)
-        arr = numpy.empty((P, self.num_rlzs), self.loss_dt)
-        arr.fill(numpy.nan)
+        arr = numpy.zeros((P, self.num_rlzs), self.loss_dt)
         for rlzstr in agg_loss_table:
             r = int(rlzstr[4:])
             losses = agg_loss_table[rlzstr]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, lti].flatten()  # flatten only in ucerf
                 lbp = losses_by_period(ls, self.return_periods, self.eff_time)
-                arr[slice(P - len(lbp), P), r][lt] = lbp
+                arr[:, r][lt] = lbp
         return arr
