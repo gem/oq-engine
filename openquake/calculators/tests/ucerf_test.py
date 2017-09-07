@@ -47,6 +47,10 @@ class UcerfTestCase(CalculatorTestCase):
         got = writetmp(rst_table(gmdata, fmt='%.6f'))
         self.assertEqualFiles('expected/gmdata_eb.csv', got)
 
+        # check the mean losses_by_period
+        [fname] = export(('agg_loss-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
+
         # check the mean hazard map
         [fname] = [f for f in export(('hmaps', 'csv'), self.calc.datastore)
                    if 'mean' in f]
