@@ -23,10 +23,8 @@ import sqlite3
 import os.path
 import logging
 import subprocess
-from multiprocessing.connection import Listener
-from concurrent.futures import ThreadPoolExecutor
 
-from openquake.baselib import sap
+from openquake.baselib import sap, zeromq
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import valid
 from openquake.commonlib import config, logs
@@ -35,10 +33,6 @@ from openquake.server import dbapi
 from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
 
-# using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
-# ref: https://bugs.python.org/issue27126
-executor = ThreadPoolExecutor(1)
-
 
 class DbServer(object):
     """
@@ -46,46 +40,28 @@ class DbServer(object):
     """
     def __init__(self, db, address, authkey):
         self.db = db
-        self.address = address
+        self.address = 'tcp://%s:%s' % address
         self.authkey = authkey
 
     def loop(self):
-        listener = Listener(self.address, backlog=5, authkey=self.authkey)
-        logging.warn('DB server started with %s, listening on %s:%d...',
-                     sys.executable, *self.address)
-        try:
-            while True:
-                try:
-                    conn = listener.accept()
-                except KeyboardInterrupt:
-                    break
-                except:
-                    # unauthenticated connection, for instance by a port
-                    # scanner such as the one in manage.py
-                    continue
-                cmd_ = conn.recv()  # a tuple (name, arg1, ... argN)
-                cmd, args = cmd_[0], cmd_[1:]
-                logging.debug('Got ' + str(cmd_))
-                if cmd == 'stop':
-                    conn.send((None, None))
-                    conn.close()
-                    break
+        logging.warn('DB server started with %s, listening on %s...',
+                     sys.executable, self.address)
+        sock = zeromq.ReplySocket(self.address)
+        for cmd_ in sock:
+            cmd, args = cmd_[0], cmd_[1:]
+            logging.debug('Got ' + str(cmd_))
+            try:
                 func = getattr(actions, cmd)
-                fut = executor.submit(safely_call, func, (self.db,) + args)
-
-                def sendback(fut, conn=conn):
-                    res, etype, _mon = fut.result()
-                    if etype:
-                        logging.error(res)
-                    # send back the result and the exception class
-                    conn.send((res, etype))
-                    conn.close()
-                fut.add_done_callback(sendback)
-        finally:
-            listener.close()
+            except AttributeError:
+                sock.reply(('Invalid command ' + cmd, ValueError, None))
+            else:
+                sock.reply(safely_call(func, (self.db,) + args))
+        logging.warn('DB server stopped')
 
 
 def different_paths(path1, path2):
+    path1 = os.path.realpath(path1)  # expand symlinks
+    path2 = os.path.realpath(path2)  # expand symlinks
     # don't care about the extension (it may be .py or .pyc)
     return os.path.splitext(path1)[0] != os.path.splitext(path2)[0]
 
@@ -113,9 +89,9 @@ def check_foreign():
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
-                   + ' instance (%s)\n' % remote_server_path
-                   + 'Check the configuration or stop the foreign'
-                   + ' DbServer instance')
+                   ' instance (got %s, expected %s)\n'
+                   'Check the configuration or stop the foreign'
+                   ' DbServer instance') % (remote_server_path, server_path)
 
 
 def ensure_on():
@@ -165,13 +141,16 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     # create and upgrade the db if needed
     db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
                   detect_types=sqlite3.PARSE_DECLTYPES)
-    db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
-    actions.upgrade_db(db)
-    db.conn.close()
+    with db:
+        db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
+        actions.upgrade_db(db)
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    DbServer(db, addr, config.DBS_AUTHKEY).loop()
+    try:
+        DbServer(db, addr, config.DBS_AUTHKEY).loop()
+    finally:
+        db.conn.close()
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')

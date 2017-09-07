@@ -1,0 +1,154 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <sourceModel name="Some Source Model">
+        <!-- Note: Area sources are identical to point sources, except for the geometry. -->
+        <areaSource id="1" name="Quito" tectonicRegion="">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                             -122.5 38.0
+                             -122.0 38.5
+                             -121.5 38.0
+                             -122.0 37.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </areaGeometry>
+
+            <magScaleRel></magScaleRel>
+
+            <ruptAspectRatio></ruptAspectRatio>
+
+            <incrementalMFD minMag="" binWidth="">
+                <occurRates></occurRates>
+            </incrementalMFD>
+
+            <nodalPlaneDist>
+                <nodalPlane probability="" strike="" dip="" rake="" />
+                <nodalPlane probability="" strike="" dip="" rake="" />
+            </nodalPlaneDist>
+
+            <hypoDepthDist>
+                <hypoDepth probability="" depth="" />
+                <hypoDepth probability="" depth="" />
+            </hypoDepthDist>
+
+        </areaSource>
+        
+
+        <pointSource id="2" name="point" tectonicRegion="">
+
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>-122.0 38.0</gml:pos>
+                </gml:Point>
+
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+
+            <magScaleRel></magScaleRel>
+            <ruptAspectRatio></ruptAspectRatio>
+
+            <truncGutenbergRichterMFD aValue="" bValue="" minMag="" maxMag="" />
+
+            <nodalPlaneDist>
+                <nodalPlane probability="" strike="" dip="" rake="" />
+                <nodalPlane probability="" strike="" dip="" rake="" />
+            </nodalPlaneDist>
+
+            <hypoDepthDist>
+                <hypoDepth probability="" depth="" />
+                <hypoDepth probability="" depth="" />
+            </hypoDepthDist>
+
+        </pointSource>
+
+        <simpleFaultSource id="3" name="Mount Diablo Thrust" tectonicRegion="">
+
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -121.82290 37.73010
+                        -122.03880 37.87710
+                    </gml:posList>
+                </gml:LineString>
+
+                <dip>45.0</dip>
+                <upperSeismoDepth>10.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+
+            <magScaleRel></magScaleRel>
+
+            <ruptAspectRatio></ruptAspectRatio>
+
+            <incrementalMFD minMag="" binWidth="">
+                <occurRates></occurRates>
+            </incrementalMFD>
+
+            <rake></rake>
+        </simpleFaultSource>
+
+        <complexFaultSource id="4" name="Cascadia Megathrust" tectonicRegion="">
+
+            <complexFaultGeometry>
+                <faultTopEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            -124.704 40.363 0.5493260E+01
+                            -124.977 41.214 0.4988560E+01
+                            -125.140 42.096 0.4897340E+01
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTopEdge>
+
+                <intermediateEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            -124.704 40.363 0.5593260E+01
+                            -124.977 41.214 0.5088560E+01
+                            -125.140 42.096 0.4997340E+01
+                        </gml:posList>
+                    </gml:LineString>
+                </intermediateEdge>
+
+                <intermediateEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            -124.704 40.363 0.5693260E+01
+                            -124.977 41.214 0.5188560E+01
+                            -125.140 42.096 0.5097340E+01
+                        </gml:posList>
+                    </gml:LineString>
+                </intermediateEdge>
+
+                <faultBottomEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            -123.829 40.347 0.2038490E+02
+                            -124.137 41.218 0.1741390E+02
+                            -124.252 42.115 0.1752740E+02
+                        </gml:posList>
+                    </gml:LineString>
+                </faultBottomEdge>
+            </complexFaultGeometry>
+
+            <magScaleRel></magScaleRel>
+            
+            <ruptAspectRatio></ruptAspectRatio>
+
+            <truncGutenbergRichterMFD aValue="" bValue="" minMag="" maxMag="" />
+
+            <rake></rake>
+        </complexFaultSource>
+    </sourceModel>
+</nrml>

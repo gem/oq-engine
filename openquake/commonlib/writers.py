@@ -86,7 +86,7 @@ htranslator = HeaderTranslator(
     '(sid):uint32',
     '(eid):uint64',
     '(imti):uint8',
-    '(gmv):float32',
+    '(gmv_.+):float32',
     '(aid):uint32',
     '(boundary):object',
     '(tectonic_region_type):object',
@@ -95,8 +95,10 @@ htranslator = HeaderTranslator(
     '(event_id):uint64',
     '(event_set):uint32',
     '(eid):uint32',
+    '(eid-\d+):float32',
     '(year):uint32',
     '(taxonomy):\|S100',
+    '(tag):\|S100',
     '(multiplicity):uint16',
     '(magnitude):float32',
     '(centroid_lon):float32',
@@ -121,6 +123,7 @@ htranslator = HeaderTranslator(
     '(slight):float32',
     '(moderate):float32',
     '(extensive):float32',
+    '(extreme):float32',
     '(complete):float32',
     '(\d+):float32',  # realization column, used in the GMF scenario exporter
 )

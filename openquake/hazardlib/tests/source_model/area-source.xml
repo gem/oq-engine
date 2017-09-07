@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Some Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaSource
+            id="1"
+            name="Quito"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -1.2250000E+02 3.7500000E+01 -1.2150000E+02 3.7500000E+01 -1.2150000E+02 3.8500000E+01 -1.2250000E+02 3.8500000E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="6.5500000E+00"
+                >
+                    <occurRates>
+                        1.0614989E-03 8.8291627E-04 7.3437777E-04 6.1082880E-04 5.0806530E-04
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="3.0000000E-01" rake="0.0000000E+00" strike="0.0000000E+00"/>
+                    <nodalPlane dip="4.5000000E+01" probability="7.0000000E-01" rake="9.0000000E+01" strike="9.0000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4.0000000E+00" probability="5.0000000E-01"/>
+                    <hypoDepth depth="8.0000000E+00" probability="5.0000000E-01"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

@@ -27,12 +27,10 @@ import sys
 import ast
 import mock
 import time
-import operator
 
-from openquake.baselib import parallel, general
-from openquake.baselib.general import humansize, AccumDict
+from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.commonlib import readinput, source
+from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
 from openquake.calculators import views
 
@@ -57,41 +55,36 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
         if sites is not None:
             count += src.num_ruptures
             dt = time.time() - t0
-            acc.calc_times.append((src.source_id, len(sites), dt))
+            acc.calc_times.append((src.source_id, len(sites), src.weight, dt))
     acc.eff_ruptures = {acc.grp_id: count}
     return acc
-
-
-def no_prefilter(csm, src_filter):
-    """
-    Disable source prefiltering in CompositeSourceModel
-    """
-    csm.set_weights()
-    return csm
 
 
 class ReportWriter(object):
     """
     A particularly smart view over the datastore
     """
-    title = dict(
-        params='Parameters',
-        inputs='Input files',
-        csm_info='Composite source model',
-        required_params_per_trt='Required parameters per tectonic region type',
-        ruptures_per_trt='Number of ruptures per tectonic region type',
-        ruptures_events='Specific information for event based',
-        rlzs_assoc='Realizations per (TRT, GSIM)',
-        job_info='Informational data',
-        biggest_ebr_gmf='Maximum memory allocated for the GMFs',
-        avglosses_data_transfer='Estimated data transfer for the avglosses',
-        exposure_info='Exposure model',
-        short_source_info='Slowest sources',
-        task_slowest='Slowest task',
-        task_info='Information about the tasks',
-        times_by_source_class='Computation times by source typology',
-        performance='Slowest operations',
-    )
+    title = {
+        'params': 'Parameters',
+        'inputs': 'Input files',
+        'csm_info': 'Composite source model',
+        'dupl_sources': 'Duplicated sources',
+        'required_params_per_trt':
+        'Required parameters per tectonic region type',
+        'ruptures_per_trt': 'Number of ruptures per tectonic region type',
+        'ruptures_events': 'Specific information for event based',
+        'rlzs_assoc': 'Realizations per (TRT, GSIM)',
+        'job_info': 'Informational data',
+        'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
+        'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
+        'exposure_info': 'Exposure model',
+        'short_source_info': 'Slowest sources',
+        'task:0': 'Fastest task',
+        'task:-1': 'Slowest task',
+        'task_info': 'Information about the tasks',
+        'times_by_source_class': 'Computation times by source typology',
+        'performance': 'Slowest operations',
+    }
 
     def __init__(self, dstore):
         self.dstore = dstore
@@ -108,13 +101,8 @@ class ReportWriter(object):
         updated = str(time.ctime(mtime))
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
-        # NB: in the future, the sitecol could be transferred as
-        # an array by leveraging the HDF5 serialization protocol;
-        # for the moment however the size of the
-        # data to transfer is given by the usual pickle
-        sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
-        self.text += '\n\nnum_sites = %d, sitecol = %s' % (
-            len(dstore['sitecol']), sitecol_size)
+        self.text += '\n\nnum_sites = %d, num_imts = %d' % (
+            len(dstore['sitecol']), len(oq.imtls))
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -131,7 +119,7 @@ class ReportWriter(object):
         oq, ds = self.oq, self.dstore
         for name in ('params', 'inputs'):
             self.add(name)
-        if 'composite_source_model' in ds:
+        if 'csm_info' in ds:
             self.add('csm_info')
             self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
@@ -148,10 +136,12 @@ class ReportWriter(object):
         if 'source_info' in ds:
             self.add('short_source_info')
             self.add('times_by_source_class')
+            self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
             if 'classical' in ds['task_info']:
-                self.add('task_slowest')
+                self.add('task:0')
+                self.add('task:-1')
         if 'performance_data' in ds:
             self.add('performance')
         return self.text
@@ -181,8 +171,7 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     p = mock.patch.object
-    with p(PSHACalculator, 'core_task', count_eff_ruptures), \
-         p(source.CompositeSourceModel, 'filter', no_prefilter):
+    with p(PSHACalculator, 'core_task', count_eff_ruptures):
         if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'

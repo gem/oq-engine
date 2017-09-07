@@ -52,10 +52,33 @@ MPI support may be added in the future if sponsored by someone. If you would lik
 On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must configure the `PYTHONPATH` first:
 
 ```bash
-export PYTHONPATH="/opt/openquake/lib/python2.7/site-packages:$PYTHONPATH"
+$ export PYTHONPATH="/opt/openquake/lib/python2.7/site-packages:$PYTHONPATH"
 ```
 
 To make this change permanent, add it at the bottom of `.bashrc` or `.bash_profile` when using `bash` or `.zshrc` if `zsh` is used instead.
+
+***
+
+### OpenQuake Hazardlib errors
+```bash
+pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
+```
+Since OpenQuake Engine 2.5.0, the OpenQuake Hazardlib package has been merged with the OpenQuake Engine one.
+
+If you are using git and you have the `PYTHONPATH` set you should update `oq-engine` and then remove `oq-hazardlib` from your filesystem and from the `PYTHONPATH`, to avoid any possible confusion.
+
+If `oq-hazardlib` has been installed via `pip` you must uninstall both `openquake.engine` and `openquake.hazardlib` first, and then reinstall `oq-engine`.
+
+```bash
+$ pip uninstall openquake.hazardlib openquake.engine
+$ pip install openquake.engine
+# -OR- development installation
+$ pip install -e /path/to/oq-engine/
+```
+
+If you are using Ubuntu or RedHat packages no extra operations are needed, the package manager will remove the old `python-oq-hazardlib` package and replace it with a fresh copy of `python-oq-engine`.
+
+On Ubuntu make sure to run `apt dist-upgrade` instead on `apt upgrade` to make a proper upgrade of the OpenQuake packages.
 
 ***
 

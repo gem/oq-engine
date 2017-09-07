@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ep"
+    >
+        
+        <description>
+            Exposure Model for Nepal
+        </description>
+        <conversions>
+            
+            <costTypes>
+                
+                <costType name="structural" retrofittedType="per_asset" retrofittedUnit="USD" type="per_asset" unit="USD"/>
+            </costTypes>
+        </conversions>
+        <assets>
+            
+            <asset
+            id="a125"
+            number="8.0000000E+00"
+            taxonomy="Adobe"
+            >
+                
+                <location lat="2.8936170E+01" lon="8.3463820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a395"
+            number="3.9000000E+01"
+            taxonomy="Adobe"
+            >
+                
+                <location lat="2.8711170E+01" lon="8.1213820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2544"
+            number="6.0000000E+00"
+            taxonomy="Stone-Masonry"
+            >
+                
+                <location lat="2.8561170E+01" lon="8.4288820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2925"
+            number="2.8000000E+01"
+            taxonomy="Stone-Masonry"
+            >
+                
+                <location lat="2.8936170E+01" lon="8.2413820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3518"
+            number="1.3500000E+02"
+            taxonomy="Stone-Masonry"
+            >
+                
+                <location lat="2.7511170E+01" lon="8.4513820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4102"
+            number="4.3000000E+02"
+            taxonomy="Stone-Masonry"
+            >
+                
+                <location lat="2.7586170E+01" lon="8.3238820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4351"
+            number="8.0600000E+02"
+            taxonomy="Stone-Masonry"
+            >
+                
+                <location lat="2.8186170E+01" lon="8.1513820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4498"
+            number="2.5003000E+04"
+            taxonomy="Stone-Masonry"
+            >
+                
+                <location lat="2.8212500E+01" lon="8.3954170E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5229"
+            number="6.0000000E+01"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                
+                <location lat="2.8636170E+01" lon="8.4063820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a7180"
+            number="1.3000000E+01"
+            taxonomy="Wood"
+            >
+                
+                <location lat="2.9986170E+01" lon="8.1363820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a8309"
+            number="3.6900000E+02"
+            taxonomy="Wood"
+            >
+                
+                <location lat="2.7961170E+01" lon="8.3763820E+01"/>
+                <costs>
+                    
+                    <cost retrofitted="5.6700000E+03" type="structural" value="1.1340000E+04"/>
+                </costs>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>

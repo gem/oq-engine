@@ -3,7 +3,6 @@
 The OpenQuake Engine stable tree is available in the form of *deb* binary packages for the following Ubuntu releases:
 - **Ubuntu 16.04** LTS (Xenial)
 - **Ubuntu 14.04** LTS (Trusty) 
-- **Ubuntu 12.04** LTS (Precise)
 
 Packages *may* work on Ubuntu derivatives (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See the **[FAQ](../faq.md#unsupported-operating-systems)**.
 
@@ -82,6 +81,20 @@ If you want to remove all the dependencies installed by the OpenQuake Engine you
 ```bash
 sudo apt-get autoremove
 ```
+
+## Data cleanup
+
+To reset the database `oq reset` command can be used:
+
+```bash
+sudo supervisorctl stop openquake-dbserver
+sudo -u openquake oq reset
+sudo supervisorctl start openquake-dbserver
+```
+
+To remove **all** the data produced by the OpenQuake Engine (including datastores) you must also remove `~/oqdata` in each users' home. The `reset-db` bash script is provided, as a reference, in `/usr/share/openquake/engine/utils`.
+
+If the packages have been already uninstalled, it's safe to remove `/var/lib/openquake`.
 
 ***
 
