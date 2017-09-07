@@ -624,6 +624,13 @@ class Starmap(object):
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, self.num_tasks)
 
+        elif self.distribute == 'zmq':  # experimental
+            from openquake.baselib import zeromq as z
+            allargs = self.add_task_no(self.task_args)
+            it = z.starmap(os.environ['OQ_FRONTEND'], self.task_func, allargs)
+            ntasks = next(it)
+            return IterResult(it, self.name, ntasks, self.progress, self.sent)
+
         elif self.distribute == 'qsub':  # experimental
             allargs = list(self.add_task_no(self.task_args, pickle=False))
             logging.warn('Sending %d tasks to the grid engine', len(allargs))

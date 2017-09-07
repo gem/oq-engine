@@ -27,6 +27,7 @@ from openquake import commands
 from openquake.commonlib import config
 
 USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
+USE_ZMQ = config.get('distribution', 'oq_distribute') == 'zmq'
 
 # the environment variable has the precedence over the configuration file
 if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
@@ -36,6 +37,10 @@ if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
 if USE_CELERY and 'run' in sys.argv:
     sys.exit('You are on a cluster and you are using oq run?? '
              'Use oq engine --run instead!')
+
+if os.environ.get('OQ_DISTRIBUTE') == 'zmq' or USE_ZMQ:
+    os.environ['OQ_DISTRIBUTE'] = 'zmq'
+    os.environ['OQ_FRONTEND'], os.environ['OQ_BACKEND'] = config.zmq_urls()
 
 
 def oq():

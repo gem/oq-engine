@@ -23,7 +23,6 @@ import os.path
 import sqlite3
 import logging
 import subprocess
-
 from openquake.baselib import sap, zeromq
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import valid
@@ -32,6 +31,11 @@ from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
+
+zmq = os.environ.get(
+    'OQ_DISTRIBUTE', config.get('distribution', 'oq_distribute')) == 'zmq'
+if zmq:
+    from openquake.baselib import zeromq as z
 
 
 db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
@@ -47,7 +51,41 @@ class DbServer(object):
     def __init__(self, db, address, authkey):
         self.db = db
         self.address = 'tcp://%s:%s' % address
-        self.authkey = authkey
+        host, self.port = address
+        self.authkey = authkey  # this is not used for the moment
+        if host == 'localhost':
+            host = '127.0.0.1'
+        self.frontend_url = 'tcp://%s:%s' % (host, self.port + 1)
+        self.backend_url = 'tcp://%s:%s' % (host, self.port + 2)
+
+    def __enter__(self):
+        if zmq:
+            # create the workers
+            self.workers = 0
+            rpython = (config.get('dbserver', 'remote_python') or
+                       sys.executable)
+            for host, sshport, cores in config.get_host_cores():
+                if host == '127.0.0.1':  # localhost
+                    args = [sys.executable]
+                else:
+                    args = ['ssh', host, '-p', sshport, rpython]
+                args += ['-m', 'openquake.baselib.zeromq',
+                         self.backend_url, cores]
+                logging.warn('starting ' + ' '.join(args))
+                subprocess.Popen(args)
+                self.workers += 1
+            z.Process(z.proxy, self.frontend_url, self.backend_url).start()
+            logging.warn('zmq proxy started on ports %d, %d',
+                         self.port + 1, self.port + 2)
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        if zmq:
+            with z.context as c, c.connect(self.frontend_url, z.DEALER) as s:
+                for i in range(self.workers):
+                    logging.warning('stopping zmq worker %d', i)
+                    s.send_pyobj(('stop', i))
+                time.sleep(1)  # wait a bit for the stop to be sent
 
     def loop(self):
         logging.warn('DB server started with %s, listening on %s...',
@@ -154,7 +192,8 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     try:
-        DbServer(db, addr, config.DBS_AUTHKEY).loop()
+        with DbServer(db, addr, config.DBS_AUTHKEY) as dbs:
+            dbs.loop()
     finally:
         db.close()
 
