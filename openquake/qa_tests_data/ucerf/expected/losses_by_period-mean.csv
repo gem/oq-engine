@@ -1,4 +1,4 @@
-annual_frequency_of_exceedence,return_periods,structural
+annual_frequency_of_exceedence,return_period,structural
 2.00000E-03,500,NAN
 1.00000E-03,1000,7.88503E+05
 5.00000E-04,2000,1.03175E+07
