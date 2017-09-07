@@ -1494,11 +1494,11 @@ class LossesByPeriodBuilder(object):
 
     :param insured_losses: insured losses flag from the job.ini
     """
-    def __init__(self, return_periods, loss_dt, num_rlzs):
+    def __init__(self, return_periods, loss_dt, num_rlzs, eff_time):
         self.return_periods = return_periods
-        self.eff_time = return_periods[-1]
         self.loss_dt = loss_dt
         self.num_rlzs = num_rlzs
+        self.eff_time = eff_time
 
     # not used yet
     def build_rlzs(self, asset_values, loss_ratios):
