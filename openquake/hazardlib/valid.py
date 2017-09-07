@@ -929,6 +929,8 @@ def integers(value):
        ...
     ValueError: Not a list of integers: ' '
     """
+    if '.' in value:
+        raise ValueError('There are decimal points in %s' % value)
     values = value.replace(',', ' ').split()
     if not values:
         raise ValueError('Not a list of integers: %r' % value)
