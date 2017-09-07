@@ -366,6 +366,13 @@ class Db(object):
             cursor.executemany(templ, rows)
         return cursor
 
+    def close(self):
+        """
+        Close the main thread connection and refresh the threadlocal object
+        """
+        self.conn.close()
+        self.local = threading.local()
+
 
 class Table(list):
     """Just a list of Rows with an attribute _fields"""
