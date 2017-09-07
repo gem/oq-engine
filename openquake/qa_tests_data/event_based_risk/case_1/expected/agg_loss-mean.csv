@@ -1,4 +1,4 @@
-annual_frequency_of_exceedence,return_periods:int64,nonstructural,structural
+annual_frequency_of_exceedence,return_period,nonstructural,structural
 3.33333E-02,30,NAN,NAN
 1.66667E-02,60,3.13609E+01,2.30030E+02
 8.33333E-03,120,1.84604E+02,7.46382E+02
