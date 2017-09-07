@@ -556,7 +556,7 @@ class EbriskCalculator(base.RiskCalculator):
 
         # build aggregate loss curves
         oq = self.oqparam
-        weights = self.datastore['realizations']['weight']
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         R = len(weights)
         if 'agg_loss_table' in self.datastore:
             alt = self.datastore['agg_loss_table']
