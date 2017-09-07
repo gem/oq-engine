@@ -18,6 +18,7 @@
 import os
 import sys
 import signal
+import getpass
 from openquake.hazardlib import valid
 from openquake.baselib import sap
 from openquake.commonlib import logs
@@ -30,7 +31,8 @@ def dbserver(cmd, dbhostport=None, dbpath=None):
     """
     start/stop/restart the database server, or return its status
     """
-    if valid.boolean(config.get('dbserver', 'multi_user')):
+    if valid.boolean(config.get('dbserver', 'multi_user')) and (
+            getpass.get_user() != 'openquake'):
         sys.exit('oq dbserver only works in single user mode')
 
     status = dbs.get_status()
