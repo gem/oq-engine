@@ -33,8 +33,11 @@ def main(input_files):
         sm = inp.sourceModel
         print('Converting %s' % input_file)
         sourceconverter.update_source_model(sm)
-        source_model = node.Node(
-            "sourceModel", {"name": sm['name']}, nodes=sm.nodes)
+        if 'name' in sm.attrib:
+            attr = {"name": sm['name']}
+        else:
+            attr = {}
+        source_model = node.Node("sourceModel", attr, nodes=sm.nodes)
         with open(input_file, 'wb') as f:
             nrml.write([source_model], f, '%s')
         

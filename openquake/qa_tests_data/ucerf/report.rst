@@ -2,12 +2,12 @@ Ucerf test
 ==========
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21271.hdf5 Fri May 12 10:45:15 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_14408.hdf5 Thu Aug 17 11:47:32 2017
+checksum32                                2,080,369,829           
+engine_version                            2.6.0-gitbdd9d17        
 ========================================= ========================
 
-num_sites = 155, sitecol = 8.93 KB
+num_sites = 155, num_imts = 1
 
 Parameters
 ----------
@@ -29,39 +29,15 @@ master_seed                     0
 
 Input files
 -----------
-======================= ==================================================================================================================
-Name                    File                                                                                                              
-======================= ==================================================================================================================
-gsim_logic_tree         `gmpe_logic_tree_ucerf_mean.xml <gmpe_logic_tree_ucerf_mean.xml>`_                                                
-job_ini                 `job.ini <job.ini>`_                                                                                              
-sites                   `bay_area.csv <bay_area.csv>`_                                                                                    
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
-source_model            `dummy_ucerf_bg_source_redux.xml <dummy_ucerf_bg_source_redux.xml>`_                                              
-source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>`_                                                        
-======================= ==================================================================================================================
+======================= ====================================================================
+Name                    File                                                                
+======================= ====================================================================
+gsim_logic_tree         `gmpe_logic_tree_ucerf_mean.xml <gmpe_logic_tree_ucerf_mean.xml>`_  
+job_ini                 `job.ini <job.ini>`_                                                
+sites                   `bay_area.csv <bay_area.csv>`_                                      
+source_model            `dummy_ucerf_bg_source_redux.xml <dummy_ucerf_bg_source_redux.xml>`_
+source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>`_          
+======================= ====================================================================
 
 Composite source model
 ----------------------
@@ -185,5 +161,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 8.249E-04 0.0       1     
+reading site collection 7.319E-04 0.0       1     
 ======================= ========= ========= ======

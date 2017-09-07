@@ -16,16 +16,4 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import sys
-from openquake.baselib.general import search_module, git_suffix
-
-# the version is managed by packager.sh with a sed
-__version__ = '2.5.0'
-__version__ += git_suffix(__file__)
-
-path = search_module('openquake.commonlib.general')
-if path:
-    sys.exit('Found an obsolete version of commonlib; '
-             'please remove %s and/or fix your PYTHONPATH'
-             % os.path.dirname(path))
+from openquake.baselib import __version__

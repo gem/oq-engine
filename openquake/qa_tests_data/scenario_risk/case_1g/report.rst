@@ -2,12 +2,12 @@ Scenario Calculation with Simple Fault Rupture
 ==============================================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21369.hdf5 Fri May 12 10:46:43 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_14508.hdf5 Thu Aug 17 11:49:01 2017
+checksum32                                391,562,862             
+engine_version                            2.6.0-gitbdd9d17        
 ========================================= ========================
 
-num_sites = 7, sitecol = 1.11 KB
+num_sites = 7, num_imts = 3
 
 Parameters
 ----------
@@ -37,6 +37,22 @@ rupture_model `rupture_model.xml <rupture_model.xml>`_
 sites         `sites.csv <sites.csv>`_                
 ============= ========================================
 
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== =================== ========= ========== ==========
+grp_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      BooreAtkinson2008() rjb       vs30       mag rake  
+====== =================== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -51,5 +67,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.007     0.0       1     
-reading site collection 1.326E-04 0.0       1     
+reading site collection 1.366E-04 0.0       1     
 ======================= ========= ========= ======

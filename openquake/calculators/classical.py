@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import math
 import logging
 import operator
 from functools import partial
@@ -36,6 +37,7 @@ from openquake.commonlib import datastore, source, calc, util
 from openquake.calculators import base
 
 U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
@@ -100,7 +102,7 @@ class BoundingBox(object):
         :param lats:
             a sequence of latitudes
         """
-        if self.min_dist:
+        if self.min_dist or self.max_dist:
             dists = [self.min_dist, self.max_dist] + dists
         if self.west:
             lons = [self.west, self.east] + lons
@@ -142,7 +144,6 @@ class BoundingBox(object):
         dist_edges = dist_bin_width * numpy.arange(
             int(self.min_dist / dist_bin_width),
             int(numpy.ceil(self.max_dist / dist_bin_width) + 1))
-
         west = numpy.floor(self.west / coord_bin_width) * coord_bin_width
         east = numpy.ceil(self.east / coord_bin_width) * coord_bin_width
         lon_extent = get_longitudinal_extent(west, east)
@@ -185,6 +186,7 @@ def classical(sources, src_filter, gsims, param, monitor):
     truncation_level = param['truncation_level']
     imtls = param['imtls']
     src_group_id = sources[0].src_group_id
+    assert src_group_id is not None
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
@@ -197,8 +199,10 @@ def classical(sources, src_filter, gsims, param, monitor):
         sources, src_filter, imtls, gsims, truncation_level,
         bbs=bbs, monitor=monitor)
     pmap.bbs = bbs
-    pmap.grp_id = src_group_id
     return pmap
+
+source_data_dt = numpy.dtype(
+    [('taskno', U16), ('nsites', U32), ('weight', F32)])
 
 
 def saving_sources_by_task(iterargs, dstore):
@@ -206,10 +210,14 @@ def saving_sources_by_task(iterargs, dstore):
     Yield the iterargs again by populating 'task_info/source_ids'
     """
     source_ids = []
-    for args in iterargs:
+    data = []
+    for i, args in enumerate(iterargs, 1):
         source_ids.append(' ' .join(src.source_id for src in args[0]))
+        for src in args[0]:  # collect source data
+            data.append((i, src.nsites, src.weight))
         yield args
     dstore['task_sources'] = numpy.array([encode(s) for s in source_ids])
+    dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
 
 
 @base.calculators.add('psha')
@@ -228,7 +236,7 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap: a ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            for src_id, nsites, calc_time in pmap.calc_times:
+            for src_id, nsites, srcweight, calc_time in pmap.calc_times:
                 src_id = src_id.split(':', 1)[0]
                 info = self.csm.infos[pmap.grp_id, src_id]
                 info.calc_time += calc_time
@@ -238,7 +246,6 @@ class PSHACalculator(base.HazardCalculator):
             for bb in getattr(pmap, 'bbs', []):  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
             acc[pmap.grp_id] |= pmap
-        self.datastore.flush()
         return acc
 
     def count_eff_ruptures(self, result_dict, src_group):
@@ -255,10 +262,11 @@ class PSHACalculator(base.HazardCalculator):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
+        gsims_by_grp = self.csm.info.get_gsims_by_grp()
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         for grp in self.csm.src_groups:
-            num_gsims = len(self.rlzs_assoc.gsims_by_grp_id[grp.id])
+            num_gsims = len(gsims_by_grp[grp.id])
             zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
@@ -276,6 +284,11 @@ class PSHACalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
+        try:
+            self.csm
+        except AttributeError:
+            raise RuntimeError('No CompositeSourceModel, did you forget to '
+                               'run the hazard or the --hc option?')
         monitor = self.monitor(self.core_task.__name__)
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, monitor)
@@ -303,28 +316,36 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
-        if oq.num_tiles:
-            tiles = self.sitecol.split_in_tiles(oq.num_tiles)
+        if self.is_stochastic:  # disable tiling
+            num_tiles = 1
+        else:
+            num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+        if num_tiles > 1:
+            tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
-        with self.monitor('prefiltering source model',
-                          autoflush=True, measuremem=True):
-            src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-            self.csm = csm.filter(src_filter)
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(self.csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
-                     maxweight, numheavy, len(tiles))
+        if oq.split_sources is False:
+            maxweight = numpy.inf  # do not split the sources
+        else:
+            numheavy = len(self.csm.get_sources('heavy', maxweight))
+            logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
+                         maxweight, numheavy, len(tiles))
+        gsims_by_grp = self.csm.info.get_gsims_by_grp()
+        sm_ids = {sg.id: sm.ordinal for sm in self.csm.info.source_models
+                  for sg in sm.src_groups}
+
         for t, tile in enumerate(tiles):
-            if oq.num_tiles:
-                # used only for the heavy sources, after their split
-                if numheavy:
+            if num_tiles > 1:
+                with self.monitor('prefiltering source model', autoflush=True):
                     logging.info('Instantiating src_filter for tile %d', t + 1)
-                src_filter = SourceFilter(tile, oq.maximum_distance,
-                                          use_rtree=numheavy > 0)
+                    src_filter = SourceFilter(tile, oq.maximum_distance)
+                    csm = self.csm.filter(src_filter)
+            else:
+                src_filter = self.src_filter
             num_tasks = 0
             num_sources = 0
-            for sm in self.csm.source_models:
+            for sm in csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
                     imtls=oq.imtls,
@@ -333,13 +354,13 @@ class PSHACalculator(base.HazardCalculator):
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for sg in sm.src_groups:
-                    if oq.num_tiles == 0:
+                    gsims = gsims_by_grp[sg.id]
+                    if num_tiles <= 1:
                         logging.info(
                             'Sending source group #%d of %d (%s, %d sources)',
                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
-                    gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
                     if oq.poes_disagg or oq.iml_disagg:  # only for disagg
-                        param['sm_id'] = self.rlzs_assoc.sm_ids[sg.id]
+                        param['sm_id'] = sm_ids[sg.id]
                     if sg.src_interdep == 'mutex':  # do not split the group
                         self.csm.add_infos(sg.sources)
                         yield sg, src_filter, gsims, param, monitor
@@ -370,11 +391,11 @@ class PSHACalculator(base.HazardCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
-        self.datastore['csm_info/assoc_by_grp'] = array = (
-            self.rlzs_assoc.get_assoc_by_grp())
-        # computing properly the length in bytes of a variable length array
-        nbytes = array.nbytes + sum(rec['rlzis'].nbytes for rec in array)
-        self.datastore.set_attrs('csm_info/assoc_by_grp', nbytes=nbytes)
+        if 'source_info' in self.datastore:
+            # the table is missing for UCERF, we should fix that
+            self.datastore.set_attrs(
+                'source_info', nbytes=array.nbytes,
+                has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
@@ -446,10 +467,15 @@ class ClassicalCalculator(PSHACalculator):
         if 'poes' not in self.datastore:  # for short report
             return
         oq = self.oqparam
-        rlzs = self.rlzs_assoc.realizations
-        if len(rlzs) == 1 or not oq.hazard_stats():
+        num_rlzs = len(self.datastore['realizations'])
+        if num_rlzs == 1:  # no stats to compute
             return {}
-
+        elif not oq.hazard_stats():
+            if oq.hazard_maps or oq.uniform_hazard_spectra:
+                raise ValueError('The job.ini says that no statistics should '
+                                 'be computed, but then there is no output!')
+            else:
+                return {}
         # initialize datasets
         N = len(self.sitecol)
         L = len(oq.imtls.array)
@@ -458,7 +484,7 @@ class ClassicalCalculator(PSHACalculator):
             sids=numpy.arange(N, dtype=numpy.uint32))
         nbytes = N * L * 4  # bytes per realization (32 bit floats)
         totbytes = 0
-        if len(rlzs) > 1:
+        if num_rlzs > 1:
             for name, stat in oq.hazard_stats():
                 self.datastore.create_dset(
                     'hcurves/' + name, F32, (N, L, 1), attrs=attrs)
@@ -471,7 +497,7 @@ class ClassicalCalculator(PSHACalculator):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
                 pgetter = calc.PmapGetter(
-                    self.datastore.parent, fromworker=True)
+                    self.datastore.parent, lazy=True)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:

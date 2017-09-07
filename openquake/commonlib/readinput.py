@@ -19,7 +19,7 @@
 from __future__ import division
 import os
 import csv
-import gzip
+import zlib
 import zipfile
 import logging
 import operator
@@ -28,8 +28,8 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib.general import groupby, AccumDict, writetmp
-from openquake.baselib.python3compat import configparser, encode
+from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
@@ -38,9 +38,8 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, read_nrml
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import logictree
+from openquake.commonlib import logictree, source, writers
 from openquake.commonlib.riskmodels import get_risk_models
-from openquake.commonlib import source
 
 read_nrml.update_validators()
 
@@ -115,7 +114,7 @@ def get_params(job_inis):
 
     # drectory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
-    base_path = os.path.dirname(job_ini)
+    base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
@@ -124,18 +123,26 @@ def get_params(job_inis):
                 input_type, _ext = key.rsplit('_', 1)
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
-                params['inputs'][input_type] = possibly_gunzip(path)
+                params['inputs'][input_type] = path
             else:
                 params[key] = value
 
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = [
-            os.path.join(base_path, src_path)
-            for src_path in sorted(source.collect_source_model_paths(smlt))]
+        params['inputs']['source'] = sorted(
+            _get_paths(base_path, source.collect_source_model_paths(smlt)))
 
     return params
+
+
+def _get_paths(base_path, uncertainty_models):
+    # extract the path names for the source models listed in the smlt file
+    for model in uncertainty_models:
+        for name in model.split():
+            fname = os.path.abspath(os.path.join(base_path, name))
+            if os.path.exists(fname):  # consider only real paths
+                yield fname
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
@@ -202,8 +209,6 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
-    elif 'gmfs' in oqparam.inputs:
-        return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
         return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
@@ -267,6 +272,9 @@ def get_site_collection(oqparam, mesh=None):
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
                           param.z1pt0, param.z2pt5, param.backarc))
+        if len(sitecol) == 1 and oqparam.hazard_maps:
+            logging.warn('There is a single site, hazard_maps=true '
+                         'has little sense')
         return site.SiteCollection(sitecol)
 
     # else use the default site params
@@ -329,25 +337,10 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
+    # NB: converting the random_seed into an integer is needed on Windows
     return logictree.SourceModelLogicTree(
-        fname, validate=False, seed=oqparam.random_seed,
+        fname, validate=False, seed=int(oqparam.random_seed),
         num_samples=oqparam.number_of_logic_tree_samples)
-
-
-def possibly_gunzip(fname):
-    """
-    A file can be .gzipped to save space (this happens
-    in the debian package); in that case, let's gunzip it.
-
-    :param fname: a file name (not zipped)
-    """
-    is_gz = os.path.exists(fname) and fname.endswith('.gz')
-    there_is_gz = not os.path.exists(fname) and os.path.exists(fname + '.gz')
-    if is_gz:
-        return writetmp(gzip.open(fname).read())
-    elif there_is_gz:
-        return writetmp(gzip.open(fname + '.gz').read())
-    return fname
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
@@ -378,24 +371,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.name.split():
-            fname = possibly_gunzip(
-                os.path.abspath(os.path.join(oqparam.base_path, name)))
+            fname = os.path.abspath(os.path.join(oqparam.base_path, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                try:
-                    logging.info('Parsing %s', fname)
-                    src_groups.extend(psr.parse_src_groups(fname, apply_unc))
-                except ValueError as e:
-                    if str(e) in ('Surface does not conform with Aki & '
-                                  'Richards convention',
-                                  'Edges points are not in the right order'):
-                        raise InvalidFile('''\
-        %s: %s. Probably you are using an obsolete model.
-        In that case you can fix the file with the command
-        python -m openquake.engine.tools.correct_complex_sources %s
-        ''' % (fname, e, fname))
-                    else:
-                        raise
+                logging.info('Parsing %s', fname)
+                src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
                 smodel = nrml.read(fname).sourceModel
                 if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
@@ -446,7 +426,7 @@ def get_composite_source_model(oqparam, in_memory=True):
     def getid(src):
         try:
             return src.source_id
-        except:
+        except AttributeError:
             return src['id']
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
@@ -470,8 +450,7 @@ def get_composite_source_model(oqparam, in_memory=True):
                 # the limit is really needed only for event based calculations
                 raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
-    csm = source.CompositeSourceModel(
-        gsim_lt, source_model_lt, smodels, in_memory)
+    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
     return csm
 
 
@@ -576,6 +555,9 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         a pair (Exposure instance, list of asset nodes)
     """
     [exposure] = nrml.read(fname, stop=stop)
+    if not exposure.tag.endswith('exposureModel'):
+        raise InvalidFile('%s: expected exposureModel, got %s' %
+                          (fname, exposure.tag))
     description = exposure.description
     try:
         conversions = exposure.conversions
@@ -619,12 +601,15 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
+    assets = []
+    asset_refs = []
+    assets_by_tag = collections.defaultdict(list)
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, [], set(), [], cc)
+        area.attrib, assets, asset_refs, cc, assets_by_tag)
     return exp, exposure.assets
 
 
@@ -690,6 +675,13 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
+            tagnode = getattr(asset, 'tags', None)
+            if tagnode is not None:
+                for item in tagnode.attrib.items():
+                    valid.simple_id(item[0])  # name
+                    valid.nice_string(item[1])  # value
+                    exposure.assets_by_tag['%s-%s' % item].append(idx)
+            exposure.assets_by_tag['taxonomy-' + taxonomy].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
@@ -739,7 +731,6 @@ def get_exposure(oqparam):
             deductibles, insurance_limits, retrofitteds,
             exposure.cost_calculator)
         exposure.assets.append(ass)
-        exposure.taxonomies.add(taxonomy)
     if region:
         logging.info('Read %d assets within the region_constraint '
                      'and discarded %d assets outside the region',
@@ -747,7 +738,7 @@ def get_exposure(oqparam):
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
 
-    # sanity check
+    # sanity checks
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
     assert values, 'Could not find any value??'
     return exposure
@@ -756,8 +747,8 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies', 'asset_refs',
-                 'cost_calculator'])
+                 'area', 'assets', 'asset_refs', 'cost_calculator',
+                 'assets_by_tag'])
 
 
 def get_sitecol_assetcol(oqparam, exposure):
@@ -776,7 +767,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = riskinput.AssetCollection(
-        assets_by_site, exposure.cost_calculator,
+        assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
     return sitecol, assetcol
@@ -831,21 +822,35 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, etags, gmf array of shape (N, I, E)
+        sitecol, eids, gmf array of shape (G, N, E, I)
     """
+    I = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
-    if fname.endswith('.txt'):
-        sitecol, etags, gmfs_by_imt = get_gmfs_from_txt(oqparam, fname)
+    if fname.endswith('.csv'):
+        array = writers.read_composite_array(fname)
+        R = len(numpy.unique(array['rlzi']))
+        # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
+        dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
+        num_gmv = len(array.dtype.names[3:])
+        assert num_gmv == I, (num_gmv, I)
+        dtlist.append(('gmv', (F32, num_gmv)))
+        eids = numpy.unique(array['eid'])
+        assert len(eids) == oqparam.number_of_ground_motion_fields, (
+            len(eids), oqparam.number_of_ground_motion_fields)
+        eidx = {eid: e for e, eid in enumerate(eids)}
+        sids = numpy.unique(array['sid'])
+        gmfs = numpy.zeros((R, len(sids), len(eids), I), F32)
+        for row in array.view(dtlist):
+            gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
     elif fname.endswith('.xml'):
-        sitecol, etags, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
+        eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
+        N, E = gmfs_by_imt.shape
+        gmfs = numpy.zeros((1, N, E, I), F32)
+        for imti, imtstr in enumerate(oqparam.imtls):
+            gmfs[0, :, :, imti] = gmfs_by_imt[imtstr]
     else:
         raise NotImplemented('Reading from %s' % fname)
-    N, E = gmfs_by_imt.shape
-    I = len(oqparam.imtls)
-    gmfs = numpy.zeros((N, I, E), F32)
-    for imti, imtstr in enumerate(oqparam.imtls):
-        gmfs[:, imti, :] = gmfs_by_imt[imtstr]
-    return sitecol, etags, gmfs
+    return eids, gmfs
 
 
 def get_hcurves(oqparam):
@@ -861,7 +866,7 @@ def get_hcurves(oqparam):
     elif fname.endswith('.xml'):
         return get_hcurves_from_nrml(oqparam, fname)
     else:
-        raise NotImplemented('Reading from %s' % fname)
+        raise NotImplementedError('Reading from %s' % fname)
 
 
 def get_hcurves_from_csv(oqparam, fname):
@@ -884,7 +889,10 @@ def get_hcurves_from_csv(oqparam, fname):
             csvfile, list(oqparam.imtls), num_values,
             valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, hcurves_by_imt
+    curves = zero_curves(len(mesh), oqparam.imtls)
+    for imt_ in oqparam.imtls:
+        curves[imt_] = hcurves_by_imt[imt_]
+    return sitecol, curves
 
 
 def get_hcurves_from_nrml(oqparam, fname):
@@ -919,73 +927,15 @@ def get_hcurves_from_nrml(oqparam, fname):
     return sitecol, curves
 
 
-def get_gmfs_from_txt(oqparam, fname):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param fname:
-        the full path of the CSV file
-    :returns:
-        a composite array of shape (N, R) read from a CSV file with format
-        `etag indices [gmv1 ... gmvN] * num_imts`
-    """
-    with open(fname) as csvfile:
-        firstline = next(csvfile)
-        try:
-            coords = valid.coordinates(firstline)
-        except:
-            raise InvalidFile(
-                'The first line of %s is expected to contain comma separated'
-                'ordered coordinates, got %s instead' % (fname, firstline))
-        lons, lats, depths = zip(*coords)
-        sitecol = site.SiteCollection.from_points(lons, lats, depths, oqparam)
-        if not oqparam.imtls:
-            oqparam.set_risk_imtls(get_risk_models(oqparam))
-        imts = list(oqparam.imtls)
-        imt_dt = numpy.dtype([(imt, F32) for imt in imts])
-        num_gmfs = oqparam.number_of_ground_motion_fields
-        gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
-        etags = []
-
-        for lineno, line in enumerate(csvfile, 2):
-            row = line.split(',')
-            try:
-                indices = list(map(valid.positiveint, row[1].split()))
-            except:
-                raise InvalidFile(
-                    'The second column in %s is expected to contain integer '
-                    'indices, got %s' % (fname, row[1]))
-            r_sites = (
-                sitecol if not indices else
-                site.FilteredSiteCollection(indices, sitecol))
-            for i in range(len(imts)):
-                try:
-                    array = numpy.array(valid.positivefloats(row[i + 2]))
-                    # NB: i + 2 because the first 2 fields are etag and indices
-                except:
-                    raise InvalidFile(
-                        'The column #%d in %s is expected to contain positive '
-                        'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]][lineno - 2][r_sites.sids] = array
-            etags.append(row[0])
-    if lineno < num_gmfs + 1:
-        raise InvalidFile('%s contains %d rows, expected %d' % (
-            fname, lineno, num_gmfs + 1))
-    if etags != sorted(etags):
-        raise InvalidFile('The etags in %s are not ordered: %s'
-                          % (fname, etags))
-    return sitecol, numpy.array([encode(e) for e in etags]), gmf_by_imt.T
-
-
 # used in get_scenario_from_nrml
-def _extract_etags_sitecounts(gmfset):
-    etags = set()
+def _extract_eids_sitecounts(gmfset):
+    eids = set()
     counter = collections.Counter()
     for gmf in gmfset:
-        etags.add(gmf['ruptureId'])
+        eids.add(gmf['ruptureId'])
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
-    return numpy.array(sorted(etags), numpy.uint64), counter
+    return numpy.array(sorted(eids), numpy.uint64), counter
 
 
 def get_scenario_from_nrml(oqparam, fname):
@@ -995,7 +945,7 @@ def get_scenario_from_nrml(oqparam, fname):
     :param fname:
         the NRML files containing the GMFs
     :returns:
-        a triple (sitecol, etags, gmf array)
+        a triple (sitecol, eids, gmf array)
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
@@ -1003,12 +953,11 @@ def get_scenario_from_nrml(oqparam, fname):
     num_imts = len(imts)
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
-    etags, sitecounts = _extract_etags_sitecounts(gmfset)
+    eids, sitecounts = _extract_eids_sitecounts(gmfset)
     coords = sorted(sitecounts)
     oqparam.sites = [(lon, lat, 0) for lon, lat in coords]
     site_idx = {lonlat: i for i, lonlat in enumerate(coords)}
-    oqparam.number_of_ground_motion_fields = num_events = len(etags)
-    sitecol = get_site_collection(oqparam)
+    oqparam.number_of_ground_motion_fields = num_events = len(eids)
     num_sites = len(oqparam.sites)
     gmf_by_imt = numpy.zeros((num_events, num_sites), imt_dt)
     counts = collections.Counter()
@@ -1031,13 +980,13 @@ def get_scenario_from_nrml(oqparam, fname):
         elif count > num_imts:
             raise InvalidFile("Found a duplicated etag '%s' in %s" %
                               (etag, fname))
-    expected_gmvs_per_site = num_imts * len(etags)
+    expected_gmvs_per_site = num_imts * len(eids)
     for lonlat, counts in sitecounts.items():
         if counts != expected_gmvs_per_site:
             raise InvalidFile(
                 '%s: expected %d gmvs at location %s, found %d' %
                 (fname, expected_gmvs_per_site, lonlat, counts))
-    return sitecol, etags, gmf_by_imt.T
+    return eids, gmf_by_imt.T
 
 
 def get_mesh_hcurves(oqparam):
@@ -1076,3 +1025,24 @@ def get_mesh_hcurves(oqparam):
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
+
+
+def get_checksum32(oqparam):
+    """
+    Build an unsigned 32 bit integer from the input files of the calculation
+    """
+    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
+    # which is the same between Python 2 and Python 3
+    checksum = 0
+    for key in sorted(oqparam.inputs):
+        fname = oqparam.inputs[key]
+        if key == 'source':  # list of fnames and/or strings
+            for f in fname:
+                data = open(f, 'rb').read()
+                checksum = zlib.adler32(data, checksum) & 0xffffffff
+        elif os.path.exists(fname):
+            data = open(fname, 'rb').read()
+            checksum = zlib.adler32(data, checksum) & 0xffffffff
+        else:
+            raise ValueError('%s is not a file' % fname)
+    return checksum

@@ -1,4 +1,6 @@
-# Installing the OpenQuake Engine on RedHat Linux 7 and its clones
+# Installing the OpenQuake Engine on RedHat Linux 7 and its clones 
+
+<a href="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python-oq-engine/"><img src="https://copr.fedorainfracloud.org/coprs/gem/openquake-stable/package/python-oq-engine/status_image/last_build.png" /></a>
 
 The OpenQuake Engine is available in the form of *rpm* binary packages for the following RHEL based distributions:
 - RedHat Enterprise Linux 7 
@@ -84,6 +86,22 @@ If you want to remove all the dependencies installed by the OpenQuake Engine, yo
 sudo yum install yum-plugin-remove-with-leaves
 sudo yum erase --remove-leaves python-oq-*
 ```
+
+## Data cleanup
+
+To reset the database `oq reset` command can be used:
+
+```bash
+sudo systemctl stop openquake-dbserver.service
+sudo -u openquake oq reset
+sudo systemctl start openquake-dbserver.service
+```
+
+To remove **all** the data produced by the OpenQuake Engine (including datastores) you must also remove `~/oqdata` in each users' home. The `reset-db` bash script is provided, as a reference, in `/usr/share/openquake/engine/utils`.
+
+
+
+If the packages have been already uninstalled, it's safe to remove `/var/lib/openquake`.
 
 ***
 

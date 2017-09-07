@@ -42,7 +42,7 @@ def dist_by_asset(data, multi_stat_dt):
     return out
 
 
-def dist_by_taxon(data, multi_stat_dt):
+def dist_by_tag(data, multi_stat_dt):
     """
     :param data: array of shape (T, R, L, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
@@ -87,31 +87,31 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
         dictionary of extra parameters
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_taxonomy': damage array of shape T, R, L, E, D,
+                      'd_tag': damage array of shape T, R, L, E, D,
                       'c_asset': [(l, r, a, mean-stddev), ...],
-                      'c_taxonomy': damage array of shape T, R, L, E}
+                      'c_tag': damage array of shape T, R, L, E}
 
-    `d_asset` and `d_taxonomy` are related to the damage distributions
-    whereas `c_asset` and `c_taxonomy` are the consequence distributions.
+    `d_asset` and `d_tag` are related to the damage distributions
+    whereas `c_asset` and `c_tag` are the consequence distributions.
     If there is no consequence model `c_asset` is an empty list and
-    `c_taxonomy` is a zero-value array.
+    `c_tag` is a zero-valued array.
     """
     c_models = param['consequence_models']
     L = len(riskmodel.loss_types)
-    R = len(riskinput.rlzs)
+    R = riskinput.hazard_getter.num_rlzs
     D = len(riskmodel.damage_states)
     E = param['number_of_ground_motion_fields']
-    T = len(param['taxonomies'])
-    taxo2idx = {taxo: i for i, taxo in enumerate(param['taxonomies'])}
-    result = dict(d_asset=[], d_taxon=numpy.zeros((T, R, L, E, D), F64),
-                  c_asset=[], c_taxon=numpy.zeros((T, R, L, E), F64))
+    T = len(param['tags'])
+    result = dict(d_asset=[], d_tag=numpy.zeros((T, R, L, E, D), F64),
+                  c_asset=[], c_tag=numpy.zeros((T, R, L, E), F64))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
         for l, damages in enumerate(outputs):
             loss_type = riskmodel.loss_types[l]
             c_model = c_models.get(loss_type)
-            for asset, fraction in zip(outputs.assets, damages):
-                t = taxo2idx[asset.taxonomy]
+            for a, fraction in enumerate(damages):
+                asset = outputs.assets[a]
+                t = riskinput.tagmask[a]
                 damages = fraction * asset.number
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
@@ -121,11 +121,11 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
                     result['c_asset'].append(
                         (l, r, asset.ordinal,
                          scientific.mean_std(consequences)))
-                    result['c_taxon'][t, r, l, :] += consequences
+                    result['c_tag'][t, r, l, :] += consequences
                     # TODO: consequences for the occupants
                 result['d_asset'].append(
                     (l, r, asset.ordinal, scientific.mean_std(damages)))
-                result['d_taxon'][t, r, l, :] += damages
+                result['d_tag'][t, r, l, :] += damages
     return result
 
 
@@ -146,12 +146,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.datastore['etags'], gmfs = calc.get_gmfs(
-            self.datastore, self.precalc)
-        rlzs = self.csm_info.get_rlzs_assoc().realizations
-        self.riskinputs = self.build_riskinputs(
-            'gmf', {rlz: gmf for rlz, gmf in zip(rlzs, gmfs)})
-        self.param['taxonomies'] = sorted(self.taxonomies)
+        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        self.riskinputs = self.build_riskinputs('gmf', gmfs)
+        self.param['tags'] = sorted(self.assetcol.tags())
 
     def post_execute(self, result):
         """
@@ -176,10 +173,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = dist_by_asset(
             d_asset, multi_stat_dt)
-        self.datastore['dmg_by_taxon'] = dist_by_taxon(
-            result['d_taxon'], multi_stat_dt)
+        self.datastore['dmg_by_tag'] = dist_by_tag(
+            result['d_tag'], multi_stat_dt)
+        by_taxon = result['d_tag'][self.assetcol.get_tax_idx()]
         self.datastore['dmg_total'] = dist_total(
-            result['d_taxon'], multi_stat_dt)
+            by_taxon, multi_stat_dt)
 
         # consequence distributions
         if result['c_asset']:
@@ -189,7 +187,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 c_asset[a, r, l] = stat
             multi_stat_dt = self.oqparam.loss_dt(stat_dt)
             self.datastore['losses_by_asset'] = c_asset
-            self.datastore['losses_by_taxon'] = dist_by_taxon(
-                result['c_taxon'], multi_stat_dt)
+            self.datastore['losses_by_tag'] = dist_by_tag(
+                result['c_tag'], multi_stat_dt)
+            by_taxon = result['c_tag'][self.assetcol.get_tax_idx()]
             self.datastore['losses_total'] = dist_total(
-                result['c_taxon'], multi_stat_dt)
+                by_taxon, multi_stat_dt)

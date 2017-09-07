@@ -28,7 +28,8 @@ a `MultiMFD` object can be instantiated as follows::
 
 ```python
 mmfd = MultiMFD('incrementalMFD',
-                bin_width=2.0,
+                size=2,
+                bin_width=[2.0, 2.0],
                 min_mag=[4.5, 4.5],
                 occurRates=[[.3, .1], [.4, .2, .1]])
 ```
@@ -94,16 +95,20 @@ looks like this::
                 </ruptAspectRatio>
                 <multiMFD
                 kind="incrementalMFD"
+                size=2
                 >
-                    <lengths>
-                        2 3
-                    </lengths>
+                    <bin_width>
+                        2.0 2.0
+                    </bin_width>
                     <min_mag>
                         4.5 4.5
                     </min_mag>
                     <occurRates>
                         0.10 0.05 0.40 0.20 0.10
                     </occurRates>
+                    <lengths>
+                        2 3
+                    </lengths>
                 </multiMFD>
                 <nodalPlaneDist>
                     <nodalPlane dip="20.0" probability="0.5" rake="3.0" strike="1.0"/>
@@ -120,3 +125,24 @@ respectively in this example. This is needed since the serializer writes
 the occurrence rates sequentially (in this example they are the 5 floats
 `0.10 0.05 0.40 0.20 0.10`) and the information about their grouping would
 be lost otherwise.
+
+There is an optimization for the case of homogeneous parameters;
+for instance in this example the `bin_width` and `min_mag` are the same
+in all points; then it is possible to store these as one-element lists:
+
+```python
+mmfd = MultiMFD('incrementalMFD',
+                size=2,
+                bin_width=[2.0],
+                min_mag=[4.5],
+                occurRates=[[.3, .1], [.4, .2, .1]])
+```
+
+This saves memory and data transfer, compared to the version of the code
+above.
+
+Notice that writing `bin_width=2.0` or `min_mag=4.5` would be an error: the
+parameters must be vector objects; if their length is 1 they are
+threated as homogeneous vectors of size `size`. If their length is different
+from 1 it must be equal to `size`, otherwise you will get an error at
+instantiation time.

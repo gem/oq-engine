@@ -31,6 +31,7 @@ from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
+F32 = numpy.float32
 
 
 class OqParam(valid.ParamSet):
@@ -97,7 +98,6 @@ class OqParam(valid.ParamSet):
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
-    num_tiles = valid.Param(valid.positiveint, 0)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     quantile_hazard_curves = valid.Param(valid.probabilities, [])
@@ -127,8 +127,10 @@ class OqParam(valid.ParamSet):
     max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
+    sites_per_tile = valid.Param(valid.positiveint, 20000)
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     specific_assets = valid.Param(valid.namelist, [])
+    split_sources = valid.Param(valid.boolean, True)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -153,6 +155,8 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
+        if 'calculation_mode' not in names_vals:
+            raise ValueError('Missing calculation_mode in the .ini file!')
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
@@ -202,15 +206,11 @@ class OqParam(valid.ParamSet):
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
-            if self.quantile_loss_curves:
-                raise ValueError('quantile_loss_curves are not defined '
-                                 'for classical_damage calculations: '
-                                 'remove them for the .ini file')
             if self.conditional_loss_poes:
                 raise ValueError('conditional_loss_poes are not defined '
                                  'for classical_damage calculations: '
                                  'remove them for the .ini file')
-        
+
         # checks for event_based_risk
         if (self.calculation_mode == 'event_based_risk'
                 and self.asset_correlation not in (0, 1)):
@@ -320,13 +320,13 @@ class OqParam(valid.ParamSet):
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
-    def loss_dt(self, dtype=numpy.float32):
+    def loss_dt(self, dtype=F32):
         """
         Return a composite dtype based on the loss types, including occupants
         """
         return numpy.dtype(self.loss_dt_list(dtype))
 
-    def loss_dt_list(self, dtype=numpy.float32):
+    def loss_dt_list(self, dtype=F32):
         """
         Return a data type list [(loss_name, dtype), ...]
         """
@@ -336,6 +336,14 @@ class OqParam(valid.ParamSet):
             for lt in loss_types:
                 dts.append((str(lt) + '_ins', dtype))
         return dts
+
+    def loss_maps_dt(self, dtype=F32):
+        """
+        Return a composite data type for loss maps
+        """
+        ltypes = self.loss_dt(dtype).names
+        lst = [('poe-%s' % poe, dtype) for poe in self.conditional_loss_poes]
+        return numpy.dtype([(lt, lst) for lt in ltypes])
 
     def no_imls(self):
         """
@@ -566,6 +574,15 @@ class OqParam(valid.ParamSet):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
 
+    def is_valid_loss_ratios(self):
+        """
+        The loss types in the loss_ratios dictionary {loss_ratios} are not
+        the ones for which there are risk functions: {_risk_files}
+        """
+        ltypes = sorted(self.loss_ratios)
+        expected_ltypes = sorted(self.risk_files)
+        return not ltypes or ltypes == expected_ltypes
+
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
@@ -573,3 +590,6 @@ class OqParam(valid.ParamSet):
             raise ValueError('The `uniform_hazard_spectra` can be True only '
                              'if the IMT set contains SA(...) or PGA, got %s'
                              % list(self.imtls))
+        elif len(ok_imts) == 1:
+            raise ValueError(
+                'There is a single IMT, uniform_hazard_spectra cannot be True')

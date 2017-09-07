@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub oq-hazardlib|src"
+GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -289,9 +289,8 @@ _pkgbuild_innervm_run () {
 #
 #  _devtest_innervm_run <lxc_ip> <branch> - part of source test performed on lxc
 #                     the following activities are performed:
-#                     - extracts dependencies from oq-{engine,hazardlib, ..} debian/control
+#                     - extracts dependencies from oq-engine debian/control
 #                       files and install them
-#                     - builds oq-hazardlib speedups
 #                     - installs oq-engine sources on lxc
 #                     - set up db
 #                     - runs tests
@@ -360,20 +359,6 @@ _devtest_innervm_run () {
     pkgs_list="$(deps_list "all" debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
-    # build oq-hazardlib speedups and put in the right place
-    ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
-                 set -e
-                 if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
-                     export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
-                     set -x
-                 fi
-                 cd oq-hazardlib
-                 python ./setup.py build
-                 for i in \$(find build/ -name *.so); do
-                     o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
-                     cp \$i \$o
-                 done"
-
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
@@ -385,7 +370,7 @@ _devtest_innervm_run () {
         fi
 
         ssh $lxc_ip "set -e
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\"
+                 export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
                  cd oq-engine; nohup bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
 
@@ -395,10 +380,10 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\"
+                 export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
-                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
-                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
+                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine
+                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  /opt/openquake/bin/nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
@@ -407,6 +392,10 @@ _devtest_innervm_run () {
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib openquake/risklib
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib openquake/commonlib
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
+
+		 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib
+
+
 
                  python-coverage xml --include=\"openquake/*\"
         bin/oq dbserver stop"
@@ -482,7 +471,7 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\" ; cd oq-engine/doc/sphinx ; make html"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\" ; cd oq-engine/doc/sphinx ; MPLBACKEND=Agg make html"
     scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
@@ -620,30 +609,14 @@ celery_wait $GEM_MAXLOOP"
             set -x
         fi
 
+        /usr/share/openquake/engine/utils/celery-status 
         cd /usr/share/openquake/engine/demos
-
-        for ini in \$(find . -name job.ini | sort); do
-            echo \"Running \$ini\"
-            for loop in \$(seq 1 $GEM_MAXLOOP); do
-                set +e
-                oq engine --run \$ini --exports xml,hdf5
-                oq_ret=\$?
-                set -e
-                if [ \$oq_ret -eq 0 ]; then
-                    break
-                elif [ \$oq_ret -ne 2 ]; then
-                    exit \$oq_ret
-                fi
-                sleep 1
-            done
-            if [ \$loop -eq $GEM_MAXLOOP ]; then
-                exit \$oq_ret
-            fi
+        for demo_dir in \$(find . -type d | sort); do
+           if [ -f \$demo_dir/job_hazard.ini ]; then
+               OQ_DISTRIBUTE=celery oq engine --run \$demo_dir/job_hazard.ini && oq engine --run \$demo_dir/job_risk.ini --hc -1
+           fi
         done
-
-        # print the log of the last calculation
-        oq engine --show-log -1
-
+        
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
         echo \"Exporting output #1\"
@@ -651,16 +624,6 @@ celery_wait $GEM_MAXLOOP"
         echo \"Exporting calculation #2\"
         oq engine --eos 2 /tmp/out/eos_2
 
-        for demo_dir in \$(find . -type d | sort); do
-            if [ -f \$demo_dir/job_hazard.ini ]; then
-            cd \$demo_dir
-            echo \"Running \$demo_dir/job_hazard.ini using celery\"
-            OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
-            echo \"Running \$demo_dir/job_risk.ini\"
-            oq engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
-            cd -
-            fi
-        done
         oq info --report risk
         echo 'Listing hazard calculations'
         oq engine --lhc
@@ -668,6 +631,7 @@ celery_wait $GEM_MAXLOOP"
         oq engine --lrc"
 
         ssh $lxc_ip "oq engine --make-html-report today
+        oq engine --show-log -1
         oq engine --delete-calculation 1 --yes
         oq engine --dc 1 --yes
         oq purge -1; oq reset --yes"
@@ -1267,7 +1231,7 @@ fi
 cd "$GEM_BUILD_SRC"
 
 # version info from openquake/risklib/__init__.py
-ini_vers="$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
+ini_vers="$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
@@ -1336,7 +1300,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/,\$ p" >> debian/changelog
     rm debian/changelog.orig
 
-    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/risklib/__init__.py
+    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/baselib/__init__.py
 else
     cp debian/changelog debian/changelog.orig
     cat debian/changelog.orig | sed "1 s/${BUILD_UBUVER_REFERENCE}/${BUILD_UBUVER}/g" > debian/changelog

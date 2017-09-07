@@ -20,6 +20,7 @@ from __future__ import print_function
 import os
 import re
 import getpass
+import shutil
 from openquake.baselib import sap
 from openquake.commonlib import datastore
 from openquake.commonlib.logs import dbcmd
@@ -39,16 +40,22 @@ def purge_one(calc_id, user):
 
 
 # used in the reset command
-def purge_all(user=None):
+def purge_all(user=None, fast=False):
     """
     Remove all calculations of the given user
     """
     user = user or getpass.getuser()
-    for fname in os.listdir(datastore.DATADIR):
-        mo = re.match('calc_(\d+)\.hdf5', fname)
-        if mo is not None:
-            calc_id = int(mo.group(1))
-            purge_one(calc_id, user)
+    datadir = datastore.DATADIR
+    if os.path.exists(datadir):
+        if fast:
+            shutil.rmtree(datadir)
+            print('Removed %s' % datadir)
+        else:
+            for fname in os.listdir(datadir):
+                mo = re.match('calc_(\d+)\.hdf5', fname)
+                if mo is not None:
+                    calc_id = int(mo.group(1))
+                    purge_one(calc_id, user)
 
 
 @sap.Script

@@ -25,7 +25,7 @@ def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
-    package_init = 'openquake/risklib/__init__.py'
+    package_init = 'openquake/baselib/__init__.py'
     for line in open(package_init, 'r'):
         version_match = re.search(version_re, line, re.M)
         if version_match:
@@ -35,6 +35,7 @@ def get_version():
         sys.exit('__version__ variable not found in %s' % package_init)
 
     return version
+
 
 version = get_version()
 
@@ -55,16 +56,17 @@ install_requires = [
     'nose >=1.3, <1.4',
     'numpy >=1.8, <1.12',
     'scipy >=0.13, <0.18',
+    'pyzmq <17.0',
     'psutil >=1.2, <4.5',
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
-    'django >=1.6, <1.11',
+    'django >=1.6, <1.12',
     'matplotlib >=1.5, <2.0',
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
-    'openquake.hazardlib ==0.25',
+    'PyYAML',
 ]
 
 if sys.version < '3':
@@ -77,6 +79,10 @@ extras_require = {
     'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'celery':  ["celery >=4.0, <4.1"],
     'pam': ["python-pam", "django-pam"],
+    'plotting':  [
+        'basemap >=1.0',
+        'pyproj >=1.9',
+    ]
 }
 
 setup(

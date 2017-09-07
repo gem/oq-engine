@@ -2,12 +2,12 @@ Scenario Damage QA Test 4
 =========================
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_21275.hdf5 Fri May 12 10:45:15 2017
-engine_version                            2.4.0-git59713b5        
-hazardlib_version                         0.24.0-git0596dd3       
+localhost:/mnt/ssd/oqdata/calc_14412.hdf5 Thu Aug 17 11:47:33 2017
+checksum32                                1,284,787,561           
+engine_version                            2.6.0-gitbdd9d17        
 ========================================= ========================
 
-num_sites = 3, sitecol = 917 B
+num_sites = 3, num_imts = 3
 
 Parameters
 ----------
@@ -37,6 +37,22 @@ job_ini              `job_haz.ini <job_haz.ini>`_
 rupture_model        `fault_rupture.xml <fault_rupture.xml>`_    
 structural_fragility `fragility_model.xml <fragility_model.xml>`_
 ==================== ============================================
+
+Composite source model
+----------------------
+========= ====== ================= =============== ================
+smlt_path weight source_model_file gsim_logic_tree num_realizations
+========= ====== ================= =============== ================
+b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
+========= ====== ================= =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================= =========== ======================= =================
+grp_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -68,7 +84,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.005     0.0       1     
-filtering sites         0.004     0.0       1     
-reading site collection 5.245E-06 0.0       1     
+reading exposure        0.006     0.0       1     
+filtering sites         0.005     0.0       1     
+reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======

@@ -127,8 +127,8 @@ def get_assets(dstore):
     assetcol = dstore['assetcol']
     asset_refs = dstore['asset_refs'].value
     taxo = assetcol.taxonomies
-    asset_data = [(asset_refs[a['idx']], '"%s"' % taxo[a['taxonomy_id']],
-                   a['lon'], a['lat']) for a in assetcol.array]
+    asset_data = [(asset_refs[a['idx']], '"%s"' % t,
+                   a['lon'], a['lat']) for a, t in zip(assetcol.array, taxo)]
     return numpy.array(asset_data, asset_dt)
 
 

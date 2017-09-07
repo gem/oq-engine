@@ -55,12 +55,13 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     """
     E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
-    R = len(riskinput.rlzs)
+    T = riskinput.tagmask.shape[1]
+    R = riskinput.hazard_getter.num_rlzs
     I = param['insured_losses'] + 1
     asset_loss_table = param['asset_loss_table']
-    lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))
+    lbt = numpy.zeros((T, R, L * I), F32)
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
-                  losses_by_taxon=lbt, all_losses=AccumDict(accum={}))
+                  losses_by_tag=lbt, all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
         assets = outputs.assets
@@ -72,8 +73,9 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
                 stats['mean'][a] = losses[a].mean()
                 stats['stddev'][a] = losses[a].std(ddof=1)
                 result['avg'].append((l, r, asset.ordinal, stats[a]))
+                t = riskinput.tagmask[a]
                 for i in range(I):
-                    lbt[asset.taxonomy][r, l + L * i] += losses[a].sum()
+                    lbt[t, r, l + L * i] += losses[a].sum()
             agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
                 result['agg'][:, r, l + L * i] += agglosses[:, i]
@@ -108,11 +110,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        self.datastore['etags'], gmfs = calc.get_gmfs(
-            self.datastore, self.precalc)
-        hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
-                         for rlz in self.rlzs_assoc.realizations}
-        self.riskinputs = self.build_riskinputs('gmf', hazard_by_rlz, eps)
+        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
@@ -125,7 +124,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         loss_dt = self.oqparam.loss_dt()
         I = self.oqparam.insured_losses + 1
         with self.monitor('saving outputs', autoflush=True):
-            A = len(self.assetcol)
+            A, T = self.tagmask.shape
 
             # agg losses
             res = result['agg']
@@ -136,14 +135,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             agglosses['mean'] = F32(mean)
             agglosses['stddev'] = F32(std)
 
-            # losses by taxonomy
-            taxid = {t: i for i, t in enumerate(
-                sorted(self.assetcol.taxonomies))}
-            T = len(taxid)
-            dset = self.datastore.create_dset(
-                'losses_by_taxon-rlzs', F32, (T, R, LI))
-            for tax, array in result['losses_by_taxon'].items():
-                dset[taxid[tax]] = array
+            # losses by tag
+            self.datastore['losses_by_tag-rlzs'] = result['losses_by_tag']
+            tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+            self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
+                                     nbytes=result['losses_by_tag'].nbytes)
 
             # losses by asset
             losses_by_asset = numpy.zeros((A, R, L * I), stat_dt)
