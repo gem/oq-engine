@@ -2,12 +2,12 @@ Event Based QA Test, Case 1
 ===========================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21358.hdf5 Fri May 12 10:46:42 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14497.hdf5 Thu Aug 17 11:48:59 2017
+checksum32                                       914,633,900             
+engine_version                                   2.6.0-gitbdd9d17        
 ================================================ ========================
 
-num_sites = 1, sitecol = 809 B
+num_sites = 1, num_imts = 1
 
 Parameters
 ----------
@@ -72,26 +72,26 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 
 Informational data
 ------------------
-============================ ========================================================================
-compute_ruptures.received    tot 42.65 KB, max_per_task 42.65 KB                                     
-compute_ruptures.sent        sources 1.28 KB, monitor 850 B, src_filter 684 B, gsims 91 B, param 67 B
-hazard.input_weight          0.100                                                                   
-hazard.n_imts                1 B                                                                     
-hazard.n_levels              3 B                                                                     
-hazard.n_realizations        1 B                                                                     
-hazard.n_sites               1 B                                                                     
-hazard.n_sources             1 B                                                                     
-hazard.output_weight         20                                                                      
-hostname                     tstation.gem.lan                                                        
-require_epsilons             0 B                                                                     
-============================ ========================================================================
+============================ =========================================================================
+compute_ruptures.received    max_per_task 34.22 KB, tot 34.22 KB                                      
+compute_ruptures.sent        sources 1.29 KB, src_filter 684 B, param 606 B, monitor 321 B, gsims 91 B
+hazard.input_weight          0.1                                                                      
+hazard.n_imts                1                                                                        
+hazard.n_levels              3                                                                        
+hazard.n_realizations        1                                                                        
+hazard.n_sites               1                                                                        
+hazard.n_sources             1                                                                        
+hazard.output_weight         20.0                                                                     
+hostname                     tstation.gem.lan                                                         
+require_epsilons             False                                                                    
+============================ =========================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  1            0.0       0         0        
+0      1         PointSource  1            0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,25 +102,29 @@ source_class calc_time counts
 PointSource  0.0       1     
 ============ ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.009 NaN    0.009 0.009 1        
+compute_ruptures   0.012 NaN    0.012 0.012 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-setting event years              0.010     0.0       1     
-total compute_ruptures           0.009     0.0       1     
-saving ruptures                  0.009     0.0       1     
-reading composite source model   0.002     0.0       1     
-managing sources                 0.001     0.0       1     
-store source_info                5.841E-04 0.0       1     
-filtering ruptures               3.228E-04 0.0       1     
-filtering composite source model 4.649E-05 0.0       1     
-reading site collection          4.578E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_ruptures         0.012     0.0       1     
+setting event years            0.009     0.0       1     
+saving ruptures                0.007     0.0       1     
+store source_info              0.004     0.0       1     
+managing sources               0.002     0.0       1     
+reading composite source model 0.002     0.0       1     
+prefiltering source model      5.398E-04 0.0       1     
+filtering ruptures             4.110E-04 0.0       1     
+reading site collection        4.148E-05 0.0       1     
+============================== ========= ========= ======

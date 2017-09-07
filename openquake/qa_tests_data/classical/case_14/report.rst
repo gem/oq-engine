@@ -2,12 +2,12 @@ Classical PSHA QA test with sites_csv
 =====================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21333.hdf5 Fri May 12 10:45:54 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14471.hdf5 Thu Aug 17 11:48:13 2017
+checksum32                                       762,001,888             
+engine_version                                   2.6.0-gitbdd9d17        
 ================================================ ========================
 
-num_sites = 10, sitecol = 1.26 KB
+num_sites = 10, num_imts = 1
 
 Parameters
 ----------
@@ -74,26 +74,26 @@ simple_fault.xml 0      Active Shallow Crust 1           447          447
 
 Informational data
 ------------------
-============================== ========================================================================
-count_eff_ruptures.received    tot 1.15 KB, max_per_task 1.15 KB                                       
-count_eff_ruptures.sent        sources 1.05 KB, srcfilter 936 B, monitor 934 B, gsims 195 B, param 65 B
-hazard.input_weight            447                                                                     
-hazard.n_imts                  1 B                                                                     
-hazard.n_levels                13 B                                                                    
-hazard.n_realizations          2 B                                                                     
-hazard.n_sites                 10 B                                                                    
-hazard.n_sources               1 B                                                                     
-hazard.output_weight           130                                                                     
-hostname                       tstation.gem.lan                                                        
-require_epsilons               0 B                                                                     
-============================== ========================================================================
+============================== ==================================================================================
+count_eff_ruptures.received    tot 7.73 KB, max_per_task 666 B                                                   
+count_eff_ruptures.sent        sources 13.63 KB, srcfilter 11.88 KB, param 8.71 KB, monitor 4.1 KB, gsims 2.48 KB
+hazard.input_weight            4470.0                                                                            
+hazard.n_imts                  1                                                                                 
+hazard.n_levels                13                                                                                
+hazard.n_realizations          2                                                                                 
+hazard.n_sites                 10                                                                                
+hazard.n_sources               1                                                                                 
+hazard.output_weight           130.0                                                                             
+hostname                       tstation.gem.lan                                                                  
+require_epsilons               False                                                                             
+============================== ==================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      3         SimpleFaultSource 447          0.002     10        1        
+0      3         SimpleFaultSource 447          0.046     10        15       
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -101,27 +101,31 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.002     1     
+SimpleFaultSource 0.046     1     
 ================= ========= ======
+
+Duplicated sources
+------------------
+There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.002 NaN    0.002 0.002 1        
+count_eff_ruptures 0.004 0.001  0.003 0.009 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-reading composite source model   0.004     0.0       1     
-total count_eff_ruptures         0.002     0.0       1     
-managing sources                 9.675E-04 0.0       1     
-store source_info                6.261E-04 0.0       1     
-reading site collection          1.898E-04 0.0       1     
-filtering composite source model 4.911E-05 0.0       1     
-saving probability maps          3.052E-05 0.0       1     
-aggregate curves                 2.480E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               0.069     0.0       1     
+total count_eff_ruptures       0.057     0.0       13    
+reading composite source model 0.005     0.0       1     
+store source_info              0.004     0.0       1     
+prefiltering source model      0.002     0.0       1     
+aggregate curves               2.487E-04 0.0       13    
+reading site collection        2.320E-04 0.0       1     
+saving probability maps        3.004E-05 0.0       1     
+============================== ========= ========= ======

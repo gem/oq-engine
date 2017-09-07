@@ -5,27 +5,63 @@ language: python
 python:
  - "3.5"
 
-addons:
-  apt:
-    packages:
-    - git
+cache:
+  pip: true
+  directories:
+  - wheels  
+
+jobs:
+  include:
+  - stage: tests
+    env: HAZARDLIB
+    script:
+        - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
+          nosetests --with-doctest -xvs -a'!slow' openquake.baselib openquake.hazardlib;
+          fi
+  - stage: tests
+    env: ENGINE
+    before_script:
+        - mkdir ~/oqdata
+    script:
+        - nosetests --with-doctest -xvs -a'!slow' openquake.engine
+        - nosetests --with-doctest -xvs -a'!slow' openquake.server
+        - nosetests --with-doctest -xvs -a'!slow' openquake.calculators
+        - nosetests --with-doctest -xvs -a'!slow' openquake.risklib
+        - nosetests --with-doctest -xvs -a'!slow' openquake.commonlib
+        - nosetests --with-doctest -xvs -a'!slow' openquake.commands
+        - bin/oq webui migrate
+        - cat /tmp/webui*
+    after_success:
+        - pip install sphinx==1.3.6 && cd doc/sphinx && make html
+  - stage: tests
+    env: DEMOS
+    script:
+        # Upload oqdata.zip to http://artifacts.openquake.org/travis/ only if
+        # the commit message includes a [demos] tag at the end or branch is master
+        - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[demos\]' || test "$BRANCH" == "master"; then
+            time bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
+            bin/check_demos &&
+            oq dump /tmp/oqdata.zip &&
+            oq restore /tmp/oqdata.zip /tmp/oqdata &&
+            helpers/zipdemos.sh $(pwd)/demos &&
+            openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in .deploy_rsa.enc -out .deploy_rsa -d &&
+            chmod 600 .deploy_rsa &&
+            eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
+            bin/oq reset --yes;
+          fi
+
+before_install:
+  - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
 
 install:
-  - pip install -r requirements-py35-linux64.txt
-  - if [ "$TRAVIS_PULL_REQUEST_BRANCH" != "" ]; then BRANCH=$TRAVIS_PULL_REQUEST_BRANCH; else BRANCH=$TRAVIS_BRANCH; fi
-  - if [ "$(git ls-remote --heads https://github.com/gem/oq-hazardlib.git ${BRANCH})" == "" ]; then BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-hazardlib.git && echo "Running on oq-hazardlib/${BRANCH}"
-  - pip install -e oq-hazardlib/
-  - pip install -e .
+  # pip do not cache data when requirements includes full http URLs, so we need to download
+  # the wheels first, put the folder in cache and then install the wheels from there.
+  # A second run of 'pip download' will download only the missing wheels. 
+  - pip -q download -r requirements-py35-linux64.txt -d wheels
+  - pip -q install wheels/*
+  - pip -q install -e .
 
-script:
-  - python -c'import platform; print(platform.platform())'
-  - bin/run-demos.sh
-  - nosetests --with-doctest -vsx -a'!slow'
-  - cat /tmp/webui*
-  - bin/oq reset --yes
-  - bin/oq webui migrate
+before_script:
+  - python -c'import platform; print(platform.platform()); import multiprocessing; print("#CPUs=%d" % multiprocessing.cpu_count())'
 
-after_success:
-  - pip install sphinx==1.3.6
-  - cd doc/sphinx
-  - make html

@@ -23,22 +23,25 @@ from openquake.hazardlib import InvalidFile
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7)
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import (
+    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
+from openquake.calculators.export import export
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
-    def assert_ok(self, pkg, job_ini, exports='xml', kind='dmg'):
+    def assert_ok(self, pkg, job_ini, exports='csv', kind='dmg'):
         test_dir = os.path.dirname(pkg.__file__)
         out = self.run_calc(test_dir, job_ini, exports=exports)
         got = (out[kind + '_by_asset', exports] +
-               out[kind + '_by_taxon', exports] +
+               out[kind + '_by_tag', exports] +
                out[kind + '_total', exports])
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
                           if f.endswith(exports))
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected/%s' % fname, actual)
+            if REFERENCE_OS:  # broken on macOS
+                self.assertEqualFiles('expected/%s' % fname, actual)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1(self):
@@ -48,9 +51,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
         test_dir = os.path.dirname(case_1c.__file__)
-        out = self.run_calc(test_dir, 'job.ini', exports='xml')
-        [total] = out['dmg_total', 'xml']
-        self.assertEqualFiles('expected/dmg_dist_total.xml', total)
+        out = self.run_calc(test_dir, 'job.ini', exports='csv')
+        [total] = out['dmg_total', 'csv']
+        self.assertEqualFiles('expected/dmg_total.csv', total)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1h(self):
@@ -102,3 +105,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_7(self):
         # this is a case with three loss types
         self.assert_ok(case_7, 'job_h.ini,job_r.ini', exports='csv')
+
+        # just run the npz export
+        [npz] = export(('dmg_by_asset', 'npz'), self.calc.datastore)
+        self.assertEqual(strip_calc_id(npz), 'dmg_by_asset.npz')

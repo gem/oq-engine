@@ -31,16 +31,6 @@ class DataStoreTestCase(unittest.TestCase):
     def tearDown(self):
         self.dstore.clear()
 
-    def test_pik(self):
-        # store pickleable Python objects
-        self.dstore['key1'] = 'value1'
-        self.assertEqual(len(self.dstore), 1)
-        self.dstore['key2'] = 'value2'
-        self.assertEqual(list(self.dstore), ['key1', 'key2'])
-        del self.dstore['key2']
-        self.assertEqual(list(self.dstore), ['key1'])
-        self.assertEqual(self.dstore['key1'], 'value1')
-
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
         self.assertEqual(len(self.dstore), 0)
@@ -76,7 +66,7 @@ class DataStoreTestCase(unittest.TestCase):
 
     def test_read(self):
         # cas of a non-existing directory
-        with self.assertRaises(IOError):
+        with self.assertRaises(OSError):
             read(42, datadir='/fake/directory')
         # case of a non-existing file
         with self.assertRaises(IOError):
@@ -88,4 +78,4 @@ class DataStoreTestCase(unittest.TestCase):
         os.chmod(fname, 0)
         with self.assertRaises(IOError) as ctx:
             read(42, datadir=tmp)
-        self.assertIn('Permission denied:', str(ctx.exception))
+        self.assertIn('permission denied', str(ctx.exception).lower())

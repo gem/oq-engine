@@ -1,43 +1,3 @@
-Event based computations with complex logic trees
--------------------------------------------------
-
-Previously_ we discussed the concept of effective realizations and
-logic tree reduction. All we said was correct and complete for the case of
-classical calculations. However, in the case of an event based calculation
-there is an additional complication:
-
-*because of the stochasticity of the rupture-generation process, a tectonic
-region type which contains sources, could still produce zero ruptures*.
-
-In other words, depending on the parameters of the calculation, notably
-the investigation time and the number of stochastic event sets, a logic
-tree could be further reduced with respect to the logic tree of the
-equivalent classical calculation.
-
-This has substantial performance implications; for instance a logic
-tree that on the surface looks complex, could actually be simple or
-even trivial, thus computationally much less intensive. This can be
-good or bad: for instance, if you are running a simplified calculation
-with a small number of stochastic event sets, as a prototype of a
-larger calculation, you may run into logic tree reduction and having
-a smaller runtime than expected: the prototype will not be significant
-for the performance of the real computation.
-
-For an event based calculation it is impossible to assess the
-complexity of a logic tree without having computed the ruptures first.
-The `oq-lite info` command does that if you use it in conjunction
-with the ``-r`` flag, which produces a report in `.rst` format
-containing a lot of useful information about the logic tree
-and the ruptures. In the case of an event based
-calculation you should always run
-
-`$ oq-lite info -r job.ini`
-
-It will be slower than just filtering the sources but reliable.
-
-.. _Previously: effective-realizations.rst
-
-
 The concept of rupture collection
 -----------------------------------------------------------
 
@@ -93,7 +53,7 @@ it can run in less than a minute but still retains some of the
 complexities of the original calculation. It is also a perfect
 example to explain the intricacies of the logic tree reduction.
 
-If you run `oq-lite info -r` on that example you will get a number of
+If you run `oq info -r` on that example you will get a number of
 warning messages, such as::
   
   WARNING:root:Could not find sources close to the sites in models/src/as_model.xml sm_lt_path=('AreaSource',), maximum_distance=200.0 km, TRT=Shield
@@ -132,11 +92,11 @@ generation becomes::
   FaultSourceAndBackground, models/src/fsbg_model.xml, trt=[6, 7, 8, 9], weight=0.200: 4 realization(s)
   SeiFaCrust, models/src/ss_model.xml, trt=[10], weight=0.300: 0 realization(s)>
 
-It is interesting to notice that oq-lite and the engine are smart
+It is interesting to notice that the engine is smart
 enough to reduce the logic even before filtering and rupture
 generation, by simply looking at the sources. The full SHARE GMPE
 logic tree has potentially 1280 realizations, but by looking at the
-sources contained in the reduced AreaSource source model, oq-lite
+sources contained in the reduced AreaSource source model, the engine
 infers that at most only 640 realizations can be relevant; that means
 that there is a missing tectonic region type with 2 GSIMs. For the
 FaultSourceAndBackground model only 40 realizations are expected
@@ -167,7 +127,7 @@ The report contains information about the (non-empty) rupture
 collections; the same information can be extracted after the
 computation with the command
 
-  `$ oq-lite show <calc_id> rupture_collections`
+  `$ oq show <calc_id> ruptures_per_trt`
 
 
 Reduction of the logic tree when sampling is enabled
@@ -219,22 +179,22 @@ should converge to the curves produced by an equivalent classical
 calculation. In practice, if the parameters
 `number_of_logic_tree_samples` and `ses_per_logic_tree_path` (the
 product of them is the relevant one) are not large enough they may be
-different. The `oq-lite` version of the engine is able to compare
+different. The engine is able to compare
 the mean hazard curves and to see how well they converge. This is
 done automatically if the option `mean_hazard_curves = true` is set.
 Here is an example of how to generate and plot the curves for one
 of our QA tests (a case with bad convergence was chosen on purpose)::
 
- $ oq-lite run event_based/case_7/job.ini
+ $ oq engine --run event_based/case_7/job.ini
  <snip>
  WARNING:root:Relative difference with the classical mean curves for IMT=SA(0.1): 51%
  WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
  <snip>
- $ oq-lite plot /tmp/cl/hazard.pik /tmp/hazard.pik --sites=0,1,2
+ $ oq plot /tmp/cl/hazard.pik /tmp/hazard.pik --sites=0,1,2
 
 .. image:: ebcl-convergency.png
 
-The relative different between the classical and event based curves is
+The relative difference between the classical and event based curves is
 computed by computing the relative difference between each point of
 the curves for each curve, and by taking the maximum, at least
 for probabilities of exceedence larger than 1% (for low values of
@@ -242,14 +202,3 @@ the probability the convergency may be bad). For the details I
 suggest you `to look at the code`_.
 
 .. _to look at the code: ../openquake/commonlib/util.py
-
-As we said before, the effective realizations produced by an
-event based calculation are not necessarily the same as the one
-produced by an equivalent classical calculation. If you are unlucky,
-for a given set of parameter, a tectonic region type producing
-ruptures in the classical calculation could *not* produce ruptures in the
-corresponding event based calculation.  The consequence is the event
-based calculation can have less effective realizations than the
-classical calculation. However, in the limit of many samples/many SES,
-all tectonic regions which are relevant for the classical calculation
-should produce ruptures for the event based calculation too.

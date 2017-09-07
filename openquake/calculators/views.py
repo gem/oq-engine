@@ -29,7 +29,9 @@ import numpy
 from openquake.baselib.general import (
     humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
+from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import unicode, decode
+from openquake.baselib.general import group_array
 from openquake.hazardlib import valid, stats as hstats
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
@@ -320,10 +322,8 @@ def _humansize(literal):
         items = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         lst = ['%s %s' % (k, humansize(v)) for k, v in items]
         return ', '.join(lst)
-    elif isinstance(dic, int):
-        return humansize(dic)
     else:
-        return dic
+        return str(dic)
 
 
 @view.add('job_info')
@@ -388,14 +388,15 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
+    tax_idx = dstore['assetcol'].get_tax_idx()
     loss_dt = oq.loss_dt()
-    losses_by_taxon = dstore['losses_by_taxon-rlzs']
-    R = losses_by_taxon.shape[1]  # shape (T, R, L')
+    losses_by_tag = dstore['losses_by_tag-rlzs']
+    R = losses_by_tag.shape[1]  # shape (T, R, L')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
     for r in range(R):
         for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = losses_by_taxon[:, r, l].sum()
+            data[r][lt] = losses_by_tag[tax_idx, r, l].sum()
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
@@ -464,7 +465,7 @@ def view_exposure_info(token, dstore):
     Display info about the exposure model
     """
     assetcol = dstore['assetcol/array'][:]
-    taxonomies = dstore['assetcol/taxonomies'][:]
+    taxonomies = sorted(set(dstore['assetcol'].taxonomies))
     cc = dstore['assetcol/cost_calculator']
     ra_flag = ['relative', 'absolute']
     data = [('#assets', len(assetcol)),
@@ -610,8 +611,9 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
-        val = dstore['task_info/' + task]['duration']
-        data.append(stats(task, val))
+        if task != 'source_data':  # this is special
+            val = dstore['task_info/' + task]['duration']
+            data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
@@ -629,17 +631,26 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task_slowest')
-def view_task_slowest(token, dstore):
+@view.add('task')
+def view_task(token, dstore):
     """
-    Display info about the slowest classical task.
+    Display info about a given task. Here are a few examples of usage::
+
+     $ oq show task:0  # the fastest task
+     $ oq show task:-1  # the slowest task
     """
-    i = dstore['task_info/classical']['duration'].argmax()
-    taskno, weight, duration = dstore['task_info/classical'][i]
+    data = dstore['task_info/classical'].value
+    data.sort(order='duration')
+    i = int(token.split(':')[1])
+    taskno, weight, duration = data[i]
+    arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
+    st = [stats('nsites', arr['nsites']),
+          stats('weight', arr['weight'])]
     sources = dstore['task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
-    return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
+    res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
+    return res + rst_table(st, header='variable mean stddev min max n'.split())
 
 
 @view.add('hmap')
@@ -664,3 +675,74 @@ def view_hmap(token, dstore):
     for i, (maxvalue, sid) in enumerate(reversed(items)):
         array[i] = (sid, ) + tuple(hmap[sid].array[:, 0])
     return rst_table(array)
+
+
+@view.add('synthetic_hcurves')
+def view_synthetic_hcurves(token, dstore):
+    """
+    Display the synthetic hazard curves for the calculation. They are
+    used for debugging purposes when comparing the results of two
+    calculations, they have no physical meaning. They are the simple mean
+    of the PoEs arrays over source groups, gsims and number of sites.
+    """
+    oq = dstore['oqparam']
+    nsites = len(dstore['sitecol'])
+    array = numpy.zeros(len(oq.imtls.array), F32)
+    ngroups = 0
+    for sm in dstore['csm_info'].source_models:
+        for src_group in sm.src_groups:
+            grp_id = src_group.id
+            try:
+                pmap = dstore['poes/grp-%02d' % grp_id]
+            except KeyError:
+                continue
+            ngroups += 1
+            for sid in pmap:
+                array += pmap[sid].array.sum(axis=1) / pmap.shape_z
+    array /= (ngroups * nsites)
+    return oq.imtls.new(array)
+
+
+@view.add('dupl_sources')
+def view_dupl_sources(token, dstore):
+    """
+    Display the duplicated sources from source_info
+    """
+    info = dstore['source_info']
+    items = sorted(group_array(info.value, 'source_id').items())
+    tbl = []
+    tot_calc_time = 0
+    for source_id, records in items:
+        if len(records) > 1:  # dupl
+            calc_time = records['calc_time'].sum()
+            tot_calc_time += calc_time
+            grp_ids = sorted(rec['grp_id'] for rec in records)
+            tbl.append((source_id, calc_time, grp_ids))
+    if tbl:
+        if info.attrs['has_dupl_sources']:
+            tot = info['calc_time'].sum()
+            percent = tot_calc_time / tot * 100
+            m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
+                tot_calc_time, tot, percent)
+        else:
+            m = '\nSources with the same ID but different parameters'
+        return rst_table(tbl, ['source_id', 'calc_time', 'src_group_ids']) + m
+    else:
+        return 'There are no duplicated sources'
+
+
+@view.add('global_poes')
+def view_global_poes(token, dstore):
+    """
+    Display global probabilities averaged on all sites and all GMPEs
+    """
+    tbl = []
+    imtls = dstore['oqparam'].imtls
+    header = ['grp_id'] + [str(poe) for poe in imtls.array]
+    for grp in sorted(dstore['poes']):
+        poes = dstore['poes/' + grp]
+        nsites = len(poes)
+        site_avg = sum(poes[sid].array for sid in poes) / nsites
+        gsim_avg = site_avg.sum(axis=1) / poes.shape_z
+        tbl.append([grp] + list(gsim_avg))
+    return rst_table(tbl, header=header)

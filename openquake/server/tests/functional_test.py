@@ -29,7 +29,6 @@ import time
 import unittest
 import subprocess
 import tempfile
-import django
 import requests
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
@@ -181,6 +180,10 @@ class EngineServerTestCase(unittest.TestCase):
         contentdisp = re.sub(r'\d', '', resp.headers['Content-Disposition'])
         self.assertEqual(
             contentdisp, 'attachment; filename=output--hazard_map-mean_.csv')
+
+        # check oqparam
+        resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
+        self.assertEqual(resp['calculation_mode'], 'classical')
 
     def test_err_1(self):
         # the rupture XML file has a syntax error

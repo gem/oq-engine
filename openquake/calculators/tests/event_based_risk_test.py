@@ -38,19 +38,18 @@ from openquake.qa_tests_data.event_based_risk import (
 def check_total_losses(calc):
     dstore = calc.datastore
     loss_dt = calc.oqparam.loss_dt()
-    L1 = len(loss_dt.names)
-    L = L1 // 2
-    data1 = numpy.zeros(L1, numpy.float32)
+    LI = len(loss_dt.names)
+    data1 = numpy.zeros(LI, numpy.float32)
     for dset in dstore['agg_loss_table'].values():
-        for l, lt in enumerate(loss_dt.names):
-            i = int(lt.endswith('_ins'))  # the cast avoids a numpy warning
-            data1[l] += dset['loss'][:, l - L * i, i].sum()
+        for li, lt in enumerate(loss_dt.names):
+            data1[li] += dset['loss'][:, li].sum()
 
-    # check the sums are consistent with the ones coming from losses_by_taxon
-    data2 = numpy.zeros(L1, numpy.float32)
-    lbt = dstore['losses_by_taxon-rlzs']
-    for l in range(L1):
-        data2[l] += lbt[:, :, l].sum()
+    # check the sums are consistent with the ones coming from losses_by_tag
+    tax_idx = dstore['assetcol'].get_tax_idx()
+    data2 = numpy.zeros(LI, numpy.float32)
+    lbt = dstore['losses_by_tag-rlzs']
+    for li in range(LI):
+        data2[li] += lbt[tax_idx, :, li].sum()
     numpy.testing.assert_allclose(data1, data2, 1E-6)
 
     # test the asset_loss_table exporter; notice that I need to disable
@@ -90,7 +89,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
-        ekeys = [('agg_curve-stats', 'xml')]
+        ekeys = [('agg_curve-stats', 'csv')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
@@ -156,21 +155,20 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
         self.run_calc(case_3.__file__, 'job.ini',
-                      exports='xml', concurrent_tasks='4')
+                      exports='csv', concurrent_tasks='4')
 
         # test the number of bytes saved in the rupture records
         grp00 = self.calc.datastore.get_attr('ruptures/grp-00', 'nbytes')
         grp02 = self.calc.datastore.get_attr('ruptures/grp-02', 'nbytes')
         grp03 = self.calc.datastore.get_attr('ruptures/grp-03', 'nbytes')
-        self.assertEqual(grp00, 545)
-        self.assertEqual(grp02, 545)
-        self.assertEqual(grp03, 218)
+        self.assertEqual(grp00, 550)
+        self.assertEqual(grp02, 550)
+        self.assertEqual(grp03, 220)
 
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
-                      exports='xml', individual_curves='false',
-                      hazard_calculation_id=str(hc_id))
-        [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
+                      exports='csv', hazard_calculation_id=str(hc_id))
+        [fname] = export(('agg_curve-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -188,9 +186,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
-        fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore) + \
-                 export(('agg_curve-rlzs', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
+        fnames = export(('agg_curve-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
@@ -220,8 +216,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
-        fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'losses_by_taxon-stats not exported?'
+        fnames = export(('losses_by_tag-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'losses_by_tag-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
@@ -235,9 +231,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check job_info is stored
-        job_info = dict(self.calc.datastore['job_info'])
-        self.assertIn(b'build_loss_maps.sent', job_info)
-        self.assertIn(b'build_loss_maps.received', job_info)
+        job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
+        self.assertIn('build_loss_maps.sent', job_info)
+        self.assertIn('build_loss_maps.received', job_info)
 
         check_total_losses(self.calc)
 
@@ -266,6 +262,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
+        # it has 8 realizations but 4 of them have 0 ruptures
         out = self.run_calc(case_4.__file__, 'job.ini',
                             calculation_mode='event_based',
                             ground_motion_fields='false', exports='csv')
@@ -275,7 +272,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
         fnames = export(('hmaps', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 20)  # 2 IMT x 2 poes + 16 files
+        self.assertEqual(len(fnames), 36)  # 2 IMT x 2 poes + 32 files
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):
