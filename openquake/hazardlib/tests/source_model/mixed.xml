@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Test Source Model"
+    >
+        <sourceGroup
+        srcs_weights="1.0"
+        tectonicRegion="Stable Continental Crust"
+        >
+            <pointSource
+            id="2"
+            name="point"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            -122.0 38.0
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        10.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    0.5
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" maxMag="6.5" minMag="5.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.3" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="45.0" probability="0.7" rake="90.0" strike="90.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4.0" probability="0.5"/>
+                    <hypoDepth depth="8.0" probability="0.5"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+        <sourceGroup
+        srcs_weights="1.0"
+        tectonicRegion="Subduction Interface"
+        >
+            <complexFaultSource
+            id="4"
+            name="Cascadia Megathrust"
+            tectonicRegion="Subduction Interface"
+            >
+                <complexFaultGeometry>
+                    <faultTopEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.49326 -124.977 41.214 4.98856 -125.14 42.096 4.89734
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.59326 -124.977 41.214 5.08856 -125.14 42.096 4.99734
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.69326 -124.977 41.214 5.18856 -125.14 42.096 5.09734
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <faultBottomEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -123.829 40.347 20.3849 -124.137 41.218 17.4139 -124.252 42.115 17.5274
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </complexFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" maxMag="6.5" minMag="5.0"/>
+                <rake>
+                    30.0
+                </rake>
+            </complexFaultSource>
+        </sourceGroup>
+        <sourceGroup
+        srcs_weights="1.0 1.0"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaSource
+            id="1"
+            name="Quito"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry
+                discretization="2.0"
+                >
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -122.5 37.5 -121.5 37.5 -121.5 38.5 -122.5 38.5
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        10.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="6.55"
+                >
+                    <occurRates>
+                        0.0010614989 0.00088291627 0.00073437777 0.0006108288 0.0005080653
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.3" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="45.0" probability="0.7" rake="90.0" strike="90.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4.0" probability="0.5"/>
+                    <hypoDepth depth="8.0" probability="0.5"/>
+                </hypoDepthDist>
+            </areaSource>
+            <simpleFaultSource
+            id="3"
+            name="Mount Diablo Thrust"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -121.8229 37.7301 -122.0388 37.8771
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        45.0
+                    </dip>
+                    <upperSeismoDepth>
+                        10.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="5.0"
+                >
+                    <occurRates>
+                        0.0010614989 0.00088291627 0.00073437777 0.0006108288 0.0005080653
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    30.0
+                </rake>
+                <hypoList>
+                    <hypo alongStrike="0.25" downDip="0.25" weight="0.3"/>
+                    <hypo alongStrike="0.75" downDip="0.75" weight="0.7"/>
+                </hypoList>
+                <slipList>
+                    <slip
+                    weight="0.7"
+                    >
+                        90.0
+                    </slip>
+                    <slip
+                    weight="0.3"
+                    >
+                        135.0
+                    </slip>
+                </slipList>
+            </simpleFaultSource>
+        </sourceGroup>
+        <sourceGroup
+        srcs_weights="1.0 1.0 1.0"
+        tectonicRegion="Volcanic"
+        >
+            <characteristicFaultSource
+            id="5"
+            name="characteristic source, simple fault"
+            tectonicRegion="Volcanic"
+            >
+                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" maxMag="6.5" minMag="5.0"/>
+                <rake>
+                    30.0
+                </rake>
+                <surface>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                            <gml:posList>
+                                -121.8229 37.7301 -122.0388 37.8771
+                            </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            45.0
+                        </dip>
+                        <upperSeismoDepth>
+                            10.0
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            20.0
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </surface>
+            </characteristicFaultSource>
+            <characteristicFaultSource
+            id="6"
+            name="characteristic source, complex fault"
+            tectonicRegion="Volcanic"
+            >
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="5.0"
+                >
+                    <occurRates>
+                        0.0010614989 0.00088291627 0.00073437777 0.0006108288 0.0005080653
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    60.0
+                </rake>
+                <surface>
+                    <complexFaultGeometry>
+                        <faultTopEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -124.704 40.363 5.49326 -124.977 41.214 4.98856 -125.14 42.096 4.89734
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultTopEdge>
+                        <intermediateEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -124.704 40.363 5.59326 -124.977 41.214 5.08856 -125.14 42.096 4.99734
+                                </gml:posList>
+                            </gml:LineString>
+                        </intermediateEdge>
+                        <intermediateEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -124.704 40.363 5.69326 -124.977 41.214 5.18856 -125.14 42.096 5.09734
+                                </gml:posList>
+                            </gml:LineString>
+                        </intermediateEdge>
+                        <faultBottomEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -123.829 40.347 20.3849 -124.137 41.218 17.4139 -124.252 42.115 17.5274
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultBottomEdge>
+                    </complexFaultGeometry>
+                </surface>
+            </characteristicFaultSource>
+            <characteristicFaultSource
+            id="7"
+            name="characteristic source, multi surface"
+            tectonicRegion="Volcanic"
+            >
+                <truncGutenbergRichterMFD aValue="-3.6" bValue="1.0" maxMag="6.4" minMag="5.2"/>
+                <rake>
+                    90.0
+                </rake>
+                <surface>
+                    <planarSurface>
+                        <topLeft depth="21.0" lat="1.0" lon="-1.0"/>
+                        <topRight depth="21.0" lat="1.0" lon="1.0"/>
+                        <bottomLeft depth="59.0" lat="-1.0" lon="-1.0"/>
+                        <bottomRight depth="59.0" lat="-1.0" lon="1.0"/>
+                    </planarSurface>
+                    <planarSurface>
+                        <topLeft depth="20.0" lat="1.0" lon="1.0"/>
+                        <topRight depth="20.0" lat="1.0" lon="3.0"/>
+                        <bottomLeft depth="80.0" lat="-1.0" lon="1.0"/>
+                        <bottomRight depth="80.0" lat="-1.0" lon="3.0"/>
+                    </planarSurface>
+                </surface>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

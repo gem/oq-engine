@@ -15,9 +15,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>
 
-# Work in progress
-
 set -e
+
+checkcmd() {
+    command -v $1 >/dev/null 2>&1 || { echo >&2 "This script requires '$1' but it isn't available. Aborting."; exit 1; }
+}
 
 CUR=$(pwd)
 BASE=$(cd $(dirname $0)/.. && /bin/pwd)
@@ -68,7 +70,7 @@ mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
 
 LIB=$(cut -d "-" -f 2 <<< $REPO)
 SHA=$(git rev-parse --short $BRANCH)
-VER=$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
+VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
 TIME=$(date +"%s")
 echo "$LIB - $BRANCH - $SHA - $VER"
 

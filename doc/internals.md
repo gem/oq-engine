@@ -1,10 +1,10 @@
 # Internal commands
 
-This commands and internals are meant to be used for debug and development. DO NOT USE them in production. They MAY CHANGE ANYTIME, without notice.
+This commands and internals are meant to be used for debug and development. They MAY CHANGE ANYTIME, without notice.
 
 ### Database creation
 
-Database is created by `oq` itself, it can be manually created via
+The database is automatically created when running a calculation, but it can also be manually created via
 
 ```bash
 $ python -m openquake.server.db.upgrade_manager ~/oqdata/db.sqlite3
@@ -15,6 +15,18 @@ $ python -m openquake.server.db.upgrade_manager ~/oqdata/db.sqlite3
 The OpenQuake server uses Django for the web/API application. Management can be done via:
 
 ```bash
+$ oq webui [help]
+```
+The `oq webui` command provides a limited subset of commands. To be able to access all the available commands in Django the following command must be used.
+
+```bash
+$ python -m openquake.server.manage [help]
+```
+
+Using packages, when a custom local_settings.py is used, the command must be run from `/usr/share/openquake/engine`.
+
+```bash
+$ cd /usr/share/openquake/engine
 $ python -m openquake.server.manage [help]
 ```
 

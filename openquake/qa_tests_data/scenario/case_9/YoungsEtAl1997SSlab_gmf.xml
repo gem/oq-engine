@@ -12,6 +12,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="PGA"
+            ruptureId="0"
             >
                 <node gmv="4.4088796E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <node gmv="1.5812968E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>

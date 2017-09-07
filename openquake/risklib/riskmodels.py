@@ -397,7 +397,7 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
+        gmvs, eids = gmvs_eids
         E = len(gmvs)
         I = self.insured_losses + 1
         A = len(assets)

@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import time
-import socket
 import logging
-import functools
 from datetime import datetime
 import numpy
 import h5py
@@ -118,7 +116,7 @@ def ucerf_classical(
 
     # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
     ucerf_source.rupset_idx = rupset_idx
-    ucerf_source.num_ruptures = len(rupset_idx)
+    ucerf_source.num_ruptures = nruptures = len(rupset_idx)
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     imtls = DictArray(imtls)
     ctx_mon = monitor('making contexts', measuremem=False)
@@ -127,7 +125,8 @@ def ucerf_classical(
     pmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
                    truncation_level, ctx_mon, pne_mons)
     nsites = len(s_sites)
-    pmap.calc_times = [(ucerf_source.source_id, nsites, time.time() - t0)]
+    pmap.calc_times = [
+        (ucerf_source.source_id, nruptures * nsites, nsites, time.time() - t0)]
     pmap.grp_id = ucerf_source.src_group_id
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
     return pmap
@@ -148,9 +147,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.csm = get_composite_source_model(self.oqparam)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        self.gsims_by_grp = self.csm.info.get_gsims_by_grp()
         self.rup_data = {}
-        self.num_tiles = 1
 
     def execute(self):
         """
@@ -163,14 +161,14 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         acc = AccumDict({
             grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
-            for grp_id, gsims in self.rlzs_assoc.gsims_by_grp_id.items()})
+            for grp_id, gsims in self.gsims_by_grp.items()})
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
 
         for sm in self.csm.source_models:  # one branch at the time
             grp_id = sm.ordinal
-            gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+            gsims = self.gsims_by_grp[grp_id]
             [[ucerf_source]] = sm.src_groups
             ucerf_source.nsites = len(self.sitecol)
             self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(

@@ -2,12 +2,12 @@ Classical PSHA - Loss fractions QA test
 =======================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_21267.hdf5 Fri May 12 10:45:12 2017
-engine_version                                   2.4.0-git59713b5        
-hazardlib_version                                0.24.0-git0596dd3       
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14404.hdf5 Thu Aug 17 11:47:29 2017
+checksum32                                       266,561,964             
+engine_version                                   2.6.0-gitbdd9d17        
 ================================================ ========================
 
-num_sites = 12, sitecol = 1.37 KB
+num_sites = 12, num_imts = 1
 
 Parameters
 ----------
@@ -70,24 +70,24 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ============
 source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 15          2132         33,831      
+source_model.xml 0      Active Shallow Crust 2           2132         2,132       
 ================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
-============================== =================================================================================
-count_eff_ruptures.received    tot 16.8 KB, max_per_task 1.22 KB                                                
-count_eff_ruptures.sent        sources 27.43 KB, monitor 13.7 KB, srcfilter 13.56 KB, gsims 1.34 KB, param 910 B
-hazard.input_weight            3,383                                                                            
-hazard.n_imts                  1 B                                                                              
-hazard.n_levels                19 B                                                                             
-hazard.n_realizations          1 B                                                                              
-hazard.n_sites                 12 B                                                                             
-hazard.n_sources               15 B                                                                             
-hazard.output_weight           228                                                                              
-hostname                       tstation.gem.lan                                                                 
-require_epsilons               1 B                                                                              
-============================== =================================================================================
+============================== ================================================================================
+count_eff_ruptures.received    tot 7.31 KB, max_per_task 1.37 KB                                               
+count_eff_ruptures.sent        sources 32.14 KB, srcfilter 5.81 KB, param 4.42 KB, monitor 1.89 KB, gsims 588 B
+hazard.input_weight            1768.0000000000002                                                              
+hazard.n_imts                  1                                                                               
+hazard.n_levels                19                                                                              
+hazard.n_realizations          1                                                                               
+hazard.n_sites                 12                                                                              
+hazard.n_sources               2                                                                               
+hazard.output_weight           228.0                                                                           
+hostname                       tstation.gem.lan                                                                
+require_epsilons               True                                                                            
+============================== ================================================================================
 
 Exposure model
 --------------
@@ -112,21 +112,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      225       AreaSource   520          0.003     1         1        
-0      232       AreaSource   1,612        0.003     9         1        
-0      57        AreaSource   840          0.0       0         0        
-0      135       AreaSource   3,285        0.0       0         0        
-0      125       AreaSource   8,274        0.0       0         0        
-0      8         AreaSource   4,832        0.0       0         0        
-0      306       AreaSource   1,768        0.0       0         0        
-0      27        AreaSource   1,482        0.0       0         0        
-0      101       AreaSource   559          0.0       0         0        
-0      299       AreaSource   710          0.0       0         0        
-0      253       AreaSource   3,058        0.0       0         0        
-0      137       AreaSource   2,072        0.0       0         0        
-0      42        AreaSource   1,755        0.0       0         0        
-0      359       AreaSource   2,314        0.0       0         0        
-0      59        AreaSource   750          0.0       0         0        
+0      232       AreaSource   1,612        0.013     10        124      
+0      225       AreaSource   520          0.003     3         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -134,28 +121,32 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.007     15    
+AreaSource   0.017     2     
 ============ ========= ======
+
+Duplicated sources
+------------------
+There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.005 9.302E-04 0.003 0.006 14       
+count_eff_ruptures 0.005 7.475E-04 0.003 0.005 6        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
-================================ ========= ========= ======
-operation                        time_sec  memory_mb counts
-================================ ========= ========= ======
-reading composite source model   0.928     0.0       1     
-total count_eff_ruptures         0.068     3.965     14    
-managing sources                 0.020     0.0       1     
-reading exposure                 0.006     0.0       1     
-store source_info                0.001     0.0       1     
-aggregate curves                 3.293E-04 0.0       14    
-filtering composite source model 5.221E-05 0.0       1     
-saving probability maps          4.292E-05 0.0       1     
-reading site collection          1.216E-05 0.0       1     
-================================ ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+reading composite source model 0.904     0.0       1     
+managing sources               0.045     0.0       1     
+total count_eff_ruptures       0.027     3.812     6     
+prefiltering source model      0.009     0.367     1     
+reading exposure               0.007     0.0       1     
+store source_info              0.004     0.0       1     
+aggregate curves               2.117E-04 0.0       6     
+saving probability maps        2.503E-05 0.0       1     
+reading site collection        6.914E-06 0.0       1     
+============================== ========= ========= ======
