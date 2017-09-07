@@ -19,8 +19,8 @@
 import sys
 import time
 import socket
-import sqlite3
 import os.path
+import sqlite3
 import logging
 import threading
 import subprocess
@@ -34,6 +34,12 @@ from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
+
+
+db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+              detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)
+# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
+# OperationalError: "database is locked" disappear in the WebUI tests
 
 
 class DbServer(object):
@@ -160,17 +166,18 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
-    db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
-                  detect_types=sqlite3.PARSE_DECLTYPES)
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)
+    # the line below is needed to work around a very subtle bug of sqlite;
+    # we need new connections, see https://github.com/gem/oq-engine/pull/3002
+    db.close()
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     try:
         DbServer(db, addr, config.DBS_AUTHKEY).start()
     finally:
-        db.conn.close()
+        db.close()
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')
