@@ -17,41 +17,40 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-import numpy
+import sys
 from openquake.baselib import sap
 from openquake.commonlib import datastore
 
 
-def make_figure(asset, loss_ratios, rcurves):
+def make_figure(periods, losses):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
-    loss_types = rcurves.dtype.names
-    S, I = rcurves.shape
+    loss_types = losses.dtype.names
     num_lt = len(loss_types)
     fig = plt.figure()
     for j, lt in enumerate(loss_types, 1):
-        losses = asset.value(lt) * numpy.array(loss_ratios[lt])
-        for i in range(I):
-            ax = fig.add_subplot(num_lt * I, I, i * num_lt + j)
-            ax.grid(True)
-            ax.set_ylabel('%s%s' % (lt, '_ins' if i else ''))
-            ax.set_ylim([0, 1])
-            for s, poes in enumerate(rcurves[lt][i]):
-                ax.plot(losses, poes, label=str(s))
-    plt.legend()
+        ax = fig.add_subplot(num_lt, 1, j)
+        ax.grid(True)
+        ax.set_ylabel(lt)
+        for s, losses_ in enumerate(losses[lt].T):
+            ax.plot(periods, losses_, label=str(s))
+    if losses.shape[1] < 20:  # show legend only if < 20 realizations
+        plt.legend(loc='lower right')
     return plt
 
 
 @sap.Script
-def plot_lc(calc_id, aid):
+def plot_lc(calc_id, aid=None):
     """
     Plot loss curves given a calculation id and an asset ordinal.
     """
     # read the hazard data
     dstore = datastore.read(calc_id)
-    oq = dstore['oqparam']
-    asset = dstore['assetcol'][aid]
-    plt = make_figure(asset, oq.loss_ratios, dstore['rcurves-stats'][aid])
+    dset = dstore['agg_loss-rlzs']
+    if aid is None:  # plot the global curves
+        plt = make_figure(dset.attrs['return_periods'], dset.value)
+    else:
+        sys.exit('Not implemented uyet')
     plt.show()
 
 plot_lc.arg('calc_id', 'a computation id', type=int)

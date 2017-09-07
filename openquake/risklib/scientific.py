@@ -39,23 +39,6 @@ F32 = numpy.float32
 U32 = numpy.uint32
 
 
-def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
-    """
-    Returns loss_curve_dt and loss_maps_dt
-    """
-    pairs = [('losses', (F32, curve_resolution)),
-             ('poes', (F32, curve_resolution)),
-             ('avg', F32)]
-    if insured:
-        pairs += [(name + '_ins', pair) for name, pair in pairs]
-    loss_curve_dt = numpy.dtype(pairs)
-    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-    if insured:
-        lst += [(name + '_ins', pair) for name, pair in lst]
-    loss_maps_dt = numpy.dtype(lst) if lst else None
-    return loss_curve_dt, loss_maps_dt
-
-
 def fine_graining(points, steps):
     """
     :param points: a list of floats
@@ -891,15 +874,12 @@ class LossTypeCurveBuilder(object):
                  user_provided, conditional_loss_poes=(),
                  insured_losses=False):
         self.loss_type = loss_type
-        self.curve_resolution = C = curve_resolution
+        self.curve_resolution = curve_resolution
         self.ratios = numpy.array(loss_ratios, F32)
         self.ses_ratio = ses_ratio
         self.user_provided = user_provided
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
-        self.agg_curve_dt = numpy.dtype([('losses', (F32, C)),
-                                         ('poes', (F32, C)),
-                                         ('avg', F32)])
 
     def __call__(self, assets, ratios_by_aid):
         """"
@@ -928,23 +908,6 @@ class LossTypeCurveBuilder(object):
             all_poes.append(poes.T)
             aids.append(aid)
         return numpy.array(aids), numpy.array(all_poes)
-
-    def calc_agg_curve(self, losses):
-        """
-        :param losses: array of length E
-        :returns: curve of dtype agg_curve_dt
-        """
-        reference_losses = numpy.linspace(
-            0, numpy.max(losses), self.curve_resolution)
-        # counts how many loss_values are bigger than the reference loss
-        counts = [(losses > loss).sum() for loss in reference_losses]
-        # NB: (loss_values > loss).sum() is MUCH more efficient than
-        # sum(loss_values > loss). Incredibly more efficient in memory.
-        curve = numpy.zeros(1, self.agg_curve_dt)
-        curve['losses'][0] = reference_losses
-        curve['poes'][0] = poes = build_poes(counts, 1. / self.ses_ratio)
-        curve['avg'][0] = average_loss([reference_losses, poes])
-        return curve[0]
 
     def __repr__(self):
         return '<%s %s=%s user_provided=%s>' % (
@@ -1460,3 +1423,132 @@ def build_loss_curve_dt(curve_resolution, conditional_loss_poes,
             lc_list.append((str(lt) + '_ins', lc_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
     return loss_curve_dt
+
+
+def return_periods(eff_time, num_losses):
+    """
+    :param eff_time: ses_per_logic_tree_path * investigation_time
+    :param num_losses: used to determine the minimum period
+    ;returns: an array of 32 bit periods
+
+    Here are a few examples:
+
+    >>> return_periods(1, 1)
+    Traceback (most recent call last):
+       ...
+    AssertionError: eff_time too small: 1
+    >>> return_periods(2, 2)
+    array([1, 2], dtype=uint32)
+    >>> return_periods(2, 10)
+    array([1, 2], dtype=uint32)
+    >>> return_periods(100, 2)
+    array([ 50, 100], dtype=uint32)
+    >>> return_periods(1000, 1000)
+    array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000], dtype=uint32)
+    """
+    assert eff_time >= 2, 'eff_time too small: %s' % eff_time
+    assert num_losses >= 2, 'num_losses too small: %s' % num_losses
+    min_time = eff_time / num_losses
+    period = 1
+    periods = []
+    loop = True
+    while loop:
+        for val in [1, 2, 5]:
+            time = period * val
+            if time >= min_time:
+                if time > eff_time:
+                    loop = False
+                    break
+                periods.append(time)
+        period *= 10
+    return U32(periods)
+
+
+def losses_by_period(losses, return_periods, eff_time):
+    """
+    :param losses: array of simulated losses
+    :param return_periods: return periods of interest
+    :param eff_time: investigation_time * ses_per_logic_tree_path
+    :returns: interpolated losses for the return periods, possibly with NaN
+
+    NB: the return periods must be ordered integers >= 1. The interpolated
+    losses are defined inside the interval min_time < time < eff_time
+    where min_time = eff_time /len(losses). Outsided the interval they
+    have NaN values. Here is an example:
+
+    >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
+    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 100)
+    array([  nan,   nan,   nan,   3.5,   8. ,  13. ,  23. ])
+    """
+    periods = eff_time / numpy.arange(len(losses), 0., -1)
+    rperiods = [rp if periods[0] <= rp <= periods[-1] else numpy.nan
+                for rp in return_periods]
+    curve = numpy.interp(
+        numpy.log(rperiods), numpy.log(periods), numpy.sort(losses))
+    return curve
+
+
+class LossesByPeriodBuilder(object):
+    """
+    Build losses by period for all loss types at the same time.
+
+    :param insured_losses: insured losses flag from the job.ini
+    """
+    def __init__(self, return_periods, loss_dt, num_rlzs, eff_time):
+        self.return_periods = return_periods
+        self.loss_dt = loss_dt
+        self.num_rlzs = num_rlzs
+        self.eff_time = eff_time
+
+    # not used yet
+    def build_rlzs(self, asset_values, loss_ratios):
+        """
+        :param asset_values: a list of asset values
+        :param loss_ratios: an array of dtype lrs_dt
+        :returns: a composite array of shape (A, R, P)
+        """
+        # loss_ratios from lrgetter.get_all
+        A, R, P = len(asset_values), self.num_rlzs, len(self.return_periods)
+        array = numpy.zeros((A, R, P), self.loss_dt)
+        for a, asset_value in enumerate(asset_values):
+            r_recs = group_array(loss_ratios[a], 'rlzi').items()
+            for li, lt in enumerate(self.loss_dt.names):
+                aval = asset_value[lt.replace('_ins', '')]
+                for r, recs in r_recs:
+                    array[a, r][lt] = aval * losses_by_period(
+                        recs['ratios'][:, li], self.return_periods,
+                        self.eff_time)
+        return array
+
+    # not used yet
+    def build_rlz(self, asset_values, loss_ratios, rlzi):
+        """
+        :param asset_values: a list of asset values
+        :param loss_ratios: an array of dtype lrs_dt
+        :returns: a composite array of shape (A, P)
+        """
+        # loss_ratios from lrgetter.get, aid -> list of ratios
+        A, P = len(asset_values), len(self.return_periods)
+        array = numpy.zeros((A, P), self.loss_dt)
+        for a, asset_value in enumerate(asset_values):
+            ratios = numpy.concatenate(loss_ratios[a])
+            for li, lt in enumerate(self.loss_dt.names):
+                aval = asset_value[lt.replace('_ins', '')]
+                array[a][lt] = aval * losses_by_period(
+                    ratios[:, li], self.return_periods, self.eff_time)
+        return array
+
+    def build(self, agg_loss_table):
+        """
+        :returns: an array of (P, R) values of dtype loss_dt
+        """
+        P = len(self.return_periods)
+        arr = numpy.zeros((P, self.num_rlzs), self.loss_dt)
+        for rlzstr in agg_loss_table:
+            r = int(rlzstr[4:])
+            losses = agg_loss_table[rlzstr]['loss']
+            for lti, lt in enumerate(self.loss_dt.names):
+                ls = losses[:, lti].flatten()  # flatten only in ucerf
+                lbp = losses_by_period(ls, self.return_periods, self.eff_time)
+                arr[:, r][lt] = lbp
+        return arr
