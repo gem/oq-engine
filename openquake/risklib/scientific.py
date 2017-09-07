@@ -1545,7 +1545,7 @@ class LossesByPeriodBuilder(object):
             r = int(rlzstr[4:])
             losses = agg_loss_table[rlzstr]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
-                lbp = losses_by_period(
-                    losses[:, lti], self.return_periods, self.eff_time)
+                ls = losses[:, lti].flatten()  # flatten only in ucerf
+                lbp = losses_by_period(ls, self.return_periods, self.eff_time)
                 arr[slice(P - len(lbp), P), r][lt] = lbp
         return arr
