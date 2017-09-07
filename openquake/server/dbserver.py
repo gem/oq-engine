@@ -146,8 +146,8 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
 
     # create and upgrade the db if needed
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
-    actions.upgrade_db(db)  # the commit is inside upgrade_db
-    # the line below is needed to work around a very subtle of sqlite;
+    actions.upgrade_db(db)
+    # the line below is needed to work around a very subtle bug of sqlite;
     # we need new connections, see https://github.com/gem/oq-engine/pull/3002
     db.close()
 
@@ -156,7 +156,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     try:
         DbServer(db, addr, config.DBS_AUTHKEY).loop()
     finally:
-        db.conn.close()
+        db.close()
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')
