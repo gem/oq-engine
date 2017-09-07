@@ -562,7 +562,8 @@ class EbriskCalculator(base.RiskCalculator):
             alt = self.datastore['agg_loss_table']
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
             num_losses = max(len(dset) for dset in alt.values())
-            periods = scientific.return_periods(eff_time, num_losses)
+            periods = oq.return_periods or scientific.return_periods(
+                eff_time, num_losses)
             b = scientific.LossesByPeriodBuilder(periods, oq.loss_dt(), R)
             self.datastore['agg_loss-rlzs'] = array = b.build(alt)
             self.datastore.set_attrs(
