@@ -604,12 +604,30 @@ def get_results(db, job_id):
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
 
 
+def get_data(db, job_id, dspath):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param dspath:
+        path in the datastore
+    :returns: array corresponding to the datastore path
+    """
+    # everybody can read from everybody else for the moment
+    fname = db('SELECT ds_calc_dir FROM job WHERE id=?x', job_id, scalar=True)
+    with datastore.read(fname + '.hdf5') as dstore:
+        return dstore[dspath].value
+
+
 # ############################### db commands ########################### #
 
 def get_longest_jobs(db):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
+    :returns:
+        (id, user_name, days) tuples
     """
     query = '''-- completed jobs taking more than one hour
 SELECT id, user_name, julianday(stop_time) - julianday(start_time) AS days
