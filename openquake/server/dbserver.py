@@ -22,9 +22,11 @@ import socket
 import os.path
 import sqlite3
 import logging
+import threading
 import subprocess
+import psutil
 
-from openquake.baselib import sap, zeromq
+from openquake.baselib import sap, zeromq as z
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import valid
 from openquake.commonlib import config, logs
@@ -44,25 +46,44 @@ class DbServer(object):
     """
     A server collecting the received commands into a queue
     """
-    def __init__(self, db, address, authkey):
+    def __init__(self, db, address, authkey,  num_workers=5):
         self.db = db
-        self.address = 'tcp://%s:%s' % address
+        self.frontend = 'tcp://%s:%s' % address
+        self.backend = 'inproc://dbworkers'
         self.authkey = authkey
+        self.num_workers = num_workers
+        self.pid = os.getpid()
 
-    def loop(self):
-        logging.warn('DB server started with %s, listening on %s...',
-                     sys.executable, self.address)
-        sock = zeromq.ReplySocket(self.address)
+    def worker(self, sock):
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
-            logging.debug('Got ' + str(cmd_))
+            if cmd == 'getpid':
+                sock.rep((self.pid, None, None))
+                continue
             try:
                 func = getattr(actions, cmd)
             except AttributeError:
-                sock.reply(('Invalid command ' + cmd, ValueError, None))
+                sock.rep(('Invalid command ' + cmd, ValueError, None))
             else:
-                sock.reply(safely_call(func, (self.db,) + args))
-        logging.warn('DB server stopped')
+                sock.rep(safely_call(func, (self.db,) + args))
+
+    def start(self):
+        # start workers
+        workers = []
+        for _ in range(self.num_workers):
+            sock = z.Socket(self.backend, z.zmq.REP, 'connect')
+            threading.Thread(target=self.worker, args=(sock,)).start()
+            workers.append(sock)
+        logging.warn('DB server started with %s on %s, pid=%d',
+                     sys.executable, self.frontend, self.pid)
+        # start frontend->backend proxy
+        try:
+            z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
+                        z.bind(self.backend, z.zmq.DEALER))
+        except (KeyboardInterrupt, z.zmq.ZMQError):
+            for sock in workers:
+                sock.running = False
+            logging.warn('DB server stopped')
 
 
 def different_paths(path1, path2):
@@ -154,7 +175,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     try:
-        DbServer(db, addr, config.DBS_AUTHKEY).loop()
+        DbServer(db, addr, config.DBS_AUTHKEY).start()
     finally:
         db.close()
 
