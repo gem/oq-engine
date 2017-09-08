@@ -236,8 +236,8 @@ def safely_call(func, args):
             mon = child
         # FIXME check_mem_usage is disabled here because it's causing
         # dead locks in threads when log messages are raised.
-        # check is done anyway in other parts of the code (submit and iter).
-        # Further investigation is needed
+        # Check is done anyway in other parts of the code (submit and iter);
+        # further investigation is needed
         # check_mem_usage(mon)  # check if too much memory is used
         # FIXME: this approach does not work with the Threadmap
         mon._flush = False
