@@ -334,7 +334,7 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         with monitor('building hazard', measuremem=True):
             gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
-            hazard = sorted(getter.get_hazard(gmfdata).items())
+            hazard = sorted(getter.get_hazard(data=gmfdata).items())
         for rlzi, hazardr in hazard:
             for sid in getter.sids:
                 array = hazardr[sid]
