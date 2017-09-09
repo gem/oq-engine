@@ -46,7 +46,7 @@ def plot_lc(calc_id, aid=None):
     """
     # read the hazard data
     dstore = datastore.read(calc_id)
-    dset = dstore['agg_loss-rlzs']
+    dset = dstore['agg_curves-rlzs']
     if aid is None:  # plot the global curves
         plt = make_figure(dset.attrs['return_periods'], dset.value)
     else:
