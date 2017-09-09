@@ -883,7 +883,7 @@ class CurveBuilder(object):
         loss_ratios = {cb.loss_type: len(cb.ratios)
                        for cb in cps if cb.user_provided}
         self.loss_curve_dt = build_loss_curve_dt(
-            loss_ratios, conditional_loss_poes, insured_losses)
+            loss_ratios, insured_losses)
         dtlist = []
         for i in range(self.I):
             for cb in self.cps:
@@ -1352,13 +1352,10 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def build_loss_curve_dt(curve_resolution, conditional_loss_poes,
-                        insured_losses=False):
+def build_loss_curve_dt(curve_resolution, insured_losses=False):
     """
     :param curve_resolution:
         dictionary loss_type -> curve_resolution
-    :param conditional_loss_poes:
-        configuration parameter
     :param insured_losses:
         configuration parameter
     :returns:
