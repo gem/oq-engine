@@ -1456,11 +1456,11 @@ class LossesByPeriodBuilder(object):
         self.eff_time = eff_time
 
     # used in the EbrPostCalculator
-    def build_rlzs(self, asset_values, loss_ratios):
+    def build_all(self, asset_values, loss_ratios, stats):
         """
         :param asset_values: a list of asset values
         :param loss_ratios: an array of dtype lrs_dt
-        :returns: a composite array of shape (A, R, P)
+        :returns: two composite arrays of shape (A, R, P) and (A, S, P)
         """
         # loss_ratios from lrgetter.get_all
         A = len(asset_values)
@@ -1475,7 +1475,12 @@ class LossesByPeriodBuilder(object):
                     array[a, r][lt] = aval * losses_by_period(
                         recs['ratios'][:, li], self.return_periods,
                         self.eff_time)
-        return array
+        if len(self.weights) > 1 and stats:
+            statnames, statfuncs = zip(*stats)
+            array_stats = compute_stats2(array, statfuncs, self.weights)
+        else:
+            array_stats = None
+        return array, array_stats
 
     # used in the LossCurvesExporter
     def build_rlz(self, asset_values, loss_ratios, rlzi):
@@ -1495,17 +1500,23 @@ class LossesByPeriodBuilder(object):
                     ratios[:, li], self.return_periods, self.eff_time)
         return array
 
-    def build(self, agg_loss_table):
+    def build(self, agg_loss_table, stats):
         """
-        :returns: an array of (P, R) values of dtype loss_dt
+        :returns:
+            two arrays of dtype loss_dt values with shape (P, R) and (P, S)
         """
         P, R = len(self.return_periods), len(self.weights)
-        arr = numpy.zeros((P, R), self.loss_dt)
+        array = numpy.zeros((P, R), self.loss_dt)
         for rlzstr in agg_loss_table:
             r = int(rlzstr[4:])
             losses = agg_loss_table[rlzstr]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, lti].flatten()  # flatten only in ucerf
                 lbp = losses_by_period(ls, self.return_periods, self.eff_time)
-                arr[:, r][lt] = lbp
-        return arr
+                array[:, r][lt] = lbp
+        if len(self.weights) > 1 and stats:
+            statnames, statfuncs = zip(*stats)
+            array_stats = compute_stats2(array, statfuncs, self.weights)
+        else:
+            array_stats = None
+        return array, array_stats
