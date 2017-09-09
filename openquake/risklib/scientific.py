@@ -860,59 +860,10 @@ class DiscreteDistribution(Distribution):
 # Event Based
 #
 
-class LossTypeCurveBuilder(object):
-    """
-    Build loss ratio curves. The loss ratios can be provided
-    by the user or automatically generated (user_provided=False).
-    The usage is something like this::
-
-      builder = LossTypeCurveBuilder(loss_type, loss_ratios, ses_ratio,
-                                     user_provided=True)
-      counts = builder.build_counts(loss_matrix)
-    """
-    def __init__(self, loss_type, curve_resolution, loss_ratios, ses_ratio,
-                 user_provided, conditional_loss_poes=(),
-                 insured_losses=False):
-        self.loss_type = loss_type
-        self.curve_resolution = curve_resolution
-        self.ratios = numpy.array(loss_ratios, F32)
-        self.ses_ratio = ses_ratio
-        self.user_provided = user_provided
-        self.conditional_loss_poes = conditional_loss_poes
-        self.insured_losses = insured_losses
-
-    def __call__(self, assets, ratios_by_aid):
-        """"
-        :param assets: a list of assets
-        :param ratios_by_aid: a dictionary of loss ratios by asset ordinal
-        :returns:
-           two arrays, `aids` of size A, and `all_poes` of shape (A, I, C)
-        """
-        aids = []
-        all_poes = []
-        for asset in assets:
-            aid = asset.ordinal
-            try:
-                loss_ratios = ratios_by_aid[aid]
-            except KeyError:   # no loss ratios
-                continue
-            # loss_ratios has shape (E, L, I)
-            lrs = loss_ratios[:, self.index]
-            counts = numpy.array([(lrs >= ratio).sum(axis=0)
-                                  for ratio in self.ratios])
-            poes = build_poes(counts, 1. / self.ses_ratio)
-            if len(poes.shape) == 1:
-                poes = poes[:, None]
-            # for instance the ratios can have shape (21,), the loss_ratios
-            # (3, 2), the counts (21, 2) and the transposed poes (2, 21)
-            all_poes.append(poes.T)
-            aids.append(aid)
-        return numpy.array(aids), numpy.array(all_poes)
-
-    def __repr__(self):
-        return '<%s %s=%s user_provided=%s>' % (
-            self.__class__.__name__, self.loss_type,
-            self.ratios, self.user_provided)
+LossTypeCurveBuilder = collections.namedtuple(
+    'LossTypeCurveBuilder',
+    ['index', 'loss_type', 'curve_resolution', 'ratios', 'ses_ratio',
+     'user_provided', 'conditional_loss_poes', 'insured_losses'])
 
 
 class CurveBuilder(object):
@@ -948,6 +899,7 @@ class CurveBuilder(object):
     def __len__(self):
         return len(self.cbs)
 
+    # old algorithm not used anymore
     def build_curves(self, avalues, loss_ratios):
         """
         :param avalues: array of asset values
@@ -1500,7 +1452,7 @@ class LossesByPeriodBuilder(object):
         self.num_rlzs = num_rlzs
         self.eff_time = eff_time
 
-    # not used yet
+    # used in the EbrPostCalculator
     def build_rlzs(self, asset_values, loss_ratios):
         """
         :param asset_values: a list of asset values
@@ -1520,7 +1472,7 @@ class LossesByPeriodBuilder(object):
                         self.eff_time)
         return array
 
-    # not used yet
+    # used in the LossCurvesExporter
     def build_rlz(self, asset_values, loss_ratios, rlzi):
         """
         :param asset_values: a list of asset values
