@@ -874,32 +874,32 @@ class CurveBuilder(object):
     :param insured_losses: insured losses flag from the job.ini
     :param conditional_loss_poes: list of PoEs from the job.ini
     """
-    def __init__(self, cbs, ses_ratio, insured_losses,
+    def __init__(self, cps, ses_ratio, insured_losses,
                  conditional_loss_poes=()):
+        self.cps = cps
         self.ses_ratio = ses_ratio
-        self.cbs = cbs
         self.I = insured_losses + 1
         self.clp = conditional_loss_poes
         loss_ratios = {cb.loss_type: len(cb.ratios)
-                       for cb in cbs if cb.user_provided}
+                       for cb in cps if cb.user_provided}
         self.loss_curve_dt = build_loss_curve_dt(
             loss_ratios, conditional_loss_poes, insured_losses)
         dtlist = []
         for i in range(self.I):
-            for cb in self.cbs:
+            for cb in self.cps:
                 lt = cb.loss_type + '_ins' * i
                 dtlist.append((lt, (F32, len(cb.ratios))))
         self.dt = numpy.dtype(dtlist)
 
     def __getitem__(self, li):
-        L = len(self.cbs)
-        return self.cbs[li % L]
+        L = len(self.cps)
+        return self.cps[li % L]
 
     def __iter__(self):
-        return iter(self.cbs)
+        return iter(self.cps)
 
     def __len__(self):
-        return len(self.cbs)
+        return len(self.cps)
 
     # old algorithm not used anymore
     def build_curves(self, avalues, loss_ratios):
@@ -909,7 +909,7 @@ class CurveBuilder(object):
         :returns: A curves of dtype loss_curve_dt
         """
         curves = numpy.zeros(len(avalues), self.loss_curve_dt)
-        L = len(self.cbs)
+        L = len(self.cps)
         LI = L * self.I
         for a, avalue in enumerate(avalues):
             try:
@@ -917,7 +917,7 @@ class CurveBuilder(object):
             except KeyError:  # no ratios for the given realization
                 continue
             ratios = data.reshape(-1, LI)
-            for cb in self.cbs:
+            for cb in self.cps:
                 lt = cb.loss_type
                 losses = avalue[lt] * cb.ratios
                 for i in range(self.I):
@@ -953,7 +953,7 @@ class CurveBuilder(object):
         for lt, i in sorted(lti.items()):
             lti[lt + '_ins'] = i
         losses = {}
-        for cb in self.cbs:
+        for cb in self.cps:
             losses[cb.loss_type] = [avalue[cb.loss_type] * cb.ratios
                                     for avalue in avalues]
             if self.I == 2:
@@ -992,7 +992,7 @@ class CurveBuilder(object):
         :yields:
             a matrix of shape (A, R) of PoEs
         """
-        L = len(self.cbs)
+        L = len(self.cps)
         LI = L * self.I
         poes = numpy.zeros((len(aids), num_rlzs), self.dt)
         for a, aid in enumerate(aids):
@@ -1002,7 +1002,7 @@ class CurveBuilder(object):
                     ratios = dic[r]['ratios'].reshape(-1, LI)
                 except KeyError:
                     continue  # no ratios for the given realization
-                for cb in self.cbs:
+                for cb in self.cps:
                     for i in range(self.I):
                         lt = cb.index + L * i
                         lrs = ratios[:, lt]
