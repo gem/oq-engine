@@ -1449,10 +1449,10 @@ class LossesByPeriodBuilder(object):
 
     :param insured_losses: insured losses flag from the job.ini
     """
-    def __init__(self, return_periods, loss_dt, num_rlzs, eff_time):
+    def __init__(self, return_periods, loss_dt, weights, eff_time):
         self.return_periods = return_periods
         self.loss_dt = loss_dt
-        self.num_rlzs = num_rlzs
+        self.weights = weights
         self.eff_time = eff_time
 
     # used in the EbrPostCalculator
@@ -1463,7 +1463,9 @@ class LossesByPeriodBuilder(object):
         :returns: a composite array of shape (A, R, P)
         """
         # loss_ratios from lrgetter.get_all
-        A, R, P = len(asset_values), self.num_rlzs, len(self.return_periods)
+        A = len(asset_values)
+        R = len(self.weights)
+        P = len(self.return_periods)
         array = numpy.zeros((A, R, P), self.loss_dt)
         for a, asset_value in enumerate(asset_values):
             r_recs = group_array(loss_ratios[a], 'rlzi').items()
@@ -1497,8 +1499,8 @@ class LossesByPeriodBuilder(object):
         """
         :returns: an array of (P, R) values of dtype loss_dt
         """
-        P = len(self.return_periods)
-        arr = numpy.zeros((P, self.num_rlzs), self.loss_dt)
+        P, R = len(self.return_periods), len(self.weights)
+        arr = numpy.zeros((P, R), self.loss_dt)
         for rlzstr in agg_loss_table:
             r = int(rlzstr[4:])
             losses = agg_loss_table[rlzstr]['loss']

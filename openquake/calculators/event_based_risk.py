@@ -173,6 +173,7 @@ class EbrPostCalculator(base.RiskCalculator):
         self.oqparam = calc.oqparam
         self._monitor = calc._monitor
         self.riskmodel = calc.riskmodel
+        self.loss_builder = get_loss_builder(calc.datastore)
         P = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
 
@@ -289,6 +290,22 @@ class EpsilonMatrix1(object):
         # item[0] is the asset index, item[1] the event index
         # the epsilons are equal for all assets since asset_correlation=1
         return self.eps[item[1]]
+
+
+def get_loss_builder(dstore):
+    """
+    :param dstore: datastore for an event based risk calculation
+    :returns: a LossesByPeriodBuilder instance
+    """
+    oq = dstore['oqparam']
+    weights = dstore['realizations']['weight']
+    alt = dstore['agg_loss_table']
+    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+    num_losses = max(len(dset) for dset in alt.values())
+    periods = oq.return_periods or scientific.return_periods(
+        eff_time, num_losses)
+    return scientific.LossesByPeriodBuilder(
+        periods, oq.loss_dt(), weights, eff_time)
 
 
 @base.calculators.add('event_based_risk')
@@ -557,26 +574,19 @@ class EbriskCalculator(base.RiskCalculator):
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
         # build aggregate loss curves
+        self.before_export()  # set 'realizations'
         oq = self.oqparam
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        R = len(weights)
-        if 'agg_loss_table' in self.datastore:
-            alt = self.datastore['agg_loss_table']
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            num_losses = max(len(dset) for dset in alt.values())
-            periods = oq.return_periods or scientific.return_periods(
-                eff_time, num_losses)
-            b = scientific.LossesByPeriodBuilder(
-                periods, oq.loss_dt(), R, eff_time)
-            self.datastore['agg_curves-rlzs'] = array = b.build(alt)
+        b = get_loss_builder(self.datastore)
+        alt = self.datastore['agg_loss_table']
+        self.datastore['agg_curves-rlzs'] = array = b.build(alt)
+        self.datastore.set_attrs(
+            'agg_curves-rlzs', return_periods=b.return_periods)
+        statnames, stats = zip(*oq.risk_stats())
+        if len(b.weights) > 1 and stats:
+            self.datastore['agg_curves-stats'] = compute_stats2(
+                array, stats, b.weights)
             self.datastore.set_attrs(
-                'agg_curves-rlzs', return_periods=b.return_periods)
-            statnames, stats = zip(*oq.risk_stats())
-            if R > 1 and stats:
-                self.datastore['agg_curves-stats'] = compute_stats2(
-                    array, stats, weights)
-                self.datastore.set_attrs(
-                    'agg_curves-stats', return_periods=b.return_periods)
+                'agg_curves-stats', return_periods=b.return_periods)
 
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
