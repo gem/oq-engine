@@ -88,6 +88,7 @@ def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
     if param['asset_loss_table']:
         data = sorted(ass)  # sort by aid, r
         lrs_idx = result['lrs_idx']  # aid -> indices
+        result['num_losses'] = num_losses = collections.Counter()  # by aid, r
         n = 0
         all_ratios = []
         for aid, agroup in itertools.groupby(data, operator.itemgetter(0)):
@@ -98,6 +99,7 @@ def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
                     for rec in egroup:
                         ratios[rec[3]] = rec[4]
                     all_ratios.append((r, ratios))
+                    num_losses[aid, r] += 1
             n1 = len(all_ratios)
             lrs_idx[aid].append((n, n1))
             n = n1
@@ -465,6 +467,7 @@ class EbriskCalculator(base.RiskCalculator):
         self.gmdata = {}
         self.taskno = 0
         self.start = 0
+        self.num_losses = numpy.zeros((self.A, self.R), U32)
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
@@ -480,6 +483,11 @@ class EbriskCalculator(base.RiskCalculator):
                     events = res.events_by_grp[grp_id]
                     self.datastore.extend('events/grp-%02d' % grp_id, events)
             num_events[res.sm_id] += res.num_events
+        if 'all_loss_ratios' in self.datastore:
+            self.datastore['all_loss_ratios/num_losses'] = self.num_losses
+            self.datastore.set_attrs(
+                'all_loss_ratios/num_losses', nbytes=self.num_losses.nbytes)
+        del self.num_losses
         event_based.save_gmdata(self, num_rlzs)
         return num_events
 
@@ -506,6 +514,8 @@ class EbriskCalculator(base.RiskCalculator):
 
         if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
             with self.monitor('saving loss ratios', autoflush=True):
+                for (a, r), num in dic.pop('num_losses').items():
+                    self.num_losses[a, r + offset] += num
                 for aid, pairs in lrs_idx.items():
                     self.indices[aid].extend(
                         (start + self.start, stop + self.start)
