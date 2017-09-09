@@ -25,7 +25,6 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
-from openquake.hazardlib.stats import compute_stats2
 from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
@@ -148,96 +147,6 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     # store info about the GMFs
     result['gmdata'] = riskinput.gmdata
     return result
-
-
-@util.reader
-def build_loss_maps(avalues, builder, lrgetter, weights, stats, monitor):
-    """
-    Thin wrapper over :meth:
-    `openquake.risklib.scientific.CurveBuilder.build_maps`.
-    :returns: assets IDs and loss maps for the given chunk of assets
-    """
-    with monitor('getting loss ratios'):
-        loss_ratios = lrgetter.get_all()
-    loss_maps, loss_maps_stats = builder.build_maps(
-        lrgetter.aids, avalues, loss_ratios, weights, stats, monitor)
-    res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
-    if loss_maps_stats is not None:
-        res['loss_maps-stats'] = loss_maps_stats
-    return res
-
-
-class EbrPostCalculator(base.RiskCalculator):
-    def __init__(self, calc):
-        self.datastore = calc.datastore
-        self.oqparam = calc.oqparam
-        self._monitor = calc._monitor
-        self.riskmodel = calc.riskmodel
-        self.loss_builder = get_loss_builder(calc.datastore)
-        P = len(self.oqparam.conditional_loss_poes)
-        self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
-
-    def save_loss_maps(self, acc, res):
-        """
-        Save the loss maps by opening and closing the datastore and
-        return the total number of stored bytes.
-        """
-        for key in res:
-            if key.startswith('loss_maps'):
-                array = res[key]  # shape (A, R, P, LI)
-                loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
-                for lti, lt in enumerate(self.loss_maps_dt.names):
-                    loss_maps[lt] = array[:, :, :, lti]
-                acc += {key: loss_maps.nbytes}
-                self.datastore[key][res['aids']] = loss_maps
-                self.datastore.set_attrs(key, nbytes=acc[key])
-        return acc
-
-    def pre_execute(self):
-        pass
-
-    def execute(self):
-        oq = self.oqparam
-        weights = self.datastore['realizations']['weight']
-        R = len(weights)
-        # build loss maps
-        if 'all_loss_ratios' in self.datastore and oq.conditional_loss_poes:
-            assetcol = self.assetcol
-            stats = oq.risk_stats()
-            builder = self.riskmodel.curve_builder
-            A = len(assetcol)
-            # create loss_maps datasets
-            self.datastore.create_dset(
-                'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
-            if R > 1:
-                self.datastore.create_dset(
-                    'loss_maps-stats', self.loss_maps_dt, (A, len(stats)),
-                    fillvalue=None)
-            mon = self.monitor('loss maps')
-            lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
-                    in self.datastore.parent)
-            logging.info('Instantiating LossRatiosGetters')
-            with self.monitor('building lrgetters', measuremem=True,
-                              autoflush=True):
-                allargs = []
-                for aids in split_in_blocks(range(A), oq.concurrent_tasks):
-                    dstore = self.datastore.parent if lazy else self.datastore
-                    getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
-                    # a lazy getter will read the loss_ratios from the workers
-                    # an eager getter reads the loss_ratios upfront
-                    allargs.append((assetcol.values(aids), builder, getter,
-                                    weights, stats, mon))
-            if lazy:
-                # avoid OSError: Can't read data (Wrong b-tree signature)
-                self.datastore.parent.close()
-            parallel.Starmap(build_loss_maps, allargs).reduce(
-                self.save_loss_maps)
-            if lazy:  # the parent was closed, reopen it
-                self.datastore.parent.open()
-
-    def post_execute(self):
-        # override the base class method to avoid doing bad stuff
-        pass
 
 save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
@@ -578,13 +487,12 @@ class EbriskCalculator(base.RiskCalculator):
         oq = self.oqparam
         b = get_loss_builder(self.datastore)
         alt = self.datastore['agg_loss_table']
-        self.datastore['agg_curves-rlzs'] = array = b.build(alt)
+        array, array_stats = b.build(alt, oq.risk_stats())
+        self.datastore['agg_curves-rlzs'] = array
         self.datastore.set_attrs(
             'agg_curves-rlzs', return_periods=b.return_periods)
-        statnames, stats = zip(*oq.risk_stats())
-        if len(b.weights) > 1 and stats:
-            self.datastore['agg_curves-stats'] = compute_stats2(
-                array, stats, b.weights)
+        if array_stats is not None:
+            self.datastore['agg_curves-stats'] = array_stats
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods)
 
@@ -602,3 +510,110 @@ class EbriskCalculator(base.RiskCalculator):
                 'all_loss_ratios/data',
                 nbytes=nbytes, bytes_per_asset=nbytes / self.A)
             EbrPostCalculator(self).run(close=False)
+
+
+# ######################### EbrPostCalculator ############################## #
+
+@util.reader
+def build_curves_maps(avalues, builder, lrgetter, stats, monitor):
+    """
+    Thin wrapper over :meth:
+    `openquake.risklib.scientific.CurveBuilder.build_maps`.
+    :returns: assets IDs and loss maps for the given chunk of assets
+    """
+    b = builder.loss_builder
+    with monitor('getting loss ratios'):
+        loss_ratios = lrgetter.get_all()
+    loss_maps, loss_maps_stats = builder.build_maps(
+        lrgetter.aids, avalues, loss_ratios, b.weights, stats, monitor)
+    curves, curves_stats = b.build_all(avalues, loss_ratios, stats)
+    res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
+    if loss_maps_stats is not None:
+        res['loss_maps-stats'] = loss_maps_stats
+    if curves_stats is not None:
+        res['curves-stats'] = curves_stats
+    return res
+
+
+class EbrPostCalculator(base.RiskCalculator):
+    def __init__(self, calc):
+        self.datastore = calc.datastore
+        self.oqparam = calc.oqparam
+        self._monitor = calc._monitor
+        self.riskmodel = calc.riskmodel
+        self.loss_builder = get_loss_builder(calc.datastore)
+        P = len(self.oqparam.conditional_loss_poes)
+        self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
+
+    def save_curves_maps(self, acc, res):
+        """
+        Save the loss curves and maps (if any).
+
+        :returns: the total number of stored bytes.
+        """
+        for key in res:
+            if key == 'curves-stats':
+                array = res[key]  # shape (A, S, P)
+                self.datastore[key][res['aids']] = array
+            elif key.startswith('loss_maps'):
+                array = res[key]  # shape (A, R, P, LI)
+                loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
+                for lti, lt in enumerate(self.loss_maps_dt.names):
+                    loss_maps[lt] = array[:, :, :, lti]
+                acc += {key: loss_maps.nbytes}
+                self.datastore[key][res['aids']] = loss_maps
+                self.datastore.set_attrs(key, nbytes=acc[key])
+        return acc
+
+    def pre_execute(self):
+        pass
+
+    def execute(self):
+        oq = self.oqparam
+        R = len(self.loss_builder.weights)
+        # build loss maps
+        if 'all_loss_ratios' in self.datastore and oq.conditional_loss_poes:
+            assetcol = self.assetcol
+            stats = oq.risk_stats()
+            builder = self.riskmodel.curve_builder
+            builder.loss_builder = self.loss_builder
+            periods = self.loss_builder.return_periods
+            A = len(assetcol)
+            S = len(stats)
+            P = len(periods)
+            # create loss_maps datasets
+            self.datastore.create_dset(
+                'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
+            if R > 1:
+                self.datastore.create_dset(
+                    'loss_maps-stats', self.loss_maps_dt, (A, S),
+                    fillvalue=None)
+                self.datastore.create_dset(
+                    'curves-stats', oq.loss_dt(), (A, S, P), fillvalue=None)
+                self.datastore.set_attrs(
+                    'curves-stats', return_periods=periods)
+            mon = self.monitor('loss maps')
+            lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
+                    in self.datastore.parent)
+            logging.info('Instantiating LossRatiosGetters')
+            with self.monitor('building lrgetters', measuremem=True,
+                              autoflush=True):
+                allargs = []
+                for aids in split_in_blocks(range(A), oq.concurrent_tasks):
+                    dstore = self.datastore.parent if lazy else self.datastore
+                    getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
+                    # a lazy getter will read the loss_ratios from the workers
+                    # an eager getter reads the loss_ratios upfront
+                    allargs.append((assetcol.values(aids), builder, getter,
+                                    stats, mon))
+            if lazy:
+                # avoid OSError: Can't read data (Wrong b-tree signature)
+                self.datastore.parent.close()
+            parallel.Starmap(build_curves_maps, allargs).reduce(
+                self.save_curves_maps)
+            if lazy:  # the parent was closed, reopen it
+                self.datastore.parent.open()
+
+    def post_execute(self):
+        # override the base class method to avoid doing bad stuff
+        pass
