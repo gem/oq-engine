@@ -860,21 +860,23 @@ class DiscreteDistribution(Distribution):
 # Event Based
 #
 
-LossTypeCurveBuilder = collections.namedtuple(
-    'LossTypeCurveBuilder',
-    ['index', 'loss_type', 'curve_resolution', 'ratios', 'ses_ratio',
-     'user_provided', 'conditional_loss_poes', 'insured_losses'])
+CurveParams = collections.namedtuple(
+    'CurveParams',
+    ['index', 'loss_type', 'curve_resolution', 'ratios', 'user_provided'])
 
 
 class CurveBuilder(object):
     """
     Build curves for all loss types at the same time.
 
-    :param cbs: a list of :class:`LossTypeCurveBuilder` instances
+    :param cbs: a list of :class:`CurveParams` instances
+    :param ses_ratio: the ses_ratio parameter in oqparam
     :param insured_losses: insured losses flag from the job.ini
     :param conditional_loss_poes: list of PoEs from the job.ini
     """
-    def __init__(self, cbs, insured_losses, conditional_loss_poes=()):
+    def __init__(self, cbs, ses_ratio, insured_losses,
+                 conditional_loss_poes=()):
+        self.ses_ratio = ses_ratio
         self.cbs = cbs
         self.I = insured_losses + 1
         self.clp = conditional_loss_poes
@@ -923,7 +925,7 @@ class CurveBuilder(object):
                     lrs = ratios[:, cb.index + L * i]
                     counts = numpy.array([(lrs >= ratio).sum()
                                           for ratio in cb.ratios], F32)
-                    poes = 1. - numpy.exp(- counts * cb.ses_ratio)
+                    poes = 1. - numpy.exp(- counts * self.ses_ratio)
                     arr['poes'] = poes
                     arr['losses'] = losses
                     arr['avg'] = average_loss([losses, poes])
@@ -1006,7 +1008,8 @@ class CurveBuilder(object):
                         lrs = ratios[:, lt]
                         counts = numpy.array([(lrs >= ratio).sum()
                                               for ratio in cb.ratios], F32)
-                        poes[a, r][lt] = 1. - numpy.exp(-counts * cb.ses_ratio)
+                        poes[a, r][lt] = 1. - numpy.exp(
+                            - counts * self.ses_ratio)
         return poes
 
 
