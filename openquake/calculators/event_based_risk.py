@@ -568,15 +568,15 @@ class EbriskCalculator(base.RiskCalculator):
                 eff_time, num_losses)
             b = scientific.LossesByPeriodBuilder(
                 periods, oq.loss_dt(), R, eff_time)
-            self.datastore['agg_loss-rlzs'] = array = b.build(alt)
+            self.datastore['agg_curves-rlzs'] = array = b.build(alt)
             self.datastore.set_attrs(
-                'agg_loss-rlzs', return_periods=b.return_periods)
+                'agg_curves-rlzs', return_periods=b.return_periods)
             statnames, stats = zip(*oq.risk_stats())
             if R > 1 and stats:
-                self.datastore['agg_loss-stats'] = compute_stats2(
+                self.datastore['agg_curves-stats'] = compute_stats2(
                     array, stats, weights)
                 self.datastore.set_attrs(
-                    'agg_loss-stats', return_periods=b.return_periods)
+                    'agg_curves-stats', return_periods=b.return_periods)
 
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
