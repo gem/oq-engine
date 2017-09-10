@@ -101,6 +101,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-rlz-000.csv', f1)
         self.assertEqualFiles('expected/loss_curves-rlz-001.csv', f2)
 
+        [f] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-mean.csv', f)
+
         # test the loss maps exporter
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         assert fnames
