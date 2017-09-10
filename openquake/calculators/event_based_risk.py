@@ -29,7 +29,7 @@ from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.baselib import parallel
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import riskinput
 
 U8 = numpy.uint8
 U16 = numpy.uint16
