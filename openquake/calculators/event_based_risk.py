@@ -27,6 +27,7 @@ from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
 from openquake.commonlib import util
 from openquake.calculators import base, event_based
+from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
 
@@ -199,22 +200,6 @@ class EpsilonMatrix1(object):
         # item[0] is the asset index, item[1] the event index
         # the epsilons are equal for all assets since asset_correlation=1
         return self.eps[item[1]]
-
-
-def get_loss_builder(dstore):
-    """
-    :param dstore: datastore for an event based risk calculation
-    :returns: a LossesByPeriodBuilder instance
-    """
-    oq = dstore['oqparam']
-    weights = dstore['realizations']['weight']
-    alt = dstore['agg_loss_table']
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_losses = max(len(dset) for dset in alt.values())
-    periods = oq.return_periods or scientific.return_periods(
-        eff_time, num_losses)
-    return scientific.LossesByPeriodBuilder(
-        periods, oq.loss_dt(), weights, eff_time)
 
 
 @base.calculators.add('event_based_risk')
