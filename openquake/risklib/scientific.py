@@ -883,7 +883,7 @@ class CurveBuilder(object):
         loss_ratios = {cb.loss_type: len(cb.ratios)
                        for cb in cps if cb.user_provided}
         self.loss_curve_dt = build_loss_curve_dt(
-            loss_ratios, conditional_loss_poes, insured_losses)
+            loss_ratios, insured_losses)
         dtlist = []
         for i in range(self.I):
             for cb in self.cps:
@@ -900,36 +900,6 @@ class CurveBuilder(object):
 
     def __len__(self):
         return len(self.cps)
-
-    # old algorithm not used anymore
-    def build_curves(self, avalues, loss_ratios):
-        """
-        :param avalues: array of asset values
-        :param loss_ratios: a list of dictionaries aid -> loss ratios
-        :returns: A curves of dtype loss_curve_dt
-        """
-        curves = numpy.zeros(len(avalues), self.loss_curve_dt)
-        L = len(self.cps)
-        LI = L * self.I
-        for a, avalue in enumerate(avalues):
-            try:
-                data = numpy.concatenate(loss_ratios[a])
-            except KeyError:  # no ratios for the given realization
-                continue
-            ratios = data.reshape(-1, LI)
-            for cb in self.cps:
-                lt = cb.loss_type
-                losses = avalue[lt] * cb.ratios
-                for i in range(self.I):
-                    arr = curves[a][lt + '_ins' * i]
-                    lrs = ratios[:, cb.index + L * i]
-                    counts = numpy.array([(lrs >= ratio).sum()
-                                          for ratio in cb.ratios], F32)
-                    poes = 1. - numpy.exp(- counts * self.ses_ratio)
-                    arr['poes'] = poes
-                    arr['losses'] = losses
-                    arr['avg'] = average_loss([losses, poes])
-        return curves
 
     def build_maps(self, aids, avalues, loss_ratios, weights, stats, mon):
         """
@@ -1352,13 +1322,10 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def build_loss_curve_dt(curve_resolution, conditional_loss_poes,
-                        insured_losses=False):
+def build_loss_curve_dt(curve_resolution, insured_losses=False):
     """
     :param curve_resolution:
         dictionary loss_type -> curve_resolution
-    :param conditional_loss_poes:
-        configuration parameter
     :param insured_losses:
         configuration parameter
     :returns:
@@ -1456,10 +1423,11 @@ class LossesByPeriodBuilder(object):
         self.eff_time = eff_time
 
     # used in the EbrPostCalculator
-    def build_all(self, asset_values, loss_ratios, stats):
+    def build_all(self, asset_values, loss_ratios, stats=()):
         """
         :param asset_values: a list of asset values
         :param loss_ratios: an array of dtype lrs_dt
+        :param stats: list of pairs [(statname, statfunc), ...]
         :returns: two composite arrays of shape (A, R, P) and (A, S, P)
         """
         # loss_ratios from lrgetter.get_all
@@ -1486,22 +1454,26 @@ class LossesByPeriodBuilder(object):
     def build_rlz(self, asset_values, loss_ratios, rlzi):
         """
         :param asset_values: a list of asset values
-        :param loss_ratios: an array of dtype lrs_dt
+        :param loss_ratios: a dictionary aid -> array of shape (E, LI)
         :returns: a composite array of shape (A, P)
         """
         # loss_ratios from lrgetter.get, aid -> list of ratios
         A, P = len(asset_values), len(self.return_periods)
         array = numpy.zeros((A, P), self.loss_dt)
         for a, asset_value in enumerate(asset_values):
-            ratios = numpy.concatenate(loss_ratios[a])
+            ratios = loss_ratios[a]  # shape (E, LI)
             for li, lt in enumerate(self.loss_dt.names):
                 aval = asset_value[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(
                     ratios[:, li], self.return_periods, self.eff_time)
         return array
 
-    def build(self, agg_loss_table, stats):
+    def build(self, agg_loss_table, stats=()):
         """
+        :param agg_loss_table:
+            the aggregate loss table
+        :param stats:
+            list of pairs [(statname, statfunc), ...]
         :returns:
             two arrays of dtype loss_dt values with shape (P, R) and (P, S)
         """
