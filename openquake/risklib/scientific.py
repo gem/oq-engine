@@ -1384,27 +1384,35 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def losses_by_period(losses, return_periods, eff_time):
+def losses_by_period(losses, return_periods, num_events, eff_time):
     """
     :param losses: array of simulated losses
     :param return_periods: return periods of interest
+    :param num_events: the number of events
     :param eff_time: investigation_time * ses_per_logic_tree_path
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
     where min_time = eff_time /len(losses). Outsided the interval they
-    have NaN values. Here is an example:
+    have NaN values. If there are less losses than events, the array
+    is filled with zeros.
+    Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
-    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 100)
-    array([  nan,   nan,   nan,   3.5,   8. ,  13. ,  23. ])
+    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20, 100)
+    array([  nan,   nan,   0. ,   3.5,   8. ,  13. ,  23. ])
     """
-    periods = eff_time / numpy.arange(len(losses), 0., -1)
+    assert num_events >= len(losses), (num_events, len(losses))
+    losses = numpy.sort(losses)
+    num_zeros = num_events - len(losses)
+    if num_zeros:
+        losses = numpy.concatenate(
+            [numpy.zeros(num_zeros, losses.dtype), losses])
+    periods = eff_time / numpy.arange(num_events, 0., -1)
     rperiods = [rp if periods[0] <= rp <= periods[-1] else numpy.nan
                 for rp in return_periods]
-    curve = numpy.interp(
-        numpy.log(rperiods), numpy.log(periods), numpy.sort(losses))
+    curve = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
     return curve
 
 
@@ -1414,10 +1422,11 @@ class LossesByPeriodBuilder(object):
 
     :param insured_losses: insured losses flag from the job.ini
     """
-    def __init__(self, return_periods, loss_dt, weights, eff_time):
+    def __init__(self, return_periods, loss_dt, weights, num_events, eff_time):
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
+        self.num_events = num_events
         self.eff_time = eff_time
 
     # used in the EbrPostCalculator
@@ -1440,7 +1449,7 @@ class LossesByPeriodBuilder(object):
                 for r, recs in r_recs:
                     array[a, r][lt] = aval * losses_by_period(
                         recs['ratios'][:, li], self.return_periods,
-                        self.eff_time)
+                        self.num_events[r], self.eff_time)
         if len(self.weights) > 1 and stats:
             statnames, statfuncs = zip(*stats)
             array_stats = compute_stats2(array, statfuncs, self.weights)
@@ -1463,7 +1472,8 @@ class LossesByPeriodBuilder(object):
             for li, lt in enumerate(self.loss_dt.names):
                 aval = asset_value[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(
-                    ratios[:, li], self.return_periods, self.eff_time)
+                    ratios[:, li], self.return_periods,
+                    self.num_events[rlzi], self.eff_time)
         return array
 
     def build(self, agg_loss_table, stats=()):
@@ -1479,10 +1489,12 @@ class LossesByPeriodBuilder(object):
         array = numpy.zeros((P, R), self.loss_dt)
         for rlzstr in agg_loss_table:
             r = int(rlzstr[4:])
+            num_events = self.num_events[r]
             losses = agg_loss_table[rlzstr]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, lti].flatten()  # flatten only in ucerf
-                lbp = losses_by_period(ls, self.return_periods, self.eff_time)
+                lbp = losses_by_period(
+                    ls, self.return_periods, num_events, self.eff_time)
                 array[:, r][lt] = lbp
         if len(self.weights) > 1 and stats:
             statnames, statfuncs = zip(*stats)

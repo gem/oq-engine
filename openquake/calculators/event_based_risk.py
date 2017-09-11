@@ -354,6 +354,7 @@ class EbriskCalculator(base.RiskCalculator):
         :param num_rlzs: the total number of realizations
         :returns: the total number of events
         """
+        oq = self.oqparam
         self.R = num_rlzs
         self.A = len(self.assetcol)
         tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
@@ -362,25 +363,24 @@ class EbriskCalculator(base.RiskCalculator):
                                    (T, self.R, self.L * self.I))
         self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
                                  nbytes=4 * T * self.R * self.L * self.I)
-        if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
+        if oq.asset_loss_table or oq.loss_ratios:
             # save all_loss_ratios
             self.alr_nbytes = 0
             self.indices = collections.defaultdict(list)  # sid -> pairs
 
-        avg_losses = self.oqparam.avg_losses
-        if avg_losses:
+        if oq.avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
 
         num_events = collections.Counter()
-        self.gmdata = {}
+        self.gmdata = AccumDict(accum=numpy.zeros(len(oq.imtls) + 2, F32))
         self.taskno = 0
         self.start = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
-                for r, rec in dic.pop('gmdata').items():
-                    self.gmdata[start + r] = rec
+                for r, arr in dic.pop('gmdata').items():
+                    self.gmdata[start + r] += arr
                 self.save_losses(dic, start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
