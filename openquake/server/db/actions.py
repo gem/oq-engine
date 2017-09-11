@@ -19,6 +19,9 @@ from __future__ import print_function
 import os
 import operator
 from datetime import datetime
+from h5py._hl.dataset import Dataset
+from h5py._hl.group import Group
+import numpy
 
 from openquake.hazardlib import valid
 from openquake.commonlib import datastore
@@ -604,6 +607,24 @@ def get_results(db, job_id):
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
 
 
+class DatasetWrapper(object):
+    """
+    A pickleable wrapper over an HDF5 dataset
+    """
+    def __init__(self, array, attrs):
+        vars(self).update(attrs)
+        self.array = array
+
+
+class DatagroupWrapper(object):
+    """
+    A pickleable wrapper over an HDF5 group
+    """
+    def __init__(self, array, attrs):
+        vars(self).update(attrs)
+        self.array = array
+
+
 def get_data(db, job_id, dspath):
     """
     :param db:
@@ -617,7 +638,46 @@ def get_data(db, job_id, dspath):
     # everybody can read from everybody else for the moment
     fname = db('SELECT ds_calc_dir FROM job WHERE id=?x', job_id, scalar=True)
     with datastore.read(fname + '.hdf5') as dstore:
-        return dstore[dspath].value
+        obj = dstore[dspath]
+        if isinstance(obj, Dataset):
+            return DatasetWrapper(obj.value, obj.attrs)
+        elif isinstance(obj, Group):
+            return DatagroupWrapper(numpy.array(list(obj)), obj.attrs)
+        else:
+            return obj
+
+
+# TODO: add a way to invalidate the cache (easy) and somebody responsible
+# for doing that (difficult: perhaps a recurrent task?)
+asset_cache = {}  # job_id -> (assets_by_site, loss_type, time_event)
+
+
+def get_asset_values(db, job_id, sid):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :returns:
+        (aid, loss_type1, ..., loss_typeN) composite array
+    """
+    try:
+        assets_by_site, lts, time_event = asset_cache[job_id]
+    except KeyError:
+        assetcol = get_data(db, job_id, 'assetcol')
+        assets_by_site = assetcol.assets_by_site()
+        lts = assetcol.loss_types
+        time_event = assetcol.time_event
+        asset_cache[job_id] = assets_by_site, lts, time_event
+    assets = assets_by_site[sid]
+    dt = numpy.dtype([('aid', numpy.uint32)] +
+                     [(str(lt), numpy.float32) for lt in lts])
+    vals = numpy.zeros(len(assets), dt)
+    for a, asset in enumerate(assets):
+        vals[a]['aid'] = asset.ordinal
+        for lt in lts:
+            vals[a][lt] = asset.value(lt, time_event)
+    return vals
 
 
 # ############################### db commands ########################### #
