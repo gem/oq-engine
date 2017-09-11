@@ -360,8 +360,8 @@ class CompositeRiskModel(collections.Mapping):
     def init(self, oqparam):
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.curve_builder = self.make_curve_builder(oqparam)
-        self.loss_types = [cb.loss_type for cb in self.curve_builder]
+        self.curve_builders = self.make_curve_builders(oqparam)
+        self.loss_types = [cb.loss_type for cb in self.curve_builders]
         self.insured_losses = oqparam.insured_losses
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
@@ -386,14 +386,12 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    def make_curve_builder(self, oqparam):
+    def make_curve_builders(self, oqparam):
         # NB: populate the inner lists .loss_types too
         cbs = []
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
-        ses_ratio = oqparam.ses_ratio if oqparam.calculation_mode in (
-            'event_based_risk',) else 1
         for l, loss_type in enumerate(loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
@@ -420,19 +418,17 @@ class CompositeRiskModel(collections.Mapping):
                     default_loss_ratios, False)
             cbs.append(cb)
             self.lti[loss_type] = l
-        return scientific.CurveBuilder(
-            cbs, ses_ratio, oqparam.insured_losses,
-            oqparam.conditional_loss_poes)
+        return cbs
 
     def get_loss_ratios(self):
         """
         :returns: a 1-dimensional composite array with loss ratios by loss type
         """
         lst = [('user_provided', numpy.bool)]
-        for cb in self.curve_builder:
+        for cb in self.curve_builders:
             lst.append((cb.loss_type, F32, len(cb.ratios)))
         loss_ratios = numpy.zeros(1, numpy.dtype(lst))
-        for cb in self.curve_builder:
+        for cb in self.curve_builders:
             loss_ratios['user_provided'] = cb.user_provided
             loss_ratios[cb.loss_type] = tuple(cb.ratios)
         return loss_ratios
