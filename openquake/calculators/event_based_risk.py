@@ -510,7 +510,7 @@ def build_curves_maps(avalues, builder, lrgetter, stats, monitor):
     with monitor('getting loss ratios'):
         loss_ratios = lrgetter.get_all()
     loss_maps, loss_maps_stats = builder.build_maps(
-        lrgetter.aids, avalues, loss_ratios, b.weights, stats, monitor)
+        avalues, loss_ratios, b.weights, stats, monitor)
     curves, curves_stats = b.build_all(avalues, loss_ratios, stats)
     res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
     if loss_maps_stats is not None:
