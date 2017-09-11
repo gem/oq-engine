@@ -745,6 +745,7 @@ def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     imts = list(oq.imtls)
+    sitemesh = get_mesh(dstore['sitecol'])
     if 'scenario' in oq.calculation_mode:
         imtls = oq.imtls
         gsims = [str(rlz.gsim_rlz) for rlz in rlzs_assoc.realizations]
@@ -752,7 +753,6 @@ def export_gmf_data_csv(ekey, dstore):
         fields = ['%03d' % i for i in range(n_gmfs)]
         dt = numpy.dtype([(f, F32) for f in fields])
         eids, gmfs_ = calc.get_gmfs(dstore)
-        sitemesh = get_mesh(dstore['sitecol'])
         writer = writers.CsvWriter(fmt='%.5f')
         for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E, I)
             for imti, imt in enumerate(imtls):
@@ -768,10 +768,14 @@ def export_gmf_data_csv(ekey, dstore):
         getter = GmfDataGetter(dstore['gmf_data'])
         gmfa = getter.gen_gmv()
         if eid is None:  # new format
+            f = dstore.build_fname('sitemesh', '', 'csv')
+            sids = numpy.arange(len(sitemesh), dtype=U32)
+            sites = util.compose_arrays(sids, sitemesh, 'site_id')
+            writers.write_csv(f, sites)
             fname = dstore.build_fname('gmf', 'data', 'csv')
             gmfa.sort(order=['rlzi', 'sid', 'eid'])
             writers.write_csv(fname, _expand_gmv(gmfa, imts))
-            return [fname]
+            return [f, fname]
         # old format for single eid
         gmfa = gmfa[gmfa['eid'] == eid]
         fnames = []
