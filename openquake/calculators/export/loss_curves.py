@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import logging
+import numpy
 from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
 from openquake.risklib import riskinput, scientific
@@ -33,7 +34,8 @@ def get_loss_builder(dstore):
     periods = oq.return_periods or scientific.return_periods(
         eff_time, num_events.max())
     return scientific.LossesByPeriodBuilder(
-        periods, oq.loss_dt(), weights, num_events, eff_time)
+        numpy.array(periods), oq.loss_dt(), weights, num_events,
+        eff_time, oq.risk_investigation_time)
 
 
 class LossCurveExporter(object):
