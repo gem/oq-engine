@@ -901,10 +901,8 @@ class CurveBuilder(object):
     def __len__(self):
         return len(self.cps)
 
-    def build_maps(self, aids, avalues, loss_ratios, weights, stats, mon):
+    def build_maps(self, avalues, loss_ratios, weights, stats, mon):
         """
-        :param aids:
-            asset ordinals
         :param avalues:
             an array of asset values
         :param loss_ratios:
@@ -928,7 +926,7 @@ class CurveBuilder(object):
                                     for avalue in avalues]
             if self.I == 2:
                 losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
-        all_poes = self.build_all_poes(aids, loss_ratios, len(weights))
+        all_poes = self.build_all_poes(len(avalues), loss_ratios, len(weights))
         loss_maps = self._build_maps(losses, all_poes)
         if len(weights) > 1 and stats:
             statnames, statfuncs = zip(*stats)
@@ -951,21 +949,21 @@ class CurveBuilder(object):
                         loss_maps[a, r, p, lti] = clratio
         return loss_maps
 
-    def build_all_poes(self, aids, loss_ratios, num_rlzs):
+    def build_all_poes(self, num_assets, loss_ratios, num_rlzs):
         """
-        :param aids:
-            a list of asset IDs
+        :param num_assets:
+            the number of assets in the given bunch
         :param loss_ratios:
             a list of loss ratios
         :param num_rlzs:
             the total number of realizations
         :yields:
-            a matrix of shape (A, R) of PoEs
+            a matrix of shape (num_assets, R) of PoEs
         """
         L = len(self.cps)
         LI = L * self.I
-        poes = numpy.zeros((len(aids), num_rlzs), self.dt)
-        for a, aid in enumerate(aids):
+        poes = numpy.zeros((num_assets, num_rlzs), self.dt)
+        for a in range(num_assets):
             dic = group_array(loss_ratios[a], 'rlzi')
             for r in range(num_rlzs):
                 try:
