@@ -775,7 +775,7 @@ def export_gmf_data_csv(ekey, dstore):
             fname = dstore.build_fname('gmf', 'data', 'csv')
             gmfa.sort(order=['rlzi', 'sid', 'eid'])
             writers.write_csv(fname, _expand_gmv(gmfa, imts))
-            return [f, fname]
+            return [fname, f]
         # old format for single eid
         gmfa = gmfa[gmfa['eid'] == eid]
         fnames = []
