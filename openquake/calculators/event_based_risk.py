@@ -379,7 +379,8 @@ class EbriskCalculator(base.RiskCalculator):
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
-                self.gmdata += dic.pop('gmdata')
+                for r, rec in dic.pop('gmdata').items():
+                    self.gmdata[start + r] = rec
                 self.save_losses(dic, start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
