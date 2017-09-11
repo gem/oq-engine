@@ -104,7 +104,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
 
         # check the mean losses_by_period
-        [fname] = export(('agg_loss-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
 
         # make sure this runs
