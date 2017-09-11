@@ -160,6 +160,6 @@ class LossCurveExporter(object):
             if key == 'stats':
                 return {stat[0]: data[:, s] for s, stat in enumerate(stats)}
             else:  # a specific statistics
-                return {key: data[stat2idx[key]]}
+                return {key: data[:, stat2idx[key]]}
         # otherwise event_based
         raise NotImplementedError
