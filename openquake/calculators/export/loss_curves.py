@@ -58,13 +58,11 @@ class LossCurveExporter(object):
     quantile-0.1/ref-a1 # export quantile loss curves of asset a1
     """
     def __init__(self, dstore):
-        oq = dstore['oqparam']
         self.dstore = dstore
         try:
             self.builder = get_loss_builder(dstore)
         except KeyError:  # no 'agg_loss_table' for non event_based_risk
             pass
-        self.rit = oq.risk_investigation_time or oq.hazard_investigation_time
         self.assetcol = dstore['assetcol']
         arefs = [decode(aref) for aref in self.dstore['asset_refs']]
         self.str2asset = {arefs[asset.idx]: asset for asset in self.assetcol}
