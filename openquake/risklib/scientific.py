@@ -1422,12 +1422,25 @@ class LossesByPeriodBuilder(object):
 
     :param insured_losses: insured losses flag from the job.ini
     """
-    def __init__(self, return_periods, loss_dt, weights, num_events, eff_time):
+    def __init__(self, return_periods, loss_dt, weights, num_events, eff_time,
+                 risk_investigation_time):
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
         self.num_events = num_events
         self.eff_time = eff_time
+        self.poes = 1. - numpy.exp(- risk_investigation_time / return_periods)
+
+    def pair(self, array, stats):
+        """
+        :return (array, array_stats) if stats, else (array, None)
+        """
+        if len(self.weights) > 1 and stats:
+            statnames, statfuncs = zip(*stats)
+            array_stats = compute_stats2(array, statfuncs, self.weights)
+        else:
+            array_stats = None
+        return array, array_stats
 
     # used in the EbrPostCalculator
     def build_all(self, asset_values, loss_ratios, stats=()):
@@ -1450,12 +1463,7 @@ class LossesByPeriodBuilder(object):
                     array[a, r][lt] = aval * losses_by_period(
                         recs['ratios'][:, li], self.return_periods,
                         self.num_events[r], self.eff_time)
-        if len(self.weights) > 1 and stats:
-            statnames, statfuncs = zip(*stats)
-            array_stats = compute_stats2(array, statfuncs, self.weights)
-        else:
-            array_stats = None
-        return array, array_stats
+        return self.pair(array, stats)
 
     # used in the LossCurvesExporter
     def build_rlz(self, asset_values, loss_ratios, rlzi):
@@ -1496,9 +1504,21 @@ class LossesByPeriodBuilder(object):
                 lbp = losses_by_period(
                     ls, self.return_periods, num_events, self.eff_time)
                 array[:, r][lt] = lbp
-        if len(self.weights) > 1 and stats:
-            statnames, statfuncs = zip(*stats)
-            array_stats = compute_stats2(array, statfuncs, self.weights)
-        else:
-            array_stats = None
-        return array, array_stats
+        return self.pair(array, stats)
+
+    def build_maps(self, losses, clp, stats=()):
+        """
+        :param losses: an array of shape (A, R, P)
+        :param clp: a list of C conditional loss poes
+        :param stats: list of pairs [(statname, statfunc), ...]
+        :returns: an array of loss_maps of shape (A, R, C, LI)
+        """
+        shp = losses.shape[:2] + (len(clp), len(losses.dtype))  # (A, R, C, LI)
+        array = numpy.zeros(shp, F32)
+        for lti, lt in enumerate(losses.dtype.names):
+            for a, losses_ in enumerate(losses[lt]):
+                for r, ls in enumerate(losses_):
+                    for c, poe in enumerate(clp):
+                        clratio = conditional_loss_ratio(ls, self.poes, poe)
+                        array[a, r, c, lti] = clratio
+        return self.pair(array, stats)
