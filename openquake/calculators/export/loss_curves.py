@@ -28,11 +28,10 @@ def get_loss_builder(dstore):
     """
     oq = dstore['oqparam']
     weights = dstore['realizations']['weight']
-    alt = dstore['agg_loss_table']
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_losses = max(len(dset) for dset in alt.values())
+    num_events = dstore['gmdata']['events']
     periods = oq.return_periods or scientific.return_periods(
-        eff_time, num_losses)
+        eff_time, num_events.max())
     return scientific.LossesByPeriodBuilder(
         periods, oq.loss_dt(), weights, eff_time)
 

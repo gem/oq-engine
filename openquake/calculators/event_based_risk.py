@@ -503,9 +503,7 @@ class EbriskCalculator(base.RiskCalculator):
 @util.reader
 def build_curves_maps(avalues, builder, lrgetter, stats, monitor):
     """
-    Thin wrapper over :meth:
-    `openquake.risklib.scientific.CurveBuilder.build_maps`.
-    :returns: assets IDs and loss maps for the given chunk of assets
+    Build loss curves and optionally maps if conditional_loss_poes are set.
     """
     b = builder.loss_builder
     with monitor('getting loss ratios'):
