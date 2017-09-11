@@ -157,8 +157,10 @@ def build_loss_maps(avalues, builder, lrgetter, weights, stats, monitor):
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
+    with monitor('getting loss ratios'):
+        loss_ratios = lrgetter.get_all()
     loss_maps, loss_maps_stats = builder.build_maps(
-        avalues, lrgetter, weights, stats, monitor)
+        lrgetter.aids, avalues, loss_ratios, weights, stats, monitor)
     res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
     if loss_maps_stats is not None:
         res['loss_maps-stats'] = loss_maps_stats
@@ -466,7 +468,8 @@ class EbriskCalculator(base.RiskCalculator):
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
-                self.gmdata += dic.pop('gmdata')
+                for r, rec in dic.pop('gmdata').items():
+                    self.gmdata[start + r] = rec
                 self.save_losses(dic, start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
@@ -566,15 +569,15 @@ class EbriskCalculator(base.RiskCalculator):
                 eff_time, num_losses)
             b = scientific.LossesByPeriodBuilder(
                 periods, oq.loss_dt(), R, eff_time)
-            self.datastore['agg_loss-rlzs'] = array = b.build(alt)
+            self.datastore['agg_curves-rlzs'] = array = b.build(alt)
             self.datastore.set_attrs(
-                'agg_loss-rlzs', return_periods=b.return_periods)
+                'agg_curves-rlzs', return_periods=b.return_periods)
             statnames, stats = zip(*oq.risk_stats())
             if R > 1 and stats:
-                self.datastore['agg_loss-stats'] = compute_stats2(
+                self.datastore['agg_curves-stats'] = compute_stats2(
                     array, stats, weights)
                 self.datastore.set_attrs(
-                    'agg_loss-stats', return_periods=b.return_periods)
+                    'agg_curves-stats', return_periods=b.return_periods)
 
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
