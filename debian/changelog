@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in the statistical loss curves exporter for classical_risk
   * Replaced the agg_curve outputs with losses by return period outputs
   * Turned the DbServer into a multi-threaded server
   * Used zmq in the DbServer
