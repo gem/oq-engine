@@ -33,7 +33,7 @@ def get_loss_builder(dstore):
     periods = oq.return_periods or scientific.return_periods(
         eff_time, num_events.max())
     return scientific.LossesByPeriodBuilder(
-        periods, oq.loss_dt(), weights, eff_time)
+        periods, oq.loss_dt(), weights, num_events, eff_time)
 
 
 class LossCurveExporter(object):
