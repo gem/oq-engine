@@ -35,7 +35,7 @@ def get_loss_builder(dstore):
         eff_time, num_events.max())
     return scientific.LossesByPeriodBuilder(
         numpy.array(periods), oq.loss_dt(), weights, num_events,
-        eff_time, oq.risk_investigation_time or oq.hazard_investigation_time)
+        eff_time, oq.investigation_time)
 
 
 class LossCurveExporter(object):
