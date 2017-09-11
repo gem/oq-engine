@@ -51,7 +51,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # check the exported GMFs
         [fname, sitefile] = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-FromFile-PGA.csv', fname)
+        self.assertEqualFiles('expected/gmf-FromFile.csv', fname)
         self.assertEqualFiles('expected/sites.csv', sitefile)
 
         [fname] = out['losses_by_event', 'csv']
