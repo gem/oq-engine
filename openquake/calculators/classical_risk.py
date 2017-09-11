@@ -149,7 +149,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                        for cb in self.riskmodel.curve_builder
                        if cb.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
-            loss_ratios, self.oqparam.conditional_loss_poes, self.I)
+            loss_ratios, self.I)
         ltypes = self.riskmodel.loss_types
         loss_curves = numpy.zeros((self.N, self.R), self.loss_curve_dt)
         for l, r, aid, lcurve in result['loss_curves']:
