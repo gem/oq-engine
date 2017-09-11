@@ -197,4 +197,4 @@ class LossCurveExporter(object):
             else:  # a specific statistics
                 return {key: data[:, stat2idx[key]]}
         else:
-            raise NotImplementedError
+            raise KeyError('no loss curves in %s' % self.dstore)
