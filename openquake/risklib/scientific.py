@@ -1294,7 +1294,11 @@ class LossesByPeriodBuilder(object):
     """
     Build losses by period for all loss types at the same time.
 
-    :param insured_losses: insured losses flag from the job.ini
+    :param return_periods: ordered array of return periods
+    :param loss_dt: composite dtype for the loss types
+    :param weights: weights of the realizations
+    :param num_events: number of events for each realization
+    :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
     def __init__(self, return_periods, loss_dt, weights, num_events, eff_time,
                  risk_investigation_time):
