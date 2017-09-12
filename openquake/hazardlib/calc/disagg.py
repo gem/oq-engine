@@ -63,7 +63,7 @@ def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
 
 
 def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
-                       rlzs_assoc, gsims, imtls, poes, truncation_level,
+                       rlzs_by_gsim, gsims, imtls, poes, truncation_level,
                        n_epsilons, iml_disagg, mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
@@ -100,8 +100,7 @@ def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
                     for imt_str, imls in imtls.items():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[src_group_id, gs]:
-                            rlzi = rlz.ordinal
+                        for rlzi in rlzs_by_gsim[gs]:
                             iml = iml_disagg.get(imt_str)
                             curve_poes = curves[rlzi, imt_str][::-1]
                             for k, v in _disagg(

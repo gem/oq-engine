@@ -82,6 +82,20 @@ If you want to remove all the dependencies installed by the OpenQuake Engine you
 sudo apt-get autoremove
 ```
 
+## Data cleanup
+
+To reset the database `oq reset` command can be used:
+
+```bash
+sudo supervisorctl stop openquake-dbserver
+sudo -u openquake oq reset
+sudo supervisorctl start openquake-dbserver
+```
+
+To remove **all** the data produced by the OpenQuake Engine (including datastores) you must also remove `~/oqdata` in each users' home. The `reset-db` bash script is provided, as a reference, in `/usr/share/openquake/engine/utils`.
+
+If the packages have been already uninstalled, it's safe to remove `/var/lib/openquake`.
+
 ***
 
 ## Getting help

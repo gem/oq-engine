@@ -28,6 +28,9 @@ python -m openquake.commands db set_status 26 executing
 # repeat the failed/executing calculation, which is useful for QGIS
 python -m openquake.commands engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini
 
+# test db get_data
+python -m openquake.commands db get_data 7 sids
+
 # display the calculations
 python -m openquake.commands db find %
 
