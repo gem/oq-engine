@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 6
 ================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1810.hdf5 Fri Jul  7 07:32:34 2017
-checksum32                                      3,056,992,103           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+================================================ ========================
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14459.hdf5 Thu Aug 17 11:47:57 2017
+checksum32                                       3,056,992,103           
+engine_version                                   2.6.0-gitbdd9d17        
+================================================ ========================
 
 num_sites = 1, num_imts = 1
 
@@ -73,8 +73,8 @@ source_model.xml 0      Active Shallow Crust 2           140          140
 Informational data
 ------------------
 ============================== =============================================================================
-count_eff_ruptures.received    tot 1.15 KB, max_per_task 591 B                                              
-count_eff_ruptures.sent        sources 2.17 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 644 B, gsims 182 B
+count_eff_ruptures.received    tot 1.18 KB, max_per_task 602 B                                              
+count_eff_ruptures.sent        sources 2.17 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 646 B, gsims 182 B
 hazard.input_weight            287.0                                                                        
 hazard.n_imts                  1                                                                            
 hazard.n_levels                3                                                                            
@@ -92,7 +92,7 @@ Slowest sources
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
 0      1         SimpleFaultSource  91           0.003     1         1        
-0      2         ComplexFaultSource 49           0.003     1         1        
+0      2         ComplexFaultSource 49           0.002     1         1        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -100,15 +100,19 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.003     1     
+ComplexFaultSource 0.002     1     
 SimpleFaultSource  0.003     1     
 ================== ========= ======
+
+Duplicated sources
+------------------
+There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.004 2.343E-04 0.003 0.004 2        
+count_eff_ruptures 0.003 8.482E-04 0.003 0.004 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -116,12 +120,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.108     0.0       1     
-total count_eff_ruptures       0.007     0.0       2     
+reading composite source model 0.085     0.0       1     
+total count_eff_ruptures       0.006     0.0       2     
 store source_info              0.004     0.0       1     
-prefiltering source model      0.003     0.0       1     
+prefiltering source model      0.002     0.0       1     
 managing sources               0.002     0.0       1     
-aggregate curves               4.005E-05 0.0       2     
-reading site collection        3.862E-05 0.0       1     
-saving probability maps        3.123E-05 0.0       1     
+aggregate curves               5.579E-05 0.0       2     
+reading site collection        3.290E-05 0.0       1     
+saving probability maps        2.337E-05 0.0       1     
 ============================== ========= ========= ======

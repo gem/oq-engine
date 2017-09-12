@@ -1,29 +1,52 @@
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <sourceModel name="Example Source Model containing a Characteristic Fault Source defined by a sequence of Planar Surfaces">
-
-        <characteristicFaultSource id="1" name="Characteristic Fault Source with multiple Planar Surfaces" tectonicRegion="Active Shallow Crust">
-            <incrementalMFD minMag="7.0" binWidth="0.1">
-                <occurRates>0.4e-2</occurRates>
-            </incrementalMFD>
-            <rake>90.0</rake>
-            <surface>
-                <planarSurface strike="90.0" dip="45.0">
-                    <topLeft lon="-0.8" lat="-2.3" depth="0.0" />
-                    <topRight lon="-0.4" lat="-2.3" depth="0.0" />
-                    <bottomLeft lon="-0.8" lat="-2.3890" depth="10.0" />
-                    <bottomRight lon="-0.4" lat="-2.3890" depth="10.0" />
-                </planarSurface>
-                <planarSurface strike="30.94744" dip="30.0">
-                    <topLeft lon="-0.42" lat="-2.3" depth="0.0" />
-                    <topRight lon="-0.29967" lat="-2.09945" depth="0.0" />
-                    <bottomLeft lon="-0.28629" lat="-2.38009" depth="10.0" />
-                    <bottomRight lon="-0.16598" lat="-2.17955" depth="10.0" />
-                </planarSurface>
-            </surface>
-        </characteristicFaultSource>
-
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Example Source Model containing a Characteristic Fault Source defined by a sequence of Planar Surfaces"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <characteristicFaultSource
+            id="1"
+            name="Characteristic Fault Source with multiple Planar Surfaces"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="7.0000000E+00"
+                >
+                    <occurRates>
+                        4.0000000E-03
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    9.0000000E+01
+                </rake>
+                <surface>
+                    <planarSurface
+                    dip="4.5000000E+01"
+                    strike="9.0000000E+01"
+                    >
+                        <topLeft depth="0.0000000E+00" lat="-2.3000000E+00" lon="-8.0000000E-01"/>
+                        <topRight depth="0.0000000E+00" lat="-2.3000000E+00" lon="-4.0000000E-01"/>
+                        <bottomLeft depth="1.0000000E+01" lat="-2.3890000E+00" lon="-8.0000000E-01"/>
+                        <bottomRight depth="1.0000000E+01" lat="-2.3890000E+00" lon="-4.0000000E-01"/>
+                    </planarSurface>
+                    <planarSurface
+                    dip="3.0000000E+01"
+                    strike="3.0947440E+01"
+                    >
+                        <topLeft depth="0.0000000E+00" lat="-2.3000000E+00" lon="-4.2000000E-01"/>
+                        <topRight depth="0.0000000E+00" lat="-2.0994500E+00" lon="-2.9967000E-01"/>
+                        <bottomLeft depth="1.0000000E+01" lat="-2.3800900E+00" lon="-2.8629000E-01"/>
+                        <bottomRight depth="1.0000000E+01" lat="-2.1795500E+00" lon="-1.6598000E-01"/>
+                    </planarSurface>
+                </surface>
+            </characteristicFaultSource>
+        </sourceGroup>
     </sourceModel>
 </nrml>

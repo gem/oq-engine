@@ -327,6 +327,10 @@ class CompositeRiskModel(collections.Mapping):
             if oqparam.calculation_mode in ('classical', 'scenario'):
                 # case when the risk files are in the job_hazard.ini file
                 oqparam.calculation_mode += '_damage'
+                if 'exposure' not in oqparam.inputs:
+                    raise RuntimeError(
+                        'There are risk files in %r but not '
+                        'an exposure' % oqparam.inputs['job_ini'])
             self.damage_states = ['no_damage'] + oqparam.limit_states
             delattr(oqparam, 'limit_states')
             for taxonomy, ffs_by_lt in rmdict.items():
@@ -404,25 +408,21 @@ class CompositeRiskModel(collections.Mapping):
                 if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
-                cb = scientific.LossTypeCurveBuilder(
-                    loss_type, max(curve_resolutions), ratios, ses_ratio,
-                    True, oqparam.conditional_loss_poes,
-                    oqparam.insured_losses)
+                cb = scientific.CurveParams(
+                    l, loss_type, max(curve_resolutions), ratios, True)
             elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
-                cb = scientific.LossTypeCurveBuilder(
-                    loss_type, oqparam.loss_curve_resolution,
-                    oqparam.loss_ratios[loss_type], ses_ratio, True,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses)
+                lratios = numpy.array(oqparam.loss_ratios[loss_type], F32)
+                cb = scientific.CurveParams(
+                    l, loss_type, oqparam.loss_curve_resolution, lratios, True)
             else:  # no loss_ratios provided
-                cb = scientific.LossTypeCurveBuilder(
-                    loss_type, oqparam.loss_curve_resolution,
-                    default_loss_ratios, ses_ratio, False,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses)
+                cb = scientific.CurveParams(
+                    l, loss_type, oqparam.loss_curve_resolution,
+                    default_loss_ratios, False)
             cbs.append(cb)
-            cb.index = l
             self.lti[loss_type] = l
         return scientific.CurveBuilder(
-            cbs, oqparam.insured_losses, oqparam.conditional_loss_poes)
+            cbs, ses_ratio, oqparam.insured_losses,
+            oqparam.conditional_loss_poes)
 
     def get_loss_ratios(self):
         """
@@ -484,12 +484,22 @@ class CompositeRiskModel(collections.Mapping):
                     [asset.ordinal for asset in group[taxonomy]])
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
-        with mon_hazard:
-            hazard = hazard_getter.get_hazard()
-        with mon_risk:
-            for out in self._gen_outputs(
-                    hazard, imti, dic, hazard_getter.eids):
-                yield out
+        if hasattr(hazard_getter, 'rlzs_by_gsim'):
+            # save memory in event based risk by working one gsim at the time
+            for gsim in hazard_getter.rlzs_by_gsim:
+                with mon_hazard:
+                    hazard = hazard_getter.get_hazard(gsim)
+                with mon_risk:
+                    for out in self._gen_outputs(
+                            hazard, imti, dic, hazard_getter.eids):
+                        yield out
+        else:
+            with mon_hazard:
+                hazard = hazard_getter.get_hazard()
+            with mon_risk:
+                for out in self._gen_outputs(
+                        hazard, imti, dic, hazard_getter.eids):
+                    yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
@@ -631,7 +641,7 @@ class GmfGetter(object):
         # dictionary eid -> index
         self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
-    def gen_gmv(self):
+    def gen_gmv(self, gsim=None):
         """
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
@@ -639,7 +649,9 @@ class GmfGetter(object):
         itemsize = self.gmf_data_dt.itemsize
         sample = 0  # in case of sampling the realizations have a corresponding
         # sample number from 0 to the number of samples of the given src model
-        for gsim, rlzs in self.rlzs_by_gsim.items():  # OrderedDict
+        gsims = self.rlzs_by_gsim if gsim is None else [gsim]
+        for gsim in gsims:  # OrderedDict
+            rlzs = self.rlzs_by_gsim[gsim]
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sites.sids
@@ -677,13 +689,13 @@ class GmfGetter(object):
                     n += e
             sample += len(rlzs)
 
-    def get_hazard(self, data=None):
+    def get_hazard(self, gsim=None, data=None):
         """
         :param data: if given, an iterator of records of dtype gmf_data_dt
         :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
         if data is None:
-            data = self.gen_gmv()
+            data = self.gen_gmv(gsim)
         hazard = collections.defaultdict(lambda: collections.defaultdict(list))
         for rlzi, sid, eid, gmv in data:
             hazard[rlzi][sid].append((gmv, eid))
@@ -859,16 +871,16 @@ class LossRatiosGetter(object):
     def get(self, rlzi):
         """
         :param rlzi: a realization ordinal
-        :returns: a dictionary aid -> list of loss ratios
+        :returns: a dictionary aid -> array of shape (E, LI)
         """
         data = self.dstore['all_loss_ratios/data']
         dic = collections.defaultdict(list)  # aid -> ratios
         for aid, idxs in zip(self.aids, self.indices):
             for idx in idxs:
-                for rec in data[idx[0]: idx[1]]:
+                for rec in data[idx[0]: idx[1]]:  # dtype (rlzi, ratios)
                     if rlzi == rec['rlzi']:
                         dic[aid].append(rec['ratios'])
-        return dic
+        return {a: numpy.array(dic[a]) for a in dic}
 
     # used in the calculator
     def get_all(self):
