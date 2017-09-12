@@ -71,21 +71,23 @@ def extract_asset_values(key, dstore):
     """
     sid = int(key.split('/')[1])
     try:
-        vals = asset_cache[dstore.calc_id]
+        data = asset_cache[dstore.calc_id]
     except KeyError:
-        asset_refs = extract('dstore', 'asset_refs').array
-        assetcol = extract('dstore', 'assetcol')
+        asset_refs = extract('/asset_refs', dstore).array
+        assetcol = extract('/assetcol', dstore)
         assets_by_site = assetcol.assets_by_site()
         lts = assetcol.loss_types
         time_event = assetcol.time_event
-        assets = assets_by_site[sid]
         dt = numpy.dtype([('ref', asset_refs.dtype), ('aid', numpy.uint32)] +
                          [(str(lt), numpy.float32) for lt in lts])
-        vals = numpy.zeros(len(assets), dt)
-        for a, asset in enumerate(assets):
-            vals[a]['ref'] = asset_refs[asset.idx]
-            vals[a]['aid'] = asset.ordinal
-            for lt in lts:
-                vals[a][lt] = asset.value(lt, time_event)
-        asset_cache[dstore.calc_id] = vals
-    return vals
+        data = []
+        for assets in assets_by_site:
+            vals = numpy.zeros(len(assets), dt)
+            for a, asset in enumerate(assets):
+                vals[a]['ref'] = asset_refs[asset.idx]
+                vals[a]['aid'] = asset.ordinal
+                for lt in lts:
+                    vals[a][lt] = asset.value(lt, time_event)
+            data.append(vals)
+        asset_cache[dstore.calc_id] = data
+    return data[sid]
