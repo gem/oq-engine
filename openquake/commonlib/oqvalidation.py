@@ -431,7 +431,10 @@ class OqParam(valid.ParamSet):
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
-        if ('risk' in self.calculation_mode or
+        if (self.calculation_mode == 'gmf_ebrisk' and
+                'sites' not in self.inputs):
+            raise ValueError('Missing sites_csv in the .ini file')
+        elif ('risk' in self.calculation_mode or
                 'damage' in self.calculation_mode or
                 'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
