@@ -33,7 +33,7 @@ import requests
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
-from openquake.server.manage import db
+from openquake.server.dbserver import db
 from openquake.server.settings import DATABASE
 
 if requests.__version__ < '1.0.0':

@@ -2,8 +2,9 @@ scenario hazard
 ===============
 
 ========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_29178.hdf5 Wed Jun 14 10:03:48 2017
-engine_version                            2.5.0-gite200a20        
+localhost:/mnt/ssd/oqdata/calc_14413.hdf5 Thu Aug 17 11:47:33 2017
+checksum32                                3,204,585,490           
+engine_version                            2.6.0-gitbdd9d17        
 ========================================= ========================
 
 num_sites = 1, num_imts = 1
@@ -79,7 +80,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
-reading exposure        0.006     0.0       1     
-reading site collection 7.153E-06 0.0       1     
+filtering sites         0.013     0.0       1     
+reading exposure        0.009     0.0       1     
+reading site collection 9.060E-06 0.0       1     
 ======================= ========= ========= ======

@@ -19,7 +19,7 @@
 from __future__ import division
 import os
 import csv
-import gzip
+import zlib
 import zipfile
 import logging
 import operator
@@ -28,7 +28,7 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib.general import groupby, AccumDict, writetmp
+from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
@@ -112,7 +112,7 @@ def get_params(job_inis):
     cp = configparser.ConfigParser()
     cp.read(job_inis)
 
-    # drectory containing the config files we're parsing
+    # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
     base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
@@ -123,18 +123,26 @@ def get_params(job_inis):
                 input_type, _ext = key.rsplit('_', 1)
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
-                params['inputs'][input_type] = possibly_gunzip(path)
+                params['inputs'][input_type] = path
             else:
                 params[key] = value
 
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = [
-            os.path.join(base_path, src_path)
-            for src_path in sorted(source.collect_source_model_paths(smlt))]
+        params['inputs']['source'] = sorted(
+            _get_paths(base_path, source.collect_source_model_paths(smlt)))
 
     return params
+
+
+def _get_paths(base_path, uncertainty_models):
+    # extract the path names for the source models listed in the smlt file
+    for model in uncertainty_models:
+        for name in model.split():
+            fname = os.path.abspath(os.path.join(base_path, name))
+            if os.path.exists(fname):  # consider only real paths
+                yield fname
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
@@ -329,25 +337,10 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
+    # NB: converting the random_seed into an integer is needed on Windows
     return logictree.SourceModelLogicTree(
-        fname, validate=False, seed=oqparam.random_seed,
+        fname, validate=False, seed=int(oqparam.random_seed),
         num_samples=oqparam.number_of_logic_tree_samples)
-
-
-def possibly_gunzip(fname):
-    """
-    A file can be .gzipped to save space (this happens
-    in the debian package); in that case, let's gunzip it.
-
-    :param fname: a file name (not zipped)
-    """
-    is_gz = os.path.exists(fname) and fname.endswith('.gz')
-    there_is_gz = not os.path.exists(fname) and os.path.exists(fname + '.gz')
-    if is_gz:
-        return writetmp(gzip.open(fname).read())
-    elif there_is_gz:
-        return writetmp(gzip.open(fname + '.gz').read())
-    return fname
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
@@ -378,24 +371,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.name.split():
-            fname = possibly_gunzip(
-                os.path.abspath(os.path.join(oqparam.base_path, name)))
+            fname = os.path.abspath(os.path.join(oqparam.base_path, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                try:
-                    logging.info('Parsing %s', fname)
-                    src_groups.extend(psr.parse_src_groups(fname, apply_unc))
-                except ValueError as e:
-                    if str(e) in ('Surface does not conform with Aki & '
-                                  'Richards convention',
-                                  'Edges points are not in the right order'):
-                        raise InvalidFile('''\
-        %s: %s. Probably you are using an obsolete model.
-        In that case you can fix the file with the command
-        python -m openquake.engine.tools.correct_complex_sources %s
-        ''' % (fname, e, fname))
-                    else:
-                        raise
+                logging.info('Parsing %s', fname)
+                src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
                 smodel = nrml.read(fname).sourceModel
                 if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
@@ -446,7 +426,7 @@ def get_composite_source_model(oqparam, in_memory=True):
     def getid(src):
         try:
             return src.source_id
-        except:
+        except AttributeError:
             return src['id']
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
@@ -621,12 +601,15 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
+    assets = []
+    asset_refs = []
+    assets_by_tag = collections.defaultdict(list)
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, [], set(), [], cc)
+        area.attrib, assets, asset_refs, cc, assets_by_tag)
     return exp, exposure.assets
 
 
@@ -692,6 +675,13 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
+            tagnode = getattr(asset, 'tags', None)
+            if tagnode is not None:
+                for item in tagnode.attrib.items():
+                    valid.simple_id(item[0])  # name
+                    valid.nice_string(item[1])  # value
+                    exposure.assets_by_tag['%s-%s' % item].append(idx)
+            exposure.assets_by_tag['taxonomy-' + taxonomy].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
@@ -741,7 +731,6 @@ def get_exposure(oqparam):
             deductibles, insurance_limits, retrofitteds,
             exposure.cost_calculator)
         exposure.assets.append(ass)
-        exposure.taxonomies.add(taxonomy)
     if region:
         logging.info('Read %d assets within the region_constraint '
                      'and discarded %d assets outside the region',
@@ -749,7 +738,7 @@ def get_exposure(oqparam):
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
 
-    # sanity check
+    # sanity checks
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
     assert values, 'Could not find any value??'
     return exposure
@@ -758,8 +747,8 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies', 'asset_refs',
-                 'cost_calculator'])
+                 'area', 'assets', 'asset_refs', 'cost_calculator',
+                 'assets_by_tag'])
 
 
 def get_sitecol_assetcol(oqparam, exposure):
@@ -778,7 +767,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = riskinput.AssetCollection(
-        assets_by_site, exposure.cost_calculator,
+        assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
     return sitecol, assetcol
@@ -1036,3 +1025,24 @@ def get_mesh_hcurves(oqparam):
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
+
+
+def get_checksum32(oqparam):
+    """
+    Build an unsigned 32 bit integer from the input files of the calculation
+    """
+    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
+    # which is the same between Python 2 and Python 3
+    checksum = 0
+    for key in sorted(oqparam.inputs):
+        fname = oqparam.inputs[key]
+        if key == 'source':  # list of fnames and/or strings
+            for f in fname:
+                data = open(f, 'rb').read()
+                checksum = zlib.adler32(data, checksum) & 0xffffffff
+        elif os.path.exists(fname):
+            data = open(fname, 'rb').read()
+            checksum = zlib.adler32(data, checksum) & 0xffffffff
+        else:
+            raise ValueError('%s is not a file' % fname)
+    return checksum
