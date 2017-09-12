@@ -2,8 +2,9 @@ Event Based Risk for Turkey reduced
 ===================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29212.hdf5 Wed Jun 14 10:04:09 2017
-engine_version                                   2.5.0-gite200a20        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14447.hdf5 Thu Aug 17 11:47:51 2017
+checksum32                                       565,489,737             
+engine_version                                   2.6.0-gitbdd9d17        
 ================================================ ========================
 
 num_sites = 14, num_imts = 2
@@ -48,9 +49,9 @@ Composite source model
 ======================== ====== ======================================================== ====================== ================
 smlt_path                weight source_model_file                                        gsim_logic_tree        num_realizations
 ======================== ====== ======================================================== ====================== ================
-AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(4,0,2,1,5,4,4) 4/4             
-FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(4,0,2,1,5,4,4) 4/4             
-SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(4,0,2,1,5,4,4) 0/0             
+AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(1,0,4,5,4,2,4) 4/4             
+FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(1,0,4,5,4,2,4) 4/4             
+SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(1,0,4,5,4,2,4) 0/0             
 ======================== ====== ======================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -82,14 +83,14 @@ Number of ruptures per tectonic region type
 ========================= ====== ==================== =========== ============ ============
 source_model              grp_id trt                  num_sources eff_ruptures tot_ruptures
 ========================= ====== ==================== =========== ============ ============
-models/src/as_model.xml   5      Active Shallow Crust 7           38280        39,108      
+models/src/as_model.xml   5      Active Shallow Crust 7           39108        39,108      
 models/src/fsbg_model.xml 9      Active Shallow Crust 29          4638         7,374       
 ========================= ====== ==================== =========== ============ ============
 
 ============= ======
 #TRT models   2     
 #sources      36    
-#eff_ruptures 42,918
+#eff_ruptures 43,746
 #tot_ruptures 46,482
 #tot_weight   0     
 ============= ======
@@ -97,17 +98,17 @@ models/src/fsbg_model.xml 9      Active Shallow Crust 29          4638         7
 Informational data
 ------------------
 ============================ =======================================================================================
-compute_ruptures.received    tot 83.96 KB, max_per_task 6.19 KB                                                     
-compute_ruptures.sent        sources 444.9 KB, src_filter 79.44 KB, param 67.87 KB, gsims 15.87 KB, monitor 15.19 KB
-hazard.input_weight          7,937                                                                                  
-hazard.n_imts                2 B                                                                                    
-hazard.n_levels              91 B                                                                                   
-hazard.n_realizations        3.75 KB                                                                                
-hazard.n_sites               14 B                                                                                   
-hazard.n_sources             36 B                                                                                   
-hazard.output_weight         1,274                                                                                  
+compute_ruptures.received    tot 91.51 KB, max_per_task 5.42 KB                                                     
+compute_ruptures.sent        sources 462.38 KB, src_filter 96.92 KB, param 82.8 KB, gsims 19.36 KB, monitor 19.12 KB
+hazard.input_weight          39598.0                                                                                
+hazard.n_imts                2                                                                                      
+hazard.n_levels              91                                                                                     
+hazard.n_realizations        3840                                                                                   
+hazard.n_sites               14                                                                                     
+hazard.n_sources             36                                                                                     
+hazard.output_weight         1274.0                                                                                 
 hostname                     tstation.gem.lan                                                                       
-require_epsilons             0 B                                                                                    
+require_epsilons             False                                                                                  
 ============================ =======================================================================================
 
 Estimated data transfer for the avglosses
@@ -142,26 +143,26 @@ Slowest sources
 ====== ============ ================= ============ ========= ========= =========
 grp_id source_id    source_class      num_ruptures calc_time num_sites num_split
 ====== ============ ================= ============ ========= ========= =========
-9      FSBG_TRCS038 SimpleFaultSource 21           0.0       4         0        
-9      FSBG_TRCS373 SimpleFaultSource 85           0.0       1         0        
-5      AS_TRAS346   AreaSource        6,171        0.0       8         0        
-9      FSBG_TRCS052 SimpleFaultSource 55           0.0       1         0        
-9      FSBG_BGCS044 SimpleFaultSource 57           0.0       1         0        
-9      FSBG_TRCS912 SimpleFaultSource 30           0.0       3         0        
-9      FSBG_TRCS114 SimpleFaultSource 449          0.0       1         0        
-9      FSBG_TRCS417 SimpleFaultSource 23           0.0       3         0        
-5      AS_GEAS479   AreaSource        2,880        0.0       2         0        
-5      AS_TRAS458   AreaSource        4,845        0.0       4         0        
 9      FSBG_TRCS437 SimpleFaultSource 193          0.0       3         0        
-9      FSBG_GRCS912 SimpleFaultSource 32           0.0       3         0        
-9      FSBG_TRCS090 SimpleFaultSource 245          0.0       1         0        
-9      FSBG_TRCS319 SimpleFaultSource 12           0.0       3         0        
-5      AS_TRAS334   AreaSource        9,780        0.0       12        0        
+9      FSBG_TRCS038 SimpleFaultSource 21           0.0       4         0        
 9      FSBG_TRCS068 SimpleFaultSource 149          0.0       2         0        
-9      FSBG_TRCS003 SimpleFaultSource 1,020        0.0       5         0        
-9      FSBG_TRCS206 SimpleFaultSource 64           0.0       2         0        
-9      FSBG_TRCS231 SimpleFaultSource 7            0.0       5         0        
+9      FSBG_BGCS044 SimpleFaultSource 57           0.0       1         0        
+5      AS_GEAS479   AreaSource        2,880        0.0       2         0        
+9      FSBG_TRCS313 SimpleFaultSource 38           0.0       7         0        
+9      FSBG_TRCS199 SimpleFaultSource 32           0.0       4         0        
 9      FSBG_TRCS322 SimpleFaultSource 194          0.0       5         0        
+9      FSBG_TRCS003 SimpleFaultSource 1,020        0.0       5         0        
+9      FSBG_TRCS113 SimpleFaultSource 149          0.0       1         0        
+9      FSBG_TRCS114 SimpleFaultSource 449          0.0       1         0        
+9      FSBG_TRCS052 SimpleFaultSource 55           0.0       1         0        
+9      FSBG_TRCS082 SimpleFaultSource 197          0.0       1         0        
+9      FSBG_TRCS373 SimpleFaultSource 85           0.0       1         0        
+9      FSBG_ARAS462 AreaSource        2,397        0.0       1         0        
+5      AS_TRAS346   AreaSource        6,171        0.0       8         0        
+9      FSBG_TRCS417 SimpleFaultSource 23           0.0       3         0        
+5      AS_TRAS395   AreaSource        4,896        0.0       6         0        
+9      FSBG_TRCS239 SimpleFaultSource 113          0.0       3         0        
+5      AS_TRAS458   AreaSource        4,845        0.0       4         0        
 ====== ============ ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -173,11 +174,15 @@ AreaSource        0.0       9
 SimpleFaultSource 0.0       27    
 ================= ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.271 0.281  0.005 0.800 50       
+compute_ruptures   0.214 0.200  0.007 0.702 61       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -185,14 +190,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         13        0.215     50    
-reading composite source model 6.338     0.0       1     
-managing sources               1.261     0.0       1     
-prefiltering source model      0.160     0.0       1     
-store source_info              0.068     0.0       1     
-saving ruptures                0.037     0.0       50    
-reading exposure               0.015     0.0       1     
-filtering ruptures             0.009     0.0       32    
+total compute_ruptures         13        0.203     61    
+reading composite source model 5.899     0.0       1     
+managing sources               0.789     0.0       1     
+prefiltering source model      0.152     0.0       1     
+store source_info              0.066     0.0       1     
+saving ruptures                0.039     0.0       61    
+reading exposure               0.020     0.0       1     
+filtering ruptures             0.009     0.0       33    
 setting event years            0.002     0.0       1     
-reading site collection        8.106E-06 0.0       1     
+reading site collection        7.391E-06 0.0       1     
 ============================== ========= ========= ======

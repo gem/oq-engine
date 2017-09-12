@@ -30,7 +30,7 @@ Requirements are:
 
 ## Install packages from the OpenQuake website
 
-Download the installer from http://www.globalquakemodel.org/pkgs/linux/oq-engine/openquake-setup-linux64-2.5.0-1.run using any browser
+Download the installer from http://storage.globalquakemodel.org/pkgs/linux/oq-engine/openquake-setup-linux64-2.5.0-1.run using any browser
 
 From a terminal run
 
@@ -69,7 +69,7 @@ rm -Rf ~/openquake
 If _make the 'oq' command available by default_ as been set to 'Y' (default) during the installation
 the 'oq' command will be available by default after the terminal has been restarted.
 
-To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, yum must run
+To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, you must run
 
 ```bash
 # default is ~/openquake

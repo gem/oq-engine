@@ -22,7 +22,6 @@ classes for :class:`ASR <BaseASR>`, :class:`MSR <BaseMSR>`,
 :class:`ASRSigma <BaseASRSigma>`, and :class:`MSRSigma <BaseMSRSigma>`
 """
 import abc
-import math
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -67,6 +66,7 @@ class BaseASRSigma(with_metaclass(abc.ABCMeta, BaseASR)):
             from -180 to 180.
         """
 
+
 class BaseMSR(with_metaclass(abc.ABCMeta)):
     """
     A base class for Magnitude-Area Scaling Relationship.
@@ -86,6 +86,12 @@ class BaseMSR(with_metaclass(abc.ABCMeta)):
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
         """
+
+    def __eq__(self, other):
+        """
+        Two instances of the same class are considered equal
+        """
+        return self.__class__ is other.__class__
 
     def __repr__(self):
         """

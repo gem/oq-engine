@@ -69,7 +69,7 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): ['<0,b1~@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>
+0,AkkarBommer2010(): [0]>
 =============== ======
 attribute       nbytes
 =============== ======'''
@@ -134,16 +134,13 @@ xmlns:gml="http://www.opengis.net/gml"
     gsimTreePath=""
     sourceModelTreePath=""
     >
-        
         <gmfSet
         stochasticEventSetId="1"
         >
-            
             <gmf
             IMT="PGA"
             ruptureId="scenario-0"
             >
-                
                 <node gmv="1.26515E-02" lat="4.35812E+01" lon="1.21248E+01"/>
                 <node gmv="1.24056E-02" lat="4.35812E+01" lon="1.21248E+01"/>
             </gmf>
