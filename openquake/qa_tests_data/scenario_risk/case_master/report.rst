@@ -2,8 +2,9 @@ scenario risk
 =============
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29268.hdf5 Wed Jun 14 10:05:20 2017
-engine_version                                   2.5.0-gite200a20        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14504.hdf5 Thu Aug 17 11:49:00 2017
+checksum32                                       3,710,104,175           
+engine_version                                   2.6.0-gitbdd9d17        
 ================================================ ========================
 
 num_sites = 7, num_imts = 4
@@ -72,7 +73,7 @@ Informational data
 ------------------
 ================ ================
 hostname         tstation.gem.lan
-require_epsilons 1 B             
+require_epsilons True            
 ================ ================
 
 Exposure model
@@ -97,11 +98,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.027     0.0       1     
-reading exposure        0.007     0.0       1     
+computing gmfs          0.011     0.0       1     
+reading exposure        0.009     0.0       1     
 filtering sites         0.007     0.0       1     
 saving gmfs             0.002     0.0       1     
-building riskinputs     5.789E-04 0.0       1     
-building epsilons       3.920E-04 0.0       1     
-reading site collection 6.914E-06 0.0       1     
+building riskinputs     4.082E-04 0.0       1     
+building epsilons       3.593E-04 0.0       1     
+reading site collection 4.530E-06 0.0       1     
 ======================= ========= ========= ======

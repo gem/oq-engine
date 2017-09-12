@@ -2,8 +2,9 @@ Hazard Calculation for end-to-end hazard+risk
 =============================================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29172.hdf5 Wed Jun 14 10:03:48 2017
-engine_version                                   2.5.0-gite200a20        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14407.hdf5 Thu Aug 17 11:47:32 2017
+checksum32                                       2,783,587,006           
+engine_version                                   2.6.0-gitbdd9d17        
 ================================================ ========================
 
 num_sites = 1, num_imts = 1
@@ -42,7 +43,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ simple(4,1)     4/4             
+b1        1.000  `source_model.xml <source_model.xml>`_ simple(1,4)     4/4             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -86,17 +87,17 @@ source_model.xml 1      Subduction Interface 1           23           23
 Informational data
 ------------------
 ============================== =============================================================================
-count_eff_ruptures.received    tot 1.13 KB, max_per_task 579 B                                              
-count_eff_ruptures.sent        sources 2.29 KB, param 1.94 KB, srcfilter 1.34 KB, monitor 626 B, gsims 425 B
-hazard.input_weight            4.600                                                                        
-hazard.n_imts                  1 B                                                                          
-hazard.n_levels                50 B                                                                         
-hazard.n_realizations          4 B                                                                          
-hazard.n_sites                 1 B                                                                          
-hazard.n_sources               2 B                                                                          
-hazard.output_weight           50                                                                           
+count_eff_ruptures.received    tot 1.18 KB, max_per_task 605 B                                              
+count_eff_ruptures.sent        sources 2.29 KB, param 1.94 KB, srcfilter 1.34 KB, monitor 646 B, gsims 425 B
+hazard.input_weight            4.6000000000000005                                                           
+hazard.n_imts                  1                                                                            
+hazard.n_levels                50                                                                           
+hazard.n_realizations          4                                                                            
+hazard.n_sites                 1                                                                            
+hazard.n_sources               2                                                                            
+hazard.output_weight           50.0                                                                         
 hostname                       tstation.gem.lan                                                             
-require_epsilons               0 B                                                                          
+require_epsilons               False                                                                        
 ============================== =============================================================================
 
 Slowest sources
@@ -104,8 +105,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      A         PointSource  23           1.864E-04 1         1        
-1      B         PointSource  23           1.545E-04 1         1        
+0      A         PointSource  23           1.824E-04 1         1        
+1      B         PointSource  23           1.745E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -113,14 +114,18 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.409E-04 2     
+PointSource  3.569E-04 2     
 ============ ========= ======
+
+Duplicated sources
+------------------
+There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.001 3.422E-05 0.001 0.001 2        
+count_eff_ruptures 0.001 2.495E-05 0.001 0.001 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -128,12 +133,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-store source_info              0.004     0.0       1     
-total count_eff_ruptures       0.002     0.0       2     
+store source_info              0.005     0.0       1     
+managing sources               0.003     0.0       1     
 reading composite source model 0.002     0.0       1     
-managing sources               0.002     0.0       1     
-prefiltering source model      6.380E-04 0.0       1     
-aggregate curves               3.481E-05 0.0       2     
-reading site collection        3.481E-05 0.0       1     
-saving probability maps        2.360E-05 0.0       1     
+total count_eff_ruptures       0.002     0.137     2     
+prefiltering source model      8.676E-04 0.0       1     
+aggregate curves               4.435E-05 0.0       2     
+reading site collection        4.220E-05 0.0       1     
+saving probability maps        2.909E-05 0.0       1     
 ============================== ========= ========= ======

@@ -18,7 +18,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.o']rg/licenses/>.
 import os.path
 import getpass
-from openquake.server.manage import db
+from openquake.server.dbserver import db
 
 expected_outputs = {
     'AreaSourceClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
@@ -28,7 +28,7 @@ expected_outputs = {
     'ComplexFaultSourceClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
     'Disaggregation': ['hcurves', 'disagg'],
     'EventBasedPSHA': ['ruptures', 'gmf_data', 'hcurves', 'hmaps'],
-    'LogicTreeCase1ClassicalPSHA': ['hcurves', 'hmaps'],
+    'LogicTreeCase1ClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
     'LogicTreeCase2ClassicalPSHA': ['hcurves', 'hmaps'],
     'LogicTreeCase3ClassicalPSHA': ['hcurves', 'hmaps'],
     'PointSourceClassicalPSHA': ['hcurves', 'hmaps', 'uhs'],
@@ -37,10 +37,10 @@ expected_outputs = {
     'SimpleFaultSourceClassicalPSHA': ['hcurves', 'uhs'],
     'ClassicalBCR': ['bcr-rlzs'],
     'ClassicalRisk': ['loss_maps-rlzs'],
-    'ScenarioDamage': ['dmg_by_asset', 'dmg_by_taxon', 'dmg_total', 'losses_by_asset', 'losses_by_taxon', 'losses_total'],
+    'ScenarioDamage': ['dmg_by_asset', 'dmg_by_tag', 'dmg_total', 'losses_by_asset', 'losses_by_tag', 'losses_total'],
     'ClassicalDamage': ['damages-rlzs'],
-    'EventBasedRisk': ['agg_loss_table', 'avg_losses-rlzs', 'avg_losses-stats', 'loss_maps-rlzs', 'loss_maps-stats', 'losses_by_taxon-rlzs'],
-    'ScenarioRisk': ['losses_by_asset', 'losses_by_event', 'losses_by_taxon-rlzs']}
+    'EventBasedRisk': ['agg_loss_table', 'avg_losses-rlzs', 'avg_losses-stats', 'loss_maps-rlzs', 'loss_maps-stats', 'losses_by_tag-rlzs'],
+    'ScenarioRisk': ['losses_by_asset', 'losses_by_event', 'losses_by_tag-rlzs']}
 
 
 def get_job_dir_job_id(db, user):

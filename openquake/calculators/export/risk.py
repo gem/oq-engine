@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import itertools
 import collections
 import logging
@@ -73,23 +73,23 @@ def copy_to(elt, rup_data, rup_ids):
 
 
 # this is used by event_based_risk
-@export.add(('agg_curve-rlzs', 'csv'), ('agg_curve-stats', 'csv'))
+@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     agg_curve = dstore[ekey[0]]
+    periods = dstore.get_attr(ekey[0], 'return_periods')
     if ekey[0].endswith('stats'):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
         tags = ['rlz-%03d' % r for r in range(agg_curve.shape[1])]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    header = (('annual_frequency_of_exceedence', 'return_period') +
+              agg_curve.dtype.names)
     for r, tag in enumerate(tags):
-        data = [['loss_type', 'loss', 'poe']]
-        for loss_type in agg_curve.dtype.names:
-            array = agg_curve[0, r][loss_type]
-            for loss, poe in zip(array['losses'], array['poes']):
-                data.append((loss_type, loss, poe))
-        dest = dstore.build_fname('agg_curve', tag, 'csv')
-        writer.save(data, dest)
+        d = compose_arrays(periods, agg_curve[:, r], 'return_period')
+        data = compose_arrays(1 / periods, d, 'annual_frequency_of_exceedence')
+        dest = dstore.build_fname('agg_loss', tag, 'csv')
+        writer.save(data, dest, header)
     return writer.getsaved()
 
 
@@ -206,25 +206,6 @@ def export_all_losses_npz(ekey, dstore):
     return [fname]
 
 
-# this is used by classical_risk
-@export.add(('agg_losses-rlzs', 'csv'))
-def export_agg_losses(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    agg_losses = dstore[ekey[0]].value
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    eids = calc.build_eids(dstore['events'], 0)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        losses = agg_losses[:, rlz.ordinal]
-        dest = dstore.build_fname('agg_losses', rlz, 'csv')
-        data = compose_arrays(eids, losses)
-        writer.save(data, dest)
-    return writer.getsaved()
-
-
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
 def export_agg_losses_ebr(ekey, dstore):
@@ -233,6 +214,7 @@ def export_agg_losses_ebr(ekey, dstore):
     :param dstore: datastore object
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    L = len(loss_types)
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     has_rup_data = 'ruptures' in dstore
@@ -279,7 +261,7 @@ def export_agg_losses_ebr(ekey, dstore):
             for i, ins in enumerate(
                     ['', '_ins'] if oq.insured_losses else ['']):
                 for l, loss_type in enumerate(loss_types):
-                    elt[loss_type + ins][:] = losses[:, l, i]
+                    elt[loss_type + ins][:] = losses[:, l + L * i]
             elt.sort(order=['year', 'event_id'])
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             writer.save(elt, dest)
@@ -453,17 +435,17 @@ def export_dmg_by_asset_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('dmg_by_taxon', 'csv'))
-def export_dmg_by_taxon_csv(ekey, dstore):
+@export.add(('dmg_by_tag', 'csv'))
+def export_dmg_by_tag_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
+    tags = add_quotes(dstore['assetcol'].tags())
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
-        dmg_by_taxon = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        dmg_by_tag = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonomy')
+        array = compose_arrays(tags, dmg_by_tag, 'tag')
         writer.save(array, fname)
     return writer.getsaved()
 
@@ -565,39 +547,39 @@ def get_paths(rlz):
 
 
 # used by scenario_damage
-@export.add(('losses_by_taxon', 'csv'))
-def export_csq_by_taxon_csv(ekey, dstore):
-    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
+@export.add(('losses_by_tag', 'csv'))
+def export_csq_by_tag_csv(ekey, dstore):
+    tags = add_quotes(dstore['assetcol'].tags())
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     value = dstore[ekey[0]].value  # matrix T x R
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
+        writer.save(compose_arrays(tags, values, 'tag'), fname)
     return writer.getsaved()
 
 
 # used by event_based_risk and scenario_risk
-@export.add(('losses_by_taxon-rlzs', 'csv'), ('losses_by_taxon-stats', 'csv'))
-def export_losses_by_taxon_csv(ekey, dstore):
+@export.add(('losses_by_tag-rlzs', 'csv'), ('losses_by_tag-stats', 'csv'))
+def export_losses_by_tag_csv(ekey, dstore):
     oq = dstore['oqparam']
-    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
+    tags = add_quotes(dstore['assetcol'].tags())
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_types = oq.loss_dt().names
     key, kind = ekey[0].split('-')
     value = dstore[key + '-rlzs'].value
     if kind == 'stats':
         weights = dstore['realizations']['weight']
-        tags, stats = zip(*oq.risk_stats())
+        kinds, stats = zip(*oq.risk_stats())
         value = compute_stats2(value, stats, weights)
     else:  # rlzs
-        tags = rlzs
+        kinds = rlzs
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dt = numpy.dtype([('taxonomy', taxonomies.dtype)] + oq.loss_dt_list())
-    for tag, values in zip(tags, value.transpose(1, 0, 2)):
-        fname = dstore.build_fname(key, tag, ekey[1])
+    dt = numpy.dtype([('tag', tags.dtype)] + oq.loss_dt_list())
+    for kind, values in zip(kinds, value.transpose(1, 0, 2)):
+        fname = dstore.build_fname(key, kind, ekey[1])
         array = numpy.zeros(len(values), dt)
-        array['taxonomy'] = taxonomies
+        array['tag'] = numpy.array(tags)
         for l, lt in enumerate(loss_types):
             array[lt] = values[:, l]
         writer.save(array, fname)

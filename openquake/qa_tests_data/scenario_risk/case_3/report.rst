@@ -2,8 +2,9 @@ Scenario QA Test 3
 ==================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29266.hdf5 Wed Jun 14 10:05:20 2017
-engine_version                                   2.5.0-gite200a20        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14502.hdf5 Thu Aug 17 11:49:00 2017
+checksum32                                       3,085,599,105           
+engine_version                                   2.6.0-gitbdd9d17        
 ================================================ ========================
 
 num_sites = 4, num_imts = 3
@@ -66,7 +67,7 @@ Informational data
 ------------------
 ================ ================
 hostname         tstation.gem.lan
-require_epsilons 0 B             
+require_epsilons False           
 ================ ================
 
 Exposure model
@@ -91,11 +92,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.072     0.0       1     
-reading exposure        0.005     0.0       1     
-filtering sites         0.005     0.0       1     
-saving gmfs             0.002     0.0       1     
-building epsilons       6.070E-04 0.0       1     
-building riskinputs     3.676E-04 0.0       1     
-reading site collection 6.676E-06 0.0       1     
+saving gmfs             0.010     0.0       1     
+reading exposure        0.007     0.0       1     
+filtering sites         0.006     0.0       1     
+computing gmfs          0.006     0.0       1     
+building epsilons       7.279E-04 0.0       1     
+building riskinputs     3.328E-04 0.0       1     
+reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

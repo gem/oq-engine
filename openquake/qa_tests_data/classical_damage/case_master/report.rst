@@ -2,8 +2,9 @@ classical damage
 ================
 
 ================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_29198.hdf5 Wed Jun 14 10:03:52 2017
-engine_version                                   2.5.0-gite200a20        
+tstation.gem.lan:/mnt/ssd/oqdata/calc_14433.hdf5 Thu Aug 17 11:47:35 2017
+checksum32                                       1,277,613,563           
+engine_version                                   2.6.0-gitbdd9d17        
 ================================================ ========================
 
 num_sites = 7, num_imts = 3
@@ -99,17 +100,17 @@ source_model_2.xml 3      Stable Shallow Crust 1           1            1
 Informational data
 ------------------
 ============================== ===================================================================================
-count_eff_ruptures.received    tot 5 KB, max_per_task 720 B                                                       
-count_eff_ruptures.sent        sources 21.96 KB, param 10.65 KB, srcfilter 6.66 KB, monitor 2.45 KB, gsims 1.39 KB
-hazard.input_weight            969                                                                                
-hazard.n_imts                  3 B                                                                                
-hazard.n_levels                79 B                                                                               
-hazard.n_realizations          8 B                                                                                
-hazard.n_sites                 7 B                                                                                
-hazard.n_sources               4 B                                                                                
-hazard.output_weight           2,212                                                                              
+count_eff_ruptures.received    tot 16.64 KB, max_per_task 636 B                                                   
+count_eff_ruptures.sent        sources 39.24 KB, param 37.27 KB, srcfilter 23.3 KB, monitor 8.83 KB, gsims 4.89 KB
+hazard.input_weight            6783.0                                                                             
+hazard.n_imts                  3                                                                                  
+hazard.n_levels                79                                                                                 
+hazard.n_realizations          8                                                                                  
+hazard.n_sites                 7                                                                                  
+hazard.n_sources               4                                                                                  
+hazard.output_weight           2212.0                                                                             
 hostname                       tstation.gem.lan                                                                   
-require_epsilons               0 B                                                                                
+require_epsilons               False                                                                              
 ============================== ===================================================================================
 
 Exposure model
@@ -134,10 +135,10 @@ Slowest sources
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-0      1         SimpleFaultSource         482          0.045     7         15       
-2      1         SimpleFaultSource         482          0.038     7         15       
+2      1         SimpleFaultSource         482          0.045     7         15       
+0      1         SimpleFaultSource         482          0.042     7         15       
 3      2         CharacteristicFaultSource 1            0.003     7         1        
-1      2         SimpleFaultSource         4            0.003     7         1        
+1      2         SimpleFaultSource         4            0.002     7         1        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -146,14 +147,24 @@ Computation times by source typology
 source_class              calc_time counts
 ========================= ========= ======
 CharacteristicFaultSource 0.003     1     
-SimpleFaultSource         0.085     3     
+SimpleFaultSource         0.089     3     
 ========================= ========= ======
+
+Duplicated sources
+------------------
+========= ========= =============
+source_id calc_time src_group_ids
+========= ========= =============
+1         0.087     0 2          
+2         0.005     1 3          
+========= ========= =============
+Sources with the same ID but different parameters
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.012 0.007  0.003 0.024 8        
+count_eff_ruptures 0.004 0.001  0.002 0.007 28       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,13 +172,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.120     0.0       1     
-total count_eff_ruptures       0.095     0.375     8     
-reading composite source model 0.016     0.0       1     
-reading exposure               0.008     0.0       1     
-prefiltering source model      0.006     0.0       1     
+managing sources               0.163     0.0       1     
+total count_eff_ruptures       0.113     0.141     28    
+reading composite source model 0.014     0.0       1     
+reading exposure               0.007     0.0       1     
 store source_info              0.005     0.0       1     
-aggregate curves               1.924E-04 0.0       8     
-saving probability maps        3.290E-05 0.0       1     
-reading site collection        8.821E-06 0.0       1     
+prefiltering source model      0.005     0.0       1     
+aggregate curves               6.137E-04 0.0       28    
+saving probability maps        3.338E-05 0.0       1     
+reading site collection        5.484E-06 0.0       1     
 ============================== ========= ========= ======
