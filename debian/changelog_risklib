@@ -1,3 +1,5 @@
+## DO NOT ADD NEW ITEMS: use `debian/changelog` instead ##
+
 python-oq-risklib (0.12.1-0~precise01) precise; urgency=low
 
   [Michele Simionato]

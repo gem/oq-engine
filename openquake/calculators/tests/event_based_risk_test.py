@@ -44,11 +44,12 @@ def check_total_losses(calc):
         for li, lt in enumerate(loss_dt.names):
             data1[li] += dset['loss'][:, li].sum()
 
-    # check the sums are consistent with the ones coming from losses_by_taxon
+    # check the sums are consistent with the ones coming from losses_by_tag
+    tax_idx = dstore['assetcol'].get_tax_idx()
     data2 = numpy.zeros(LI, numpy.float32)
-    lbt = dstore['losses_by_taxon-rlzs']
+    lbt = dstore['losses_by_tag-rlzs']
     for li in range(LI):
-        data2[li] += lbt[:, :, li].sum()
+        data2[li] += lbt[tax_idx, :, li].sum()
     numpy.testing.assert_allclose(data1, data2, 1E-6)
 
     # test the asset_loss_table exporter; notice that I need to disable
@@ -88,7 +89,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
-        ekeys = [('agg_curve-stats', 'csv')]
+        ekeys = [('agg_curves-stats', 'csv')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
@@ -167,7 +168,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='csv', hazard_calculation_id=str(hc_id))
-        [fname] = export(('agg_curve-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -185,7 +186,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
-        fnames = export(('agg_curve-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
@@ -215,8 +216,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
-        fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'losses_by_taxon-stats not exported?'
+        fnames = export(('losses_by_tag-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'losses_by_tag-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
@@ -230,9 +231,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check job_info is stored
-        job_info = dict(self.calc.datastore['job_info'])
-        self.assertIn(b'build_loss_maps.sent', job_info)
-        self.assertIn(b'build_loss_maps.received', job_info)
+        job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
+        self.assertIn('build_loss_maps.sent', job_info)
+        self.assertIn('build_loss_maps.received', job_info)
 
         check_total_losses(self.calc)
 
