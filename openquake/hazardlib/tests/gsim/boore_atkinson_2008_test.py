@@ -58,9 +58,10 @@ class Atkinson2010HawaiiTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Atkinson2010Hawaii
     
     # Test data were kindly provided by Gail Atkinson
+    # (distances less than 1km are imposed equal to 1km)
 
     def test_mean(self):
-        self.check('NGA/BA08/A10H_MEDIAN.csv',
+        self.check('NGA/BA08/A10H_MEDIAN_1KM.csv',
                     max_discrep_percentage=0.6)
 
     def test_std_total(self):
