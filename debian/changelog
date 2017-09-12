@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Used the new loss curves algorithm for the asset loss curves and loss maps
+
   [Daniele Viganò]
   * Changed the 'CTRL-C' behaviour to make sure that all children
     processes are killed when a calculation in interrupted
