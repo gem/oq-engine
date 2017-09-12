@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Changed the 'CTRL-C' behaviour to make sure that all children
+    processes are killed when a calculation in interrupted
+
   [Michele Simionato]
   * Replaced the agg_curve outputs with losses by return period outputs
   * Turned the DbServer into a multi-threaded server
