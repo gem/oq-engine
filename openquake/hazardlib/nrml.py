@@ -85,8 +85,8 @@ import numpy
 
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import (
-    node_to_xml, context, Node, striptag, ValidatingXmlParser, floatformat)
-from openquake.hazardlib import valid, sourceconverter
+    node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
+from openquake.hazardlib import valid, sourceconverter, InvalidFile
 
 F64 = numpy.float64
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
@@ -152,9 +152,8 @@ def get_source_model_05(node, fname, converter):
     converter.fname = fname
     groups = []  # expect a sequence of sourceGroup nodes
     for src_group in node:
-        with context(fname, src_group):
-            if 'sourceGroup' not in src_group.tag:
-                raise ValueError('expected sourceGroup')
+        if 'sourceGroup' not in src_group.tag:
+            raise ValueError('expected sourceGroup')
         groups.append(converter.convert_node(src_group))
     return sorted(groups)
 
@@ -230,7 +229,7 @@ validators = {
     'epsBinEdges': valid.integers,
     'lonBinEdges': valid.longitudes,
     'latBinEdges': valid.latitudes,
-    'type': valid.namelist,
+    'type': valid.simple_id,
     'dims': valid.positiveints,
     'poE': valid.probability,
     'iml': valid.positivefloat,
@@ -294,7 +293,20 @@ class SourceModelParser(object):
         :param fname:
             the full pathname of the source model file
         """
-        return parse(fname, self.converter)
+        try:
+            return parse(fname, self.converter)
+        except ValueError as e:
+            err = str(e)
+            e1 = 'Surface does not conform with Aki & Richards convention'
+            e2 = 'Edges points are not in the right order'
+            if e1 in err or e2 in err:
+                raise InvalidFile('''\
+        %s: %s. Probably you are using an obsolete model.
+        In that case you can fix the file with the command
+        %s -m openquake.engine.tools.correct_complex_sources %s
+        ''' % (fname, e, sys.executable, fname))
+            else:
+                raise
 
 
 def read(source, chatty=True, stop=None):

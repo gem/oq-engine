@@ -21,7 +21,7 @@ from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -116,6 +116,14 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__, kind='all')
+
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_7.__file__, 'job.ini', mean_hazard_curves='false',
+                hazard_maps='true', poes='0.1')
+        self.assertEqual(
+            'The job.ini says that no statistics should be computed, but then '
+            'there is no output!', str(ctx.exception))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):
@@ -231,7 +239,7 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         export(('hmaps', 'npz'), self.calc.datastore)
         export(('uhs', 'npz'), self.calc.datastore)
 
-        # check the size of assoc_by_grp for a complex logic tree
+        # here is the size of assoc_by_grp for a complex logic tree
         # grp_id gsim_idx rlzis
         # 0	0	 {0, 1}
         # 0	1	 {2, 3}
@@ -242,9 +250,6 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         # 3	0	 {6}
         # 3	1	 {7}
         # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
-        nbytes = self.calc.datastore.get_attr(
-            'csm_info/assoc_by_grp', 'nbytes')
-        self.assertEqual(nbytes, 120)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
@@ -279,7 +284,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
 
         # check exporting a single realization in XML and CSV
         [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
-        self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
+        if REFERENCE_OS:  # broken on macOS
+            self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
         [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
@@ -348,6 +354,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     def test_case_22(self):  # crossing date line calculation for Alaska
         # this also tests the splitting of the source model in two files
         self.assert_curves_ok(['hazard_curve-mean.csv'], case_22.__file__)
+        checksum = self.calc.datastore['/'].attrs['checksum32']
+        self.assertEqual(checksum, 4227047805)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT

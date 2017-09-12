@@ -18,13 +18,15 @@
 
 import unittest
 import mock
+from openquake.baselib.general import writetmp
+from openquake.baselib import hdf5
 from openquake.calculators import base
 
 
-class FakeParams(object):
+class FakeParams(hdf5.LiteralAttrs):
     export_dir = '/tmp'
     hazard_calculation_id = None
-    inputs = {'job_ini': 'fake_job.ini'}
+    inputs = {'job_ini': writetmp('fake_job.ini')}
     concurrent_tasks = 0
 
     def to_params(self):

@@ -772,8 +772,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997(): "
-            "['<0,b1_b5_b8~b2_b3,w=1.0>']\n"
-            "1,ChiouYoungs2008(): ['<0,b1_b5_b8~b2_b3,w=1.0>']>")
+            "[0]\n1,ChiouYoungs2008(): [0]>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -792,15 +791,6 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
             [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
             list(map(len, csm.src_groups)))
 
-        # test the method extract
-        assoc = rlzs_assoc.extract([1, 5], csm.info)
-        self.assertEqual(str(assoc), """\
-<RlzsAssoc(size=4, rlzs=2)
-0,SadighEtAl1997(): ['<1,b1_b3_b6~b2_b3,w=0.5>']
-1,ChiouYoungs2008(): ['<1,b1_b3_b6~b2_b3,w=0.5>']
-4,SadighEtAl1997(): ['<5,b1_b3_b8~b2_b3,w=0.5>']
-5,ChiouYoungs2008(): ['<5,b1_b3_b8~b2_b3,w=0.5>']>""")
-
         # removing 9 src_groups out of 18
         def count_ruptures(src_group):
             if src_group.trt == 'Active Shallow Crust':  # no ruptures
@@ -810,15 +800,15 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         assoc = csm.info.get_rlzs_assoc(count_ruptures)
         expected_assoc = """\
 <RlzsAssoc(size=9, rlzs=9)
-0,SadighEtAl1997(): ['<0,b1_b3_b6~@_b3,w=0.04>']
-2,SadighEtAl1997(): ['<1,b1_b3_b7~@_b3,w=0.12>']
-4,SadighEtAl1997(): ['<2,b1_b3_b8~@_b3,w=0.04>']
-6,SadighEtAl1997(): ['<3,b1_b4_b6~@_b3,w=0.12>']
-8,SadighEtAl1997(): ['<4,b1_b4_b7~@_b3,w=0.36>']
-10,SadighEtAl1997(): ['<5,b1_b4_b8~@_b3,w=0.12>']
-12,SadighEtAl1997(): ['<6,b1_b5_b6~@_b3,w=0.04>']
-14,SadighEtAl1997(): ['<7,b1_b5_b7~@_b3,w=0.12>']
-16,SadighEtAl1997(): ['<8,b1_b5_b8~@_b3,w=0.04>']>"""
+0,SadighEtAl1997(): [0]
+2,SadighEtAl1997(): [1]
+4,SadighEtAl1997(): [2]
+6,SadighEtAl1997(): [3]
+8,SadighEtAl1997(): [4]
+10,SadighEtAl1997(): [5]
+12,SadighEtAl1997(): [6]
+14,SadighEtAl1997(): [7]
+16,SadighEtAl1997(): [8]>"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -835,8 +825,8 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=5)\n"
-            "0,SadighEtAl1997(): ['<0,b1~b1,w=0.2>']\n"
-            "1,SadighEtAl1997(): ['<1,b2~b1,w=0.2>', '<2,b2~b1,w=0.2>', '<3,b2~b1,w=0.2>', '<4,b2~b1,w=0.2>']>")
+            "0,SadighEtAl1997(): [0]\n"
+            "1,SadighEtAl1997(): [1 2 3 4]>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()

@@ -23,7 +23,7 @@ import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from multiprocessing.connection import Client
+from openquake.baselib import zeromq
 
 from openquake.commonlib import config
 
@@ -46,15 +46,8 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    try:
-        client = Client(config.DBS_ADDRESS, authkey=config.DBS_AUTHKEY)
-    except:
-        raise RuntimeError('Cannot connect on %s:%s' % config.DBS_ADDRESS)
-    try:
-        client.send((action,) + args)
-        res, etype = client.recv()
-    finally:
-        client.close()
+    sock = zeromq.Socket('tcp://%s:%s' % config.DBS_ADDRESS, zeromq.zmq.REQ)
+    res, etype, _mon = sock.req(action, *args)
     if etype:
         raise etype(res)
     return res
