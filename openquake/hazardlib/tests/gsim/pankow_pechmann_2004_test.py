@@ -18,6 +18,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data obtained from Table 2 of Pankow and Pechmann (2004)
 
+
 class PankowPechmann2004TestCase(BaseGSIMTestCase):
     GSIM_CLASS = PankowPechmann2004
 
@@ -25,6 +26,6 @@ class PankowPechmann2004TestCase(BaseGSIMTestCase):
         self.check('PP2004/PP2004_MEAN.csv',
                    max_discrep_percentage=0.1)
 
-    #def test_std_total(self):
+    # def test_std_total(self):
     #    self.check('PP2004/PP2004_STD_TOTAL.csv',
     #               max_discrep_percentage=0.1)
