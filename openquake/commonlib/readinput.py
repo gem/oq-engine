@@ -191,16 +191,15 @@ def get_mesh(oqparam):
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['sites'], 'U').read()
-        csv_data = csv_data.strip().replace(',', ' ').splitlines()
-        has_header = csv_data[0].startswith('site_id lon lat')
+        csv_data = open(oqparam.inputs['sites'], 'U').readlines()
+        has_header = csv_data[0].startswith('site_id')
         if has_header:  # strip site_id
-            csv_data = []
+            data = []
             for i, line in enumerate(csv_data[1:]):
-                row = line.split()
+                row = line.replace(',', ' ').split()
                 assert int(row[0]) == i, (row[0], i)
-                csv_data.append(' '.join(row[1:]))
-        coords = valid.coordinates(','.join(csv_data))
+                data.append(' '.join(row[1:]))
+        coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
         return geo.Mesh.from_coords(c)
