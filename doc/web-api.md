@@ -113,17 +113,13 @@ A list of error lines extracted from the log. If the calculation was
 successfull, the list is empty.
 
 
-#### GET /v1/calc/:calc_id/export/:out_key/:out_kind
+#### GET /v1/calc/:calc_id/extract/:spec
 
-Get the exported file for the given output key and output kind.
-
-Parameters:
-
-    * export_type: the desired format for the file (`npz`, `csv`, etc.)
+Get a pickled file for the given output specification
 
 Response:
 
-A single file or an error 406 if multiple files are generated.
+A single .pik file of Content-Type: application/octet-stream
 
 
 #### GET /v1/calc/:calc_id/results
