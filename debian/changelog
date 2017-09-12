@@ -16,6 +16,9 @@
   * Added a flag `split_sources` in the job.ini (default False)
   * Updated the demos to the format NRML 0.5
 
+  [Valerio Poggi]
+  * Implemented the Munson and Thurber 1997 (Volcanic) GMPE
+
   [Graeme Weatherill]
   * Adapts CoeffsTable to be instantiated with dictionaries as well as strings
 
