@@ -66,6 +66,7 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
     sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
     gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
+    rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -83,7 +84,7 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
         with collecting_mon:
             bdata = disagg._collect_bins_data(
                 trt_num, sources, site, curves_dict[sid],
-                src_group_id, rlzs_assoc, gsims, oqparam.imtls,
+                src_group_id, rlzs_by_gsim, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor)
@@ -205,14 +206,14 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     dist_edges, lon_edges, lat_edges = bb.bins_edges(
                         oq.distance_bin_width, oq.coordinate_bin_width)
                     logging.info(
-                        '%d dist bins from %s to %s', len(dist_edges) - 1,
-                        min(dist_edges), max(dist_edges))
+                        '[sid=%d] %d dist bins from %s to %s', sid,
+                        len(dist_edges) - 1, min(dist_edges), max(dist_edges))
                     logging.info(
-                        '%d lon bins from %s to %s', len(lon_edges) - 1,
-                        bb.west, bb.east)
+                        '[sid=%d] %d lon bins from %s to %s', sid,
+                        len(lon_edges) - 1, bb.west, bb.east)
                     logging.info(
-                        '%d lat bins from %s to %s', len(lon_edges) - 1,
-                        bb.south, bb.north)
+                        '[sid=%d] %d lat bins from %s to %s', sid,
+                        len(lon_edges) - 1, bb.south, bb.north)
 
                     self.bin_edges[sm_id, sid] = (
                         mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)

@@ -121,6 +121,7 @@ class OqParam(valid.ParamSet):
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
+    return_periods = valid.Param(valid.positiveints, None)
     save_ruptures = valid.Param(valid.boolean, True)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -130,6 +131,7 @@ class OqParam(valid.ParamSet):
     sites_per_tile = valid.Param(valid.positiveint, 20000)
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     specific_assets = valid.Param(valid.namelist, [])
+    split_sources = valid.Param(valid.boolean, True)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)

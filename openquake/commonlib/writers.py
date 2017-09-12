@@ -97,6 +97,8 @@ htranslator = HeaderTranslator(
     '(eid):uint32',
     '(eid-\d+):float32',
     '(year):uint32',
+    '(return_period):uint32',
+    '(site_id):uint32',
     '(taxonomy):\|S100',
     '(tag):\|S100',
     '(multiplicity):uint16',

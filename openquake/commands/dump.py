@@ -22,7 +22,7 @@ import os.path
 import tempfile
 from openquake.baselib import sap
 from openquake.baselib.general import safeprint
-from openquake.server.manage import db
+from openquake.server.dbserver import db
 from openquake.engine.export.core import zipfiles
 
 
