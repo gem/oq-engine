@@ -871,16 +871,16 @@ class LossRatiosGetter(object):
     def get(self, rlzi):
         """
         :param rlzi: a realization ordinal
-        :returns: a dictionary aid -> list of loss ratios
+        :returns: a dictionary aid -> array of shape (E, LI)
         """
         data = self.dstore['all_loss_ratios/data']
         dic = collections.defaultdict(list)  # aid -> ratios
         for aid, idxs in zip(self.aids, self.indices):
             for idx in idxs:
-                for rec in data[idx[0]: idx[1]]:
+                for rec in data[idx[0]: idx[1]]:  # dtype (rlzi, ratios)
                     if rlzi == rec['rlzi']:
                         dic[aid].append(rec['ratios'])
-        return dic
+        return {a: numpy.array(dic[a]) for a in dic}
 
     # used in the calculator
     def get_all(self):

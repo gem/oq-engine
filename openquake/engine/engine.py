@@ -104,10 +104,12 @@ def expose_outputs(dstore):
             dskeys.add('hmaps')  # export them
     if 'avg_losses-rlzs' in dstore and rlzs:
         dskeys.add('avg_losses-stats')
+    if 'curves-stats' in dstore:
+        logs.LOG.warn('loss curves are exportable with oq export')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
-        if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
+        if 'loss_curves-rlzs' in dstore:
             dskeys.add('loss_maps-rlzs')
-        if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
+        if 'loss_curves-stats' in dstore:
             if len(rlzs) > 1:
                 dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
@@ -131,10 +133,17 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    if signum == signal.SIGTERM:
+    if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
     else:
         msg = 'Received a signal %d' % signum
+
+    for pid in parallel.executor.pids:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError: # pid not found
+            pass
+
     raise MasterKilled(msg)
 
 
@@ -144,6 +153,7 @@ def raiseMasterKilled(signum, _stack):
 # can be safely ignored
 try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
+    signal.signal(signal.SIGINT, raiseMasterKilled)
 except ValueError:
     pass
 
