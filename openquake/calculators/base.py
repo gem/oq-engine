@@ -209,11 +209,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
-        except KeyboardInterrupt:
-            pids = ' '.join(str(p.pid) for p in executor._processes)
-            sys.stderr.write(
-                'You can manually kill the workers with kill %s\n' % pids)
-            raise
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
@@ -317,8 +312,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.datastore['realizations'] = numpy.array(
                 [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
                  for r in self.rlzs_assoc.realizations], rlz_dt)
-        if 'hcurves' in set(self.datastore):
-            self.datastore.set_nbytes('hcurves')
+        for key in self.datastore:
+            self.datastore.set_nbytes(key)
         self.datastore.flush()
 
 
@@ -678,9 +673,6 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
-        rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
-        if rlz_ids:
-            self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
         mon = self.monitor('risk')
         all_args = [(riskinput, self.riskmodel, self.param, mon)
                     for riskinput in self.riskinputs]
