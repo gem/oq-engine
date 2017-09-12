@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the GMF CSV exporter to export the sites too; unified it with the
+    event based one
+
   [Daniele Viganò]
   * Changed the 'CTRL-C' behaviour to make sure that all children
     processes are killed when a calculation in interrupted
