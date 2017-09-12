@@ -193,11 +193,17 @@ def get_mesh(oqparam):
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         csv_data = csv_data.strip().replace(',', ' ').splitlines()
-        if csv_data[0].startswith('site_id lon lat'):  # split site_id
-            csv_data = [' '.join(row.split()[1:]) for row in csv_data[1:]]
+        has_header = csv_data[0].startswith('site_id lon lat')
+        if has_header:  # strip site_id
+            csv_data = []
+            for i, line in enumerate(csv_data[1:]):
+                row = line.split()
+                assert int(row[0]) == i, (row[0], i)
+                csv_data.append(' '.join(row[1:]))
         coords = valid.coordinates(','.join(csv_data))
         start, stop = oqparam.sites_slice
-        return geo.Mesh.from_coords(coords[start:stop])
+        c = coords[start:stop] if has_header else sorted(coords[start:stop])
+        return geo.Mesh.from_coords(c)
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
