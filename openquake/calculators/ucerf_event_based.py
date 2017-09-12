@@ -788,6 +788,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [sm] = ssm.source_models
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
+            for src in srcs:
+                src.nsites = len(self.sitecol)  # not filtered here
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
@@ -825,11 +827,12 @@ def compute_losses(ssm, src_filter, param, riskmodel,
         grp, src_filter, gsims, param, monitor)
     [(grp_id, ebruptures)] = ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
+    samples = ssm.info.get_samples_by_grp()
     num_rlzs = len(rlzs_assoc.realizations)
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
+    rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[grp_id]
     getter = riskinput.GmfGetter(
         grp_id, rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
-        trunc_level, correl_model, rlzs_assoc.samples[grp_id])
+        trunc_level, correl_model, samples[grp_id])
     ri = riskinput.RiskInputFromRuptures(getter)
     res.append(event_based_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
