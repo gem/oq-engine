@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Changed the 'CTRL-C' behaviour to make sure that all children
+    processes are killed when a calculation in interrupted
+
   [Michele Simionato]
   * Fixed a bug in the statistical loss curves exporter for classical_risk
   * Replaced the agg_curve outputs with losses by return period outputs
