@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Used the new loss curves algorithm for the asset loss curves and loss maps
+  * Changed the GMF CSV exporter to export the sites too; unified it with the
+    event based one
 
   [Daniele Viganò]
   * Changed the 'CTRL-C' behaviour to make sure that all children
@@ -18,6 +20,9 @@
     to display information about the duplicated sources
   * Added a flag `split_sources` in the job.ini (default False)
   * Updated the demos to the format NRML 0.5
+
+  [Valerio Poggi]
+  * Implemented the Munson and Thurber 1997 (Volcanic) GMPE
 
   [Graeme Weatherill]
   * Adapts CoeffsTable to be instantiated with dictionaries as well as strings
