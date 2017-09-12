@@ -192,8 +192,10 @@ def get_mesh(oqparam):
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
-        coords = valid.coordinates(
-            csv_data.strip().replace(',', ' ').replace('\n', ','))
+        csv_data = csv_data.strip().replace(',', ' ').splitlines()
+        if csv_data[0].startswith('site_id lon lat'):  # split site_id
+            csv_data = [' '.join(row.split()[1:]) for row in csv_data[1:]]
+        coords = valid.coordinates(','.join(csv_data))
         start, stop = oqparam.sites_slice
         return geo.Mesh.from_coords(coords[start:stop])
     elif oqparam.region:
