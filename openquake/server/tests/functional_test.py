@@ -185,15 +185,10 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
         self.assertEqual(resp['calculation_mode'], 'classical')
 
-        # check the /export endpoint
-        url = 'http://%s/v1/calc/%s/export/hcurves/rlz-000' % (
-            self.hostport, job_id)
-        resp = requests.get(url, dict(export_type='npz'))
+        # check the /extract endpoint
+        url = 'http://%s/v1/calc/%s/extract/sitecol' % (self.hostport, job_id)
+        resp = requests.get(url)
         self.assertEqual(resp.status_code, 200)
-
-        resp = requests.get(url, dict(export_type='csv'))
-        # multiple files, not acceptable
-        self.assertEqual(resp.status_code, 406)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error

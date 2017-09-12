@@ -36,13 +36,14 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode
+from openquake.baselib.python3compat import unicode, pickle
 from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
 from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine
@@ -77,7 +78,7 @@ DEFAULT_LOG_LEVEL = 'info'
 #: XML by default.
 DEFAULT_EXPORT_TYPE = 'xml'
 
-EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON, npy=HDF5)
+EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
 DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquake.server')
@@ -570,31 +571,27 @@ def get_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def get_export(request, calc_id, what):
+def extract(request, calc_id, what):
     """
-    Wrapper over the `oq export` command
+    Wrapper over the `oq extract` command
     """
     try:
         job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
-    fname = job.ds_calc_dir + '.hdf5'
-    etype = request.GET.get('export_type', 'npy')
-    with datastore.read(fname) as ds:
-        ds.export_dir = tempfile.mkdtemp()
-        fnames = export((what, etype), ds)
-        if len(fnames) != 1:
-            shutil.rmtree(ds.export_dir)
-            return HttpResponse(
-                content='Expected a single filename, got %s' % fnames,
-                content_type='text/plain', status=406)
-        [fname] = fnames
+    # read the data and save them on a temporary .pik file
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        fd, fname = tempfile.mkstemp(prefix=what[1:], suffix='.pik')
+        os.close(fd)
+        obj = _extract(what, ds)  # `what` starts with a slash
+        with open(fname, 'wb') as f:
+            pickle.dump(obj, f)
+
+    # stream the data back
     stream = FileWrapper(open(fname, 'rb'))
-    stream.close = lambda: (
-        FileWrapper.close(stream), shutil.rmtree(ds.export_dir))
-    response = FileResponse(stream, content_type=EXPORT_CONTENT_TYPE_MAP.get(
-        etype, DEFAULT_CONTENT_TYPE))
+    stream.close = lambda: (FileWrapper.close(stream), os.remove(fname))
+    response = FileResponse(stream, content_type='application/octet-stream')
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
     return response
