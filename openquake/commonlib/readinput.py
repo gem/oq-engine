@@ -189,7 +189,7 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        return geo.Mesh.from_coords(oqparam.sites)
+        return geo.Mesh.from_coords(sorted(oqparam.sites))
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').readlines()
         has_header = csv_data[0].startswith('site_id')
@@ -227,7 +227,7 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
                   for param in get_site_model(oqparam)]
-        mesh = geo.Mesh.from_coords(coords)
+        mesh = geo.Mesh.from_coords(sorted(coords))
         mesh.from_site_model = True
         return mesh
 
