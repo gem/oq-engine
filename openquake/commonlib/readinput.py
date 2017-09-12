@@ -19,7 +19,6 @@
 from __future__ import division
 import os
 import csv
-import gzip
 import zlib
 import zipfile
 import logging
@@ -113,7 +112,7 @@ def get_params(job_inis):
     cp = configparser.ConfigParser()
     cp.read(job_inis)
 
-    # drectory containing the config files we're parsing
+    # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
     base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
@@ -338,8 +337,9 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
+    # NB: converting the random_seed into an integer is needed on Windows
     return logictree.SourceModelLogicTree(
-        fname, validate=False, seed=oqparam.random_seed,
+        fname, validate=False, seed=int(oqparam.random_seed),
         num_samples=oqparam.number_of_logic_tree_samples)
 
 
@@ -374,20 +374,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             fname = os.path.abspath(os.path.join(oqparam.base_path, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                try:
-                    logging.info('Parsing %s', fname)
-                    src_groups.extend(psr.parse_src_groups(fname, apply_unc))
-                except ValueError as e:
-                    if str(e) in ('Surface does not conform with Aki & '
-                                  'Richards convention',
-                                  'Edges points are not in the right order'):
-                        raise InvalidFile('''\
-        %s: %s. Probably you are using an obsolete model.
-        In that case you can fix the file with the command
-        python -m openquake.engine.tools.correct_complex_sources %s
-        ''' % (fname, e, fname))
-                    else:
-                        raise
+                logging.info('Parsing %s', fname)
+                src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
                 smodel = nrml.read(fname).sourceModel
                 if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
@@ -438,7 +426,7 @@ def get_composite_source_model(oqparam, in_memory=True):
     def getid(src):
         try:
             return src.source_id
-        except:
+        except AttributeError:
             return src['id']
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
@@ -613,12 +601,15 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
+    assets = []
+    asset_refs = []
+    assets_by_tag = collections.defaultdict(list)
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, [], set(), [], cc)
+        area.attrib, assets, asset_refs, cc, assets_by_tag)
     return exp, exposure.assets
 
 
@@ -684,6 +675,13 @@ def get_exposure(oqparam):
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
+            tagnode = getattr(asset, 'tags', None)
+            if tagnode is not None:
+                for item in tagnode.attrib.items():
+                    valid.simple_id(item[0])  # name
+                    valid.nice_string(item[1])  # value
+                    exposure.assets_by_tag['%s-%s' % item].append(idx)
+            exposure.assets_by_tag['taxonomy-' + taxonomy].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
@@ -733,7 +731,6 @@ def get_exposure(oqparam):
             deductibles, insurance_limits, retrofitteds,
             exposure.cost_calculator)
         exposure.assets.append(ass)
-        exposure.taxonomies.add(taxonomy)
     if region:
         logging.info('Read %d assets within the region_constraint '
                      'and discarded %d assets outside the region',
@@ -741,7 +738,7 @@ def get_exposure(oqparam):
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
 
-    # sanity check
+    # sanity checks
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
     assert values, 'Could not find any value??'
     return exposure
@@ -750,8 +747,8 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies', 'asset_refs',
-                 'cost_calculator'])
+                 'area', 'assets', 'asset_refs', 'cost_calculator',
+                 'assets_by_tag'])
 
 
 def get_sitecol_assetcol(oqparam, exposure):
@@ -770,7 +767,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = riskinput.AssetCollection(
-        assets_by_site, exposure.cost_calculator,
+        assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
     return sitecol, assetcol
