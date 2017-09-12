@@ -199,6 +199,8 @@ def get_mesh(oqparam):
                 row = line.replace(',', ' ').split()
                 assert int(row[0]) == i, (row[0], i)
                 data.append(' '.join(row[1:]))
+        else:
+            data = [line.replace(',', ' ') for line in csv_data]
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
