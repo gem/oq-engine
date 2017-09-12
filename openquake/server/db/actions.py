@@ -649,7 +649,7 @@ def get_data(db, job_id, dspath):
 
 # TODO: add a way to invalidate the cache (easy) and somebody responsible
 # for doing that (difficult: perhaps a recurrent task?)
-asset_cache = {}  # job_id -> (assets_by_site, loss_type, time_event)
+asset_cache = {}  # job_id -> asset_values
 
 
 def get_asset_values(db, job_id, sid):
@@ -662,21 +662,23 @@ def get_asset_values(db, job_id, sid):
         (aid, loss_type1, ..., loss_typeN) composite array
     """
     try:
-        assets_by_site, lts, time_event = asset_cache[job_id]
+        vals = asset_cache[job_id]
     except KeyError:
+        asset_refs = get_data(db, job_id, 'asset_refs').array
         assetcol = get_data(db, job_id, 'assetcol')
         assets_by_site = assetcol.assets_by_site()
         lts = assetcol.loss_types
         time_event = assetcol.time_event
-        asset_cache[job_id] = assets_by_site, lts, time_event
-    assets = assets_by_site[sid]
-    dt = numpy.dtype([('aid', numpy.uint32)] +
-                     [(str(lt), numpy.float32) for lt in lts])
-    vals = numpy.zeros(len(assets), dt)
-    for a, asset in enumerate(assets):
-        vals[a]['aid'] = asset.ordinal
-        for lt in lts:
-            vals[a][lt] = asset.value(lt, time_event)
+        assets = assets_by_site[sid]
+        dt = numpy.dtype([('ref', asset_refs.dtype), ('aid', numpy.uint32)] +
+                         [(str(lt), numpy.float32) for lt in lts])
+        vals = numpy.zeros(len(assets), dt)
+        for a, asset in enumerate(assets):
+            vals[a]['ref'] = asset_refs[asset.idx]
+            vals[a]['aid'] = asset.ordinal
+            for lt in lts:
+                vals[a][lt] = asset.value(lt, time_event)
+        asset_cache[job_id] = vals
     return vals
 
 
