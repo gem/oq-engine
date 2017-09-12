@@ -73,7 +73,7 @@ def copy_to(elt, rup_data, rup_ids):
 
 
 # this is used by event_based_risk
-@export.add(('agg_loss-rlzs', 'csv'), ('agg_loss-stats', 'csv'))
+@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     agg_curve = dstore[ekey[0]]
