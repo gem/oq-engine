@@ -22,16 +22,16 @@ Module exports :class:`PankowPechmann2004`.
 from __future__ import division
 
 import numpy as np
-from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+
 class PankowPechmann2004(GMPE):
     """
-    The SEA99 Ground-Motion Predictive Relations for Extensional Tectonic Regimes:
-    Revisions and a New Peak Ground Velocity Relation
+    The SEA99 Ground-Motion Predictive Relations for Extensional
+    Tectonic Regimes: Revisions and a New Peak Ground Velocity Relation
     (Kris L. Pankow and James C. Pechmann)
     """
     #: Supported tectonic region type is active shallow crust,
@@ -76,7 +76,7 @@ class PankowPechmann2004(GMPE):
         R = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
 
         # In the original formulation of the GMPE, distinction is only made
-        # between rock and soil sites, which I assumed are separated by the Vs30
+        # between rock and soil sites, which I assumed separated by the Vs30
         # value of 910m/s (see equation 5 of the paper)
         gamma = 0 if sites.vs30.any() > 910 else 1
 
@@ -111,10 +111,10 @@ class PankowPechmann2004(GMPE):
                    for stddev_type in stddev_types)
 
         if self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT == 'Random horizontal':
-          # Using equation 8 of the paper
-          Sr = np.sqrt(C['SlZ']**2 + C['S3']**2)
+            # Using equation 8 of the paper
+            Sr = np.sqrt(C['SlZ']**2 + C['S3']**2)
         else:
-          Sr = C['SlZ']
+            Sr = C['SlZ']
 
         stddevs = [np.zeros(num_sites) + Sr for _ in stddev_types]
         return stddevs
@@ -171,6 +171,3 @@ class PankowPechmann2004(GMPE):
     1.900   -0.667   2.069   0.472   -0.032   -1.056   0.312   6.60   0.307   0.137
     2.000   -0.655   2.059   0.471   -0.037   -1.049   0.306   6.71   0.312   0.137
     """)
-
-
-
