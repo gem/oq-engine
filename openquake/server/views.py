@@ -582,9 +582,10 @@ def extract(request, calc_id, what):
 
     # read the data and save them on a temporary .pik file
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        # `what` starts with a slash which has to be stripped in the prefix
         fd, fname = tempfile.mkstemp(prefix=what[1:], suffix='.pik')
         os.close(fd)
-        obj = _extract(what, ds)  # `what` starts with a slash
+        obj = _extract(ds, what)
         with open(fname, 'wb') as f:
             pickle.dump(obj, f)
 
