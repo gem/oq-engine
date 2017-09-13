@@ -461,7 +461,9 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         source_model = mtkSourceModel(identifier,
                                       name=node_set.attrib["name"])
         for node in node_set:
-            if "pointSource" in node.tag:
+            if "sourceGroup" in node.tag:
+                print 'Source group not yet implemented... proceeding without'
+            elif "pointSource" in node.tag:
                 source_model.sources.append(
                     parse_point_source_node(node, mfd_spacing))
             elif "areaSource" in node.tag:
