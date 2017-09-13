@@ -15,14 +15,27 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+import collections
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
-from openquake.baselib.general import CallableDict
+from openquake.risklib.utils import memoized
+# TODO: add a better memoized with a maximum size of the cache
 
-# for instance extract('dstore/sids', dstore)
-extract = CallableDict(lambda k: k.split('/', 1)[0])
+
+class Extract(collections.OrderedDict):
+
+    def add(self, key, cache=False):
+        def decorator(func):
+            self[key] = memoized(func) if cache else func
+            return func
+        return decorator
+
+    def __call__(self, dstore, key):
+        k, v = key.split('/', 1)
+        return self[k](dstore, v)
+
+extract = Extract()
 
 
 class DatasetWrapper(object):
@@ -33,6 +46,15 @@ class DatasetWrapper(object):
         vars(self).update(attrs)
         self.array = array
 
+    def __iter__(self):
+        return iter(self.array)
+
+    def __len__(self):
+        return len(self.array)
+
+    def __getitem__(self, idx):
+        return self.array[idx]
+
 
 class DatagroupWrapper(object):
     """
@@ -42,9 +64,18 @@ class DatagroupWrapper(object):
         vars(self).update(attrs)
         self.array = array
 
+    def __iter__(self):
+        return iter(self.array)
+
+    def __len__(self):
+        return len(self.array)
+
+    def __getitem__(self, idx):
+        return self.array[idx]
+
 
 @extract.add('')
-def extract_slash(dspath, dstore):
+def extract_slash(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
     extract('/sitecol', dstore)
@@ -58,36 +89,28 @@ def extract_slash(dspath, dstore):
         return obj
 
 
-# TODO: add a way to invalidate the cache (easy) and somebody responsible
-# for doing that (difficult: perhaps a recurrent task?)
-asset_cache = {}  # job_id -> asset_values
-
-
-@extract.add('asset_values')
-def extract_asset_values(key, dstore):
+@extract.add('asset_values', cache=True)
+def extract_asset_values(dstore, sid):
     """
     :returns:
         (aid, loss_type1, ..., loss_typeN) composite array
     """
-    sid = int(key.split('/')[1])
-    try:
-        data = asset_cache[dstore.calc_id]
-    except KeyError:
-        asset_refs = extract('/asset_refs', dstore).array
-        assetcol = extract('/assetcol', dstore)
-        assets_by_site = assetcol.assets_by_site()
-        lts = assetcol.loss_types
-        time_event = assetcol.time_event
-        dt = numpy.dtype([('ref', asset_refs.dtype), ('aid', numpy.uint32)] +
-                         [(str(lt), numpy.float32) for lt in lts])
-        data = []
-        for assets in assets_by_site:
-            vals = numpy.zeros(len(assets), dt)
-            for a, asset in enumerate(assets):
-                vals[a]['ref'] = asset_refs[asset.idx]
-                vals[a]['aid'] = asset.ordinal
-                for lt in lts:
-                    vals[a][lt] = asset.value(lt, time_event)
-            data.append(vals)
-        asset_cache[dstore.calc_id] = data
-    return data[sid]
+    if sid:
+        return extract(dstore, 'asset_values')[int(sid)]
+    asset_refs = extract(dstore, '/asset_refs')
+    assetcol = extract(dstore, '/assetcol')
+    assets_by_site = assetcol.assets_by_site()
+    lts = assetcol.loss_types
+    time_event = assetcol.time_event
+    dt = numpy.dtype([('aref', asset_refs.dtype), ('aid', numpy.uint32)] +
+                     [(str(lt), numpy.float32) for lt in lts])
+    data = []
+    for assets in assets_by_site:
+        vals = numpy.zeros(len(assets), dt)
+        for a, asset in enumerate(assets):
+            vals[a]['aref'] = asset_refs[asset.idx]
+            vals[a]['aid'] = asset.ordinal
+            for lt in lts:
+                vals[a][lt] = asset.value(lt, time_event)
+        data.append(vals)
+    return data
