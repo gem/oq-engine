@@ -19,8 +19,12 @@ import collections
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
-from openquake.risklib.utils import memoized
-# TODO: add a better memoized with a maximum size of the cache
+try:
+    from functools import lrucache
+except ImportError:
+    from openquake.risklib.utils import memoized
+else:
+    memoized = lrucache(100)
 
 
 class Extract(collections.OrderedDict):
@@ -32,7 +36,10 @@ class Extract(collections.OrderedDict):
         return decorator
 
     def __call__(self, dstore, key):
-        k, v = key.split('/', 1)
+        try:
+            k, v = key.split('/', 1)
+        except ValueError:   # no slashes
+            k, v = key, ''
         return self[k](dstore, v)
 
 extract = Extract()
@@ -54,6 +61,10 @@ class DatasetWrapper(object):
 
     def __getitem__(self, idx):
         return self.array[idx]
+
+    @property
+    def dtype(self):
+        return self.array.dtype
 
 
 class DatagroupWrapper(object):
