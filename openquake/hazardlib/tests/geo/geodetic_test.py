@@ -46,7 +46,7 @@ class TestGeodeticDistance(unittest.TestCase):
 
     def test_along_meridian(self):
         coords = list(map(numpy.array, [(77.5, -150.), (-10., 15.),
-                                   (77.5, -150.), (-20., 25.)]))
+                                        (77.5, -150.), (-20., 25.)]))
         dist = geodetic.geodetic_distance(*coords)
         assert_aeq(dist, [1111.949, 1111.949], decimal=3)
 
@@ -143,6 +143,15 @@ class TestDistance(unittest.TestCase):
         p2 = (0.5, -0.3, -2)
         distance = geodetic.distance(*(p1 + p2))
         self.assertAlmostEqual(distance, 65.0295143)
+
+    def test_pure_distances(self):
+        # distances between a 1D mesh and a 2D mesh are a 3D mesh
+        mlons = numpy.array([.1, .2])
+        mlats = numpy.array([.11, .22])
+        slons = numpy.ones((3, 3))
+        slats = numpy.zeros((3, 3))
+        res = geodetic.pure_distances(mlons, mlats, slons, slats)
+        self.assertEqual(res.shape, (2, 3, 3))
 
 
 class MinDistanceTest(unittest.TestCase):
