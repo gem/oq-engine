@@ -34,9 +34,9 @@ def extract_(dstore, dspath):
     """
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
-        return DatasetWrapper(obj.value, obj.attrs)
+        return ArrayWrapper(obj.value, obj.attrs)
     elif isinstance(obj, Group):
-        return DatagroupWrapper(numpy.array(list(obj)), obj.attrs)
+        return ArrayWrapper(numpy.array(list(obj)), obj.attrs)
     else:
         return obj
 
@@ -70,9 +70,9 @@ class Extract(collections.OrderedDict):
 extract = Extract()
 
 
-class DatasetWrapper(object):
+class ArrayWrapper(object):
     """
-    A pickleable wrapper over an HDF5 dataset
+    A pickleable wrapper over an HDF5 dataset or group
     """
     def __init__(self, array, attrs):
         vars(self).update(attrs)
@@ -90,24 +90,6 @@ class DatasetWrapper(object):
     @property
     def dtype(self):
         return self.array.dtype
-
-
-class DatagroupWrapper(object):
-    """
-    A pickleable wrapper over an HDF5 group
-    """
-    def __init__(self, array, attrs):
-        vars(self).update(attrs)
-        self.array = array
-
-    def __iter__(self):
-        return iter(self.array)
-
-    def __len__(self):
-        return len(self.array)
-
-    def __getitem__(self, idx):
-        return self.array[idx]
 
 
 @extract.add('asset_values', cache=True)
