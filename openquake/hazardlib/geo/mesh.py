@@ -454,8 +454,7 @@ class RectangularMesh(Mesh):
         # out by the threshold and have positive distance instead of 0.
         # so for threshold of 40 km mesh spacing should not be more
         # than 56 km (typical values are 5 to 10 km).
-
-        [idxs] = (distances < 40).nonzero()
+        idxs = (distances < 40).nonzero()[0]  # indices on the first dimension
         if not len(idxs):
             # no point is close enough, return distances as they are
             return distances
