@@ -42,7 +42,15 @@ def extract_(dstore, dspath):
 
 
 class Extract(collections.OrderedDict):
+    """
+    A callable dictionary of functions with a single instance called
+    `extract`. Then `extract(dstore, fullkey)` dispatches to the function
+    determined by the first part of `fullkey` (a slash-separated
+    string) by passing as argument the second part of `fullkey`.
 
+    For instance extract(dstore, 'sitecol), extract(dstore, 'asset_values/0')
+    etc.
+    """
     def add(self, key, cache=False):
         def decorator(func):
             self[key] = memoized(func) if cache else func
