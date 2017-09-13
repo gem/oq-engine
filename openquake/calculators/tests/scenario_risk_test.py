@@ -59,7 +59,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # check the asset values by sid
         [val] = extract(self.calc.datastore, 'asset_values/0')
-        self.assertEqual(val['ref'], b'a2')
+        self.assertEqual(val['aref'], b'a2')
         self.assertEqual(val['aid'], 0)
         self.assertEqual(val['structural'], 2000.)
 
