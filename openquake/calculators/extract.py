@@ -20,7 +20,7 @@ from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
 try:
-    from functools import lrucache
+    from functools import lru_cache
 except ImportError:
     from openquake.risklib.utils import memoized
 else:
