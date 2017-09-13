@@ -286,7 +286,7 @@ def get_eids_years_serials(events_by_grp, eids):
     return numpy.array(eids_ok), numpy.array(years), numpy.array(serials)
 
 
-# this is used by classical_risk
+# this is used by classical_risk and event_based_risk
 @export.add(('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
     if '/' not in ekey[0]:  # full loss curves are not exportable
