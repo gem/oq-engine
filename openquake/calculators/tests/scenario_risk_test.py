@@ -58,13 +58,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/losses_by_event.csv', fname)
 
         # check the asset values by sid
-        [val] = extract('asset_values/0', self.calc.datastore)
+        [val] = extract(self.calc.datastore, 'asset_values/0')
         self.assertEqual(val['ref'], b'a2')
         self.assertEqual(val['aid'], 0)
         self.assertEqual(val['structural'], 2000.)
 
         with self.assertRaises(IndexError):  # non-existing site_id
-            extract('asset_values/1', self.calc.datastore)
+            extract(self.calc.datastore, 'asset_values/1')
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
