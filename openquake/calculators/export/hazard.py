@@ -745,45 +745,31 @@ def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     imts = list(oq.imtls)
-    if 'scenario' in oq.calculation_mode:
-        imtls = oq.imtls
-        gsims = [str(rlz.gsim_rlz) for rlz in rlzs_assoc.realizations]
-        n_gmfs = oq.number_of_ground_motion_fields
-        fields = ['%03d' % i for i in range(n_gmfs)]
-        dt = numpy.dtype([(f, F32) for f in fields])
-        eids, gmfs_ = calc.get_gmfs(dstore)
-        sitemesh = get_mesh(dstore['sitecol'])
-        writer = writers.CsvWriter(fmt='%.5f')
-        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E, I)
-            for imti, imt in enumerate(imtls):
-                gmfs = numpy.zeros(len(gmfa), dt)
-                for e, event in enumerate(dt.names):
-                    gmfs[event] = gmfa[:, e, imti]
-                dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
-                data = util.compose_arrays(sitemesh, gmfs)
-                writer.save(data, dest)
-        return writer.getsaved()
-    else:  # event based
-        eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-        getter = GmfDataGetter(dstore['gmf_data'])
-        gmfa = getter.gen_gmv()
-        if eid is None:  # new format
-            fname = dstore.build_fname('gmf', 'data', 'csv')
-            gmfa.sort(order=['rlzi', 'sid', 'eid'])
-            writers.write_csv(fname, _expand_gmv(gmfa, imts))
-            return [fname]
-        # old format for single eid
-        gmfa = gmfa[gmfa['eid'] == eid]
-        fnames = []
-        for rlzi, array in group_array(gmfa, 'rlzi').items():
-            rlz = rlzs_assoc.realizations[rlzi]
-            data, comment = _build_csv_data(
-                array, rlz, dstore['sitecol'], imts, oq.investigation_time)
-            fname = dstore.build_fname(
-                'gmf', '%d-rlz-%03d' % (eid, rlzi), 'csv')
-            writers.write_csv(fname, data, comment=comment)
-            fnames.append(fname)
-        return fnames
+    sitemesh = get_mesh(dstore['sitecol'])
+    eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
+    getter = GmfDataGetter(dstore['gmf_data'])
+    gmfa = getter.gen_gmv()
+    if eid is None:  # new format
+        f = dstore.build_fname('sitemesh', '', 'csv')
+        sids = numpy.arange(len(sitemesh), dtype=U32)
+        sites = util.compose_arrays(sids, sitemesh, 'site_id')
+        writers.write_csv(f, sites)
+        fname = dstore.build_fname('gmf', 'data', 'csv')
+        gmfa.sort(order=['rlzi', 'sid', 'eid'])
+        writers.write_csv(fname, _expand_gmv(gmfa, imts))
+        return [fname, f]
+    # old format for single eid
+    gmfa = gmfa[gmfa['eid'] == eid]
+    fnames = []
+    for rlzi, array in group_array(gmfa, 'rlzi').items():
+        rlz = rlzs_assoc.realizations[rlzi]
+        data, comment = _build_csv_data(
+            array, rlz, dstore['sitecol'], imts, oq.investigation_time)
+        fname = dstore.build_fname(
+            'gmf', '%d-rlz-%03d' % (eid, rlzi), 'csv')
+        writers.write_csv(fname, data, comment=comment)
+        fnames.append(fname)
+    return fnames
 
 
 def _expand_gmv(array, imts):

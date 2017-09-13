@@ -901,40 +901,8 @@ class CurveBuilder(object):
     def __len__(self):
         return len(self.cps)
 
-    # old algorithm not used anymore
-    def build_curves(self, avalues, loss_ratios):
+    def build_maps(self, avalues, loss_ratios, weights, stats, mon):
         """
-        :param avalues: array of asset values
-        :param loss_ratios: a list of dictionaries aid -> loss ratios
-        :returns: A curves of dtype loss_curve_dt
-        """
-        curves = numpy.zeros(len(avalues), self.loss_curve_dt)
-        L = len(self.cps)
-        LI = L * self.I
-        for a, avalue in enumerate(avalues):
-            try:
-                data = numpy.concatenate(loss_ratios[a])
-            except KeyError:  # no ratios for the given realization
-                continue
-            ratios = data.reshape(-1, LI)
-            for cb in self.cps:
-                lt = cb.loss_type
-                losses = avalue[lt] * cb.ratios
-                for i in range(self.I):
-                    arr = curves[a][lt + '_ins' * i]
-                    lrs = ratios[:, cb.index + L * i]
-                    counts = numpy.array([(lrs >= ratio).sum()
-                                          for ratio in cb.ratios], F32)
-                    poes = 1. - numpy.exp(- counts * self.ses_ratio)
-                    arr['poes'] = poes
-                    arr['losses'] = losses
-                    arr['avg'] = average_loss([losses, poes])
-        return curves
-
-    def build_maps(self, aids, avalues, loss_ratios, weights, stats, mon):
-        """
-        :param aids:
-            asset ordinals
         :param avalues:
             an array of asset values
         :param loss_ratios:
@@ -958,7 +926,7 @@ class CurveBuilder(object):
                                     for avalue in avalues]
             if self.I == 2:
                 losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
-        all_poes = self.build_all_poes(aids, loss_ratios, len(weights))
+        all_poes = self.build_all_poes(len(avalues), loss_ratios, len(weights))
         loss_maps = self._build_maps(losses, all_poes)
         if len(weights) > 1 and stats:
             statnames, statfuncs = zip(*stats)
@@ -981,21 +949,21 @@ class CurveBuilder(object):
                         loss_maps[a, r, p, lti] = clratio
         return loss_maps
 
-    def build_all_poes(self, aids, loss_ratios, num_rlzs):
+    def build_all_poes(self, num_assets, loss_ratios, num_rlzs):
         """
-        :param aids:
-            a list of asset IDs
+        :param num_assets:
+            the number of assets in the given bunch
         :param loss_ratios:
             a list of loss ratios
         :param num_rlzs:
             the total number of realizations
         :yields:
-            a matrix of shape (A, R) of PoEs
+            a matrix of shape (num_assets, R) of PoEs
         """
         L = len(self.cps)
         LI = L * self.I
-        poes = numpy.zeros((len(aids), num_rlzs), self.dt)
-        for a, aid in enumerate(aids):
+        poes = numpy.zeros((num_assets, num_rlzs), self.dt)
+        for a in range(num_assets):
             dic = group_array(loss_ratios[a], 'rlzi')
             for r in range(num_rlzs):
                 try:
@@ -1416,27 +1384,35 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def losses_by_period(losses, return_periods, eff_time):
+def losses_by_period(losses, return_periods, num_events, eff_time):
     """
     :param losses: array of simulated losses
     :param return_periods: return periods of interest
+    :param num_events: the number of events
     :param eff_time: investigation_time * ses_per_logic_tree_path
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
     where min_time = eff_time /len(losses). Outsided the interval they
-    have NaN values. Here is an example:
+    have NaN values. If there are less losses than events, the array
+    is filled with zeros.
+    Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
-    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 100)
-    array([  nan,   nan,   nan,   3.5,   8. ,  13. ,  23. ])
+    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20, 100)
+    array([  nan,   nan,   0. ,   3.5,   8. ,  13. ,  23. ])
     """
-    periods = eff_time / numpy.arange(len(losses), 0., -1)
+    assert num_events >= len(losses), (num_events, len(losses))
+    losses = numpy.sort(losses)
+    num_zeros = num_events - len(losses)
+    if num_zeros:
+        losses = numpy.concatenate(
+            [numpy.zeros(num_zeros, losses.dtype), losses])
+    periods = eff_time / numpy.arange(num_events, 0., -1)
     rperiods = [rp if periods[0] <= rp <= periods[-1] else numpy.nan
                 for rp in return_periods]
-    curve = numpy.interp(
-        numpy.log(rperiods), numpy.log(periods), numpy.sort(losses))
+    curve = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
     return curve
 
 
@@ -1444,23 +1420,31 @@ class LossesByPeriodBuilder(object):
     """
     Build losses by period for all loss types at the same time.
 
-    :param insured_losses: insured losses flag from the job.ini
+    :param return_periods: ordered array of return periods
+    :param loss_dt: composite dtype for the loss types
+    :param weights: weights of the realizations
+    :param num_events: number of events for each realization
+    :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
-    def __init__(self, return_periods, loss_dt, num_rlzs, eff_time):
+    def __init__(self, return_periods, loss_dt, weights, num_events, eff_time):
         self.return_periods = return_periods
         self.loss_dt = loss_dt
-        self.num_rlzs = num_rlzs
+        self.weights = weights
+        self.num_events = num_events
         self.eff_time = eff_time
 
     # used in the EbrPostCalculator
-    def build_rlzs(self, asset_values, loss_ratios):
+    def build_all(self, asset_values, loss_ratios, stats=()):
         """
         :param asset_values: a list of asset values
         :param loss_ratios: an array of dtype lrs_dt
-        :returns: a composite array of shape (A, R, P)
+        :param stats: list of pairs [(statname, statfunc), ...]
+        :returns: two composite arrays of shape (A, R, P) and (A, S, P)
         """
         # loss_ratios from lrgetter.get_all
-        A, R, P = len(asset_values), self.num_rlzs, len(self.return_periods)
+        A = len(asset_values)
+        R = len(self.weights)
+        P = len(self.return_periods)
         array = numpy.zeros((A, R, P), self.loss_dt)
         for a, asset_value in enumerate(asset_values):
             r_recs = group_array(loss_ratios[a], 'rlzi').items()
@@ -1469,38 +1453,56 @@ class LossesByPeriodBuilder(object):
                 for r, recs in r_recs:
                     array[a, r][lt] = aval * losses_by_period(
                         recs['ratios'][:, li], self.return_periods,
-                        self.eff_time)
-        return array
+                        self.num_events[r], self.eff_time)
+        if len(self.weights) > 1 and stats:
+            statnames, statfuncs = zip(*stats)
+            array_stats = compute_stats2(array, statfuncs, self.weights)
+        else:
+            array_stats = None
+        return array, array_stats
 
     # used in the LossCurvesExporter
     def build_rlz(self, asset_values, loss_ratios, rlzi):
         """
         :param asset_values: a list of asset values
-        :param loss_ratios: an array of dtype lrs_dt
+        :param loss_ratios: a dictionary aid -> array of shape (E, LI)
         :returns: a composite array of shape (A, P)
         """
         # loss_ratios from lrgetter.get, aid -> list of ratios
         A, P = len(asset_values), len(self.return_periods)
         array = numpy.zeros((A, P), self.loss_dt)
         for a, asset_value in enumerate(asset_values):
-            ratios = numpy.concatenate(loss_ratios[a])
+            ratios = loss_ratios[a]  # shape (E, LI)
             for li, lt in enumerate(self.loss_dt.names):
                 aval = asset_value[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(
-                    ratios[:, li], self.return_periods, self.eff_time)
+                    ratios[:, li], self.return_periods,
+                    self.num_events[rlzi], self.eff_time)
         return array
 
-    def build(self, agg_loss_table):
+    def build(self, agg_loss_table, stats=()):
         """
-        :returns: an array of (P, R) values of dtype loss_dt
+        :param agg_loss_table:
+            the aggregate loss table
+        :param stats:
+            list of pairs [(statname, statfunc), ...]
+        :returns:
+            two arrays of dtype loss_dt values with shape (P, R) and (P, S)
         """
-        P = len(self.return_periods)
-        arr = numpy.zeros((P, self.num_rlzs), self.loss_dt)
+        P, R = len(self.return_periods), len(self.weights)
+        array = numpy.zeros((P, R), self.loss_dt)
         for rlzstr in agg_loss_table:
             r = int(rlzstr[4:])
+            num_events = self.num_events[r]
             losses = agg_loss_table[rlzstr]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, lti].flatten()  # flatten only in ucerf
-                lbp = losses_by_period(ls, self.return_periods, self.eff_time)
-                arr[:, r][lt] = lbp
-        return arr
+                lbp = losses_by_period(
+                    ls, self.return_periods, num_events, self.eff_time)
+                array[:, r][lt] = lbp
+        if len(self.weights) > 1 and stats:
+            statnames, statfuncs = zip(*stats)
+            array_stats = compute_stats2(array, statfuncs, self.weights)
+        else:
+            array_stats = None
+        return array, array_stats

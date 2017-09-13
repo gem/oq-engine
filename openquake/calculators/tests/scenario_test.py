@@ -131,13 +131,8 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
-        f1, f2 = out['gmf_data', 'csv']
-        self.assertEqualFiles('LinLee2008SSlab_gmf.csv', f1)
-        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.csv', f2)
-
-        f1, f2 = out['gmf_data', 'csv']
-        self.assertEqualFiles('gmf-LinLee2008SSlab-PGA.csv', f1)
-        self.assertEqualFiles('gmf-YoungsEtAl1997SSlab-PGA.csv', f2)
+        f, _sitefile = out['gmf_data', 'csv']
+        self.assertEqualFiles('gmf.csv', f)
 
         # test the .npz export
         [fname] = out['gmf_data', 'npz']
