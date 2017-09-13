@@ -30,6 +30,7 @@ import unittest
 import subprocess
 import tempfile
 import requests
+import numpy
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
@@ -154,6 +155,14 @@ class EngineServerTestCase(unittest.TestCase):
         # test no filtering in actions.get_calcs
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
+
+        # check asset_values
+        url = 'http://%s/v1/calc/%s/extract/asset_values/0' % (
+            self.hostport, job_id)
+        resp = requests.get(url)
+        got = numpy.loads(resp.content)
+        self.assertEqual(len(got), 0)  # there are 0 assets on site 0
+        self.assertEqual(resp.status_code, 200)
 
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails

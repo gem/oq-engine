@@ -65,7 +65,7 @@ class ClassicalTestCase(CalculatorTestCase):
         export(('hcurves', 'npz'), self.calc.datastore)
 
         # check extraction
-        sitecol = extract(self.calc.datastore, '/sitecol')
+        sitecol = extract(self.calc.datastore, 'sitecol')
         self.assertEqual(repr(sitecol), '<SiteCollection with 1 sites>')
 
     @attr('qa', 'hazard', 'classical')
