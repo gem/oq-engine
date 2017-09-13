@@ -27,6 +27,20 @@ else:
     memoized = lru_cache(100)
 
 
+def extract_(dstore, dspath):
+    """
+    Extracts an HDF5 path object from the datastore, for instance
+    extract('sitecol', dstore)
+    """
+    obj = dstore[dspath]
+    if isinstance(obj, Dataset):
+        return DatasetWrapper(obj.value, obj.attrs)
+    elif isinstance(obj, Group):
+        return DatagroupWrapper(numpy.array(list(obj)), obj.attrs)
+    else:
+        return obj
+
+
 class Extract(collections.OrderedDict):
 
     def add(self, key, cache=False):
@@ -40,7 +54,10 @@ class Extract(collections.OrderedDict):
             k, v = key.split('/', 1)
         except ValueError:   # no slashes
             k, v = key, ''
-        return self[k](dstore, v)
+        if k in self:
+            return self[k](dstore, v)
+        else:
+            return extract_(dstore, key)
 
 extract = Extract()
 
@@ -85,21 +102,6 @@ class DatagroupWrapper(object):
         return self.array[idx]
 
 
-@extract.add('')
-def extract_slash(dstore, dspath):
-    """
-    Extracts an HDF5 path object from the datastore, for instance
-    extract('/sitecol', dstore)
-    """
-    obj = dstore[dspath]
-    if isinstance(obj, Dataset):
-        return DatasetWrapper(obj.value, obj.attrs)
-    elif isinstance(obj, Group):
-        return DatagroupWrapper(numpy.array(list(obj)), obj.attrs)
-    else:
-        return obj
-
-
 @extract.add('asset_values', cache=True)
 def extract_asset_values(dstore, sid):
     """
@@ -108,8 +110,8 @@ def extract_asset_values(dstore, sid):
     """
     if sid:
         return extract(dstore, 'asset_values')[int(sid)]
-    asset_refs = extract(dstore, '/asset_refs')
-    assetcol = extract(dstore, '/assetcol')
+    asset_refs = extract(dstore, 'asset_refs')
+    assetcol = extract(dstore, 'assetcol')
     assets_by_site = assetcol.assets_by_site()
     lts = assetcol.loss_types
     time_event = assetcol.time_event
