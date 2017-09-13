@@ -101,6 +101,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-rlz-000.csv', f1)
         self.assertEqualFiles('expected/loss_curves-rlz-001.csv', f2)
 
+        [f] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-mean.csv', f)
+
         # test the loss maps exporter
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         assert fnames
@@ -232,8 +235,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check job_info is stored
         job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
-        self.assertIn('build_loss_maps.sent', job_info)
-        self.assertIn('build_loss_maps.received', job_info)
+        self.assertIn('build_curves_maps.sent', job_info)
+        self.assertIn('build_curves_maps.received', job_info)
 
         check_total_losses(self.calc)
 
@@ -279,5 +282,5 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
                             exports='csv')
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
