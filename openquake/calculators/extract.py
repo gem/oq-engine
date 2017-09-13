@@ -24,7 +24,7 @@ try:
 except ImportError:
     from openquake.risklib.utils import memoized
 else:
-    memoized = lrucache(100)
+    memoized = lru_cache(100)
 
 
 class Extract(collections.OrderedDict):
