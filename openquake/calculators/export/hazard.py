@@ -441,15 +441,9 @@ def export_hcurves_csv(ekey, dstore):
             fnames.extend(
                 export_hazard_csv(ekey, fname, sitemesh, hmap, pdic, comment))
         elif key == 'hcurves':
-            if export.from_db:  # called by export_from_db
-                fnames.extend(
-                    export_hcurves_by_imt_csv(
-                        ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
-            else:  # when exporting directly from the datastore
-                fnames.extend(
-                    export_hazard_csv(
-                        ekey, fname, sitemesh, hcurves, oq.imtls, comment))
-
+            fnames.extend(
+                export_hcurves_by_imt_csv(
+                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
     return sorted(fnames)
 
 UHS = collections.namedtuple('UHS', 'imls location')
