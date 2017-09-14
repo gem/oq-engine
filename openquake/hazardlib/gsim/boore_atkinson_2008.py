@@ -383,10 +383,6 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
         Standard deviation is fixed.
         """
 
-        # Limiting calculation distance to 1km
-        # (as suggested by C. Bruce Worden)
-        dists.rjb = np.array([d if d > 1 else 1 for d in dists.rjb])
-
         base = super(Atkinson2010Hawaii, self)
         mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists,
                                                   imt, stddev_types)
@@ -410,8 +406,12 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
         else:
             x0 = 0.2
 
+        # Limiting calculation distance to 1km
+        # (as suggested by C. Bruce Worden)
+        rjb = [d if d > 1 else 1 for d in dists.rjb]
+
         # Equation 2 and 5 of Atkinson (2010)
-        mean += (x0 + x1*np.log10(dists.rjb))/np.log10(np.e)
+        mean += (x0 + x1*np.log10(rjb))/np.log10(np.e)
 
         return mean, stddevs
 
