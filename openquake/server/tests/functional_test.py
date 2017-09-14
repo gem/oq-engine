@@ -30,6 +30,7 @@ import unittest
 import subprocess
 import tempfile
 import requests
+import numpy
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
@@ -155,6 +156,14 @@ class EngineServerTestCase(unittest.TestCase):
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
 
+        # check asset_values
+        url = 'http://%s/v1/calc/%s/extract/asset_values/0' % (
+            self.hostport, job_id)
+        resp = requests.get(url)
+        got = numpy.loads(resp.content)
+        self.assertEqual(len(got), 0)  # there are 0 assets on site 0
+        self.assertEqual(resp.status_code, 200)
+
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
         datadir, dskeys = actions.get_results(db, job_id)
@@ -184,6 +193,11 @@ class EngineServerTestCase(unittest.TestCase):
         # check oqparam
         resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
         self.assertEqual(resp['calculation_mode'], 'classical')
+
+        # check the /extract endpoint
+        url = 'http://%s/v1/calc/%s/extract/sitecol' % (self.hostport, job_id)
+        resp = requests.get(url)
+        self.assertEqual(resp.status_code, 200)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
