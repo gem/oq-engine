@@ -58,7 +58,8 @@ class Atkinson2010HawaiiTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Atkinson2010Hawaii
     
     # Test data were kindly provided by Gail Atkinson
-    # (distances less than 1km are imposed equal to 1km)
+    # (Note that it is here used a modified version of the table
+    # to get rid of distances less than 1km)
 
     def test_mean(self):
         self.check('NGA/BA08/A10H_MEDIAN_1KM.csv',
