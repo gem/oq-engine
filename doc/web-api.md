@@ -113,6 +113,15 @@ A list of error lines extracted from the log. If the calculation was
 successfull, the list is empty.
 
 
+#### GET /v1/calc/:calc_id/extract/:spec
+
+Get a pickled file for the given output specification
+
+Response:
+
+A single .pik file of Content-Type: application/octet-stream
+
+
 #### GET /v1/calc/:calc_id/results
 
 List a summary of results for the given `calc_id`. The [url](#get-v1calchazardresultresult_id) in each response item can be followed to retrieve the full result artifact.

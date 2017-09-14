@@ -26,6 +26,7 @@ from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.views import view
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 
 
 def tot_loss(dstore):
@@ -56,6 +57,15 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         [fname] = out['losses_by_event', 'csv']
         self.assertEqualFiles('expected/losses_by_event.csv', fname)
+
+        # check the asset values by sid
+        [val] = extract(self.calc.datastore, 'asset_values/0')
+        self.assertEqual(val['aref'], b'a2')
+        self.assertEqual(val['aid'], 0)
+        self.assertEqual(val['structural'], 2000.)
+
+        with self.assertRaises(IndexError):  # non-existing site_id
+            extract(self.calc.datastore, 'asset_values/1')
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
