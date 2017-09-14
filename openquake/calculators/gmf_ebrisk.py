@@ -58,6 +58,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
+        self.param['ses_ratio'] = oq.ses_ratio
         self.param['asset_loss_table'] = oq.asset_loss_table or oq.loss_ratios
         self.param['elt_dt'] = numpy.dtype(
             [('eid', U64), ('loss', (F32, (self.L * self.I,)))])
