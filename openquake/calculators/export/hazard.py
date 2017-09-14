@@ -828,7 +828,7 @@ def export_gmf_scenario_csv(ekey, dstore):
     correl_model = oq.get_correl_model()
     sitecol = dstore['sitecol'].complete
     getter = GmfGetter(
-        ebr.grp_id, rlzs_by_gsim, ruptures, sitecol, imts,
+        rlzs_by_gsim, ruptures, sitecol, imts,
         min_iml, oq.truncation_level, correl_model, samples)
     getter.init()
     hazardr = getter.get_hazard()
