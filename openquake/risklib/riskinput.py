@@ -597,10 +597,10 @@ class GmfGetter(object):
     """
     kind = 'gmf'
 
-    def __init__(self, grp_id, rlzs_by_gsim, ebruptures, sitecol, imts,
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imts,
                  min_iml, truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete, sitecol
-        self.grp_id = grp_id
+        self.grp_id = ebruptures[0].grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
