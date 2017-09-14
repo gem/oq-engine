@@ -36,7 +36,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, datastore, source, calc, riskmodels
-from openquake.baselib.parallel import Starmap, executor, wakeup_pool
+from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
 
