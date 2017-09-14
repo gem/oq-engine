@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a generic `extract` functionality to the web API
   * Fixed a bug when computing the rjb distances with multidimensional meshes
   * Changed the GMF CSV exporter to export the sites too; unified it with the
     event based one
