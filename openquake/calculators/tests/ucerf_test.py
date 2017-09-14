@@ -69,8 +69,8 @@ class UcerfTestCase(CalculatorTestCase):
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
         fnames = export(('hcurves/all', 'csv'), self.calc.datastore)
-        expected = ['hazard_curve-PGA.csv', 'hazard_curve-SA(0.1).csv',
-                    'hazard_curve-PGA.csv', 'hazard_curve-SA(0.1).csv']
+        expected = ['hazard_curve-0-PGA.csv', 'hazard_curve-0-SA(0.1).csv',
+                    'hazard_curve-1-PGA.csv', 'hazard_curve-1-SA(0.1).csv']
         for fname, exp in zip(fnames, expected):
             self.assertEqualFiles('expected/' + exp, fname)
 
