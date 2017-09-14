@@ -306,14 +306,15 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), F32))
+            lst.append(('poe-%s' % iml, F32))
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
-            rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt))
+            rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt,
+                                        header=[name for (name, dt) in lst]))
     return fnames
 
 
