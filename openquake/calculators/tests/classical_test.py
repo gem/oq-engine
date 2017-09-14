@@ -21,6 +21,7 @@ from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
@@ -62,6 +63,10 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check npz export
         export(('hcurves', 'npz'), self.calc.datastore)
+
+        # check extraction
+        sitecol = extract(self.calc.datastore, 'sitecol')
+        self.assertEqual(repr(sitecol), '<SiteCollection with 1 sites>')
 
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
