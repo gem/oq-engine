@@ -104,10 +104,12 @@ def expose_outputs(dstore):
             dskeys.add('hmaps')  # export them
     if 'avg_losses-rlzs' in dstore and rlzs:
         dskeys.add('avg_losses-stats')
+    if 'curves-stats' in dstore:
+        logs.LOG.warn('loss curves are exportable with oq export')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
-        if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
+        if 'loss_curves-rlzs' in dstore:
             dskeys.add('loss_maps-rlzs')
-        if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
+        if 'loss_curves-stats' in dstore:
             if len(rlzs) > 1:
                 dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
