@@ -21,6 +21,7 @@ import logging
 import numpy
 
 from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
 from openquake.commonlib import readinput, source, calc
@@ -164,6 +165,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         # loss curves stats
         if self.R > 1:
+            stats = [encode(n) for (n, f) in self.oqparam.risk_stats()]
             stat_curves = numpy.zeros((self.N, self.S), self.loss_curve_dt)
             for l, aid, losses, statpoes, statloss in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
@@ -172,4 +174,5 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     base.set_array(stat_curves_lt['poes'][aid, s], statpoes[s])
                     base.set_array(stat_curves_lt['losses'][aid, s], losses)
             self.datastore['loss_curves-stats'] = stat_curves
-            self.datastore.set_nbytes('loss_curves-stats')
+            self.datastore.set_attrs(
+                'loss_curves-stats', nbytes=stat_curves.nbytes, stats=stats)
