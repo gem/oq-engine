@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -457,25 +457,29 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         Reads in the source model in returns an instance of the :class:
         openquake.hmtk.sourcs.source_model.mtkSourceModel
         """
-        node_set = node_from_xml(self.input_file)[0]
-        source_model = mtkSourceModel(identifier,
-                                      name=node_set.attrib["name"])
-        for node in node_set:
-            if "pointSource" in node.tag:
-                source_model.sources.append(
-                    parse_point_source_node(node, mfd_spacing))
-            elif "areaSource" in node.tag:
-                source_model.sources.append(
-                    parse_area_source_node(node, mfd_spacing))
-            elif "simpleFaultSource" in node.tag:
-                source_model.sources.append(
-                    parse_simple_fault_node(node, mfd_spacing,
-                                            simple_mesh_spacing))
-            elif "complexFaultSource" in node.tag:
-                source_model.sources.append(
-                    parse_complex_fault_node(node, mfd_spacing,
-                                             complex_mesh_spacing))
-            else:
-                print("Source typology %s not recognised - skipping!"
-                      % node.tag)
+        sm_node = node_from_xml(self.input_file)[0]
+        if sm_node[0].tag.startswith('{http://openquake.org/xmlns/nrml/0.4}'):
+            node_sets = [sm_node]
+        else:  # format NRML 0.5+
+            node_sets = sm_node
+        source_model = mtkSourceModel(identifier, name=sm_node["name"])
+        for node_set in node_sets:
+            for node in node_set:
+                if "pointSource" in node.tag:
+                    source_model.sources.append(
+                        parse_point_source_node(node, mfd_spacing))
+                elif "areaSource" in node.tag:
+                    source_model.sources.append(
+                        parse_area_source_node(node, mfd_spacing))
+                elif "simpleFaultSource" in node.tag:
+                    source_model.sources.append(
+                        parse_simple_fault_node(node, mfd_spacing,
+                                                simple_mesh_spacing))
+                elif "complexFaultSource" in node.tag:
+                    source_model.sources.append(
+                        parse_complex_fault_node(node, mfd_spacing,
+                                                 complex_mesh_spacing))
+                else:
+                    print("Source typology %s not recognised - skipping!"
+                          % node.tag)
         return source_model
