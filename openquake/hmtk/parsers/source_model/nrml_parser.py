@@ -49,6 +49,7 @@
 Parser for input in a NRML format, with partial validation
 """
 import re
+import logging
 from copy import copy
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.geo.point import Point
@@ -457,6 +458,8 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         Reads in the source model in returns an instance of the :class:
         openquake.hmtk.sourcs.source_model.mtkSourceModel
         """
+        logging.warn('The nrmlSourceModelParser is deprecated, '
+                     'use openquake.hazardlib.nrml.parse instead')
         sm_node = node_from_xml(self.input_file)[0]
         if sm_node[0].tag.startswith('{http://openquake.org/xmlns/nrml/0.4}'):
             node_sets = [sm_node]
@@ -479,6 +482,7 @@ class nrmlSourceModelParser(BaseSourceModelParser):
                     source_model.sources.append(
                         parse_complex_fault_node(node, mfd_spacing,
                                                  complex_mesh_spacing))
+                # TODO: multiPointSource are not supported
                 else:
                     print("Source typology %s not recognised - skipping!"
                           % node.tag)
