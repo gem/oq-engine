@@ -49,9 +49,9 @@
 Parser for input in a NRML format, with partial validation
 """
 import re
-import logging
 from copy import copy
 from openquake.baselib.node import node_from_xml
+from openquake.baselib.general import deprecated
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
@@ -452,14 +452,13 @@ class nrmlSourceModelParser(BaseSourceModelParser):
     Parser for a source model in NRML format, permitting partial validation
     such that not all fields need to be specified for the file to be parsed
     """
+    @deprecated('Use openquake.hazardlib.nrml.parse instead')
     def read_file(self, identifier, mfd_spacing=0.1, simple_mesh_spacing=1.0,
                   complex_mesh_spacing=4.0, area_discretization=10.):
         """
         Reads in the source model in returns an instance of the :class:
         openquake.hmtk.sourcs.source_model.mtkSourceModel
         """
-        logging.warn('The nrmlSourceModelParser is deprecated, '
-                     'use openquake.hazardlib.nrml.parse instead')
         sm_node = node_from_xml(self.input_file)[0]
         if sm_node[0].tag.startswith('{http://openquake.org/xmlns/nrml/0.4}'):
             node_sets = [sm_node]
