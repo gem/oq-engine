@@ -36,13 +36,14 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode
+from openquake.baselib.python3compat import unicode, pickle
 from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
 from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine
@@ -563,6 +564,35 @@ def get_result(request, result_id):
     stream.close = lambda: (
         FileWrapper.close(stream), shutil.rmtree(tmpdir))
     response = FileResponse(stream, content_type=content_type)
+    response['Content-Disposition'] = (
+        'attachment; filename=%s' % os.path.basename(fname))
+    return response
+
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
+def extract(request, calc_id, what):
+    """
+    Wrapper over the `oq extract` command
+    """
+    try:
+        job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+
+    # read the data and save them on a temporary .pik file
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        fd, fname = tempfile.mkstemp(
+            prefix=what.replace('/', '-'), suffix='.pik')
+        os.close(fd)
+        obj = _extract(ds, what)
+        with open(fname, 'wb') as f:
+            pickle.dump(obj, f)
+
+    # stream the data back
+    stream = FileWrapper(open(fname, 'rb'))
+    stream.close = lambda: (FileWrapper.close(stream), os.remove(fname))
+    response = FileResponse(stream, content_type='application/octet-stream')
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
     return response
