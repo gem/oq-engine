@@ -55,7 +55,7 @@ from openquake.hmtk.sources.point_source import mtkPointSource
 from openquake.hmtk.sources.area_source import mtkAreaSource
 from openquake.hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from openquake.hmtk.sources.complex_fault_source import mtkComplexFaultSource
-from openquake.hmtk.parsers.source_model.nrml_parser import nrmlSourceModelParser
+from openquake.hmtk.parsers.source_model.nrml04_parser import nrmlSourceModelParser
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), "data")
 
