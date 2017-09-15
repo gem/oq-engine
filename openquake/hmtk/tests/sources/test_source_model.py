@@ -55,7 +55,7 @@ import os
 import unittest
 import operator
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hmtk.parsers.source_model.nrml_parser import nrmlSourceModelParser
+from openquake.hmtk.parsers.source_model.nrml04_parser import nrmlSourceModelParser
 from openquake.hmtk.sources.source_model import mtkSourceModel
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.area import AreaSource
