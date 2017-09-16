@@ -389,13 +389,14 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
-def save(path, obj, **extra):
+def save(path, dic, **extra):
     """
     :param path: an .hdf5 pathname
-    :param obj: array-like or dictionary of array-like objects
+    :param dic: a dictionary of array-like objects
     :param extra: extra attributes to be saved in the file
     :returns: the passed pathname
     """
     with File(path, 'w') as f:
-        f[obj.__class__.__name__] = obj
+        for key in sorted(dic):
+            f[key] = dic[key]
     return path
