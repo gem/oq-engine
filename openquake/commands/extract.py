@@ -28,8 +28,7 @@ from openquake.calculators.extract import extract as extract_
 @sap.Script
 def extract(what, calc_id=-1):
     """
-    Extract an output from the datastore and prints it on the terminal.
-    This is meant for debugging.
+    Extract an output from the datastore and save it into an .hdf5 file.
     """
     logging.basicConfig(level=logging.INFO)
     dstore = datastore.read(calc_id)
@@ -38,6 +37,8 @@ def extract(what, calc_id=-1):
         dstore.parent = datastore.read(parent_id)
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
         dic = extract_(dstore, what)
+        if not hasattr(dic, 'keys'):
+            dic = {dic.__class__.__name__: dic}
         fname = hdf5.save(what + '.hdf5', dic)
         print('Saved', fname)
     if mon.duration > 1:
