@@ -25,6 +25,8 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
+from openquake.baselib.general import AccumDict, DictArray
+from openquake.commonlib import calc
 
 
 def extract_(dstore, dspath):
@@ -117,3 +119,50 @@ def extract_asset_values(dstore, sid):
                 vals[a][lt] = asset.value(lt, time_event)
         data.append(vals)
     return data
+
+
+def convert_to_array(pmap, nsites, imtls):
+    """
+    Convert the probability map into a composite array with header
+    of the form PGA-0.1, PGA-0.2 ...
+
+    :param pmap: probability map
+    :param nsites: total number of sites
+    :param imtls: a DictArray with IMT and levels
+    :returns: a composite array of lenght nsites
+    """
+    lst = []
+    # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
+    for imt, imls in imtls.items():
+        for iml in imls:
+            lst.append(('%s-%s' % (imt, iml), numpy.float64))
+    curves = numpy.zeros(nsites, numpy.dtype(lst))
+    for sid, pcurve in pmap.items():
+        curve = curves[sid]
+        idx = 0
+        for imt, imls in imtls.items():
+            for iml in imls:
+                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
+                idx += 1
+    return curves
+
+
+@extract.add('hazard')
+def extract_hazard(dstore, what):
+    """
+    Extracts hazard curves and possibly hazard maps and/or uniform hazard
+    spectra. Use it as /extract/hazard/mean or /extract/hazard/rlz-0, etc
+    """
+    oq = dstore['oqparam']
+    N = len(dstore['sitecol'])
+    dic = AccumDict()
+    if oq.poes:
+        pdic = DictArray({imt: oq.poes for imt in oq.imtls})
+    for kind, hcurves in calc.PmapGetter(dstore).items(what):
+        dic['hcurves', kind] = convert_to_array(hcurves, N, oq.imtls)
+        if oq.poes and oq.uniform_hazard_spectra:
+            dic['uhs', kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
+        if oq.poes and oq.hazard_maps:
+            hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+            dic['hmaps', kind] = convert_to_array(hmaps, N, pdic)
+    return dic
