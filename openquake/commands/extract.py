@@ -19,7 +19,7 @@
 from __future__ import print_function
 import logging
 
-from openquake.baselib import performance, sap
+from openquake.baselib import performance, sap, hdf5
 from openquake.commonlib import datastore
 from openquake.calculators.extract import extract as extract_
 
@@ -37,7 +37,9 @@ def extract(what, calc_id=-1):
     if parent_id:
         dstore.parent = datastore.read(parent_id)
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
-        print(extract_(dstore, what))
+        dic = extract_(dstore, what)
+        fname = hdf5.save(what + '.hdf5', dic)
+        print('Saved', fname)
     if mon.duration > 1:
         print(mon)
 
