@@ -159,10 +159,10 @@ def extract_hazard(dstore, what):
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     for kind, hcurves in calc.PmapGetter(dstore).items(what):
-        dic['hcurves', kind] = convert_to_array(hcurves, N, oq.imtls)
+        dic['hcurves-' + kind] = convert_to_array(hcurves, N, oq.imtls)
         if oq.poes and oq.uniform_hazard_spectra:
-            dic['uhs', kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
+            dic['uhs-' + kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
         if oq.poes and oq.hazard_maps:
             hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-            dic['hmaps', kind] = convert_to_array(hmaps, N, pdic)
+            dic['hmaps-' + kind] = convert_to_array(hmaps, N, pdic)
     return dic
