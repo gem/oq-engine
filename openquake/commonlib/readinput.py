@@ -112,7 +112,7 @@ def get_params(job_inis):
     cp = configparser.ConfigParser()
     cp.read(job_inis)
 
-    # drectory containing the config files we're parsing
+    # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
     base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
@@ -337,8 +337,9 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
+    # NB: converting the random_seed into an integer is needed on Windows
     return logictree.SourceModelLogicTree(
-        fname, validate=False, seed=oqparam.random_seed,
+        fname, validate=False, seed=int(oqparam.random_seed),
         num_samples=oqparam.number_of_logic_tree_samples)
 
 
@@ -373,20 +374,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             fname = os.path.abspath(os.path.join(oqparam.base_path, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                try:
-                    logging.info('Parsing %s', fname)
-                    src_groups.extend(psr.parse_src_groups(fname, apply_unc))
-                except ValueError as e:
-                    if str(e) in ('Surface does not conform with Aki & '
-                                  'Richards convention',
-                                  'Edges points are not in the right order'):
-                        raise InvalidFile('''\
-        %s: %s. Probably you are using an obsolete model.
-        In that case you can fix the file with the command
-        python -m openquake.engine.tools.correct_complex_sources %s
-        ''' % (fname, e, fname))
-                    else:
-                        raise
+                logging.info('Parsing %s', fname)
+                src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
                 smodel = nrml.read(fname).sourceModel
                 if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format

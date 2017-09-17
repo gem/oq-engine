@@ -610,6 +610,8 @@ def get_longest_jobs(db):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
+    :returns:
+        (id, user_name, days) tuples
     """
     query = '''-- completed jobs taking more than one hour
 SELECT id, user_name, julianday(stop_time) - julianday(start_time) AS days
