@@ -22,14 +22,14 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
-from openquake.hazardlib.stats import compute_stats
 from openquake.commonlib import util
 from openquake.calculators import base, event_based
+from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.baselib import parallel
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import riskinput
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -39,30 +39,6 @@ F64 = numpy.float64
 U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
-
-
-def build_agg_curve(cb_inputs, monitor):
-    """
-    Build the aggregate loss curve in parallel for each loss type
-    and realization pair.
-
-    :param cb_inputs:
-        a list of triples `(cbs, rlzname, data)` where `cbs` are the curve
-        builders, `rlzname` is a string of kind `rlz-%03d` and `data` is an
-        array of kind `(eid, loss)`
-    :param monitor:
-        a Monitor instance
-    :returns:
-        a dictionary (li, r) -> (losses, poes, avg)
-    """
-    result = {}
-    for cbs, rlzname, data in cb_inputs:
-        if len(data) == 0:  # realization with no losses
-            continue
-        r = int(rlzname[4:])  # strip rlz-
-        for li, losses in enumerate(data['loss'].T):
-            result[li, r] = cbs[li].calc_agg_curve(losses)
-    return result
 
 
 def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
@@ -173,143 +149,6 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     result['gmdata'] = riskinput.gmdata
     return result
 
-
-@util.reader
-def build_loss_maps(avalues, builder, lrgetter, weights, stats, monitor):
-    """
-    Thin wrapper over :meth:
-    `openquake.risklib.scientific.CurveBuilder.build_maps`.
-    :returns: assets IDs and loss maps for the given chunk of assets
-    """
-    loss_maps, loss_maps_stats = builder.build_maps(
-        avalues, lrgetter, weights, stats, monitor)
-    res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
-    if loss_maps_stats is not None:
-        res['loss_maps-stats'] = loss_maps_stats
-    return res
-
-
-class EbrPostCalculator(base.RiskCalculator):
-    def __init__(self, calc):
-        self.datastore = calc.datastore
-        self.oqparam = calc.oqparam
-        self._monitor = calc._monitor
-        self.riskmodel = calc.riskmodel
-        P = len(self.oqparam.conditional_loss_poes)
-        self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
-
-    def cb_inputs(self, table):
-        loss_table = self.datastore[table]
-        cb = self.riskmodel.curve_builder
-        return [(cb, rlzstr, loss_table[rlzstr].value)
-                for rlzstr in loss_table]
-
-    def save_loss_maps(self, acc, res):
-        """
-        Save the loss maps by opening and closing the datastore and
-        return the total number of stored bytes.
-        """
-        for key in res:
-            if key.startswith('loss_maps'):
-                array = res[key]  # shape (A, R, P, LI)
-                loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
-                for lti, lt in enumerate(self.loss_maps_dt.names):
-                    loss_maps[lt] = array[:, :, :, lti]
-                acc += {key: loss_maps.nbytes}
-                self.datastore[key][res['aids']] = loss_maps
-                self.datastore.set_attrs(key, nbytes=acc[key])
-        return acc
-
-    def pre_execute(self):
-        pass
-
-    def execute(self):
-        oq = self.oqparam
-        # build loss maps
-        if 'all_loss_ratios' in self.datastore and oq.conditional_loss_poes:
-            assetcol = self.assetcol
-            stats = oq.risk_stats()
-            builder = self.riskmodel.curve_builder
-            A = len(assetcol)
-            weights = self.datastore['realizations']['weight']
-            R = len(weights)
-            # create loss_maps datasets
-            self.datastore.create_dset(
-                'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
-            if R > 1:
-                self.datastore.create_dset(
-                    'loss_maps-stats', self.loss_maps_dt, (A, len(stats)),
-                    fillvalue=None)
-            mon = self.monitor('loss maps')
-            lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
-                    in self.datastore.parent)
-            logging.info('Instantiating LossRatiosGetters')
-            with self.monitor('building lrgetters', measuremem=True,
-                              autoflush=True):
-                allargs = []
-                for aids in split_in_blocks(range(A), oq.concurrent_tasks):
-                    dstore = self.datastore.parent if lazy else self.datastore
-                    getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
-                    # a lazy getter will read the loss_ratios from the workers
-                    # an eager getter reads the loss_ratios upfront
-                    allargs.append((assetcol.values(aids), builder, getter,
-                                    weights, stats, mon))
-            if lazy:
-                # avoid OSError: Can't read data (Wrong b-tree signature)
-                self.datastore.parent.close()
-            parallel.Starmap(build_loss_maps, allargs).reduce(
-                self.save_loss_maps)
-            if lazy:  # the parent was closed, reopen it
-                self.datastore.parent.open()
-
-        # build an aggregate loss curve per realization
-        if 'agg_loss_table' in self.datastore:
-            self.build_agg_curve()
-
-    def post_execute(self):
-        # override the base class method to avoid doing bad stuff
-        pass
-
-    def build_agg_curve(self):
-        """
-        Build a single loss curve per realization. It is NOT obtained
-        by aggregating the loss curves; instead, it is obtained without
-        generating the loss curves, directly from the the aggregate losses.
-        """
-        oq = self.oqparam
-        weights = self.datastore['realizations']['weight']
-        cr = {cb.loss_type: cb.curve_resolution
-              for cb in self.riskmodel.curve_builder}
-        loss_curve_dt = scientific.build_loss_curve_dt(
-            cr, oq.conditional_loss_poes, oq.insured_losses)
-        cb_inputs = self.cb_inputs('agg_loss_table')
-        R = len(weights)
-        # NB: using the Processmap since celery is hanging; the computation
-        # is fast anyway and this part will likely be removed in the future
-        result = parallel.Processmap.apply(
-            build_agg_curve, (cb_inputs, self.monitor('')),
-            concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
-        agg_curve = numpy.zeros(R, loss_curve_dt)
-        for li, r in result:
-            lt = loss_curve_dt.names[li]
-            agg_curve[r][lt] = result[li, r]
-        self.datastore['agg_curve-rlzs'] = agg_curve
-
-        if R > 1:  # save stats too
-            statnames, stats = zip(*oq.risk_stats())
-            agg_curve_stats = numpy.zeros(len(stats), agg_curve.dtype)
-            for loss_type in agg_curve.dtype.names:
-                acs = agg_curve_stats[loss_type]
-                data = agg_curve[loss_type]
-                avg = data['avg']
-                losses, all_poes = scientific.normalize_curves_eb(
-                    [(c['losses'], c['poes']) for c in data])
-                acs['losses'] = losses
-                acs['poes'] = compute_stats(all_poes, stats, weights)
-                acs['avg'] = compute_stats(avg, stats, weights)
-
-            self.datastore['agg_curve-stats'] = agg_curve_stats
-
 save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
 
@@ -402,9 +241,14 @@ class EbriskCalculator(base.RiskCalculator):
         ruptures_per_block = self.oqparam.ruptures_per_block
         start = 0
         ignore_covs = self.oqparam.ignore_covs
+        try:
+            csm_info = self.csm.info
+        except AttributeError:  # there is no .csm if --hc was given
+            csm_info = self.datastore['csm_info']
+        samples_by_grp = csm_info.get_samples_by_grp()
         for grp_id in grp_ids:
-            rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            samples = rlzs_assoc.samples[grp_id]
+            rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[grp_id]
+            samples = samples_by_grp[grp_id]
             for rupts in block_splitter(
                     ruptures_by_grp.get(grp_id, []), ruptures_per_block):
                 if ignore_covs or not self.riskmodel.covs:
@@ -417,7 +261,7 @@ class EbriskCalculator(base.RiskCalculator):
                         len(self.assetcol), seeds[start: start + n_events])
                     start += n_events
                 getter = riskinput.GmfGetter(
-                    grp_id, rlzs_by_gsim, rupts, sitecol, imts, min_iml,
+                    rlzs_by_gsim, rupts, sitecol, imts, min_iml,
                     trunc_level, correl_model, samples)
                 ri = riskinput.RiskInputFromRuptures(getter, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
@@ -510,6 +354,7 @@ class EbriskCalculator(base.RiskCalculator):
         :param num_rlzs: the total number of realizations
         :returns: the total number of events
         """
+        oq = self.oqparam
         self.R = num_rlzs
         self.A = len(self.assetcol)
         tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
@@ -518,24 +363,24 @@ class EbriskCalculator(base.RiskCalculator):
                                    (T, self.R, self.L * self.I))
         self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
                                  nbytes=4 * T * self.R * self.L * self.I)
-        if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
+        if oq.asset_loss_table or oq.loss_ratios:
             # save all_loss_ratios
             self.alr_nbytes = 0
             self.indices = collections.defaultdict(list)  # sid -> pairs
 
-        avg_losses = self.oqparam.avg_losses
-        if avg_losses:
+        if oq.avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
 
         num_events = collections.Counter()
-        self.gmdata = {}
+        self.gmdata = AccumDict(accum=numpy.zeros(len(oq.imtls) + 2, F32))
         self.taskno = 0
         self.start = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
-                self.gmdata += dic.pop('gmdata')
+                for r, arr in dic.pop('gmdata').items():
+                    self.gmdata[start + r] += arr
                 self.save_losses(dic, start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
@@ -623,6 +468,22 @@ class EbriskCalculator(base.RiskCalculator):
             for rlz, dset in agglt.items():
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
+        # build aggregate loss curves
+        self.before_export()  # set 'realizations'
+        oq = self.oqparam
+        b = get_loss_builder(self.datastore)
+        alt = self.datastore['agg_loss_table']
+        stats = oq.risk_stats()
+        array, array_stats = b.build(alt, stats)
+        self.datastore['agg_curves-rlzs'] = array
+        self.datastore.set_attrs(
+            'agg_curves-rlzs', return_periods=b.return_periods)
+        if array_stats is not None:
+            self.datastore['agg_curves-stats'] = array_stats
+            self.datastore.set_attrs(
+                'agg_curves-stats', return_periods=b.return_periods,
+                stats=[encode(name) for (name, func) in stats])
+
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
                 'all_loss_ratios/indices',
@@ -637,3 +498,112 @@ class EbriskCalculator(base.RiskCalculator):
                 'all_loss_ratios/data',
                 nbytes=nbytes, bytes_per_asset=nbytes / self.A)
             EbrPostCalculator(self).run(close=False)
+
+
+# ######################### EbrPostCalculator ############################## #
+
+@util.reader
+def build_curves_maps(avalues, builder, lrgetter, stats, monitor):
+    """
+    Build loss curves and optionally maps if conditional_loss_poes are set.
+    """
+    b = builder.loss_builder
+    with monitor('getting loss ratios'):
+        loss_ratios = lrgetter.get_all()
+    loss_maps, loss_maps_stats = builder.build_maps(
+        avalues, loss_ratios, b.weights, stats, monitor)
+    curves, curves_stats = b.build_all(avalues, loss_ratios, stats)
+    res = {'aids': lrgetter.aids, 'loss_maps-rlzs': loss_maps}
+    if loss_maps_stats is not None:
+        res['loss_maps-stats'] = loss_maps_stats
+    if curves_stats is not None:
+        res['curves-stats'] = curves_stats
+    return res
+
+
+class EbrPostCalculator(base.RiskCalculator):
+    def __init__(self, calc):
+        self.datastore = calc.datastore
+        self.oqparam = calc.oqparam
+        self._monitor = calc._monitor
+        self.riskmodel = calc.riskmodel
+        self.loss_builder = get_loss_builder(calc.datastore)
+        P = len(self.oqparam.conditional_loss_poes)
+        self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
+
+    def save_curves_maps(self, acc, res):
+        """
+        Save the loss curves and maps (if any).
+
+        :returns: the total number of stored bytes.
+        """
+        for key in res:
+            if key == 'curves-stats':
+                array = res[key]  # shape (A, S, P)
+                self.datastore[key][res['aids']] = array
+            elif key.startswith('loss_maps'):
+                array = res[key]  # shape (A, R, P, LI)
+                loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
+                for lti, lt in enumerate(self.loss_maps_dt.names):
+                    loss_maps[lt] = array[:, :, :, lti]
+                acc += {key: loss_maps.nbytes}
+                self.datastore[key][res['aids']] = loss_maps
+                self.datastore.set_attrs(key, nbytes=acc[key])
+        return acc
+
+    def pre_execute(self):
+        pass
+
+    def execute(self):
+        oq = self.oqparam
+        R = len(self.loss_builder.weights)
+        # build loss maps
+        if 'all_loss_ratios' in self.datastore and oq.conditional_loss_poes:
+            assetcol = self.assetcol
+            stats = oq.risk_stats()
+            builder = self.riskmodel.curve_builder
+            builder.loss_builder = self.loss_builder
+            periods = self.loss_builder.return_periods
+            A = len(assetcol)
+            S = len(stats)
+            P = len(periods)
+            # create loss_maps datasets
+            self.datastore.create_dset(
+                'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
+            if R > 1:
+                self.datastore.create_dset(
+                    'loss_maps-stats', self.loss_maps_dt, (A, S),
+                    fillvalue=None)
+                self.datastore.set_attrs(
+                    'loss_maps-stats',
+                    stats=[encode(name) for (name, func) in stats])
+                self.datastore.create_dset(
+                    'curves-stats', oq.loss_dt(), (A, S, P), fillvalue=None)
+                self.datastore.set_attrs(
+                    'curves-stats', return_periods=periods,
+                    stats=[encode(name) for (name, func) in stats])
+            mon = self.monitor('loss maps')
+            lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
+                    in self.datastore.parent)
+            logging.info('Instantiating LossRatiosGetters')
+            with self.monitor('building lrgetters', measuremem=True,
+                              autoflush=True):
+                allargs = []
+                for aids in split_in_blocks(range(A), oq.concurrent_tasks):
+                    dstore = self.datastore.parent if lazy else self.datastore
+                    getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
+                    # a lazy getter will read the loss_ratios from the workers
+                    # an eager getter reads the loss_ratios upfront
+                    allargs.append((assetcol.values(aids), builder, getter,
+                                    stats, mon))
+            if lazy:
+                # avoid OSError: Can't read data (Wrong b-tree signature)
+                self.datastore.parent.close()
+            parallel.Starmap(build_curves_maps, allargs).reduce(
+                self.save_curves_maps)
+            if lazy:  # the parent was closed, reopen it
+                self.datastore.parent.open()
+
+    def post_execute(self):
+        # override the base class method to avoid doing bad stuff
+        pass
