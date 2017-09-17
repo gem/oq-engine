@@ -82,6 +82,16 @@ class ValidationTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             valid.positiveint('1.0')
 
+    def test_positiveints(self):
+        self.assertEqual(valid.positiveints('1'), [1])
+        self.assertEqual(valid.positiveints('1 2'), [1, 2])
+        with self.assertRaises(ValueError):
+            valid.positiveints('1 -1')
+        with self.assertRaises(ValueError):
+            valid.positiveints('1.1')
+        with self.assertRaises(ValueError):
+            valid.positiveints('1.0')
+
     def test_positivefloat(self):
         self.assertEqual(valid.positiveint('1'), 1)
         with self.assertRaises(ValueError):

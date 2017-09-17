@@ -18,7 +18,22 @@
 import logging
 from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, scientific
+
+
+def get_loss_builder(dstore):
+    """
+    :param dstore: datastore for an event based risk calculation
+    :returns: a LossesByPeriodBuilder instance
+    """
+    oq = dstore['oqparam']
+    weights = dstore['realizations']['weight']
+    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+    num_events = dstore['gmdata']['events']
+    periods = oq.return_periods or scientific.return_periods(
+        eff_time, num_events.max())
+    return scientific.LossesByPeriodBuilder(
+        periods, oq.loss_dt(), weights, num_events, eff_time)
 
 
 class LossCurveExporter(object):
@@ -41,7 +56,13 @@ class LossCurveExporter(object):
     quantile-0.1/ref-a1 # export quantile loss curves of asset a1
     """
     def __init__(self, dstore):
+        oq = dstore['oqparam']
         self.dstore = dstore
+        try:
+            self.builder = get_loss_builder(dstore)
+        except KeyError:  # no 'agg_loss_table' for non event_based_risk
+            pass
+        self.rit = oq.risk_investigation_time
         self.assetcol = dstore['assetcol']
         arefs = [decode(aref) for aref in self.dstore['asset_refs']]
         self.str2asset = {arefs[asset.idx]: asset for asset in self.assetcol}
@@ -87,15 +108,23 @@ class LossCurveExporter(object):
         :param curves_dict: a dictionary tag -> loss curves
         """
         writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        ebr = hasattr(self, 'builder')
         for key in sorted(curves_dict):
             recs = curves_dict[key]
-            data = [['asset', 'loss_type', 'loss', 'poe']]
+            data = [['asset', 'loss_type', 'loss', 'period' if ebr else 'poe']]
             for loss_type in self.loss_types:
-                array = recs[loss_type]
-                for aref, losses, poes in zip(
-                        asset_refs, array['losses'], array['poes']):
-                    for loss, poe in zip(losses, poes):
-                        data.append((aref, loss_type, loss, poe))
+                if ebr:  # event_based_risk
+                    array = recs[loss_type]  # shape (A, P) loss_dt
+                    periods = self.builder.return_periods
+                    for aref, losses in zip(asset_refs, array):
+                        for period, loss in zip(periods, losses):
+                            data.append((aref, loss_type, loss, period))
+                else:  # classical_risk
+                    array = recs[loss_type]  # shape (A,) loss_curve_dt
+                    for aref, losses, poes in zip(
+                            asset_refs, array['losses'], array['poes']):
+                        for loss, poe in zip(losses, poes):
+                            data.append((aref, loss_type, loss, poe))
             dest = self.dstore.build_fname(
                 'loss_curves', '%s-%s' % (spec, key), 'csv')
             writer.save(data, dest)
@@ -127,20 +156,19 @@ class LossCurveExporter(object):
             return {'rlz-%03d' % rlzi: data[:, rlzi] for rlzi in range(self.R)}
 
         # otherwise event_based
-        crm = riskinput.read_composite_risk_model(self.dstore)
-        builder = crm.curve_builder
         avalues = self.assetcol.values(aids)
         lrgetter = riskinput.LossRatiosGetter(self.dstore, aids)
+        build = self.builder.build_rlz
         if key.startswith('rlz-'):
             rlzi = int(key[4:])
             ratios = lrgetter.get(rlzi)
-            return {'rlz-%03d' % rlzi: builder.build_curves(avalues, ratios)}
+            return {'rlz-%03d' % rlzi: build(avalues, ratios, rlzi)}
         else:  # key is 'rlzs', return a dictionary will all realizations
             # this may be disabled in the future unless an asset is specified
             dic = {}
             for rlzi in range(self.R):
-                dic['rlz-%03d' % rlzi] = builder.build_curves(
-                    avalues, lrgetter.get(rlzi))
+                dic['rlz-%03d' % rlzi] = build(
+                    avalues, lrgetter.get(rlzi), rlzi)
             return dic
 
     def export_curves_stats(self, aids, key):
@@ -160,6 +188,13 @@ class LossCurveExporter(object):
             if key == 'stats':
                 return {stat[0]: data[:, s] for s, stat in enumerate(stats)}
             else:  # a specific statistics
-                return {key: data[stat2idx[key]]}
-        # otherwise event_based
-        raise NotImplementedError
+                return {key: data[:, stat2idx[key]]}
+        elif 'curves-stats' in self.dstore:  # event_based_risk
+            dset = self.dstore['curves-stats']
+            data = dset[aids]
+            if key == 'stats':
+                return {stat[0]: data[:, s] for s, stat in enumerate(stats)}
+            else:  # a specific statistics
+                return {key: data[:, stat2idx[key]]}
+        else:
+            raise KeyError('no loss curves in %s' % self.dstore)

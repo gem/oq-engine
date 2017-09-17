@@ -68,9 +68,11 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
-        [f1, f2] = export(('hcurves/all', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-rlz-000.csv', f1)
-        self.assertEqualFiles('expected/hazard_curve-rlz-001.csv', f2)
+        fnames = export(('hcurves/all', 'csv'), self.calc.datastore)
+        expected = ['hazard_curve-0-PGA.csv', 'hazard_curve-0-SA(0.1).csv',
+                    'hazard_curve-1-PGA.csv', 'hazard_curve-1-SA(0.1).csv']
+        for fname, exp in zip(fnames, expected):
+            self.assertEqualFiles('expected/' + exp, fname)
 
         # make sure this runs
         view('fullreport', self.calc.datastore)
@@ -102,6 +104,10 @@ class UcerfTestCase(CalculatorTestCase):
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+
+        # check the mean losses_by_period
+        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
 
         # make sure this runs
         view('fullreport', self.calc.datastore)
