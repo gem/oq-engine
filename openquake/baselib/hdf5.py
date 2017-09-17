@@ -399,4 +399,5 @@ def save(path, dic, **extra):
     with File(path, 'w') as f:
         for key in sorted(dic):
             f[key] = dic[key]
-    return path
+        for k, v in extra.items():
+            f.attrs[k] = v
