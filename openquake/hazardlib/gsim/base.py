@@ -348,6 +348,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
     #      average DPP used. See:
     #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
+    #: ``rvolc``
+    #:     Source to site distance passing through surface projection of volcanic zone
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
@@ -790,7 +792,7 @@ class DistancesContext(BaseContext):
     in a result context object.
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
-               'azimuth', 'hanging_wall')
+               'azimuth', 'hanging_wall', 'rvolc')
 
 
 class RuptureContext(BaseContext):
