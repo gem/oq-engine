@@ -37,8 +37,8 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
@@ -51,6 +51,7 @@ Parser for input in a NRML format, with partial validation
 import re
 from copy import copy
 from openquake.baselib.node import node_from_xml
+from openquake.baselib.general import deprecated
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
@@ -451,31 +452,37 @@ class nrmlSourceModelParser(BaseSourceModelParser):
     Parser for a source model in NRML format, permitting partial validation
     such that not all fields need to be specified for the file to be parsed
     """
+    @deprecated('Use openquake.hazardlib.nrml.parse instead')
     def read_file(self, identifier, mfd_spacing=0.1, simple_mesh_spacing=1.0,
                   complex_mesh_spacing=4.0, area_discretization=10.):
         """
         Reads in the source model in returns an instance of the :class:
         openquake.hmtk.sourcs.source_model.mtkSourceModel
         """
-        node_set = node_from_xml(self.input_file)[0]
-        source_model = mtkSourceModel(identifier,
-                                      name=node_set.attrib["name"])
-        for node in node_set:
-            if "pointSource" in node.tag:
-                source_model.sources.append(
-                    parse_point_source_node(node, mfd_spacing))
-            elif "areaSource" in node.tag:
-                source_model.sources.append(
-                    parse_area_source_node(node, mfd_spacing))
-            elif "simpleFaultSource" in node.tag:
-                source_model.sources.append(
-                    parse_simple_fault_node(node, mfd_spacing,
-                                            simple_mesh_spacing))
-            elif "complexFaultSource" in node.tag:
-                source_model.sources.append(
-                    parse_complex_fault_node(node, mfd_spacing,
-                                             complex_mesh_spacing))
-            else:
-                print("Source typology %s not recognised - skipping!"
-                      % node.tag)
+        sm_node = node_from_xml(self.input_file)[0]
+        if sm_node[0].tag.startswith('{http://openquake.org/xmlns/nrml/0.4}'):
+            node_sets = [sm_node]
+        else:  # format NRML 0.5+
+            node_sets = sm_node
+        source_model = mtkSourceModel(identifier, name=sm_node["name"])
+        for node_set in node_sets:
+            for node in node_set:
+                if "pointSource" in node.tag:
+                    source_model.sources.append(
+                        parse_point_source_node(node, mfd_spacing))
+                elif "areaSource" in node.tag:
+                    source_model.sources.append(
+                        parse_area_source_node(node, mfd_spacing))
+                elif "simpleFaultSource" in node.tag:
+                    source_model.sources.append(
+                        parse_simple_fault_node(node, mfd_spacing,
+                                                simple_mesh_spacing))
+                elif "complexFaultSource" in node.tag:
+                    source_model.sources.append(
+                        parse_complex_fault_node(node, mfd_spacing,
+                                                 complex_mesh_spacing))
+                # TODO: multiPointSource are not supported
+                else:
+                    print("Source typology %s not recognised - skipping!"
+                          % node.tag)
         return source_model
