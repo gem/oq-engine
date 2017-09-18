@@ -22,6 +22,7 @@ Source model XML Writer
 
 import os
 import operator
+import numpy
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter
@@ -235,7 +236,10 @@ def build_multi_mfd(mfd):
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
-            values = sum(values, [])
+            if len(values[0]) > 1:  # arbitraryMFD:
+                values = numpy.concatenate(values)
+            else:
+                values = sum(values, [])
         node.append(Node(name, text=values))
     if 'occurRates' in mfd.kwargs:
         lengths = [len(rates) for rates in mfd.kwargs['occurRates']]
