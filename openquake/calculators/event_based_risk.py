@@ -297,7 +297,7 @@ class EbriskCalculator(base.RiskCalculator):
                 assetcol=self.assetcol,
                 ses_ratio=oq.ses_ratio,
                 loss_dt=oq.loss_dt(), elt_dt=elt_dt,
-                asset_loss_table=bool(oq.asset_loss_table),
+                asset_loss_table=oq.asset_loss_table,
                 avg_losses=oq.avg_losses,
                 insured_losses=oq.insured_losses,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,

@@ -408,7 +408,7 @@ class CompositeRiskModel(collections.Mapping):
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cp = scientific.CurveParams(
                     l, loss_type, max(curve_resolutions), ratios, True)
-            else:  # no loss_ratios provided
+            else:  # event_based or scenario calculators
                 cp = scientific.CurveParams(
                     l, loss_type, oqparam.loss_curve_resolution,
                     default_loss_ratios, False)
