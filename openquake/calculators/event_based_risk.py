@@ -297,7 +297,7 @@ class EbriskCalculator(base.RiskCalculator):
                 assetcol=self.assetcol,
                 ses_ratio=oq.ses_ratio,
                 loss_dt=oq.loss_dt(), elt_dt=elt_dt,
-                asset_loss_table=bool(oq.asset_loss_table or oq.loss_ratios),
+                asset_loss_table=bool(oq.asset_loss_table),
                 avg_losses=oq.avg_losses,
                 insured_losses=oq.insured_losses,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
@@ -363,7 +363,7 @@ class EbriskCalculator(base.RiskCalculator):
                                    (T, self.R, self.L * self.I))
         self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
                                  nbytes=4 * T * self.R * self.L * self.I)
-        if oq.asset_loss_table or oq.loss_ratios:
+        if oq.asset_loss_table:
             # save all_loss_ratios
             self.alr_nbytes = 0
             self.indices = collections.defaultdict(list)  # sid -> pairs
@@ -416,7 +416,7 @@ class EbriskCalculator(base.RiskCalculator):
                 key = 'agg_loss_table/rlz-%03d' % (r + offset)
                 self.datastore.extend(key, agglosses[r])
 
-        if self.oqparam.asset_loss_table or self.oqparam.loss_ratios:
+        if self.oqparam.asset_loss_table:
             with self.monitor('saving loss ratios', autoflush=True):
                 for aid, pairs in lrs_idx.items():
                     self.indices[aid].extend(
