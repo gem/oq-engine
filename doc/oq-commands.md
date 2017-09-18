@@ -15,7 +15,7 @@ You can see the full list of commands by running `oq help`:
 ```bash
 $ oq help
 usage: oq [--version]
-          {purge,show_attrs,export,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_uhs,plot_ac,reduce,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
+          {purge,show_attrs,export,extract,restore,db,info,reset,to_hdf5,help,run_tiles,plot,checksum,run_server,tidy,dbserver,engine,dump,plot_uhs,plot_ac,reduce,to_shapefile,show,upgrade_nrml,run,plot_sites,from_shapefile,webui,plot_lc}
           ...
 
 positional arguments:
@@ -152,26 +152,12 @@ uhs ['csv', 'xml', 'npz']
 There are 52 exporters defined.
 ```
 
-At the present the supported export types are `xml`, `csv`, `rst`, `geojson`,
-`npz` and `hdf5`. `geojson` will likely disappear soon; `xml` will not
-disappear, but it is not recommended for large exports. For large exports
-the recommended formats are `npz` (which is a binary format for numpy arrays)
-and `hdf5`. For instance if you want to export the full bulk of hazard curves
-for all realizations the command to use is
-
-```
-$ oq export hcurves-rlzs --exports hdf5
-```
-
-Be warned that for large calculations the export will likely be slower
-than the entire calculation. In this case you should export only the
-sites you are interested in, while this command exports everything.
-The export system will be extended in the near future, right now
-several features are missing; for instance there is no `.hdf5` export
-for hazard maps and uniform hazard spectra. You can export them in
-`.npz` format, but then only the statistics will be exported. If you
-want the data for a specific realization (say the first one), you can
-use
+At the present the supported export types are `xml`, `csv`, `rst`,
+`geojson`, `npz` and `hdf5`. `geojson` will likely disappear soon;
+`xml` will not disappear, but it is not recommended for large
+exports. For large exports the recommended formats are `npz` (which is
+a binary format for numpy arrays) and `hdf5`. If you want the data for
+a specific realization (say the first one), you can use
 
 ```
 $ oq export hcurves/rlz-0 --exports csv
@@ -183,3 +169,17 @@ but currently this only works for `csv` and `xml`. The exporters are one of
 the most time-consuming parts on the engine, mostly for the sheer number
 of them; the are more than fifty exporters and they are always increasing.
 If you need new exports, please [add an issue on GitHub](https://github.com/gem/oq-engine/issues).
+
+There is a command similar to `export`, called `extract`, which is able to
+export in HDF5 format. For instance if you want to extract the full bulk
+of hazard curves, hazard maps and uniform hazard spectra
+for all realizations the command to use is
+
+```
+$ oq extract hazard/rlzs -1
+```
+
+Be warned that for large calculations the extraction will likely be slower
+than the entire calculation. In this case you should extract only the
+sites you are interested in, while this command extracts everything.
+The extract/export system will be extended in the near future.
