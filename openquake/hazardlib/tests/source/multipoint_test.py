@@ -65,7 +65,7 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
   multiMFD{kind='incrementalMFD', size=2}
     bin_width [2.0]
     min_mag [4.5]
-    occurRates [0.3, 0.1, 0.4, 0.2, 0.1]
+    occurRates array([ 0.3,  0.1,  0.4,  0.2,  0.1])
     lengths [2, 3]
   nodalPlaneDist
     nodalPlane{dip=20, probability=0.5, rake=3, strike=1}
