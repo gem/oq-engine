@@ -879,7 +879,6 @@ class UCERFRiskCalculator(EbriskCalculator):
                              save_ruptures=False,
                              ses_ratio=oq.ses_ratio,
                              avg_losses=oq.avg_losses,
-                             loss_ratios=oq.loss_ratios,
                              elt_dt=elt_dt,
                              asset_loss_table=False,
                              insured_losses=oq.insured_losses)
