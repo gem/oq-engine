@@ -1,3 +1,7 @@
+  [Valerio Poggi]
+  * Implemented the Atkinson (2010) GMPE as subclass `Atkinson2010Hawaii`
+    of `BooreAtkinson2008`
+
   [Michele Simionato]
   * Added a generic `extract` functionality to the web API
   * Fixed a bug when computing the rjb distances with multidimensional meshes

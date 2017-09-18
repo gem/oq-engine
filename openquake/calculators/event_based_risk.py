@@ -22,7 +22,7 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
 from openquake.commonlib import util
@@ -261,7 +261,7 @@ class EbriskCalculator(base.RiskCalculator):
                         len(self.assetcol), seeds[start: start + n_events])
                     start += n_events
                 getter = riskinput.GmfGetter(
-                    grp_id, rlzs_by_gsim, rupts, sitecol, imts, min_iml,
+                    rlzs_by_gsim, rupts, sitecol, imts, min_iml,
                     trunc_level, correl_model, samples)
                 ri = riskinput.RiskInputFromRuptures(getter, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
@@ -473,14 +473,16 @@ class EbriskCalculator(base.RiskCalculator):
         oq = self.oqparam
         b = get_loss_builder(self.datastore)
         alt = self.datastore['agg_loss_table']
-        array, array_stats = b.build(alt, oq.risk_stats())
+        stats = oq.risk_stats()
+        array, array_stats = b.build(alt, stats)
         self.datastore['agg_curves-rlzs'] = array
         self.datastore.set_attrs(
             'agg_curves-rlzs', return_periods=b.return_periods)
         if array_stats is not None:
             self.datastore['agg_curves-stats'] = array_stats
             self.datastore.set_attrs(
-                'agg_curves-stats', return_periods=b.return_periods)
+                'agg_curves-stats', return_periods=b.return_periods,
+                stats=[encode(name) for (name, func) in stats])
 
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
@@ -572,10 +574,14 @@ class EbrPostCalculator(base.RiskCalculator):
                 self.datastore.create_dset(
                     'loss_maps-stats', self.loss_maps_dt, (A, S),
                     fillvalue=None)
+                self.datastore.set_attrs(
+                    'loss_maps-stats',
+                    stats=[encode(name) for (name, func) in stats])
                 self.datastore.create_dset(
                     'curves-stats', oq.loss_dt(), (A, S, P), fillvalue=None)
                 self.datastore.set_attrs(
-                    'curves-stats', return_periods=periods)
+                    'curves-stats', return_periods=periods,
+                    stats=[encode(name) for (name, func) in stats])
             mon = self.monitor('loss maps')
             lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
                     in self.datastore.parent)
