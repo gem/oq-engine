@@ -41,7 +41,6 @@ class GmfEbRiskCalculator(base.RiskCalculator):
     def pre_execute(self):
         logging.warn('%s is still experimental', self.__class__.__name__)
         base.RiskCalculator.pre_execute(self)
-        logging.info('Building the epsilons')
         oq = self.oqparam
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.taxonomies)
@@ -51,6 +50,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         if oq.ignore_covs:
             eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
+            logging.info('Building the epsilons')
             eps = self.make_eps(self.E)
         eids, gmfs = calc.get_gmfs(self.datastore, self.precalc)
         self.R = len(gmfs)
