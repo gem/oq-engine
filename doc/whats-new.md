@@ -1,77 +1,48 @@
 Release notes for the OpenQuake Engine, version 2.6
 ===================================================
 
-Several new features where introduced in this release. Now the engine
+Several new features where introduced in this release. Moreover, now the engine
 installer includes three web applications previously only available
 on the OpenQuake Platform: the Input Preparation Toolkit (IPT), the
 Taxonomy application and XXX.
 
-Several bugs have been fixed and there were a few improvements to the
-Web User Interface(WebUI) and to the engine itself.
+Several bugs have been fixed, some outputs were changed and there were
+a few improvements to the Web User Interface(WebUI) and to the engine
+itself.
 
 More than 100 pull requests were closed. For the complete list of
 changes, please see the changelog:
 and https://github.com/gem/oq-engine/blob/engine-2.5/debian/changelog.
 
-Major new features
-------------------------------
 
+New features
+--------------
 
-Bugs fixed
-----------------
+Implemented aggregation by asset tag in the risk calculators
 
+There is a new experimental calculator called `gmf_ebrisk` which is able to
+perform an event based risk calculators starting from ground motion fields
+provided as a CSV file. In order to implement this feature we changed the
+export format of the ground motion fields so that it is the same as the
+input format of the new calculator. Moreover the GMF CSV export format is
+now the same both for event based and scenario calculators.
 
-Other improvements
----------------------
+We added three new `oq` commands:
 
-- The engine was calling the routine computing the statistics even when
-  not needed. This was inefficient and has been fixed.
-- The error checking when parsing source models in format NRML 0.5 has been
-  improved: now in case of error one gets the name of the incorrect node and
-  its line number, just like for NRML 0.4.
-- There is now a clear error message if the user does not set the
-  `calculation_mode` in the `job.ini` file.
-- We improved the error message when the rupture mesh spacing is too small.
-- We added a new `.npz` exporter for the output `dmg_by_asset_npz`.
-- There is a new `.csv` exporter for the aggregate loss curves, replacing
-  the deprecated XML exporter.
-- Some preliminary work for the Python 3 installers has been done.
+- `oq extract <what> <calc_id>` allows to save a specified output into an .hdf5 file
+- `oq dump <dump.zip>` allows to dump the database of the engine and all
+  the datastores into a single .zip file
+- `oq restore <dump.zip> <oqdata>` allows to restore a dump into an empty directory
 
-As always, there were several internal changes to the engine. Some of
-them may be of interests to power users and people developing with the
-engine.
+`oq extract hazard/rlzs` solves the problem of generating a single .hdf5 file with all
+hazard curves, maps and uniform hazard spectra for all realizations; this
+was requested by some power users and it is documented in
+https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md
 
-- It is now possible to use the engine with backends different from rabbitmq,
-  for instance with redis; we did some experiment in this direction, but
-  rabbitmq is still the official backend to use.
-- The AreaSource class in hazardlib is no more a subclass
-  of PointSource (that was an implementation accident).
-- The syntax of the command `oq db` has been improved.
-- The `composite_source_model` has been removed from the datastore:
-  this was the last pickled object remaining there for legacy reasons.
-- We changed the way the logic tree reduction works in event based calculators:
-  now it works the same as in classical calculators. The change may affect
-  rare corner cases, when there are source groups producing zero ruptures;
-  see https://github.com/gem/oq-engine/pull/2840 for the details.
-
-Deprecations
-------------------------------
-
-The obsolete `nrmlSourceModelParser` in the Hazard Modeller Toolkit has been
-removed.
-
-The repository https://github.com/gem/oq-hazardlib has been deprecated
-and new pull requests for hazardlib should be opened towards the engine
-repository.
-
-[Our roadmap for abandoning Python 2](https://github.com/gem/oq-engine/issues/2803) has been updated.
---------------------------------------------------------------------------------
-
-
-  * Added a documentation page `oq-commands.md`
-  * Fixed bug in the exported outputs: a calculation cannot export the results
-    of its parent
-
+Added an exporter gmf_scenario/rup-XXX working also for event based
+Implemented risk statistics for the classical_damage calculator
+Implemented risk statistics for the classical_bcr calculator
+  
 
 -- webui
 
@@ -103,6 +74,8 @@ confusions between `oq --version` and `oq engine -version`
 Extended the `sz` field in the rupture surface to 2 bytes, making it
 possible to use a smaller mesh spacing
 Fixed the export by realization of the hazard outputs
+Fixed bug in the exported outputs: a calculation cannot export the results
+of its parent
 Fixed `oq export hcurves-rlzs -e hdf5`
 Fixed a bug in the statistical loss curves exporter for classical_risk
 (bogus numbers)
@@ -114,15 +87,6 @@ Fixed a bug: if there are multiple realizations and no hazard stats,
 it is an error to set hazard_maps=true or uniform_hazard_spectra=true
 Fixed a small bug in the HMTK (in `get_depth_pmf`)
 Fixed correct_complex_sources.py
-  
--- new features
-
-Added two commands `oq dump` and `oq restore`
-First version of the calculator gmf_ebrisk
-Added an exporter gmf_scenario/rup-XXX working also for event based
-Implemented risk statistics for the classical_damage calculator
-Added a .csv importer for the ground motion fields
-Implemented risk statistics for the classical_bcr calculator
   
 -- packaging/installation
 
@@ -144,9 +108,6 @@ generating uniform hazard spectra (must be > 1)
 Better error message when running a risk file in absence of hazard
 calculation
 
--- new features
-  * Implemented aggregation by asset tag in the risk calculators
-
 -- other improvements
 Changed the 'CTRL-C' behaviour to make sure that all children
 processes are killed when a calculation in interrupted
@@ -163,3 +124,5 @@ checksum functionality plus an `oq checksum` command
 
 Changed the format of array `all_loss_ratios/indices`
 The size in bytes of the GMFs was saved incorrectly
+
+[Our roadmap for abandoning Python 2](https://github.com/gem/oq-engine/issues/2803) has been updated.
