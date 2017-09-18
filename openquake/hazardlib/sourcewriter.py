@@ -236,7 +236,7 @@ def build_multi_mfd(mfd):
     for name in sorted(mfd.kwargs):
         values = mfd.kwargs[name]
         if name in ('magnitudes', 'occurRates'):
-            if len(values[0]) > 1:  # arbitraryMFD:
+            if len(values[0]) > 1:  # arbitraryMFD; TODO: add a test
                 values = numpy.concatenate(values)
             else:
                 values = sum(values, [])
