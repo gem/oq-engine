@@ -40,7 +40,7 @@ def extract(what, calc_id=-1):
         dic = extract_(dstore, what)
         if not hasattr(dic, 'keys'):
             dic = {dic.__class__.__name__: dic}
-        fname = '%s_%d.hdf5' % (what, dstore.calc_id)
+        fname = '%s_%d.hdf5' % (what.replace('/', '-'), dstore.calc_id)
         hdf5.save(fname, dic)
         print('Saved', fname)
     if mon.duration > 1:
