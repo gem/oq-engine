@@ -199,6 +199,8 @@ def get_mesh(oqparam):
                 row = line.replace(',', ' ').split()
                 assert int(row[0]) == i, (row[0], i)
                 data.append(' '.join(row[1:]))
+        elif oqparam.calculation_mode == 'gmf_ebrisk':
+            raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
             data = [line.replace(',', ' ') for line in csv_data]
         coords = valid.coordinates(','.join(data))
