@@ -137,8 +137,7 @@ class MultiMFD(BaseMFD):
         Yields the occurrence rates of the underlying MFDs in order
         """
         for mfd in self:
-            for rates in mfd.get_annual_occurrence_rates():
-                yield rates
+            yield mfd.get_annual_occurrence_rates()
 
     def modify(self, modification, parameters):
         """
