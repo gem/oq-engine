@@ -32,7 +32,7 @@ import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
-    groupby, get_array, group_array, block_splitter, writetmp)
+    groupby, group_array, block_splitter, writetmp)
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.commonlib import logictree
 
