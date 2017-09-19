@@ -273,7 +273,8 @@ class OqParam(valid.ParamSet):
 
         risk_investigation_time / investigation_time / ses_per_logic_tree_path
         """
-        assert self.investigation_time, 'investigation_time = 0!'
+        if self.investigation_time is None:
+            raise ValueError('Missing investigation_time in the .ini file')
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
@@ -431,7 +432,10 @@ class OqParam(valid.ParamSet):
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
-        if ('risk' in self.calculation_mode or
+        if (self.calculation_mode == 'gmf_ebrisk' and
+                'sites' not in self.inputs):
+            raise ValueError('Missing sites_csv in the .ini file')
+        elif ('risk' in self.calculation_mode or
                 'damage' in self.calculation_mode or
                 'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
