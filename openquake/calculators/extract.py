@@ -154,7 +154,7 @@ def extract_hazard(dstore, what):
     spectra. Use it as /extract/hazard/mean or /extract/hazard/rlz-0, etc
     """
     oq = dstore['oqparam']
-    dic = AccumDict(sitecol=dstore['sitecol'])
+    dic = AccumDict(sitecol=dstore['sitecol'], oqparam=dstore['oqparam'])
     N = len(dic['sitecol'])
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
