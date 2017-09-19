@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug when reading GMFs from a NRML file: the hazard sites were
+    read from the exposure (incorrectly) and not from the GMFs
   * Fixed a bug in MultiMFDs of kind `arbitraryMFD`
 
   [Valerio Poggi]
