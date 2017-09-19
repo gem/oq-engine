@@ -408,11 +408,7 @@ class CompositeRiskModel(collections.Mapping):
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cp = scientific.CurveParams(
                     l, loss_type, max(curve_resolutions), ratios, True)
-            elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
-                lratios = numpy.array(oqparam.loss_ratios[loss_type], F32)
-                cp = scientific.CurveParams(
-                    l, loss_type, oqparam.loss_curve_resolution, lratios, True)
-            else:  # no loss_ratios provided
+            else:  # event_based or scenario calculators
                 cp = scientific.CurveParams(
                     l, loss_type, oqparam.loss_curve_resolution,
                     default_loss_ratios, False)
