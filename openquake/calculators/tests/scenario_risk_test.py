@@ -20,7 +20,7 @@ from nose.plugins.attrib import attr
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_3, case_4, case_5,
-    case_6a, case_7, occupants, case_master)
+    case_6a, case_7, case_8, occupants, case_master)
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -161,3 +161,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tot20 = tot_loss(self.calc.datastore)
         for name in tot10.dtype.names:
             numpy.testing.assert_almost_equal(tot10[name], tot20[name])
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_8(self):
+        # a complex scenario_risk from GMFs where the hazard sites are
+        # not in the asset locations
+        self.run_calc(case_8.__file__, 'job.ini')
+        tot = self.calc.datastore['losses_by_tag-rlzs'].value.sum()
+        self.assertAlmostEqual(tot, 1.7643108e+07)
