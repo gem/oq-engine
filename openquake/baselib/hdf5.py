@@ -394,7 +394,6 @@ def save(path, dic, **extra):
     :param path: an .hdf5 pathname
     :param dic: a dictionary of array-like objects
     :param extra: extra attributes to be saved in the file
-    :returns: the passed pathname
     """
     with File(path, 'w') as f:
         for key in sorted(dic):
