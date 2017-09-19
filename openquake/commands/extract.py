@@ -31,6 +31,7 @@ def extract(what, calc_id=-1):
     Extract an output from the datastore and save it into an .hdf5 file.
     """
     logging.basicConfig(level=logging.INFO)
+    logging.warn('oq extract is experimental and subject to future changes')
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
@@ -39,7 +40,7 @@ def extract(what, calc_id=-1):
         dic = extract_(dstore, what)
         if not hasattr(dic, 'keys'):
             dic = {dic.__class__.__name__: dic}
-        fname = '%s_%d.hdf5' % (what, dstore.calc_id)
+        fname = '%s_%d.hdf5' % (what.replace('/', '-'), dstore.calc_id)
         hdf5.save(fname, dic)
         print('Saved', fname)
     if mon.duration > 1:
