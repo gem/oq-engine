@@ -22,7 +22,6 @@ import numpy
 
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import calc
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -110,7 +109,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        _, gmfs = base.get_gmfs(self)
         self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
