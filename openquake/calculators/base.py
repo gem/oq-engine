@@ -524,6 +524,21 @@ class HazardCalculator(BaseCalculator):
         self.datastore.set_nbytes('loss_ratios')
         self.datastore.hdf5.flush()
 
+    def assoc_assets(self, haz_sitecol):
+        """
+        Associate the exposure assets to the hazard sites and redefine
+        the .sitecol and .assetcol attributes.
+        """
+        if haz_sitecol is not None and haz_sitecol != self.sitecol:
+            num_assets = self.count_assets()
+            with self.monitor('assoc_assets_sites', autoflush=True):
+                self.sitecol, self.assetcol = \
+                    self.assoc_assets_sites(haz_sitecol.complete)
+            ok_assets = self.count_assets()
+            num_sites = len(self.sitecol)
+            logging.warn('Associated %d assets to %d sites, %d discarded',
+                         ok_assets, num_sites, num_assets - ok_assets)
+
     def read_risk_data(self):
         """
         Read the exposure (if any), the risk model (if any) and then the
@@ -539,17 +554,9 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs:
             self.read_exposure()
             self.load_riskmodel()  # must be called *after* read_exposure
-            num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
-            if haz_sitecol is not None and haz_sitecol != self.sitecol:
-                with self.monitor('assoc_assets_sites', autoflush=True):
-                    self.sitecol, self.assetcol = \
-                        self.assoc_assets_sites(haz_sitecol.complete)
-                ok_assets = self.count_assets()
-                num_sites = len(self.sitecol)
-                logging.warn('Associated %d assets to %d sites, %d discarded',
-                             ok_assets, num_sites, num_assets - ok_assets)
+            self.assoc_assets(haz_sitecol)
         elif oq.job_type == 'risk':
             raise RuntimeError(
                 'Missing exposure_file in %(job_ini)s' % oq.inputs)
@@ -742,11 +749,9 @@ def get_gmfs(calc):
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)
+        # NB: get_gmfs redefine oq.sites in case of GMFs from XML
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
-        if haz_sitecol != calc.sitecol:
-            with calc.monitor('assoc_assets_sites', autoflush=True):
-                calc.sitecol, calc.assetcol = (
-                    calc.assoc_assets_sites(haz_sitecol.complete))
+        calc.assoc_assets(haz_sitecol)
         dstore['gmf_data/data'] = get_gmv_data(
             haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
         return eids, gmfs
