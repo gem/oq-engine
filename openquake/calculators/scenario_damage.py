@@ -19,7 +19,7 @@
 import itertools
 import numpy
 
-from openquake.commonlib import riskmodels, calc
+from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -146,7 +146,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        _, gmfs = base.get_gmfs(self)
         self.riskinputs = self.build_riskinputs('gmf', gmfs)
         self.param['tags'] = sorted(self.assetcol.tags())
 
