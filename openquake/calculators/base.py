@@ -22,6 +22,7 @@ import abc
 import pdb
 import logging
 import operator
+import itertools
 import traceback
 import collections
 try:  # with Python 3
@@ -36,7 +37,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, datastore, source, calc, riskmodels
-from openquake.baselib.parallel import Starmap, executor, wakeup_pool
+from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
 
@@ -681,3 +682,71 @@ class RiskCalculator(HazardCalculator):
 
     def combine(self, acc, res):
         return acc + res
+
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
+F32 = numpy.float32
+
+
+def get_gmv_data(sids, gmfs):
+    """
+    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
+    """
+    R, N, E, I = gmfs.shape
+    gmv_data_dt = numpy.dtype(
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+    it = ((r, sids[s], eid, gmfa[s, eid])
+          for r, gmfa in enumerate(gmfs)
+          for s, eid in itertools.product(
+                  numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64)))
+    return numpy.fromiter(it, gmv_data_dt)
+
+
+def get_gmfs(calc):
+    """
+    :param calc: a scenario_risk, scenario_damage or gmf_ebrisk calculator
+    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
+    """
+    dstore = calc.datastore
+    oq = dstore['oqparam']
+    num_assocs = dstore['csm_info'].get_num_rlzs()
+    sitecol = dstore['sitecol']
+    if dstore.parent:
+        haz_sitecol = dstore.parent['sitecol']  # S sites
+    else:
+        haz_sitecol = sitecol  # N sites
+    N = len(haz_sitecol.complete)
+    I = len(oq.imtls)
+    E = oq.number_of_ground_motion_fields
+    eids = numpy.arange(E)
+    gmfs = numpy.zeros((num_assocs, N, E, I))
+    if calc.precalc:
+        for g, gsim in enumerate(calc.precalc.gsims):
+            gmfs[g, sitecol.sids] = calc.precalc.gmfa[gsim]
+        return eids, gmfs
+
+    if 'gmf_data/data' in dstore:
+        dset = dstore['gmf_data/data']
+        R = len(dstore['realizations'])
+        nrows = len(dset) // R
+        for r in range(R):
+            for s, sid in enumerate(haz_sitecol.sids):
+                start = r * nrows + E * s
+                array = dset[start: start + E]  # shape (E, I)
+                if numpy.unique(array['sid']) != [sid]:  # sanity check
+                    raise ValueError('The GMFs have been stored incorrectly')
+                gmfs[r, sid] = array['gmv']
+        return eids, gmfs
+
+    elif 'gmfs' in oq.inputs:  # from file
+        logging.info('Reading gmfs from file')
+        eids, gmfs = readinput.get_gmfs(oq)
+        haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
+        if haz_sitecol != calc.sitecol:
+            with calc.monitor('assoc_assets_sites', autoflush=True):
+                calc.sitecol, calc.assetcol = (
+                    calc.assoc_assets_sites(haz_sitecol.complete))
+        dstore['gmf_data/data'] = get_gmv_data(
+            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
+        return eids, gmfs
