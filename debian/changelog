@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Added a command `oq extract` able to extract hazard outputs into HDF5 files
+  * Fixed a bug when reading GMFs from a NRML file: the hazard sites were
+    read from the exposure (incorrectly) and not from the GMFs
+  * Fixed a bug in MultiMFDs of kind `arbitraryMFD`
+
   [Valerio Poggi]
   * Implemented the Atkinson (2010) GMPE as subclass `Atkinson2010Hawaii`
     of `BooreAtkinson2008`

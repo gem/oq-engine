@@ -189,13 +189,24 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        return geo.Mesh.from_coords(oqparam.sites)
+        return geo.Mesh.from_coords(sorted(oqparam.sites))
     elif 'sites' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['sites'], 'U').read()
-        coords = valid.coordinates(
-            csv_data.strip().replace(',', ' ').replace('\n', ','))
+        csv_data = open(oqparam.inputs['sites'], 'U').readlines()
+        has_header = csv_data[0].startswith('site_id')
+        if has_header:  # strip site_id
+            data = []
+            for i, line in enumerate(csv_data[1:]):
+                row = line.replace(',', ' ').split()
+                assert int(row[0]) == i, (row[0], i)
+                data.append(' '.join(row[1:]))
+        elif oqparam.calculation_mode == 'gmf_ebrisk':
+            raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
+        else:
+            data = [line.replace(',', ' ') for line in csv_data]
+        coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
-        return geo.Mesh.from_coords(coords[start:stop])
+        c = coords[start:stop] if has_header else sorted(coords[start:stop])
+        return geo.Mesh.from_coords(c)
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -218,7 +229,7 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
                   for param in get_site_model(oqparam)]
-        mesh = geo.Mesh.from_coords(coords)
+        mesh = geo.Mesh.from_coords(sorted(coords))
         mesh.from_site_model = True
         return mesh
 
@@ -973,13 +984,13 @@ def get_scenario_from_nrml(oqparam, fname):
             sid = site_idx[node['lon'], node['lat']]
             gmf_by_imt[imt][i % num_events, sid] = node['gmv']
 
-    for etag, count in sorted(counts.items()):
+    for rupid, count in sorted(counts.items()):
         if count < num_imts:
-            raise InvalidFile("Found a missing etag '%s' in %s" %
-                              (etag, fname))
+            raise InvalidFile("Found a missing ruptureId %d in %s" %
+                              (rupid, fname))
         elif count > num_imts:
-            raise InvalidFile("Found a duplicated etag '%s' in %s" %
-                              (etag, fname))
+            raise InvalidFile("Found a duplicated ruptureId '%s' in %s" %
+                              (rupid, fname))
     expected_gmvs_per_site = num_imts * len(eids)
     for lonlat, counts in sitecounts.items():
         if counts != expected_gmvs_per_site:
