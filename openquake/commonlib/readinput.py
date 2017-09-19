@@ -973,13 +973,13 @@ def get_scenario_from_nrml(oqparam, fname):
             sid = site_idx[node['lon'], node['lat']]
             gmf_by_imt[imt][i % num_events, sid] = node['gmv']
 
-    for etag, count in sorted(counts.items()):
+    for rupid, count in sorted(counts.items()):
         if count < num_imts:
-            raise InvalidFile("Found a missing etag '%s' in %s" %
-                              (etag, fname))
+            raise InvalidFile("Found a missing ruptureId %d in %s" %
+                              (rupid, fname))
         elif count > num_imts:
-            raise InvalidFile("Found a duplicated etag '%s' in %s" %
-                              (etag, fname))
+            raise InvalidFile("Found a duplicated ruptureId '%s' in %s" %
+                              (rupid, fname))
     expected_gmvs_per_site = num_imts * len(eids)
     for lonlat, counts in sitecounts.items():
         if counts != expected_gmvs_per_site:
