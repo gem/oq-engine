@@ -122,7 +122,7 @@ class ReportWriter(object):
         if 'csm_info' in ds:
             self.add('csm_info')
             if ds['csm_info'].source_models[0].name != 'fake':
-                # required_params_per_trt makes no sense for scenarios
+                # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
         if 'source_info' in ds:
