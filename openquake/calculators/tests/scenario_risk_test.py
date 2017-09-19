@@ -169,3 +169,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_8.__file__, 'job.ini')
         tot = self.calc.datastore['losses_by_tag-rlzs'].value.sum()
         self.assertAlmostEqual(tot / 1E6, 17.64311, 5)
+
+        # make sure the fullreport can be extracted
+        view('fullreport', self.calc.datastore)
