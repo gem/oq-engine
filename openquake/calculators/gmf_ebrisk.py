@@ -52,7 +52,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
             eps = self.make_eps(self.E)
-        eids, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        eids, gmfs = base.get_gmfs(self)
         self.R = len(gmfs)
         self.riskinputs = self.build_riskinputs('gmf', gmfs, eps, eids)
         self.param['assetcol'] = self.assetcol
