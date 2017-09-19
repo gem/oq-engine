@@ -121,7 +121,7 @@ class Mesh(object):
         :params coords: list of coordinates
         :returns: a :class:`Mesh` instance
         """
-        lons, lats, depths = zip(*sorted(coords))
+        lons, lats, depths = zip(*coords)
         return cls(numpy.array(lons), numpy.array(lats), numpy.array(depths))
 
     @classmethod
