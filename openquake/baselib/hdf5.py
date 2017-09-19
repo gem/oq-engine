@@ -387,3 +387,16 @@ def array_of_vstr(lst):
         except AttributeError:
             ls.append(el)
     return numpy.array(ls, vstr)
+
+
+def save(path, dic, **extra):
+    """
+    :param path: an .hdf5 pathname
+    :param dic: a dictionary of array-like objects
+    :param extra: extra attributes to be saved in the file
+    """
+    with File(path, 'w') as f:
+        for key in sorted(dic):
+            f[key] = dic[key]
+        for k, v in extra.items():
+            f.attrs[k] = v

@@ -168,4 +168,4 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
         tot = self.calc.datastore['losses_by_tag-rlzs'].value.sum()
-        self.assertAlmostEqual(tot, 1.7643108e+07)
+        self.assertAlmostEqual(tot / 1E6, 17.64311, 5)
