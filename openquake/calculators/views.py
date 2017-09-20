@@ -481,15 +481,15 @@ def view_assetcol(token, dstore):
     """
     Display the exposure in CSV format
     """
-    assetcol = dstore['assetcol'].value
-    taxonomies = dstore['assetcol/taxonomies'].value
-    header = list(assetcol.dtype.names)
+    assetcol = dstore['assetcol']
+    taxonomies = assetcol.taxonomies
+    header = list(assetcol.array.dtype.names)
     columns = [None] * len(header)
     for i, field in enumerate(header):
         if field == 'taxonomy':
-            columns[i] = taxonomies[assetcol[field]]
+            columns[i] = taxonomies[assetcol.array[field]]
         else:
-            columns[i] = assetcol[field]
+            columns[i] = assetcol.array[field]
     return write_csv(io.StringIO(), [header] + list(zip(*columns)))
 
 
