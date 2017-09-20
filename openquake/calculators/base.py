@@ -749,6 +749,9 @@ def get_gmfs(calc):
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)
+        if len(eids) != E:
+            raise RuntimeError('Expected %d ground motion fields, found %d' %
+                               (E, len(eids)))
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calc.assoc_assets(haz_sitecol)

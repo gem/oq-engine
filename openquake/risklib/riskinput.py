@@ -515,7 +515,7 @@ class CompositeRiskModel(collections.Mapping):
                         data = {i: (gmvs[:, i], eids) for i in rangeI}
                     elif eids is not None:  # gmf_ebrisk
                         data = {i: (haz[i], eids) for i in rangeI}
-                    else:  # classical
+                    else:  # classical or scenario from gmfs
                         data = haz
                     out = [None] * len(self.lti)
                     for lti, i in enumerate(rangeI):
