@@ -111,8 +111,11 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
             c_model = c_models.get(loss_type)
             for a, fraction in enumerate(damages):
                 asset = outputs.assets[a]
-                t = riskinput.tagmask[a]
+                tagmask = riskinput.tagmask[a]
                 damages = fraction * asset.number
+                for ok, arr in zip(tagmask, result['d_tag']):
+                    if ok:
+                        arr[r, l] += damages  # shape (E, D)
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
                     # NB: we add a 0 in front for nodamage state
@@ -121,11 +124,12 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
                     result['c_asset'].append(
                         (l, r, asset.ordinal,
                          scientific.mean_std(consequences)))
-                    result['c_tag'][t, r, l, :] += consequences
+                    for ok, arr in zip(tagmask, result['c_tag']):
+                        if ok:
+                            arr[r, l] += consequences
                     # TODO: consequences for the occupants
                 result['d_asset'].append(
                     (l, r, asset.ordinal, scientific.mean_std(damages)))
-                result['d_tag'][t, r, l, :] += damages
     return result
 
 
