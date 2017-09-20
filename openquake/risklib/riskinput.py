@@ -233,7 +233,7 @@ class AssetCollection(object):
         candidate_loss_types = list(first_asset.values)
         loss_types = []
         the_occupants = 'occupants_%s' % time_event
-        for candidate in candidate_loss_types:
+        for candidate in sorted(candidate_loss_types):
             if candidate.startswith('occupants'):
                 if candidate == the_occupants:
                     loss_types.append('occupants')
