@@ -112,7 +112,7 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
             for a, fraction in enumerate(damages):
                 asset = outputs.assets[a]
                 t = riskinput.tagmask[a]
-                damages = fraction * asset.number
+                damages = fraction * asset.number  # shape (E, D)
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
                     # NB: we add a 0 in front for nodamage state
