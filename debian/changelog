@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a check on `number_of_ground_motion_fields` when the GMFs are
+    extracted from a NRML file
   * Added a command `oq extract` able to extract hazard outputs into HDF5 files
   * Fixed a bug when reading GMFs from a NRML file: the hazard sites were
     read from the exposure (incorrectly) and not from the GMFs
