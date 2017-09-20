@@ -6,7 +6,7 @@ were fixed, some outputs were changed and there were a few
 improvements to the installers, to the Web User Interface(WebUI) and
 to the engine itself.
 
-More than 100 pull requests were closed. For the complete list of
+More than 130 pull requests were closed. For the complete list of
 changes, please see the changelog:
 and https://github.com/gem/oq-engine/blob/engine-2.5/debian/changelog.
 
@@ -77,7 +77,7 @@ The statistical loss curves exporter for `classical_risk` calculation
 was exporting bogus numbers, even if the data in the datastore were
 correct. This has been fixed.
 
-We optimized the generation of loss_maps in event based risk: now it
+We optimized the generation of loss_maps and curves in event based risk: now it
 is done in parallel whenever possible.
 
 We changed the algorithm used in the calculation of loss curves (both
@@ -91,8 +91,8 @@ We are also working on the QGIS plugin side to be able to plot easily
 the loss curves in terms of return periods, and this will probably be
 ready for the next release.
 
-WebUI
------
+WebUI and QGIS plugin
+---------------------
 
 We are visualizing the `calculation_mode` field in the WebUI now,
 instead of the `job_type` field, which is less specific and interesting.
@@ -103,10 +103,12 @@ it can be downloaded even if the calculation was not successful.
 Now we show the user the error message in the case of a calculation
 that cannot be deleted from the WebUI.
 
-Fixed a bug introduced by a change in Django 1.10 that was causing
-the HTTP requests log to be caught by our logging system and
-then saved in the DbServer.
+We changed the .npz exporters of the hazard outputs to make the import
+into a single QGIS layer easier.
 
+We have now in place an automatic testing mechanism making sure that
+all the outputs of the demos are loadable by the QGIS plugin. The
+plugin itself has a lot more features, documented *here*.
 
 oq commands
 ---------------
@@ -137,26 +139,38 @@ installations. Finally, we renamed `oq engine --version-db` to `oq engine
 of the code) and `oq engine -version` (that was returning the version
 of the database).
 
-Internals
----------
-
-As always, there were several internal changes to the engine. Some of
-them may be of interests to power users and people developing with the
-engine.
+Other
+-----
 
 We changed the 'CTRL-C' behaviour to make sure that all children
 processes are killed when a calculation is interrupted.
 
-We added a 'celery-status' script in 'utils': this is only useful
-for users with a cluster.
+Python 3.6 is not officially supported, however we have fixed the only test
+which was breaking and we know for sure that it works. We also fixed some
+tests breaking with numpy 1.13 which however is still not officially supported.
 
-We added support for Django 1.11, while keeping support for older versions.
+We fixed some tests breaking on macOS; the numbers there are slightly
+different, since the scientific libraries are compiled differently.
+This platform should be trusted less than Linux and Windows.
 
 The engine has now a dependency from [zeromq](http://zeromq.org/) which is
 used internally in the DbServer application. In the future zeromq maybe
 used also to manage the task distribution: this would mean freeing the engine
 from the dependencies from rabbitmq and celery. However, this is a long
 term goal, for the year 2018 or later.
+
+Internals
+---------
+
+As always, there were several internal changes to the engine. Some of
+them may be of interests to power users and people developing with the
+engine.
+We added a 'celery-status' script in 'utils': this is only useful
+for users with a cluster.
+
+We added support for Django 1.11, while keeping support for older versions.
+
+We steadily improved our packaging and installation procedures.
 
 We added a flag `split_sources` in the job.ini, which by default is false.
 When set, sources are not split anymore. This will be useful in the future
@@ -168,5 +182,10 @@ pathological cases, but has not effect at all in realistic case.
 
 We added an exporter `gmf_scenario/rup-XXX` to export the GMFs generated
 by a specific rupture.
+
+Some internal and undocumented exporters for the GMFs in `.txt` format
+have been removed.
+
+We fixed the database migration procedure which is now transactional again.
 
 [Our roadmap for abandoning Python 2](https://github.com/gem/oq-engine/issues/2803) has been updated.
