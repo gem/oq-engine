@@ -26,6 +26,7 @@ from openquake.qa_tests_data.scenario_damage import (
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.calculators.export import export
+from openquake.calculators.views import view
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
@@ -46,6 +47,15 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1(self):
         self.assert_ok(case_1, 'job_risk.ini')
+        got = view('num_units', self.calc.datastore)
+        self.assertEqual('''\
+======== =========
+taxonomy num_units
+======== =========
+RC       2,000    
+RM       4,000    
+*ALL*    6,000    
+======== =========''', got)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1c(self):

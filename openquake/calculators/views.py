@@ -24,6 +24,7 @@ import operator
 import decimal
 import functools
 import itertools
+import collections
 import numpy
 
 from openquake.baselib.general import (
@@ -550,6 +551,19 @@ def stats(name, array, *extras):
     """
     return (name, numpy.mean(array), numpy.std(array, ddof=1),
             numpy.min(array), numpy.max(array), len(array)) + extras
+
+
+@view.add('num_units')
+def view_num_units(token, dstore):
+    """
+    Display the number of units by taxonomy
+    """
+    counts = collections.Counter()
+    for asset in dstore['assetcol']:
+        counts[asset.taxonomy] += asset.number
+    data = sorted(counts.items())
+    data.append(('*ALL*', sum(d[1] for d in data)))
+    return rst_table(data, header=['taxonomy', 'num_units'])
 
 
 @view.add('assets_by_site')
