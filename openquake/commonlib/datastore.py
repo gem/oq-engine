@@ -323,8 +323,8 @@ class DataStore(collections.MutableMapping):
         :param relname: relative file name
         :param export_dir: export directory (if None use .export_dir)
         """
-        assert not os.path.dirname(relname), relname
-        name, ext = relname.rsplit('.', 1)
+        # removing inner slashed to avoid creating intermediate directories
+        name, ext = relname.replace('/', '-').rsplit('.', 1)
         newname = '%s_%s.%s' % (name, self.calc_id, ext)
         if export_dir is None:
             export_dir = self.export_dir
@@ -456,6 +456,9 @@ class DataStore(collections.MutableMapping):
 
     def __len__(self):
         return sum(1 for f in self)
+
+    def __hash__(self):
+        return self.calc_id
 
     def __repr__(self):
         status = 'open' if self.hdf5 else 'close'

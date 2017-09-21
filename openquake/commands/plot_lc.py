@@ -50,7 +50,7 @@ def plot_lc(calc_id, aid=None):
     if aid is None:  # plot the global curves
         plt = make_figure(dset.attrs['return_periods'], dset.value)
     else:
-        sys.exit('Not implemented uyet')
+        sys.exit('Not implemented yet')
     plt.show()
 
 plot_lc.arg('calc_id', 'a computation id', type=int)
