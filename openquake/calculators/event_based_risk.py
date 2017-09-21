@@ -396,9 +396,11 @@ class EbriskCalculator(base.RiskCalculator):
                     self.datastore.extend('events/grp-%02d' % grp_id, events)
             num_events[res.sm_id] += res.num_events
         if 'all_loss_ratios' in self.datastore:
-            self.datastore['all_loss_ratios/num_losses'] = self.num_losses
-            self.datastore.set_attrs(
-                'all_loss_ratios/num_losses', nbytes=self.num_losses.nbytes)
+            if self.num_losses.sum():
+                self.datastore['all_loss_ratios/num_losses'] = self.num_losses
+                self.datastore.set_attrs(
+                    'all_loss_ratios/num_losses',
+                    nbytes=self.num_losses.nbytes)
         del self.num_losses
         event_based.save_gmdata(self, num_rlzs)
         return num_events
