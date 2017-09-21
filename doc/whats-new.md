@@ -1,10 +1,10 @@
 Release notes for the OpenQuake Engine, version 2.6
 ===================================================
 
-Several new features where introduced in this release. Several bugs
-were fixed, some outputs were changed and there were a few
-improvements to the installers, to the Web User Interface(WebUI) and
-to the engine itself.
+This release introduced several improvements and new features in the
+hazard and risk calculators. Several bugs were fixed, some outputs
+were changed and there were a few improvements to the installers, to
+the Web User Interface(WebUI) and to the engine itself.
 
 More than 130 pull requests were closed. For the complete list of
 changes, please see the changelog:
@@ -13,46 +13,46 @@ and https://github.com/gem/oq-engine/blob/engine-2.5/debian/changelog.
 Hazard
 ---------------
 
-We changed the source weighting algorithm, which is now proportional to the
-the number of affected sites. The net effect is a best task distribution,
-so some calculations dominated by slow tasks are faster than before.
+We changed the source weighting algorithm, which is now proportional also to the
+the number of affected sites. The consequence is a better task distribution,
+so that some calculations dominated by slow tasks are faster than before.
 
 We fixed a few bugs in the hazard exporters; moreover we have now an
-experimental command `oq extract hazard/rlzs` solves the problem of
-generating a single .hdf5 file with all hazard curves, maps and
+experimental command `oq extract hazard/rlzs` which is able to produce
+a single .hdf5 file with all hazard curves, maps and
 uniform hazard spectra for all realizations; this was requested by
 some power users and it is documented in
-https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md
+https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md.
 
 In hazardlib we implemented the Munson and Thurber 1997 (Volcanic)
-GMPE and XXX.  The CoeffsTable was enhances so that it can be
-instantiated with dictionaries as well as strings.
+Ground Motion Prediction Eequation (GMPE) and the Atkinson 2010 GMPE
+modified for Hawaii. The Coefficients Table was enhanced so that it can be
+instantiated with dictionaries as well as strings: this is useful
+for users that need to modify the Coefficients Table dynamically.
+We fixed a bug when computing the rjb distances with multidimensional
+meshes, which could be important for hazardlib power users, but not for engine
+users.
 
 We also fixed some small bugs (one in the Hazard Modeller Toolkit,
 one in the script `correct_complex_sources.py`) and added a few additional
-checks.
-
-If there are multiple realizations and no hazard stats,
+checks. In particular, if there are multiple realizations and no hazard stats,
 it is an error to set `hazard_maps=true` or `uniform_hazard_spectra=true`,
 because there will be no output (now we only export the statistics).
 There is also a check that the number of intensity measure types when
 generating uniform hazard spectra is greater than one.
 
 We extended the `sz` field in the rupture surface to 2 bytes, making it
-possible to use a smaller mesh spacing;
-
-We fixed a bug when computing the rjb distances with multidimensional
-meshes, which could be important for hazardlib users, but not for engine
-users.
+possible to use a smaller mesh spacing (useful when comparing the results
+of the engine with the results produced by other software).
 
 Risk
 --------------
 
 Now the engine installer includes three web applications previously
 only available on the OpenQuake Platform: the Input Preparation
-Toolkit (IPT), the Taxonomy Glossary application and TaxtWEB. This
-means that they are available in the desktop too. In the future such
-applications will be fully integrated with the QGIS plugin.
+Toolkit (IPT), the Taxonomy Glossary application and TaxtWEB. In the
+future such applications will be fully integrated with the QGIS
+plugin.
 
 There is a new experimental calculator called `gmf_ebrisk` which is able to
 perform an event based risk calculation starting from ground motion fields
@@ -64,14 +64,19 @@ procedure simpler.
 
 We implemented risk statistics for the `classical_damage` calculator
 and the `classical_bcr` calculator: before they were missing and the
-user had to do the computation manually from the outputs by realization.
+user had to do the computation manually from the individual realizations.
 
 We implemented the concept of *asset tag* in the exposure. The
-risk calculators are able to compute losses aggregated by tag now.
-This is documented in the current version of the manual.
+risk calculators are now able to compute losses aggregated by tag.
+For a definition of the *tag* concept please see the current version
+of the manual.
 
-There is a better error message when running a risk file in absence of a
-preceding hazard calculation.
+We changed the algorithm used in the calculation of loss curves (both
+aggregated and per-asset curves). Now the losses are given in terms of
+return periods. If the return periods are not specified in the `job.ini`
+file, the engine automatically generates a sensible range of return
+periods. There is not need to specify the `loss_ratios` in the `job.ini`
+file as it was required by the previous algorithm.
 
 The statistical loss curves exporter for `classical_risk` calculation
 was exporting bogus numbers, even if the data in the datastore were
@@ -80,12 +85,8 @@ correct. This has been fixed.
 We optimized the generation of loss_maps and curves in event based risk: now it
 is done in parallel whenever possible.
 
-We changed the algorithm used in the calculation of loss curves (both
-aggregated and per-asset curves). Now the losses are given in terms of
-return periods. If the return periods are not specified in the `job.ini`
-file, the engine automatically generates a sensible range of return
-periods. There is not need to specify the `loss_ratios` in the `job.ini`
-file as it was required by the previous algorithm.
+There is a better error message when running a risk file in absence of a
+preceding hazard calculation.
 
 We are also working on the QGIS plugin side to be able to plot easily
 the loss curves in terms of return periods, and this will probably be
@@ -95,7 +96,7 @@ WebUI and QGIS plugin
 ---------------------
 
 We are visualizing the `calculation_mode` field in the WebUI now,
-instead of the `job_type` field, which is less specific and interesting.
+instead of the `job_type` field, which is less specific.
 
 We removed an excessive check from the WebUI: now if an output exists,
 it can be downloaded even if the calculation was not successful.
