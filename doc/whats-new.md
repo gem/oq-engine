@@ -31,7 +31,9 @@ instantiated with dictionaries as well as strings: this is useful
 for users that need to modify the Coefficients Table dynamically.
 We fixed a bug when computing the rjb distances with multidimensional
 meshes, which could be important for hazardlib power users, but not for engine
-users.
+users. We fixed a bug with MultiPointSources, in the case of an `arbitraryMFD`
+magnitude-frequency-distribution. The Hazard Modeller Toolkit parser has
+been updated to read source model in format NRML 0.5.
 
 We also fixed some small bugs (one in the Hazard Modeller Toolkit,
 one in the script `correct_complex_sources.py`) and added a few additional
@@ -78,19 +80,16 @@ file, the engine automatically generates a sensible range of return
 periods. There is not need to specify the `loss_ratios` in the `job.ini`
 file as it was required by the previous algorithm.
 
-The statistical loss curves exporter for `classical_risk` calculation
+The statistical loss curves exporter for `classical_risk` calculations
 was exporting bogus numbers, even if the data in the datastore were
-correct. This has been fixed.
+correct. This has been fixed. The statistical loss curves exporter for
+`event_based_risk` was not implemented: now it is.
 
-We optimized the generation of loss_maps and curves in event based risk: now it
-is done in parallel whenever possible.
+The generation of loss_maps and curves in event based risk has been optimized:
+now it is done in parallel whenever possible.
 
 There is a better error message when running a risk file in absence of a
 preceding hazard calculation.
-
-We are also working on the QGIS plugin side to be able to plot easily
-the loss curves in terms of return periods, and this will probably be
-ready for the next release.
 
 WebUI and QGIS plugin
 ---------------------
@@ -110,6 +109,10 @@ into a single QGIS layer easier.
 We have now in place an automatic testing mechanism making sure that
 all the outputs of the demos are loadable by the QGIS plugin. The
 plugin itself has a lot more features, documented *here*.
+
+We started a work to make the risk outputs readable from the QGIS
+plugin and we will be able to plot some of them in the next release of
+the plugin.
 
 oq commands
 ---------------
@@ -155,8 +158,8 @@ different, since the scientific libraries are compiled differently.
 This platform should be trusted less than Linux and Windows.
 
 The engine has now a dependency from [zeromq](http://zeromq.org/) which is
-used internally in the DbServer application. In the future zeromq maybe
-used also to manage the task distribution: this would mean freeing the engine
+used internally in the DbServer application. In the future zeromq may be
+used to manage the task distribution: this would free the engine
 from the dependencies from rabbitmq and celery. However, this is a long
 term goal, for the year 2018 or later.
 
