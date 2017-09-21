@@ -112,20 +112,21 @@ class EventBasedTestCase(CalculatorTestCase):
         # here the <AreaSource 1> is light and not split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='3', exports='csv')
-        [fname] = out['gmf_data', 'csv']
+        [fname, sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
+        self.assertEqualFiles('expected/sites.csv', sitefile)
 
         # here the <AreaSource 1> is heavy and split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='4', exports='csv')
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
@@ -148,13 +149,13 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.4')
 
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/minimum-intensity-gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = out['hcurves', 'csv']
@@ -164,7 +165,7 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
-        [fname] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
+        [fname, _sitefile] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles('expected/gmf-data-bis.csv', fname)
 
         ltr0 = out['gmf_data', 'xml'][0]
@@ -180,7 +181,7 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        [f] = out['gmf_data', 'csv']
+        [f, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', f)
 
     @attr('qa', 'hazard', 'event_based')
@@ -193,7 +194,7 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         if REFERENCE_OS:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-6)
@@ -257,7 +258,7 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_13(self):
         out = self.run_calc(case_13.__file__, 'job.ini', exports='csv')
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
         [fname] = out['hcurves', 'csv']
@@ -292,7 +293,7 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
 
