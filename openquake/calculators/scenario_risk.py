@@ -22,7 +22,6 @@ import numpy
 
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import calc
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -55,7 +54,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     """
     E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
-    T = riskinput.tagmask.shape[1]
+    T = param['num_tags']
     R = riskinput.hazard_getter.num_rlzs
     I = param['insured_losses'] + 1
     asset_loss_table = param['asset_loss_table']
@@ -73,7 +72,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
                 stats['mean'][a] = losses[a].mean()
                 stats['stddev'][a] = losses[a].std(ddof=1)
                 result['avg'].append((l, r, asset.ordinal, stats[a]))
-                t = riskinput.tagmask[a]
+                t = asset.tagmask
                 for i in range(I):
                     lbt[t, r, l + L * i] += losses[a].sum()
             agglosses = losses.sum(axis=0)  # shape E, I
@@ -110,11 +109,12 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        _, gmfs = base.get_gmfs(self)
         self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
+        self.param['num_tags'] = len(self.assetcol.tags())
 
     def post_execute(self, result):
         """
