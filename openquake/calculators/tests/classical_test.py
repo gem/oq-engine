@@ -21,6 +21,7 @@ from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
@@ -47,7 +48,7 @@ class ClassicalTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
         self.assert_curves_ok(
-            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
+            ['hazard_curve-PGA.csv', 'hazard_curve-SA(0.1).csv'],
             case_1.__file__)
 
         if parallel.oq_distribute() != 'no':
@@ -62,6 +63,10 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check npz export
         export(('hcurves', 'npz'), self.calc.datastore)
+
+        # check extraction
+        sitecol = extract(self.calc.datastore, 'sitecol')
+        self.assertEqual(repr(sitecol), '<SiteCollection with 1 sites>')
 
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
@@ -167,8 +172,8 @@ class ClassicalTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_13(self):
         self.assert_curves_ok(
-            ['hazard_curve-mean.csv', 'hazard_map-mean.csv'],
-            case_13.__file__)
+            ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',
+             'hazard_map-mean.csv'], case_13.__file__)
 
         # test recomputing the hazard maps, i.e. with --hc
         # must be run sequentially to avoid the usual heisenbug
@@ -180,6 +185,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
 
+        # test extract; 'hazard/rlzs also works
+        haz = extract(self.calc.datastore, 'hazard/rlz-0')
+        self.assertEqual(
+            sorted(haz),
+            ['hcurves-rlz-0', 'hmaps-rlz-0', 'oqparam', 'sitecol'])
+
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
         self.assert_curves_ok([
@@ -190,27 +201,13 @@ class ClassicalTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_15(self):  # full enumeration
         self.assert_curves_ok('''\
-hazard_curve-max.csv
-hazard_curve-mean.csv
-hazard_curve-smltp_SM1-gsimltp_BA2008_C2003.csv
-hazard_curve-smltp_SM1-gsimltp_BA2008_T2002.csv
-hazard_curve-smltp_SM1-gsimltp_CB2008_C2003.csv
-hazard_curve-smltp_SM1-gsimltp_CB2008_T2002.csv
-hazard_curve-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
-hazard_curve-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
-hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
-hazard_curve-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv
+hazard_curve-max-PGA.csv,
+hazard_curve-max-SA(0.1).csv
+hazard_curve-mean-PGA.csv
+hazard_curve-mean-SA(0.1).csv
 hazard_uhs-max.csv
 hazard_uhs-mean.csv
-hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
-hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
-hazard_uhs-smltp_SM1-gsimltp_CB2008_C2003.csv
-hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002.csv
-hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
-hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
-                              case_15.__file__, kind='all', delta=1E-6)
+'''.split(), case_15.__file__, delta=1E-6)
 
         # test UHS XML export
         fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
@@ -276,7 +273,10 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     @attr('qa', 'hazard', 'classical')
     def test_case_18(self):  # GMPEtable
         self.assert_curves_ok(
-            ['hazard_curve-mean.csv', 'hazard_map-mean.csv',
+            ['hazard_curve-mean_PGA.csv',
+             'hazard_curve-mean_SA(0.2).csv',
+             'hazard_curve-mean_SA(1.0).csv',
+             'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
             case_18.__file__, delta=1E-7)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
@@ -292,12 +292,10 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
         self.assert_curves_ok([
-            'hazard_curve-mean.csv',
-            'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b51_@_@.csv',
-            'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b52_@_@.csv',
-            'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b53_@_@.csv',
-            'hazard_curve-smltp_b1-gsimltp_@_@_@_@_b54_@_@.csv',
-        ], case_19.__file__, kind='all', delta=1E-7)
+            'hazard_curve-mean_PGA.csv',
+            'hazard_curve-mean_SA(0.1).csv',
+            'hazard_curve-mean_SA(0.15).csv',
+        ], case_19.__file__, delta=1E-7)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_20(self):  # Source geometry enumeration
@@ -353,7 +351,11 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     @attr('qa', 'hazard', 'classical')
     def test_case_22(self):  # crossing date line calculation for Alaska
         # this also tests the splitting of the source model in two files
-        self.assert_curves_ok(['hazard_curve-mean.csv'], case_22.__file__)
+        self.assert_curves_ok([
+            '/hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1)',
+            'hazard_curve-mean-SA(0.2).csv', 'hazard_curve-mean-SA(0.5).csv',
+            'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
+        ], case_22.__file__)
         checksum = self.calc.datastore['/'].attrs['checksum32']
         self.assertEqual(checksum, 4227047805)
 
@@ -363,8 +365,12 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
 
     @attr('qa', 'hazard', 'classical')
     def test_case_24(self):  # UHS
-        self.assert_curves_ok(['hazard_curve.csv', 'hazard_uhs.csv'],
-                              case_24.__file__)
+        self.assert_curves_ok([
+            'hazard_curve-PGA.csv', 'hazard_curve-PGV.csv',
+            'hazard_curve-SA(0.025).csv', 'hazard_curve-SA(0.05).csv',
+            'hazard_curve-SA(0.1).csv', 'hazard_curve-SA(0.2).csv',
+            'hazard_curve-SA(0.5).csv', 'hazard_curve-SA(1.0).csv',
+            'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_25(self):  # negative depths
@@ -382,4 +388,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     @attr('qa', 'hazard', 'classical')
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
-        self.assert_curves_ok(['hazard_curve_mean.csv'], case_28.__file__)
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.05).csv',
+            'hazard_curve-mean-SA(0.1).csv', 'hazard_curve-mean-SA(0.2).csv',
+            'hazard_curve-mean-SA(0.5)', 'hazard_curve-mean-SA(1.0).csv',
+            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__)
