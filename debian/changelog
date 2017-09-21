@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Stored the number of nonzero losses per asset and realization in
+    event_based_risk calculations with asset_loss_table=True
   * Added a check on `number_of_ground_motion_fields` when the GMFs are
     extracted from a NRML file
   * Added a command `oq extract` able to extract hazard outputs into HDF5 files
