@@ -137,7 +137,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # test the .npz export
         [fname] = out['gmf_data', 'npz']
         with numpy.load(fname) as f:
-            self.assertEqual(len(f.keys()), 2)  # there are only two datasets
+            self.assertEqual(len(f.keys()), 3)  # rlz-000 rlz-001 sitemesh
             data1 = f['LinLee2008SSlab()']
             data2 = f['YoungsEtAl1997SSlab()']
             self.assertEqual(data1.dtype.names, ('lon', 'lat', 'PGA'))
