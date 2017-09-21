@@ -1,4 +1,18 @@
   [Michele Simionato]
+  * Added a check on `number_of_ground_motion_fields` when the GMFs are
+    extracted from a NRML file
+  * Added a command `oq extract` able to extract hazard outputs into HDF5 files
+  * Fixed a bug when reading GMFs from a NRML file: the hazard sites were
+    read from the exposure (incorrectly) and not from the GMFs
+  * Fixed a bug in MultiMFDs of kind `arbitraryMFD`
+
+  [Valerio Poggi]
+  * Implemented the Atkinson (2010) GMPE as subclass `Atkinson2010Hawaii`
+    of `BooreAtkinson2008`
+
+  [Michele Simionato]
+  * Used the new loss curves algorithm for the asset loss curves and loss maps
+  * Added a generic `extract` functionality to the web API
   * Fixed a bug when computing the rjb distances with multidimensional meshes
   * Changed the GMF CSV exporter to export the sites too; unified it with the
     event based one

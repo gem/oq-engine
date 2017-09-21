@@ -626,8 +626,7 @@ PGA:float32,PGV:float32
         fname = os.path.join(DATADIR,  'gmfdata_err.xml')
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Found a missing etag '0000000001'",
-                      str(ctx.exception))
+        self.assertIn("Found a missing ruptureId 1", str(ctx.exception))
 
     def test_err2(self):
         # wrong mesh
