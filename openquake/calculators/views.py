@@ -662,7 +662,7 @@ def view_task(token, dstore):
           stats('weight', arr['weight'])]
     sources = dstore['task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
-    res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n' % (
+    res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
 
