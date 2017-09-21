@@ -198,7 +198,8 @@ validators = {
     'char_mag': valid.positivefloats,
     'magnitudes': valid.positivefloats,
     'id': valid.simple_id,
-    'rupture.id': valid.utf8,  # event tag
+    'rupture.id': valid.positiveint,
+    'ruptureId': valid.positiveint,
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),
     'IML': valid.positivefloats,  # used in NRML 0.4
     'imt': valid.intensity_measure_type,

@@ -22,6 +22,7 @@ import abc
 import pdb
 import logging
 import operator
+import itertools
 import traceback
 import collections
 try:  # with Python 3
@@ -36,7 +37,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, datastore, source, calc, riskmodels
-from openquake.baselib.parallel import Starmap, executor, wakeup_pool
+from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
 
@@ -523,6 +524,21 @@ class HazardCalculator(BaseCalculator):
         self.datastore.set_nbytes('loss_ratios')
         self.datastore.hdf5.flush()
 
+    def assoc_assets(self, haz_sitecol):
+        """
+        Associate the exposure assets to the hazard sites and redefine
+        the .sitecol and .assetcol attributes.
+        """
+        if haz_sitecol is not None and haz_sitecol != self.sitecol:
+            num_assets = self.count_assets()
+            with self.monitor('assoc_assets_sites', autoflush=True):
+                self.sitecol, self.assetcol = \
+                    self.assoc_assets_sites(haz_sitecol.complete)
+            ok_assets = self.count_assets()
+            num_sites = len(self.sitecol)
+            logging.warn('Associated %d assets to %d sites, %d discarded',
+                         ok_assets, num_sites, num_assets - ok_assets)
+
     def read_risk_data(self):
         """
         Read the exposure (if any), the risk model (if any) and then the
@@ -538,17 +554,9 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs:
             self.read_exposure()
             self.load_riskmodel()  # must be called *after* read_exposure
-            num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
-            if haz_sitecol is not None and haz_sitecol != self.sitecol:
-                with self.monitor('assoc_assets_sites', autoflush=True):
-                    self.sitecol, self.assetcol = \
-                        self.assoc_assets_sites(haz_sitecol.complete)
-                ok_assets = self.count_assets()
-                num_sites = len(self.sitecol)
-                logging.warn('Associated %d assets to %d sites, %d discarded',
-                             ok_assets, num_sites, num_assets - ok_assets)
+            self.assoc_assets(haz_sitecol)
         elif oq.job_type == 'risk':
             raise RuntimeError(
                 'Missing exposure_file in %(job_ini)s' % oq.inputs)
@@ -587,14 +595,6 @@ class HazardCalculator(BaseCalculator):
 
     def post_process(self):
         """For compatibility with the engine"""
-
-
-def _get_aids(assets_by_site):
-    aids = []
-    for assets in assets_by_site:
-        for asset in assets:
-            aids.append(asset.ordinal)
-    return sorted(aids)
 
 
 class RiskCalculator(HazardCalculator):
@@ -651,16 +651,16 @@ class RiskCalculator(HazardCalculator):
                 reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
-                if len(eps):
-                    for assets in reduced_assets:
-                        for asset in assets:
+                for assets in reduced_assets:
+                    for asset in assets:
+                        asset.tagmask = self.tagmask[asset.ordinal]
+                        if len(eps):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
-                reduced_mask = self.tagmask[_get_aids(reduced_assets)]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
                         kind, hazards[:, sids], imtls, eids),
-                    reduced_assets, reduced_mask, reduced_eps)
+                    reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
@@ -681,3 +681,72 @@ class RiskCalculator(HazardCalculator):
 
     def combine(self, acc, res):
         return acc + res
+
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
+F32 = numpy.float32
+
+
+def get_gmv_data(sids, gmfs):
+    """
+    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
+    """
+    R, N, E, I = gmfs.shape
+    gmv_data_dt = numpy.dtype(
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+    it = ((r, sids[s], eid, gmfa[s, eid])
+          for r, gmfa in enumerate(gmfs)
+          for s, eid in itertools.product(
+                  numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64)))
+    return numpy.fromiter(it, gmv_data_dt)
+
+
+def get_gmfs(calc):
+    """
+    :param calc: a scenario_risk, scenario_damage or gmf_ebrisk calculator
+    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
+    """
+    dstore = calc.datastore
+    oq = dstore['oqparam']
+    num_assocs = dstore['csm_info'].get_num_rlzs()
+    sitecol = dstore['sitecol']
+    if dstore.parent:
+        haz_sitecol = dstore.parent['sitecol']  # S sites
+    else:
+        haz_sitecol = sitecol  # N sites
+    N = len(haz_sitecol.complete)
+    I = len(oq.imtls)
+    E = oq.number_of_ground_motion_fields
+    eids = numpy.arange(E)
+    gmfs = numpy.zeros((num_assocs, N, E, I))
+    if calc.precalc:
+        for g, gsim in enumerate(calc.precalc.gsims):
+            gmfs[g, sitecol.sids] = calc.precalc.gmfa[gsim]
+        return eids, gmfs
+
+    if 'gmf_data/data' in dstore:
+        dset = dstore['gmf_data/data']
+        R = len(dstore['realizations'])
+        nrows = len(dset) // R
+        for r in range(R):
+            for s, sid in enumerate(haz_sitecol.sids):
+                start = r * nrows + E * s
+                array = dset[start: start + E]  # shape (E, I)
+                if numpy.unique(array['sid']) != [sid]:  # sanity check
+                    raise ValueError('The GMFs have been stored incorrectly')
+                gmfs[r, sid] = array['gmv']
+        return eids, gmfs
+
+    elif 'gmfs' in oq.inputs:  # from file
+        logging.info('Reading gmfs from file')
+        eids, gmfs = readinput.get_gmfs(oq)
+        if len(eids) != E:
+            raise RuntimeError('Expected %d ground motion fields, found %d' %
+                               (E, len(eids)))
+        # NB: get_gmfs redefine oq.sites in case of GMFs from XML
+        haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
+        calc.assoc_assets(haz_sitecol)
+        dstore['gmf_data/data'] = get_gmv_data(
+            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
+        return eids, gmfs

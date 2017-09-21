@@ -52,7 +52,7 @@ class ArbitraryMFD(BaseMFD):
         * Each number in occurrence rates list is non-negative.
         * Minimum magnitude is positive.
         """
-        if not self.occurrence_rates:
+        if not len(self.occurrence_rates):
             raise ValueError('at least one bin must be specified')
 
         if not all(value >= 0 for value in self.occurrence_rates):
