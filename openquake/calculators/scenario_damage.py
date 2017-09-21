@@ -21,7 +21,7 @@ import numpy
 
 from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
-from openquake.calculators import base
+from openquake.calculators import base, event_based
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -111,8 +111,9 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
             c_model = c_models.get(loss_type)
             for a, fraction in enumerate(damages):
                 asset = outputs.assets[a]
-                t = riskinput.tagmask[a]
-                damages = fraction * asset.number  # shape (E, D)
+                damages = fraction * asset.number
+                t = asset.tagmask
+                result['d_tag'][t, r, l] += damages  # shape (E, D)
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
                     # NB: we add a 0 in front for nodamage state
@@ -121,11 +122,11 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
                     result['c_asset'].append(
                         (l, r, asset.ordinal,
                          scientific.mean_std(consequences)))
-                    result['c_tag'][t, r, l, :] += consequences
+                    result['c_tag'][t, r, l] += consequences
                     # TODO: consequences for the occupants
                 result['d_asset'].append(
                     (l, r, asset.ordinal, scientific.mean_std(damages)))
-                result['d_tag'][t, r, l, :] += damages
+    result['gmdata'] = riskinput.gmdata
     return result
 
 
@@ -148,7 +149,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam, 'consequence')
         _, gmfs = base.get_gmfs(self)
         self.riskinputs = self.build_riskinputs('gmf', gmfs)
-        self.param['tags'] = sorted(self.assetcol.tags())
+        self.param['tags'] = self.assetcol.tags()
 
     def post_execute(self, result):
         """
@@ -175,9 +176,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset, multi_stat_dt)
         self.datastore['dmg_by_tag'] = dist_by_tag(
             result['d_tag'], multi_stat_dt)
-        by_taxon = result['d_tag'][self.assetcol.get_tax_idx()]
-        self.datastore['dmg_total'] = dist_total(
-            by_taxon, multi_stat_dt)
+        by_tag = result['d_tag'][self.assetcol.get_tax_idx()]
+        self.datastore['dmg_total'] = dist_total(by_tag, multi_stat_dt)
 
         # consequence distributions
         if result['c_asset']:
@@ -189,6 +189,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['losses_by_asset'] = c_asset
             self.datastore['losses_by_tag'] = dist_by_tag(
                 result['c_tag'], multi_stat_dt)
-            by_taxon = result['c_tag'][self.assetcol.get_tax_idx()]
-            self.datastore['losses_total'] = dist_total(
-                by_taxon, multi_stat_dt)
+            self.datastore.set_attrs(
+                'losses_by_tag',
+                tags=[t.encode('utf-8') for t in self.param['tags']])
+            by_tag = result['c_tag'][self.assetcol.get_tax_idx()]
+            self.datastore['losses_total'] = dist_total(by_tag, multi_stat_dt)
+
+        # save gmdata
+        self.gmdata = result['gmdata']
+        for arr in self.gmdata.values():
+            arr[-2] = self.oqparam.number_of_ground_motion_fields  # events
+        event_based.save_gmdata(self, R)

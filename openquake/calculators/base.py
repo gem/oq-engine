@@ -597,14 +597,6 @@ class HazardCalculator(BaseCalculator):
         """For compatibility with the engine"""
 
 
-def _get_aids(assets_by_site):
-    aids = []
-    for assets in assets_by_site:
-        for asset in assets:
-            aids.append(asset.ordinal)
-    return sorted(aids)
-
-
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -659,16 +651,16 @@ class RiskCalculator(HazardCalculator):
                 reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
-                if len(eps):
-                    for assets in reduced_assets:
-                        for asset in assets:
+                for assets in reduced_assets:
+                    for asset in assets:
+                        asset.tagmask = self.tagmask[asset.ordinal]
+                        if len(eps):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
-                reduced_mask = self.tagmask[_get_aids(reduced_assets)]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(
                         kind, hazards[:, sids], imtls, eids),
-                    reduced_assets, reduced_mask, reduced_eps)
+                    reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
