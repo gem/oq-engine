@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import itertools
 import warnings
-import logging
 import numpy
 import h5py
 
@@ -31,7 +29,6 @@ from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, calc, probability_map
-from openquake.commonlib import readinput
 
 TWO16 = 2 ** 16
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -377,63 +374,6 @@ def make_uhs(pmap, imtls, poes, nsites):
             if imt in imts:
                 uhs[poe][imt] = array[:, i * P + j, 0]
     return uhs
-
-
-def get_gmv_data(sids, gmfs):
-    """
-    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
-    """
-    R, N, E, I = gmfs.shape
-    gmv_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
-    it = ((r, sids[s], eid, gmfa[s, eid])
-          for r, gmfa in enumerate(gmfs)
-          for s, eid in itertools.product(range(N), range(E)))
-    return numpy.fromiter(it, gmv_data_dt)
-
-
-def get_gmfs(dstore, precalc=None):
-    """
-    :param dstore: a datastore
-    :param precalc: a scenario calculator with attribute .gmfa
-    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
-    """
-    oq = dstore['oqparam']
-    num_assocs = dstore['csm_info'].get_num_rlzs()
-    sitecol = dstore['sitecol']
-    if dstore.parent:
-        haz_sitecol = dstore.parent['sitecol']  # S sites
-    else:
-        haz_sitecol = sitecol  # N sites
-    N = len(haz_sitecol.complete)
-    I = len(oq.imtls)
-    E = oq.number_of_ground_motion_fields
-    eids = numpy.arange(E)
-    gmfs = numpy.zeros((num_assocs, N, E, I))
-    if precalc:
-        for g, gsim in enumerate(precalc.gsims):
-            gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
-        return eids, gmfs
-
-    if 'gmf_data/data' in dstore:
-        dset = dstore['gmf_data/data']
-        R = len(dstore['realizations'])
-        nrows = len(dset) // R
-        for r in range(R):
-            for s, sid in enumerate(haz_sitecol.sids):
-                start = r * nrows + E * s
-                array = dset[start: start + E]  # shape (E, I)
-                if numpy.unique(array['sid']) != [sid]:  # sanity check
-                    raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[r, sid] = array['gmv']
-        return eids, gmfs
-
-    elif 'gmfs' in oq.inputs:  # from file
-        logging.info('Reading gmfs from file')
-        eids, gmfs = readinput.get_gmfs(oq)
-        dstore['gmf_data/data'] = get_gmv_data(
-            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
-        return eids, gmfs
 
 
 def fix_minimum_intensity(min_iml, imts):

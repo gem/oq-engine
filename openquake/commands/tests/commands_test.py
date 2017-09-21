@@ -114,7 +114,7 @@ class TidyTestCase(unittest.TestCase):
       xmlns:gml="http://www.opengis.net/gml">
 <gmfCollection gsimTreePath="" sourceModelTreePath="">
   <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="scenario-0">
+    <gmf IMT="PGA" ruptureId="0">
       <node gmv="0.0126515007046" lon="12.12477995" lat="43.5812"/>
       <node gmv="0.0124056290492" lon="12.12478193" lat="43.5812"/>
     </gmf>
@@ -139,7 +139,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="PGA"
-            ruptureId="scenario-0"
+            ruptureId="0"
             >
                 <node gmv="1.26515E-02" lat="4.35812E+01" lon="1.21248E+01"/>
                 <node gmv="1.24056E-02" lat="4.35812E+01" lon="1.21248E+01"/>
@@ -156,7 +156,7 @@ xmlns:gml="http://www.opengis.net/gml"
       xmlns:gml="http://www.opengis.net/gml">
 <gmfCollection gsimTreePath="" sourceModelTreePath="">
   <gmfSet stochasticEventSetId="1">
-    <gmf IMT="PGA" ruptureId="scenario-0">
+    <gmf IMT="PGA" ruptureId="0">
       <node gmv="0.012646" lon="12.12477995" lat="43.5812"/>
       <node gmv="-0.012492" lon="12.12478193" lat="43.5812"/>
     </gmf>
@@ -210,8 +210,8 @@ class RunShowExportTestCase(unittest.TestCase):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
             export('hcurves', self.calc_id, 'csv', tempdir)
-        [fname] = os.listdir(tempdir)
-        self.assertIn(str(fname), str(p))
+        fnames = os.listdir(tempdir)
+        self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
 
 
