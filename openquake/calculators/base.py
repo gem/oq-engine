@@ -702,12 +702,12 @@ def get_gmv_data(sids, gmfs):
     return numpy.fromiter(it, gmv_data_dt)
 
 
-def get_gmfs(self):
+def get_gmfs(calculator):
     """
-    :param self: a scenario_risk, scenario_damage or gmf_ebrisk calculator
+    :param calculator: a scenario_risk, scenario_damage or gmf_ebrisk calculator
     :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
-    dstore = self.datastore
+    dstore = calculator.datastore
     oq = dstore['oqparam']
     num_assocs = dstore['csm_info'].get_num_rlzs()
     sitecol = dstore['sitecol']
@@ -720,9 +720,9 @@ def get_gmfs(self):
     E = oq.number_of_ground_motion_fields
     eids = numpy.arange(E)
     gmfs = numpy.zeros((num_assocs, N, E, I))
-    if self.precalc:
-        for g, gsim in enumerate(self.precalc.gsims):
-            gmfs[g, sitecol.sids] = self.precalc.gmfa[gsim]
+    if calculator.precalc:
+        for g, gsim in enumerate(calculator.precalc.gsims):
+            gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
         return eids, gmfs
 
     if 'gmf_data/data' in dstore:
@@ -746,7 +746,7 @@ def get_gmfs(self):
                                (E, len(eids)))
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
-        self.assoc_assets(haz_sitecol)
+        calculator.assoc_assets(haz_sitecol)
         dstore['gmf_data/data'] = get_gmv_data(
             haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
 
