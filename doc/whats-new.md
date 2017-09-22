@@ -173,7 +173,7 @@ tests breaking with numpy 1.13 which however is still not officially supported.
 
 We fixed some tests breaking on macOS; the numbers there are slightly
 different, since the scientific libraries are compiled differently.
-This platform should be trusted less than Linux and Windows.
+This platform should be trusted less than Linux, that remains our reference.
 
 The engine has now a dependency from [zeromq](http://zeromq.org/) which is
 used internally in the DbServer application. In the future zeromq may be
