@@ -137,9 +137,9 @@ class ScenarioTestCase(CalculatorTestCase):
         # test the .npz export
         [fname] = out['gmf_data', 'npz']
         with numpy.load(fname) as f:
-            self.assertEqual(len(f.keys()), 3)  # rlz-000 rlz-001 sitemesh
-            data1 = f['LinLee2008SSlab()']
-            data2 = f['YoungsEtAl1997SSlab()']
+            self.assertEqual(len(f.keys()), 2)  # rlz-000 rlz-001
+            data1 = f['rlz-000']
+            data2 = f['rlz-001']
             self.assertEqual(data1.dtype.names, ('lon', 'lat', 'PGA'))
             self.assertEqual(data1.shape, (3,))
             self.assertEqual(data1['PGA'].shape, (3, 10))
