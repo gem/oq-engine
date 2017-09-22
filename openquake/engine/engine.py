@@ -139,7 +139,7 @@ def raiseMasterKilled(signum, _stack):
         msg = 'Received a signal %d' % signum
 
     # FIXME this code has been temporary disabled due issues with large
-    # computations and further investigation is need code is left as reference
+    # computations and further investigation is need; code is left as reference
     # for pid in parallel.executor.pids:
     #     try:
     #         os.kill(pid, signal.SIGKILL)
