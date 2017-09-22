@@ -85,7 +85,7 @@ python setup.py build
 %pre
 getent group %{oquser} >/dev/null || groupadd -r %{oquser}
 getent passwd %{oquser} >/dev/null || \
-    useradd -r -g %{oquser} -m -d /var/lib/%{oquser} -s /bin/bash \
+    useradd -r -g %{oquser} -d %{_localstatedir}/lib/%{oquser} -s /bin/bash \
     -c "The OpenQuake user" %{oquser}
 
 %install
@@ -95,6 +95,7 @@ install -p -m 755 -d %{buildroot}%{oqprefix}/bin
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
 ln -sf %{oqprefix}/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
+mkdir -p %{buildroot}%{_localstatedir}/lib/openquake
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
 mkdir -p %{buildroot}%{_datadir}/applications
@@ -127,6 +128,7 @@ rm -rf %{buildroot}
 %systemd_postun_with_restart openquake-webui.service
 
 %files
+%attr(0750, openquake, openquake) %dir %{_localstatedir}/lib/openquake
 %defattr(-,root,root)
 %doc README.md LICENSE CONTRIBUTORS.txt
 %doc doc/*.md
