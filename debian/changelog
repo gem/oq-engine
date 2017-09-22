@@ -1,3 +1,8 @@
+  [Daniele Viganò]
+  * Changed the behaviour during RPM upgrades:
+    old openquake.cfg configuration is left untuched and the new one
+    installed as openquake.cfg.rpmnew
+
   [Michele Simionato]
   * Added a check on `number_of_ground_motion_fields` when the GMFs are
     extracted from a NRML file
