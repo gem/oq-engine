@@ -823,15 +823,29 @@ def export_gmf_scenario_csv(ekey, dstore):
     return writer.getsaved()
 
 
+def _gmf_scenario(data, num_sites, num_events, imts):
+    # convert data into the composite array expected by QGIS
+    gmf_dt = numpy.dtype([(imt, (F32, (num_events,))) for imt in imts])
+    gmfa = numpy.zeros(num_sites, gmf_dt)
+    for rec in data:
+        arr = gmfa[rec['sid']]
+        for imt, gmv in zip(imts, rec['gmv']):
+            arr[imt][rec['eid']] = gmv
+    return gmfa
+
+
 @export.add(('gmf_data', 'npz'))
 def export_gmf_scenario_npz(ekey, dstore):
     dic = {}
+    oq = dstore['oqparam']
+    E = oq.number_of_ground_motion_fields
+    mesh = get_mesh(dstore['sitecol'])
     fname = dstore.export_path('%s.%s' % ekey)
     if 'gmf_data' in dstore:
-        dic['sitemesh'] = get_mesh(dstore['sitecol'])
         data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
         for rlzi in data_by_rlzi:
-            dic['rlz-%03d' % rlzi] = data_by_rlzi[rlzi]
+            gmfa = _gmf_scenario(data_by_rlzi[rlzi], len(mesh), E, oq.imtls)
+            dic['rlz-%03d' % rlzi] = util.compose_arrays(mesh, gmfa)
     else:  # nothing to export
         return []
     savez(fname, **dic)
