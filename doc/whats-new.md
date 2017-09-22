@@ -24,6 +24,11 @@ uniform hazard spectra for all realizations; this was requested by
 some power users and it is documented in
 https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md.
 
+We changed the numbering algorithm of the event IDs in the event based
+calculator. Now the event IDs are independent from the number of generated
+tasks. This has effect on the rupture exports, the ground motion field exports
+and the event loss table exports.
+
 In hazardlib we implemented the Munson and Thurber 1997 (Volcanic)
 Ground Motion Prediction Eequation (GMPE) and the Atkinson 2010 GMPE
 modified for Hawaiʻi. The Coefficients Table was enhanced so that it can be
@@ -59,7 +64,13 @@ plugin.
 
 There is a new experimental calculator called `gmf_ebrisk` which is able to
 perform an event based risk calculation starting from ground motion fields
-provided as a CSV file. In order to implement this feature we changed the
+provided as a CSV file. The format of the GMFs has to be the same as for
+a scenario calculation and requires specifying the parameter
+`number_of_ground_motion_fields` in the job.ini. In the future the calculator
+will be extended to work with generic ground motion fields, with a different
+number of events per each realization.
+
+In order to implement the `gmg_ebrisk` calculator we changed the
 CSV export format of the ground motion fields which is
 now the same both for event based and scenario calculators. Also the
 internal storage of the GMFs has changed to make the import/export
@@ -113,8 +124,9 @@ We changed the .npz exporters of the hazard outputs to make the import
 into a single QGIS layer easier.
 
 We now have in place an automatic testing mechanism making sure that
-all the outputs of the demos are loadable by the QGIS plugin. The
-plugin itself has a lot more features, documented *here*.
+all the outputs of the demos that are loadable by the QGIS plugin are
+actually imported and visualized correctly. The plugin itself has several
+new features, documented [here](https://plugins.qgis.org/plugins/svir/version/2.6.1/).
 
 We started work to make the risk outputs readable from the QGIS
 plugin and we will be able to plot some of them in the next release of
@@ -184,7 +196,7 @@ We added support for Django 1.11, while keeping support for older versions.
 We improved our packaging and installation procedures.
 
 A new flag, `split_sources`, can now be set in the job configuration file
-By default, this flag is set to `false`. If set to `true`, sources will not 
+By default, this flag is set to `true`. If set to `false`, sources will not 
 be split by the engine. This will be useful in the future
 when implementing disaggregation by source.
 
@@ -197,7 +209,5 @@ by a specific rupture.
 
 Some internal and undocumented exporters for the GMFs in `.txt` format
 have been removed.
-
-We fixed the database migration procedure which is now transactional again.
 
 [Our roadmap for abandoning Python 2](https://github.com/gem/oq-engine/issues/2803) has been updated.
