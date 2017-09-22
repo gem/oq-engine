@@ -164,9 +164,6 @@ of the database).
 Other
 -----
 
-We changed the behaviour of 'CTRL-C' to make sure that all children
-processes are killed when a calculation is interrupted.
-
 Python 3.6 is not officially supported, however we have fixed the only test
 which was breaking and we know for sure that it works. We also fixed some
 tests breaking with numpy 1.13 which however is still not officially supported.
