@@ -825,7 +825,8 @@ def export_gmf_scenario_csv(ekey, dstore):
 
 def _gmf_scenario(data, num_sites, imts):
     # convert data into the composite array expected by QGIS
-    eid2idx = {eid: idx for idx, eid in enumerate(numpy.unique(data['eid']))}
+    eids = sorted(numpy.unique(data['eid']))
+    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
     E = len(eid2idx)
     gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
     gmfa = numpy.zeros(num_sites, gmf_dt)
