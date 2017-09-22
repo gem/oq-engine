@@ -140,9 +140,11 @@ rm -rf %{buildroot}
 %{_datadir}/openquake/engine
 %{_datadir}/applications/oq-engine-webui.desktop
 %{_datadir}/pixmaps/openquake.png
-%{_sysconfdir}/openquake/openquake.cfg
 %{_unitdir}/openquake-dbserver.service
 %{_unitdir}/openquake-webui.service
+
+%config(noreplace)
+%{_sysconfdir}/openquake/openquake.cfg
 
 %post master
 (if ! rabbitmqctl status &>/dev/null; then
