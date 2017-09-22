@@ -1,4 +1,5 @@
   [Daniele Viganò]
+  * Fixed 'openquake' user creation in RPM when SELinux is in enforcing mode
   * Changed the behaviour during RPM upgrades:
     old openquake.cfg configuration is left untuched and the new one
     installed as openquake.cfg.rpmnew
