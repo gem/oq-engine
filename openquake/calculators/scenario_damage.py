@@ -156,6 +156,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
+        tags = [t.encode('utf-8') for t in self.param['tags']]
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         L = len(ltypes)
@@ -176,6 +177,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset, multi_stat_dt)
         self.datastore['dmg_by_tag'] = dist_by_tag(
             result['d_tag'], multi_stat_dt)
+        self.datastore.set_attrs('dmg_by_tag', tags=tags)
         by_tag = result['d_tag'][self.assetcol.get_tax_idx()]
         self.datastore['dmg_total'] = dist_total(by_tag, multi_stat_dt)
 
@@ -189,9 +191,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['losses_by_asset'] = c_asset
             self.datastore['losses_by_tag'] = dist_by_tag(
                 result['c_tag'], multi_stat_dt)
-            self.datastore.set_attrs(
-                'losses_by_tag',
-                tags=[t.encode('utf-8') for t in self.param['tags']])
+            self.datastore.set_attrs('losses_by_tag', tags=tags)
             by_tag = result['c_tag'][self.assetcol.get_tax_idx()]
             self.datastore['losses_total'] = dist_total(by_tag, multi_stat_dt)
 
