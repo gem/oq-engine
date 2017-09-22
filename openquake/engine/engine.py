@@ -138,11 +138,13 @@ def raiseMasterKilled(signum, _stack):
     else:
         msg = 'Received a signal %d' % signum
 
-    for pid in parallel.executor.pids:
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except OSError: # pid not found
-            pass
+    # FIXME this code has been temporary disabled due issues with large
+    # computations and further investigation is need code is left as reference
+    # for pid in parallel.executor.pids:
+    #     try:
+    #         os.kill(pid, signal.SIGKILL)
+    #     except OSError: # pid not found
+    #         pass
 
     raise MasterKilled(msg)
 
