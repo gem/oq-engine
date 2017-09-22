@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 17
 =================================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_14455.hdf5 Thu Aug 17 11:47:57 2017
-checksum32                                       575,048,364             
-engine_version                                   2.6.0-gitbdd9d17        
-================================================ ========================
+==================================================== ========================
+tstation.gem.lan:/home/michele/oqdata/calc_5515.hdf5 Fri Sep 22 11:29:26 2017
+checksum32                                           575,048,364             
+engine_version                                       2.6.0-gite59d75a        
+==================================================== ========================
 
 num_sites = 1, num_imts = 1
 
@@ -63,8 +63,8 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=2, rlzs=5)
-  0,SadighEtAl1997(): ['<0,b1~b1,w=0.2>']
-  1,SadighEtAl1997(): ['<1,b2~b1,w=0.2>', '<2,b2~b1,w=0.2>', '<3,b2~b1,w=0.2>', '<4,b2~b1,w=0.2>']>
+  0,SadighEtAl1997(): [0]
+  1,SadighEtAl1997(): [1 2 3 4]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -85,27 +85,27 @@ source_model_2.xml 1      Active Shallow Crust 1           7            7
 
 Informational data
 ------------------
-============================== =============================================================================
-count_eff_ruptures.received    tot 1.18 KB, max_per_task 602 B                                              
-count_eff_ruptures.sent        sources 2.55 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 646 B, gsims 182 B
-hazard.input_weight            6.700000000000001                                                            
-hazard.n_imts                  1                                                                            
-hazard.n_levels                3                                                                            
-hazard.n_realizations          5                                                                            
-hazard.n_sites                 1                                                                            
-hazard.n_sources               2                                                                            
-hazard.output_weight           3.0                                                                          
-hostname                       tstation.gem.lan                                                             
-require_epsilons               False                                                                        
-============================== =============================================================================
+=========================== =============================================================================
+count_eff_ruptures.received tot 1.18 KB, max_per_task 606 B                                              
+count_eff_ruptures.sent     sources 2.55 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 654 B, gsims 182 B
+hazard.input_weight         6.700000000000001                                                            
+hazard.n_imts               1                                                                            
+hazard.n_levels             3                                                                            
+hazard.n_realizations       5                                                                            
+hazard.n_sites              1                                                                            
+hazard.n_sources            2                                                                            
+hazard.output_weight        3.0                                                                          
+hostname                    tstation.gem.lan                                                             
+require_epsilons            False                                                                        
+=========================== =============================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  39           1.938E-04 1         1        
-1      2         PointSource  7            1.807E-04 1         1        
+1      2         PointSource  7            1.945E-04 1         1        
+0      1         PointSource  39           1.385E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -113,7 +113,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.746E-04 2     
+PointSource  3.331E-04 2     
 ============ ========= ======
 
 Duplicated sources
@@ -122,10 +122,10 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ========= ===== =========
-operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 4.232E-05 9.818E-04 0.001 2        
-================== ===== ========= ========= ===== =========
+================== ========= ========= ========= ========= =========
+operation-duration mean      stddev    min       max       num_tasks
+count_eff_ruptures 7.848E-04 1.809E-04 6.568E-04 9.127E-04 2        
+================== ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
@@ -134,10 +134,10 @@ operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 store source_info              0.004     0.0       1     
 reading composite source model 0.003     0.0       1     
-managing sources               0.003     0.0       1     
+managing sources               0.002     0.0       1     
 total count_eff_ruptures       0.002     0.0       2     
-prefiltering source model      8.259E-04 0.0       1     
+prefiltering source model      8.423E-04 0.0       1     
 aggregate curves               4.387E-05 0.0       2     
-reading site collection        4.220E-05 0.0       1     
-saving probability maps        2.909E-05 0.0       1     
+reading site collection        3.910E-05 0.0       1     
+saving probability maps        2.933E-05 0.0       1     
 ============================== ========= ========= ======
