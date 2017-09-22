@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the GMF .npz export when the GMFs are extracted from a file
   * Added a check on `number_of_ground_motion_fields` when the GMFs are
     extracted from a NRML file
   * Added a command `oq extract` able to extract hazard outputs into HDF5 files
