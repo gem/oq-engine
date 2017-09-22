@@ -141,7 +141,7 @@ def raiseMasterKilled(signum, _stack):
     for pid in parallel.executor.pids:
         try:
             os.kill(pid, signal.SIGKILL)
-        except OSError: # pid not found
+        except OSError:  # pid not found
             pass
 
     raise MasterKilled(msg)
