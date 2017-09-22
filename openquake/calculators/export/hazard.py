@@ -823,43 +823,34 @@ def export_gmf_scenario_csv(ekey, dstore):
     return writer.getsaved()
 
 
+def _gmf_scenario(data, num_sites, imts):
+    # convert data into the composite array expected by QGIS
+    eids = sorted(numpy.unique(data['eid']))
+    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+    E = len(eid2idx)
+    gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
+    gmfa = numpy.zeros(num_sites, gmf_dt)
+    for rec in data:
+        arr = gmfa[rec['sid']]
+        for imt, gmv in zip(imts, rec['gmv']):
+            arr[imt][eid2idx[rec['eid']]] = gmv
+    return gmfa, E
+
+
 @export.add(('gmf_data', 'npz'))
 def export_gmf_scenario_npz(ekey, dstore):
-    oq = dstore['oqparam']
     dic = {}
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    n = len(mesh)
     fname = dstore.export_path('%s.%s' % ekey)
-    if 'scenario' in oq.calculation_mode:
-        # compute the GMFs on the fly from the stored rupture
-        # NB: for visualization purposes we want to export the full mesh
-        # of points, including the ones outside the maximum distance
-        # NB2: in the future, I want to add a sitecol output, then the
-        # visualization of the mesh will be possibile even without the GMFs;
-        # in the future, here we will change
-        # sitemesh = get_mesh(dstore['sitecol'], complete=False)
-        sitecol = dstore['sitecol'].complete
-        sitemesh = get_mesh(sitecol)
-        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-        gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
-        E = oq.number_of_ground_motion_fields
-        correl_model = oq.get_correl_model()
-        [ebrupture] = calc.get_ruptures(dstore, 0)
-        computer = gmf.GmfComputer(
-            ebrupture, sitecol, oq.imtls,
-            gsims, oq.truncation_level, correl_model)
-        gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in oq.imtls])
-        imts = list(oq.imtls)
-        for gsim in gsims:
-            arr = computer.compute(gsim, E, oq.random_seed)
-            I, S, E = arr.shape  # #IMTs, #sites, #events
-            gmfa = numpy.zeros(S, gmf_dt)
-            for imti, imt in enumerate(imts):
-                gmfa[imt] = arr[imti]
-            dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
-    elif 'event_based' in oq.calculation_mode:
-        dic['sitemesh'] = get_mesh(dstore['sitecol'])
+    if 'gmf_data' in dstore:
         data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
         for rlzi in data_by_rlzi:
-            dic['rlz-%03d' % rlzi] = data_by_rlzi[rlzi]
+            gmfa, e = _gmf_scenario(data_by_rlzi[rlzi], n, oq.imtls)
+            logging.info('Exporting array of shape %s for rlz %d',
+                         (n, e), rlzi)
+            dic['rlz-%03d' % rlzi] = util.compose_arrays(mesh, gmfa)
     else:  # nothing to export
         return []
     savez(fname, **dic)
