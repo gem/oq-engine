@@ -1,5 +1,14 @@
   [Michele Simionato]
   * Fixed the GMF .npz export when the GMFs are extracted from a file
+  * Stored the number of nonzero losses per asset and realization in
+    event_based_risk calculations with asset_loss_table=True
+
+  [Daniele Viganò]
+  * Changed the behaviour during RPM upgrades:
+    the old openquake.cfg configuration file is left untouched and the new one
+    installed as openquake.cfg.rpmnew
+
+  [Michele Simionato]
   * Added a check on `number_of_ground_motion_fields` when the GMFs are
     extracted from a NRML file
   * Added a command `oq extract` able to extract hazard outputs into HDF5 files
