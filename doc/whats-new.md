@@ -193,7 +193,9 @@ for users with a cluster.
 
 We added support for Django 1.11, while keeping support for older versions.
 
-We improved our packaging and installation procedures.
+We improved our packaging and installation procedures. In particular now
+the RPM installer does not override the user `openquake.cfg` with a new
+one when performing an upgrade.
 
 A new flag, `split_sources`, can now be set in the job configuration file
 By default, this flag is set to `true`. If set to `false`, sources will not 
