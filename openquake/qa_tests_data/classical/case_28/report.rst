@@ -1,11 +1,11 @@
 North Africa PSHA
 =================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_14476.hdf5 Thu Aug 17 11:48:14 2017
-checksum32                                       576,018,697             
-engine_version                                   2.6.0-gitbdd9d17        
-================================================ ========================
+==================================================== ========================
+tstation.gem.lan:/home/michele/oqdata/calc_5536.hdf5 Fri Sep 22 11:29:45 2017
+checksum32                                           576,018,697             
+engine_version                                       2.6.0-gite59d75a        
+==================================================== ========================
 
 num_sites = 2, num_imts = 7
 
@@ -63,14 +63,14 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=8, rlzs=8)
-  0,AkkarEtAlRjb2014(): ['<1,smoothed_model_m_m0.2_b_e0.0~@_GROUP_B_GMPE_1_@,w=0.125>']
-  0,AtkinsonBoore2006Modified2011(): ['<2,smoothed_model_m_m0.2_b_e0.0~@_GROUP_B_GMPE_2_@,w=0.125>']
-  0,ChiouYoungs2014(): ['<0,smoothed_model_m_m0.2_b_e0.0~@_GROUP_B_GMPE_0_@,w=0.125>']
-  0,PezeshkEtAl2011(): ['<3,smoothed_model_m_m0.2_b_e0.0~@_GROUP_B_GMPE_3_@,w=0.125>']
-  1,AkkarEtAlRjb2014(): ['<5,smoothed_model_m_m0.2_b_m0.05~@_GROUP_B_GMPE_1_@,w=0.125>']
-  1,AtkinsonBoore2006Modified2011(): ['<6,smoothed_model_m_m0.2_b_m0.05~@_GROUP_B_GMPE_2_@,w=0.125>']
-  1,ChiouYoungs2014(): ['<4,smoothed_model_m_m0.2_b_m0.05~@_GROUP_B_GMPE_0_@,w=0.125>']
-  1,PezeshkEtAl2011(): ['<7,smoothed_model_m_m0.2_b_m0.05~@_GROUP_B_GMPE_3_@,w=0.125>']>
+  0,AkkarEtAlRjb2014(): [1]
+  0,AtkinsonBoore2006Modified2011(): [2]
+  0,ChiouYoungs2014(): [0]
+  0,PezeshkEtAl2011(): [3]
+  1,AkkarEtAlRjb2014(): [5]
+  1,AtkinsonBoore2006Modified2011(): [6]
+  1,ChiouYoungs2014(): [4]
+  1,PezeshkEtAl2011(): [7]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -91,27 +91,27 @@ GridSources.xml 1      Tectonic_type_b 1           260          260
 
 Informational data
 ------------------
-============================== =============================================================================
-count_eff_ruptures.received    tot 1.18 KB, max_per_task 604 B                                              
-count_eff_ruptures.sent        param 4.06 KB, sources 3.21 KB, srcfilter 1.39 KB, gsims 664 B, monitor 646 B
-hazard.input_weight            52.0                                                                         
-hazard.n_imts                  7                                                                            
-hazard.n_levels                133                                                                          
-hazard.n_realizations          32                                                                           
-hazard.n_sites                 2                                                                            
-hazard.n_sources               2                                                                            
-hazard.output_weight           266.0                                                                        
-hostname                       tstation.gem.lan                                                             
-require_epsilons               False                                                                        
-============================== =============================================================================
+=========================== =============================================================================
+count_eff_ruptures.received tot 1.19 KB, max_per_task 608 B                                              
+count_eff_ruptures.sent     param 4.06 KB, sources 3.21 KB, srcfilter 1.39 KB, gsims 664 B, monitor 654 B
+hazard.input_weight         52.0                                                                         
+hazard.n_imts               7                                                                            
+hazard.n_levels             133                                                                          
+hazard.n_realizations       32                                                                           
+hazard.n_sites              2                                                                            
+hazard.n_sources            2                                                                            
+hazard.output_weight        266.0                                                                        
+hostname                    tstation.gem.lan                                                             
+require_epsilons            False                                                                        
+=========================== =============================================================================
 
 Slowest sources
 ---------------
 ====== ========= ================ ============ ========= ========= =========
 grp_id source_id source_class     num_ruptures calc_time num_sites num_split
 ====== ========= ================ ============ ========= ========= =========
-1      21        MultiPointSource 260          1.972E-04 1         1        
-0      21        MultiPointSource 260          1.934E-04 1         1        
+0      21        MultiPointSource 260          2.172E-04 1         1        
+1      21        MultiPointSource 260          2.072E-04 1         1        
 ====== ========= ================ ============ ========= ========= =========
 
 Computation times by source typology
@@ -119,7 +119,7 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 3.905E-04 2     
+MultiPointSource 4.244E-04 2     
 ================ ========= ======
 
 Duplicated sources
@@ -127,28 +127,28 @@ Duplicated sources
 ========= ========= =============
 source_id calc_time src_group_ids
 ========= ========= =============
-21        3.905E-04 0 1          
+21        4.244E-04 0 1          
 ========= ========= =============
 Sources with the same ID but different parameters
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.001 7.148E-05 0.001 0.001 2        
-================== ===== ========= ===== ===== =========
+================== ========= ========= ========= ========= =========
+operation-duration mean      stddev    min       max       num_tasks
+count_eff_ruptures 9.543E-04 2.208E-05 9.387E-04 9.699E-04 2        
+================== ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-store source_info              0.005     0.0       1     
-reading composite source model 0.003     0.0       1     
-managing sources               0.002     0.0       1     
+store source_info              0.009     0.0       1     
+reading composite source model 0.008     0.0       1     
+managing sources               0.006     0.0       1     
+prefiltering source model      0.003     0.0       1     
 total count_eff_ruptures       0.002     0.0       2     
-prefiltering source model      9.906E-04 0.0       1     
-reading site collection        1.168E-04 0.0       1     
-aggregate curves               3.552E-05 0.0       2     
-saving probability maps        2.265E-05 0.0       1     
+reading site collection        3.567E-04 0.0       1     
+aggregate curves               7.224E-05 0.0       2     
+saving probability maps        4.601E-05 0.0       1     
 ============================== ========= ========= ======
