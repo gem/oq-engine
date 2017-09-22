@@ -89,6 +89,13 @@ class ArrayWrapper(object):
     def __getitem__(self, idx):
         return self.array[idx]
 
+    def __toh5__(self):
+        return (self.array, {k: v for k, v in vars(self).items()
+                             if k != 'array' and not k.startswith('_')})
+
+    def __fromh5__(self, array, attrs):
+        self.__init__(array, attrs)
+
     @property
     def dtype(self):
         return self.array.dtype
