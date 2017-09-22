@@ -4,6 +4,7 @@
     event_based_risk calculations with asset_loss_table=True
 
   [Daniele Viganò]
+  * Fixed 'openquake' user creation in RPM when SELinux is in enforcing mode
   * Changed the behaviour during RPM upgrades:
     the old openquake.cfg configuration file is left untouched and the new one
     installed as openquake.cfg.rpmnew
