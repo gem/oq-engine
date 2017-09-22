@@ -1,11 +1,11 @@
 Scenario QA Test for occupants
 ==============================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_14500.hdf5 Thu Aug 17 11:49:00 2017
-checksum32                                95,847,934              
-engine_version                            2.6.0-gitbdd9d17        
-========================================= ========================
+============================================= ========================
+localhost:/home/michele/oqdata/calc_5560.hdf5 Fri Sep 22 11:30:32 2017
+checksum32                                    95,847,934              
+engine_version                                2.6.0-gite59d75a        
+============================================= ========================
 
 num_sites = 3, num_imts = 3
 
@@ -46,21 +46,13 @@ smlt_path weight source_model_file gsim_logic_tree num_realizations
 b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
 ========= ====== ================= =============== ================
 
-Required parameters per tectonic region type
---------------------------------------------
-====== ================= =========== ======================= =================
-grp_id gsims             distances   siteparams              ruptparams       
-====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-====== ================= =========== ======================= =================
-
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): ['<0,b_1~b1,w=1.0>']>
+  0,ChiouYoungs2008(): [0]>
 
 Exposure model
 --------------
@@ -85,6 +77,6 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.006     0.0       1     
-filtering sites         0.006     0.0       1     
-reading site collection 5.722E-06 0.0       1     
+filtering sites         0.005     0.0       1     
+reading site collection 1.717E-05 0.0       1     
 ======================= ========= ========= ======
