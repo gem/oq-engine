@@ -33,7 +33,8 @@ from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
     groupby, group_array, block_splitter, writetmp)
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib import (
+    nrml, sourceconverter, InvalidFile, probability_map)
 from openquake.commonlib import logictree
 
 
@@ -183,6 +184,23 @@ class RlzsAssoc(object):
     def weights(self):
         """Array with the weight of the realizations"""
         return numpy.array([rlz.weight for rlz in self.realizations])
+
+    def combine_pmaps(self, pmap_by_grp):
+        """
+        :param pmap_by_grp: dictionary group string -> probability map
+        :returns: a list of probability maps, one per realization
+        """
+        grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
+        num_levels = pmap_by_grp[grp].shape_y
+        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
+                 for _ in self.realizations]
+        for rec in self.array:
+            grp = 'grp-%02d' % rec['grp_id']
+            if grp in pmap_by_grp:
+                pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
+                for rlzi in rec['rlzis']:
+                    pmaps[rlzi] |= pmap
+        return pmaps
 
     def get_rlz(self, rlzstr):
         """
