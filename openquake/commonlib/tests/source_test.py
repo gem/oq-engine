@@ -792,8 +792,8 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
             list(map(len, csm.src_groups)))
 
         # removing 9 src_groups out of 18
-        def count_ruptures(src_group):
-            if src_group.trt == 'Active Shallow Crust':  # no ruptures
+        def count_ruptures(src_group_id):
+            if src_group_id % 2 == 1:  # Active Shallow Crust
                 return 0
             else:
                 return 1
