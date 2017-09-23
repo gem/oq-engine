@@ -383,7 +383,7 @@ class CompositionInfo(object):
         """
         Return an array assoc_by_grp
 
-        :param count_ruptures: a function src_group -> num_ruptures
+        :param count_ruptures: a function src_group_id -> num_ruptures
         """
         assoc = RlzsAssoc(self)
         assoc_by_grp = []
@@ -394,7 +394,7 @@ class CompositionInfo(object):
             trts = set()
             for sg in smodel.src_groups:
                 if count_ruptures:
-                    sg.eff_ruptures = count_ruptures(sg)
+                    sg.eff_ruptures = count_ruptures(sg.id)
                 if sg.eff_ruptures:
                     trts.add(sg.trt)
 
