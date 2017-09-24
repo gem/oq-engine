@@ -102,13 +102,13 @@ class PmapGetter(object):
         """
         pmap_by_grp = self.get_pmap_by_grp(sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        for rec in self.rlzs_assoc.array:
-            grp = 'grp-%02d' % rec['grp_id']
+        for grp, array in self.rlzs_assoc.array.items():
             if grp in pmap_by_grp:
-                for r in rec['rlzis']:
-                    if r == rlzi:
-                        pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
-                        break
+                for rec in array:
+                    for r in rec['rlzis']:
+                        if r == rlzi:
+                            pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
+                            break
         return pmap
 
     def get_pmaps(self, sids):  # used in classical
