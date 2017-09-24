@@ -219,7 +219,7 @@ class RlzsAssoc(object):
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
     def __len__(self):
-        return len(self.array)
+        return sum(len(self.array[grp]) for grp in self.array)
 
     def __repr__(self):
         pairs = []
