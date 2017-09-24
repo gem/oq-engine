@@ -64,10 +64,9 @@ class PmapGetter(object):
     :param lazy: if True, read directly from the datastore
     """
     def __init__(self, dstore, lazy=False):
-        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+        self.rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
-        self.assoc_by_grp = rlzs_assoc.array
         self.weights = dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
@@ -95,21 +94,6 @@ class PmapGetter(object):
             newgetter.get_pmap_by_grp(sids)
         return newgetter
 
-    def combine_pmaps(self, pmap_by_grp):
-        """
-        :param pmap_by_grp: dictionary group string -> probability map
-        :returns: a list of probability maps, one per realization
-        """
-        pmaps = [probability_map.ProbabilityMap(self.num_levels, 1)
-                 for _ in self.weights]
-        for rec in self.assoc_by_grp:
-            grp = 'grp-%02d' % rec['grp_id']
-            if grp in pmap_by_grp:
-                pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
-                for rlzi in rec['rlzis']:
-                    pmaps[rlzi] |= pmap
-        return pmaps
-
     def get(self, sids, rlzi):
         """
         :param sids: an array of S site IDs
@@ -118,7 +102,7 @@ class PmapGetter(object):
         """
         pmap_by_grp = self.get_pmap_by_grp(sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        for rec in self.assoc_by_grp:
+        for rec in self.rlzs_assoc.array:
             grp = 'grp-%02d' % rec['grp_id']
             if grp in pmap_by_grp:
                 for r in rec['rlzis']:
@@ -132,7 +116,7 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
-        return self.combine_pmaps(self.get_pmap_by_grp(sids))
+        return self.rlzs_assoc.combine_pmaps(self.get_pmap_by_grp(sids))
 
     def get_pmap_by_grp(self, sids=None):
         """
