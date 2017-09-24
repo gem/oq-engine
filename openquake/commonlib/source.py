@@ -223,13 +223,14 @@ class RlzsAssoc(object):
 
     def __repr__(self):
         pairs = []
-        g = operator.itemgetter('grp_id', 'gsim_idx')
-        for (grp_id, gsim_idx), [rec] in groupby(self.array, g).items():
-            rlzs = rec['rlzis']
-            gsim = self.gsims_by_grp_id[grp_id][rec['gsim_idx']]
-            if len(rlzs) > 10:  # short representation
-                rlzs = ['%d realizations' % len(rlzs)]
-            pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
+        for grp in sorted(self.array):
+            grp_id = int(grp[4:])
+            for rec in self.array[grp]:
+                rlzs = rec['rlzis']
+                gsim = self.gsims_by_grp_id[grp_id][rec['gsim_idx']]
+                if len(rlzs) > 10:  # short representation
+                    rlzs = ['%d realizations' % len(rlzs)]
+                pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
             self.__class__.__name__, len(self), len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
