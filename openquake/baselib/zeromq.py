@@ -1,4 +1,5 @@
 import os
+import re
 import zmq
 
 context = zmq.Context()
@@ -44,7 +45,7 @@ class Socket(object):
      # server
      sock = Socket('tcp://127.0.0.1:9000', zmq.REP)
      for cmd, *args in sock:
-         sock.rep(cmd(*args))
+         sock.send(cmd(*args))
 
      # client
      Socket('tcp://127.0.0.1:9000', zmq.REQ).req(cmd, *args)
@@ -65,15 +66,27 @@ class Socket(object):
         self.timeout = timeout
         self.running = False
 
-    def check_type(self, method, *socket_types):
-        """
-        Check that the socket is of the expected type
-        """
-        if self.socket_type not in socket_types:
-            expected = '|'.join(SOCKTYPE[st] for st in socket_types)
-            raise ValueError(
-                'Socket.%s: the current socket is of type %s, expected %s' %
-                (method, SOCKTYPE[self.socket_type], expected))
+    def __enter__(self):
+        """Instantiate the undelying zmq socket"""
+        # first check if the end_point ends in :<min_port>-<max_port>
+        port_range = re.search(r':(\d+)-(\d+)$', self.end_point)
+        if port_range:
+            assert self.mode == 'bind', self.mode
+            p1, p2 = map(int, port_range.groups())
+            end_point = self.end_point.rsplit(':', 1)[0]  # strip port range
+            self.zsocket = context.socket(self.socket_type)
+            port = self.zsocket.bind_to_random_port(end_point, p1, p2)
+            self.true_end_point = '%s:%d' % (end_point, port)
+        elif self.mode == 'bind':
+            self.zsocket = bind(self.end_point, self.socket_type)
+        else:  # connect
+            self.zsocket = connect(self.end_point, self.socket_type)
+        self.zsocket.__enter__()
+        return self
+
+    def __exit__(self, *args):
+        self.zsocket.__exit__(*args)
+        del self.zsocket
 
     def __iter__(self):
         """
@@ -84,13 +97,9 @@ class Socket(object):
         3. SIGINT is sent
         4. SIGTERM is sent
         """
-        self.check_type('__iter__', zmq.REP, zmq.PULL)
-        if self.mode == 'bind':
-            self.zsocket = bind(self.end_point, self.socket_type)
-        else:  # connect
-            self.zsocket = connect(self.end_point, self.socket_type)
-        self.running = True
-        with self.zsocket:
+        # works zmq.REP and zmq.PULL sockets
+        with self:
+            self.running = True
             while self.running:
                 try:
                     if self.zsocket.poll(self.timeout):
@@ -107,36 +116,18 @@ class Socket(object):
                 else:
                     yield args
 
-    def rep(self, obj):
+    def send(self, obj):
         """
-        Reply to a request with the given object
+        Send an object to the remote server; blocks and returns the reply
+        if the socket type is REP.
         """
-        self.check_type('rep', zmq.REP)
         self.zsocket.send_pyobj(obj)
-
-    def req(self, *args):
-        """
-        Make a request to a remote server with the given arguments and
-        return the reply.
-        """
-        self.check_type('req', zmq.REQ)
-        zsocket = connect(self.end_point, zmq.REQ)
-        with zsocket:
-            zsocket.send_pyobj(args)
-            return zsocket.recv_pyobj()
-
-    def push(self, *args):
-        """
-        Make a push to a remote server with the given arguments
-        """
-        self.check_type('push', zmq.PUSH)
-        zsocket = connect(self.end_point, zmq.PUSH)
-        with zsocket:
-            zsocket.send_pyobj(args)
+        if self.socket_type in (zmq.REQ, zmq.REP):
+            return self.zsocket.recv_pyobj()
 
 
 if __name__ == '__main__':
     print('started echo server, pid=%d' % os.getpid())
     sock = Socket('tcp://127.0.0.1:9000', zmq.REP)
     for args in sock:  # server for testing purposes
-        sock.rep(args)
+        sock.send(args)
