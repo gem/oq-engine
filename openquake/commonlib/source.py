@@ -48,9 +48,7 @@ I32 = numpy.int32
 F32 = numpy.float32
 
 assoc_by_grp_dt = numpy.dtype(
-    [('grp_id', U16),
-     ('gsim_idx', U16),
-     ('rlzis', h5py.special_dtype(vlen=U16))])
+    [('gsim_idx', U16), ('rlzis', h5py.special_dtype(vlen=U16))])
 
 
 class LtRealization(object):
@@ -169,8 +167,8 @@ class RlzsAssoc(object):
                     rlz.weight = rlz.weight / tot_weight
 
         # populate rlzs_by_gsim
-        bygrp = operator.itemgetter(0)
-        for grp_id, arr in groupby(self.array, bygrp).items():
+        for grp, arr in self.array.items():
+            grp_id = int(grp[4:])
             gsims = self.gsims_by_grp_id[grp_id]
             self.rlzs_by_gsim[grp_id] = collections.OrderedDict(
                 (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
@@ -194,9 +192,8 @@ class RlzsAssoc(object):
         num_levels = pmap_by_grp[grp].shape_y
         pmaps = [probability_map.ProbabilityMap(num_levels, 1)
                  for _ in self.realizations]
-        for rec in self.array:
-            grp = 'grp-%02d' % rec['grp_id']
-            if grp in pmap_by_grp:
+        for grp in pmap_by_grp:
+            for rec in self.array[grp]:
                 pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
                 for rlzi in rec['rlzis']:
                     pmaps[rlzi] |= pmap
@@ -404,7 +401,7 @@ class CompositionInfo(object):
         :param count_ruptures: a function src_group_id -> num_ruptures
         """
         assoc = RlzsAssoc(self)
-        assoc_by_grp = []
+        assoc_by_grp = collections.defaultdict(list)
         offset = 0
         trtset = set(self.gsim_lt.tectonic_region_types)
         for smodel in self.source_models:
@@ -428,7 +425,9 @@ class CompositionInfo(object):
                 gsim_lt = self.gsim_lt
             offset = self._populate(
                 assoc, assoc_by_grp, gsim_lt, smodel, offset)
-        assoc.array = numpy.array(assoc_by_grp, assoc_by_grp_dt)
+        assoc.array = {
+            'grp-%02d' % sgid: numpy.array(assoc_by_grp[sgid], assoc_by_grp_dt)
+            for sgid in assoc_by_grp}
         if assoc.realizations:
             assoc._init()
         return assoc
@@ -518,8 +517,8 @@ class CompositionInfo(object):
                     if sg.eff_ruptures:
                         gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
                         dic[idx[i, gsim]].append(rlzi + offset)
-            assoc_by_grp.extend((sgid, j, numpy.array(rlzis, U16))
-                                for (sgid, j), rlzis in sorted(dic.items()))
+            for (sgid, j), rlzis in sorted(dic.items()):
+                assoc_by_grp[sgid].append((j, numpy.array(rlzis, U16)))
             assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             offset += len(indices)
         return offset
