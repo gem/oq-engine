@@ -407,11 +407,7 @@ class DataStore(collections.MutableMapping):
                 raise KeyError('No %r found in %s' % (key, self))
         return val
 
-    def __setitem__(self, key, value):
-        if isinstance(value, dict) or hasattr(value, '__toh5__'):
-            val = value
-        else:
-            val = value
+    def __setitem__(self, key, val):
         if key in self.hdf5:
             # there is a bug in the current version of HDF5 for composite
             # arrays: is impossible to save twice the same key; so we remove
