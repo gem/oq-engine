@@ -111,7 +111,7 @@ class Socket(object):
                     break
                 if args[0] == 'stop':
                     if self.socket_type == zmq.REP:
-                        self.rep((None, None, None))
+                        self.send((None, None, None))
                     break
                 else:
                     yield args
