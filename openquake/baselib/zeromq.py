@@ -1,6 +1,11 @@
 import os
 import re
 import zmq
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
 
 context = zmq.Context()
 

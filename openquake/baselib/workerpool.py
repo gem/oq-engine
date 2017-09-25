@@ -7,11 +7,13 @@ from openquake.baselib import zeromq as z, parallel as p
 
 STREAMER = '''\
 from openquake.baselib import zeromq as z
+z.setproctitle('oq streamer')
 try:
     z.zmq.proxy(z.bind(%r, z.zmq.PULL), z.bind(%r, z.zmq.PUSH))
 except (KeyboardInterrupt, z.zmq.ZMQError):
    pass
 '''
+
 
 class WorkerMaster(object):
     """
@@ -19,64 +21,69 @@ class WorkerMaster(object):
     :param backend_url: url with a range of ports to receive the results
     """
     def __init__(self, frontend_url, backend_url):
-        self.backend_url = backend_url
         self.frontend_url = frontend_url
+        self.backend_url = backend_url
 
-    def starmap(self, func, iterargs):
+    def starmap(self, receiver_url, func, iterargs):
         """
         starmap a function over an iterator of arguments by using a zmq socket.
 
         :param func:
         :param iterargs:
         """
-        with z.Socket(self.backend_url, z.zmq.PULL, 'bind') as receiver, \
+        with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver, \
                 z.Socket(self.frontend_url, z.zmq.PUSH, 'connect') as sender:
             n = 0
             for args in iterargs:
                 args[-1].backurl = receiver.true_end_point
-                sender.send_pyobj((func, args))
+                sender.send((func, args))
                 n += 1
             yield n
             for _ in range(n):
                 # receive n responses for the n requests sent
                 yield receiver.zsocket.recv_pyobj()
 
-    def start(self, remote_python, host_cores):
+    def start(self, ctrl_port, host_cores, remote_python=None):
         """
         Start multiple workerpools and a frontend->backend streamer as
         background processes.
 
+        :param ctrl_port: port on which the worker pools listen
         :param remote_python: path of the Python executable on the remote hosts
         :param host_cores: names of the remote hosts and number of cores
         """
         self.host_cores = host_cores
+        self.ctrl_port = ctrl_port
         rpython = remote_python or sys.executable
-        for host, sshport, cores in self.host_cores:
+        for host, cores in self.host_cores:
+            ctrl_url = 'tcp://%s:%s' % (host, ctrl_port)
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
-                args = ['ssh', host, '-p', sshport, rpython]
-                args += ['-m', 'openquake.baselib.workerpool',
-                         self.backend_url, cores]
-                print('starting ' + ' '.join(args))
-                subprocess.Popen(args)
+                args = ['ssh', host, rpython]
+            args += ['-m', 'openquake.baselib.workerpool',
+                     ctrl_url, self.backend_url, cores]
+            print('starting ' + ' '.join(args))
+            subprocess.Popen(args)
         subprocess.Popen([sys.executable, '-c',
-                          STREAMER % (self.frontend, self.backend_url)])
+                          STREAMER % (self.frontend_url, self.backend_url)])
 
     def stop(self):
         """
         Send a "stop" command to all worker pools
         """
-        for hc in self.host_cores:
-            with z.Socket(hc[0], z.zmq.REQ) as sock:
+        for host, _ in self.host_cores:
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('stop'))
 
     def kill(self):
         """
         Send a "kill" command to all worker pools
         """
-        for hc in self.host_cores:
-            with z.Socket(hc[0], z.zmq.REQ) as sock:
+        for host, _ in self.host_cores:
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('kill'))
 
 
@@ -97,13 +104,15 @@ class WorkerPool(object):
         self.pid = os.getpid()
 
     def worker(self, sock):
-        for cmd_ in sock:
-            cmd, args = cmd_[0], cmd_[1:]
+        z.setproctitle('oq worker')
+        for cmd_args in sock:
+            cmd, args = cmd_args
             backurl = args[-1].backurl  # attached to the monitor
             with z.Socket(backurl, z.zmq.PUSH, 'connect') as s:
-                s.push(p.safely_call(cmd, args))
+                s.send(p.safely_call(cmd, args))
 
     def start(self):
+        z.setproctitle('oq workerpool')
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
