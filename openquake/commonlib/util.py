@@ -142,7 +142,7 @@ def shared_dir_on():
 def reader(func):
     """
     Decorator used to mark functions that require read access to the
-    file system. It simply adds a thunk `shared_dir_on` to the function.
+    file system.
     """
-    func.shared_dir_on = shared_dir_on
+    func.read_access = config.SHARED_DIR_ON
     return func
