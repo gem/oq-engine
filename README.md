@@ -5,19 +5,22 @@
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
 <!-- GEM BEGIN: apply the following patch with the proper values for the next release
--Jenkins (Python 2): [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
-+## OpenQuake Engine version 2.3 (Degenkolb)
- 
--Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
-+Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists.
+-| Jenkins (Python 2) | Travis CI (Python 3) |
+-|       :---:        |         :---:        |
+-| [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/) | [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine) |
  
 -### Current stable
-+The code name for version 2.3 is **Degenkolb**, in memory of [Henry Degenkolb](https://en.wikipedia.org/wiki/Henry_J._Degenkolb).
-+* [What's new](https://github.com/gem/oq-engine/blob/engine-2.3/doc/whats-new.md)
++## OpenQuake Engine version 2.6 (Gutenberg)
  
--Current stable version is the **OpenQuake Engine 2.2** 'Cornell'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.2#openquake-engine.
--* [What's new](https://github.com/gem/oq-engine/blob/engine-2.2/doc/whats-new.md)
-
+-Current stable version is the **OpenQuake Engine 2.5** 'Fourier'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.5#openquake-engine.
+-* [What's new](https://github.com/gem/oq-engine/blob/engine-2.5/doc/whats-new.md)
+-
+-## Documentation (master tree)
++Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists.
+ 
++The code name for version 2.6 is **Gutenberg**, in memory of [Beno Gutenberg](https://en.wikipedia.org/wiki/Beno_Gutenberg).
++* [What's new](https://github.com/gem/oq-engine/blob/engine-2.6/doc/whats-new.md)
++ 
 +## Documentation
 -## Documentation (master tree)
 -->
@@ -34,6 +37,7 @@ Current stable version is the **OpenQuake Engine 2.5** 'Fourier'. The documentat
 ## Documentation (master tree)
 
 <!-- GEM END -->
+
 ### General overview
 
 * [About](https://github.com/gem/oq-engine/blob/master/doc/about.md)
