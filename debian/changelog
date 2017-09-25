@@ -1,3 +1,8 @@
+  [Graeme Weatherill]
+  * Implemented the Zhao et al. (2016) GMPE for active shallow crustal,
+    subduction interface and subduction slab events
+  * Adds 'rvolc' (volcanic path distance) to the distance context
+
 python-oq-engine (2.6.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
