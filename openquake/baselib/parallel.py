@@ -180,19 +180,15 @@ elif OQ_DISTRIBUTE == 'ipython':
 
 def oq_distribute(task=None):
     """
-    If the task has an attribute `shared_dir_on` which is false,
-    return 'futures' even if OQ_DISTRIBUTE is `celery`, otherwise
-    return the current value of the variable OQ_DISTRIBUTE;
-    if undefined, return 'futures'.
+    :returns: the value of OQ_DISTRIBUTE or 'futures'
     """
-    env = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-    if hasattr(task, 'shared_dir_on'):
-        if env == 'celery' and not task.shared_dir_on():
-            logging.warn(
-                'Task `%s` will be run on the controller node only, since '
-                'no `shared_dir` has been specified' % task.__name__)
-            return 'futures'
-    return env
+    dist = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+    read_access = getattr(task, 'read_access', True)
+    if dist == 'celery' and not read_access:
+        raise ValueError('You must configure the shared_dir in openquake.cfg '
+                         'in order to be able to run %s with celery' %
+                         task.__name__)
+    return dist
 
 
 def check_mem_usage(monitor=Monitor(),
