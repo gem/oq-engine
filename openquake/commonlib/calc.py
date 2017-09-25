@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import itertools
 import warnings
-import logging
 import numpy
 import h5py
 
@@ -31,7 +29,6 @@ from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, calc, probability_map
-from openquake.commonlib import readinput
 
 TWO16 = 2 ** 16
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -67,10 +64,9 @@ class PmapGetter(object):
     :param lazy: if True, read directly from the datastore
     """
     def __init__(self, dstore, lazy=False):
-        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+        self.rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
-        self.assoc_by_grp = rlzs_assoc.array
         self.weights = dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
@@ -98,21 +94,6 @@ class PmapGetter(object):
             newgetter.get_pmap_by_grp(sids)
         return newgetter
 
-    def combine_pmaps(self, pmap_by_grp):
-        """
-        :param pmap_by_grp: dictionary group string -> probability map
-        :returns: a list of probability maps, one per realization
-        """
-        pmaps = [probability_map.ProbabilityMap(self.num_levels, 1)
-                 for _ in self.weights]
-        for rec in self.assoc_by_grp:
-            grp = 'grp-%02d' % rec['grp_id']
-            if grp in pmap_by_grp:
-                pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
-                for rlzi in rec['rlzis']:
-                    pmaps[rlzi] |= pmap
-        return pmaps
-
     def get(self, sids, rlzi):
         """
         :param sids: an array of S site IDs
@@ -121,13 +102,13 @@ class PmapGetter(object):
         """
         pmap_by_grp = self.get_pmap_by_grp(sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        for rec in self.assoc_by_grp:
-            grp = 'grp-%02d' % rec['grp_id']
+        for grp, array in self.rlzs_assoc.array.items():
             if grp in pmap_by_grp:
-                for r in rec['rlzis']:
-                    if r == rlzi:
-                        pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
-                        break
+                for rec in array:
+                    for r in rec['rlzis']:
+                        if r == rlzi:
+                            pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
+                            break
         return pmap
 
     def get_pmaps(self, sids):  # used in classical
@@ -135,7 +116,7 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
-        return self.combine_pmaps(self.get_pmap_by_grp(sids))
+        return self.rlzs_assoc.combine_pmaps(self.get_pmap_by_grp(sids))
 
     def get_pmap_by_grp(self, sids=None):
         """
@@ -377,63 +358,6 @@ def make_uhs(pmap, imtls, poes, nsites):
             if imt in imts:
                 uhs[poe][imt] = array[:, i * P + j, 0]
     return uhs
-
-
-def get_gmv_data(sids, gmfs):
-    """
-    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
-    """
-    R, N, E, I = gmfs.shape
-    gmv_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
-    it = ((r, sids[s], eid, gmfa[s, eid])
-          for r, gmfa in enumerate(gmfs)
-          for s, eid in itertools.product(range(N), range(E)))
-    return numpy.fromiter(it, gmv_data_dt)
-
-
-def get_gmfs(dstore, precalc=None):
-    """
-    :param dstore: a datastore
-    :param precalc: a scenario calculator with attribute .gmfa
-    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
-    """
-    oq = dstore['oqparam']
-    num_assocs = dstore['csm_info'].get_num_rlzs()
-    sitecol = dstore['sitecol']
-    if dstore.parent:
-        haz_sitecol = dstore.parent['sitecol']  # S sites
-    else:
-        haz_sitecol = sitecol  # N sites
-    N = len(haz_sitecol.complete)
-    I = len(oq.imtls)
-    E = oq.number_of_ground_motion_fields
-    eids = numpy.arange(E)
-    gmfs = numpy.zeros((num_assocs, N, E, I))
-    if precalc:
-        for g, gsim in enumerate(precalc.gsims):
-            gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
-        return eids, gmfs
-
-    if 'gmf_data/data' in dstore:
-        dset = dstore['gmf_data/data']
-        R = len(dstore['realizations'])
-        nrows = len(dset) // R
-        for r in range(R):
-            for s, sid in enumerate(haz_sitecol.sids):
-                start = r * nrows + E * s
-                array = dset[start: start + E]  # shape (E, I)
-                if numpy.unique(array['sid']) != [sid]:  # sanity check
-                    raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[r, sid] = array['gmv']
-        return eids, gmfs
-
-    elif 'gmfs' in oq.inputs:  # from file
-        logging.info('Reading gmfs from file')
-        eids, gmfs = readinput.get_gmfs(oq)
-        dstore['gmf_data/data'] = get_gmv_data(
-            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
-        return eids, gmfs
 
 
 def fix_minimum_intensity(min_iml, imts):

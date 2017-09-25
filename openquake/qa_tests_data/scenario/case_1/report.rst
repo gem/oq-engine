@@ -1,11 +1,11 @@
 Scenario QA Test, Case 1
 ========================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_14424.hdf5 Thu Aug 17 11:47:34 2017
-checksum32                                749,899,809             
-engine_version                            2.6.0-gitbdd9d17        
-========================================= ========================
+============================================= ========================
+localhost:/home/michele/oqdata/calc_5484.hdf5 Fri Sep 22 11:28:56 2017
+checksum32                                    749,899,809             
+engine_version                                2.6.0-gite59d75a        
+============================================= ========================
 
 num_sites = 3, num_imts = 1
 
@@ -44,27 +44,19 @@ smlt_path weight source_model_file gsim_logic_tree num_realizations
 b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
 ========= ====== ================= =============== ================
 
-Required parameters per tectonic region type
---------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
-
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): ['<0,b_1~b1,w=1.0>']>
+  0,BooreAtkinson2008(): [0]>
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.013     0.0       1     
-reading site collection 3.910E-05 0.0       1     
+filtering sites         0.011     0.0       1     
+reading site collection 3.076E-05 0.0       1     
 ======================= ========= ========= ======

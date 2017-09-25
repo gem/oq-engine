@@ -541,7 +541,7 @@ class Damage(RiskModel):
         :param assets: a list of N assets of the same taxonomy
         :param gmvs: an array of E elements
         :param _eps: dummy parameter, unused
-        :returns: an array of N assets and an array of N x E x D elements
+        :returns: N arrays of E x D elements
 
         where N is the number of points, E the number of events
         and D the number of damage states.
