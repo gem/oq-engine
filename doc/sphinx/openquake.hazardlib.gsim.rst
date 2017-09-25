@@ -738,3 +738,11 @@ zhao_2006_swiss_coeffs
     :members:
     :undoc-members:
     :show-inheritance:
+
+zhao_2016
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zhao_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
