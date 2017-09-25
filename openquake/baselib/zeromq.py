@@ -118,11 +118,11 @@ class Socket(object):
 
     def send(self, obj):
         """
-        Send an object to the remote server; blocks and returns the reply
-        if the socket type is REP.
+        Send an object to the remote server; block and return the reply
+        if the socket type is REQ.
         """
         self.zsocket.send_pyobj(obj)
-        if self.socket_type in (zmq.REQ, zmq.REP):
+        if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj()
 
 
