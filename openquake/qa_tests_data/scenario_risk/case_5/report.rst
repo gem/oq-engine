@@ -1,11 +1,11 @@
 Scenario Risk with site model
 =============================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_14507.hdf5 Thu Aug 17 11:49:00 2017
-checksum32                                       1,603,095,237           
-engine_version                                   2.6.0-gitbdd9d17        
-================================================ ========================
+==================================================== ========================
+tstation.gem.lan:/home/michele/oqdata/calc_5568.hdf5 Fri Sep 22 11:30:33 2017
+checksum32                                           1,603,095,237           
+engine_version                                       2.6.0-gite59d75a        
+==================================================== ========================
 
 num_sites = 11, num_imts = 2
 
@@ -48,21 +48,13 @@ smlt_path weight source_model_file gsim_logic_tree num_realizations
 b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
 ========= ====== ================= =============== ================
 
-Required parameters per tectonic region type
---------------------------------------------
-====== ================== ========= ========== ==========
-grp_id gsims              distances siteparams ruptparams
-====== ================== ========= ========== ==========
-0      AkkarEtAlRjb2014() rjb       vs30       mag rake  
-====== ================== ========= ========== ==========
-
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,AkkarEtAlRjb2014(): ['<0,b_1~b1,w=1.0>']>
+  0,AkkarEtAlRjb2014(): [0]>
 
 Informational data
 ------------------
@@ -94,11 +86,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.043     0.0       1     
-reading exposure        0.030     0.0       1     
+filtering sites         0.042     0.0       1     
+reading exposure        0.028     0.0       1     
 computing gmfs          0.004     0.0       1     
 saving gmfs             0.002     0.0       1     
-building riskinputs     7.644E-04 0.0       1     
-building epsilons       5.126E-04 0.0       1     
-reading site collection 6.437E-06 0.0       1     
+building riskinputs     6.106E-04 0.0       1     
+building epsilons       4.957E-04 0.0       1     
+reading site collection 5.245E-06 0.0       1     
 ======================= ========= ========= ======

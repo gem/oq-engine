@@ -1,11 +1,11 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_14511.hdf5 Thu Aug 17 11:49:02 2017
-checksum32                                       1,556,025,092           
-engine_version                                   2.6.0-gitbdd9d17        
-================================================ ========================
+==================================================== ========================
+tstation.gem.lan:/home/michele/oqdata/calc_5572.hdf5 Fri Sep 22 11:30:35 2017
+checksum32                                           1,556,025,092           
+engine_version                                       2.6.0-gite59d75a        
+==================================================== ========================
 
 num_sites = 83, num_imts = 2
 
@@ -47,9 +47,9 @@ Composite source model
 ======================== ====== ======================================================== ====================== ================
 smlt_path                weight source_model_file                                        gsim_logic_tree        num_realizations
 ======================== ====== ======================================================== ====================== ================
-AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(1,0,4,5,4,2,4) 4/4             
-FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(1,0,4,5,4,2,4) 4/4             
-SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(1,0,4,5,4,2,4) 0/0             
+AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(0,4,5,4,2,1,4) 4/4             
+FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(0,4,5,4,2,1,4) 4/4             
+SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(0,4,5,4,2,1,4) 0/0             
 ======================== ====== ======================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -67,14 +67,14 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=8, rlzs=8)
-  4,AkkarBommer2010(): ['<0,AreaSource~AkkarBommer2010asc_@_@_@_@_@_@,w=0.24999999893563138>']
-  4,CauzziFaccioli2008(): ['<1,AreaSource~CauzziFaccioli2008asc_@_@_@_@_@_@,w=0.24999999893563138>']
-  4,ChiouYoungs2008(): ['<2,AreaSource~ChiouYoungs2008asc_@_@_@_@_@_@,w=0.14285714224893223>']
-  4,ZhaoEtAl2006Asc(): ['<3,AreaSource~ZhaoEtAl2006Ascasc_@_@_@_@_@_@,w=0.07142857112446611>']
-  9,AkkarBommer2010(): ['<4,FaultSourceAndBackground~AkkarBommer2010asc_@_@_@_@_@_@,w=0.10000000106436867>']
-  9,CauzziFaccioli2008(): ['<5,FaultSourceAndBackground~CauzziFaccioli2008asc_@_@_@_@_@_@,w=0.10000000106436867>']
-  9,ChiouYoungs2008(): ['<6,FaultSourceAndBackground~ChiouYoungs2008asc_@_@_@_@_@_@,w=0.05714285775106781>']
-  9,ZhaoEtAl2006Asc(): ['<7,FaultSourceAndBackground~ZhaoEtAl2006Ascasc_@_@_@_@_@_@,w=0.028571428875533905>']>
+  4,AkkarBommer2010(): [0]
+  4,CauzziFaccioli2008(): [1]
+  4,ChiouYoungs2008(): [2]
+  4,ZhaoEtAl2006Asc(): [3]
+  9,AkkarBommer2010(): [4]
+  9,CauzziFaccioli2008(): [5]
+  9,ChiouYoungs2008(): [6]
+  9,ZhaoEtAl2006Asc(): [7]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -95,19 +95,19 @@ models/src/fsbg_model.xml 9      Active Shallow Crust 2           7632         2
 
 Informational data
 ------------------
-============================== ================================================================================
-count_eff_ruptures.received    tot 9.54 KB, max_per_task 614 B                                                 
-count_eff_ruptures.sent        sources 48.3 KB, param 21.58 KB, srcfilter 21 KB, gsims 5.08 KB, monitor 5.05 KB
-hazard.input_weight            15721.2                                                                         
-hazard.n_imts                  2                                                                               
-hazard.n_levels                90                                                                              
-hazard.n_realizations          3840                                                                            
-hazard.n_sites                 83                                                                              
-hazard.n_sources               3                                                                               
-hazard.output_weight           7470.0                                                                          
-hostname                       tstation.gem.lan                                                                
-require_epsilons               False                                                                           
-============================== ================================================================================
+=========================== ================================================================================
+count_eff_ruptures.received tot 9.6 KB, max_per_task 621 B                                                  
+count_eff_ruptures.sent     sources 48.3 KB, param 21.58 KB, srcfilter 21 KB, monitor 5.11 KB, gsims 5.08 KB
+hazard.input_weight         15721.2                                                                         
+hazard.n_imts               2                                                                               
+hazard.n_levels             90                                                                              
+hazard.n_realizations       3840                                                                            
+hazard.n_sites              83                                                                              
+hazard.n_sources            3                                                                               
+hazard.output_weight        7470.0                                                                          
+hostname                    tstation.gem.lan                                                                
+require_epsilons            False                                                                           
+=========================== ================================================================================
 
 Slowest sources
 ---------------
@@ -135,7 +135,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.004 5.721E-04 0.002 0.004 16       
+count_eff_ruptures 0.003 6.239E-04 0.002 0.004 16       
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -143,12 +143,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.596     0.0       1     
-prefiltering source model      0.121     0.0       10    
-managing sources               0.057     0.0       1     
-total count_eff_ruptures       0.056     0.0       16    
-store source_info              0.035     0.0       1     
+reading composite source model 0.623     0.0       1     
+prefiltering source model      0.115     0.0       10    
+managing sources               0.092     0.0       1     
+store source_info              0.071     0.0       1     
+total count_eff_ruptures       0.054     0.203     16    
 reading site collection        0.005     0.0       1     
-aggregate curves               2.503E-04 0.0       16    
-saving probability maps        2.575E-05 0.0       1     
+aggregate curves               2.360E-04 0.0       16    
+saving probability maps        2.527E-05 0.0       1     
 ============================== ========= ========= ======

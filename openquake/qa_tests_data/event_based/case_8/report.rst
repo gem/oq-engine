@@ -1,11 +1,11 @@
 Event Based from NonParametric source
 =====================================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_14490.hdf5 Thu Aug 17 11:48:26 2017
-checksum32                                2,117,452,566           
-engine_version                            2.6.0-gitbdd9d17        
-========================================= ========================
+============================================= ========================
+localhost:/home/michele/oqdata/calc_5550.hdf5 Fri Sep 22 11:29:57 2017
+checksum32                                    2,117,452,566           
+engine_version                                2.6.0-gite59d75a        
+============================================= ========================
 
 num_sites = 3, num_imts = 1
 
@@ -60,14 +60,14 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): ['<0,b1~b1,w=1.0>']>
+  0,ChiouYoungs2008(): [0]>
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.037     0.0       1     
+reading composite source model 0.049     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        3.481E-05 0.0       1     
+reading site collection        4.220E-05 0.0       1     
 ============================== ========= ========= ======

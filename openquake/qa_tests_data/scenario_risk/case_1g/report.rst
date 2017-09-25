@@ -1,11 +1,11 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_14508.hdf5 Thu Aug 17 11:49:01 2017
-checksum32                                391,562,862             
-engine_version                            2.6.0-gitbdd9d17        
-========================================= ========================
+============================================= ========================
+localhost:/home/michele/oqdata/calc_5569.hdf5 Fri Sep 22 11:30:34 2017
+checksum32                                    391,562,862             
+engine_version                                2.6.0-gite59d75a        
+============================================= ========================
 
 num_sites = 7, num_imts = 3
 
@@ -45,21 +45,13 @@ smlt_path weight source_model_file gsim_logic_tree num_realizations
 b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
 ========= ====== ================= =============== ================
 
-Required parameters per tectonic region type
---------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
-
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): ['<0,b_1~b1,w=1.0>']>
+  0,BooreAtkinson2008(): [0]>
 
 Slowest operations
 ------------------
@@ -67,5 +59,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.007     0.0       1     
-reading site collection 1.366E-04 0.0       1     
+reading site collection 1.426E-04 0.0       1     
 ======================= ========= ========= ======
