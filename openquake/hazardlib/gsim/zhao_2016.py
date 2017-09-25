@@ -16,7 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports
+Module exports :class:`ZhaoEtAl2016Asc`,
+               :class:`ZhaoEtAl2016AscSiteSigma`,
+               :class:`ZhaoEtAl2016UpperMantle`,
+               :class:`ZhaoEtAl2016UpperMantleSiteSigma`,
+               :class:`ZhaoEtAl2016SInter`,
+               :class:`ZhaoEtAl2016SInterSiteSigma`,
+               :class:`ZhaoEtAl2016SSlab`,
+               :class:`ZhaoEtAl2016SSlabSiteSigma`
+               
 """
 from __future__ import division
 
