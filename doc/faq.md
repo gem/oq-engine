@@ -61,7 +61,7 @@ To make this change permanent, add it at the bottom of `.bashrc` or `.bash_profi
 
 ### Swap partitions
 
-Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluser.md).
+Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
 
 ***
 
