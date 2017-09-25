@@ -84,7 +84,6 @@ class OqParam(valid.ParamSet):
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
     loss_curve_resolution = valid.Param(valid.positiveint, 50)
-    loss_ratios = valid.Param(valid.loss_ratios, ())
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
@@ -273,7 +272,8 @@ class OqParam(valid.ParamSet):
 
         risk_investigation_time / investigation_time / ses_per_logic_tree_path
         """
-        assert self.investigation_time, 'investigation_time = 0!'
+        if self.investigation_time is None:
+            raise ValueError('Missing investigation_time in the .ini file')
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
@@ -431,7 +431,10 @@ class OqParam(valid.ParamSet):
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
-        if ('risk' in self.calculation_mode or
+        if (self.calculation_mode == 'gmf_ebrisk' and
+                'sites' not in self.inputs):
+            raise ValueError('Missing sites_csv in the .ini file')
+        elif ('risk' in self.calculation_mode or
                 'damage' in self.calculation_mode or
                 'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
@@ -574,15 +577,6 @@ class OqParam(valid.ParamSet):
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
-
-    def is_valid_loss_ratios(self):
-        """
-        The loss types in the loss_ratios dictionary {loss_ratios} are not
-        the ones for which there are risk functions: {_risk_files}
-        """
-        ltypes = sorted(self.loss_ratios)
-        expected_ltypes = sorted(self.risk_files)
-        return not ltypes or ltypes == expected_ltypes
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
