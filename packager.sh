@@ -612,7 +612,7 @@ celery_wait $GEM_MAXLOOP"
         /usr/share/openquake/engine/utils/celery-status 
         cd /usr/share/openquake/engine/demos
         # run disaggregation with multiple realizations with celery (hanged in the past)
-        OQ_DISTRIBUTE=celery oq engine --run ../openquake/qa_tests_data/disagg/case_2/job.ini
+        OQ_DISTRIBUTE=celery oq engine --run  /opt/openquake/lib/python2.7/site-packages/openquake/qa_tests_data/disagg/case_2/job.ini
         # run demos
         for demo_dir in \$(find . -type d | sort); do
            if [ -f \$demo_dir/job_hazard.ini ]; then
