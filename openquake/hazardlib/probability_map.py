@@ -355,3 +355,15 @@ def get_shape(pmaps):
     else:
         raise AllEmptyProbabilityMaps(pmaps)
     return (len(pmap),) + pmap[sid].array.shape
+
+
+def combine(pmaps):
+    """
+    :param pmaps: a set of homogenous ProbabilityMaps
+    :returns: the combined map
+    """
+    shape = get_shape(pmaps)
+    res = ProbabilityMap(shape[1], shape[2])
+    for pmap in pmaps:
+        res |= pmap
+    return res

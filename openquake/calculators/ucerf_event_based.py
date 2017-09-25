@@ -716,8 +716,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                             calc.EBRupture(rup, indices, evs,
                                            src.src_group_id, serial))
                         serial += 1
-    res.num_events = event_based.set_eids(
-        ebruptures, getattr(monitor, 'task_no', 0))
+    res.num_events = event_based.set_eids(ebruptures)
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
@@ -879,7 +878,6 @@ class UCERFRiskCalculator(EbriskCalculator):
                              save_ruptures=False,
                              ses_ratio=oq.ses_ratio,
                              avg_losses=oq.avg_losses,
-                             loss_ratios=oq.loss_ratios,
                              elt_dt=elt_dt,
                              asset_loss_table=False,
                              insured_losses=oq.insured_losses)
