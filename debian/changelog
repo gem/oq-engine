@@ -1,3 +1,5 @@
+python-oq-engine (2.6.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Fixed the GMF .npz export when the GMFs are extracted from a file
   * Stored the number of nonzero losses per asset and realization in
@@ -121,6 +123,8 @@
   * Added two commands `oq dump` and `oq restore`
   * Added a check that on the number of intensity measure types when
     generating uniform hazard spectra (must be > 1)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 25 Sep 2017 15:05:45 +0200
 
 python-oq-engine (2.5.0-0~precise01) precise; urgency=low
 
