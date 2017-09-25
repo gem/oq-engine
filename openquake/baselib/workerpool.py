@@ -1,30 +1,61 @@
 import os
 import sys
 import signal
+import subprocess
 import multiprocessing
 from openquake.baselib import zeromq as z, parallel as p
 
 
-def starmap(frontend_url, backend_url, func, iterargs):
+class WorkerMaster(object):
     """
-    starmap a function over an iterator of arguments by using a zmq socket.
+    :param frontend_url: url where to send the tasks
+    :param backend_url: url with a range of ports to receive the results
+    """
+    def __init__(self, frontend_url, backend_url):
+        self.backend_url = backend_url
+        self.frontend_url = frontend_url
 
-    :param frontend_url:
-    :param backend_url: url with a range of ports
-    :param func:
-    :param iterargs:
-    """
-    with z.Socket(backend_url, z.zmq.PULL) as receiver, \
-         z.Socket(frontend_url, z.zmq.PUSH, 'connect') as sender:
-        n = 0
-        for args in iterargs:
-            args[-1].backurl = receiver.true_end_point
-            sender.send_pyobj((func, args))
-            n += 1
-        yield n
-        for _ in range(n):
-            # receive n responses for the n requests sent
-            yield receiver.zsocket.recv_pyobj()
+    def starmap(self, func, iterargs):
+        """
+        starmap a function over an iterator of arguments by using a zmq socket.
+
+        :param func:
+        :param iterargs:
+        """
+        with z.Socket(self.backend_url, z.zmq.PULL, 'bind') as receiver, \
+                z.Socket(self.frontend_url, z.zmq.PUSH, 'connect') as sender:
+            n = 0
+            for args in iterargs:
+                args[-1].backurl = receiver.true_end_point
+                sender.send_pyobj((func, args))
+                n += 1
+            yield n
+            for _ in range(n):
+                # receive n responses for the n requests sent
+                yield receiver.zsocket.recv_pyobj()
+
+    def start(self, remote_python, host_cores):
+        """
+        Start frontend->backend proxy.
+
+        :param remote_python: path of the Python executable on the remote hosts
+        :param host_cores: names of the remote hosts and number of cores
+        """
+        rpython = remote_python or sys.executable
+        for host, sshport, cores in host_cores:
+            if host == '127.0.0.1':  # localhost
+                args = [sys.executable]
+            else:
+                args = ['ssh', host, '-p', sshport, rpython]
+                args += ['-m', 'openquake.baselib.workerpool',
+                         self.backend_url, cores]
+                print('starting ' + ' '.join(args))
+                subprocess.Popen(args)
+        try:
+            z.zmq.proxy(z.bind(self.frontend, z.zmq.PULL),
+                        z.bind(self.backend, z.zmq.PUSH))
+        except (KeyboardInterrupt, z.zmq.ZMQError):
+            pass
 
 
 class WorkerPool(object):
