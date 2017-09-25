@@ -69,7 +69,7 @@ Having a swap partition active on resources fully dedicated to the OpenQuake Eng
 ```bash
 pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
 ```
-Since OpenQuake Engine 2.5.0, the OpenQuake Hazardlib package has been merged with the OpenQuake Engine one.
+Since OpenQuake Engine 2.5, the OpenQuake Hazardlib package has been merged with the OpenQuake Engine one.
 
 If you are using git and you have the `PYTHONPATH` set you should update `oq-engine` and then remove `oq-hazardlib` from your filesystem and from the `PYTHONPATH`, to avoid any possible confusion.
 
