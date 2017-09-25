@@ -59,6 +59,12 @@ To make this change permanent, add it at the bottom of `.bashrc` or `.bash_profi
 
 ***
 
+### Swap partitions
+
+Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluser.md).
+
+***
+
 ### OpenQuake Hazardlib errors
 ```bash
 pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
