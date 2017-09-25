@@ -5,6 +5,13 @@ import subprocess
 import multiprocessing
 from openquake.baselib import zeromq as z, parallel as p
 
+STREAMER = '''\
+from openquake.baselib import zeromq as z
+try:
+    z.zmq.proxy(z.bind(%r, z.zmq.PULL), z.bind(%r, z.zmq.PUSH))
+except (KeyboardInterrupt, z.zmq.ZMQError):
+   pass
+'''
 
 class WorkerMaster(object):
     """
@@ -36,13 +43,15 @@ class WorkerMaster(object):
 
     def start(self, remote_python, host_cores):
         """
-        Start frontend->backend proxy.
+        Start multiple workerpools and a frontend->backend streamer as
+        background processes.
 
         :param remote_python: path of the Python executable on the remote hosts
         :param host_cores: names of the remote hosts and number of cores
         """
+        self.host_cores = host_cores
         rpython = remote_python or sys.executable
-        for host, sshport, cores in host_cores:
+        for host, sshport, cores in self.host_cores:
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
@@ -51,11 +60,24 @@ class WorkerMaster(object):
                          self.backend_url, cores]
                 print('starting ' + ' '.join(args))
                 subprocess.Popen(args)
-        try:
-            z.zmq.proxy(z.bind(self.frontend, z.zmq.PULL),
-                        z.bind(self.backend, z.zmq.PUSH))
-        except (KeyboardInterrupt, z.zmq.ZMQError):
-            pass
+        subprocess.Popen([sys.executable, '-c',
+                          STREAMER % (self.frontend, self.backend_url)])
+
+    def stop(self):
+        """
+        Send a "stop" command to all worker pools
+        """
+        for hc in self.host_cores:
+            with z.Socket(hc[0], z.zmq.REQ) as sock:
+                print(sock.send('stop'))
+
+    def kill(self):
+        """
+        Send a "kill" command to all worker pools
+        """
+        for hc in self.host_cores:
+            with z.Socket(hc[0], z.zmq.REQ) as sock:
+                print(sock.send('kill'))
 
 
 class WorkerPool(object):
