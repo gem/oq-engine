@@ -58,14 +58,14 @@ class DbServer(object):
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
             if cmd == 'getpid':
-                sock.rep((self.pid, None, None))
+                sock.send((self.pid, None, None))
                 continue
             try:
                 func = getattr(actions, cmd)
             except AttributeError:
-                sock.rep(('Invalid command ' + cmd, ValueError, None))
+                sock.send(('Invalid command ' + cmd, ValueError, None))
             else:
-                sock.rep(safely_call(func, (self.db,) + args))
+                sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
         # start workers
