@@ -176,9 +176,11 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
 
         self.bin_edges = {}
         curves_dict = {sid: self.get_curves(sid) for sid in sitecol.sids}
+        # determine the number of effective source groups
+        sg_data = self.datastore['csm_info/sg_data']
+        num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
+        nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         all_args = []
-        num_trts = sum(len(sm.src_groups) for sm in self.csm.source_models)
-        nblocks = math.ceil(oq.concurrent_tasks / num_trts)
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
             trt_names = tuple(mod.trt for mod in smodel.src_groups)
