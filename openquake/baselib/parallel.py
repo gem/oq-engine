@@ -688,7 +688,7 @@ if OQ_DISTRIBUTE == 'celery':
 
 def _wakeup(sec):
     """Waiting functions, used to wake up the process pool"""
-    setproctitle('oq worker')
+    setproctitle('oq-worker')
     try:
         import prctl
     except ImportError:
