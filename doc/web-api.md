@@ -115,11 +115,11 @@ successfull, the list is empty.
 
 #### GET /v1/calc/:calc_id/extract/:spec
 
-Get a pickled file for the given output specification
+Get an .npz file for the given output specification
 
 Response:
 
-A single .pik file of Content-Type: application/octet-stream
+A single .npz file of Content-Type: application/octet-stream
 
 
 #### GET /v1/calc/:calc_id/results
