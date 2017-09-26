@@ -35,14 +35,18 @@ class WorkerPoolTestCase(unittest.TestCase):
     def test1(self):
         mon = Monitor()
         iterargs = ((i, mon) for i in range(10))
-        res = list(self.master.starmap(self.url, double, iterargs))
+        res = self.master.starmap(self.url, double, iterargs)
+        num_tasks = next(res)
+        self.assertEqual(num_tasks, 10)
         self.assertEqual(sum(r[0] for r in res), 90)
         # sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
 
     def test2(self):
         mon = Monitor()
         iterargs = ((i, mon) for i in range(5))
-        res = list(self.master.starmap(self.url, double, iterargs))
+        res = self.master.starmap(self.url, double, iterargs)
+        num_tasks = next(res)
+        self.assertEqual(num_tasks, 5)
         self.assertEqual(sum(r[0] for r in res), 20)  # sum[0, 2, 4, 6, 8]
 
     @classmethod
