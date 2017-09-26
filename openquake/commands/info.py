@@ -27,8 +27,7 @@ from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import get_pickled_sizes
-from openquake.hazardlib import nrml
-from openquake.hazardlib import gsim
+from openquake.hazardlib import gsim, nrml, InvalidFile
 from openquake.commonlib import readinput
 from openquake.calculators.export import export
 from openquake.calculators import base, reportwriter
@@ -132,7 +131,11 @@ def info(calculators, gsims, views, exports, report, input_file=''):
     elif input_file.endswith('.xml'):
         node = nrml.read(input_file)
         if node[0].tag.endswith('sourceModel'):
-            assert node['xmlns'].endswith('nrml/0.5'), node['xmlns']
+            if node['xmlns'].endswith('nrml/0.4'):
+                raise InvalidFile(
+                    '%s is in NRML 0.4 format, please run the following '
+                    'command:\noq upgrade_nrml %s' % (
+                        input_file, os.path.dirname(input_file) or '.'))
             print(source_model_info(node[0]))
         else:
             print(node.to_str())
