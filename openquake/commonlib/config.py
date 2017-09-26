@@ -145,7 +145,6 @@ def flag_set(section, setting):
     """
     return valid.boolean(get(section, setting) or '')
 
-
 port = int(get('dbserver', 'port'))
 DBS_ADDRESS = (get('dbserver', 'host'), port)
 DBS_AUTHKEY = encode(get('dbserver', 'authkey'))
