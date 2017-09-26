@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.commonlib import datastore, source, calc, util
+from openquake.commonlib import datastore, source, calc, config
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -418,7 +418,6 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-@util.reader
 def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
@@ -497,7 +496,7 @@ class ClassicalCalculator(PSHACalculator):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
                 pgetter = calc.PmapGetter(
-                    self.datastore.parent, lazy=True)
+                    self.datastore.parent, lazy=config.SHARED_DIR_ON)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:

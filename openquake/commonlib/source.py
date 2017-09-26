@@ -31,10 +31,9 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import (
-    groupby, group_array, block_splitter, writetmp)
+from openquake.baselib.general import group_array, block_splitter, writetmp
 from openquake.hazardlib import (
-    nrml, sourceconverter, InvalidFile, probability_map)
+    nrml, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.commonlib import logictree
 
 
@@ -198,6 +197,15 @@ class RlzsAssoc(object):
                 for rlzi in rec['rlzis']:
                     pmaps[rlzi] |= pmap
         return pmaps
+
+    def compute_pmap_stats(self, pmap_by_grp, statfuncs):
+        """
+        :param pmap_by_grp: dictionary group string -> probability map
+        :param statfuncs: a list of statistical functions
+        :returns: a probability map containing all statistics
+        """
+        pmaps = self.combine_pmaps(pmap_by_grp)
+        return stats.compute_pmap_stats(pmaps, statfuncs, self.weights)
 
     def get_rlz(self, rlzstr):
         """
