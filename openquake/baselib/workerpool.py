@@ -6,8 +6,8 @@ import multiprocessing
 from openquake.baselib import zeromq as z, parallel as p
 
 STREAMER = '''\
-from openquake.baselib import zeromq as z
-z.setproctitle('oq streamer')
+from openquake.baselib import zeromq as z, parallel as p
+p.setproctitle('oq streamer')
 try:
     z.zmq.proxy(z.bind(%r, z.zmq.PULL), z.bind(%r, z.zmq.PUSH))
 except (KeyboardInterrupt, z.zmq.ZMQError):
@@ -65,8 +65,10 @@ class WorkerMaster(object):
                      ctrl_url, self.backend_url, cores]
             print('starting ' + ' '.join(args))
             subprocess.Popen(args)
-        subprocess.Popen([sys.executable, '-c',
-                          STREAMER % (self.frontend_url, self.backend_url)])
+        po = subprocess.Popen(
+            [sys.executable, '-c',
+             STREAMER % (self.frontend_url, self.backend_url)])
+        self.pid = po.pid
 
     def stop(self):
         """
@@ -76,6 +78,7 @@ class WorkerMaster(object):
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('stop'))
+        os.kill(self.pid, signal.SIGINT)
 
     def kill(self):
         """
@@ -85,6 +88,7 @@ class WorkerMaster(object):
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('kill'))
+        os.kill(self.pid, signal.SIGTERM)
 
 
 class WorkerPool(object):
@@ -104,7 +108,7 @@ class WorkerPool(object):
         self.pid = os.getpid()
 
     def worker(self, sock):
-        z.setproctitle('oq worker')
+        p.setproctitle('oq worker')
         for cmd_args in sock:
             cmd, args = cmd_args
             backurl = args[-1].backurl  # attached to the monitor
@@ -112,7 +116,7 @@ class WorkerPool(object):
                 s.send(p.safely_call(cmd, args))
 
     def start(self):
-        z.setproctitle('oq workerpool')
+        p.setproctitle('oq workerpool')
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
