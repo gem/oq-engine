@@ -27,6 +27,7 @@ try:
 except ImportError:
     import urlparse
 import re
+import numpy
 
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -36,7 +37,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode, pickle
+from openquake.baselib.python3compat import unicode
 from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
@@ -583,11 +584,14 @@ def extract(request, calc_id, what):
     # read the data and save them on a temporary .pik file
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         fd, fname = tempfile.mkstemp(
-            prefix=what.replace('/', '-'), suffix='.pik')
+            prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
         obj = _extract(ds, what)
-        with open(fname, 'wb') as f:
-            pickle.dump(obj, f)
+        if hasattr(obj, '__toh5__'):
+            array, attrs = obj.__toh5__()
+        else:  # assume obj is an array
+            array, attrs = obj, {}
+        numpy.savez(fname, array=array, **attrs)
 
     # stream the data back
     stream = FileWrapper(open(fname, 'rb'))
