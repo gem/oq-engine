@@ -3,6 +3,10 @@
     subduction interface and subduction slab events
   * Adds 'rvolc' (volcanic path distance) to the distance context
 
+  [Michele Simionato]
+  * Fixed a bug with multi-realization disaggregation, celery and no
+    shared_dir: now the calculation does not hang anymore
+
 python-oq-engine (2.6.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
