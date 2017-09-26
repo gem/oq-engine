@@ -32,7 +32,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         task_out_url = 'tcp://127.0.0.1:2910'
         cls.receiver_url = 'tcp://127.0.0.1:2911-2920'
         ctrl_port = 2909
-        host_cores = [('127.0.0.1', '4')]
+        host_cores = '127.0.0.1 4'
         cls.master = WorkerMaster(cls.task_in_url, task_out_url,
                                   ctrl_port, host_cores)
         cls.master.start()
@@ -53,6 +53,9 @@ class WorkerPoolTestCase(unittest.TestCase):
         num_tasks = next(res)
         self.assertEqual(num_tasks, 5)
         self.assertEqual(sum(r[0] for r in res), 20)  # sum[0, 2, 4, 6, 8]
+
+    def test_status(self):
+        self.assertEqual(self.master.status(), [('127.0.0.1', 'running')])
 
     @classmethod
     def tearDownClass(cls):
