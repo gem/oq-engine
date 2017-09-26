@@ -45,13 +45,14 @@ class WorkerMaster(object):
         self.task_in_url = task_in_url
         self.task_out_url = task_out_url
         self.ctrl_port = ctrl_port
-        self.host_cores = host_cores
+        self.host_cores = [hc.split() for hc in host_cores.split(',')]
         self.remote_python = remote_python or sys.executable
 
     def status(self):
         """
         :returns: a list of pairs (hostname, 'running'|'not-running')
         """
+        lst = []
         for host, _ in self.host_cores:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
@@ -59,6 +60,8 @@ class WorkerMaster(object):
             finally:
                 sock.close()
             print(host, 'not-running' if err else 'running')
+            lst.append((host, 'not-running' if err else 'running'))
+        return lst
 
     def start(self):
         """
@@ -147,6 +150,7 @@ class WorkerPool(object):
             assert cmd in ('stop', 'kill'), cmd
             msg = getattr(self, cmd)()
             ctrlsock.send(msg)
+            break
 
     def stop(self):
         for sock in self.workers:
