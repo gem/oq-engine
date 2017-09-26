@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from openquake.baselib.workerpool import WorkerMaster
+from openquake.baselib.workerpool import WorkerMaster, _starmap
 from openquake.baselib.performance import Monitor
 
 
@@ -28,14 +28,19 @@ def double(x, mon):
 class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.url = 'tcp://127.0.0.1:5000-5100'
-        cls.master = WorkerMaster('ipc://starmap', 'tcp://127.0.0.1:1910')
-        cls.master.start('2908', [('127.0.0.1', '4')])
+        cls.task_in_url = 'ipc://starmap'
+        task_out_url = 'tcp://127.0.0.1:2910'
+        cls.receiver_url = 'tcp://127.0.0.1:2911-2920'
+        ctrl_port = 2909
+        host_cores = [('127.0.0.1', '4')]
+        cls.master = WorkerMaster(cls.task_in_url, task_out_url,
+                                  ctrl_port, host_cores)
+        cls.master.start()
 
     def test1(self):
         mon = Monitor()
         iterargs = ((i, mon) for i in range(10))
-        res = self.master.starmap(self.url, double, iterargs)
+        res = _starmap(double, iterargs, self.task_in_url, self.receiver_url)
         num_tasks = next(res)
         self.assertEqual(num_tasks, 10)
         self.assertEqual(sum(r[0] for r in res), 90)
@@ -44,7 +49,7 @@ class WorkerPoolTestCase(unittest.TestCase):
     def test2(self):
         mon = Monitor()
         iterargs = ((i, mon) for i in range(5))
-        res = self.master.starmap(self.url, double, iterargs)
+        res = _starmap(double, iterargs, self.task_in_url, self.receiver_url)
         num_tasks = next(res)
         self.assertEqual(num_tasks, 5)
         self.assertEqual(sum(r[0] for r in res), 20)  # sum[0, 2, 4, 6, 8]

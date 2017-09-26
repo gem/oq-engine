@@ -1,6 +1,7 @@
 import os
 import sys
 import signal
+import socket
 import subprocess
 import multiprocessing
 from openquake.baselib import zeromq as z, parallel as p
@@ -15,60 +16,70 @@ except (KeyboardInterrupt, z.zmq.ZMQError):
 '''
 
 
+def _starmap(func, iterargs, task_in_url, receiver_url):
+    # called by parallel.Starmap; should not be used directly
+    with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver, \
+            z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
+        n = 0
+        for args in iterargs:
+            # args[-1] is a Monitor instance
+            args[-1].backurl = receiver.true_end_point
+            sender.send((func, args))
+            n += 1
+        yield n
+        for _ in range(n):
+            # receive n responses for the n requests sent
+            yield receiver.zsocket.recv_pyobj()
+
+
 class WorkerMaster(object):
     """
     :param frontend_url: url where to send the tasks
-    :param backend_url: url with a range of ports to receive the results
+    :param task_out_url: url with a range of ports to receive the results
+    :param ctrl_port: port on which the worker pools listen
+    :param host_cores: names of the remote hosts and number of cores
+    :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, frontend_url, backend_url):
-        self.frontend_url = frontend_url
-        self.backend_url = backend_url
+    def __init__(self, task_in_url, task_out_url,
+                 ctrl_port, host_cores, remote_python=None):
+        self.task_in_url = task_in_url
+        self.task_out_url = task_out_url
+        self.ctrl_port = ctrl_port
+        self.host_cores = host_cores
+        self.remote_python = remote_python or sys.executable
 
-    def starmap(self, receiver_url, func, iterargs):
+    def status(self):
         """
-        starmap a function over an iterator of arguments by using a zmq socket.
-
-        :param func:
-        :param iterargs:
+        :returns: a list of pairs (hostname, 'running'|'not-running')
         """
-        with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver, \
-                z.Socket(self.frontend_url, z.zmq.PUSH, 'connect') as sender:
-            n = 0
-            for args in iterargs:
-                args[-1].backurl = receiver.true_end_point
-                sender.send((func, args))
-                n += 1
-            yield n
-            for _ in range(n):
-                # receive n responses for the n requests sent
-                yield receiver.zsocket.recv_pyobj()
+        for host, _ in self.host_cores:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                err = sock.connect_ex((host, self.ctrl_port))
+            finally:
+                sock.close()
+            print(host, 'not-running' if err else 'running')
 
-    def start(self, ctrl_port, host_cores, remote_python=None):
+    def start(self):
         """
         Start multiple workerpools and a frontend->backend streamer as
         background processes.
-
-        :param ctrl_port: port on which the worker pools listen
-        :param remote_python: path of the Python executable on the remote hosts
-        :param host_cores: names of the remote hosts and number of cores
         """
-        self.host_cores = host_cores
-        self.ctrl_port = ctrl_port
-        rpython = remote_python or sys.executable
         for host, cores in self.host_cores:
-            ctrl_url = 'tcp://%s:%s' % (host, ctrl_port)
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
-                args = ['ssh', host, rpython]
+                args = ['ssh', host, self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool',
-                     ctrl_url, self.backend_url, cores]
+                     ctrl_url, self.task_out_url, cores]
             print('starting ' + ' '.join(args))
             subprocess.Popen(args)
         po = subprocess.Popen(
             [sys.executable, '-c',
-             STREAMER % (self.frontend_url, self.backend_url)])
+             STREAMER % (self.task_in_url, self.task_out_url)])
         self.pid = po.pid
+        print('streamer started on PID=%d' % self.pid)
 
     def stop(self):
         """
@@ -79,6 +90,7 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('stop'))
         os.kill(self.pid, signal.SIGINT)
+        print('streamer stopped')
 
     def kill(self):
         """
@@ -89,6 +101,7 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('kill'))
         os.kill(self.pid, signal.SIGTERM)
+        print('streamer killed')
 
 
 class WorkerPool(object):
@@ -98,13 +111,13 @@ class WorkerPool(object):
 
     :param ctrl_url: zmq address of the control socket
     :param stream_url: zmq address of the task streamer
-    :param num_workers: a string with the number of workers (or 'default')
+    :param num_workers: a string with the number of workers (or '-1')
     """
-    def __init__(self, ctrl_url, stream_url, num_workers='default'):
+    def __init__(self, ctrl_url, stream_url, num_workers='-1'):
         self.ctrl_url = ctrl_url
         self.stream_url = stream_url
         self.num_workers = (multiprocessing.cpu_count()
-                            if num_workers == 'default' else int(num_workers))
+                            if num_workers == '-1' else int(num_workers))
         self.pid = os.getpid()
 
     def worker(self, sock):
