@@ -28,6 +28,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.baselib import parallel
 from openquake.hazardlib import sourceconverter
 from openquake.commonlib import calc
@@ -82,9 +83,10 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
 
         # generate source, rupture, sites once per site
         with collecting_mon:
+            cmaker = ContextMaker(gsims, src_filter.integration_distance)
             bdata = disagg._collect_bins_data(
                 trt_num, sources, site, curves_dict[sid],
-                src_group_id, rlzs_by_gsim, gsims, oqparam.imtls,
+                src_group_id, rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor)
