@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added information about to the loss units to the `agg_curve` outputs
+  * Added information about the loss units to the `agg_curve` outputs
   * `oq extract hazard/rlzs` now extracts one realization at the time
   * The rupture filtering is now applied during disaggregation
   * Changed the /extract wen API to return a compressed .npz file
