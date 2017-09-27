@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
+import logging
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -166,6 +167,7 @@ def extract_hazard(dstore, what):
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     for kind, hcurves in calc.PmapGetter(dstore).items(what):
+        logging.info('extracting hazard/%s', kind)
         dic['hcurves-' + kind] = convert_to_array(hcurves, N, oq.imtls)
         if oq.poes and oq.uniform_hazard_spectra:
             dic['uhs-' + kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
