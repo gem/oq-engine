@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
-from openquake.commonlib import util, config
+from openquake.commonlib import config
 from openquake.calculators import base, event_based
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.baselib import parallel
@@ -486,13 +486,14 @@ class EbriskCalculator(base.RiskCalculator):
         stats = oq.risk_stats()
         array, array_stats = b.build(alt, stats)
         self.datastore['agg_curves-rlzs'] = array
+        units = self.assetcol.units(loss_types=array.dtype.names)
         self.datastore.set_attrs(
-            'agg_curves-rlzs', return_periods=b.return_periods)
+            'agg_curves-rlzs', return_periods=b.return_periods, units=units)
         if array_stats is not None:
             self.datastore['agg_curves-stats'] = array_stats
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods,
-                stats=[encode(name) for (name, func) in stats])
+                stats=[encode(name) for (name, func) in stats], units=units)
 
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
