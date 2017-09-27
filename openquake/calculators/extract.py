@@ -162,16 +162,17 @@ def extract_hazard(dstore, what):
     spectra. Use it as /extract/hazard/mean or /extract/hazard/rlz-0, etc
     """
     oq = dstore['oqparam']
-    dic = AccumDict(sitecol=dstore['sitecol'], oqparam=dstore['oqparam'])
-    N = len(dic['sitecol'])
+    sitecol = dstore['sitecol']
+    yield 'sitecol', sitecol
+    yield 'oqparam', dstore['oqparam']
+    N = len(sitecol)
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     for kind, hcurves in calc.PmapGetter(dstore).items(what):
         logging.info('extracting hazard/%s', kind)
-        dic['hcurves-' + kind] = convert_to_array(hcurves, N, oq.imtls)
+        yield 'hcurves-' + kind, convert_to_array(hcurves, N, oq.imtls)
         if oq.poes and oq.uniform_hazard_spectra:
-            dic['uhs-' + kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
+            yield 'uhs-' + kind, calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
         if oq.poes and oq.hazard_maps:
             hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-            dic['hmaps-' + kind] = convert_to_array(hmaps, N, pdic)
-    return dic
+            yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
