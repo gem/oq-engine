@@ -35,7 +35,7 @@ from openquake.commonlib import logs
 TERMINATE = valid.boolean(
     config.get('distribution', 'terminate_workers_on_revoke') or 'false')
 
-USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
+USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
 if USE_CELERY:
     import celery.task.control
