@@ -302,10 +302,19 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         self.assertIn('Edges points are not in the right order',
                       str(ctx.exception))
 
-    def test_roundtrip_valid(self):
-        # test the conversion to shapefile and back for a valid file
+    def test_roundtrip_valid_04(self):
+        # test the conversion to shapefile and back for a valid file NRML 0.4
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model.xml")
+        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        shpfiles = [os.path.join(self.OUTDIR, f)
+                    for f in os.listdir(self.OUTDIR)]
+        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+
+    def test_roundtrip_valid_05(self):
+        # test the conversion to shapefile and back for a valid file NRML 0.5
+        ssm = os.path.join(os.path.dirname(__file__),
+                           "data", "sample_source_model_05.xml")
         to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
