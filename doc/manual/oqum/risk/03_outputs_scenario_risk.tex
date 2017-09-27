@@ -1,19 +1,27 @@
-The Scenario Risk Calculator produces the following set of output files for
-all loss types (amongst ``structural'', ``nonstructural'', ``contents'',
-``occupants'', or ``business\_interruption'') for which a vulnerability model
-file was provided in the configuration file:
+The Scenario Risk Calculator produces the following set of output files:
 
 \begin{enumerate}
 
-  \item \Verb+agg_loss+: this file contains the aggregated scenario
+  \item \Verb+agglosses+: this file contains the aggregated scenario
     loss statistics for the entire portfolio of \glspl{asset} defined
     in the \gls{exposuremodel}. The mean (\Verb+mean+) and standard
     deviation (\Verb+stddev+) of the total loss for the portfolio of
     \glspl{asset} are listed in this file.
 
-  \item \Verb+loss_map+: this file contains mean (\Verb+mean+) and
+  \item \Verb+losses_by_taxon+: this file contains the scenario
+    loss statistics for each of the \glspl{taxonomy} defined in the
+    \gls{exposuremodel}. For each \gls{taxonomy}, the mean (\Verb+mean+)
+    and associated standard deviation (\Verb+stddev+)
+    of the losses for each taxonomy are listed in this file.
+
+  \item \Verb+losses_by_asset+: this file contains mean (\Verb+mean+) and
     associated standard deviation (\Verb+stddev+) of the scenario loss for all
     \glspl{asset} at each of the unique locations in the \gls{exposuremodel}.
+
+  \item \Verb+losses_by_event+: this file contains the total loss for the
+    portfolio of \glspl{asset} defined in the \gls{exposuremodel} for each
+    realization of the scenario generated in the Monte Carlo simulation process.
+
 
 \end{enumerate}
 
@@ -28,11 +36,35 @@ more detail in the following subsections.
 \subsection{Scenario loss statistics}
 \label{subsec:scenario_loss_statistics}
 
-% \subsubsection{Asset loss statistics}
-% \label{subsubsec:scenario_asset_loss_statistics}
+\subsubsection{Asset loss statistics}
+\label{subsubsec:scenario_asset_loss_statistics}
 
-% \subsubsection{Taxonomy loss statistics}
-% \label{subsubsec:scenario_taxonomy_loss_statistics}
+This output is always produced for a Scenario Risk calculation and comprises a
+mean total loss and associated standard deviation for each of the individual
+\glspl{asset} defined in the \gls{exposuremodel} that fall within the
+\Verb+region_constraint+ and have a computed \gls{acr:gmf} value available
+within the defined \Verb+asset_hazard_distance+. These results are stored in a
+comma separate value (.csv) file as illustrated in the example shown in
+Table~\ref{output:scenario_loss_asset}.
+
+\input{oqum/risk/verbatim/output_scenario_loss_asset}
+
+
+\subsubsection{Taxonomy loss statistics}
+\label{subsubsec:scenario_taxonomy_loss_statistics}
+
+The Scenario Risk calculator also estimates the total expected losses for
+assets of each \gls{taxonomy}. This distribution of losses per building
+\gls{taxonomy} is depicted in the example output file snippet in
+Table~\ref{output:scenario_loss_taxonomy}.
+
+\input{oqum/risk/verbatim/output_scenario_loss_taxonomy}
+
+The output file lists the mean loss aggregated for each building typology
+found in the exposure model for all loss types (amongst ``structural'',
+``nonstructural'', ``contents'', or ``business\_interruption'') for which a
+\gls{vulnerabilitymodel} file was provided in the configuration file.
+
 
 \subsubsection{Total loss statistics}
 \label{subsubsec:scenario_total_loss_statistics}
@@ -64,39 +96,4 @@ described below:
   \item \Verb+Standard Deviation+: the standard deviation of the total loss 
     across the portfolio of assets for the selected earthquake rupture.
 
-\end{itemize}
-
-
-\subsection{Scenario loss maps}
-\label{subsec:scenario_loss_map}
-
-A scenario loss map contains the spatial distribution of the losses throughout
-the region of interest. The scenario loss map comprises a mean loss and
-respective standard deviation for each \gls{asset} for the selected earthquake
-rupture, as shown in the example file in Listing~\ref{lst:output_scenario_loss_map}.
-
-\begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}{oqum/risk/verbatim/output_scenario_loss_map.xml}
-  \caption{Example scenario loss map}
-  \label{lst:output_scenario_loss_map}
-\end{listing}
-
-The important attributes in a scenario loss map are described below:
-
-\begin{itemize}
-
-  \item \Verb+LossType+: the type of losses that are being stored. This
-    parameter is taken from the \gls{vulnerabilitymodel} that was used in the
-    loss calculations (e.g. fatalities, economic loss).
-
-  \item \Verb+unit+: this attribute defines the units in which the losses are
-    being measured (e.g. EUR).
-
-  \item \Verb+node+: each loss map comprises various nodes, each node possibly
-    containing a number of \glspl{asset}. The location of the node is defined
-    by a latitude and longitude in decimal degrees within the field
-    \Verb+gml:Point+. The mean loss (\Verb+mean+) and associated standard
-    deviation (\Verb+stdDev+) for each \gls{asset} (identified by the parameter
-    \Verb+assetRef+) is stored in the \Verb+loss+ field.
-
-\end{itemize}
+\end{itemize} 
