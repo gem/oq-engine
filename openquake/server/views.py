@@ -20,6 +20,7 @@ import shutil
 import json
 import logging
 import os
+import inspect
 import getpass
 import tempfile
 try:
@@ -587,11 +588,13 @@ def extract(request, calc_id, what):
             prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
         obj = _extract(ds, what)
-        if hasattr(obj, '__toh5__'):
+        if inspect.isgenerator(obj):
+            array, attrs = None, {k: v for k, v in obj}
+        elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
             array, attrs = obj, {}
-        numpy.savez(fname, array=array, **attrs)
+        numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
     stream = FileWrapper(open(fname, 'rb'))
