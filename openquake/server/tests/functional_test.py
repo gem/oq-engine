@@ -196,7 +196,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp['calculation_mode'], 'classical')
 
         # check the /extract endpoint
-        url = 'http://%s/v1/calc/%s/extract/sitecol' % (self.hostport, job_id)
+        url = 'http://%s/v1/calc/%s/extract/hazard/rlzs' % (
+            self.hostport, job_id)
         resp = requests.get(url)
         self.assertEqual(resp.status_code, 200)
 
