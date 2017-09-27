@@ -571,6 +571,12 @@ def get_result(request, result_id):
     return response
 
 
+def _array(v):
+    if hasattr(v, '__toh5__'):
+        return v.__toh5__()[0]
+    return v
+
+
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
@@ -589,7 +595,7 @@ def extract(request, calc_id, what):
         os.close(fd)
         obj = _extract(ds, what)
         if inspect.isgenerator(obj):
-            array, attrs = None, {k: v for k, v in obj}
+            array, attrs = None, {k: _array(v) for k, v in obj}
         elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
