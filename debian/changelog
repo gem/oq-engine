@@ -1,6 +1,7 @@
   [Michele Simionato]
+  * `oq extract hazard/rlzs` now extracts one realization at the time
   * The rupture filtering is now applied during disaggregation
-  * Changed the /extract wen API to return an .npz file
+  * Changed the /extract wen API to return a compressed .npz file
   * Fixed a bug with multi-realization disaggregation, celery and no
     shared_dir: now the calculation does not hang anymore
 
