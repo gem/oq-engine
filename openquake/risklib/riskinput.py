@@ -26,7 +26,7 @@ except ImportError:  # with Python 2
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip, decode
+from openquake.baselib.python3compat import zip, encode, decode
 from openquake.baselib.general import groupby, get_array, AccumDict
 from openquake.hazardlib import site, calc, valid
 from openquake.risklib import scientific, riskmodels
@@ -122,6 +122,19 @@ class AssetCollection(object):
         :returns: list of sorted tags
         """
         return sorted(self.aids_by_tag)
+
+    def units(self, loss_types):
+        """
+        :param: a list of loss types
+        :returns: an array of units as byte strings, suitable for HDF5
+        """
+        units = self.cc.units
+        lst = []
+        for lt in loss_types:
+            if lt.endswith('_ins'):
+                lt = lt[:-4]
+            lst.append(encode(units[lt]))
+        return numpy.array(lst)
 
     def assets_by_site(self):
         """
