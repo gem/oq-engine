@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Adds the Bindi et al. (2017) GMPEs for Joyner-Boore and Hypocentral
+    Distance
+
   [Michele Simionato]
   * The rupture filtering is now applied during disaggregation
   * Changed the /extract wen API to return an .npz file
