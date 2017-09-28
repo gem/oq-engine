@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed `oq to_shapefile` and `oq from_shapefile` to work with NRML 0.5
+    (except MultiPointSources)
   * Added information about the loss units to the `agg_curve` outputs
   * `oq extract hazard/rlzs` now extracts one realization at the time
   * The rupture filtering is now applied during disaggregation
