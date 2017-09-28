@@ -9,10 +9,10 @@ The Scenario Risk Calculator produces the following set of output files:
     \glspl{asset} are listed in this file.
 
   \item \Verb+losses_by_tag+: this file contains the scenario
-    loss statistics for each of the \glspl{taxonomy} defined in the
-    \gls{exposuremodel}. For each \gls{taxonomy}, the mean (\Verb+mean+)
+    loss statistics for each of the \glspl{tag} defined in the
+    \gls{exposuremodel}. For each \gls{tag}, the mean (\Verb+mean+)
     and associated standard deviation (\Verb+stddev+)
-    of the losses for each taxonomy are listed in this file.
+    of the losses for each tag are listed in this file.
 
   \item \Verb+losses_by_asset+: this file contains mean (\Verb+mean+) and
     associated standard deviation (\Verb+stddev+) of the scenario loss for all
@@ -50,15 +50,15 @@ Table~\ref{output:scenario_loss_asset}.
 \input{oqum/risk/verbatim/output_scenario_loss_asset}
 
 
-\subsubsection{Taxonomy loss statistics}
-\label{subsubsec:scenario_taxonomy_loss_statistics}
+\subsubsection{tag loss statistics}
+\label{subsubsec:scenario_tag_loss_statistics}
 
 The Scenario Risk calculator also estimates the total expected losses for
-assets of each \gls{taxonomy}. This distribution of losses per building
-\gls{taxonomy} is depicted in the example output file snippet in
-Table~\ref{output:scenario_loss_taxonomy}.
+assets of each \gls{tag}. This distribution of losses per asset
+\gls{tag} is depicted in the example output file snippet in
+Table~\ref{output:scenario_loss_tag}.
 
-\input{oqum/risk/verbatim/output_scenario_loss_taxonomy}
+\input{oqum/risk/verbatim/output_scenario_loss_tag}
 
 The output file lists the mean loss aggregated for each building typology
 found in the exposure model for all loss types (amongst ``structural'',
