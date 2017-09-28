@@ -97,7 +97,7 @@ def compute_pmap_stats(pmaps, stats, weights):
         assert pmap.shape_y == L, (pmap.shape_y, L)
     if len(sids) == 0:
         raise ValueError('All empty probability maps!')
-    sids = numpy.array(sorted(sids), numpy.float32)
+    sids = numpy.array(sorted(sids), numpy.uint32)
     nstats = len(stats)
     curves = numpy.zeros((len(pmaps), len(sids), L), numpy.float64)
     for i, pmap in enumerate(pmaps):
