@@ -100,7 +100,7 @@ def get_status(address=None):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s = config.dbserver
     try:
-        err = sock.connect_ex(address or (s.host, s.port))
+        err = sock.connect_ex(address or (s.host, int(s.port)))
     finally:
         sock.close()
     return 'not-running' if err else 'running'
