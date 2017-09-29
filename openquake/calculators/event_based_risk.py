@@ -359,7 +359,7 @@ class EbriskCalculator(base.RiskCalculator):
         oq = self.oqparam
         self.R = num_rlzs
         self.A = len(self.assetcol)
-        tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+        tags = encode(self.assetcol.tags())
         T = len(tags)
         self.datastore.create_dset('losses_by_tag-rlzs', F32,
                                    (T, self.R, self.L * self.I))

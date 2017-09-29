@@ -20,7 +20,7 @@ import logging
 
 import numpy
 
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.calculators import base
@@ -137,7 +137,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
             # losses by tag
             self.datastore['losses_by_tag-rlzs'] = result['losses_by_tag']
-            tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+            tags = encode(self.assetcol.tags())
             self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
                                      nbytes=result['losses_by_tag'].nbytes)
 
