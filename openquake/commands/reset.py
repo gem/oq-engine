@@ -40,7 +40,7 @@ def reset(yes):
     # user must be able to access and write the databse file to remove it
     if os.path.isfile(dbpath) and os.access(dbpath, os.W_OK):
         if dbserver.get_status() == 'running':
-            if config.flag_set('dbserver', 'multi_user'):
+            if config.dbserver.multi_user:
                 sys.exit('The oq dbserver must be stopped '
                          'before proceeding')
             else:
