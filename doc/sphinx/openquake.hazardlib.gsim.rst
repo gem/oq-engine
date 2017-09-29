@@ -331,6 +331,14 @@ convertito_2012
     :undoc-members:
     :show-inheritance:
 
+derras_2014
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.derras_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dost_2004
 -----------------------------------------
 
