@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import logging
+import re
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -26,7 +27,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.general import AccumDict, DictArray
+from openquake.baselib.general import DictArray
 from openquake.commonlib import calc
 
 
@@ -176,3 +177,22 @@ def extract_hazard(dstore, what):
         if oq.poes and oq.hazard_maps:
             hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
             yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
+
+
+@extract.add('losses_by_asset')
+def extract_losses_by_asset(dstore, what):
+    """
+    Extracts losses_by_asset given a `what` string like
+    "rlz-0/structural", "rlz-1/contents_ins", "mean/structural" etc
+    """
+    rlz_or_stat, lt = what.split('/')
+    r = int(rlz_or_stat[4:]) if rlz_or_stat.startswith('rlz-') else None
+    lti = dstore['oqparam'].lti
+    if 'losses_by_asset' in dstore:  # scenario_risk
+        return dstore['losses_by_asset'][:, r, lti[lt]]['mean']
+    elif 'avg_losses-rlzs' in dstore:  # event_based_risk
+        if r is None:
+            assert rlz_or_stat == 'mean', rlz_or_stat
+            return dstore['avg_losses-rlzs'][:, :, lti[lt]].mean(axis=1)
+        else:
+            return dstore['avg_losses-rlzs'][:, r, lti[lt]]
