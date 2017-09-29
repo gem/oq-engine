@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an utility `extract losses_by_asset/<rlz>/<loss_type>`
   * Changed the ScenarioDamage demo to use two GSIMs
   * Added a node `<tagNames>` in the exposure
   * Added a web API to extract the attributes of a datastore object
