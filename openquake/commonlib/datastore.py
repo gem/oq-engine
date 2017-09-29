@@ -250,6 +250,13 @@ class DataStore(collections.MutableMapping):
                 raise
             return default
 
+    def get_attrs(self, key):
+        """
+        :param key: dataset path
+        :returns: dictionary of attributes for that path
+        """
+        return dict(h5py.File.__getitem__(self.hdf5, key).attrs)
+
     def create_dset(self, key, dtype, shape=(None,), compression=None,
                     fillvalue=0, attrs=None):
         """
