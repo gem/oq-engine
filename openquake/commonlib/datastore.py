@@ -22,13 +22,12 @@ import getpass
 import collections
 import h5py
 
-from openquake.baselib import hdf5
-from openquake.commonlib import config
+from openquake.baselib import hdf5, config
 from openquake.commonlib.writers import write_csv
 
 DATADIR = os.environ.get('OQ_DATADIR')
 if not DATADIR:
-    shared_dir = config.get('directory', 'shared_dir')
+    shared_dir = config.directory.shared_dir
     if shared_dir:
         DATADIR = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
     else:  # use the home of the user

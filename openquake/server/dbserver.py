@@ -24,12 +24,10 @@ import sqlite3
 import logging
 import threading
 import subprocess
-import psutil
 
-from openquake.baselib import sap, zeromq as z
+from openquake.baselib import config, sap, zeromq as z
 from openquake.baselib.parallel import safely_call
-from openquake.hazardlib import valid
-from openquake.commonlib import config, logs
+from openquake.commonlib import logs
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
@@ -46,11 +44,10 @@ class DbServer(object):
     """
     A server collecting the received commands into a queue
     """
-    def __init__(self, db, address, authkey,  num_workers=5):
+    def __init__(self, db, address, num_workers=5):
         self.db = db
         self.frontend = 'tcp://%s:%s' % address
         self.backend = 'inproc://dbworkers'
-        self.authkey = authkey
         self.num_workers = num_workers
         self.pid = os.getpid()
 
@@ -101,8 +98,9 @@ def get_status(address=None):
     :returns: 'running' or 'not-running'
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s = config.dbserver
     try:
-        err = sock.connect_ex(address or config.DBS_ADDRESS)
+        err = sock.connect_ex(address or (s.host, s.port))
     finally:
         sock.close()
     return 'not-running' if err else 'running'
@@ -112,7 +110,7 @@ def check_foreign():
     """
     Check if we the DbServer is the right one
     """
-    if not config.flag_set('dbserver', 'multi_user'):
+    if not config.dbserver.multi_user:
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
@@ -126,7 +124,7 @@ def ensure_on():
     Start the DbServer if it is off
     """
     if get_status() == 'not-running':
-        if valid.boolean(config.get('dbserver', 'multi_user')):
+        if config.dbserver.multi_user:
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
@@ -155,7 +153,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = config.DBS_ADDRESS
+        addr = (config.dbserver.host, config.dbserver.port)
 
     if dbpath:
         DATABASE['NAME'] = dbpath
@@ -175,7 +173,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     try:
-        DbServer(db, addr, config.DBS_AUTHKEY).start()
+        DbServer(db, addr).start()
     finally:
         db.close()
 
