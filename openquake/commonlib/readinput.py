@@ -590,6 +590,10 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         # about pickling dictionaries with empty strings:
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
+    try:
+        tagNames = exposure.tagNames
+    except AttributeError:
+        tagNames = Node('tagNames', text='')
 
     # read the cost types and make some check
     cost_types = []
@@ -614,7 +618,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.units[name] = ct['unit']
     assets = []
     asset_refs = []
-    assets_by_tag = collections.defaultdict(list)
+    assets_by_tag = AccumDict(accum=[])
+    assets_by_tag.tagnames = ~tagNames
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
@@ -687,11 +692,16 @@ def get_exposure(oqparam):
                 out_of_region += 1
                 continue
             tagnode = getattr(asset, 'tags', None)
+            assets_by_tag = exposure.assets_by_tag
             if tagnode is not None:
-                for item in tagnode.attrib.items():
-                    valid.simple_id(item[0])  # name
-                    valid.nice_string(item[1])  # value
-                    exposure.assets_by_tag['%s-%s' % item].append(idx)
+                for tagname, tagvalue in tagnode.attrib.items():
+                    if tagname not in assets_by_tag.tagnames:
+                        with context(fname, tagnode):
+                            raise ValueError(
+                                'Unknown tag %r or <tagNames> not '
+                                'specified in the exposure' % tagname)
+                    valid.nice_string(tagvalue)
+                    assets_by_tag['%s-%s' % (tagname, tagvalue)].append(idx)
             exposure.assets_by_tag['taxonomy-' + taxonomy].append(idx)
         try:
             costs = asset.costs
