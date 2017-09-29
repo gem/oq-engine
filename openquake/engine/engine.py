@@ -25,15 +25,13 @@ import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import valid
-from openquake.baselib import parallel
+from openquake.baselib import parallel, config
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import datastore, config, readinput
+from openquake.commonlib import datastore, readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
-TERMINATE = valid.boolean(
-    config.get('distribution', 'terminate_workers_on_revoke') or 'false')
+TERMINATE = config.distribution.terminate_workers_on_revoke
 
 USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 

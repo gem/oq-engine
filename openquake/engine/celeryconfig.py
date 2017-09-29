@@ -42,15 +42,13 @@ else:
         sys.modules['openquake'].__dict__["__path__"].insert(
             0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-    from openquake.commonlib import config
-
-    config.abort_if_no_config_available()
-
-    amqp = config.get_section("amqp")
+    from openquake.baselib import config
+    from openquake import engine as e
+    config.read(os.path.join(os.path.dirname(e.__file__), "openquake.cfg"))
 
     # RabbitMQ broker (default)
     BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
-                 amqp
+                 config.amqp
     # Redis broker (works only on Trusty)
     # BROKER_URL = 'redis://%(host)s:6379/0' % amqp
 

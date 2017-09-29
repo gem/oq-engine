@@ -23,17 +23,15 @@ import getpass
 import logging
 import numpy
 
-from openquake.baselib import sap
-from openquake.hazardlib import valid, stats
+from openquake.baselib import sap, config
+from openquake.hazardlib import stats
 from openquake.commonlib import datastore, calc
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.commonlib import config
 from openquake.commonlib import logs
 from openquake.calculators.views import view
 
-MULTI_USER = valid.boolean(config.get('dbserver', 'multi_user') or 'false')
-if MULTI_USER:
+if config.dbserver.multi_user:
     # get the datastore of the user who ran the job
     def read(calc_id):
         job = logs.dbcmd('get_job', calc_id, getpass.getuser())

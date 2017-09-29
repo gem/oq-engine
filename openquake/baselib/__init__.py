@@ -39,15 +39,16 @@ class DotDict(collections.OrderedDict):
 config = DotDict()  # global configuration
 
 
-def _read(*paths):
+def _read(*paths, **validators):
     # load the configuration file by looking at the given paths
     paths = paths + PATHS
     parser = configparser.SafeConfigParser()
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
     if not found:
-        raise IOError('No configuration file found in %s' % paths)
+        raise IOError('No configuration file found in %s' % str(paths))
     config.clear()
     for section in parser.sections():
-        config[section] = DotDict(parser.items(section))
-
+        config[section] = sec = DotDict(parser.items(section))
+        for k, v in sec.items():
+            sec[k] = validators.get(k, lambda x: x)(v)
 config.read = _read
