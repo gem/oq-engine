@@ -25,7 +25,10 @@ from openquake.baselib.general import git_suffix
 __version__ = '2.7.0'
 __version__ += git_suffix(__file__)
 
-PATHS = ('~/openquake.cfg', '/etc/openquake/openquake.cfg')
+PATHS = ['~/openquake.cfg', '/etc/openquake/openquake.cfg']
+cfg = os.environ.get('OQ_CONFIG_FILE_VAR')
+if cfg:  # has the precedence
+    PATHS.insert(0, cfg)
 
 
 class DotDict(collections.OrderedDict):
