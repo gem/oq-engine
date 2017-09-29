@@ -579,7 +579,7 @@ def _array(v):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def extract(request, calc_id, what):
+def extract(request, calc_id, what, attrs):
     """
     Wrapper over the `oq extract` command
     """
@@ -593,13 +593,16 @@ def extract(request, calc_id, what):
         fd, fname = tempfile.mkstemp(
             prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
-        obj = _extract(ds, what)
-        if inspect.isgenerator(obj):
-            array, attrs = None, {k: _array(v) for k, v in obj}
-        elif hasattr(obj, '__toh5__'):
-            array, attrs = obj.__toh5__()
-        else:  # assume obj is an array
-            array, attrs = obj, {}
+        if attrs:  # extract the attributes only
+            array, attrs = None, ds.get_attrs(what)
+        else:  # extract the full HDF5 object
+            obj = _extract(ds, what)
+            if inspect.isgenerator(obj):
+                array, attrs = None, {k: _array(v) for k, v in obj}
+            elif hasattr(obj, '__toh5__'):
+                array, attrs = obj.__toh5__()
+            else:  # assume obj is an array
+                array, attrs = obj, {}
         numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
