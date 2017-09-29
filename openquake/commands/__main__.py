@@ -23,10 +23,12 @@ import importlib
 
 from openquake.baselib import sap
 from openquake.commonlib import __version__
-from openquake import commands
-from openquake.commonlib import config
+from openquake import commands, engine
+from openquake.baselib import config
 
-USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
+config.read(os.path.join(os.path.dirname(engine.__file__), 'openquake.cfg'))
+
+USE_CELERY = config.distribution.oq_distribute == 'celery'
 
 # the environment variable has the precedence over the configuration file
 if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
