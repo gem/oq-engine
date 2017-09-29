@@ -85,6 +85,7 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_collection(assets_by_site, time_event)
         dic = dict(zip(self.array['idx'], range(len(self.array))))
+        self.tagnames = assets_by_tag.tagnames
         self.aids_by_tag = {}
         for tag, idxs in assets_by_tag.items():
             aids = []
@@ -214,6 +215,7 @@ class AssetCollection(object):
                  'i_lim': ' '.join(self.i_lim),
                  'retro': ' '.join(self.retro),
                  'tot_sites': self.tot_sites,
+                 'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, aids_by_tag=self.aids_by_tag,
                     cost_calculator=self.cc), attrs
@@ -221,6 +223,7 @@ class AssetCollection(object):
     def __fromh5__(self, dic, attrs):
         for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
             setattr(self, name, attrs[name].split())
+        self.tagnames = attrs['tagnames']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
