@@ -514,11 +514,8 @@ class HazardCalculator(BaseCalculator):
         attrs = self.datastore.getitem('composite_risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
         if rm.damage_states:
-            # saving it twice in the datastore: as an attribute of the
-            # composite risk model and also at top level, for easy
-            # extraction by the QGIS plugin
-            attrs['damage_states'] = ds = hdf5.array_of_vstr(rm.damage_states)
-            self.datastore['damage_states'] = ds
+            # best not to save them as bytes, they are used as headers
+            attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)
         self.datastore['loss_ratios'] = rm.get_loss_ratios()
         self.datastore.set_nbytes('composite_risk_model')
         self.datastore.set_nbytes('loss_ratios')
