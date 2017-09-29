@@ -321,6 +321,13 @@ class OqParam(valid.ParamSet):
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
+    @property
+    def lti(self):
+        """
+        Dictionary extended_loss_type -> extended_loss_type index
+        """
+        return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
+
     def loss_dt(self, dtype=F32):
         """
         Return a composite dtype based on the loss types, including occupants

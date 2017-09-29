@@ -81,6 +81,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
+        # test extraction
+        lba = extract(self.calc.datastore, 'losses_by_asset/rlz-0/occupants')
+        self.assertEqual(lba.shape, (1,))  # there is a single asset
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
