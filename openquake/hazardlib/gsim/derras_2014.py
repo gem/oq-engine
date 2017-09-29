@@ -171,7 +171,9 @@ class DerrasEtAl2014(GMPE):
     def _get_normalised_term(pval, pmax, pmin):
         """
         Normalisation of a variable between its minimum and maximum using:
-        (1/2) * ((p - p_min) / (p_max - p_min)) - 1
+        2.0 * ((p - p_min) / (p_max - p_min)) - 1
+        N.B. This is given as 0.5 * (...) - 1 in the paper, but the Electronic
+        Supplement implements it as 2.0 * (...) - 1
         """
         return 2.0 * ((pval - pmin) / (pmax - pmin)) - 1
 
