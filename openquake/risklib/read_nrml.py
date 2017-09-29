@@ -423,4 +423,5 @@ def update_validators():
         'damage': damage_triple,
         'damageStates': valid.namelist,
         'taxonomy': taxonomy,
+        'tagNames': valid.namelist,
     })
