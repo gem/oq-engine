@@ -43,7 +43,9 @@ def _read(*paths):
     # load the configuration file by looking at the given paths
     paths = paths + PATHS
     parser = configparser.SafeConfigParser()
-    parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
+    found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
+    if not found:
+        raise IOError('No configuration file found in %s' % paths)
     config.clear()
     for section in parser.sections():
         config[section] = DotDict(parser.items(section))
