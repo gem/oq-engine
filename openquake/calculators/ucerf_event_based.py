@@ -868,7 +868,8 @@ class UCERFRiskCalculator(EbriskCalculator):
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
-        elt_dt = numpy.dtype([('eid', U64), ('loss', (F32, (self.L, self.I)))])
+        elt_dt = numpy.dtype([('eid', U64), ('rlzi', U16),
+                              ('loss', (F32, (self.L, self.I)))])
         monitor = self.monitor('compute_losses')
         for sm in self.csm.source_models:
             ssm = self.csm.get_model(sm.ordinal)
