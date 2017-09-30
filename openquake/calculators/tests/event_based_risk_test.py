@@ -40,9 +40,9 @@ def check_total_losses(calc):
     loss_dt = calc.oqparam.loss_dt()
     LI = len(loss_dt.names)
     data1 = numpy.zeros(LI, numpy.float32)
-    for dset in dstore['agg_loss_table'].values():
-        for li, lt in enumerate(loss_dt.names):
-            data1[li] += dset['loss'][:, li].sum()
+    alt = dstore['agg_loss_table'].value
+    for li, lt in enumerate(loss_dt.names):
+        data1[li] += alt['loss'][:, li].sum()
 
     # check the sums are consistent with the ones coming from losses_by_tag
     tax_idx = dstore['assetcol'].get_tax_idx()
