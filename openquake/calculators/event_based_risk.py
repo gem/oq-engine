@@ -56,6 +56,7 @@ def _aggregate(outputs, compositemodel, tagmask, agg, all_eids, result, param):
                 continue
             loss_ratios, eids = out
             loss_type = compositemodel.loss_types[l]
+            indices = numpy.array([idx[eid] for eid in eids])
             for aid, asset in enumerate(outs.assets):
                 ratios = loss_ratios[aid]
                 aid = asset.ordinal
@@ -69,10 +70,7 @@ def _aggregate(outputs, compositemodel, tagmask, agg, all_eids, result, param):
 
                 # agglosses
                 for i in range(I):
-                    li = l + L * i
-                    for eid, loss in zip(eids, losses[:, i]):
-                        if loss:
-                            agg[idx[eid], r, li] += loss
+                    agg[indices, r, l + L * i] += losses[:, i]
 
                 # losses by taxonomy
                 for i in range(I):
