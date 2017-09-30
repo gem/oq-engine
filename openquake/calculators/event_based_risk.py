@@ -41,12 +41,14 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-def _aggregate(outputs, compositemodel, tagmask, agg, result, param):
+def _aggregate(outputs, compositemodel, tagmask, agg, all_eids, result, param):
     # update the result dictionary and the agg array with each output
+    E = len(all_eids)
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
     losses_by_tag = result['losses_by_tag']
     ass = result['assratios']
+    idx = dict(zip(all_eids, range(E)))
     for outs in outputs:
         r = outs.r
         for l, out in enumerate(outs):
@@ -69,8 +71,8 @@ def _aggregate(outputs, compositemodel, tagmask, agg, result, param):
                 for i in range(I):
                     li = l + L * i
                     for eid, loss in zip(eids, losses[:, i]):
-                        if loss > 0:
-                            agg[eid, r][li] += loss
+                        if loss:
+                            agg[idx[eid], r, li] += loss
 
                 # losses by taxonomy
                 for i in range(I):
@@ -85,8 +87,10 @@ def _aggregate(outputs, compositemodel, tagmask, agg, result, param):
                                 ass.append((aid, r, eid, li, ratio))
 
     # store agglosses
-    lst = ((eid, rlzi, loss) for (eid, rlzi), loss in agg.items())
-    result['agglosses'] = numpy.fromiter(lst, param['elt_dt'])
+    it = ((eid, r, losses)
+          for eid, all_losses in zip(all_eids, agg)
+          for r, losses in enumerate(all_losses) if losses.sum())
+    result['agglosses'] = numpy.fromiter(it, param['elt_dt'])
 
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
@@ -126,13 +130,15 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     """
     riskinput.hazard_getter.init()
     assetcol = param['assetcol']
+    eids = riskinput.hazard_getter.eids
+    E = len(eids)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     tagmask = assetcol.tagmask()
     A, T = tagmask.shape
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
-    agg = AccumDict(accum=numpy.zeros(L * I, F32))  # e, r -> array
+    agg = numpy.zeros((E, R, L * I), F32)
     result = dict(assratios=[],
                   lrs_idx=AccumDict(accum=[]),  # aid -> start_stop list
                   losses_by_tag=numpy.zeros((T, R, L * I), F32),
@@ -142,7 +148,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, tagmask, agg, result, param)
+    _aggregate(outputs, riskmodel, tagmask, agg, eids, result, param)
 
     # store info about the GMFs
     result['gmdata'] = riskinput.gmdata
