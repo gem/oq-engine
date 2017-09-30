@@ -788,9 +788,7 @@ class RiskInput(object):
         :param asset_ordinals: list of ordinals of the assets
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        return lambda dummy1, dummy2: (
-            [self.eps[aid] for aid in asset_ordinals]
-            if self.eps else None)
+        return lambda aid, dummy2: self.eps[aid] if self.eps else None
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
