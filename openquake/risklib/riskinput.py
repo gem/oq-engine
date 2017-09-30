@@ -788,7 +788,13 @@ class RiskInput(object):
         :param eids: ignored
         :returns: an array of E epsilons
         """
-        return self.eps[aid] if self.eps else None
+        if not self.eps:
+            return
+        eps = self.eps[aid]
+        if isinstance(eps, numpy.ndarray):
+            return eps
+        # else assume it is zero
+        return numpy.zeros(len(eids), F32)
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
