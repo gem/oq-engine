@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from nose.plugins.attrib import attr
+from openquake.baselib.general import writetmp
+from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2
 
@@ -28,5 +30,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
     @attr('qa', 'risk', 'gmf_ebrisk')
-    def _test_case_2(self):
+    def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+        self.calc.datastore['agg_loss_table']
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
