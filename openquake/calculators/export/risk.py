@@ -23,7 +23,8 @@ import numpy
 
 from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import split_in_blocks, deprecated as depr
+from openquake.baselib.general import (
+    group_array, split_in_blocks, deprecated as depr)
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
@@ -216,7 +217,7 @@ def export_agg_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     L = len(loss_types)
     name, ext = export.keyfunc(ekey)
-    agg_losses = dstore[name]
+    agg_losses = group_array(dstore[name], 'rlzi')
     has_rup_data = 'ruptures' in dstore
     extra_list = [('magnitude', F32),
                   ('centroid_lon', F32),
@@ -246,10 +247,10 @@ def export_agg_losses_ebr(ekey, dstore):
                     get_rup_data(calc.get_ruptures(dstore, grp_id)))
 
         for rlz in rlzs:
-            rlzname = 'rlz-%03d' % rlz.ordinal
-            if rlzname not in agg_losses:
+            rlzi = rlz.ordinal
+            if rlzi not in agg_losses:
                 continue
-            data = agg_losses[rlzname].value
+            data = agg_losses[rlzi]
             eids = data['eid']
             losses = data['loss']
             eids_, years, serials = get_eids_years_serials(event_by_grp, eids)
