@@ -363,6 +363,7 @@ class EbriskCalculator(base.RiskCalculator):
         oq = self.oqparam
         self.R = num_rlzs
         self.A = len(self.assetcol)
+        self.tagmask = self.assetcol.tagmask()  # shape (A, T)
         tags = encode(self.assetcol.tags())
         T = len(tags)
         self.datastore.create_dset('losses_by_tag-rlzs', F32,
@@ -445,8 +446,8 @@ class EbriskCalculator(base.RiskCalculator):
         for r in range(losses_by_tag.shape[1]):
             if aids is None:  # event_based_risk
                 dset[:, r + offset, :] += losses_by_tag[:, r, :]
-            else:  # gmf_ebrisk
-                pass  # disabled aggregation by tag
+            else:  # gmf_ebrisk, there is no offset
+                dset[:, r, :] += losses_by_tag[:, r, :]
 
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
@@ -454,8 +455,8 @@ class EbriskCalculator(base.RiskCalculator):
                 vs = self.vals[self.riskmodel.loss_types[l]]
                 if aids is None:  # event_based_risk
                     self.dset[:, r + offset, li] += ratios * vs
-                else:  # gmf_ebrisk
-                    self.dset[aids, r + offset, li] += ratios * vs
+                else:  # gmf_ebrisk, there is no offset
+                    self.dset[aids, offset, li] += ratios * vs
         self.taskno += 1
 
     def post_execute(self, num_events):
