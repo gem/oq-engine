@@ -61,7 +61,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['elt_dt'] = numpy.dtype(
-            [('eid', U64), ('loss', (F32, (self.L * self.I,)))])
+            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         self.taskno = 0
         self.start = 0
         self.datastore.create_dset('losses_by_tag-rlzs', F32,
