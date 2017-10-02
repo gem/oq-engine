@@ -52,7 +52,7 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
                 ax.plot(imtls[imt], spec_curves[imt][site], '--', label=label)
             for r, curves in enumerate(all_curves):
                 ax.plot(imtls[imt], curves[imt][site], label=str(r))
-    plt.legend()
+            ax.legend()
     return plt
 
 
