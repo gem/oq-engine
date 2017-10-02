@@ -19,6 +19,7 @@
 import itertools
 import numpy
 
+from openquake.baselib.python3compat import encode
 from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
 from openquake.calculators import base, event_based
@@ -156,7 +157,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
-        tags = [t.encode('utf-8') for t in self.param['tags']]
+        tags = encode(self.param['tags'])
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         L = len(ltypes)

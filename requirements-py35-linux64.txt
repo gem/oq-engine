@@ -29,7 +29,12 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py35/PyYAML-3.12-cp35-cp35m-manyli
 
 ## Extra ##
 
-### pythn-prctl ###
+### setproctitle ###
+# comment the following lines to skip installation
+# of setproctitle (optional feature)
+http://cdn.ftp.openquake.org/wheelhouse/linux/py35/setproctitle-1.1.10-cp35-cp35m-manylinux1_x86_64.whl
+
+### python-prctl ###
 # comment the following lines to skip installation
 # of python-prctl (optional feature)
 http://cdn.ftp.openquake.org/wheelhouse/linux/py35/python_prctl-1.6.1-cp35-cp35m-manylinux1_x86_64.whl
