@@ -26,7 +26,7 @@ except ImportError:  # with Python 2
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip, decode
+from openquake.baselib.python3compat import zip, encode, decode
 from openquake.baselib.general import groupby, get_array, AccumDict
 from openquake.hazardlib import site, calc, valid
 from openquake.risklib import scientific, riskmodels
@@ -85,6 +85,7 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_collection(assets_by_site, time_event)
         dic = dict(zip(self.array['idx'], range(len(self.array))))
+        self.tagnames = assets_by_tag.tagnames
         self.aids_by_tag = {}
         for tag, idxs in assets_by_tag.items():
             aids = []
@@ -122,6 +123,19 @@ class AssetCollection(object):
         :returns: list of sorted tags
         """
         return sorted(self.aids_by_tag)
+
+    def units(self, loss_types):
+        """
+        :param: a list of loss types
+        :returns: an array of units as byte strings, suitable for HDF5
+        """
+        units = self.cc.units
+        lst = []
+        for lt in loss_types:
+            if lt.endswith('_ins'):
+                lt = lt[:-4]
+            lst.append(encode(units[lt]))
+        return numpy.array(lst)
 
     def assets_by_site(self):
         """
@@ -201,6 +215,7 @@ class AssetCollection(object):
                  'i_lim': ' '.join(self.i_lim),
                  'retro': ' '.join(self.retro),
                  'tot_sites': self.tot_sites,
+                 'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, aids_by_tag=self.aids_by_tag,
                     cost_calculator=self.cc), attrs
@@ -208,6 +223,7 @@ class AssetCollection(object):
     def __fromh5__(self, dic, attrs):
         for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
             setattr(self, name, attrs[name].split())
+        self.tagnames = attrs['tagnames']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
@@ -472,8 +488,7 @@ class CompositeRiskModel(collections.Mapping):
         for sid, assets in enumerate(assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
-                epsgetter = riskinput.epsilon_getter(
-                    [asset.ordinal for asset in group[taxonomy]])
+                epsgetter = riskinput.epsilon_getter
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
         if hasattr(hazard_getter, 'rlzs_by_gsim'):
@@ -767,14 +782,19 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def epsilon_getter(self, asset_ordinals):
+    def epsilon_getter(self, aid, eids):
         """
-        :param asset_ordinals: list of ordinals of the assets
-        :returns: a closure returning an array of epsilons from the event IDs
+        :param aid: asset ordinal
+        :param eids: ignored
+        :returns: an array of E epsilons
         """
-        return lambda dummy1, dummy2: (
-            [self.eps[aid] for aid in asset_ordinals]
-            if self.eps else None)
+        if not self.eps:
+            return
+        eps = self.eps[aid]
+        if isinstance(eps, numpy.ndarray):
+            return eps
+        # else assume it is zero
+        return numpy.zeros(len(eids), F32)
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
@@ -797,18 +817,16 @@ class RiskInputFromRuptures(object):
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
 
-    def epsilon_getter(self, asset_ordinals):
+    def epsilon_getter(self, aid, eids):
         """
-        :param asset_ordinals: ordinals of the assets
-        :returns: a closure returning an array of epsilons from the event IDs
+        :param aid: asset ordinal
+        :param eids: E event IDs
+        :returns: an array of E epsilons
         """
         if not hasattr(self, 'eps'):
-            return lambda aid, eids: None
-
-        def geteps(aid, eids):
-            idxs = [self.hazard_getter.eid2idx[eid] for eid in eids]
-            return self.eps[aid, idxs]
-        return geteps
+            return None
+        idxs = [self.hazard_getter.eid2idx[eid] for eid in eids]
+        return self.eps[aid, idxs]
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (

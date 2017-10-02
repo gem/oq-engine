@@ -151,7 +151,14 @@ import multiprocessing.dummy
 from multiprocessing.connection import Client, Listener
 from concurrent.futures import (
     as_completed, ThreadPoolExecutor, ProcessPoolExecutor, Future)
+
 import numpy
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
+
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -680,7 +687,8 @@ if OQ_DISTRIBUTE == 'celery':
 
 
 def _wakeup(sec):
-    """Waiting functions, used to wake up the process pool"""
+    """Waiting function, used to wake up the process pool"""
+    setproctitle('oq-worker')
     try:
         import prctl
     except ImportError:
