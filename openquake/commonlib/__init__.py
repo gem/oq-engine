@@ -23,7 +23,7 @@ from openquake.hazardlib import valid
 d = os.path.dirname
 
 # we must read the configuration file at the level of commonlib
-# to be able to set the DATADIR used by the datastore
+# to be able to set the DATADIR used by the datastore; we should fix this
 config.read(os.path.join(d(d(__file__)), 'engine', 'openquake.cfg'),
             multi_user=valid.boolean, port=valid.positiveint,
             terminate_workers_on_revoke=valid.boolean,
