@@ -31,7 +31,7 @@ if venv:
     PATHS = ['~/openquake.cfg']
 else:  # installation from packages, search also in /etc
     PATHS = ['~/openquake.cfg', '/etc/openquake/openquake.cfg']
-cfg = os.environ.get('OQ_CONFIG_FILE_VAR')
+cfg = os.environ.get('OQ_CONFIG_FILE')
 if cfg:  # has the precedence
     PATHS.insert(0, cfg)
 
