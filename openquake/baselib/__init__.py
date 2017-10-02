@@ -47,8 +47,22 @@ class DotDict(collections.OrderedDict):
 config = DotDict()  # global configuration
 
 
-def _read(*paths, **validators):
-    # load the configuration file by looking at the given paths
+def read(*paths, **validators):
+    """
+    Load the configuration, make each section available in a separate dict.
+
+    The configuration location can specified via an environment variable:
+       - OQ_CONFIG_FILE
+
+    In the absence of this environment variable the following paths will be
+    used in order:
+       - ~/openquake.cfg
+       - /etc/openquake/openquake.cfg (only when running outside a venv)
+       - openquake/engine/openquake.cfg
+
+    Please note: settings in the site configuration file are overridden
+    by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
+    """
     paths = list(paths) + PATHS
     parser = configparser.SafeConfigParser()
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
@@ -59,4 +73,4 @@ def _read(*paths, **validators):
         config[section] = sec = DotDict(parser.items(section))
         for k, v in sec.items():
             sec[k] = validators.get(k, lambda x: x)(v)
-config.read = _read
+config.read = read
