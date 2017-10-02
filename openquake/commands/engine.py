@@ -115,8 +115,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         os.environ['OQ_DISTRIBUTE'] = 'no'
 
     # check if the datadir exists
-    if not os.path.exists(datastore.DATADIR):
-        os.makedirs(datastore.DATADIR)
+    datadir = datastore.get_datadir()
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
 
     dbserver.ensure_on()
     # check if we are talking to the right server
