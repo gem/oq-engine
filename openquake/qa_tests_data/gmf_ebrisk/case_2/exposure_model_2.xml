@@ -8,26 +8,23 @@
         <costType name="structural" unit="USD" type="aggregated"/>
       </costTypes>
     </conversions>
-    <tagNames>CRESTA</tagNames>
     <assets>
-      <asset id="a1" taxonomy="RM" number="3000">
+      <asset id="a1" taxonomy="RM" number="1">
         <location lon="15.48" lat="38.09"/>
         <costs>
-          <cost type="structural" value="3000"/>
+          <cost type="structural" value="1"/>
         </costs>
-        <tags CRESTA="01.1" />
       </asset>
-      <asset id="a2" taxonomy="RC" number="2000">
+      <asset id="a2" taxonomy="RM" number="1">
         <location lon="15.56" lat="38.17"/>
         <costs>
-          <cost type="structural" value="2000"/>
+          <cost type="structural" value="1"/>
         </costs>
-        <tags CRESTA="01.1" />
       </asset>
-      <asset id="a3" taxonomy="RM" number="1000">
+      <asset id="a3" taxonomy="RC" number="1">
         <location lon="15.48" lat="38.25"/>
         <costs>
-          <cost type="structural" value="1000"/>
+          <cost type="structural" value="1"/>
         </costs>
       </asset>
     </assets>

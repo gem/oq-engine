@@ -157,6 +157,11 @@ class EngineServerTestCase(unittest.TestCase):
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
 
+        # check extract/composite_risk_model.attrs
+        url = 'http://%s/v1/calc/%s/extract/composite_risk_model.attrs' % (
+            self.hostport, job_id)
+        self.assertEqual(requests.get(url).status_code, 200)
+
         # check asset_values
         url = 'http://%s/v1/calc/%s/extract/asset_values/0' % (
             self.hostport, job_id)
@@ -196,7 +201,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp['calculation_mode'], 'classical')
 
         # check the /extract endpoint
-        url = 'http://%s/v1/calc/%s/extract/sitecol' % (self.hostport, job_id)
+        url = 'http://%s/v1/calc/%s/extract/hazard/rlzs' % (
+            self.hostport, job_id)
         resp = requests.get(url)
         self.assertEqual(resp.status_code, 200)
 
