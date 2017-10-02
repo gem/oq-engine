@@ -487,7 +487,7 @@ class Scenario(RiskModel):
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
-        epsilons = epsgetter(None, None)
+        epsilons = [epsgetter(asset.ordinal, None) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
