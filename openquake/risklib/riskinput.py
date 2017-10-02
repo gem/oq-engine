@@ -19,10 +19,6 @@
 import operator
 import logging
 import collections
-try:  # with Python 3
-    from urllib.parse import unquote_plus
-except ImportError:  # with Python 2
-    from urllib import unquote_plus
 import numpy
 
 from openquake.baselib import hdf5
@@ -48,6 +44,8 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
 
 by_taxonomy = operator.attrgetter('taxonomy')
+
+aids_by_tag_dt = numpy.dtype([('tag', hdf5.vstr), ('aids', hdf5.vuint32)])
 
 
 class Output(object):
@@ -112,7 +110,7 @@ class AssetCollection(object):
         if not hasattr(self, '_taxonomy'):
             self._taxonomy = [None] * len(self)
             for tag, aids in self.aids_by_tag.items():
-                name, value = tag.split('-', 1)
+                name, value = tag.split('=', 1)
                 if name == 'taxonomy':
                     for aid in aids:
                         self._taxonomy[aid] = value
@@ -177,7 +175,7 @@ class AssetCollection(object):
         :returns: list of tag indices corresponding to taxonomies
         """
         return [i for i, t in enumerate(self.tags())
-                if t.startswith('taxonomy-')]
+                if t.startswith('taxonomy=')]
 
     def __iter__(self):
         for i in range(len(self)):
@@ -217,7 +215,9 @@ class AssetCollection(object):
                  'tot_sites': self.tot_sites,
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
-        return dict(array=self.array, aids_by_tag=self.aids_by_tag,
+        aids_by_tag = numpy.array(sorted(self.aids_by_tag.items()),
+                                  aids_by_tag_dt)
+        return dict(array=self.array, aids_by_tag=aids_by_tag,
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
@@ -229,9 +229,8 @@ class AssetCollection(object):
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.cc = dic['cost_calculator']
-        items = dic.get('aids_by_tag', {}).items()
-        self.aids_by_tag = {unquote_plus(tag): dset.value
-                            for tag, dset in items}
+        self.aids_by_tag = {rec['tag']: rec['aids']
+                            for rec in dic['aids_by_tag']}
 
     @staticmethod
     def build_asset_collection(assets_by_site, time_event=None):
