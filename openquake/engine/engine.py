@@ -175,7 +175,8 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     oq = readinput.get_oqparam(cfg_file)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.DATADIR, hazard_calculation_id)
+                        username, datastore.get_datadir(),
+                        hazard_calculation_id)
     return job_id, oq
 
 
