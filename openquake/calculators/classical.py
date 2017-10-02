@@ -23,7 +23,7 @@ import operator
 from functools import partial
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, config
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.commonlib import datastore, source, calc, config
+from openquake.commonlib import datastore, source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -496,7 +496,7 @@ class ClassicalCalculator(PSHACalculator):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
                 pgetter = calc.PmapGetter(
-                    self.datastore.parent, lazy=config.SHARED_DIR_ON)
+                    self.datastore.parent, lazy=config.directory.shared_dir)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:
