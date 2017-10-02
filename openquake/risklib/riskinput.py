@@ -110,7 +110,7 @@ class AssetCollection(object):
         if not hasattr(self, '_taxonomy'):
             self._taxonomy = [None] * len(self)
             for tag, aids in self.aids_by_tag.items():
-                name, value = tag.split('-', 1)
+                name, value = tag.split('=', 1)
                 if name == 'taxonomy':
                     for aid in aids:
                         self._taxonomy[aid] = value
@@ -175,7 +175,7 @@ class AssetCollection(object):
         :returns: list of tag indices corresponding to taxonomies
         """
         return [i for i, t in enumerate(self.tags())
-                if t.startswith('taxonomy-')]
+                if t.startswith('taxonomy=')]
 
     def __iter__(self):
         for i in range(len(self)):
@@ -487,8 +487,7 @@ class CompositeRiskModel(collections.Mapping):
         for sid, assets in enumerate(assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
-                epsgetter = riskinput.epsilon_getter(
-                    [asset.ordinal for asset in group[taxonomy]])
+                epsgetter = riskinput.epsilon_getter
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
         if hasattr(hazard_getter, 'rlzs_by_gsim'):
@@ -782,14 +781,19 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def epsilon_getter(self, asset_ordinals):
+    def epsilon_getter(self, aid, eids):
         """
-        :param asset_ordinals: list of ordinals of the assets
-        :returns: a closure returning an array of epsilons from the event IDs
+        :param aid: asset ordinal
+        :param eids: ignored
+        :returns: an array of E epsilons
         """
-        return lambda dummy1, dummy2: (
-            [self.eps[aid] for aid in asset_ordinals]
-            if self.eps else None)
+        if not self.eps:
+            return
+        eps = self.eps[aid]
+        if isinstance(eps, numpy.ndarray):
+            return eps
+        # else assume it is zero
+        return numpy.zeros(len(eids), F32)
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
@@ -812,18 +816,16 @@ class RiskInputFromRuptures(object):
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
 
-    def epsilon_getter(self, asset_ordinals):
+    def epsilon_getter(self, aid, eids):
         """
-        :param asset_ordinals: ordinals of the assets
-        :returns: a closure returning an array of epsilons from the event IDs
+        :param aid: asset ordinal
+        :param eids: E event IDs
+        :returns: an array of E epsilons
         """
         if not hasattr(self, 'eps'):
-            return lambda aid, eids: None
-
-        def geteps(aid, eids):
-            idxs = [self.hazard_getter.eid2idx[eid] for eid in eids]
-            return self.eps[aid, idxs]
-        return geteps
+            return None
+        idxs = [self.hazard_getter.eid2idx[eid] for eid in eids]
+        return self.eps[aid, idxs]
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (

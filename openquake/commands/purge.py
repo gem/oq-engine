@@ -25,12 +25,14 @@ from openquake.baselib import sap
 from openquake.commonlib import datastore
 from openquake.commonlib.logs import dbcmd
 
+datadir = datastore.get_datadir()
+
 
 def purge_one(calc_id, user):
     """
     Remove one calculation ID from the database and remove its datastore
     """
-    hdf5path = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
+    hdf5path = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     err = dbcmd('del_calc', calc_id, user)
     if err:
         print(err)
@@ -45,7 +47,6 @@ def purge_all(user=None, fast=False):
     Remove all calculations of the given user
     """
     user = user or getpass.getuser()
-    datadir = datastore.DATADIR
     if os.path.exists(datadir):
         if fast:
             shutil.rmtree(datadir)
@@ -66,7 +67,7 @@ def purge(calc_id):
     """
     if calc_id < 0:
         try:
-            calc_id = datastore.get_calc_ids()[calc_id]
+            calc_id = datastore.get_calc_ids(datadir)[calc_id]
         except IndexError:
             print('Calculation %d not found' % calc_id)
             return
