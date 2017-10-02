@@ -175,7 +175,7 @@ class AssetCollection(object):
         :returns: list of tag indices corresponding to taxonomies
         """
         return [i for i, t in enumerate(self.tags())
-                if t.startswith('taxonomy-')]
+                if t.startswith('taxonomy=')]
 
     def __iter__(self):
         for i in range(len(self)):
