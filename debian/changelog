@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Added an utility `extract losses_by_asset/<rlz>/<loss_type>`
+  * Fixed a bug with logging configured a WARN level instead of INFO level
+    if rtree was missing (affecting only `oq run`)
   * Changed the ScenarioDamage demo to use two GSIMs
   * Added a node `<tagNames>` in the exposure
   * Added a web API to extract the attributes of a datastore object
