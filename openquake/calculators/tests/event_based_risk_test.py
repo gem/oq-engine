@@ -29,6 +29,7 @@ from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
     occupants, case_1g, case_7a)
@@ -128,6 +129,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/avg_losses.txt', fname)
         os.remove(fname)
+
+        # test extract
+        lba = extract(self.calc.datastore, 'losses_by_asset/rlz-0/structural')
+        self.assertEqual(lba.shape, (1,))  # there is a single asset
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
@@ -246,6 +251,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
         self.assertIn('build_curves_maps.sent', job_info)
         self.assertIn('build_curves_maps.received', job_info)
+
+        # test extract losses_by_asset
+        lba = extract(self.calc.datastore, 'losses_by_asset/rlz-1/contents')
+        self.assertEqual(lba.shape, (7,))  # there are seven assets
+
+        lba = extract(self.calc.datastore, 'losses_by_asset/mean/structural')
+        self.assertEqual(lba.shape, (7,))  # there are seven assets
 
         check_total_losses(self.calc)
 
