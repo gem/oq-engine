@@ -649,6 +649,7 @@ class RiskCalculator(HazardCalculator):
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
                 sids = numpy.array([sid for sid, _weight in block])
+                reduced_hazards = hazards[:, sids]
                 reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
@@ -659,8 +660,7 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.HazardGetter(
-                        kind, hazards[:, sids], imtls, eids),
+                    riskinput.HazardGetter(kind, reduced_hazards, imtls, eids),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
@@ -705,7 +705,7 @@ def get_gmv_data(sids, gmfs):
 
 def get_gmfs(calculator):
     """
-    :param calculator: a scenario_risk, scenario_damage or gmf_ebrisk calculator
+    :param calculator: a scenario_risk/damage or gmf_ebrisk calculator
     :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
     """
     dstore = calculator.datastore

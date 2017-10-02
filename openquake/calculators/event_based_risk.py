@@ -143,7 +143,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     result = dict(assratios=[],
                   lrs_idx=AccumDict(accum=[]),  # aid -> start_stop list
                   losses_by_tag=numpy.zeros((T, R, L * I), F32),
-                  aids=None)
+                  aids=getattr(riskinput, 'aids', None))
     if param['avg_losses']:
         result['avglosses'] = AccumDict(accum=numpy.zeros(A, F64))
     else:
@@ -363,6 +363,7 @@ class EbriskCalculator(base.RiskCalculator):
         oq = self.oqparam
         self.R = num_rlzs
         self.A = len(self.assetcol)
+        self.tagmask = self.assetcol.tagmask()  # shape (A, T)
         tags = encode(self.assetcol.tags())
         T = len(tags)
         self.datastore.create_dset('losses_by_tag-rlzs', F32,
@@ -440,22 +441,22 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend('all_loss_ratios/data', assratios)
                 self.alr_nbytes += assratios.nbytes
 
-        # saving losses by taxonomy is ultra-fast, so it is not monitored
+        # saving losses by tag is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_tag-rlzs']
         for r in range(losses_by_tag.shape[1]):
-            if aids is None:
+            if aids is None:  # event_based_risk
                 dset[:, r + offset, :] += losses_by_tag[:, r, :]
-            else:
-                dset[aids, r + offset, :] += losses_by_tag[:, r, :]
+            else:  # gmf_ebrisk, there is no offset
+                dset[:, r, :] += losses_by_tag[:, r, :]
 
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                if aids is None:
+                if aids is None:  # event_based_risk
                     self.dset[:, r + offset, li] += ratios * vs
-                else:
-                    self.dset[aids, r + offset, li] += ratios * vs
+                else:  # gmf_ebrisk, there is no offset
+                    self.dset[aids, r, li] += ratios * vs
         self.taskno += 1
 
     def post_execute(self, num_events):
