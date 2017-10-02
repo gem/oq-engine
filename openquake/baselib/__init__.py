@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import collections
 from openquake.baselib.python3compat import configparser
 from openquake.baselib.general import git_suffix
@@ -25,7 +26,11 @@ from openquake.baselib.general import git_suffix
 __version__ = '2.7.0'
 __version__ += git_suffix(__file__)
 
-PATHS = ['~/openquake.cfg', '/etc/openquake/openquake.cfg']
+venv = 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix')
+if venv:
+    PATHS = ['~/openquake.cfg']
+else:  # installation from packages, search also in /etc
+    PATHS = ['~/openquake.cfg', '/etc/openquake/openquake.cfg']
 cfg = os.environ.get('OQ_CONFIG_FILE_VAR')
 if cfg:  # has the precedence
     PATHS.insert(0, cfg)
