@@ -32,6 +32,12 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ***
 
+### 32bit supported
+
+The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Staring with version 2.3.0 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
+
+***
+
 ### Celery support
 
 Starting with OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
