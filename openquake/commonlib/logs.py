@@ -23,9 +23,7 @@ import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.baselib import zeromq
-
-from openquake.commonlib import config
+from openquake.baselib import zeromq, config
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -46,7 +44,8 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    sock = zeromq.Socket('tcp://%s:%s' % config.DBS_ADDRESS, zeromq.zmq.REQ)
+    sock = zeromq.Socket('tcp://%(host)s:%(port)s' % config.dbserver,
+                         zeromq.zmq.REQ)
     res, etype, _mon = sock.req(action, *args)
     if etype:
         raise etype(res)

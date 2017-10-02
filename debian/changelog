@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Added an utility `extract losses_by_asset/<rlz>/<loss_type>`
+  * Fixed several bugs in the gmf_ebrisk calculator, in particular in presence
+    of asset correlation
   * Fixed a bug with logging configured a WARN level instead of INFO level
     if rtree was missing (affecting only `oq run`)
   * Changed the ScenarioDamage demo to use two GSIMs
