@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
-from openquake.commonlib import config
+from openquake.baselib import config
 from openquake.calculators import base, event_based
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.baselib import parallel
@@ -589,8 +589,11 @@ class EbrPostCalculator(base.RiskCalculator):
                     'curves-stats', return_periods=builder.return_periods,
                     stats=[encode(name) for (name, func) in stats])
             mon = self.monitor('loss maps')
+            read_access = (bool(config.directory.shared_dir)
+                           if config.distribution.oq_distribute == 'celery'
+                           else True)
             lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
-                    in self.datastore.parent and config.READ_ACCESS)
+                    in self.datastore.parent and read_access)
             logging.info('Instantiating LossRatiosGetters')
             with self.monitor('building lrgetters', measuremem=True,
                               autoflush=True):
