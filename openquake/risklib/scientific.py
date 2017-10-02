@@ -1373,10 +1373,10 @@ class LossesByPeriodBuilder(object):
         """
         P, R = len(self.return_periods), len(self.weights)
         array = numpy.zeros((P, R), self.loss_dt)
-        for rlzstr in agg_loss_table:
-            r = int(rlzstr[4:])
+        dic = group_array(agg_loss_table, 'rlzi')
+        for r in dic:
             num_events = self.num_events[r]
-            losses = agg_loss_table[rlzstr]['loss']
+            losses = dic[r]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, lti].flatten()  # flatten only in ucerf
                 lbp = losses_by_period(
