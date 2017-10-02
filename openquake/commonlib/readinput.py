@@ -702,7 +702,7 @@ def get_exposure(oqparam):
                                 'specified in the exposure' % tagname)
                     valid.nice_string(tagvalue)
                     assets_by_tag['%s=%s' % (tagname, tagvalue)].append(idx)
-            exposure.assets_by_tag['taxonomy-' + taxonomy].append(idx)
+            exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
