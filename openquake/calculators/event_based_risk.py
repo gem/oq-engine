@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
-from openquake.commonlib import util
+from openquake.baselib import config
 from openquake.calculators import base, event_based
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.baselib import parallel
@@ -41,21 +41,23 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
+def _aggregate(outputs, compositemodel, tagmask, agg, all_eids, result, param):
     # update the result dictionary and the agg array with each output
+    E = len(all_eids)
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
     losses_by_tag = result['losses_by_tag']
     ass = result['assratios']
+    idx = dict(zip(all_eids, range(E)))
     for outs in outputs:
         r = outs.r
-        aggr = agg[r]  # array of zeros of shape (E, L * I)
         for l, out in enumerate(outs):
             if out is None:  # for GMFs below the minimum_intensity
                 continue
             loss_ratios, eids = out
             loss_type = compositemodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in eids])
+
             for aid, asset in enumerate(outs.assets):
                 ratios = loss_ratios[aid]
                 aid = asset.ordinal
@@ -69,9 +71,11 @@ def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
 
                 # agglosses
                 for i in range(I):
-                    aggr[indices, l + L * i] += losses[:, i]
+                    # this is the critical loop: it is import to keep it
+                    # vectorized in terms of the event indices
+                    agg[indices, r, l + L * i] += losses[:, i]
 
-                # losses by taxonomy
+                # losses by tag
                 for i in range(I):
                     tot = losses[:, i].sum()
                     losses_by_tag[tagmask[aid], r, l + L * i] += tot
@@ -82,6 +86,12 @@ def _aggregate(outputs, compositemodel, tagmask, agg, idx, result, param):
                         for eid, ratio in zip(eids, ratios[:, i]):
                             if ratio > 0:
                                 ass.append((aid, r, eid, li, ratio))
+
+    # store agglosses
+    it = ((eid, r, losses)
+          for eid, all_losses in zip(all_eids, agg)
+          for r, losses in enumerate(all_losses) if losses.sum())
+    result['agglosses'] = numpy.fromiter(it, param['elt_dt'])
 
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
@@ -121,31 +131,25 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     """
     riskinput.hazard_getter.init()
     assetcol = param['assetcol']
-    I = param['insured_losses'] + 1
     eids = riskinput.hazard_getter.eids
     E = len(eids)
+    I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     tagmask = assetcol.tagmask()
     A, T = tagmask.shape
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
-    idx = dict(zip(eids, range(E)))
-    agg = AccumDict(accum=numpy.zeros((E, L * I), F32))  # r -> array
-    result = dict(agglosses=AccumDict(), assratios=[],
+    agg = numpy.zeros((E, R, L * I), F32)
+    result = dict(assratios=[],
                   lrs_idx=AccumDict(accum=[]),  # aid -> start_stop list
                   losses_by_tag=numpy.zeros((T, R, L * I), F32),
-                  aids=None)
+                  aids=getattr(riskinput, 'aids', None))
     if param['avg_losses']:
         result['avglosses'] = AccumDict(accum=numpy.zeros(A, F64))
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, tagmask, agg, idx, result, param)
-    for r in sorted(agg):
-        records = [(eids[i], loss) for i, loss in enumerate(agg[r])
-                   if loss.sum() > 0]
-        if records:
-            result['agglosses'][r] = numpy.array(records, param['elt_dt'])
+    _aggregate(outputs, riskmodel, tagmask, agg, eids, result, param)
 
     # store info about the GMFs
     result['gmdata'] = riskinput.gmdata
@@ -291,7 +295,7 @@ class EbriskCalculator(base.RiskCalculator):
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
         elt_dt = numpy.dtype(
-            [('eid', U64), ('loss', (F32, (self.L * self.I,)))])
+            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         csm_info = self.datastore['csm_info']
         mon = self.monitor('risk')
         for sm in csm_info.source_models:
@@ -359,7 +363,8 @@ class EbriskCalculator(base.RiskCalculator):
         oq = self.oqparam
         self.R = num_rlzs
         self.A = len(self.assetcol)
-        tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+        self.tagmask = self.assetcol.tagmask()  # shape (A, T)
+        tags = encode(self.assetcol.tags())
         T = len(tags)
         self.datastore.create_dset('losses_by_tag-rlzs', F32,
                                    (T, self.R, self.L * self.I))
@@ -420,9 +425,8 @@ class EbriskCalculator(base.RiskCalculator):
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
         with self.monitor('saving event loss table', autoflush=True):
-            for r in agglosses:
-                key = 'agg_loss_table/rlz-%03d' % (r + offset)
-                self.datastore.extend(key, agglosses[r])
+            agglosses['rlzi'] += offset
+            self.datastore.extend('agg_loss_table', agglosses)
 
         if self.oqparam.asset_loss_table:
             with self.monitor('saving loss ratios', autoflush=True):
@@ -437,22 +441,22 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend('all_loss_ratios/data', assratios)
                 self.alr_nbytes += assratios.nbytes
 
-        # saving losses by taxonomy is ultra-fast, so it is not monitored
+        # saving losses by tag is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_tag-rlzs']
         for r in range(losses_by_tag.shape[1]):
-            if aids is None:
+            if aids is None:  # event_based_risk
                 dset[:, r + offset, :] += losses_by_tag[:, r, :]
-            else:
-                dset[aids, r + offset, :] += losses_by_tag[:, r, :]
+            else:  # gmf_ebrisk, there is no offset
+                dset[:, r, :] += losses_by_tag[:, r, :]
 
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                if aids is None:
+                if aids is None:  # event_based_risk
                     self.dset[:, r + offset, li] += ratios * vs
-                else:
-                    self.dset[aids, r + offset, li] += ratios * vs
+                else:  # gmf_ebrisk, there is no offset
+                    self.dset[aids, r, li] += ratios * vs
         self.taskno += 1
 
     def post_execute(self, num_events):
@@ -470,13 +474,10 @@ class EbriskCalculator(base.RiskCalculator):
                 'No losses were generated: most likely there is an error in y'
                 'our input files or the GMFs were below the minimum intensity')
         else:
-            for rlzname in self.datastore['agg_loss_table']:
-                self.datastore.set_nbytes('agg_loss_table/' + rlzname)
             self.datastore.set_nbytes('agg_loss_table')
             E = sum(num_events.values())
             agglt = self.datastore['agg_loss_table']
-            for rlz, dset in agglt.items():
-                dset.attrs['nonzero_fraction'] = len(dset) / E
+            agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
         # build aggregate loss curves
         self.before_export()  # set 'realizations'
@@ -486,13 +487,14 @@ class EbriskCalculator(base.RiskCalculator):
         stats = oq.risk_stats()
         array, array_stats = b.build(alt, stats)
         self.datastore['agg_curves-rlzs'] = array
+        units = self.assetcol.units(loss_types=array.dtype.names)
         self.datastore.set_attrs(
-            'agg_curves-rlzs', return_periods=b.return_periods)
+            'agg_curves-rlzs', return_periods=b.return_periods, units=units)
         if array_stats is not None:
             self.datastore['agg_curves-stats'] = array_stats
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods,
-                stats=[encode(name) for (name, func) in stats])
+                stats=[encode(name) for (name, func) in stats], units=units)
 
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
@@ -512,7 +514,6 @@ class EbriskCalculator(base.RiskCalculator):
 
 # ######################### EbrPostCalculator ############################## #
 
-@util.reader
 def build_curves_maps(avalues, builder, lrgetter, stats, clp, monitor):
     """
     Build loss curves and optionally maps if conditional_loss_poes are set.
@@ -589,8 +590,11 @@ class EbrPostCalculator(base.RiskCalculator):
                     'curves-stats', return_periods=builder.return_periods,
                     stats=[encode(name) for (name, func) in stats])
             mon = self.monitor('loss maps')
+            read_access = (bool(config.directory.shared_dir)
+                           if config.distribution.oq_distribute == 'celery'
+                           else True)
             lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
-                    in self.datastore.parent)
+                    in self.datastore.parent and read_access)
             logging.info('Instantiating LossRatiosGetters')
             with self.monitor('building lrgetters', measuremem=True,
                               autoflush=True):
