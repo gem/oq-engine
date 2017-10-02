@@ -58,11 +58,12 @@ def show(what, calc_id=-1):
     """
     Show the content of a datastore (by default the last one).
     """
+    datadir = datastore.get_datadir()
     if what == 'all':  # show all
-        if not os.path.exists(datastore.DATADIR):
+        if not os.path.exists(datadir):
             return
         rows = []
-        for calc_id in datastore.get_calc_ids(datastore.DATADIR):
+        for calc_id in datastore.get_calc_ids(datadir):
             try:
                 ds = datastore.read(calc_id)
                 oq = ds['oqparam']
@@ -70,7 +71,7 @@ def show(what, calc_id=-1):
             except:
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
-                f = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
+                f = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
                 logging.warn('Unreadable datastore %s', f)
                 continue
             else:
