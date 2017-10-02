@@ -77,5 +77,4 @@ config.read = read
 
 d = os.path.dirname
 config.read(os.path.join(d(d(__file__)), 'engine', 'openquake.cfg'),
-            soft_mem_limit=int,
-            hard_mem_limit=int)
+            soft_mem_limit=int, hard_mem_limit=int, port=int)
