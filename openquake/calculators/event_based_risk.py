@@ -456,7 +456,7 @@ class EbriskCalculator(base.RiskCalculator):
                 if aids is None:  # event_based_risk
                     self.dset[:, r + offset, li] += ratios * vs
                 else:  # gmf_ebrisk, there is no offset
-                    self.dset[aids, offset, li] += ratios * vs
+                    self.dset[aids, r, li] += ratios * vs
         self.taskno += 1
 
     def post_execute(self, num_events):
