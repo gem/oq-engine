@@ -185,6 +185,7 @@ def extract_losses_by_asset(dstore, what):
     Extracts losses_by_asset given a `what` string like
     "rlz-0/structural", "rlz-1/contents_ins", "mean/structural" etc
     """
+    # extracting the quantiles is not implemented yet
     rlz_or_stat, lt = what.split('/')
     r = int(rlz_or_stat[4:]) if rlz_or_stat.startswith('rlz-') else None
     lti = dstore['oqparam'].lti
