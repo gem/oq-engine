@@ -44,7 +44,7 @@ config = DotDict()  # global configuration
 
 def _read(*paths, **validators):
     # load the configuration file by looking at the given paths
-    paths = paths + PATHS
+    paths = list(paths) + PATHS
     parser = configparser.SafeConfigParser()
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
     if not found:
