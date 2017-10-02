@@ -32,7 +32,7 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ***
 
-### 32bit supported
+### 32bit support
 
 The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Staring with version 2.3.0 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
 
