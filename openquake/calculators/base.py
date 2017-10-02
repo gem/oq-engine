@@ -25,10 +25,6 @@ import operator
 import itertools
 import traceback
 import collections
-try:  # with Python 3
-    from urllib.parse import unquote_plus
-except ImportError:  # with Python 2
-    from urllib import unquote_plus
 import numpy
 
 from openquake.baselib import general, hdf5, __version__ as engine_version
@@ -141,10 +137,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     @property
     def taxonomies(self):
-        L = len('taxonomy-')
-        return [unquote_plus(key[L:])
-                for key in self.datastore['assetcol/aids_by_tag']
-                if key.startswith('taxonomy-')]
+        L = len('taxonomy=')
+        return [key[L:]
+                for key in self.datastore['assetcol/aids_by_tag']['tag']
+                if key.startswith('taxonomy=')]
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
