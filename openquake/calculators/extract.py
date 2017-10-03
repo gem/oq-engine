@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import logging
-import re
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -61,13 +60,13 @@ class Extract(collections.OrderedDict):
             return func
         return decorator
 
-    def __call__(self, dstore, key):
+    def __call__(self, dstore, key, *extra):
         try:
             k, v = key.split('/', 1)
         except ValueError:   # no slashes
             k, v = key, ''
         if k in self:
-            return self[k](dstore, v)
+            return self[k](dstore, v, *extra)
         else:
             return extract_(dstore, key)
 
@@ -179,21 +178,27 @@ def extract_hazard(dstore, what):
             yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
 
 
-@extract.add('losses_by_asset')
-def extract_losses_by_asset(dstore, what):
+@extract.add('agglosses')
+def extract_agglosses(dstore, loss_type, *tags):
     """
-    Extracts losses_by_asset given a `what` string like
-    "rlz-0/structural", "rlz-1/contents_ins", "mean/structural" etc
+    Aggregate losses of the given loss type and tags
     """
-    # extracting the quantiles is not implemented yet
-    rlz_or_stat, lt = what.split('/')
-    r = int(rlz_or_stat[4:]) if rlz_or_stat.startswith('rlz-') else None
-    lti = dstore['oqparam'].lti
+    if not loss_type:
+        raise ValueError('loss_type not passed in agglosses/<loss_type>')
+    l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
-        return dstore['losses_by_asset'][:, r, lti[lt]]['mean']
+        losses = dstore['losses_by_asset'][:, :, l]['mean']
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk
-        if r is None:
-            assert rlz_or_stat == 'mean', rlz_or_stat
-            return dstore['avg_losses-rlzs'][:, :, lti[lt]].mean(axis=1)
-        else:
-            return dstore['avg_losses-rlzs'][:, r, lti[lt]]
+        losses = dstore['avg_losses-rlzs'][:, :, l]
+    else:
+        raise KeyError('No losses found in %s' % dstore)
+    if not tags:
+        return losses.sum(axis=0)
+
+    assetcol = dstore['assetcol']
+    idxs = set(range(len(assetcol)))
+    # find the indices common to all tags
+    for tag in tags:
+        idxs &= set(assetcol.aids_by_tag[tag])
+    # numpy.array wants lists, not sets, hence the sorted below
+    return losses[numpy.array(sorted(idxs))].sum(axis=0)
