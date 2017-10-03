@@ -25,7 +25,7 @@ import logging
 import threading
 import subprocess
 
-from openquake.baselib import config, sap, zeromq as z
+from openquake.baselib import config, sap, zeromq as z, workerpool as w
 from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
 from openquake.server.db import actions
@@ -51,7 +51,8 @@ class DbServer(object):
         self.num_workers = num_workers
         self.pid = os.getpid()
 
-    def worker(self, sock):
+    def dworker(self, sock):
+        # a database worker responding to commands
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
             if cmd == 'getpid':
@@ -65,20 +66,27 @@ class DbServer(object):
                 sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
-        # start workers
-        workers = []
+        # start database worker threads
+        dworkers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
-            threading.Thread(target=self.worker, args=(sock,)).start()
-            workers.append(sock)
+            threading.Thread(target=self.dworker, args=(sock,)).start()
+            dworkers.append(sock)
         logging.warn('DB server started with %s on %s, pid=%d',
                      sys.executable, self.frontend, self.pid)
-        # start frontend->backend proxy
+
+        # start task_in->task_out streamer thread
+        c = config.zworkers
+        threading.Thread(
+            target=w.streamer, args=(c.task_in_url, c.task_out_url)
+        ).start()
+
+        # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
                         z.bind(self.backend, z.zmq.DEALER))
         except (KeyboardInterrupt, z.zmq.ZMQError):
-            for sock in workers:
+            for sock in dworkers:
                 sock.running = False
             logging.warn('DB server stopped')
 
