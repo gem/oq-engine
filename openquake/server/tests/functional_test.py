@@ -157,17 +157,23 @@ class EngineServerTestCase(unittest.TestCase):
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
 
+        extract_url = 'http://%s/v1/calc/%s/extract/' % (self.hostport, job_id)
+
         # check extract/composite_risk_model.attrs
-        url = 'http://%s/v1/calc/%s/extract/composite_risk_model.attrs' % (
-            self.hostport, job_id)
+        url = extract_url + 'composite_risk_model.attrs'
         self.assertEqual(requests.get(url).status_code, 200)
 
         # check asset_values
-        url = 'http://%s/v1/calc/%s/extract/asset_values/0' % (
-            self.hostport, job_id)
-        resp = requests.get(url)
+        resp = requests.get(extract_url + 'asset_values/0')
         got = numpy.load(io.BytesIO(resp.content))  # load npz file
         self.assertEqual(len(got['array']), 0)  # there are 0 assets on site 0
+        self.assertEqual(resp.status_code, 200)
+
+        # check avg_losses-rlzs
+        resp = requests.get(
+            extract_url + 'agglosses/structural?taxonomy=W-SLFB-1')
+        got = numpy.load(io.BytesIO(resp.content))  # load npz file
+        self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
         self.assertEqual(resp.status_code, 200)
 
         # there is some logic in `core.export_from_db` that it is only
