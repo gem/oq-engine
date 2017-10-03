@@ -80,6 +80,8 @@ class DbServer(object):
         threading.Thread(
             target=w.streamer, args=(c.task_in_url, c.task_out_url)
         ).start()
+        logging.warn('Task streamer started from %s -> %s',
+                     c.task_in_url, c.task_out_url)
 
         # start frontend->backend proxy for the database workers
         try:
