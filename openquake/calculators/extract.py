@@ -181,7 +181,9 @@ def extract_hazard(dstore, what):
 @extract.add('agglosses')
 def extract_agglosses(dstore, loss_type, *tags):
     """
-    Aggregate losses of the given loss type and tags
+    Aggregate losses of the given loss type and tags.
+
+    :returns: array of shape (R,), being R the number of realizations
     """
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
@@ -192,6 +194,33 @@ def extract_agglosses(dstore, loss_type, *tags):
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)
+    if not tags:
+        return losses.sum(axis=0)
+
+    assetcol = dstore['assetcol']
+    idxs = set(range(len(assetcol)))
+    # find the indices common to all tags
+    for tag in tags:
+        idxs &= set(assetcol.aids_by_tag[tag])
+    # numpy.array wants lists, not sets, hence the sorted below
+    return losses[numpy.array(sorted(idxs))].sum(axis=0)
+
+
+@extract.add('aggdamages')
+def extract_aggdamages(dstore, loss_type, *tags):
+    """
+    Aggregate damages of the given loss type and tags.
+
+    :returns:
+        array of shape (R, D), being R the number of realizations and
+        D the number of damage states
+    """
+    if not loss_type:
+        raise ValueError('loss_type not passed in aggdamages/<loss_type>')
+    if 'dmg_by_asset' in dstore:  # scenario_damage
+        losses = dstore['dmg_by_asset'][loss_type]['mean']
+    else:
+        raise KeyError('No damages found in %s' % dstore)
     if not tags:
         return losses.sum(axis=0)
 
