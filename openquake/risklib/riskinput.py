@@ -45,7 +45,7 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
 
 by_taxonomy = operator.attrgetter('taxonomy')
 
-aids_by_tag_dt = numpy.dtype([('tag', hdf5.vstr), ('aids', hdf5.vuint32)])
+aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 
 
 class Output(object):
@@ -215,9 +215,13 @@ class AssetCollection(object):
                  'tot_sites': self.tot_sites,
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
-        aids_by_tag = numpy.array(sorted(self.aids_by_tag.items()),
-                                  aids_by_tag_dt)
-        return dict(array=self.array, aids_by_tag=aids_by_tag,
+        tags, all_aids = [], []
+        for tag, aids in sorted(self.aids_by_tag.items()):
+            tags.append(encode(tag))
+            all_aids.append((aids,))
+        return dict(array=self.array,
+                    tags=numpy.array(tags, hdf5.vstr),
+                    aids=numpy.array(all_aids, aids_dt),
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
@@ -229,8 +233,7 @@ class AssetCollection(object):
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.cc = dic['cost_calculator']
-        self.aids_by_tag = {rec['tag']: rec['aids']
-                            for rec in dic['aids_by_tag']}
+        self.aids_by_tag = dict(zip(dic['tags'], dic['aids']['aids']))
 
     @staticmethod
     def build_asset_collection(assets_by_site, time_event=None):
