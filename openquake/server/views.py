@@ -596,7 +596,8 @@ def extract(request, calc_id, what, attrs):
         if attrs:  # extract the attributes only
             array, attrs = None, ds.get_attrs(what)
         else:  # extract the full HDF5 object
-            obj = _extract(ds, what)
+            extra = ['%s=%s' % item for item in request.GET.items()]
+            obj = _extract(ds, what, *extra)
             if inspect.isgenerator(obj):
                 array, attrs = None, {k: _array(v) for k, v in obj}
             elif hasattr(obj, '__toh5__'):
