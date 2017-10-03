@@ -138,9 +138,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     @property
     def taxonomies(self):
         L = len('taxonomy=')
-        return [key[L:]
-                for key in self.datastore['assetcol/aids_by_tag']['tag']
-                if key.startswith('taxonomy=')]
+        return [tag[L:]
+                for tag in self.datastore['assetcol/tags']
+                if tag.startswith('taxonomy=')]
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
