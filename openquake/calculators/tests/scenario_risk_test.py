@@ -81,6 +81,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
+        # test agglosses
+        tot = extract(self.calc.datastore, 'agglosses/occupants')
+        numpy.testing.assert_almost_equal(tot, 0.01355099)
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')

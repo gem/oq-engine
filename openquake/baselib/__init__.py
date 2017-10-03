@@ -74,3 +74,20 @@ def read(*paths, **validators):
         for k, v in sec.items():
             sec[k] = validators.get(k, lambda x: x)(v)
 config.read = read
+
+
+def boolean(flag):
+    """
+    Convert string in boolean
+    """
+    s = flag.lower()
+    if s in ('1', 'yes', 'true'):
+        return True
+    elif s in ('0', 'no', 'false'):
+        return False
+    raise ValueError('Unknown flag %r' % s)
+
+d = os.path.dirname
+config.read(os.path.join(d(d(__file__)), 'engine', 'openquake.cfg'),
+            soft_mem_limit=int, hard_mem_limit=int, port=int,
+            multi_user=boolean)
