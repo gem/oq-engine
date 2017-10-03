@@ -76,10 +76,14 @@ def read(*paths, **validators):
 config.read = read
 
 
-def boolean(s):
-    if s in ('1', 'true'):
+def boolean(flag):
+    """
+    Convert string in boolean
+    """
+    s = flag.lower()
+    if s in ('1', 'yes', 'true'):
         return True
-    elif s in ('0', 'false'):
+    elif s in ('0', 'no', 'false'):
         return False
     raise ValueError('Unknown flag %r' % s)
 
