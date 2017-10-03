@@ -49,7 +49,7 @@ jobs:
             chmod 600 .deploy_rsa &&
             eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
-            oq workers stop
+            oq workers stop &&
             bin/oq reset --yes;
           fi
 
