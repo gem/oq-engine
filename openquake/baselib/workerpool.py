@@ -137,7 +137,7 @@ class WorkerPool(object):
                 s.send(p.safely_call(cmd, args))
 
     def start(self):
-        p.setproctitle('oq workerpool')
+        p.setproctitle('oq workerpool %s' % self.ctrl_url[6:])  # strip tcp://
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
