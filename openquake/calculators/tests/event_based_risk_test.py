@@ -130,10 +130,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_losses.txt', fname)
         os.remove(fname)
 
-        # test extract
-        lba = extract(self.calc.datastore, 'losses_by_asset/rlz-0/structural')
-        self.assertEqual(lba.shape, (1,))  # there is a single asset
-
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
@@ -251,13 +247,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
         self.assertIn('build_curves_maps.sent', job_info)
         self.assertIn('build_curves_maps.received', job_info)
-
-        # test extract losses_by_asset
-        lba = extract(self.calc.datastore, 'losses_by_asset/rlz-1/contents')
-        self.assertEqual(lba.shape, (7,))  # there are seven assets
-
-        lba = extract(self.calc.datastore, 'losses_by_asset/mean/structural')
-        self.assertEqual(lba.shape, (7,))  # there are seven assets
 
         check_total_losses(self.calc)
 
