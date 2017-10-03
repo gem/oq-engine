@@ -26,7 +26,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.general import AccumDict, DictArray
+from openquake.baselib.general import DictArray
 from openquake.commonlib import calc
 
 
@@ -60,13 +60,13 @@ class Extract(collections.OrderedDict):
             return func
         return decorator
 
-    def __call__(self, dstore, key):
+    def __call__(self, dstore, key, *extra):
         try:
             k, v = key.split('/', 1)
         except ValueError:   # no slashes
             k, v = key, ''
         if k in self:
-            return self[k](dstore, v)
+            return self[k](dstore, v, *extra)
         else:
             return extract_(dstore, key)
 
@@ -176,3 +176,29 @@ def extract_hazard(dstore, what):
         if oq.poes and oq.hazard_maps:
             hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
             yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
+
+
+@extract.add('agglosses')
+def extract_agglosses(dstore, loss_type, *tags):
+    """
+    Aggregate losses of the given loss type and tags
+    """
+    if not loss_type:
+        raise ValueError('loss_type not passed in agglosses/<loss_type>')
+    l = dstore['oqparam'].lti[loss_type]
+    if 'losses_by_asset' in dstore:  # scenario_risk
+        losses = dstore['losses_by_asset'][:, :, l]['mean']
+    elif 'avg_losses-rlzs' in dstore:  # event_based_risk
+        losses = dstore['avg_losses-rlzs'][:, :, l]
+    else:
+        raise KeyError('No losses found in %s' % dstore)
+    if not tags:
+        return losses.sum(axis=0)
+
+    assetcol = dstore['assetcol']
+    idxs = set(range(len(assetcol)))
+    # find the indices common to all tags
+    for tag in tags:
+        idxs &= set(assetcol.aids_by_tag[tag])
+    # numpy.array wants lists, not sets, hence the sorted below
+    return losses[numpy.array(sorted(idxs))].sum(axis=0)

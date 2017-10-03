@@ -159,7 +159,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, config
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
@@ -199,12 +199,14 @@ def oq_distribute(task=None):
 
 
 def check_mem_usage(monitor=Monitor(),
-                    soft_percent=90, hard_percent=100):
+                    soft_percent=None, hard_percent=None):
     """
     Display a warning if we are running out of memory
 
     :param int mem_percent: the memory limit as a percentage
     """
+    soft_percent = soft_percent or config.memory.soft_mem_limit
+    hard_percent = hard_percent or config.memory.hard_mem_limit
     used_mem_percent = virtual_memory().percent
     if used_mem_percent > hard_percent:
         raise MemoryError('Using more memory than allowed by configuration '
