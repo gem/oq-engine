@@ -178,6 +178,19 @@ def extract_hazard(dstore, what):
             yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
 
 
+def filter_agg(dstore, losses, tags):
+    # filter the losses with the tags and returns the aggregate
+    if not tags:
+        return losses.sum(axis=0)
+    assetcol = dstore['assetcol']
+    idxs = set(range(len(assetcol)))
+    # find the indices common to all tags
+    for tag in tags:
+        idxs &= set(assetcol.aids_by_tag[tag])
+    # numpy.array wants lists, not sets, hence the sorted below
+    return losses[numpy.array(sorted(idxs))].sum(axis=0)
+
+
 @extract.add('agglosses')
 def extract_agglosses(dstore, loss_type, *tags):
     """
@@ -194,16 +207,7 @@ def extract_agglosses(dstore, loss_type, *tags):
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)
-    if not tags:
-        return losses.sum(axis=0)
-
-    assetcol = dstore['assetcol']
-    idxs = set(range(len(assetcol)))
-    # find the indices common to all tags
-    for tag in tags:
-        idxs &= set(assetcol.aids_by_tag[tag])
-    # numpy.array wants lists, not sets, hence the sorted below
-    return losses[numpy.array(sorted(idxs))].sum(axis=0)
+    return filter_agg(dstore, losses, tags)
 
 
 @extract.add('aggdamages')
@@ -219,13 +223,4 @@ def extract_aggdamages(dstore, loss_type_rlz, *tags):
         losses = dstore['dmg_by_asset'][:, r][loss_type]['mean']
     else:
         raise KeyError('No damages found in %s' % dstore)
-    if not tags:
-        return losses.sum(axis=0)
-
-    assetcol = dstore['assetcol']
-    idxs = set(range(len(assetcol)))
-    # find the indices common to all tags
-    for tag in tags:
-        idxs &= set(assetcol.aids_by_tag[tag])
-    # numpy.array wants lists, not sets, hence the sorted below
-    return losses[numpy.array(sorted(idxs))].sum(axis=0)
+    return filter_agg(dstore, losses, tags)
