@@ -19,9 +19,9 @@
 import os
 import getpass
 
-from openquake.commonlib import config
+from openquake.baselib import config
 
-DB_SECTION = config.get_section('dbserver')
+DB_SECTION = config.dbserver
 
 INSTALLED_APPS = ('openquake.server.db',)
 

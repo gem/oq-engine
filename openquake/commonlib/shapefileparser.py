@@ -916,13 +916,18 @@ class SourceModelParser(object):
                                         mfd_spacing,
                                         10.0)
             converter.fname = nrml_file
-        src_nodes = nrml.read(nrml_file).sourceModel
+        root = nrml.read(nrml_file)
+        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+            sg_nodes = [root.sourceModel.nodes]
+        else:  # NRML 0.5
+            sg_nodes = root.sourceModel.nodes
         sources = []
-        for no, src_node in enumerate(src_nodes, 1):
-            if validate:
-                print("Validating Source %s" % src_node.attrib["id"])
-                converter.convert_node(src_node)
-            sources.append(src_node)
+        for sg_node in sg_nodes:
+            for no, src_node in enumerate(sg_node, 1):
+                if validate:
+                    print("Validating Source %s" % src_node.attrib["id"])
+                    converter.convert_node(src_node)
+                sources.append(src_node)
         return SourceModel(sources)
 
     def write(self, destination, source_model, name=None):
