@@ -131,6 +131,10 @@ class Socket(object):
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj(noblock)
 
+    def __repr__(self):
+        st = SOCKTYPE[self.socket_type]
+        return '<%s %s %s>' % (self.__class__.__name__, st, self.mode)
+
 
 if __name__ == '__main__':
     print('started echo server, pid=%d' % os.getpid())
