@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added an utility `extract losses_by_asset/<rlz>/<loss_type>`
+  * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1`
   * Fixed several bugs in the gmf_ebrisk calculator, in particular in presence
     of asset correlation
   * Fixed a bug with logging configured a WARN level instead of INFO level

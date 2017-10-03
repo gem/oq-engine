@@ -31,4 +31,4 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini', exports='csv')
         totloss = self.calc.datastore['agg_loss_table']['loss'].sum()
-        self.assertAlmostEqual(totloss, 1.0323775)
+        self.assertAlmostEqual(totloss, 1.0323775, places=6)
