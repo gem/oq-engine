@@ -9,7 +9,7 @@ openquake.commonlib.calc module
     :undoc-members:
     :show-inheritance:
    
-openquake.commonlib.config module
+openquake.baselib.config module
 ---------------------------------
 
 .. automodule:: openquake.commonlib.config
@@ -17,10 +17,10 @@ openquake.commonlib.config module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.datastore module
+openquake.baselib.datastore module
 ------------------------------------
 
-.. automodule:: openquake.commonlib.datastore
+.. automodule:: openquake.baselib.datastore
     :members:
     :undoc-members:
     :show-inheritance:
