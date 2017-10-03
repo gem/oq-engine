@@ -8,22 +8,6 @@ openquake.commonlib.calc module
     :members:
     :undoc-members:
     :show-inheritance:
-   
-openquake.baselib.config module
----------------------------------
-
-.. automodule:: openquake.commonlib.config
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.baselib.datastore module
-------------------------------------
-
-.. automodule:: openquake.baselib.datastore
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 openquake.commonlib.hazard_writers module
 -----------------------------------------
