@@ -233,6 +233,7 @@ class AssetCollection(object):
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.cc = dic['cost_calculator']
+        # dic['aids'] is an array of dtype `aids_dt` with field 'aids'
         self.aids_by_tag = dict(zip(dic['tags'], dic['aids']['aids']))
 
     @staticmethod
