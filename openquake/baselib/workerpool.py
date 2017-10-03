@@ -90,6 +90,7 @@ class WorkerMaster(object):
         """
         Send a "stop" command to all worker pools
         """
+        stopped = []
         for host, _ in self.host_cores:
             if self.status(host)[0][1] == 'not-running':
                 print('%s not running' % host)
@@ -97,12 +98,14 @@ class WorkerMaster(object):
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('stop'))
-        return 'stopped'
+                stopped.append(host)
+        return 'stopped %s' % stopped
 
     def kill(self):
         """
         Send a "kill" command to all worker pools
         """
+        killed = []
         for host, _ in self.host_cores:
             if self.status(host)[0][1] == 'not-running':
                 print('%s not running' % host)
@@ -110,7 +113,8 @@ class WorkerMaster(object):
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('kill'))
-        return 'killed'
+                killed.append(host)
+        return 'killed %s' % killed
 
 
 class WorkerPool(object):
