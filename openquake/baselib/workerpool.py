@@ -2,6 +2,7 @@ import os
 import sys
 import signal
 import socket
+import logging
 import subprocess
 import multiprocessing
 from openquake.baselib import zeromq as z, parallel as p
@@ -20,6 +21,8 @@ def _starmap(func, iterargs, task_in_url, receiver_url):
     # called by parallel.Starmap; should not be used directly
     with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver, \
             z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
+        logging.info('receiver_url for %s=%s',
+                     func.__name__, receiver.true_end_point)
         n = 0
         for args in iterargs:
             # args[-1] is a Monitor instance
@@ -28,8 +31,9 @@ def _starmap(func, iterargs, task_in_url, receiver_url):
             n += 1
         yield n
         for _ in range(n):
+            obj = receiver.zsocket.recv_pyobj()
             # receive n responses for the n requests sent
-            yield receiver.zsocket.recv_pyobj()
+            yield obj
 
 
 class WorkerMaster(object):
@@ -40,13 +44,14 @@ class WorkerMaster(object):
     :param host_cores: names of the remote hosts and number of cores
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, task_in_url, task_out_url,
-                 ctrl_port, host_cores, remote_python=None):
+    def __init__(self, task_in_url, task_out_url, ctrl_port,
+                 host_cores, remote_python=None, receiver_url=None):
         self.task_in_url = task_in_url
         self.task_out_url = task_out_url
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
         self.remote_python = remote_python or sys.executable
+        # receiver_url is not used
 
     def status(self, host=None):
         """
@@ -116,6 +121,14 @@ class WorkerMaster(object):
                 killed.append(host)
         return 'killed %s' % killed
 
+    def restart(self):
+        """
+        Stop and start again
+        """
+        self.stop()
+        self.start()
+        return 'restarted'
+
 
 class WorkerPool(object):
     """
@@ -160,6 +173,8 @@ class WorkerPool(object):
                 break
             elif cmd == 'getpid':
                 ctrlsock.send(self.pid)
+            elif cmd == 'getcores':
+                ctrlsock.send(len(self.workers))
 
     def stop(self):
         for sock in self.workers:

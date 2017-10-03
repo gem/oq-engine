@@ -25,7 +25,7 @@ import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.baselib import parallel, config
+from openquake.baselib import config, parallel, workerpool, zeromq as z
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import datastore, readinput
 from openquake.calculators import base, views, export
@@ -35,13 +35,33 @@ TERMINATE = config.distribution.terminate_workers_on_revoke
 
 USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
-if USE_CELERY:
+if parallel.oq_distribute() == 'zmq':
+
+    def set_concurrent_tasks_default():
+        """
+        Set the default for concurrent_tasks based on the available
+        worker pools .
+        """
+        master = workerpool.WorkerMaster(**config.zworkers)
+        for host, status in master.status():
+            if status == 'not-running':
+                sys.exit('%s is not running' % host)
+        num_cores = 0
+        w = config.zworkers
+        for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
+            with z.Socket('tcp://%s:%s' % (host, w.ctrl_port), z.zmq.REQ,
+                          'connect') as sock:
+                num_cores += sock.send('getcores')
+        OqParam.concurrent_tasks.default = num_cores * 5
+        logs.LOG.info('Using %d zmq workers', num_cores)
+
+elif USE_CELERY:
     import celery.task.control
 
     def set_concurrent_tasks_default():
         """
-        Set the default for concurrent_tasks.
-        Returns the number of live celery nodes (i.e. the number of machines).
+        Set the default for concurrent_tasks based on the number of available
+        celery workers.
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
@@ -200,7 +220,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     """
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if USE_CELERY and os.environ.get('OQ_DISTRIBUTE') == 'celery':
+        if os.environ.get('OQ_DISTRIBUTE') in ('zmq', 'celery'):
             set_concurrent_tasks_default()
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         monitor.hdf5path = calc.datastore.hdf5path

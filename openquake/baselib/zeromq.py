@@ -133,7 +133,9 @@ class Socket(object):
 
     def __repr__(self):
         st = SOCKTYPE[self.socket_type]
-        return '<%s %s %s>' % (self.__class__.__name__, st, self.mode)
+        end_point = getattr(self, 'true_end_point', self.end_point)
+        return '<%s %s %s %s>' % (self.__class__.__name__, end_point,
+                                  st, self.mode)
 
 
 if __name__ == '__main__':
