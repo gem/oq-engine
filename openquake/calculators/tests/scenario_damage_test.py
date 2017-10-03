@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import numpy
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib import InvalidFile
@@ -25,6 +26,7 @@ from openquake.qa_tests_data.scenario_damage import (
     case_6, case_7)
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
+from openquake.calculators.extract import extract
 from openquake.calculators.export import export
 from openquake.calculators.views import view
 
@@ -119,3 +121,9 @@ RM       4,000
         # just run the npz export
         [npz] = export(('dmg_by_asset', 'npz'), self.calc.datastore)
         self.assertEqual(strip_calc_id(npz), 'dmg_by_asset.npz')
+
+        # test aggdamages
+        dmg = extract(self.calc.datastore, 'aggdamages/structural/rlz-0',
+                      'taxonomy=tax1')
+        numpy.testing.assert_almost_equal(
+            [0.39546266, 0.29675126, 0.13741516, 0.06894679, 0.10142413], dmg)
