@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import logging
-import re
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
@@ -201,4 +200,5 @@ def extract_agglosses(dstore, loss_type, *tags):
     # find the indices common to all tags
     for tag in tags:
         idxs &= set(assetcol.aids_by_tag[tag])
-    return losses[numpy.array(idxs)].sum(axis=0)
+    # numpy.array wants lists, not sets, hence the sorted below
+    return losses[numpy.array(sorted(idxs))].sum(axis=0)
