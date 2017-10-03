@@ -25,17 +25,15 @@ import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import valid
-from openquake.baselib import parallel
+from openquake.baselib import parallel, config
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import datastore, config, readinput
+from openquake.commonlib import datastore, readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
-TERMINATE = valid.boolean(
-    config.get('distribution', 'terminate_workers_on_revoke') or 'false')
+TERMINATE = config.distribution.terminate_workers_on_revoke
 
-USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
+USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
 if USE_CELERY:
     import celery.task.control
@@ -177,7 +175,8 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     oq = readinput.get_oqparam(cfg_file)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.DATADIR, hazard_calculation_id)
+                        username, datastore.get_datadir(),
+                        hazard_calculation_id)
     return job_id, oq
 
 
