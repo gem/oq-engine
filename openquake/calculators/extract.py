@@ -207,18 +207,16 @@ def extract_agglosses(dstore, loss_type, *tags):
 
 
 @extract.add('aggdamages')
-def extract_aggdamages(dstore, loss_type, *tags):
+def extract_aggdamages(dstore, loss_type_rlz, *tags):
     """
     Aggregate damages of the given loss type and tags.
 
-    :returns:
-        array of shape (R, D), being R the number of realizations and
-        D the number of damage states
+    :returns: array of shape (D,), being D the number of damage states
     """
-    if not loss_type:
-        raise ValueError('loss_type not passed in aggdamages/<loss_type>')
+    loss_type, rlzstr = loss_type_rlz.split('/')
+    r = int(rlzstr[4:])  # strip rlz-
     if 'dmg_by_asset' in dstore:  # scenario_damage
-        losses = dstore['dmg_by_asset'][loss_type]['mean']
+        losses = dstore['dmg_by_asset'][:, r][loss_type]['mean']
     else:
         raise KeyError('No damages found in %s' % dstore)
     if not tags:
