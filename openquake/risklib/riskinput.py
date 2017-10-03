@@ -217,7 +217,7 @@ class AssetCollection(object):
                  'nbytes': self.array.nbytes}
         tags, all_aids = [], []
         for tag, aids in sorted(self.aids_by_tag.items()):
-            tags.append(encode(tag))
+            tags.append(tag)
             all_aids.append((aids,))
         return dict(array=self.array,
                     tags=numpy.array(tags, hdf5.vstr),
