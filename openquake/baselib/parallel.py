@@ -159,7 +159,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, workerpool
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
@@ -632,6 +632,14 @@ class Starmap(object):
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, self.num_tasks)
+
+        elif self.distribute == 'zmq':  # experimental
+            allargs = self.add_task_no(self.task_args, pickle=False)
+            w = config.zworkers
+            it = workerpool._starmap(self.task_func, allargs,
+                                     w.task_in_url, w.receiver_url)
+            ntasks = next(it)
+            return IterResult(it, self.name, ntasks, self.progress, self.sent)
 
         elif self.distribute == 'qsub':  # experimental
             allargs = list(self.add_task_no(self.task_args, pickle=False))
