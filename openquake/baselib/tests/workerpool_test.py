@@ -16,8 +16,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import unittest
-from openquake.baselib.workerpool import WorkerMaster, _starmap
+import multiprocessing
+from openquake.baselib.workerpool import WorkerMaster, _starmap, streamer
 from openquake.baselib.performance import Monitor
 
 
@@ -35,6 +37,9 @@ class WorkerPoolTestCase(unittest.TestCase):
         host_cores = '127.0.0.1 4'
         cls.master = WorkerMaster(cls.task_in_url, task_out_url,
                                   ctrl_port, host_cores)
+        cls.proc = multiprocessing.Process(
+            target=streamer, args=(cls.task_in_url, task_out_url))
+        cls.proc.start()
         cls.master.start()
 
     def test1(self):
@@ -55,8 +60,11 @@ class WorkerPoolTestCase(unittest.TestCase):
         self.assertEqual(sum(r[0] for r in res), 20)  # sum[0, 2, 4, 6, 8]
 
     def test_status(self):
+        time.sleep(1)  # wait a bit for the workerpool to start
         self.assertEqual(self.master.status(), [('127.0.0.1', 'running')])
 
     @classmethod
     def tearDownClass(cls):
+        time.sleep(.2)
         cls.master.stop()
+        cls.proc.terminate()

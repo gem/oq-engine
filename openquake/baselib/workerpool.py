@@ -6,14 +6,14 @@ import subprocess
 import multiprocessing
 from openquake.baselib import zeromq as z, parallel as p
 
-STREAMER = '''\
-from openquake.baselib import zeromq as z, parallel as p
-p.setproctitle('oq streamer')
-try:
-    z.zmq.proxy(z.bind(%r, z.zmq.PULL), z.bind(%r, z.zmq.PUSH))
-except (KeyboardInterrupt, z.zmq.ZMQError):
-   pass
-'''
+
+def streamer(task_in_url, task_out_url):
+    """A streamer thread for the zmq workers"""
+    try:
+        z.zmq.proxy(z.bind(task_in_url, z.zmq.PULL),
+                    z.bind(task_out_url, z.zmq.PUSH))
+    except (KeyboardInterrupt, z.zmq.ZMQError):
+        pass
 
 
 def _starmap(func, iterargs, task_in_url, receiver_url):
@@ -44,7 +44,7 @@ class WorkerMaster(object):
                  ctrl_port, host_cores, remote_python=None):
         self.task_in_url = task_in_url
         self.task_out_url = task_out_url
-        self.ctrl_port = ctrl_port
+        self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
         self.remote_python = remote_python or sys.executable
 
@@ -59,14 +59,12 @@ class WorkerMaster(object):
                 err = sock.connect_ex((host, self.ctrl_port))
             finally:
                 sock.close()
-            print(host, 'not-running' if err else 'running')
             lst.append((host, 'not-running' if err else 'running'))
         return lst
 
     def start(self):
         """
-        Start multiple workerpools and a frontend->backend streamer as
-        background processes.
+        Start multiple workerpools, possibly on remote servers via ssh
         """
         for host, cores in self.host_cores:
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
@@ -78,11 +76,7 @@ class WorkerMaster(object):
                      ctrl_url, self.task_out_url, cores]
             print('starting ' + ' '.join(args))
             subprocess.Popen(args)
-        po = subprocess.Popen(
-            [sys.executable, '-c',
-             STREAMER % (self.task_in_url, self.task_out_url)])
-        self.pid = po.pid
-        print('streamer started on PID=%d' % self.pid)
+        return '%s started' % ctrl_url
 
     def stop(self):
         """
@@ -92,8 +86,7 @@ class WorkerMaster(object):
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('stop'))
-        os.kill(self.pid, signal.SIGINT)
-        print('streamer stopped')
+        return 'stopped'
 
     def kill(self):
         """
@@ -103,30 +96,28 @@ class WorkerMaster(object):
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('kill'))
-        os.kill(self.pid, signal.SIGTERM)
-        print('streamer killed')
+        return 'killed'
 
 
 class WorkerPool(object):
     """
     A pool of workers accepting the command 'stop' and 'kill' and reading
-    tasks to perform from the stream_url.
+    tasks to perform from the task_out_url.
 
     :param ctrl_url: zmq address of the control socket
-    :param stream_url: zmq address of the task streamer
+    :param task_out_url: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
-    def __init__(self, ctrl_url, stream_url, num_workers='-1'):
+    def __init__(self, ctrl_url, task_out_url, num_workers='-1'):
         self.ctrl_url = ctrl_url
-        self.stream_url = stream_url
+        self.task_out_url = task_out_url
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
         self.pid = os.getpid()
 
     def worker(self, sock):
         p.setproctitle('oq worker')
-        for cmd_args in sock:
-            cmd, args = cmd_args
+        for cmd, args in sock:
             backurl = args[-1].backurl  # attached to the monitor
             with z.Socket(backurl, z.zmq.PUSH, 'connect') as s:
                 s.send(p.safely_call(cmd, args))
@@ -136,21 +127,21 @@ class WorkerPool(object):
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
-            sock = z.Socket(self.stream_url, z.zmq.PULL, 'connect')
+            sock = z.Socket(self.task_out_url, z.zmq.PULL, 'connect')
             proc = multiprocessing.Process(target=self.worker, args=(sock,))
             proc.start()
             sock.pid = proc.pid
             self.workers.append(sock)
-        # print pid
-        sys.stdout.write('%d\n' % self.pid)
-        sys.stdout.flush()
+
         # start control loop accepting the commands stop and kill
-        ctrlsock = z.Socket(self.ctrl_url, z.zmq.REP)
+        ctrlsock = z.Socket(self.ctrl_url, z.zmq.REP, 'bind')
         for cmd in ctrlsock:
-            assert cmd in ('stop', 'kill'), cmd
-            msg = getattr(self, cmd)()
-            ctrlsock.send(msg)
-            break
+            if cmd in ('stop', 'kill'):
+                msg = getattr(self, cmd)()
+                ctrlsock.send(msg)
+                break
+            elif cmd == 'getpid':
+                ctrlsock.send(self.pid)
 
     def stop(self):
         for sock in self.workers:
@@ -164,5 +155,5 @@ class WorkerPool(object):
 
 
 if __name__ == '__main__':
-    ctrl_url, stream_url, num_workers = sys.argv[1:]
-    WorkerPool(ctrl_url, stream_url, num_workers).start()
+    ctrl_url, task_out_url, num_workers = sys.argv[1:]
+    WorkerPool(ctrl_url, task_out_url, num_workers).start()
