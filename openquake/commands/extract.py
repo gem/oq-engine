@@ -27,7 +27,7 @@ from openquake.calculators.extract import extract as extract_
 
 # the export is tested in the demos
 @sap.Script
-def extract(what, calc_id=-1):
+def extract(calc_id, what, extra):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     """
@@ -38,7 +38,7 @@ def extract(what, calc_id=-1):
     if parent_id:
         dstore.parent = datastore.read(parent_id)
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
-        items = extract_(dstore, what)
+        items = extract_(dstore, what, *extra)
         if not inspect.isgenerator(items):
             items = [(items.__class__.__name__, items)]
         fname = '%s_%d.hdf5' % (what.replace('/', '-'), dstore.calc_id)
@@ -48,5 +48,6 @@ def extract(what, calc_id=-1):
         print(mon)
 
 
-extract.arg('what', 'string specifying what to export')
 extract.arg('calc_id', 'number of the calculation', type=int)
+extract.arg('what', 'string specifying what to export')
+extract.arg('extra', 'extra arguments', nargs='*')

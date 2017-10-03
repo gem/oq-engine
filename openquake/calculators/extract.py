@@ -61,13 +61,13 @@ class Extract(collections.OrderedDict):
             return func
         return decorator
 
-    def __call__(self, dstore, key):
+    def __call__(self, dstore, key, *extra):
         try:
             k, v = key.split('/', 1)
         except ValueError:   # no slashes
             k, v = key, ''
         if k in self:
-            return self[k](dstore, v)
+            return self[k](dstore, v, *extra)
         else:
             return extract_(dstore, key)
 
@@ -197,3 +197,23 @@ def extract_losses_by_asset(dstore, what):
             return dstore['avg_losses-rlzs'][:, :, lti[lt]].mean(axis=1)
         else:
             return dstore['avg_losses-rlzs'][:, r, lti[lt]]
+
+
+@extract.add('agglosses')
+def extract_agglosses(dstore, loss_type, *tags):
+    """
+    Aggregate losses of the give loss type for the given tags
+    """
+    l = dstore['oqparam'].lti[loss_type]
+    if 'losses_by_asset' in dstore:  # scenario_risk
+        losses = dstore['losses_by_asset'][:, :, l]['mean']
+    elif 'avg_losses-rlzs' in dstore:  # event_based_risk
+        losses = dstore['avg_losses-rlzs'][:, :, l]
+    if not tags:
+        return losses.sum(axis=0)
+
+    assetcol = dstore['assetcol']
+    idxs = set(range(len(assetcol)))
+    for tag in tags:
+        idxs &= set(assetcol.aids_by_tag[tag])
+    return losses[numpy.array(sorted(idxs))].sum(axis=0)
