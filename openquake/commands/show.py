@@ -30,6 +30,7 @@ from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
 from openquake.commonlib import logs
 from openquake.calculators.views import view
+from openquake.calculators.extract import extract
 
 if config.dbserver.multi_user:
     # get the datastore of the user who ran the job
@@ -54,7 +55,7 @@ def get_hcurves_and_means(dstore):
 
 
 @sap.Script
-def show(what, calc_id=-1):
+def show(what='contents', calc_id=-1, extra=()):
     """
     Show the content of a datastore (by default the last one).
     """
@@ -99,6 +100,8 @@ def show(what, calc_id=-1):
             print('%s: rmsep=%s' % (rlz, dist))
     elif view.keyfunc(what) in view:
         print(view(what, ds))
+    elif what.split('/', 1)[0] in extract:
+        print(extract(ds, what, *extra))
     elif what in ds:
         obj = ds[what]
         if hasattr(obj, 'value'):  # an array
@@ -112,3 +115,4 @@ def show(what, calc_id=-1):
 
 show.arg('what', 'key or view of the datastore')
 show.arg('calc_id', 'calculation ID', type=int)
+show.arg('extra', 'extra arguments', nargs='*')

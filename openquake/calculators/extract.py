@@ -179,41 +179,26 @@ def extract_hazard(dstore, what):
             yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
 
 
-@extract.add('losses_by_asset')
-def extract_losses_by_asset(dstore, what):
-    """
-    Extracts losses_by_asset given a `what` string like
-    "rlz-0/structural", "rlz-1/contents_ins", "mean/structural" etc
-    """
-    # extracting the quantiles is not implemented yet
-    rlz_or_stat, lt = what.split('/')
-    r = int(rlz_or_stat[4:]) if rlz_or_stat.startswith('rlz-') else None
-    lti = dstore['oqparam'].lti
-    if 'losses_by_asset' in dstore:  # scenario_risk
-        return dstore['losses_by_asset'][:, r, lti[lt]]['mean']
-    elif 'avg_losses-rlzs' in dstore:  # event_based_risk
-        if r is None:
-            assert rlz_or_stat == 'mean', rlz_or_stat
-            return dstore['avg_losses-rlzs'][:, :, lti[lt]].mean(axis=1)
-        else:
-            return dstore['avg_losses-rlzs'][:, r, lti[lt]]
-
-
 @extract.add('agglosses')
 def extract_agglosses(dstore, loss_type, *tags):
     """
-    Aggregate losses of the give loss type for the given tags
+    Aggregate losses of the given loss type and tags
     """
+    if not loss_type:
+        raise ValueError('loss_type not passed in agglosses/<loss_type>')
     l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         losses = dstore['losses_by_asset'][:, :, l]['mean']
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk
         losses = dstore['avg_losses-rlzs'][:, :, l]
+    else:
+        raise KeyError('No losses found in %s' % dstore)
     if not tags:
         return losses.sum(axis=0)
 
     assetcol = dstore['assetcol']
     idxs = set(range(len(assetcol)))
+    # find the indices common to all tags
     for tag in tags:
         idxs &= set(assetcol.aids_by_tag[tag])
-    return losses[numpy.array(sorted(idxs))].sum(axis=0)
+    return losses[numpy.array(idxs)].sum(axis=0)
