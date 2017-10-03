@@ -84,7 +84,7 @@ class WorkerMaster(object):
                      ctrl_url, self.task_out_url, cores]
             print('starting ' + ' '.join(args))
             subprocess.Popen(args)
-        return '%s started' % ctrl_url
+        return 'started'
 
     def stop(self):
         """
