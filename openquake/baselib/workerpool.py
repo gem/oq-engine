@@ -48,12 +48,16 @@ class WorkerMaster(object):
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
         self.remote_python = remote_python or sys.executable
 
-    def status(self):
+    def status(self, host=None):
         """
         :returns: a list of pairs (hostname, 'running'|'not-running')
         """
+        if host is None:
+            host_cores = self.host_cores
+        else:
+            host_cores = [hc for hc in self.host_cores if hc[0] == host]
         lst = []
-        for host, _ in self.host_cores:
+        for host, _ in host_cores:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
                 err = sock.connect_ex((host, self.ctrl_port))
@@ -67,7 +71,11 @@ class WorkerMaster(object):
         Start multiple workerpools, possibly on remote servers via ssh
         """
         for host, cores in self.host_cores:
+            if self.status(host)[0][1] == 'running':
+                print('%s already running' % host)
+                continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
@@ -83,6 +91,9 @@ class WorkerMaster(object):
         Send a "stop" command to all worker pools
         """
         for host, _ in self.host_cores:
+            if self.status(host)[0][1] == 'not-running':
+                print('%s not running' % host)
+                continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('stop'))
@@ -93,6 +104,9 @@ class WorkerMaster(object):
         Send a "kill" command to all worker pools
         """
         for host, _ in self.host_cores:
+            if self.status(host)[0][1] == 'not-running':
+                print('%s not running' % host)
+                continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 print(sock.send('kill'))
