@@ -45,8 +45,9 @@ def dbcmd(action, *args):
     :param args: arguments
     """
     sock = zeromq.Socket('tcp://%(host)s:%(port)s' % config.dbserver,
-                         zeromq.zmq.REQ)
-    res, etype, _mon = sock.req(action, *args)
+                         zeromq.zmq.REQ, 'connect')
+    with sock:
+        res, etype, _mon = sock.send((action,) + args)
     if etype:
         raise etype(res)
     return res
