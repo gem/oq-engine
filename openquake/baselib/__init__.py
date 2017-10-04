@@ -59,7 +59,7 @@ def read(*paths, **validators):
     In the absence of this environment variable the following paths will be
     used:
        - $VIRTUAL_ENV/openquake.cfg when in a virtualenv
-       - /etc/openquake/openquake.cfg outside a virtualenv
+       - /etc/openquake/openquake.cfg outside of a virtualenv
 
     If those files are missing, the fallback is the source code:
        - openquake/engine/openquake.cfg
