@@ -36,7 +36,7 @@ from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, read_nrml
-from openquake.commonlib import datastore
+from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
 from openquake.commonlib.riskmodels import get_risk_models
