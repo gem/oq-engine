@@ -412,7 +412,9 @@
 
             ajax = $.ajax({url: gem_oq_server_url + "/engine_new_version",
                            async: true}).done(function(data) {
-                                                 if(data) {
+                                                 /* None returned in case of an error
+                                                    but we don't care abour these errors */
+                                                 if(data && data != 'None') {
                                                      $('#new-release-box').html(data).show()
                                                  }
                                               });
