@@ -30,9 +30,9 @@ def double(x, mon):
 class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.task_in_url = 'ipc://starmap'
-        task_out_url = 'tcp://127.0.0.1:2910'
-        cls.receiver_url = 'tcp://127.0.0.1:2911-2920'
+        cls.task_in_url = 'tcp://127.0.0.1:2910'
+        task_out_url = 'tcp://127.0.0.1:2911'
+        cls.receiver_url = 'tcp://127.0.0.1:2912-2920'
         ctrl_port = '2909'
         host_cores = '127.0.0.1 4'
         cls.master = WorkerMaster(cls.task_in_url, task_out_url,

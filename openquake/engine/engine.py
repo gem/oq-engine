@@ -45,7 +45,8 @@ if parallel.oq_distribute() == 'zmq':
         master = workerpool.WorkerMaster(**config.zworkers)
         for host, status in master.status():
             if status == 'not-running':
-                sys.exit('%s is not running' % host)
+                logs.LOG.warn('%s is not running', host)
+                return
         num_cores = 0
         w = config.zworkers
         for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
