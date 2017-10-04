@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Moved openquake.cfg into '/etc/openquake/engine' when using DEB and RPM
+
   [Michele Simionato]
   * Changed the search logic for the configuration file openquake.cfg
   * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1`

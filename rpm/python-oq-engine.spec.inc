@@ -101,7 +101,7 @@ mkdir -p %{buildroot}%{_datadir}/openquake/engine
 mkdir -p %{buildroot}%{_datadir}/applications
 mkdir -p %{buildroot}%{_datadir}/pixmaps
 mkdir -p %{buildroot}%{_unitdir}
-install -m 644 openquake/engine/openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
+install -m 644 openquake/engine/openquake.cfg %{buildroot}/%{_sysconfdir}/openquake/engine
 install -m 644 debian/desktop/oq-engine-webui.desktop %{buildroot}%{_datadir}/applications
 install -m 644 debian/desktop/openquake.png %{buildroot}%{_datadir}/pixmaps
 install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
@@ -146,7 +146,7 @@ rm -rf %{buildroot}
 %{_unitdir}/openquake-webui.service
 
 %config(noreplace)
-%{_sysconfdir}/openquake/openquake.cfg
+%{_sysconfdir}/openquake/engine/openquake.cfg
 
 %post master
 (if ! rabbitmqctl status &>/dev/null; then

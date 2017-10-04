@@ -23,7 +23,7 @@ On the workers install `python-oq-engine-worker`; it adds _celery_ support on to
 
 In all the nodes, the following file should be modified to enable the *Celery* support:
 
-`/etc/openquake/openquake.cfg:`
+`/etc/openquake/engine/openquake.cfg:`
 
 ```
 [distribution]
@@ -32,7 +32,7 @@ oq_distribute = celery
 ```
 
 ## OpenQuake Engine 'worker' node configuration File
-On all worker nodes, the `/etc/openquake/openquake.cfg` file should be also modified to set the *DbServer* and *RabbitMQ* daemons IP address:
+On all worker nodes, the `/etc/openquake/engine/openquake.cfg` file should be also modified to set the *DbServer* and *RabbitMQ* daemons IP address:
 
 ```
 [amqp]

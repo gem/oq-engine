@@ -1,4 +1,4 @@
-openquake/engine/openquake.cfg             /etc/openquake
+openquake/engine/openquake.cfg             /etc/openquake/engine
 debian/desktop/oq-engine-webui.desktop     /usr/share/applications
 debian/desktop/openquake.png               /usr/share/pixmaps
 debian/supervisord/openquake-celery.conf   /etc/supervisor/conf.d
