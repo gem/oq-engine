@@ -27,12 +27,13 @@ import traceback
 import collections
 import numpy
 
-from openquake.baselib import general, hdf5, __version__ as engine_version
+from openquake.baselib import (
+    general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput
-from openquake.commonlib import readinput, datastore, source, calc, riskmodels
+from openquake.commonlib import readinput, source, calc, riskmodels
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
