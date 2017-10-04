@@ -27,7 +27,8 @@ import zipfile
 import traceback
 
 from openquake.calculators.export import export
-from openquake.commonlib import datastore, logs, __version__
+from openquake.baselib import datastore, __version__
+from openquake.commonlib import logs
 
 
 class DataStoreExportError(Exception):
