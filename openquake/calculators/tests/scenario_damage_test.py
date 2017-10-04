@@ -123,7 +123,7 @@ RM       4,000
         self.assertEqual(strip_calc_id(npz), 'dmg_by_asset.npz')
 
         # test aggdamages
-        dmg = extract(self.calc.datastore, 'aggdamages/structural/rlz-0',
-                      'taxonomy=tax1')
+        [dmg] = extract(self.calc.datastore, 'aggdamages/structural',
+                        'taxonomy=tax1')  # 1 realization x 5 damage states
         numpy.testing.assert_almost_equal(
             [0.39546266, 0.29675126, 0.13741516, 0.06894679, 0.10142413], dmg)
