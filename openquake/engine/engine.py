@@ -263,7 +263,10 @@ def check_obsolete_version(oqparam):
     """
     Check if there is a newer version of the engine.
 
-    :returns: a message if the current version is obsolete or the empty string
+    :returns:
+        - a message if the running version of the engine is obsolete
+        - the empty string if the engine is updated
+        - None if the check could not be performed (i.e. github is down)
     """
     try:
         json = requests.get(GITHUB + '/releases/latest', timeout=0.5).json()
