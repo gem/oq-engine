@@ -26,6 +26,7 @@ import sys
 import imp
 import copy
 import math
+import socket
 import operator
 import warnings
 import tempfile
@@ -852,3 +853,22 @@ def safeprint(*args, **kwargs):
         new_args.append(s.encode('utf-8').decode(str_encoding, 'ignore'))
 
     return print(*new_args, **kwargs)
+
+
+def socket_ready(hostport):
+    """
+    :param hostport: a pair (host, port) or a string (tcp://)host:port
+    :returns: True if the socket is on and False otherwise
+    """
+    if hasattr(hostport, 'startswith'):
+        # string representation of the hostport combination
+        if hostport.startswith('tcp://'):
+            hostport = hostport[6:]  # strip tcp://
+        host, port = hostport.split(':')
+        hostport = (host, int(port))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        exc = sock.connect_ex(hostport)
+    finally:
+        sock.close()
+    return False if exc else True

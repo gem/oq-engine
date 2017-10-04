@@ -18,7 +18,6 @@
 
 import sys
 import time
-import socket
 import os.path
 import sqlite3
 import logging
@@ -26,6 +25,7 @@ import threading
 import subprocess
 
 from openquake.baselib import config, sap, zeromq as z, workerpool as w
+from openquake.baselib.general import socket_ready
 from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
 from openquake.server.db import actions
@@ -86,7 +86,8 @@ class DbServer(object):
                          c.task_in_url, c.task_out_url)
 
             # start zworkers and wait a bit for them
-            self.master.start()
+            msg = self.master.start()
+            logging.warn(msg)
             time.sleep(1)
 
         # start frontend->backend proxy for the database workers
@@ -113,13 +114,8 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s = config.dbserver
-    try:
-        err = sock.connect_ex(address or (s.host, s.port))
-    finally:
-        sock.close()
-    return 'not-running' if err else 'running'
+    address = address or (config.dbserver.host, config.dbserver.port)
+    return 'running' if socket_ready(address) else 'not-running'
 
 
 def check_foreign():
