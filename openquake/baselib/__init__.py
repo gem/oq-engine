@@ -26,15 +26,6 @@ from openquake.baselib.general import git_suffix
 __version__ = '2.7.0'
 __version__ += git_suffix(__file__)
 
-venv = 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix')
-if venv:
-    PATHS = [os.path.join(os.environ.get('VIRTUAL_ENV', '~'), 'openquake.cfg')]
-else:  # installation from packages, search in /etc
-    PATHS = ['/etc/openquake/openquake.cfg']
-cfg = os.environ.get('OQ_CONFIG_FILE')
-if cfg:  # has the precedence
-    PATHS.insert(0, cfg)
-
 
 class DotDict(collections.OrderedDict):
     """
@@ -47,6 +38,14 @@ class DotDict(collections.OrderedDict):
             raise AttributeError(key)
 
 config = DotDict()  # global configuration
+if 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix'):
+    config.paths = [
+        os.path.join(os.environ.get('VIRTUAL_ENV', '~'), 'openquake.cfg')]
+else:  # installation from packages, search in /etc
+    config.paths = ['/etc/openquake/openquake.cfg']
+cfgfile = os.environ.get('OQ_CONFIG_FILE')
+if cfgfile:  # has the precedence
+    config.paths.insert(0, cfgfile)
 
 
 def read(*paths, **validators):
@@ -67,7 +66,7 @@ def read(*paths, **validators):
     Please note: settings in the site configuration file are overridden
     by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
-    paths = list(paths) + PATHS
+    paths = list(paths) + config.paths
     parser = configparser.SafeConfigParser()
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
     if not found:
