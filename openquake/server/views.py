@@ -201,7 +201,7 @@ def get_engine_new_version(request):
     """
     Return a string with if new versions have been released
     """
-    return HttpResponse('FIXME')
+    return HttpResponse(engine.check_obsolete_version(None))
 
 
 @cross_domain_ajax
