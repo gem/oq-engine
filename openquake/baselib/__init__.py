@@ -28,7 +28,7 @@ __version__ += git_suffix(__file__)
 
 venv = 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix')
 if venv:
-    PATHS = [os.path.join(os.environ('VIRTUAL_ENV', '~'), 'openquake.cfg')]
+    PATHS = [os.path.join(os.environ.get('VIRTUAL_ENV', '~'), 'openquake.cfg')]
 else:  # installation from packages, search in /etc
     PATHS = ['/etc/openquake/openquake.cfg']
 cfg = os.environ.get('OQ_CONFIG_FILE')
