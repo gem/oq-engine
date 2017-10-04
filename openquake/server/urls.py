@@ -25,6 +25,7 @@ from openquake.server import views
 urlpatterns = [
     url(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
     url(r'^engine_version$', views.get_engine_version),
+    url(r'^engine_new_version$', views.get_engine_new_version),
     url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
     url(r'^v1/valid/', views.validate_nrml),
     url(r'^v1/available_gsims$', views.get_available_gsims),

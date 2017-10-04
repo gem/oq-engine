@@ -410,6 +410,13 @@
             calculations.fetch({reset: true});
             setTimer();
 
+            ajax = $.ajax({url: gem_oq_server_url + "/engine_new_version",
+                           async: true}).done(function(data) {
+                                                 if(data) {
+                                                     $('#new-release-box').html(data).show()
+                                                 }
+                                              });
+
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
             $(document).on("click", 'input[name=archive]',

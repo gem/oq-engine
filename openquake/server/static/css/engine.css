@@ -168,6 +168,10 @@ footer.footer form label {
     color: #fff;
 }
 
+#new-release-box {
+    display: none;
+}
+
 #my-datastore {
     float: right;
 }

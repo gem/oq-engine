@@ -197,6 +197,15 @@ def get_engine_version(request):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def get_engine_new_version(request):
+    """
+    Return a string with the openquake.engine version
+    """
+    return HttpResponse('FIXME')
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def get_available_gsims(request):
     """
     Return a list of strings with the available GSIMs
