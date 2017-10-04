@@ -57,7 +57,8 @@ class WorkerPoolTestCase(unittest.TestCase):
         res = _starmap(double, iterargs, self.task_in_url, self.receiver_url)
         num_tasks = next(res)
         self.assertEqual(num_tasks, 5)
-        self.assertEqual(sum(r[0] for r in res), 20)  # sum[0, 2, 4, 6, 8]
+        self.assertEqual(sum(r[0] for r in res), 20)
+        # sum[0, 2, 4, 6, 8]
 
     def test_status(self):
         time.sleep(1)  # wait a bit for the workerpool to start
