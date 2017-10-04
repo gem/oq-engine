@@ -18,9 +18,9 @@
 
 from __future__ import print_function
 import numpy
-from openquake.baselib import sap
+from openquake.baselib import sap, datastore
 from openquake.hazardlib.stats import mean_curve, compute_pmap_stats
-from openquake.commonlib import datastore, calc
+from openquake.commonlib import calc
 
 
 def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
