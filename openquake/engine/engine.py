@@ -20,19 +20,21 @@
 calculations."""
 
 import os
+import re
 import sys
 import signal
 import traceback
+import requests
 
 from openquake.baselib.performance import Monitor
-from openquake.baselib import parallel, config
+from openquake.baselib import parallel, config, __version__
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import datastore, readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
+GITHUB = 'https://api.github.com/repos/gem/oq-engine'
 TERMINATE = config.distribution.terminate_workers_on_revoke
-
 USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
 if USE_CELERY:
@@ -200,8 +202,9 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     """
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if USE_CELERY and os.environ.get('OQ_DISTRIBUTE') == 'celery':
+        if USE_CELERY:
             set_concurrent_tasks_default()
+        check_latest_version(oqparam)
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         monitor.hdf5path = calc.datastore.hdf5path
         calc.from_engine = True
@@ -244,3 +247,27 @@ def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
     with calc._monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
                  close=False, **kw)  # don't close the datastore too soon
+
+
+def version_triple(tag):
+    """
+    returns: a triple of integers from a version tag
+    """
+    groups = re.match(r'v?(\d+)\.(\d+)\.(\d+)', tag).groups()
+    return tuple(int(n) for n in groups)
+
+
+def check_latest_version(oqparam):
+    """
+    Check if there is a newer version of the engine
+    """
+    try:
+        latest = requests.get(GITHUB + '/releases/latest', timeout=1).json()
+        tag_name = latest['tag_name']
+        current = version_triple(__version__)
+        latest = version_triple(latest['tag_name'])
+    except:  # page not available
+        return
+    if current < latest:
+        logs.LOG.warn('Version %s of the engine is available, but you are '
+                      'still using version %s', tag_name, __version__)
