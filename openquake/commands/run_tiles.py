@@ -19,9 +19,9 @@ from __future__ import division
 import os
 import time
 import logging
-from openquake.baselib import sap, general, parallel
+from openquake.baselib import sap, general, parallel, datastore
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib import readinput, logs
 from openquake.commands import engine
 
 
