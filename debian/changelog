@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the search logic for the configuration file openquake.cfg
   * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1`
   * Fixed several bugs in the gmf_ebrisk calculator, in particular in presence
     of asset correlation
