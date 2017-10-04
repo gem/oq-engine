@@ -1,11 +1,10 @@
 import os
 import sys
 import signal
-import socket
 import logging
 import subprocess
 import multiprocessing
-from openquake.baselib import zeromq as z, parallel as p
+from openquake.baselib import zeromq as z, parallel as p, general
 
 
 def streamer(task_in_url, task_out_url):
@@ -68,12 +67,8 @@ class WorkerMaster(object):
             host_cores = [hc for hc in self.host_cores if hc[0] == host]
         lst = []
         for host, _ in host_cores:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try:
-                err = sock.connect_ex((host, self.ctrl_port))
-            finally:
-                sock.close()
-            lst.append((host, 'not-running' if err else 'running'))
+            on = general.socket_ready((host, self.ctrl_port))
+            lst.append((host, 'running' if on else 'not-running'))
         return lst
 
     def start(self):
@@ -83,7 +78,7 @@ class WorkerMaster(object):
         starting = []
         for host, cores in self.host_cores:
             if self.status(host)[0][1] == 'running':
-                print('%s already running' % host)
+                print('%s:%s already running' % (host, self.ctrl_port))
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
 

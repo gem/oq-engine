@@ -25,7 +25,7 @@ import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.baselib import config, parallel, zeromq as z
+from openquake.baselib import config, parallel, general, zeromq as z
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import datastore, readinput
 from openquake.calculators import base, views, export
@@ -45,12 +45,12 @@ if parallel.oq_distribute() == 'zmq':
         num_cores = 0
         w = config.zworkers
         for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
-            with z.Socket('tcp://%s:%s' % (host, w.ctrl_port), z.zmq.REQ,
-                          'connect') as sock:
-                try:
-                    num_cores += sock.send('getcores', noblock=True)
-                except z.zmq.ZMQError:
+            url = 'tcp://%s:%s' % (host, w.ctrl_port)
+            with z.Socket(url, z.zmq.REQ, 'connect') as sock:
+                if not general.socket_ready(url):
                     logs.LOG.warn('%s is not running', host)
+                    continue
+                num_cores += sock.send('getcores')
         OqParam.concurrent_tasks.default = num_cores * 5
         logs.LOG.info('Using %d zmq workers', num_cores)
 
