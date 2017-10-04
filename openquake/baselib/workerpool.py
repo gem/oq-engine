@@ -9,16 +9,21 @@ from openquake.baselib import zeromq as z, parallel as p
 
 
 def streamer(task_in_url, task_out_url):
-    """A streamer thread for the zmq workers"""
+    """
+    A streamer for zmq workers.
+
+    :param task_in_url: where to send the tasks (ex. tcp://127.0.0.1:1910)
+    :param task_out_url: where to receive the tasks (ex. tcp://127.0.0.1:1911)
+    """
     try:
         z.zmq.proxy(z.bind(task_in_url, z.zmq.PULL),
                     z.bind(task_out_url, z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ZMQError):
-        pass
+        pass  # killed cleanly by SIGINT/SIGTERM
 
 
 def _starmap(func, iterargs, task_in_url, receiver_url):
-    # called by parallel.Starmap; should not be used directly
+    # called by parallel.Starmap.submit_all; should not be used directly
     with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver, \
             z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
         logging.info('receiver_url for %s=%s',
@@ -46,12 +51,12 @@ class WorkerMaster(object):
     """
     def __init__(self, task_in_url, task_out_url, ctrl_port,
                  host_cores, remote_python=None, receiver_url=None):
+        # receiver_url is not used
         self.task_in_url = task_in_url
         self.task_out_url = task_out_url
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
         self.remote_python = remote_python or sys.executable
-        # receiver_url is not used
 
     def status(self, host=None):
         """
@@ -75,6 +80,7 @@ class WorkerMaster(object):
         """
         Start multiple workerpools, possibly on remote servers via ssh
         """
+        starting = []
         for host, cores in self.host_cores:
             if self.status(host)[0][1] == 'running':
                 print('%s already running' % host)
@@ -87,9 +93,9 @@ class WorkerMaster(object):
                 args = ['ssh', host, self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool',
                      ctrl_url, self.task_out_url, cores]
-            print('starting ' + ' '.join(args))
+            starting.append(' '.join(args))
             subprocess.Popen(args)
-        return 'started'
+        return 'starting %s' % starting
 
     def stop(self):
         """
@@ -102,7 +108,7 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                print(sock.send('stop'))
+                sock.send('stop')
                 stopped.append(host)
         return 'stopped %s' % stopped
 
@@ -117,7 +123,7 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                print(sock.send('kill'))
+                sock.send('kill')
                 killed.append(host)
         return 'killed %s' % killed
 
@@ -147,6 +153,9 @@ class WorkerPool(object):
         self.pid = os.getpid()
 
     def worker(self, sock):
+        """
+        :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
+        """
         p.setproctitle('oq worker')
         for cmd, args in sock:
             backurl = args[-1].backurl  # attached to the monitor
@@ -154,6 +163,9 @@ class WorkerPool(object):
                 s.send(p.safely_call(cmd, args))
 
     def start(self):
+        """
+        Start worker processes and a control loop
+        """
         p.setproctitle('oq workerpool %s' % self.ctrl_url[6:])  # strip tcp://
         # start workers
         self.workers = []
@@ -177,11 +189,17 @@ class WorkerPool(object):
                 ctrlsock.send(len(self.workers))
 
     def stop(self):
+        """
+        Send a SIGINT to all worker processes
+        """
         for sock in self.workers:
             os.kill(sock.pid, signal.SIGINT)
         return 'WorkerPool %s stopped' % self.ctrl_url
 
     def kill(self):
+        """
+        Send a SIGTERM to all worker processes
+        """
         for sock in self.workers:
             os.kill(sock.pid, signal.SIGTERM)
         return 'WorkerPool %s killed' % self.ctrl_url
