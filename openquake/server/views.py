@@ -199,7 +199,7 @@ def get_engine_version(request):
 @require_http_methods(['GET'])
 def get_engine_new_version(request):
     """
-    Return a string with the openquake.engine version
+    Return a string with if new versions have been released
     """
     return HttpResponse('FIXME')
 
