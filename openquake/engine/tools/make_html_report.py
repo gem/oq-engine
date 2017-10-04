@@ -24,7 +24,7 @@ from datetime import date, datetime, timedelta
 import itertools
 from docutils.examples import html_parts
 
-from openquake.commonlib.datastore import read
+from openquake.baselib.datastore import read
 from openquake.calculators.views import view_fullreport
 from openquake.commonlib.logs import dbcmd
 

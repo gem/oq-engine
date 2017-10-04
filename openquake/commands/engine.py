@@ -20,9 +20,9 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import sap, config
+from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
-from openquake.commonlib import datastore, logs
+from openquake.commonlib import logs
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
