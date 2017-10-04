@@ -30,7 +30,7 @@ venv = 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix')
 if venv:
     PATHS = ['~/openquake.cfg']
 else:  # installation from packages, search also in /etc
-    PATHS = ['~/openquake.cfg', '/etc/openquake/openquake.cfg']
+    PATHS = ['~/openquake.cfg', '/etc/openquake/engine/openquake.cfg']
 cfg = os.environ.get('OQ_CONFIG_FILE')
 if cfg:  # has the precedence
     PATHS.insert(0, cfg)
@@ -57,7 +57,7 @@ def read(*paths, **validators):
     In the absence of this environment variable the following paths will be
     used in order:
        - ~/openquake.cfg
-       - /etc/openquake/openquake.cfg (only when running outside a venv)
+       - /etc/openquake/engine/openquake.cfg (only when running outside a venv)
        - openquake/engine/openquake.cfg
 
     Please note: settings in the site configuration file are overridden

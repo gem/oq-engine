@@ -6,7 +6,7 @@ To upgrade the OpenQuake Engine and its libraries run
 sudo yum upgrade python-oq-*
 ```
 
-If a custom configuration is installed in `/etc/openquake/openquake.cfg` this configuration will be left untouched and the new configuration file, provided by the upgrade, will be installed as `/etc/openquake/openquake.cfg.rpmnew`. Before starting using OpenQuake you must check for new configuration parameters or changes in the `openquake.cfg.rpmnew` file and merge those into your `openquake.cfg`. This can be done manually with `diff` or using `rpmconf` (see `man rpmconf`).
+If a custom configuration is installed in `/etc/openquake/engine/openquake.cfg` this configuration will be left untouched and the new configuration file, provided by the upgrade, will be installed as `/etc/openquake/engine/openquake.cfg.rpmnew`. Before starting using OpenQuake you must check for new configuration parameters or changes in the `openquake.cfg.rpmnew` file and merge those into your `openquake.cfg`. This can be done manually with `diff` or using `rpmconf` (see `man rpmconf`).
 
 ### Coming from OpenQuake Engine 1.x
 

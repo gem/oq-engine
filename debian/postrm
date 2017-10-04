@@ -46,7 +46,7 @@ case "$1" in
     do
         rm -rf $dir
     done
-    rm -f /etc/openquake/openquake.cfg
+    rm -f /etc/openquake/engine/openquake.cfg
     ;;
 esac
 
