@@ -29,7 +29,7 @@ class ConfigPathsTestCase(unittest.TestCase):
         if venv:
             self.assertIn(os.path.join(venv, 'openquake.cfg'), config.paths)
         else:
-            self.assertIn('/etc/openquake/openquake.cfg', config.paths)
+            self.assertIn('/etc/openquake/engine/openquake.cfg', config.paths)
 
     def test_config_file(self):
         cfgfile = os.environ.get('OQ_CONFIG_FILE')
