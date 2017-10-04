@@ -50,6 +50,7 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
+        self.master = w.WorkerMaster(**config.zworkers)
 
     def dworker(self, sock):
         # a database worker responding to commands
@@ -75,13 +76,18 @@ class DbServer(object):
         logging.warn('DB server started with %s on %s, pid=%d',
                      sys.executable, self.frontend, self.pid)
 
-        # start task_in->task_out streamer thread
-        c = config.zworkers
-        threading.Thread(
-            target=w.streamer, args=(c.task_in_url, c.task_out_url)
-        ).start()
-        logging.warn('Task streamer started from %s -> %s',
-                     c.task_in_url, c.task_out_url)
+        if os.environ.get('OQ_DISTRIBUTE') == 'zmq':
+            # start task_in->task_out streamer thread
+            c = config.zworkers
+            threading.Thread(
+                target=w.streamer, args=(c.task_in_url, c.task_out_url)
+            ).start()
+            logging.warn('Task streamer started from %s -> %s',
+                         c.task_in_url, c.task_out_url)
+
+            # start zworkers and wait a bit for them
+            self.master.start()
+            time.sleep(1)
 
         # start frontend->backend proxy for the database workers
         try:
