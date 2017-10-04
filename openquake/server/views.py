@@ -37,13 +37,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
+from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
-from openquake.commonlib import readinput, oqvalidation, logs, datastore
+from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
