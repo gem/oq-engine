@@ -262,10 +262,10 @@ def check_latest_version(oqparam):
     Check if there is a newer version of the engine
     """
     try:
-        latest = requests.get(GITHUB + '/releases/latest', timeout=1).json()
-        tag_name = latest['tag_name']
+        json = requests.get(GITHUB + '/releases/latest', timeout=1).json()
+        tag_name = json['tag_name']
         current = version_triple(__version__)
-        latest = version_triple(latest['tag_name'])
+        latest = version_triple(json['tag_name'])
     except:  # page not available or wrong version tag
         return
     if current < latest:
