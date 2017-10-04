@@ -204,7 +204,9 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     with logs.handle(job_id, log_level, log_file):  # run the job
         if USE_CELERY:
             set_concurrent_tasks_default()
-        check_latest_version(oqparam)
+        msg = check_obsolete_version(oqparam)
+        if msg:
+            logs.LOG.warn(msg)
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         monitor.hdf5path = calc.datastore.hdf5path
         calc.from_engine = True
@@ -257,9 +259,11 @@ def version_triple(tag):
     return tuple(int(n) for n in groups)
 
 
-def check_latest_version(oqparam):
+def check_obsolete_version(oqparam):
     """
-    Check if there is a newer version of the engine
+    Check if there is a newer version of the engine.
+
+    :returns: a message if the current version is obsolete or the empty string
     """
     try:
         json = requests.get(GITHUB + '/releases/latest', timeout=0.5).json()
@@ -269,5 +273,7 @@ def check_latest_version(oqparam):
     except:  # page not available or wrong version tag
         return
     if current < latest:
-        logs.LOG.warn('Version %s of the engine is available, but you are '
-                      'still using version %s', tag_name, __version__)
+        return ('Version %s of the engine is available, but you are '
+                'still using version %s' % (tag_name, __version__))
+    else:
+        return ''
