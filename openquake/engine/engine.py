@@ -266,7 +266,7 @@ def check_latest_version(oqparam):
         tag_name = latest['tag_name']
         current = version_triple(__version__)
         latest = version_triple(latest['tag_name'])
-    except:  # page not available
+    except:  # page not available or wrong version tag
         return
     if current < latest:
         logs.LOG.warn('Version %s of the engine is available, but you are '
