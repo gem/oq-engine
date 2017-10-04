@@ -106,7 +106,7 @@ class Socket(object):
                         args = self.zsocket.recv_pyobj()
                     else:
                         continue
-                except (KeyboardInterrupt, zmq.error.ZMQError):
+                except (KeyboardInterrupt, zmq.ZMQError):
                     # sending SIGTERM raises ZMQError
                     break
                 if args[0] == 'stop':
@@ -132,14 +132,6 @@ class Socket(object):
             return self.zsocket.recv_pyobj(noblock)
 
     def __repr__(self):
-        st = SOCKTYPE[self.socket_type]
         end_point = getattr(self, 'true_end_point', self.end_point)
         return '<%s %s %s %s>' % (self.__class__.__name__, end_point,
-                                  st, self.mode)
-
-
-if __name__ == '__main__':
-    print('started echo server, pid=%d' % os.getpid())
-    sock = Socket('tcp://127.0.0.1:9000', zmq.REP)
-    for args in sock:  # server for testing purposes
-        sock.send(args)
+                                  SOCKTYPE[self.socket_type], self.mode)
