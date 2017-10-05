@@ -1,11 +1,11 @@
 Scenario Damage
 ===============
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_14409.hdf5 Thu Aug 17 11:47:32 2017
-checksum32                                       272,505,614             
-engine_version                                   2.6.0-gitbdd9d17        
-================================================ ========================
+==================================================== ========================
+tstation.gem.lan:/home/michele/oqdata/calc_5469.hdf5 Fri Sep 22 11:28:55 2017
+checksum32                                           272,505,614             
+engine_version                                       2.6.0-gite59d75a        
+==================================================== ========================
 
 num_sites = 1, num_imts = 1
 
@@ -47,21 +47,13 @@ smlt_path weight source_model_file gsim_logic_tree num_realizations
 b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
 ========= ====== ================= =============== ================
 
-Required parameters per tectonic region type
---------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
-
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): ['<0,b_1~b1,w=1.0>']>
+  0,BooreAtkinson2008(): [0]>
 
 Informational data
 ------------------
@@ -94,6 +86,6 @@ reading exposure        0.006     0.0       1
 assoc_assets_sites      0.006     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-reading site collection 1.686E-04 0.0       1     
-building riskinputs     1.605E-04 0.0       1     
+reading site collection 1.974E-04 0.0       1     
+building riskinputs     1.607E-04 0.0       1     
 ======================= ========= ========= ======
