@@ -151,8 +151,15 @@ import multiprocessing.dummy
 from multiprocessing.connection import Client, Listener
 from concurrent.futures import (
     as_completed, ThreadPoolExecutor, ProcessPoolExecutor, Future)
+
 import numpy
-from openquake.baselib import hdf5
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
+
+from openquake.baselib import hdf5, config
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
@@ -180,28 +187,26 @@ elif OQ_DISTRIBUTE == 'ipython':
 
 def oq_distribute(task=None):
     """
-    If the task has an attribute `shared_dir_on` which is false,
-    return 'futures' even if OQ_DISTRIBUTE is `celery`, otherwise
-    return the current value of the variable OQ_DISTRIBUTE;
-    if undefined, return 'futures'.
+    :returns: the value of OQ_DISTRIBUTE or 'futures'
     """
-    env = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-    if hasattr(task, 'shared_dir_on'):
-        if env == 'celery' and not task.shared_dir_on():
-            logging.warn(
-                'Task `%s` will be run on the controller node only, since '
-                'no `shared_dir` has been specified' % task.__name__)
-            return 'futures'
-    return env
+    dist = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+    read_access = getattr(task, 'read_access', True)
+    if dist == 'celery' and not read_access:
+        raise ValueError('You must configure the shared_dir in openquake.cfg '
+                         'in order to be able to run %s with celery' %
+                         task.__name__)
+    return dist
 
 
 def check_mem_usage(monitor=Monitor(),
-                    soft_percent=90, hard_percent=100):
+                    soft_percent=None, hard_percent=None):
     """
     Display a warning if we are running out of memory
 
     :param int mem_percent: the memory limit as a percentage
     """
+    soft_percent = soft_percent or config.memory.soft_mem_limit
+    hard_percent = hard_percent or config.memory.hard_mem_limit
     used_mem_percent = virtual_memory().percent
     if used_mem_percent > hard_percent:
         raise MemoryError('Using more memory than allowed by configuration '
@@ -234,7 +239,11 @@ def safely_call(func, args):
             child.hdf5path = mon.hdf5path
         else:
             mon = child
-        check_mem_usage(mon)  # check if too much memory is used
+        # FIXME check_mem_usage is disabled here because it's causing
+        # dead locks in threads when log messages are raised.
+        # Check is done anyway in other parts of the code (submit and iter);
+        # further investigation is needed
+        # check_mem_usage(mon)  # check if too much memory is used
         # FIXME: this approach does not work with the Threadmap
         mon._flush = False
         try:
@@ -680,7 +689,8 @@ if OQ_DISTRIBUTE == 'celery':
 
 
 def _wakeup(sec):
-    """Waiting functions, used to wake up the process pool"""
+    """Waiting function, used to wake up the process pool"""
+    setproctitle('oq-worker')
     try:
         import prctl
     except ImportError:

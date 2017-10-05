@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 Config for all installed OpenQuake binaries and modules.
 Should be installed by setup.py into /etc/openquake
@@ -42,11 +41,12 @@ else:
         sys.modules['openquake'].__dict__["__path__"].insert(
             0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-    from openquake.commonlib import config
-
-    config.abort_if_no_config_available()
-
-    amqp = config.get_section("amqp")
+    # there must be no dependency from something higher than baselib,
+    # othewise baselib.parallel that imports this file will depend on
+    # the engine
+    from openquake.baselib import config
+    config.read(os.path.join(os.path.dirname(__file__), "openquake.cfg"),
+                port=int, soft_mem_limit=int, hard_mem_limit=int)
 
     task_serializer = 'pickle'
     result_serializer = 'pickle'
@@ -54,7 +54,7 @@ else:
 
     # RabbitMQ broker (default)
     broker_url = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
-                 amqp
+                 amqp.config
     # Redis broker (works only on Trusty)
     # broker_url = 'redis://%(host)s:6379/0' % amqp
 

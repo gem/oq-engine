@@ -51,40 +51,21 @@ TWO48 = 2 ** 48  # 281,474,976,710,656
 # ######################## rupture calculator ############################ #
 
 
-def get_seq_ids(task_no, num_ids):
+def set_eids(ebruptures):
     """
-    Get an array of sequential indices for the given task.
-
-    :param task_no: the number of the task
-    :param num_ids: the number of indices to return
-
-    >>> list(get_seq_ids(1, 3))
-    [4294967296, 4294967297, 4294967298]
-    """
-    assert 0 <= task_no < TWO16, task_no
-    assert 0 <= num_ids < TWO32, num_ids
-    start = task_no * TWO32
-    return numpy.arange(start, start + num_ids, dtype=U64)
-
-
-def set_eids(ebruptures, task_no):
-    """
-    Set event IDs on the given list of ebruptures produced by the given task.
+    Set event IDs on the given list of ebruptures.
 
     :param ebruptures: a non-empty list of ruptures with the same grp_id
-    :param task_no: the number of the task generating the ruptures
-    :returns: the total number of events
+    :returns: the total number of events set
     """
     if not ebruptures:
         return 0
     num_events = sum(ebr.multiplicity for ebr in ebruptures)
-    eids = get_seq_ids(task_no, num_events)
-    start = 0
-    offset = U64(ebruptures[0].grp_id * TWO48)  # first 16 bits for grp_id
     for ebr in ebruptures:
-        m = ebr.multiplicity
-        ebr.events['eid'] = eids[start: start + m] + offset
-        start += m
+        assert ebr.multiplicity < TWO32, ebr.multiplicity
+        eids = U64(TWO32 * ebr.serial) + numpy.arange(
+            ebr.multiplicity, dtype=U64)
+        ebr.events['eid'] = eids
     return num_events
 
 
@@ -129,7 +110,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({grp_id: eb_ruptures})
-    res.num_events = set_eids(eb_ruptures, getattr(monitor, 'task_no', 0))
+    res.num_events = set_eids(eb_ruptures)
     res.calc_times = calc_times
     res.eff_ruptures = {grp_id: num_ruptures}
     return res
@@ -334,7 +315,7 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         with monitor('building hazard', measuremem=True):
             gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
-            hazard = sorted(getter.get_hazard(gmfdata).items())
+            hazard = sorted(getter.get_hazard(data=gmfdata).items())
         for rlzi, hazardr in hazard:
             for sid in getter.sids:
                 array = hazardr[sid]
@@ -473,7 +454,7 @@ class EventBasedCalculator(ClassicalCalculator):
             rlzs_by_gsim = self.rlzs_assoc.rlzs_by_gsim[grp_id]
             for block in block_splitter(ruptures, oq.ruptures_per_block):
                 samples = samples_by_grp[grp_id]
-                getter = GmfGetter(grp_id, rlzs_by_gsim, block, self.sitecol,
+                getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
                                    correl_model, samples)
                 yield getter, oq, monitor

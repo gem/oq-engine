@@ -15,11 +15,12 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
-from openquake.hazardlib import valid
-from openquake.baselib import sap
+import signal
+import getpass
+from openquake.baselib import sap, config
 from openquake.commonlib import logs
-from openquake.commonlib import config
 from openquake.server import dbserver as dbs
 
 
@@ -28,7 +29,7 @@ def dbserver(cmd, dbhostport=None, dbpath=None):
     """
     start/stop/restart the database server, or return its status
     """
-    if valid.boolean(config.get('dbserver', 'multi_user')):
+    if config.dbserver.multi_user and getpass.getuser() != 'openquake':
         sys.exit('oq dbserver only works in single user mode')
 
     status = dbs.get_status()
@@ -36,7 +37,8 @@ def dbserver(cmd, dbhostport=None, dbpath=None):
         print('dbserver ' + status)
     elif cmd == 'stop':
         if status == 'running':
-            logs.dbcmd('stop')
+            pid = logs.dbcmd('getpid')
+            os.kill(pid, signal.SIGTERM)
             print('dbserver stopped')
         else:
             print('dbserver already stopped')
@@ -47,7 +49,8 @@ def dbserver(cmd, dbhostport=None, dbpath=None):
             print('dbserver already running')
     elif cmd == 'restart':
         if status == 'running':
-            logs.dbcmd('stop')
+            pid = logs.dbcmd('getpid')
+            os.kill(pid, signal.SIGTERM)
             print('dbserver stopped')
         dbs.run_server(dbhostport, dbpath)
 
