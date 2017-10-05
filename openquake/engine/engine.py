@@ -269,15 +269,11 @@ def check_obsolete_version():
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
-
-
-    headers = {
-        'User-Agent': 'OpenQuake Engine %s; %s' % (__version__,
-                                                   platform.platform())
-    }
-
+    headers = {'User-Agent': 'OpenQuake Engine %s; %s' %
+               (__version__, platform.platform())}
     try:
-        json = requests.get(OQ_API + '/engine/latest', timeout=0.5, headers=headers).json()
+        json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
+                            headers=headers).json()
         tag_name = json['tag_name']
         current = version_triple(__version__)
         latest = version_triple(json['tag_name'])
