@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Fixed a bug in `oq reset` command which was not stopping
+    the DbServer properly
+
   [Michele Simionato]
   * Implemented an API `/extract/aggcurves/loss_type?tagname1=tagvalue1&...`
   * Implemented an API `/extract/aggdamages/loss_type?tagname1=tagvalue1&...`
