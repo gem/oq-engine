@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Tested also the case of calculators requiring a shared_dir
   * Improved the error checking when parsing vulnerability functions with PMF
 
   [Daniele Viganò]
