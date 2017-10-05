@@ -48,7 +48,8 @@ jobs:
             chmod 600 .deploy_rsa &&
             eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
-            bin/oq reset --yes;
+            bin/oq reset --yes &&
+            bin/oq dbserver status | grep -q 'dbserver not-running';
           fi
 
 before_install:
