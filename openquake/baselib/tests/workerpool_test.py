@@ -43,7 +43,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         cls.proc.start()
         cls.master.start()
 
-    def test1(self):
+    def test(self):
         mon = Monitor()
         iterargs = ((i, mon) for i in range(10))
         res = _starmap(double, iterargs, self.host, self.task_in_port,
@@ -52,16 +52,6 @@ class WorkerPoolTestCase(unittest.TestCase):
         self.assertEqual(num_tasks, 10)
         self.assertEqual(sum(r[0] for r in res), 90)
         # sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
-
-    def test2(self):
-        mon = Monitor()
-        iterargs = ((i, mon) for i in range(5))
-        res = _starmap(double, iterargs, self.host, self.task_in_port,
-                       self.receiver_ports)
-        num_tasks = next(res)
-        self.assertEqual(num_tasks, 5)
-        self.assertEqual(sum(r[0] for r in res), 20)
-        # sum[0, 2, 4, 6, 8]
 
     def test_status(self):
         time.sleep(1)  # wait a bit for the workerpool to start
