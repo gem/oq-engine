@@ -188,6 +188,9 @@ def filter_agg(dstore, losses, tags):
     for tag in tags:
         idxs &= set(assetcol.aids_by_tag[tag])
     # numpy.array wants lists, not sets, hence the sorted below
+    if not idxs:
+        # no intersection, return a zero matrix
+        return numpy.zeros(losses.shape[1:], losses.dtype)
     return losses[numpy.array(sorted(idxs))].sum(axis=0)
 
 
@@ -223,4 +226,7 @@ def extract_aggdamages(dstore, loss_type, *tags):
         losses = dstore['dmg_by_asset'][loss_type]['mean']
     else:
         raise KeyError('No damages found in %s' % dstore)
-    return filter_agg(dstore, losses, tags)
+    res = filter_agg(dstore, losses, tags)
+    if res.sum() == 0.0:
+        res[:, 0] = 1.  # no_damage state has probability 1
+    return res
