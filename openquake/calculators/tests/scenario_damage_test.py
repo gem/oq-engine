@@ -59,6 +59,16 @@ RM       4,000
 *ALL*    6,000    
 ======== =========''', got)
 
+        # test aggdamages, 1 realization x 3 damage states
+        [dmg] = extract(self.calc.datastore, 'aggdamages/structural',
+                        'taxonomy=RC', 'CRESTA=01.1')
+        numpy.testing.assert_almost_equal(
+            [998.6327515, 720.0072021, 281.3600769], dmg)
+        # test no intersection
+        dmg = extract(self.calc.datastore, 'aggdamages/structural',
+                      'taxonomy=RM', 'CRESTA=01.1')
+        self.assertEqual(len(dmg), 0)
+
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
@@ -121,9 +131,3 @@ RM       4,000
         # just run the npz export
         [npz] = export(('dmg_by_asset', 'npz'), self.calc.datastore)
         self.assertEqual(strip_calc_id(npz), 'dmg_by_asset.npz')
-
-        # test aggdamages
-        [dmg] = extract(self.calc.datastore, 'aggdamages/structural',
-                        'taxonomy=tax1')  # 1 realization x 5 damage states
-        numpy.testing.assert_almost_equal(
-            [0.39546266, 0.29675126, 0.13741516, 0.06894679, 0.10142413], dmg)

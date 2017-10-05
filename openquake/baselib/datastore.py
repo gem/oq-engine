@@ -23,7 +23,6 @@ import collections
 import h5py
 
 from openquake.baselib import hdf5, config
-from openquake.commonlib.writers import write_csv
 
 
 def get_datadir():
@@ -364,12 +363,6 @@ class DataStore(collections.MutableMapping):
         else:
             fname = '%s-%s.%s' % (prefix, postfix, fmt)
         return self.export_path(fname, export_dir)
-
-    def export_csv(self, key):
-        """
-        Generic csv exporter
-        """
-        return write_csv(self.export_path(key, 'csv'), self[key])
 
     def flush(self):
         """Flush the underlying hdf5 file"""
