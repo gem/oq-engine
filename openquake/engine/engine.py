@@ -25,6 +25,7 @@ import sys
 import signal
 import traceback
 import requests
+import platform
 
 from openquake.baselib.performance import Monitor
 from openquake.baselib import parallel, config, datastore, __version__
@@ -33,7 +34,7 @@ from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
-GITHUB = 'https://api.github.com/repos/gem/oq-engine'
+OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
@@ -268,8 +269,15 @@ def check_obsolete_version():
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
+
+
+    headers = {
+        'User-Agent': 'OpenQuake Engine %s; %s' % (__version__,
+                                                   platform.platform())
+    }
+
     try:
-        json = requests.get(GITHUB + '/releases/latest', timeout=0.5).json()
+        json = requests.get(OQ_API + '/engine/latest', timeout=0.5, headers=headers).json()
         tag_name = json['tag_name']
         current = version_triple(__version__)
         latest = version_triple(json['tag_name'])
