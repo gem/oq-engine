@@ -76,7 +76,7 @@ class Socket(object):
             end_point = self.end_point.rsplit(':', 1)[0]  # strip port range
             self.zsocket = context.socket(self.socket_type)
             port = self.zsocket.bind_to_random_port(end_point, p1, p2)
-            self.true_end_point = '%s:%d' % (end_point, port)
+            self.port = port
         elif self.mode == 'bind':
             self.zsocket = bind(self.end_point, self.socket_type)
         else:  # connect
@@ -133,6 +133,5 @@ class Socket(object):
             return self.zsocket.recv_pyobj(noblock)
 
     def __repr__(self):
-        end_point = getattr(self, 'true_end_point', self.end_point)
-        return '<%s %s %s %s>' % (self.__class__.__name__, end_point,
+        return '<%s %s %s %s>' % (self.__class__.__name__, self.end_point,
                                   SOCKTYPE[self.socket_type], self.mode)
