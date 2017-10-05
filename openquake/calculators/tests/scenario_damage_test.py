@@ -65,9 +65,9 @@ RM       4,000
         numpy.testing.assert_almost_equal(
             [998.6327515, 720.0072021, 281.3600769], dmg)
         # test no intersection
-        [dmg] = extract(self.calc.datastore, 'aggdamages/structural',
-                        'taxonomy=RM', 'CRESTA=01.1')
-        numpy.testing.assert_almost_equal([1, 0, 0], dmg)
+        dmg = extract(self.calc.datastore, 'aggdamages/structural',
+                      'taxonomy=RM', 'CRESTA=01.1')
+        self.assertEqual(len(dmg), 0)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1c(self):
