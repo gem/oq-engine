@@ -36,7 +36,7 @@ from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, read_nrml
-from openquake.commonlib import datastore
+from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
 from openquake.commonlib.riskmodels import get_risk_models
@@ -112,7 +112,7 @@ def get_params(job_inis):
     cp = configparser.ConfigParser()
     cp.read(job_inis)
 
-    # drectory containing the config files we're parsing
+    # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_inis[0])
     base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
@@ -189,13 +189,24 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        return geo.Mesh.from_coords(oqparam.sites)
+        return geo.Mesh.from_coords(sorted(oqparam.sites))
     elif 'sites' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['sites'], 'U').read()
-        coords = valid.coordinates(
-            csv_data.strip().replace(',', ' ').replace('\n', ','))
+        csv_data = open(oqparam.inputs['sites'], 'U').readlines()
+        has_header = csv_data[0].startswith('site_id')
+        if has_header:  # strip site_id
+            data = []
+            for i, line in enumerate(csv_data[1:]):
+                row = line.replace(',', ' ').split()
+                assert int(row[0]) == i, (row[0], i)
+                data.append(' '.join(row[1:]))
+        elif oqparam.calculation_mode == 'gmf_ebrisk':
+            raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
+        else:
+            data = [line.replace(',', ' ') for line in csv_data]
+        coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
-        return geo.Mesh.from_coords(coords[start:stop])
+        c = coords[start:stop] if has_header else sorted(coords[start:stop])
+        return geo.Mesh.from_coords(c)
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -218,7 +229,7 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
                   for param in get_site_model(oqparam)]
-        mesh = geo.Mesh.from_coords(coords)
+        mesh = geo.Mesh.from_coords(sorted(coords))
         mesh.from_site_model = True
         return mesh
 
@@ -579,6 +590,10 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         # about pickling dictionaries with empty strings:
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
+    try:
+        tagNames = exposure.tagNames
+    except AttributeError:
+        tagNames = Node('tagNames', text='')
 
     # read the cost types and make some check
     cost_types = []
@@ -603,7 +618,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.units[name] = ct['unit']
     assets = []
     asset_refs = []
-    assets_by_tag = collections.defaultdict(list)
+    assets_by_tag = AccumDict(accum=[])
+    assets_by_tag.tagnames = ~tagNames
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
@@ -676,12 +692,17 @@ def get_exposure(oqparam):
                 out_of_region += 1
                 continue
             tagnode = getattr(asset, 'tags', None)
+            assets_by_tag = exposure.assets_by_tag
             if tagnode is not None:
-                for item in tagnode.attrib.items():
-                    valid.simple_id(item[0])  # name
-                    valid.nice_string(item[1])  # value
-                    exposure.assets_by_tag['%s-%s' % item].append(idx)
-            exposure.assets_by_tag['taxonomy-' + taxonomy].append(idx)
+                for tagname, tagvalue in tagnode.attrib.items():
+                    if tagname not in assets_by_tag.tagnames:
+                        with context(fname, tagnode):
+                            raise ValueError(
+                                'Unknown tag %r or <tagNames> not '
+                                'specified in the exposure' % tagname)
+                    valid.nice_string(tagvalue)
+                    assets_by_tag['%s=%s' % (tagname, tagvalue)].append(idx)
+            exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
             costs = asset.costs
         except AttributeError:
@@ -973,13 +994,13 @@ def get_scenario_from_nrml(oqparam, fname):
             sid = site_idx[node['lon'], node['lat']]
             gmf_by_imt[imt][i % num_events, sid] = node['gmv']
 
-    for etag, count in sorted(counts.items()):
+    for rupid, count in sorted(counts.items()):
         if count < num_imts:
-            raise InvalidFile("Found a missing etag '%s' in %s" %
-                              (etag, fname))
+            raise InvalidFile("Found a missing ruptureId %d in %s" %
+                              (rupid, fname))
         elif count > num_imts:
-            raise InvalidFile("Found a duplicated etag '%s' in %s" %
-                              (etag, fname))
+            raise InvalidFile("Found a duplicated ruptureId '%s' in %s" %
+                              (rupid, fname))
     expected_gmvs_per_site = num_imts * len(eids)
     for lonlat, counts in sitecounts.items():
         if counts != expected_gmvs_per_site:

@@ -1,11 +1,11 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_14449.hdf5 Thu Aug 17 11:47:56 2017
-checksum32                                       2,582,625,613           
-engine_version                                   2.6.0-gitbdd9d17        
-================================================ ========================
+==================================================== ========================
+tstation.gem.lan:/home/michele/oqdata/calc_5509.hdf5 Fri Sep 22 11:29:25 2017
+checksum32                                           2,582,625,613           
+engine_version                                       2.6.0-gite59d75a        
+==================================================== ========================
 
 num_sites = 281, num_imts = 1
 
@@ -64,8 +64,8 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=2, rlzs=1)
-  0,AkkarBommer2010(): ['<0,b1~b1_b6,w=1.0>']
-  1,AtkinsonBoore2003SInter(): ['<0,b1~b1_b6,w=1.0>']>
+  0,AkkarBommer2010(): [0]
+  1,AtkinsonBoore2003SInter(): [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -86,19 +86,19 @@ source_model.xml 1      Subduction Interface 1           3945         3,945
 
 Informational data
 ------------------
-============================ =====================================================================================
-compute_ruptures.received    tot 311.57 KB, max_per_task 76.54 KB                                                 
-compute_ruptures.sent        src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.45 KB, gsims 1.12 KB
-hazard.input_weight          7309372.0                                                                            
-hazard.n_imts                1                                                                                    
-hazard.n_levels              50                                                                                   
-hazard.n_realizations        1                                                                                    
-hazard.n_sites               281                                                                                  
-hazard.n_sources             2                                                                                    
-hazard.output_weight         14050.0                                                                              
-hostname                     tstation.gem.lan                                                                     
-require_epsilons             True                                                                                 
-============================ =====================================================================================
+========================= =====================================================================================
+compute_ruptures.received tot 312 KB, max_per_task 76.58 KB                                                    
+compute_ruptures.sent     src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.49 KB, gsims 1.12 KB
+hazard.input_weight       7309372.0                                                                            
+hazard.n_imts             1                                                                                    
+hazard.n_levels           50                                                                                   
+hazard.n_realizations     1                                                                                    
+hazard.n_sites            281                                                                                  
+hazard.n_sources          2                                                                                    
+hazard.output_weight      14050.0                                                                              
+hostname                  tstation.gem.lan                                                                     
+require_epsilons          True                                                                                 
+========================= =====================================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -154,7 +154,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.881 0.455  0.591 2.041 11       
+compute_ruptures   0.915 0.415  0.606 1.957 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -162,15 +162,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         9.688    1.367     11    
-managing sources               1.357    0.0       1     
-filtering ruptures             0.376    0.0       489   
-reading site collection        0.201    0.0       1     
-assoc_assets_sites             0.180    0.0       1     
-reading composite source model 0.144    0.0       1     
-reading exposure               0.127    0.0       1     
-saving ruptures                0.074    0.0       11    
+total compute_ruptures         10       1.320     11    
+managing sources               1.359    0.0       1     
+filtering ruptures             0.396    0.0       489   
+reading site collection        0.203    0.0       1     
+assoc_assets_sites             0.178    0.0       1     
+reading composite source model 0.160    0.0       1     
+reading exposure               0.095    0.0       1     
+saving ruptures                0.060    0.0       11    
+setting event years            0.008    0.0       1     
 prefiltering source model      0.008    0.0       1     
-store source_info              0.008    0.0       1     
-setting event years            0.007    0.0       1     
+store source_info              0.007    0.0       1     
 ============================== ======== ========= ======

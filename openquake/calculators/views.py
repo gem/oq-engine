@@ -24,6 +24,7 @@ import operator
 import decimal
 import functools
 import itertools
+import collections
 import numpy
 
 from openquake.baselib.general import (
@@ -39,7 +40,7 @@ from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
-INT = (int, numpy.uint32, numpy.int64)
+INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 F32 = numpy.float32
 U32 = numpy.uint32
 
@@ -481,15 +482,15 @@ def view_assetcol(token, dstore):
     """
     Display the exposure in CSV format
     """
-    assetcol = dstore['assetcol'].value
-    taxonomies = dstore['assetcol/taxonomies'].value
-    header = list(assetcol.dtype.names)
+    assetcol = dstore['assetcol']
+    taxonomies = assetcol.taxonomies
+    header = list(assetcol.array.dtype.names)
     columns = [None] * len(header)
     for i, field in enumerate(header):
         if field == 'taxonomy':
-            columns[i] = taxonomies[assetcol[field]]
+            columns[i] = taxonomies[assetcol.array[field]]
         else:
-            columns[i] = assetcol[field]
+            columns[i] = assetcol.array[field]
     return write_csv(io.StringIO(), [header] + list(zip(*columns)))
 
 
@@ -550,6 +551,19 @@ def stats(name, array, *extras):
     """
     return (name, numpy.mean(array), numpy.std(array, ddof=1),
             numpy.min(array), numpy.max(array), len(array)) + extras
+
+
+@view.add('num_units')
+def view_num_units(token, dstore):
+    """
+    Display the number of units by taxonomy
+    """
+    counts = collections.Counter()
+    for asset in dstore['assetcol']:
+        counts[asset.taxonomy] += asset.number
+    data = sorted(counts.items())
+    data.append(('*ALL*', sum(d[1] for d in data)))
+    return rst_table(data, header=['taxonomy', 'num_units'])
 
 
 @view.add('assets_by_site')
@@ -648,7 +662,7 @@ def view_task(token, dstore):
           stats('weight', arr['weight'])]
     sources = dstore['task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
-    res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n' % (
+    res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
 

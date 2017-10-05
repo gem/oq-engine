@@ -113,6 +113,18 @@ A list of error lines extracted from the log. If the calculation was
 successfull, the list is empty.
 
 
+#### GET /v1/calc/:calc_id/extract/:spec
+
+Get an .npz file for the given object specification. If `spec` ends with
+the extension `.attrs` the attributes of the underlying object (usually
+coming from an HDF5 dataset) are used to build the .npz file, while the
+object itself is not retrieved.
+
+Response:
+
+A single .npz file of Content-Type: application/octet-stream
+
+
 #### GET /v1/calc/:calc_id/results
 
 List a summary of results for the given `calc_id`. The [url](#get-v1calchazardresultresult_id) in each response item can be followed to retrieve the full result artifact.

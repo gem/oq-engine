@@ -19,14 +19,10 @@
 import operator
 import logging
 import collections
-try:  # with Python 3
-    from urllib.parse import unquote_plus
-except ImportError:  # with Python 2
-    from urllib import unquote_plus
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip, decode
+from openquake.baselib.python3compat import zip, encode, decode
 from openquake.baselib.general import groupby, get_array, AccumDict
 from openquake.hazardlib import site, calc, valid
 from openquake.risklib import scientific, riskmodels
@@ -48,6 +44,8 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
 
 by_taxonomy = operator.attrgetter('taxonomy')
+
+aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 
 
 class Output(object):
@@ -85,6 +83,7 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_collection(assets_by_site, time_event)
         dic = dict(zip(self.array['idx'], range(len(self.array))))
+        self.tagnames = assets_by_tag.tagnames
         self.aids_by_tag = {}
         for tag, idxs in assets_by_tag.items():
             aids = []
@@ -111,7 +110,7 @@ class AssetCollection(object):
         if not hasattr(self, '_taxonomy'):
             self._taxonomy = [None] * len(self)
             for tag, aids in self.aids_by_tag.items():
-                name, value = tag.split('-', 1)
+                name, value = tag.split('=', 1)
                 if name == 'taxonomy':
                     for aid in aids:
                         self._taxonomy[aid] = value
@@ -122,6 +121,19 @@ class AssetCollection(object):
         :returns: list of sorted tags
         """
         return sorted(self.aids_by_tag)
+
+    def units(self, loss_types):
+        """
+        :param: a list of loss types
+        :returns: an array of units as byte strings, suitable for HDF5
+        """
+        units = self.cc.units
+        lst = []
+        for lt in loss_types:
+            if lt.endswith('_ins'):
+                lt = lt[:-4]
+            lst.append(encode(units[lt]))
+        return numpy.array(lst)
 
     def assets_by_site(self):
         """
@@ -163,7 +175,7 @@ class AssetCollection(object):
         :returns: list of tag indices corresponding to taxonomies
         """
         return [i for i, t in enumerate(self.tags())
-                if t.startswith('taxonomy-')]
+                if t.startswith('taxonomy=')]
 
     def __iter__(self):
         for i in range(len(self)):
@@ -201,21 +213,28 @@ class AssetCollection(object):
                  'i_lim': ' '.join(self.i_lim),
                  'retro': ' '.join(self.retro),
                  'tot_sites': self.tot_sites,
+                 'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
-        return dict(array=self.array, aids_by_tag=self.aids_by_tag,
+        tags, all_aids = [], []
+        for tag, aids in sorted(self.aids_by_tag.items()):
+            tags.append(tag)
+            all_aids.append((aids,))
+        return dict(array=self.array,
+                    tags=numpy.array(tags, hdf5.vstr),
+                    aids=numpy.array(all_aids, aids_dt),
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
         for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
             setattr(self, name, attrs[name].split())
+        self.tagnames = attrs['tagnames']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.cc = dic['cost_calculator']
-        items = dic.get('aids_by_tag', {}).items()
-        self.aids_by_tag = {unquote_plus(tag): dset.value
-                            for tag, dset in items}
+        # dic['aids'] is an array of dtype `aids_dt` with field 'aids'
+        self.aids_by_tag = dict(zip(dic['tags'], dic['aids']['aids']))
 
     @staticmethod
     def build_asset_collection(assets_by_site, time_event=None):
@@ -233,7 +252,7 @@ class AssetCollection(object):
         candidate_loss_types = list(first_asset.values)
         loss_types = []
         the_occupants = 'occupants_%s' % time_event
-        for candidate in candidate_loss_types:
+        for candidate in sorted(candidate_loss_types):
             if candidate.startswith('occupants'):
                 if candidate == the_occupants:
                     loss_types.append('occupants')
@@ -360,8 +379,8 @@ class CompositeRiskModel(collections.Mapping):
     def init(self, oqparam):
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.curve_builder = self.make_curve_builder(oqparam)
-        self.loss_types = [cb.loss_type for cb in self.curve_builder]
+        self.curve_params = self.make_curve_params(oqparam)
+        self.loss_types = [cp.loss_type for cp in self.curve_params]
         self.insured_losses = oqparam.insured_losses
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
@@ -386,14 +405,12 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    def make_curve_builder(self, oqparam):
+    def make_curve_params(self, oqparam):
         # NB: populate the inner lists .loss_types too
-        cbs = []
+        cps = []
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
-        ses_ratio = oqparam.ses_ratio if oqparam.calculation_mode in (
-            'event_based_risk',) else 1
         for l, loss_type in enumerate(loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
@@ -408,37 +425,27 @@ class CompositeRiskModel(collections.Mapping):
                 if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
-                cb = scientific.LossTypeCurveBuilder(
-                    loss_type, max(curve_resolutions), ratios, ses_ratio,
-                    True, oqparam.conditional_loss_poes,
-                    oqparam.insured_losses)
-            elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
-                cb = scientific.LossTypeCurveBuilder(
-                    loss_type, oqparam.loss_curve_resolution,
-                    oqparam.loss_ratios[loss_type], ses_ratio, True,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses)
-            else:  # no loss_ratios provided
-                cb = scientific.LossTypeCurveBuilder(
-                    loss_type, oqparam.loss_curve_resolution,
-                    default_loss_ratios, ses_ratio, False,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses)
-            cbs.append(cb)
-            cb.index = l
+                cp = scientific.CurveParams(
+                    l, loss_type, max(curve_resolutions), ratios, True)
+            else:  # event_based or scenario calculators
+                cp = scientific.CurveParams(
+                    l, loss_type, oqparam.loss_curve_resolution,
+                    default_loss_ratios, False)
+            cps.append(cp)
             self.lti[loss_type] = l
-        return scientific.CurveBuilder(
-            cbs, oqparam.insured_losses, oqparam.conditional_loss_poes)
+        return cps
 
     def get_loss_ratios(self):
         """
         :returns: a 1-dimensional composite array with loss ratios by loss type
         """
         lst = [('user_provided', numpy.bool)]
-        for cb in self.curve_builder:
-            lst.append((cb.loss_type, F32, len(cb.ratios)))
+        for cp in self.curve_params:
+            lst.append((cp.loss_type, F32, len(cp.ratios)))
         loss_ratios = numpy.zeros(1, numpy.dtype(lst))
-        for cb in self.curve_builder:
-            loss_ratios['user_provided'] = cb.user_provided
-            loss_ratios[cb.loss_type] = tuple(cb.ratios)
+        for cp in self.curve_params:
+            loss_ratios['user_provided'] = cp.user_provided
+            loss_ratios[cp.loss_type] = tuple(cp.ratios)
         return loss_ratios
 
     def _get_loss_types(self):
@@ -484,16 +491,25 @@ class CompositeRiskModel(collections.Mapping):
         for sid, assets in enumerate(assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
-                epsgetter = riskinput.epsilon_getter(
-                    [asset.ordinal for asset in group[taxonomy]])
+                epsgetter = riskinput.epsilon_getter
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
-        with mon_hazard:
-            hazard = hazard_getter.get_hazard()
-        with mon_risk:
-            for out in self._gen_outputs(
-                    hazard, imti, dic, hazard_getter.eids):
-                yield out
+        if hasattr(hazard_getter, 'rlzs_by_gsim'):
+            # save memory in event based risk by working one gsim at the time
+            for gsim in hazard_getter.rlzs_by_gsim:
+                with mon_hazard:
+                    hazard = hazard_getter.get_hazard(gsim)
+                with mon_risk:
+                    for out in self._gen_outputs(
+                            hazard, imti, dic, hazard_getter.eids):
+                        yield out
+        else:
+            with mon_hazard:
+                hazard = hazard_getter.get_hazard()
+            with mon_risk:
+                for out in self._gen_outputs(
+                        hazard, imti, dic, hazard_getter.eids):
+                    yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
@@ -517,7 +533,7 @@ class CompositeRiskModel(collections.Mapping):
                         data = {i: (gmvs[:, i], eids) for i in rangeI}
                     elif eids is not None:  # gmf_ebrisk
                         data = {i: (haz[i], eids) for i in rangeI}
-                    else:  # classical
+                    else:  # classical or scenario from gmfs
                         data = haz
                     out = [None] * len(self.lti)
                     for lti, i in enumerate(rangeI):
@@ -579,8 +595,18 @@ class HazardGetter(object):
     def get_hazard(self):
         """
         :param gsim: a GSIM instance
-        :yields: pairs (rlz, dic) where dic is dictionary (num_sites, num_imts)
+        :returns: an OrderedDict rlzi -> datadict
         """
+        if self.kind == 'gmf':
+            # save info useful for debugging into gmdata
+            I = len(self.imts)
+            for rlzi, datadict in self.data.items():
+                arr = numpy.zeros(I + 2, F32)  # imt, events, bytes
+                arr[-1] = 4 * I * len(datadict)  # nbytes
+                for lst in datadict.values():
+                    for i, gmvs in enumerate(lst):
+                        arr[i] += gmvs.sum()
+                self.gmdata[rlzi] += arr
         return self.data
 
 
@@ -591,10 +617,10 @@ class GmfGetter(object):
     """
     kind = 'gmf'
 
-    def __init__(self, grp_id, rlzs_by_gsim, ebruptures, sitecol, imts,
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imts,
                  min_iml, truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete, sitecol
-        self.grp_id = grp_id
+        self.grp_id = ebruptures[0].grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
@@ -635,7 +661,7 @@ class GmfGetter(object):
         # dictionary eid -> index
         self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
-    def gen_gmv(self):
+    def gen_gmv(self, gsim=None):
         """
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
@@ -643,7 +669,9 @@ class GmfGetter(object):
         itemsize = self.gmf_data_dt.itemsize
         sample = 0  # in case of sampling the realizations have a corresponding
         # sample number from 0 to the number of samples of the given src model
-        for gsim, rlzs in self.rlzs_by_gsim.items():  # OrderedDict
+        gsims = self.rlzs_by_gsim if gsim is None else [gsim]
+        for gsim in gsims:  # OrderedDict
+            rlzs = self.rlzs_by_gsim[gsim]
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sites.sids
@@ -681,13 +709,13 @@ class GmfGetter(object):
                     n += e
             sample += len(rlzs)
 
-    def get_hazard(self, data=None):
+    def get_hazard(self, gsim=None, data=None):
         """
         :param data: if given, an iterator of records of dtype gmf_data_dt
         :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
         if data is None:
-            data = self.gen_gmv()
+            data = self.gen_gmv(gsim)
         hazard = collections.defaultdict(lambda: collections.defaultdict(list))
         for rlzi, sid, eid, gmv in data:
             hazard[rlzi][sid].append((gmv, eid))
@@ -738,10 +766,9 @@ class RiskInput(object):
     :param eps_dict:
         dictionary of epsilons
     """
-    def __init__(self, hazard_getter, assets_by_site, tagmask, eps_dict):
+    def __init__(self, hazard_getter, assets_by_site, eps_dict):
         self.hazard_getter = hazard_getter
         self.assets_by_site = assets_by_site
-        self.tagmask = tagmask
         self.eps = eps_dict
         taxonomies_set = set()
         aids = []
@@ -758,14 +785,19 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def epsilon_getter(self, asset_ordinals):
+    def epsilon_getter(self, aid, eids):
         """
-        :param asset_ordinals: list of ordinals of the assets
-        :returns: a closure returning an array of epsilons from the event IDs
+        :param aid: asset ordinal
+        :param eids: ignored
+        :returns: an array of E epsilons
         """
-        return lambda dummy1, dummy2: (
-            [self.eps[aid] for aid in asset_ordinals]
-            if self.eps else None)
+        if not self.eps:
+            return
+        eps = self.eps[aid]
+        if isinstance(eps, numpy.ndarray):
+            return eps
+        # else assume it is zero
+        return numpy.zeros(len(eids), F32)
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
@@ -788,18 +820,16 @@ class RiskInputFromRuptures(object):
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
 
-    def epsilon_getter(self, asset_ordinals):
+    def epsilon_getter(self, aid, eids):
         """
-        :param asset_ordinals: ordinals of the assets
-        :returns: a closure returning an array of epsilons from the event IDs
+        :param aid: asset ordinal
+        :param eids: E event IDs
+        :returns: an array of E epsilons
         """
         if not hasattr(self, 'eps'):
-            return lambda aid, eids: None
-
-        def geteps(aid, eids):
-            idxs = [self.hazard_getter.eid2idx[eid] for eid in eids]
-            return self.eps[aid, idxs]
-        return geteps
+            return None
+        idxs = [self.hazard_getter.eid2idx[eid] for eid in eids]
+        return self.eps[aid, idxs]
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
@@ -863,16 +893,16 @@ class LossRatiosGetter(object):
     def get(self, rlzi):
         """
         :param rlzi: a realization ordinal
-        :returns: a dictionary aid -> list of loss ratios
+        :returns: a dictionary aid -> array of shape (E, LI)
         """
         data = self.dstore['all_loss_ratios/data']
         dic = collections.defaultdict(list)  # aid -> ratios
         for aid, idxs in zip(self.aids, self.indices):
             for idx in idxs:
-                for rec in data[idx[0]: idx[1]]:
+                for rec in data[idx[0]: idx[1]]:  # dtype (rlzi, ratios)
                     if rlzi == rec['rlzi']:
                         dic[aid].append(rec['ratios'])
-        return dic
+        return {a: numpy.array(dic[a]) for a in dic}
 
     # used in the calculator
     def get_all(self):

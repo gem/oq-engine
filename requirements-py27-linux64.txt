@@ -30,7 +30,12 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py27/PyYAML-3.12-cp27-cp27mu-manyl
 
 ## Extra ##
 
-### pythn-prctl ###
+### setproctitle ###
+# comment the following lines to skip installation
+# of setproctitle (optional feature)
+http://cdn.ftp.openquake.org/wheelhouse/linux/py27/setproctitle-1.1.10-cp27-cp27mu-manylinux1_x86_64.whl
+
+### python-prctl ###
 # comment the following lines to skip installation
 # of python-prctl (optional feature)
 http://cdn.ftp.openquake.org/wheelhouse/linux/py27/python_prctl-1.6.1-cp27-cp27mu-manylinux1_x86_64.whl

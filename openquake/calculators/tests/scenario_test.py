@@ -131,20 +131,15 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
         out = self.run_calc(case_9.__file__, 'job.ini', exports='csv,npz')
-        f1, f2 = out['gmf_data', 'csv']
-        self.assertEqualFiles('LinLee2008SSlab_gmf.csv', f1)
-        self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.csv', f2)
-
-        f1, f2 = out['gmf_data', 'csv']
-        self.assertEqualFiles('gmf-LinLee2008SSlab-PGA.csv', f1)
-        self.assertEqualFiles('gmf-YoungsEtAl1997SSlab-PGA.csv', f2)
+        f, _sitefile = out['gmf_data', 'csv']
+        self.assertEqualFiles('gmf.csv', f)
 
         # test the .npz export
         [fname] = out['gmf_data', 'npz']
         with numpy.load(fname) as f:
-            self.assertEqual(len(f.keys()), 2)  # there are only two datasets
-            data1 = f['LinLee2008SSlab()']
-            data2 = f['YoungsEtAl1997SSlab()']
+            self.assertEqual(len(f.keys()), 2)  # rlz-000 rlz-001
+            data1 = f['rlz-000']
+            data2 = f['rlz-001']
             self.assertEqual(data1.dtype.names, ('lon', 'lat', 'PGA'))
             self.assertEqual(data1.shape, (3,))
             self.assertEqual(data1['PGA'].shape, (3, 10))
