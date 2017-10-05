@@ -184,7 +184,7 @@ class WorkerPool(object):
             elif cmd == 'getpid':
                 ctrlsock.send(self.pid)
             elif cmd == 'getcores':
-                ctrlsock.send(len(self.workers))
+                ctrlsock.send(self.num_workers)
 
     def stop(self):
         """
