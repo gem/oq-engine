@@ -26,16 +26,16 @@ def _starmap(func, iterargs, host, task_in_port, receiver_ports):
     # called by parallel.Starmap.submit_all; should not be used directly
     receiver_url = 'tcp://%s:%s' % (host, receiver_ports)
     task_in_url = 'tcp://%s:%s' % (host, task_in_port)
-    with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver, \
-            z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
+    with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver:
         logging.info('Receiver port for %s=%s', func.__name__, receiver.port)
-        n = 0
-        for args in iterargs:
-            # args[-1] is a Monitor instance
-            args[-1].backurl = '%s:%s' % (receiver.end_point.rsplit(':', 1)[0],
-                                          receiver.port)
-            sender.send((func, args))
-            n += 1
+        receiver_host = receiver.end_point.rsplit(':', 1)[0]
+        backurl = '%s:%s' % (receiver_host, receiver.port)
+        with z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
+            n = 0
+            for args in iterargs:
+                args[-1].backurl = backurl  # args[-1] is a Monitor instance
+                sender.send((func, args))
+                n += 1
         yield n
         for _ in range(n):
             obj = receiver.zsocket.recv_pyobj()
@@ -45,10 +45,11 @@ def _starmap(func, iterargs, host, task_in_port, receiver_ports):
 
 class WorkerMaster(object):
     """
-    :param frontend_url: url where to send the tasks
-    :param task_out_port: url with a range of ports to receive the results
+    :param master_host: hostname or IP of the master node
+    :param task_in_port: port where to send the tasks
+    :param task_out_port: port from where to read the tasks
     :param ctrl_port: port on which the worker pools listen
-    :param host_cores: names of the remote hosts and number of cores
+    :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
     def __init__(self, master_host, task_in_port, task_out_port, ctrl_port,
