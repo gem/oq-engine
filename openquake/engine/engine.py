@@ -224,7 +224,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     with logs.handle(job_id, log_level, log_file):  # run the job
         if os.environ.get('OQ_DISTRIBUTE') in ('zmq', 'celery'):
             set_concurrent_tasks_default()
-        msg = check_obsolete_version(oqparam)
+        msg = check_obsolete_version()
         if msg:
             logs.LOG.warn(msg)
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
@@ -279,7 +279,7 @@ def version_triple(tag):
     return tuple(int(n) for n in groups)
 
 
-def check_obsolete_version(oqparam):
+def check_obsolete_version():
     """
     Check if there is a newer version of the engine.
 
