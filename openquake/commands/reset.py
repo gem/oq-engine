@@ -19,6 +19,7 @@
 from __future__ import print_function
 import os
 import sys
+import signal
 from openquake.baselib import sap, config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
@@ -57,5 +58,6 @@ def reset(yes):
 
     # fast way of removing everything
     purge_all(fast=True)  # datastore of the current user
+
 
 reset.flg('yes', 'confirmation')
