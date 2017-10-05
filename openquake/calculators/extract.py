@@ -230,3 +230,21 @@ def extract_aggdamages(dstore, loss_type, *tags):
     else:
         raise KeyError('No damages found in %s' % dstore)
     return filter_agg(dstore, losses, tags)
+
+
+@extract.add('aggcurves')
+def extract_aggcurves(dstore, loss_type, *tags):
+    """
+    Aggregate loss curves of the given loss type and tags for
+    event based risk calculations.
+
+    :returns:
+        array of shape (S, P), being P the number of return periods
+        and S the number of statistics
+    """
+    if 'curves-stats' in dstore:  # event_based_risk
+        losses = dstore['curves-stats'][loss_type]
+    else:
+        raise KeyError('No curves found in %s' % dstore)
+    curves = filter_agg(dstore, losses, tags)
+    return ArrayWrapper(curves, dstore.get_attrs('curves-stats'))
