@@ -29,6 +29,7 @@ from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
     occupants, case_1g, case_7a)
@@ -40,9 +41,9 @@ def check_total_losses(calc):
     loss_dt = calc.oqparam.loss_dt()
     LI = len(loss_dt.names)
     data1 = numpy.zeros(LI, numpy.float32)
-    for dset in dstore['agg_loss_table'].values():
-        for li, lt in enumerate(loss_dt.names):
-            data1[li] += dset['loss'][:, li].sum()
+    alt = dstore['agg_loss_table'].value
+    for li, lt in enumerate(loss_dt.names):
+        data1[li] += alt['loss'][:, li].sum()
 
     # check the sums are consistent with the ones coming from losses_by_tag
     tax_idx = dstore['assetcol'].get_tax_idx()
@@ -67,6 +68,10 @@ def check_total_losses(calc):
 
 class EventBasedRiskTestCase(CalculatorTestCase):
 
+    def check_attr(self, name, value):
+        got = self.calc.datastore.get_attr('agg_curves-stats', name)
+        numpy.testing.assert_equal(value, got)
+
     def assert_stats_ok(self, pkg, job_ini):
         out = self.run_calc(pkg.__file__, job_ini, exports='csv',
                             concurrent_tasks='4')
@@ -89,17 +94,25 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
-        ekeys = [('agg_curve-stats', 'csv')]
+        ekeys = [('agg_curves-stats', 'csv')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
                     'expected/%s' % strip_calc_id(fname), fname)
+
+        # make sure the agg_curves-stats has the right attrs
+        self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
+        self.check_attr('units', [b'EUR', b'EUR'])
+        self.check_attr('nbytes', 96)
 
         # test the loss curves exporter
         [f1] = export(('loss_curves/rlz-0', 'csv'), self.calc.datastore)
         [f2] = export(('loss_curves/rlz-1', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-rlz-000.csv', f1)
         self.assertEqualFiles('expected/loss_curves-rlz-001.csv', f2)
+
+        [f] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-mean.csv', f)
 
         # test the loss maps exporter
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
@@ -168,7 +181,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='csv', hazard_calculation_id=str(hc_id))
-        [fname] = export(('agg_curve-stats', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -186,7 +199,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
-        fnames = export(('agg_curve-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
@@ -232,8 +245,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check job_info is stored
         job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
-        self.assertIn('build_loss_maps.sent', job_info)
-        self.assertIn('build_loss_maps.received', job_info)
+        self.assertIn('build_curves_maps.sent', job_info)
+        self.assertIn('build_curves_maps.received', job_info)
 
         check_total_losses(self.calc)
 
@@ -266,8 +279,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_4.__file__, 'job.ini',
                             calculation_mode='event_based',
                             ground_motion_fields='false', exports='csv')
-        [fname] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
+        [f1, f2] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
+        self.assertEqualFiles('expected/hazard_curve-mean-SA(0.5).csv', f2)
         [fname] = [f for f in out['hmaps', 'csv'] if 'mean' in f]
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
@@ -279,5 +293,5 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
                             exports='csv')
-        [fname] = out['gmf_data', 'csv']
+        [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)

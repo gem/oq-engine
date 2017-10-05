@@ -31,6 +31,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
 from openquake.calculators.export import export
+from openquake.calculators.extract import convert_to_array
 from openquake.risklib.riskinput import GmfGetter, GmfDataGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
@@ -232,33 +233,6 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def convert_to_array(pmap, sitemesh, imtls):
-    """
-    Convert the probability map into a composite array with header
-    of the form PGA-0.1, PGA-0.2 ...
-
-    :param pmap: probability map
-    :param sitemesh: mesh of N sites
-    :param imtls: a DictArray with IMT and levels
-    :returns: a composite array of lenght N
-    """
-    nsites = len(sitemesh)
-    lst = []
-    # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
-    for imt, imls in imtls.items():
-        for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), F64))
-    curves = numpy.zeros(nsites, numpy.dtype(lst))
-    for sid, pcurve in pmap.items():
-        curve = curves[sid]
-        idx = 0
-        for imt, imls in imtls.items():
-            for iml in imls:
-                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
-                idx += 1
-    return curves
-
-
 def export_hazard_csv(key, dest, sitemesh, pmap,
                       imtls, comment):
     """
@@ -272,7 +246,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     :param comment: comment to use as header of the exported CSV file
     """
     curves = util.compose_arrays(
-        sitemesh, convert_to_array(pmap, sitemesh, imtls))
+        sitemesh, convert_to_array(pmap, len(sitemesh), imtls))
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -306,14 +280,15 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), F32))
+            lst.append(('poe-%s' % iml, F32))
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
-            rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt))
+            rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt,
+                                        header=[name for (name, dt) in lst]))
     return fnames
 
 
@@ -441,15 +416,9 @@ def export_hcurves_csv(ekey, dstore):
             fnames.extend(
                 export_hazard_csv(ekey, fname, sitemesh, hmap, pdic, comment))
         elif key == 'hcurves':
-            if export.from_db:  # called by export_from_db
-                fnames.extend(
-                    export_hcurves_by_imt_csv(
-                        ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
-            else:  # when exporting directly from the datastore
-                fnames.extend(
-                    export_hazard_csv(
-                        ekey, fname, sitemesh, hcurves, oq.imtls, comment))
-
+            fnames.extend(
+                export_hcurves_by_imt_csv(
+                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
     return sorted(fnames)
 
 UHS = collections.namedtuple('UHS', 'imls location')
@@ -664,7 +633,7 @@ def export_hmaps_np(ekey, dstore):
     dic = {}
     for kind, hcurves in calc.PmapGetter(dstore).items():
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-        dic[kind] = convert_to_array(hmap, mesh, pdic)
+        dic[kind] = convert_to_array(hmap, len(mesh), pdic)
     save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30),
             investigation_time=oq.investigation_time)
     return [fname]
@@ -745,45 +714,31 @@ def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     imts = list(oq.imtls)
-    if 'scenario' in oq.calculation_mode:
-        imtls = oq.imtls
-        gsims = [str(rlz.gsim_rlz) for rlz in rlzs_assoc.realizations]
-        n_gmfs = oq.number_of_ground_motion_fields
-        fields = ['%03d' % i for i in range(n_gmfs)]
-        dt = numpy.dtype([(f, F32) for f in fields])
-        eids, gmfs_ = calc.get_gmfs(dstore)
-        sitemesh = get_mesh(dstore['sitecol'])
-        writer = writers.CsvWriter(fmt='%.5f')
-        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E, I)
-            for imti, imt in enumerate(imtls):
-                gmfs = numpy.zeros(len(gmfa), dt)
-                for e, event in enumerate(dt.names):
-                    gmfs[event] = gmfa[:, e, imti]
-                dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
-                data = util.compose_arrays(sitemesh, gmfs)
-                writer.save(data, dest)
-        return writer.getsaved()
-    else:  # event based
-        eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-        getter = GmfDataGetter(dstore['gmf_data'])
-        gmfa = getter.gen_gmv()
-        if eid is None:  # new format
-            fname = dstore.build_fname('gmf', 'data', 'csv')
-            gmfa.sort(order=['rlzi', 'sid', 'eid'])
-            writers.write_csv(fname, _expand_gmv(gmfa, imts))
-            return [fname]
-        # old format for single eid
-        gmfa = gmfa[gmfa['eid'] == eid]
-        fnames = []
-        for rlzi, array in group_array(gmfa, 'rlzi').items():
-            rlz = rlzs_assoc.realizations[rlzi]
-            data, comment = _build_csv_data(
-                array, rlz, dstore['sitecol'], imts, oq.investigation_time)
-            fname = dstore.build_fname(
-                'gmf', '%d-rlz-%03d' % (eid, rlzi), 'csv')
-            writers.write_csv(fname, data, comment=comment)
-            fnames.append(fname)
-        return fnames
+    sitemesh = get_mesh(dstore['sitecol'])
+    eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
+    getter = GmfDataGetter(dstore['gmf_data'])
+    gmfa = getter.gen_gmv()
+    if eid is None:  # new format
+        f = dstore.build_fname('sitemesh', '', 'csv')
+        sids = numpy.arange(len(sitemesh), dtype=U32)
+        sites = util.compose_arrays(sids, sitemesh, 'site_id')
+        writers.write_csv(f, sites)
+        fname = dstore.build_fname('gmf', 'data', 'csv')
+        gmfa.sort(order=['rlzi', 'sid', 'eid'])
+        writers.write_csv(fname, _expand_gmv(gmfa, imts))
+        return [fname, f]
+    # old format for single eid
+    gmfa = gmfa[gmfa['eid'] == eid]
+    fnames = []
+    for rlzi, array in group_array(gmfa, 'rlzi').items():
+        rlz = rlzs_assoc.realizations[rlzi]
+        data, comment = _build_csv_data(
+            array, rlz, dstore['sitecol'], imts, oq.investigation_time)
+        fname = dstore.build_fname(
+            'gmf', '%d-rlz-%03d' % (eid, rlzi), 'csv')
+        writers.write_csv(fname, data, comment=comment)
+        fnames.append(fname)
+    return fnames
 
 
 def _expand_gmv(array, imts):
@@ -842,7 +797,7 @@ def export_gmf_scenario_csv(ekey, dstore):
     correl_model = oq.get_correl_model()
     sitecol = dstore['sitecol'].complete
     getter = GmfGetter(
-        ebr.grp_id, rlzs_by_gsim, ruptures, sitecol, imts,
+        rlzs_by_gsim, ruptures, sitecol, imts,
         min_iml, oq.truncation_level, correl_model, samples)
     getter.init()
     hazardr = getter.get_hazard()
@@ -868,43 +823,34 @@ def export_gmf_scenario_csv(ekey, dstore):
     return writer.getsaved()
 
 
+def _gmf_scenario(data, num_sites, imts):
+    # convert data into the composite array expected by QGIS
+    eids = sorted(numpy.unique(data['eid']))
+    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+    E = len(eid2idx)
+    gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
+    gmfa = numpy.zeros(num_sites, gmf_dt)
+    for rec in data:
+        arr = gmfa[rec['sid']]
+        for imt, gmv in zip(imts, rec['gmv']):
+            arr[imt][eid2idx[rec['eid']]] = gmv
+    return gmfa, E
+
+
 @export.add(('gmf_data', 'npz'))
 def export_gmf_scenario_npz(ekey, dstore):
-    oq = dstore['oqparam']
     dic = {}
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    n = len(mesh)
     fname = dstore.export_path('%s.%s' % ekey)
-    if 'scenario' in oq.calculation_mode:
-        # compute the GMFs on the fly from the stored rupture
-        # NB: for visualization purposes we want to export the full mesh
-        # of points, including the ones outside the maximum distance
-        # NB2: in the future, I want to add a sitecol output, then the
-        # visualization of the mesh will be possibile even without the GMFs;
-        # in the future, here we will change
-        # sitemesh = get_mesh(dstore['sitecol'], complete=False)
-        sitecol = dstore['sitecol'].complete
-        sitemesh = get_mesh(sitecol)
-        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-        gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
-        E = oq.number_of_ground_motion_fields
-        correl_model = oq.get_correl_model()
-        [ebrupture] = calc.get_ruptures(dstore, 0)
-        computer = gmf.GmfComputer(
-            ebrupture, sitecol, oq.imtls,
-            gsims, oq.truncation_level, correl_model)
-        gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in oq.imtls])
-        imts = list(oq.imtls)
-        for gsim in gsims:
-            arr = computer.compute(gsim, E, oq.random_seed)
-            I, S, E = arr.shape  # #IMTs, #sites, #events
-            gmfa = numpy.zeros(S, gmf_dt)
-            for imti, imt in enumerate(imts):
-                gmfa[imt] = arr[imti]
-            dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
-    elif 'event_based' in oq.calculation_mode:
-        dic['sitemesh'] = get_mesh(dstore['sitecol'])
+    if 'gmf_data' in dstore:
         data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
         for rlzi in data_by_rlzi:
-            dic['rlz-%03d' % rlzi] = data_by_rlzi[rlzi]
+            gmfa, e = _gmf_scenario(data_by_rlzi[rlzi], n, oq.imtls)
+            logging.info('Exporting array of shape %s for rlz %d',
+                         (n, e), rlzi)
+            dic['rlz-%03d' % rlzi] = util.compose_arrays(mesh, gmfa)
     else:  # nothing to export
         return []
     savez(fname, **dic)

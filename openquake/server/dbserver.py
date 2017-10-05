@@ -19,44 +19,68 @@
 import sys
 import time
 import socket
-import sqlite3
 import os.path
+import sqlite3
 import logging
+import threading
 import subprocess
 
-from openquake.baselib import sap, zeromq
+from openquake.baselib import config, sap, zeromq as z
 from openquake.baselib.parallel import safely_call
-from openquake.hazardlib import valid
-from openquake.commonlib import config, logs
+from openquake.commonlib import logs
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
 
 
+db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+              detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)
+# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
+# OperationalError: "database is locked" disappear in the WebUI tests
+
+
 class DbServer(object):
     """
     A server collecting the received commands into a queue
     """
-    def __init__(self, db, address, authkey):
+    def __init__(self, db, address, num_workers=5):
         self.db = db
-        self.address = 'tcp://%s:%s' % address
-        self.authkey = authkey
+        self.frontend = 'tcp://%s:%s' % address
+        self.backend = 'inproc://dbworkers'
+        self.num_workers = num_workers
+        self.pid = os.getpid()
 
-    def loop(self):
-        logging.warn('DB server started with %s, listening on %s...',
-                     sys.executable, self.address)
-        sock = zeromq.ReplySocket(self.address)
+    def worker(self, sock):
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
-            logging.debug('Got ' + str(cmd_))
+            if cmd == 'getpid':
+                sock.send((self.pid, None, None))
+                continue
             try:
                 func = getattr(actions, cmd)
             except AttributeError:
-                sock.reply(('Invalid command ' + cmd, ValueError, None))
+                sock.send(('Invalid command ' + cmd, ValueError, None))
             else:
-                sock.reply(safely_call(func, (self.db,) + args))
-        logging.warn('DB server stopped')
+                sock.send(safely_call(func, (self.db,) + args))
+
+    def start(self):
+        # start workers
+        workers = []
+        for _ in range(self.num_workers):
+            sock = z.Socket(self.backend, z.zmq.REP, 'connect')
+            threading.Thread(target=self.worker, args=(sock,)).start()
+            workers.append(sock)
+        logging.warn('DB server started with %s on %s, pid=%d',
+                     sys.executable, self.frontend, self.pid)
+        # start frontend->backend proxy
+        try:
+            z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
+                        z.bind(self.backend, z.zmq.DEALER))
+        except (KeyboardInterrupt, z.zmq.ZMQError):
+            for sock in workers:
+                sock.running = False
+            logging.warn('DB server stopped')
 
 
 def different_paths(path1, path2):
@@ -74,8 +98,9 @@ def get_status(address=None):
     :returns: 'running' or 'not-running'
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s = config.dbserver
     try:
-        err = sock.connect_ex(address or config.DBS_ADDRESS)
+        err = sock.connect_ex(address or (s.host, s.port))
     finally:
         sock.close()
     return 'not-running' if err else 'running'
@@ -85,7 +110,7 @@ def check_foreign():
     """
     Check if we the DbServer is the right one
     """
-    if not config.flag_set('dbserver', 'multi_user'):
+    if not config.dbserver.multi_user:
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
@@ -99,7 +124,7 @@ def ensure_on():
     Start the DbServer if it is off
     """
     if get_status() == 'not-running':
-        if valid.boolean(config.get('dbserver', 'multi_user')):
+        if config.dbserver.multi_user:
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
@@ -128,7 +153,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = config.DBS_ADDRESS
+        addr = (config.dbserver.host, config.dbserver.port)
 
     if dbpath:
         DATABASE['NAME'] = dbpath
@@ -139,18 +164,18 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
-    db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
-                  detect_types=sqlite3.PARSE_DECLTYPES)
-    with db:
-        db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
-        actions.upgrade_db(db)
+    db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
+    actions.upgrade_db(db)
+    # the line below is needed to work around a very subtle bug of sqlite;
+    # we need new connections, see https://github.com/gem/oq-engine/pull/3002
+    db.close()
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     try:
-        DbServer(db, addr, config.DBS_AUTHKEY).loop()
+        DbServer(db, addr).start()
     finally:
-        db.conn.close()
+        db.close()
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')

@@ -487,7 +487,7 @@ class Scenario(RiskModel):
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
-        epsilons = epsgetter(None, None)
+        epsilons = [epsgetter(asset.ordinal, None) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -541,7 +541,7 @@ class Damage(RiskModel):
         :param assets: a list of N assets of the same taxonomy
         :param gmvs: an array of E elements
         :param _eps: dummy parameter, unused
-        :returns: an array of N assets and an array of N x E x D elements
+        :returns: N arrays of E x D elements
 
         where N is the number of points, E the number of events
         and D the number of damage states.

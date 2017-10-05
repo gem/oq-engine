@@ -1,11 +1,11 @@
 oq-test03, depth=15km
 =====================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_14410.hdf5 Thu Aug 17 11:47:33 2017
-checksum32                                3,074,586,051           
-engine_version                            2.6.0-gitbdd9d17        
-========================================= ========================
+============================================= ========================
+localhost:/home/michele/oqdata/calc_5470.hdf5 Fri Sep 22 11:28:55 2017
+checksum32                                    3,074,586,051           
+engine_version                                2.6.0-gite59d75a        
+============================================= ========================
 
 num_sites = 1, num_imts = 2
 
@@ -46,21 +46,13 @@ smlt_path weight source_model_file gsim_logic_tree num_realizations
 b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
 ========= ====== ================= =============== ================
 
-Required parameters per tectonic region type
---------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
-
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997(): ['<0,b_1~b1,w=1.0>']>
+  0,SadighEtAl1997(): [0]>
 
 Exposure model
 --------------
@@ -88,5 +80,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.007     0.0       1     
 filtering sites         0.002     0.0       1     
-reading site collection 5.722E-06 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======
