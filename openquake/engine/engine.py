@@ -45,7 +45,7 @@ if parallel.oq_distribute() == 'zmq':
         Set the default for concurrent_tasks based on the available
         worker pools .
         """
-        num_cores = 0
+        num_workers = 0
         w = config.zworkers
         for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
@@ -53,9 +53,9 @@ if parallel.oq_distribute() == 'zmq':
                 if not general.socket_ready(url):
                     logs.LOG.warn('%s is not running', host)
                     continue
-                num_cores += sock.send('getcores')
-        OqParam.concurrent_tasks.default = num_cores * 5
-        logs.LOG.info('Using %d zmq workers', num_cores)
+                num_workers += sock.send('num_workers')
+        OqParam.concurrent_tasks.default = num_workers * 5
+        logs.LOG.info('Using %d zmq workers', num_workers)
 
 elif USE_CELERY:
     import celery.task.control
