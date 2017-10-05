@@ -15,16 +15,25 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
+import unittest
+from nose.plugins.attrib import attr
+from openquake.baselib import config
 from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 
-from nose.plugins.attrib import attr
+NO_SHARED_DIR = (os.environ.get('OQ_DISTRIBUTE') != 'futures' and
+                 not config.directory.shared_dir)
 
 
 class UcerfTestCase(CalculatorTestCase):
+    def setUp(self):
+        if NO_SHARED_DIR:
+            raise unittest.SkipTest('no shared_dir')
+
     @attr('qa', 'hazard', 'ucerf')
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
