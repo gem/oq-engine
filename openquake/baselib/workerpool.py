@@ -154,7 +154,7 @@ class WorkerPool(object):
         """
         :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
         """
-        p.setproctitle('oq worker')
+        p.setproctitle('oq-zworker')
         for cmd, args in sock:
             backurl = args[-1].backurl  # attached to the monitor
             with z.Socket(backurl, z.zmq.PUSH, 'connect') as s:
@@ -164,7 +164,7 @@ class WorkerPool(object):
         """
         Start worker processes and a control loop
         """
-        p.setproctitle('oq workerpool %s' % self.ctrl_url[6:])  # strip tcp://
+        p.setproctitle('oq-zworkerpool %s' % self.ctrl_url[6:])  # strip tcp://
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
