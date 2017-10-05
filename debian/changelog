@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Added an experimental distribution mode of kind "zmq"
+  * Improved the error checking when parsing vulnerability functions with PMF
 
     [Daniele Viganò]
   * Fixed a bug in `oq reset` command which was not stopping
