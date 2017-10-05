@@ -44,8 +44,8 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    sock = zeromq.Socket('tcp://%(host)s:%(port)s' % config.dbserver,
-                         zeromq.zmq.REQ, 'connect')
+    hostport = config.zworkers.master_host, config.dbserver.port
+    sock = zeromq.Socket('tcp://%s:%s' % hostport, zeromq.zmq.REQ, 'connect')
     with sock:
         res, etype, _mon = sock.send((action,) + args)
     if etype:

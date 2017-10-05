@@ -46,6 +46,7 @@ class DbServer(object):
     """
     def __init__(self, db, address, num_workers=5):
         self.db = db
+        self.master_host = address[0]
         self.frontend = 'tcp://%s:%s' % address
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
@@ -80,10 +81,11 @@ class DbServer(object):
             # start task_in->task_out streamer thread
             c = config.zworkers
             threading.Thread(
-                target=w.streamer, args=(c.task_in_url, c.task_out_url)
+                target=w.streamer,
+                args=(self.master_host, c.task_in_port, c.task_out_port)
             ).start()
             logging.warn('Task streamer started from %s -> %s',
-                         c.task_in_url, c.task_out_url)
+                         c.task_in_port, c.task_out_port)
 
             # start zworkers and wait a bit for them
             msg = self.master.start()
@@ -114,7 +116,7 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    address = address or (config.dbserver.host, config.dbserver.port)
+    address = address or (config.zworkers.master_host, config.dbserver.port)
     return 'running' if socket_ready(address) else 'not-running'
 
 
@@ -165,7 +167,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = (config.dbserver.host, config.dbserver.port)
+        addr = (config.zworkers.master_host, config.dbserver.port)
 
     if dbpath:
         DATABASE['NAME'] = dbpath

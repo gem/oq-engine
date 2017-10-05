@@ -7,25 +7,28 @@ import multiprocessing
 from openquake.baselib import zeromq as z, parallel as p, general
 
 
-def streamer(task_in_url, task_out_url):
+def streamer(host, task_in_port, task_out_port):
     """
     A streamer for zmq workers.
 
-    :param task_in_url: where to send the tasks (ex. tcp://127.0.0.1:1910)
-    :param task_out_url: where to receive the tasks (ex. tcp://127.0.0.1:1911)
+    :param host: name or IP of the controller node
+    :param task_in_port: port where to send the tasks
+    :param task_out_port: port from where to receive the tasks
     """
     try:
-        z.zmq.proxy(z.bind(task_in_url, z.zmq.PULL),
-                    z.bind(task_out_url, z.zmq.PUSH))
+        z.zmq.proxy(z.bind('tcp://%s:%s' % (host, task_in_port), z.zmq.PULL),
+                    z.bind('tcp://%s:%s' % (host, task_out_port), z.zmq.PUSH))
     except (KeyboardInterrupt, z.zmq.ZMQError):
         pass  # killed cleanly by SIGINT/SIGTERM
 
 
-def _starmap(func, iterargs, task_in_url, receiver_url):
+def _starmap(func, iterargs, host, task_in_port, receiver_ports):
     # called by parallel.Starmap.submit_all; should not be used directly
+    receiver_url = 'tcp://%s:%s' % (host, receiver_ports)
+    task_in_url = 'tcp://%s:%s' % (host, task_in_port)
     with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver, \
             z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
-        logging.info('receiver_url for %s=%s',
+        logging.info('receiver_ports for %s=%s',
                      func.__name__, receiver.true_end_point)
         n = 0
         for args in iterargs:
@@ -43,16 +46,16 @@ def _starmap(func, iterargs, task_in_url, receiver_url):
 class WorkerMaster(object):
     """
     :param frontend_url: url where to send the tasks
-    :param task_out_url: url with a range of ports to receive the results
+    :param task_out_port: url with a range of ports to receive the results
     :param ctrl_port: port on which the worker pools listen
     :param host_cores: names of the remote hosts and number of cores
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, task_in_url, task_out_url, ctrl_port,
-                 host_cores, remote_python=None, receiver_url=None):
-        # receiver_url is not used
-        self.task_in_url = task_in_url
-        self.task_out_url = task_out_url
+    def __init__(self, master_host, task_in_port, task_out_port, ctrl_port,
+                 host_cores, remote_python=None, receiver_ports=None):
+        # receiver_ports is not used
+        self.task_in_port = task_in_port
+        self.task_out_url = 'tcp://%s:%s' % (master_host, task_out_port)
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
         self.remote_python = remote_python or sys.executable
@@ -67,8 +70,8 @@ class WorkerMaster(object):
             host_cores = [hc for hc in self.host_cores if hc[0] == host]
         lst = []
         for host, _ in host_cores:
-            on = general.socket_ready((host, self.ctrl_port))
-            lst.append((host, 'running' if on else 'not-running'))
+            ready = general.socket_ready((host, self.ctrl_port))
+            lst.append((host, 'running' if ready else 'not-running'))
         return lst
 
     def start(self):
@@ -134,15 +137,15 @@ class WorkerMaster(object):
 class WorkerPool(object):
     """
     A pool of workers accepting the command 'stop' and 'kill' and reading
-    tasks to perform from the task_out_url.
+    tasks to perform from the task_out_port.
 
     :param ctrl_url: zmq address of the control socket
-    :param task_out_url: zmq address of the task streamer
+    :param task_out_port: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
-    def __init__(self, ctrl_url, task_out_url, num_workers='-1'):
+    def __init__(self, ctrl_url, task_out_port, num_workers='-1'):
         self.ctrl_url = ctrl_url
-        self.task_out_url = task_out_url
+        self.task_out_port = task_out_port
         self.num_workers = (multiprocessing.cpu_count()
                             if num_workers == '-1' else int(num_workers))
         self.pid = os.getpid()
@@ -165,7 +168,7 @@ class WorkerPool(object):
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
-            sock = z.Socket(self.task_out_url, z.zmq.PULL, 'connect')
+            sock = z.Socket(self.task_out_port, z.zmq.PULL, 'connect')
             proc = multiprocessing.Process(target=self.worker, args=(sock,))
             proc.start()
             sock.pid = proc.pid
@@ -201,5 +204,5 @@ class WorkerPool(object):
 
 
 if __name__ == '__main__':
-    ctrl_url, task_out_url, num_workers = sys.argv[1:]
-    WorkerPool(ctrl_url, task_out_url, num_workers).start()
+    ctrl_url, task_out_port, num_workers = sys.argv[1:]
+    WorkerPool(ctrl_url, task_out_port, num_workers).start()
