@@ -636,8 +636,9 @@ class Starmap(object):
         elif self.distribute == 'zmq':  # experimental
             allargs = self.add_task_no(self.task_args, pickle=False)
             w = config.zworkers
-            it = workerpool._starmap(self.task_func, allargs,
-                                     w.task_in_url, w.receiver_url)
+            it = workerpool._starmap(
+                self.task_func, allargs,
+                w.master_host, w.task_in_port, w.receiver_ports)
             ntasks = next(it)
             return IterResult(it, self.name, ntasks, self.progress, self.sent)
 
