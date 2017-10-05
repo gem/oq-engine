@@ -39,23 +39,6 @@ F32 = numpy.float32
 U32 = numpy.uint32
 
 
-def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
-    """
-    Returns loss_curve_dt and loss_maps_dt
-    """
-    pairs = [('losses', (F32, curve_resolution)),
-             ('poes', (F32, curve_resolution)),
-             ('avg', F32)]
-    if insured:
-        pairs += [(name + '_ins', pair) for name, pair in pairs]
-    loss_curve_dt = numpy.dtype(pairs)
-    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-    if insured:
-        lst += [(name + '_ins', pair) for name, pair in lst]
-    loss_maps_dt = numpy.dtype(lst) if lst else None
-    return loss_curve_dt, loss_maps_dt
-
-
 def fine_graining(points, steps):
     """
     :param points: a list of floats
@@ -877,232 +860,9 @@ class DiscreteDistribution(Distribution):
 # Event Based
 #
 
-class LossTypeCurveBuilder(object):
-    """
-    Build loss ratio curves. The loss ratios can be provided
-    by the user or automatically generated (user_provided=False).
-    The usage is something like this::
-
-      builder = LossTypeCurveBuilder(loss_type, loss_ratios, ses_ratio,
-                                     user_provided=True)
-      counts = builder.build_counts(loss_matrix)
-    """
-    def __init__(self, loss_type, curve_resolution, loss_ratios, ses_ratio,
-                 user_provided, conditional_loss_poes=(),
-                 insured_losses=False):
-        self.loss_type = loss_type
-        self.curve_resolution = C = curve_resolution
-        self.ratios = numpy.array(loss_ratios, F32)
-        self.ses_ratio = ses_ratio
-        self.user_provided = user_provided
-        self.conditional_loss_poes = conditional_loss_poes
-        self.insured_losses = insured_losses
-        self.agg_curve_dt = numpy.dtype([('losses', (F32, C)),
-                                         ('poes', (F32, C)),
-                                         ('avg', F32)])
-
-    def __call__(self, assets, ratios_by_aid):
-        """"
-        :param assets: a list of assets
-        :param ratios_by_aid: a dictionary of loss ratios by asset ordinal
-        :returns:
-           two arrays, `aids` of size A, and `all_poes` of shape (A, I, C)
-        """
-        aids = []
-        all_poes = []
-        for asset in assets:
-            aid = asset.ordinal
-            try:
-                loss_ratios = ratios_by_aid[aid]
-            except KeyError:   # no loss ratios
-                continue
-            # loss_ratios has shape (E, L, I)
-            lrs = loss_ratios[:, self.index]
-            counts = numpy.array([(lrs >= ratio).sum(axis=0)
-                                  for ratio in self.ratios])
-            poes = build_poes(counts, 1. / self.ses_ratio)
-            if len(poes.shape) == 1:
-                poes = poes[:, None]
-            # for instance the ratios can have shape (21,), the loss_ratios
-            # (3, 2), the counts (21, 2) and the transposed poes (2, 21)
-            all_poes.append(poes.T)
-            aids.append(aid)
-        return numpy.array(aids), numpy.array(all_poes)
-
-    def calc_agg_curve(self, losses):
-        """
-        :param losses: array of length E
-        :returns: curve of dtype agg_curve_dt
-        """
-        reference_losses = numpy.linspace(
-            0, numpy.max(losses), self.curve_resolution)
-        # counts how many loss_values are bigger than the reference loss
-        counts = [(losses > loss).sum() for loss in reference_losses]
-        # NB: (loss_values > loss).sum() is MUCH more efficient than
-        # sum(loss_values > loss). Incredibly more efficient in memory.
-        curve = numpy.zeros(1, self.agg_curve_dt)
-        curve['losses'][0] = reference_losses
-        curve['poes'][0] = poes = build_poes(counts, 1. / self.ses_ratio)
-        curve['avg'][0] = average_loss([reference_losses, poes])
-        return curve[0]
-
-    def __repr__(self):
-        return '<%s %s=%s user_provided=%s>' % (
-            self.__class__.__name__, self.loss_type,
-            self.ratios, self.user_provided)
-
-
-class CurveBuilder(object):
-    """
-    Build curves for all loss types at the same time.
-
-    :param cbs: a list of :class:`LossTypeCurveBuilder` instances
-    :param insured_losses: insured losses flag from the job.ini
-    :param conditional_loss_poes: list of PoEs from the job.ini
-    """
-    def __init__(self, cbs, insured_losses, conditional_loss_poes=()):
-        self.cbs = cbs
-        self.I = insured_losses + 1
-        self.clp = conditional_loss_poes
-        loss_ratios = {cb.loss_type: len(cb.ratios)
-                       for cb in cbs if cb.user_provided}
-        self.loss_curve_dt = build_loss_curve_dt(
-            loss_ratios, conditional_loss_poes, insured_losses)
-        dtlist = []
-        for i in range(self.I):
-            for cb in self.cbs:
-                lt = cb.loss_type + '_ins' * i
-                dtlist.append((lt, (F32, len(cb.ratios))))
-        self.dt = numpy.dtype(dtlist)
-
-    def __getitem__(self, li):
-        L = len(self.cbs)
-        return self.cbs[li % L]
-
-    def __iter__(self):
-        return iter(self.cbs)
-
-    def __len__(self):
-        return len(self.cbs)
-
-    def build_curves(self, avalues, loss_ratios):
-        """
-        :param avalues: array of asset values
-        :param loss_ratios: a list of dictionaries aid -> loss ratios
-        :returns: A curves of dtype loss_curve_dt
-        """
-        curves = numpy.zeros(len(avalues), self.loss_curve_dt)
-        L = len(self.cbs)
-        LI = L * self.I
-        for a, avalue in enumerate(avalues):
-            try:
-                data = numpy.concatenate(loss_ratios[a])
-            except KeyError:  # no ratios for the given realization
-                continue
-            ratios = data.reshape(-1, LI)
-            for cb in self.cbs:
-                lt = cb.loss_type
-                losses = avalue[lt] * cb.ratios
-                for i in range(self.I):
-                    arr = curves[a][lt + '_ins' * i]
-                    lrs = ratios[:, cb.index + L * i]
-                    counts = numpy.array([(lrs >= ratio).sum()
-                                          for ratio in cb.ratios], F32)
-                    poes = 1. - numpy.exp(- counts * cb.ses_ratio)
-                    arr['poes'] = poes
-                    arr['losses'] = losses
-                    arr['avg'] = average_loss([losses, poes])
-        return curves
-
-    def build_maps(self, avalues, getter, weights, stats, mon):
-        """
-        :param avalues:
-            an array of asset values
-        :param getter:
-            a :class:`openquake.risklib.riskinput.LossRatiosGetter` instance
-        :param weights:
-            a list of realization weights
-        :param stats:
-            a record of statistic functions
-        :param mon:
-            a :class:`openquake.baselib.performance.Monitor` instance
-        :returns:
-            aids, loss_maps, loss_maps_stats
-        """
-        assert self.clp, 'No conditional_loss_poes in the job.ini!'
-        lti = {cb.loss_type: i for i, cb in enumerate(self)}
-        for lt, i in sorted(lti.items()):
-            lti[lt + '_ins'] = i
-        with mon('getting loss ratios'):
-            loss_ratios = getter.get_all()
-        losses = {}
-        for cb in self.cbs:
-            losses[cb.loss_type] = [avalue[cb.loss_type] * cb.ratios
-                                    for avalue in avalues]
-            if self.I == 2:
-                losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
-        all_poes = self.build_all_poes(getter.aids, loss_ratios, len(weights))
-        loss_maps = self._build_maps(losses, all_poes)
-        if len(weights) > 1 and stats:
-            statnames, statfuncs = zip(*stats)
-            stat_poes = compute_stats2(all_poes, statfuncs, weights)
-            loss_maps_stats = self._build_maps(losses, stat_poes)
-        else:
-            loss_maps_stats = None
-        return loss_maps, loss_maps_stats
-
-    def _build_maps(self, losses, all_poes):
-        shp = all_poes.shape + (len(self.clp), len(self.dt))  # (A, R, P, LI)
-        loss_maps = numpy.zeros(shp, F32)
-        for lti, lt in enumerate(all_poes.dtype.names):
-            loss_lt = losses[lt]
-            for a, poes in enumerate(all_poes):
-                losses_ = loss_lt[a]
-                for r, poes_ in enumerate(poes[lt]):
-                    for p, poe in enumerate(self.clp):
-                        clratio = conditional_loss_ratio(losses_, poes_, poe)
-                        loss_maps[a, r, p, lti] = clratio
-        return loss_maps
-
-    def build_all_poes(self, aids, loss_ratios, num_rlzs):
-        """
-        :param aids:
-            a list of asset IDs
-        :param loss_ratios:
-            a list of loss ratios
-        :param num_rlzs:
-            the total number of realizations
-        :yields:
-            a matrix of shape (A, R) of PoEs
-        """
-        L = len(self.cbs)
-        LI = L * self.I
-        poes = numpy.zeros((len(aids), num_rlzs), self.dt)
-        for a, aid in enumerate(aids):
-            dic = group_array(loss_ratios[a], 'rlzi')
-            for r in range(num_rlzs):
-                try:
-                    ratios = dic[r]['ratios'].reshape(-1, LI)
-                except KeyError:
-                    continue  # no ratios for the given realization
-                for cb in self.cbs:
-                    for i in range(self.I):
-                        lt = cb.index + L * i
-                        lrs = ratios[:, lt]
-                        counts = numpy.array([(lrs >= ratio).sum()
-                                              for ratio in cb.ratios], F32)
-                        poes[a, r][lt] = 1. - numpy.exp(-counts * cb.ses_ratio)
-        return poes
-
-
-# should I use the ses_ratio here?
-def build_poes(counts, nses):
-    """
-    :param counts: an array of counts of exceedence for the bins
-    :param nses: number of stochastic event sets
-    :returns: an array of PoEs
-    """
-    return 1. - numpy.exp(- numpy.array(counts, F32) / nses)
+CurveParams = collections.namedtuple(
+    'CurveParams',
+    ['index', 'loss_type', 'curve_resolution', 'ratios', 'user_provided'])
 
 
 #
@@ -1434,13 +1194,10 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def build_loss_curve_dt(curve_resolution, conditional_loss_poes,
-                        insured_losses=False):
+def build_loss_curve_dt(curve_resolution, insured_losses=False):
     """
     :param curve_resolution:
         dictionary loss_type -> curve_resolution
-    :param conditional_loss_poes:
-        configuration parameter
     :param insured_losses:
         configuration parameter
     :returns:
@@ -1460,3 +1217,186 @@ def build_loss_curve_dt(curve_resolution, conditional_loss_poes,
             lc_list.append((str(lt) + '_ins', lc_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
     return loss_curve_dt
+
+
+def return_periods(eff_time, num_losses):
+    """
+    :param eff_time: ses_per_logic_tree_path * investigation_time
+    :param num_losses: used to determine the minimum period
+    ;returns: an array of 32 bit periods
+
+    Here are a few examples:
+
+    >>> return_periods(1, 1)
+    Traceback (most recent call last):
+       ...
+    AssertionError: eff_time too small: 1
+    >>> return_periods(2, 2)
+    array([1, 2], dtype=uint32)
+    >>> return_periods(2, 10)
+    array([1, 2], dtype=uint32)
+    >>> return_periods(100, 2)
+    array([ 50, 100], dtype=uint32)
+    >>> return_periods(1000, 1000)
+    array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000], dtype=uint32)
+    """
+    assert eff_time >= 2, 'eff_time too small: %s' % eff_time
+    assert num_losses >= 2, 'num_losses too small: %s' % num_losses
+    min_time = eff_time / num_losses
+    period = 1
+    periods = []
+    loop = True
+    while loop:
+        for val in [1, 2, 5]:
+            time = period * val
+            if time >= min_time:
+                if time > eff_time:
+                    loop = False
+                    break
+                periods.append(time)
+        period *= 10
+    return U32(periods)
+
+
+def losses_by_period(losses, return_periods, num_events, eff_time):
+    """
+    :param losses: array of simulated losses
+    :param return_periods: return periods of interest
+    :param num_events: the number of events
+    :param eff_time: investigation_time * ses_per_logic_tree_path
+    :returns: interpolated losses for the return periods, possibly with NaN
+
+    NB: the return periods must be ordered integers >= 1. The interpolated
+    losses are defined inside the interval min_time < time < eff_time
+    where min_time = eff_time /len(losses). Outsided the interval they
+    have NaN values. If there are less losses than events, the array
+    is filled with zeros.
+    Here is an example:
+
+    >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
+    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20, 100)
+    array([  nan,   nan,   0. ,   3.5,   8. ,  13. ,  23. ])
+    """
+    assert num_events >= len(losses), (num_events, len(losses))
+    losses = numpy.sort(losses)
+    num_zeros = num_events - len(losses)
+    if num_zeros:
+        losses = numpy.concatenate(
+            [numpy.zeros(num_zeros, losses.dtype), losses])
+    periods = eff_time / numpy.arange(num_events, 0., -1)
+    rperiods = [rp if periods[0] <= rp <= periods[-1] else numpy.nan
+                for rp in return_periods]
+    curve = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
+    return curve
+
+
+class LossesByPeriodBuilder(object):
+    """
+    Build losses by period for all loss types at the same time.
+
+    :param return_periods: ordered array of return periods
+    :param loss_dt: composite dtype for the loss types
+    :param weights: weights of the realizations
+    :param num_events: number of events for each realization
+    :param eff_time: ses_per_logic_tree_path * hazard investigation time
+    """
+    def __init__(self, return_periods, loss_dt, weights, num_events, eff_time,
+                 risk_investigation_time):
+        self.return_periods = return_periods
+        self.loss_dt = loss_dt
+        self.weights = weights
+        self.num_events = num_events
+        self.eff_time = eff_time
+        self.poes = 1. - numpy.exp(- risk_investigation_time / return_periods)
+
+    def pair(self, array, stats):
+        """
+        :return (array, array_stats) if stats, else (array, None)
+        """
+        if len(self.weights) > 1 and stats:
+            statnames, statfuncs = zip(*stats)
+            array_stats = compute_stats2(array, statfuncs, self.weights)
+        else:
+            array_stats = None
+        return array, array_stats
+
+    # used in the EbrPostCalculator
+    def build_all(self, asset_values, loss_ratios, stats=()):
+        """
+        :param asset_values: a list of asset values
+        :param loss_ratios: an array of dtype lrs_dt
+        :param stats: list of pairs [(statname, statfunc), ...]
+        :returns: two composite arrays of shape (A, R, P) and (A, S, P)
+        """
+        # loss_ratios from lrgetter.get_all
+        A = len(asset_values)
+        R = len(self.weights)
+        P = len(self.return_periods)
+        array = numpy.zeros((A, R, P), self.loss_dt)
+        for a, asset_value in enumerate(asset_values):
+            r_recs = group_array(loss_ratios[a], 'rlzi').items()
+            for li, lt in enumerate(self.loss_dt.names):
+                aval = asset_value[lt.replace('_ins', '')]
+                for r, recs in r_recs:
+                    array[a, r][lt] = aval * losses_by_period(
+                        recs['ratios'][:, li], self.return_periods,
+                        self.num_events[r], self.eff_time)
+        return self.pair(array, stats)
+
+    # used in the LossCurvesExporter
+    def build_rlz(self, asset_values, loss_ratios, rlzi):
+        """
+        :param asset_values: a list of asset values
+        :param loss_ratios: a dictionary aid -> array of shape (E, LI)
+        :returns: a composite array of shape (A, P)
+        """
+        # loss_ratios from lrgetter.get, aid -> list of ratios
+        A, P = len(asset_values), len(self.return_periods)
+        array = numpy.zeros((A, P), self.loss_dt)
+        for a, asset_value in enumerate(asset_values):
+            ratios = loss_ratios[a]  # shape (E, LI)
+            for li, lt in enumerate(self.loss_dt.names):
+                aval = asset_value[lt.replace('_ins', '')]
+                array[a][lt] = aval * losses_by_period(
+                    ratios[:, li], self.return_periods,
+                    self.num_events[rlzi], self.eff_time)
+        return array
+
+    def build(self, agg_loss_table, stats=()):
+        """
+        :param agg_loss_table:
+            the aggregate loss table
+        :param stats:
+            list of pairs [(statname, statfunc), ...]
+        :returns:
+            two arrays of dtype loss_dt values with shape (P, R) and (P, S)
+        """
+        P, R = len(self.return_periods), len(self.weights)
+        array = numpy.zeros((P, R), self.loss_dt)
+        dic = group_array(agg_loss_table, 'rlzi')
+        for r in dic:
+            num_events = self.num_events[r]
+            losses = dic[r]['loss']
+            for lti, lt in enumerate(self.loss_dt.names):
+                ls = losses[:, lti].flatten()  # flatten only in ucerf
+                lbp = losses_by_period(
+                    ls, self.return_periods, num_events, self.eff_time)
+                array[:, r][lt] = lbp
+        return self.pair(array, stats)
+
+    def build_maps(self, losses, clp, stats=()):
+        """
+        :param losses: an array of shape (A, R, P)
+        :param clp: a list of C conditional loss poes
+        :param stats: list of pairs [(statname, statfunc), ...]
+        :returns: an array of loss_maps of shape (A, R, C, LI)
+        """
+        shp = losses.shape[:2] + (len(clp), len(losses.dtype))  # (A, R, C, LI)
+        array = numpy.zeros(shp, F32)
+        for lti, lt in enumerate(losses.dtype.names):
+            for a, losses_ in enumerate(losses[lt]):
+                for r, ls in enumerate(losses_):
+                    for c, poe in enumerate(clp):
+                        clratio = conditional_loss_ratio(ls, self.poes, poe)
+                        array[a, r, c, lti] = clratio
+        return self.pair(array, stats)

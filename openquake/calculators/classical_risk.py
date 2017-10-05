@@ -21,6 +21,7 @@ import logging
 import numpy
 
 from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
 from openquake.commonlib import readinput, source, calc
@@ -145,11 +146,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         :param result: aggregated result of the task classical_risk
         """
-        loss_ratios = {cb.loss_type: cb.curve_resolution
-                       for cb in self.riskmodel.curve_builder
-                       if cb.user_provided}
+        loss_ratios = {cp.loss_type: cp.curve_resolution
+                       for cp in self.riskmodel.curve_params
+                       if cp.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
-            loss_ratios, self.oqparam.conditional_loss_poes, self.I)
+            loss_ratios, self.I)
         ltypes = self.riskmodel.loss_types
         loss_curves = numpy.zeros((self.N, self.R), self.loss_curve_dt)
         for l, r, aid, lcurve in result['loss_curves']:
@@ -164,6 +165,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         # loss curves stats
         if self.R > 1:
+            stats = [encode(n) for (n, f) in self.oqparam.risk_stats()]
             stat_curves = numpy.zeros((self.N, self.S), self.loss_curve_dt)
             for l, aid, losses, statpoes, statloss in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
@@ -172,4 +174,5 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     base.set_array(stat_curves_lt['poes'][aid, s], statpoes[s])
                     base.set_array(stat_curves_lt['losses'][aid, s], losses)
             self.datastore['loss_curves-stats'] = stat_curves
-            self.datastore.set_nbytes('loss_curves-stats')
+            self.datastore.set_attrs(
+                'loss_curves-stats', nbytes=stat_curves.nbytes, stats=stats)
