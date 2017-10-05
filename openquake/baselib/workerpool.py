@@ -84,7 +84,6 @@ class WorkerMaster(object):
             if self.status(host)[0][1] == 'running':
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
-
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
@@ -184,7 +183,7 @@ class WorkerPool(object):
                 break
             elif cmd == 'getpid':
                 ctrlsock.send(self.pid)
-            elif cmd == 'num_workers':
+            elif cmd == 'get_num_workers':
                 ctrlsock.send(self.num_workers)
 
     def stop(self):
