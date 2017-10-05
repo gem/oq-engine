@@ -83,8 +83,8 @@ class WorkerMaster(object):
             if self.status(host)[0][1] == 'running':
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
 
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
@@ -183,23 +183,23 @@ class WorkerPool(object):
                 break
             elif cmd == 'getpid':
                 ctrlsock.send(self.pid)
-            elif cmd == 'getcores':
+            elif cmd == 'num_workers':
                 ctrlsock.send(self.num_workers)
 
     def stop(self):
-        """
-        Send a SIGINT to all worker processes
-        """
-        for sock in self.workers:
-            os.kill(sock.pid, signal.SIGINT)
-        return 'WorkerPool %s stopped' % self.ctrl_url
-
-    def kill(self):
         """
         Send a SIGTERM to all worker processes
         """
         for sock in self.workers:
             os.kill(sock.pid, signal.SIGTERM)
+        return 'WorkerPool %s stopped' % self.ctrl_url
+
+    def kill(self):
+        """
+        Send a SIGKILL to all worker processes
+        """
+        for sock in self.workers:
+            os.kill(sock.pid, signal.SIGKILL)
         return 'WorkerPool %s killed' % self.ctrl_url
 
 

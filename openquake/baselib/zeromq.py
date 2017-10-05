@@ -127,6 +127,7 @@ class Socket(object):
             if the socket is of type REQ and the reply is not ready, raise a
             ZMQError or wait, depending on this flag
         """
+        # NB: noblock is not used yet
         self.zsocket.send_pyobj(obj)
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj(noblock)
