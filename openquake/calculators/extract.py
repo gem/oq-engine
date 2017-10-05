@@ -189,8 +189,8 @@ def filter_agg(dstore, losses, tags):
         idxs &= set(assetcol.aids_by_tag[tag])
     # numpy.array wants lists, not sets, hence the sorted below
     if not idxs:
-        # no intersection, return a zero matrix
-        return numpy.zeros(losses.shape[1:], losses.dtype)
+        # no intersection, return a 0-dim matrix
+        return numpy.zeros(0, losses.dtype)
     return losses[numpy.array(sorted(idxs))].sum(axis=0)
 
 
@@ -199,7 +199,9 @@ def extract_agglosses(dstore, loss_type, *tags):
     """
     Aggregate losses of the given loss type and tags.
 
-    :returns: array of shape (R,), being R the number of realizations
+    :returns:
+        array of shape (R,), being R the number of realizations or
+        array of length 0 if there are no data for the given tags
     """
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
@@ -219,14 +221,12 @@ def extract_aggdamages(dstore, loss_type, *tags):
     Aggregate damages of the given loss type and tags.
 
     :returns:
-        array of shape (R, D), being R the number of realizations
-        and D the number of damage states
+        array of shape (R, D), being R the number of realizations and D
+        the number of damage states or array of length 0 if there are no
+        data for the given tags
     """
     if 'dmg_by_asset' in dstore:  # scenario_damage
         losses = dstore['dmg_by_asset'][loss_type]['mean']
     else:
         raise KeyError('No damages found in %s' % dstore)
-    res = filter_agg(dstore, losses, tags)
-    if res.sum() == 0.0:
-        res[:, 0] = 1.  # no_damage state has probability 1
-    return res
+    return filter_agg(dstore, losses, tags)
