@@ -234,9 +234,10 @@ Logout
 Return a string with the OpenQuake engine version
 
 
-#### GET /engine_new_version
+#### GET /engine_latest_version
 
-Return a string with if new versions have been released
+Return a string with if new versions have been released.
+Return 'None' if the version is not available
 
 
 #### GET /v1/available_gsims
