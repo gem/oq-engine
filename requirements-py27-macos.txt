@@ -28,6 +28,11 @@ http://cdn.ftp.openquake.org/wheelhouse/macos/py27/PyYAML-3.12-cp27-cp27m-macosx
 
 ## Extra ##
 
+### setproctitle ###
+# comment the following lines to skip installation
+# of setproctitle (optional feature)
+http://cdn.ftp.openquake.org/wheelhouse/macos/py27/setproctitle-1.1.10-cp27-cp27m-macosx_10_6_intel.whl
+
 ### Rtree wheel is not currently available for macOS ###
 
 ### Plotting ###

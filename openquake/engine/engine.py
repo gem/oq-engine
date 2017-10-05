@@ -20,22 +20,22 @@
 calculations."""
 
 import os
+import re
 import sys
 import signal
 import traceback
+import requests
 
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import valid
-from openquake.baselib import parallel
+from openquake.baselib import parallel, config, datastore, __version__
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import datastore, config, readinput
+from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
-TERMINATE = valid.boolean(
-    config.get('distribution', 'terminate_workers_on_revoke') or 'false')
-
-USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
+GITHUB = 'https://api.github.com/repos/gem/oq-engine'
+TERMINATE = config.distribution.terminate_workers_on_revoke
+USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
 if USE_CELERY:
     import celery.task.control
@@ -104,10 +104,12 @@ def expose_outputs(dstore):
             dskeys.add('hmaps')  # export them
     if 'avg_losses-rlzs' in dstore and rlzs:
         dskeys.add('avg_losses-stats')
+    if 'curves-stats' in dstore:
+        logs.LOG.warn('loss curves are exportable with oq export')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
-        if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
+        if 'loss_curves-rlzs' in dstore:
             dskeys.add('loss_maps-rlzs')
-        if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
+        if 'loss_curves-stats' in dstore:
             if len(rlzs) > 1:
                 dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
@@ -131,10 +133,19 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    if signum == signal.SIGTERM:
+    if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
     else:
         msg = 'Received a signal %d' % signum
+
+    # FIXME this code has been temporary disabled due issues with large
+    # computations and further investigation is need; code is left as reference
+    # for pid in parallel.executor.pids:
+    #     try:
+    #         os.kill(pid, signal.SIGKILL)
+    #     except OSError: # pid not found
+    #         pass
+
     raise MasterKilled(msg)
 
 
@@ -144,6 +155,7 @@ def raiseMasterKilled(signum, _stack):
 # can be safely ignored
 try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
+    signal.signal(signal.SIGINT, raiseMasterKilled)
 except ValueError:
     pass
 
@@ -165,7 +177,8 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     oq = readinput.get_oqparam(cfg_file)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.DATADIR, hazard_calculation_id)
+                        username, datastore.get_datadir(),
+                        hazard_calculation_id)
     return job_id, oq
 
 
@@ -189,8 +202,11 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     """
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if USE_CELERY and os.environ.get('OQ_DISTRIBUTE') == 'celery':
+        if USE_CELERY:
             set_concurrent_tasks_default()
+        msg = check_obsolete_version(oqparam)
+        if msg:
+            logs.LOG.warn(msg)
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         monitor.hdf5path = calc.datastore.hdf5path
         calc.from_engine = True
@@ -233,3 +249,34 @@ def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
     with calc._monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
                  close=False, **kw)  # don't close the datastore too soon
+
+
+def version_triple(tag):
+    """
+    returns: a triple of integers from a version tag
+    """
+    groups = re.match(r'v?(\d+)\.(\d+)\.(\d+)', tag).groups()
+    return tuple(int(n) for n in groups)
+
+
+def check_obsolete_version(oqparam):
+    """
+    Check if there is a newer version of the engine.
+
+    :returns:
+        - a message if the running version of the engine is obsolete
+        - the empty string if the engine is updated
+        - None if the check could not be performed (i.e. github is down)
+    """
+    try:
+        json = requests.get(GITHUB + '/releases/latest', timeout=0.5).json()
+        tag_name = json['tag_name']
+        current = version_triple(__version__)
+        latest = version_triple(json['tag_name'])
+    except:  # page not available or wrong version tag
+        return
+    if current < latest:
+        return ('Version %s of the engine is available, but you are '
+                'still using version %s' % (tag_name, __version__))
+    else:
+        return ''

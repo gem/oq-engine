@@ -21,7 +21,7 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.commonlib import datastore
+from openquake.baselib import datastore
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
@@ -610,6 +610,8 @@ def get_longest_jobs(db):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
+    :returns:
+        (id, user_name, days) tuples
     """
     query = '''-- completed jobs taking more than one hour
 SELECT id, user_name, julianday(stop_time) - julianday(start_time) AS days
