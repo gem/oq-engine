@@ -44,7 +44,8 @@ def reset(yes):
                 sys.exit('The oq dbserver must be stopped '
                          'before proceeding')
             else:
-                logs.dbcmd('stop')
+                pid = logs.dbcmd('getpid')
+                os.kill(pid, signal.SIGTERM)
                 print('dbserver stopped')
 
         try:
