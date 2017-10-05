@@ -116,7 +116,7 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    address = address or (config.zworkers.master_host, config.dbserver.port)
+    address = address or (config.dbserver.host, config.dbserver.port)
     return 'running' if socket_ready(address) else 'not-running'
 
 
@@ -167,7 +167,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = (config.zworkers.master_host, config.dbserver.port)
+        addr = (config.dbserver.host, config.dbserver.port)
 
     if dbpath:
         DATABASE['NAME'] = dbpath
