@@ -23,7 +23,7 @@ import operator
 from functools import partial
 import numpy
 
-from openquake.baselib import parallel, config
+from openquake.baselib import parallel, config, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.commonlib import datastore, source, calc
+from openquake.commonlib import source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16

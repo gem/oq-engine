@@ -25,10 +25,10 @@ import numpy
 
 from openquake.baselib import sap, config
 from openquake.hazardlib import stats
-from openquake.commonlib import datastore, calc
+from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.commonlib import logs
+from openquake.commonlib import logs, calc
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract
 

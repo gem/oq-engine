@@ -21,8 +21,7 @@ import os
 import re
 import getpass
 import shutil
-from openquake.baselib import sap
-from openquake.commonlib import datastore
+from openquake.baselib import sap, datastore
 from openquake.commonlib.logs import dbcmd
 
 datadir = datastore.get_datadir()
