@@ -15,7 +15,6 @@
         <costs>
           <cost type="structural" value="3000"/>
         </costs>
-        <tags CRESTA="01.1" />
       </asset>
       <asset id="a2" taxonomy="RC" number="2000">
         <location lon="15.56" lat="38.17"/>
