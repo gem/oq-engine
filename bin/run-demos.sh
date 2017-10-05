@@ -18,7 +18,7 @@ for ini in $(find $1 -name job.ini | sort); do
 done
 
 # do something with the generated data; -2 is LogicTreeCase3ClassicalPSHA
-python -m openquake.commands export hcurves-rlzs -2 --exports hdf5 -d /tmp
+python -m openquake.commands extract -2 hazard/rlzs
 python -m openquake.commands engine --lhc
 MPLBACKEND=Agg python -m openquake.commands plot -2
 MPLBACKEND=Agg python -m openquake.commands plot_uhs -2

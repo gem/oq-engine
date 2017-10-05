@@ -1,4 +1,64 @@
   [Michele Simionato]
+  * Every time a new calculation starts, we check if there is a newer version
+    of the engine available on GitHub
+  * Changed the search logic for the configuration file `openquake.cfg`
+  * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1`
+  * Fixed several bugs in the gmf_ebrisk calculator, in particular in presence
+    of asset correlation
+  * Fixed a bug with logging configured a WARN level instead of INFO level
+    if rtree was missing (affecting only `oq run`)
+  * Changed the ScenarioDamage demo to use two GSIMs
+  * Added a node `<tagNames>` in the exposure
+  * Added a web API to extract the attributes of a datastore object
+  * Fixed `oq to_shapefile` and `oq from_shapefile` to work with NRML 0.5
+    (except MultiPointSources)
+  * Added information about the loss units to the `agg_curve` outputs
+  * `oq extract hazard/rlzs` now extracts one realization at the time
+  * The rupture filtering is now applied during disaggregation
+  * Changed the /extract wen API to return a compressed .npz file
+  * Fixed a bug with multi-realization disaggregation, celery and no
+    shared_dir: now the calculation does not hang anymore
+
+python-oq-engine (2.6.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed the GMF .npz export when the GMFs are extracted from a file
+  * Stored the number of nonzero losses per asset and realization in
+    event_based_risk calculations with asset_loss_table=True
+
+  [Daniele Viganò]
+  * Fixed 'openquake' user creation in RPM when SELinux is in enforcing mode
+  * Changed the behaviour during RPM upgrades:
+    the old openquake.cfg configuration file is left untouched and the new one
+    installed as openquake.cfg.rpmnew
+
+  [Michele Simionato]
+  * Added a check on `number_of_ground_motion_fields` when the GMFs are
+    extracted from a NRML file
+  * Added a command `oq extract` able to extract hazard outputs into HDF5 files
+  * Fixed a bug when reading GMFs from a NRML file: the hazard sites were
+    read from the exposure (incorrectly) and not from the GMFs
+  * Fixed a bug in MultiMFDs of kind `arbitraryMFD`
+
+  [Valerio Poggi]
+  * Implemented the Atkinson (2010) GMPE as subclass `Atkinson2010Hawaii`
+    of `BooreAtkinson2008`
+
+  [Michele Simionato]
+  * Used the new loss curves algorithm for the asset loss curves and loss maps
+  * Added a generic `extract` functionality to the web API
+  * Fixed a bug when computing the rjb distances with multidimensional meshes
+  * Changed the GMF CSV exporter to export the sites too; unified it with the
+    event based one
+
+  [Daniele Viganò]
+  * Changed the 'CTRL-C' behaviour to make sure that all children
+    processes are killed when a calculation in interrupted
+
+  [Michele Simionato]
+  * Fixed a bug in the statistical loss curves exporter for classical_risk
+  * Replaced the agg_curve outputs with losses by return period outputs
+  * Turned the DbServer into a multi-threaded server
   * Used zmq in the DbServer
   * Fixed correct_complex_sources.py
   * Fixed `oq export hcurves-rlzs -e hdf5`
@@ -8,6 +68,9 @@
     to display information about the duplicated sources
   * Added a flag `split_sources` in the job.ini (default False)
   * Updated the demos to the format NRML 0.5
+
+  [Valerio Poggi]
+  * Implemented the Munson and Thurber 1997 (Volcanic) GMPE
 
   [Graeme Weatherill]
   * Adapts CoeffsTable to be instantiated with dictionaries as well as strings
@@ -81,6 +144,8 @@
   * Added two commands `oq dump` and `oq restore`
   * Added a check that on the number of intensity measure types when
     generating uniform hazard spectra (must be > 1)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 25 Sep 2017 15:05:45 +0200
 
 python-oq-engine (2.5.0-0~precise01) precise; urgency=low
 

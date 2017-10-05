@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import itertools
 import collections
 import logging
@@ -23,7 +23,8 @@ import numpy
 
 from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import split_in_blocks, deprecated as depr
+from openquake.baselib.general import (
+    group_array, split_in_blocks, deprecated as depr)
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
@@ -73,23 +74,23 @@ def copy_to(elt, rup_data, rup_ids):
 
 
 # this is used by event_based_risk
-@export.add(('agg_curve-rlzs', 'csv'), ('agg_curve-stats', 'csv'))
+@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     agg_curve = dstore[ekey[0]]
+    periods = dstore.get_attr(ekey[0], 'return_periods')
     if ekey[0].endswith('stats'):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
-        tags = ['rlz-%03d' % r for r in range(len(agg_curve))]
+        tags = ['rlz-%03d' % r for r in range(agg_curve.shape[1])]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    header = (('annual_frequency_of_exceedence', 'return_period') +
+              agg_curve.dtype.names)
     for r, tag in enumerate(tags):
-        data = [['loss_type', 'loss', 'poe']]
-        for loss_type in agg_curve.dtype.names:
-            array = agg_curve[r][loss_type]
-            for loss, poe in zip(array['losses'], array['poes']):
-                data.append((loss_type, loss, poe))
-        dest = dstore.build_fname('agg_curve', tag, 'csv')
-        writer.save(data, dest)
+        d = compose_arrays(periods, agg_curve[:, r], 'return_period')
+        data = compose_arrays(1 / periods, d, 'annual_frequency_of_exceedence')
+        dest = dstore.build_fname('agg_loss', tag, 'csv')
+        writer.save(data, dest, header)
     return writer.getsaved()
 
 
@@ -206,25 +207,6 @@ def export_all_losses_npz(ekey, dstore):
     return [fname]
 
 
-# this is used by classical_risk
-@export.add(('agg_losses-rlzs', 'csv'))
-def export_agg_losses(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    agg_losses = dstore[ekey[0]].value
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    eids = calc.build_eids(dstore['events'], 0)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        losses = agg_losses[:, rlz.ordinal]
-        dest = dstore.build_fname('agg_losses', rlz, 'csv')
-        data = compose_arrays(eids, losses)
-        writer.save(data, dest)
-    return writer.getsaved()
-
-
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
 def export_agg_losses_ebr(ekey, dstore):
@@ -235,7 +217,7 @@ def export_agg_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     L = len(loss_types)
     name, ext = export.keyfunc(ekey)
-    agg_losses = dstore[name]
+    agg_losses = group_array(dstore[name], 'rlzi')
     has_rup_data = 'ruptures' in dstore
     extra_list = [('magnitude', F32),
                   ('centroid_lon', F32),
@@ -265,10 +247,10 @@ def export_agg_losses_ebr(ekey, dstore):
                     get_rup_data(calc.get_ruptures(dstore, grp_id)))
 
         for rlz in rlzs:
-            rlzname = 'rlz-%03d' % rlz.ordinal
-            if rlzname not in agg_losses:
+            rlzi = rlz.ordinal
+            if rlzi not in agg_losses:
                 continue
-            data = agg_losses[rlzname].value
+            data = agg_losses[rlzi]
             eids = data['eid']
             losses = data['loss']
             eids_, years, serials = get_eids_years_serials(event_by_grp, eids)
@@ -305,7 +287,7 @@ def get_eids_years_serials(events_by_grp, eids):
     return numpy.array(eids_ok), numpy.array(years), numpy.array(serials)
 
 
-# this is used by classical_risk
+# this is used by classical_risk and event_based_risk
 @export.add(('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
     if '/' not in ekey[0]:  # full loss curves are not exportable

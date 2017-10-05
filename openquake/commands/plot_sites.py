@@ -1,6 +1,5 @@
 from __future__ import division
-from openquake.baselib import sap
-from openquake.commonlib import datastore
+from openquake.baselib import sap, datastore
 from openquake.hazardlib.calc.filters import SourceFilter
 
 
