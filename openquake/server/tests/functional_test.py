@@ -176,6 +176,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
         self.assertEqual(resp.status_code, 200)
 
+        # TODO: check aggcurves
+
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
         datadir, dskeys = actions.get_results(db, job_id)
