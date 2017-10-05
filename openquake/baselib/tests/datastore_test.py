@@ -21,7 +21,7 @@ import os
 import unittest
 import tempfile
 import numpy
-from openquake.commonlib.datastore import DataStore, read
+from openquake.baselib.datastore import DataStore, read
 
 
 class DataStoreTestCase(unittest.TestCase):
