@@ -21,7 +21,7 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.commonlib import datastore
+from openquake.baselib import datastore
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
