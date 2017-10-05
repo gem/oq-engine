@@ -201,7 +201,7 @@ def extract_agglosses(dstore, loss_type, *tags):
 
     :returns:
         array of shape (R,), being R the number of realizations or
-        array of length 0 if there are no data for the given tags
+        array of length 0 if there is no data for the given tags
     """
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
@@ -222,7 +222,7 @@ def extract_aggdamages(dstore, loss_type, *tags):
 
     :returns:
         array of shape (R, D), being R the number of realizations and D
-        the number of damage states or array of length 0 if there are no
+        the number of damage states or array of length 0 if there is no
         data for the given tags
     """
     if 'dmg_by_asset' in dstore:  # scenario_damage
