@@ -246,4 +246,5 @@ def extract_aggcurves(dstore, loss_type, *tags):
         losses = dstore['curves-stats'][loss_type]
     else:
         raise KeyError('No curves found in %s' % dstore)
-    return filter_agg(dstore, losses, tags)
+    curves = filter_agg(dstore, losses, tags)
+    return ArrayWrapper(curves, dstore.get_attrs('curves-stats'))
