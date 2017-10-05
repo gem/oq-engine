@@ -59,6 +59,5 @@ class WorkerPoolTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(.2)
         cls.master.stop()
         cls.proc.terminate()
