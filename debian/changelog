@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Fixed a bug in `oq reset` command which was not stopping
+    the DbServer properly
+
   [Michele Simionato]
   * Every time a new calculation starts, we check if there is a newer version
     of the engine available on GitHub
