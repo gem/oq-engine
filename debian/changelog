@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Improved the error checking when parsing vulnerability functions with PMF
+
   [Daniele Viganò]
   * Fixed a bug in `oq reset` command which was not stopping
     the DbServer properly
