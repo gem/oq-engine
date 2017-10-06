@@ -18,8 +18,7 @@
 
 from __future__ import print_function
 import sys
-from openquake.baselib import sap
-from openquake.commonlib import datastore
+from openquake.baselib import sap, datastore
 
 
 def make_figure(periods, losses):

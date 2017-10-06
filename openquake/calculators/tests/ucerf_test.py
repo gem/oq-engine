@@ -15,17 +15,40 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
+from decorator import decorator
+from nose.plugins.attrib import attr
+from openquake.baselib import config
 from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 
-from nose.plugins.attrib import attr
+cluster = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) != 'futures'
+NO_SHARED_DIR = cluster and not config.directory.shared_dir
+
+
+@decorator
+def manage_shared_dir_error(func, self):
+    """
+    When the shared_dir is not configured, expect an error, unless
+    the distribution mechanism is set to futures.
+    """
+    if NO_SHARED_DIR:
+        with self.assertRaises(ValueError) as ctx:
+            func(self)
+        self.assertIn('You must configure the shared_dir in openquake.cfg',
+                      str(ctx.exception))
+    else:
+        func(self)
 
 
 class UcerfTestCase(CalculatorTestCase):
+
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
@@ -53,6 +76,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
@@ -66,6 +90,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hmap.rst', got)
 
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
         fnames = export(('hcurves/all', 'csv'), self.calc.datastore)
@@ -78,6 +103,7 @@ class UcerfTestCase(CalculatorTestCase):
         view('fullreport', self.calc.datastore)
 
     @attr('qa', 'hazard', 'ucerf_td')
+    @manage_shared_dir_error
     def test_classical_time_dep(self):
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             exports='csv')
@@ -89,6 +115,7 @@ class UcerfTestCase(CalculatorTestCase):
         view('fullreport', self.calc.datastore)
 
     @attr('qa', 'hazard', 'ucerf_td')
+    @manage_shared_dir_error
     def test_classical_time_dep_sampling(self):
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             number_of_logic_tree_samples='2',
@@ -98,6 +125,7 @@ class UcerfTestCase(CalculatorTestCase):
                               delta=1E-6)
 
     @attr('qa', 'risk', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based_risk(self):
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
