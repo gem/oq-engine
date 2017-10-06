@@ -39,7 +39,8 @@ db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
-ZMQ = os.environ('OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
+ZMQ = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
 
 class DbServer(object):
