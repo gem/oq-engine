@@ -39,6 +39,8 @@ db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
+ZMQ = os.environ('OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
+
 
 class DbServer(object):
     """
@@ -76,8 +78,7 @@ class DbServer(object):
             dworkers.append(sock)
         logging.warn('DB server started with %s on %s, pid=%d',
                      sys.executable, self.frontend, self.pid)
-
-        if os.environ.get('OQ_DISTRIBUTE') == 'zmq':
+        if ZMQ:
             # start task_in->task_out streamer thread
             c = config.zworkers
             threading.Thread(
