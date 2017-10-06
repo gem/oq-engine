@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made it mandatory to specify the sites for all calculators reading the
+    GMFs from a CSV file
   * Tested also the case of calculators requiring a shared_dir
   * Improved the error checking when parsing vulnerability functions with PMF
 
@@ -14,7 +16,7 @@
   * Changed the search logic for the configuration file `openquake.cfg`
   * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1&...`
   * Fixed several bugs in the gmf_ebrisk calculator, in particular in presence
-    of asset correlation
+    of asset correlation and missing values on some sites
   * Fixed a bug with logging configured a WARN level instead of INFO level
     if rtree was missing (affecting only `oq run`)
   * Changed the ScenarioDamage demo to use two GSIMs
