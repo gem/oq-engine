@@ -261,7 +261,7 @@ def version_triple(tag):
     return tuple(int(n) for n in groups)
 
 
-def check_obsolete_version(calculation_mode=''):
+def check_obsolete_version(calculation_mode='WebUI'):
     """
     Check if there is a newer version of the engine.
 
@@ -273,13 +273,19 @@ def check_obsolete_version(calculation_mode=''):
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
-    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
+    headers = {'User-Agent': 'OpenQuake Engine %s; %s; %s' %
                (__version__, calculation_mode, platform.platform())}
     try:
-        logging.disable(logging.INFO)  # requests.get must not log
-        json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
-                            headers=headers).json()
-        logging.disable(logging.NOTSET)  # restore logging as before
+        logger = logging.getLogger()  # root logger
+        level = logger.level
+        # requests.get logs at level INFO: raising the level so that
+        # the log is hidden
+        logger.setLevel(logging.WARN)
+        try:
+            json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
+                                headers=headers).json()
+        finally:
+            logger.setLevel(level)  # back as it was
         tag_name = json['tag_name']
         current = version_triple(__version__)
         latest = version_triple(json['tag_name'])
