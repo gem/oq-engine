@@ -37,7 +37,7 @@ expected_outputs = {
     'SimpleFaultSourceClassicalPSHA': ['hcurves', 'uhs'],
     'ClassicalBCR': ['bcr-rlzs'],
     'ClassicalRisk': ['loss_maps-rlzs'],
-    'ScenarioDamage': ['dmg_by_asset', 'dmg_by_tag', 'dmg_total', 'losses_by_asset', 'losses_by_tag', 'losses_total'],
+    'ScenarioDamage': ['dmg_by_asset', 'losses_by_asset'],
     'ClassicalDamage': ['damages-rlzs'],
     'EventBasedRisk': ['agg_loss_table', 'avg_losses-rlzs', 'avg_losses-stats', 'loss_maps-rlzs', 'loss_maps-stats', 'losses_by_tag-rlzs'],
     'ScenarioRisk': ['losses_by_asset', 'losses_by_event', 'losses_by_tag-rlzs']}
