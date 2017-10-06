@@ -23,6 +23,7 @@ import os
 import re
 import sys
 import signal
+import logging
 import traceback
 import requests
 import platform
@@ -275,8 +276,10 @@ def check_obsolete_version(calculation_mode=''):
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
                (__version__, calculation_mode, platform.platform())}
     try:
+        logging.disable(logging.INFO)  # requests.get must not log
         json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
                             headers=headers).json()
+        logging.disable(logging.NOTSET)  # restore logging as before
         tag_name = json['tag_name']
         current = version_triple(__version__)
         latest = version_triple(json['tag_name'])
