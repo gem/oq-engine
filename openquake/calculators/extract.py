@@ -178,20 +178,32 @@ def extract_hazard(dstore, what):
             yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
 
 
-def filter_agg(dstore, losses, tags):
-    # filter the losses with the tags and returns the aggregate
-    if not tags:
-        return losses.sum(axis=0)
-    assetcol = dstore['assetcol']
-    idxs = set(range(len(assetcol)))
-    # find the indices common to all tags
-    for tag in tags:
-        idxs &= set(assetcol.aids_by_tag[tag])
-    # numpy.array wants lists, not sets, hence the sorted below
+def _agg(losses, idxs):
+    shp = losses.shape[1:]
     if not idxs:
         # no intersection, return a 0-dim matrix
-        return numpy.zeros(0, losses.dtype)
+        return numpy.zeros((0,) + shp, losses.dtype)
+    # numpy.array wants lists, not sets, hence the sorted below
     return losses[numpy.array(sorted(idxs))].sum(axis=0)
+
+
+def _filter_agg(assetcol, losses, tags):
+    idxs = set(range(len(assetcol)))
+    tagnames = []
+    for tag in tags:
+        tagname, tagvalue = tag.split('=', 1)
+        if tagvalue == '*':
+            tagnames.append(tagname)
+        else:
+            idxs &= assetcol.aids_by_tag[tag]
+    if len(tagnames) > 1:
+        raise ValueError('Too many * as tag values in %s' % tagnames)
+    elif not tagnames:  # return an array of shape (R,)
+        return _agg(losses, idxs)
+    else:  # return an array of shape (T, R)
+        all_idxs = (idxs & assetcol.aids_by_tag[t] for t in assetcol.tags()
+                    if t.startswith(tagname))
+        return numpy.array([_agg(losses, idxs) for idxs in all_idxs])
 
 
 @extract.add('agglosses')
@@ -200,8 +212,9 @@ def extract_agglosses(dstore, loss_type, *tags):
     Aggregate losses of the given loss type and tags.
 
     :returns:
-        array of shape (R,), being R the number of realizations or
-        array of length 0 if there is no data for the given tags
+        an array of shape (R,), being R the number of realizations
+        an array of length 0 if there is no data for the given tags
+        an array of shape (T, R) if one of the tag names has a `*` value
     """
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
@@ -212,7 +225,7 @@ def extract_agglosses(dstore, loss_type, *tags):
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)
-    return filter_agg(dstore, losses, tags)
+    return _filter_agg(dstore['assetcol'], losses, tags)
 
 
 @extract.add('aggdamages')
@@ -229,7 +242,7 @@ def extract_aggdamages(dstore, loss_type, *tags):
         losses = dstore['dmg_by_asset'][loss_type]['mean']
     else:
         raise KeyError('No damages found in %s' % dstore)
-    return filter_agg(dstore, losses, tags)
+    return _filter_agg(dstore['assetcol'], losses, tags)
 
 
 @extract.add('aggcurves')
@@ -246,5 +259,5 @@ def extract_aggcurves(dstore, loss_type, *tags):
         losses = dstore['curves-stats'][loss_type]
     else:
         raise KeyError('No curves found in %s' % dstore)
-    curves = filter_agg(dstore, losses, tags)
+    curves = _filter_agg(dstore['assetcol'], losses, tags)
     return ArrayWrapper(curves, dstore.get_attrs('curves-stats'))
