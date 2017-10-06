@@ -92,7 +92,7 @@ class AssetCollection(object):
                     aids.append(dic[idx])
                 except KeyError:  # discarded by assoc_assets_sites
                     continue
-            self.aids_by_tag[tag] = U32(aids)
+            self.aids_by_tag[tag] = set(aids)
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
@@ -167,7 +167,7 @@ class AssetCollection(object):
         tagidx = {t: i for i, t in enumerate(tags)}
         mask = numpy.zeros((len(self), len(tags)), bool)
         for tag, aids in self.aids_by_tag.items():
-            mask[aids, tagidx[tag]] = True
+            mask[sorted(aids), tagidx[tag]] = True
         return mask
 
     def get_tax_idx(self):
@@ -218,7 +218,7 @@ class AssetCollection(object):
         tags, all_aids = [], []
         for tag, aids in sorted(self.aids_by_tag.items()):
             tags.append(tag)
-            all_aids.append((aids,))
+            all_aids.append((numpy.array(sorted(aids), U32),))
         return dict(array=self.array,
                     tags=numpy.array(tags, hdf5.vstr),
                     aids=numpy.array(all_aids, aids_dt),
@@ -234,7 +234,9 @@ class AssetCollection(object):
         self.array = dic['array'].value
         self.cc = dic['cost_calculator']
         # dic['aids'] is an array of dtype `aids_dt` with field 'aids'
-        self.aids_by_tag = dict(zip(dic['tags'], dic['aids']['aids']))
+        self.aids_by_tag = {
+            tag: set(aids) for tag, aids in zip(
+                dic['tags'], dic['aids']['aids'])}
 
     @staticmethod
     def build_asset_collection(assets_by_site, time_event=None):
