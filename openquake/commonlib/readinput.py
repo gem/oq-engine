@@ -849,7 +849,7 @@ def get_gmfs(oqparam):
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
         array = writers.read_composite_array(fname)
-        R = len(numpy.unique(array['rlzi']))
+        G = len(numpy.unique(array['rlzi']))
         # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
         num_gmv = len(array.dtype.names[3:])
@@ -859,8 +859,8 @@ def get_gmfs(oqparam):
         assert len(eids) == oqparam.number_of_ground_motion_fields, (
             len(eids), oqparam.number_of_ground_motion_fields)
         eidx = {eid: e for e, eid in enumerate(eids)}
-        sids = numpy.unique(array['sid'])
-        gmfs = numpy.zeros((R, len(sids), len(eids), I), F32)
+        N = len(get_site_collection(oqparam))
+        gmfs = numpy.zeros((G, N, len(eids), I), F32)
         for row in array.view(dtlist):
             gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
     elif fname.endswith('.xml'):
