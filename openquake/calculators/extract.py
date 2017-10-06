@@ -105,6 +105,9 @@ class ArrayWrapper(object):
 @extract.add('asset_values', cache=True)
 def extract_asset_values(dstore, sid):
     """
+    Extract an array of asset values for the given sid. Use it as
+    /extract/asset_values/0
+
     :returns:
         (aid, loss_type1, ..., loss_typeN) composite array
     """
@@ -210,7 +213,9 @@ def _filter_agg(assetcol, losses, tags):
 @extract.add('agglosses')
 def extract_agglosses(dstore, loss_type, *tags):
     """
-    Aggregate losses of the given loss type and tags.
+    Aggregate losses of the given loss type and tags. Use it as
+    /extract/agglosses/structural?taxonomy=RC&zipcode=20126
+    /extract/agglosses/structural?taxonomy=RC&zipcode=*
 
     :returns:
         an array of shape (R,), being R the number of realizations
@@ -232,7 +237,8 @@ def extract_agglosses(dstore, loss_type, *tags):
 @extract.add('aggdamages')
 def extract_aggdamages(dstore, loss_type, *tags):
     """
-    Aggregate damages of the given loss type and tags.
+    Aggregate damages of the given loss type and tags. Use it as
+    /extract/aggdamages/structural?taxonomy=RC&zipcode=20126
 
     :returns:
         array of shape (R, D), being R the number of realizations and D
@@ -250,7 +256,8 @@ def extract_aggdamages(dstore, loss_type, *tags):
 def extract_aggcurves(dstore, loss_type, *tags):
     """
     Aggregate loss curves of the given loss type and tags for
-    event based risk calculations.
+    event based risk calculations. Use it as
+    /extract/aggcurves/structural?taxonomy=RC&zipcode=20126
 
     :returns:
         array of shape (S, P), being P the number of return periods
