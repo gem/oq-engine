@@ -703,7 +703,7 @@ def get_gmv_data(sids, gmfs):
 def get_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or gmf_ebrisk calculator
-    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
+    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (R, N, E, I)
     """
     dstore = calculator.datastore
     oq = dstore['oqparam']
@@ -742,9 +742,10 @@ def get_gmfs(calculator):
         if len(eids) != E:
             raise RuntimeError('Expected %d ground motion fields, found %d' %
                                (E, len(eids)))
-        # NB: get_gmfs redefine oq.sites in case of GMFs from XML
+        # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
+        # gmfs has shape (R, N, E, I)
         dstore['gmf_data/data'] = get_gmv_data(
             haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
 

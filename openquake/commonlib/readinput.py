@@ -843,7 +843,7 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, eids, gmf array of shape (G, N, E, I)
+        sitecol, eids, gmf array of shape (R, N, E, I)
     """
     I = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
@@ -859,8 +859,8 @@ def get_gmfs(oqparam):
         assert len(eids) == oqparam.number_of_ground_motion_fields, (
             len(eids), oqparam.number_of_ground_motion_fields)
         eidx = {eid: e for e, eid in enumerate(eids)}
-        sids = numpy.unique(array['sid'])
-        gmfs = numpy.zeros((R, len(sids), len(eids), I), F32)
+        N = len(get_site_collection(oqparam))
+        gmfs = numpy.zeros((R, N, len(eids), I), F32)
         for row in array.view(dtlist):
             gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
     elif fname.endswith('.xml'):
