@@ -1,4 +1,0 @@
-tag,contents~mean,contents~stddev,nonstructural~mean,nonstructural~stddev,structural~mean,structural~stddev
-"taxonomy=tax1",5.55687E+03,1.52144E+03,6.50867E+03,2.60399E+03,1.95508E+03,1.52057E+03
-"taxonomy=tax2",1.56604E+03,8.73792E+02,4.57416E+03,2.07352E+03,5.48202E+02,5.45034E+02
-"taxonomy=tax3",9.27802E+02,6.57211E+02,2.84577E+03,1.56056E+03,3.12526E+02,3.22323E+02
