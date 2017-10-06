@@ -273,6 +273,10 @@ def check_obsolete_version(calculation_mode='WebUI'):
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
+    if os.environ.get('JENKINS_URL') or os.environ.get('TRAVIS'):
+        # avoid flooding our API server with requests from CI systems
+        return
+
     headers = {'User-Agent': 'OpenQuake Engine %s; %s; %s' %
                (__version__, calculation_mode, platform.platform())}
     try:
