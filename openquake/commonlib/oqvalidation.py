@@ -438,7 +438,8 @@ class OqParam(valid.ParamSet):
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
-        has_sites = self.sites is not None or 'sites' in self.inputs
+        has_sites = (self.sites is not None or 'sites' in self.inputs
+                     or 'site_model' in self.inputs)
         if ('gmfs' in self.inputs and not has_sites and
                 not self.inputs['gmfs'].endswith('.xml')):
             raise ValueError('Missing sites or sites_csv in the .ini file')
