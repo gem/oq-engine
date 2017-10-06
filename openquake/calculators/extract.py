@@ -188,6 +188,7 @@ def _agg(losses, idxs):
 
 
 def _filter_agg(assetcol, losses, tags):
+    # losses is an array of shape (A, ..., R) with A=#assets, R=#realizations
     idxs = set(range(len(assetcol)))
     tagnames = []
     for tag in tags:
@@ -198,9 +199,9 @@ def _filter_agg(assetcol, losses, tags):
             idxs &= assetcol.aids_by_tag[tag]
     if len(tagnames) > 1:
         raise ValueError('Too many * as tag values in %s' % tagnames)
-    elif not tagnames:  # return an array of shape (R,)
+    elif not tagnames:  # return an array of shape (..., R)
         return _agg(losses, idxs)
-    else:  # return an array of shape (T, R)
+    else:  # return an array of shape (T, ..., R)
         all_idxs = (idxs & assetcol.aids_by_tag[t] for t in assetcol.tags()
                     if t.startswith(tagname))
         return numpy.array([_agg(losses, idxs) for idxs in all_idxs])
