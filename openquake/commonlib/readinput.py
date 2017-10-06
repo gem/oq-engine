@@ -694,13 +694,14 @@ def get_exposure(oqparam):
             tagnode = getattr(asset, 'tags', None)
             assets_by_tag = exposure.assets_by_tag
             if tagnode is not None:
-                for tagname, tagvalue in tagnode.attrib.items():
-                    if tagname not in assets_by_tag.tagnames:
-                        with context(fname, tagnode):
+                with context(fname, tagnode):
+                    for tagname, tagvalue in tagnode.attrib.items():
+                        if tagname not in assets_by_tag.tagnames:
                             raise ValueError(
                                 'Unknown tag %r or <tagNames> not '
                                 'specified in the exposure' % tagname)
-                    valid.nice_string(tagvalue)
+                        if tagvalue == '*':
+                            raise ValueError('Invalid tagvalue="*"')
                     assets_by_tag['%s=%s' % (tagname, tagvalue)].append(idx)
             exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
