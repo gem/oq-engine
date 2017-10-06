@@ -23,6 +23,8 @@ import unittest
 import numpy as np
 import nga_east_base_v3 as neb
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
+
 
 class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
     """
@@ -36,9 +38,9 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
         d_att = self.get_context_attributes(dctx)
-        self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
-        self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
-        self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
+        self.assertEqual(self.GSIM_CLASS.REQUIRES_SITES_PARAMETERS, s_att)
+        self.assertEqual(self.GSIM_CLASS.REQUIRES_RUPTURE_PARAMETERS, r_att)
+        self.assertEqual(self.GSIM_CLASS.REQUIRES_DISTANCES, d_att)
         self.assertTrue(
             numpy.all(ctxs),
             msg='Contexts objects have been changed by method '
