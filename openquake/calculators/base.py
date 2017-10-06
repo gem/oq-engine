@@ -688,9 +688,9 @@ F32 = numpy.float32
 
 def get_gmv_data(sids, gmfs):
     """
-    Convert an array of shape (G, N, E, I) into an array of type gmv_data_dt
+    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
     """
-    G, N, E, I = gmfs.shape
+    R, N, E, I = gmfs.shape
     gmv_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
     it = ((r, sids[s], eid, gmfa[s, eid])
@@ -703,7 +703,7 @@ def get_gmv_data(sids, gmfs):
 def get_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or gmf_ebrisk calculator
-    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
+    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (R, N, E, I)
     """
     dstore = calculator.datastore
     oq = dstore['oqparam']
@@ -745,7 +745,7 @@ def get_gmfs(calculator):
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
-        # gmfs has shape (G, N, E, I)
+        # gmfs has shape (R, N, E, I)
         dstore['gmf_data/data'] = get_gmv_data(
             haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
 
