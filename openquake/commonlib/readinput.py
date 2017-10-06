@@ -702,7 +702,8 @@ def get_exposure(oqparam):
                                 'specified in the exposure' % tagname)
                         if tagvalue == '*':
                             raise ValueError('Invalid tagvalue="*"')
-                    assets_by_tag['%s=%s' % (tagname, tagvalue)].append(idx)
+                        tag = '%s=%s' % (tagname, tagvalue)
+                        assets_by_tag[tag].append(idx)
             exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
             costs = asset.costs
