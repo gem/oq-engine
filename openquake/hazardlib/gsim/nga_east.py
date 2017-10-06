@@ -598,8 +598,10 @@ class NGAEastGMPE(NGAEastBaseGMPE):
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
         super(NGAEastGMPE, self).__init__(gmpe_table=self.NGA_EAST_TABLE,
-            tau_model, phi_model, phi_s2ss_model, tau_quantile,
-            phi_ss_quantile, phi_s2ss_quantile)
+            tau_model=tau_model, phi_model=phi_model,
+            phi_s2ss_model=phi_s2ss_model, tau_quantile=tau_quantile,
+            phi_ss_quantile=phi_ss_quantile,
+            phi_s2ss_quantile=phi_s2ss_quantile)
 
 
 
@@ -787,8 +789,8 @@ class NGAEastGMPETotalSigma(NGAEastBaseGMPETotalSigma):
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
         super(NGAEastGMPETotalSigma, self).__init__(self.NGA_EAST_TABLE,
-            tau_model="global", phi_model="global", phi_s2ss_model=None,
-            sigma_quantile=None)
+            tau_model=tau_model, phi_model=phi_model,
+            phi_s2ss_model=phi_s2ss_model, sigma_quantile=sigma_quantile)
 
 
 # /////////////////////////////////////////////////////////////////////////////
