@@ -441,7 +441,7 @@ class OqParam(valid.ParamSet):
         has_sites = self.sites is not None or 'sites' in self.inputs
         if ('gmfs' in self.inputs and not has_sites and
                 not self.inputs['gmfs'].endswith('.xml')):
-            raise ValueError('Missing sites_csv in the .ini file')
+            raise ValueError('Missing sites or sites_csv in the .ini file')
         elif ('risk' in self.calculation_mode or
                 'damage' in self.calculation_mode or
                 'bcr' in self.calculation_mode):
