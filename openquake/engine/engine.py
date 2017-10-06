@@ -277,7 +277,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         # avoid flooding our API server with requests from CI systems
         return
 
-    headers = {'User-Agent': 'OpenQuake Engine %s; %s; %s' %
+    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
                (__version__, calculation_mode, platform.platform())}
     try:
         logger = logging.getLogger()  # root logger
