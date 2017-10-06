@@ -25,9 +25,9 @@ from nose.plugins.attrib import attr
 import numpy.testing
 
 from openquake.baselib.general import group_array, writetmp
+from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
-from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
