@@ -205,7 +205,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     with logs.handle(job_id, log_level, log_file):  # run the job
         if USE_CELERY:
             set_concurrent_tasks_default()
-        msg = check_obsolete_version()
+        msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
@@ -260,17 +260,20 @@ def version_triple(tag):
     return tuple(int(n) for n in groups)
 
 
-def check_obsolete_version():
+def check_obsolete_version(calculation_mode=''):
     """
     Check if there is a newer version of the engine.
 
+    :param calculation_mode:
+         - the calculation mode when called from the engine
+         - an empty string when called from the WebUI
     :returns:
         - a message if the running version of the engine is obsolete
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
-    headers = {'User-Agent': 'OpenQuake Engine %s; %s' %
-               (__version__, platform.platform())}
+    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
+               (__version__, calculation_mode, platform.platform())}
     try:
         json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
                             headers=headers).json()
