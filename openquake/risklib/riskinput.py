@@ -725,35 +725,6 @@ class GmfGetter(object):
         return hazard
 
 
-class GmfDataGetter(GmfGetter):
-    """
-    Extracts a dictionary of GMVs from the datastore
-    """
-    def __init__(self, gmf_data, start=0, stop=None):
-        self.gmf_data = gmf_data
-        self.start = start
-        self.stop = stop
-
-    def init(self):
-        pass
-
-    def gen_gmv(self):
-        """
-        Returns gmv records from the datastore, if any
-        """
-        return self.gmf_data['data'][self.start:self.stop]
-
-    @classmethod
-    def gen_gmfs(cls, gmf_data, eid=None):
-        """
-        Returns a gmf_data_dt array
-        """
-        data = cls(gmf_data).gen_gmv()
-        if eid is None:
-            return data
-        return data[data['eid'] == eid]
-
-
 class RiskInput(object):
     """
     Contains all the assets and hazard values associated to a given
