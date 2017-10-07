@@ -316,9 +316,8 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         with monitor('building hazard', measuremem=True):
             gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
             hazard = sorted(getter.get_hazard(data=gmfdata).items())
-        for rlzi, hazardr in hazard:
-            for sid in getter.sids:
-                array = hazardr[sid]
+        for sid, hazardr in hazard:
+            for rlzi, array in hazardr.items():
                 if len(array) == 0:  # no data
                     continue
                 with hc_mon:
