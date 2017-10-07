@@ -559,7 +559,7 @@ class HazardGetter(object):
         source group ID
     :param rlzs_by_gsim:
         a dictionary gsim -> realizations for that GSIM
-    :param hazards_by_sid:
+    :param hazards_by_rlz:
         an array of curves of shape (R, N) or a GMF array of shape (R, N, E, I)
     :param imts:
         a list of IMT strings
