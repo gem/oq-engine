@@ -27,7 +27,6 @@ try:
 except ImportError:
     STANDALONE = False
 
-
 DB_SECTION = config.dbserver
 
 INSTALLED_APPS = ('openquake.server.db',)
@@ -166,7 +165,6 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
-
 
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 STANDALONE_APPS = ()
