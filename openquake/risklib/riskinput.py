@@ -519,15 +519,15 @@ class CompositeRiskModel(collections.Mapping):
             riskmodel = self[taxonomy]
             rangeI = [imti[riskmodel.risk_functions[lt].imt]
                       for lt in self.loss_types]
-            for rlzi, hazardr in sorted(hazard.items()):
-                for sid, assets, epsgetter in dic[taxonomy]:
-                    try:
-                        haz = hazardr[sid]
-                    except KeyError:  # no hazard for this site
-                        continue
-                    if len(haz) == 0:  # no hazard for this site
-                        continue
-                    elif isinstance(haz, numpy.ndarray):  # event_based
+            for sid, assets, epsgetter in dic[taxonomy]:
+                try:
+                    haz_by_sid = hazard[sid]
+                except KeyError:  # no hazard for this site
+                    continue
+                if len(haz_by_sid) == 0:  # no hazard for this site
+                    continue
+                for rlzi, haz in sorted(haz_by_sid.items()):
+                    if isinstance(haz, numpy.ndarray):  # event_based
                         eids = haz['eid']
                         gmvs = haz['gmv']
                         data = {i: (gmvs[:, i], eids) for i in rangeI}
@@ -559,7 +559,7 @@ class HazardGetter(object):
         source group ID
     :param rlzs_by_gsim:
         a dictionary gsim -> realizations for that GSIM
-    :param hazards_by_rlz:
+    :param hazards_by_sid:
         an array of curves of shape (R, N) or a GMF array of shape (R, N, E, I)
     :param imts:
         a list of IMT strings
@@ -572,16 +572,20 @@ class HazardGetter(object):
         self.imts = imts
         self.eids = eids
         self.data = collections.OrderedDict()
-        self.num_rlzs = len(hazards_by_rlz)
-        for rlzi, hazard in enumerate(hazards_by_rlz):
-            self.data[rlzi] = datadict = {}
-            for idx, haz in enumerate(hazards_by_rlz[rlzi]):
-                datadict[idx] = lst = [None for imt in imts]
+        self.num_rlzs, num_sids = hazards_by_rlz.shape[:2]
+        if len(hazards_by_rlz.shape) == 2:  # hcurves
+            hazards_by_sid = hazards_by_rlz.transpose(1, 0)
+        else:  # gmfs
+            hazards_by_sid = hazards_by_rlz.transpose(1, 0, 2, 3)
+        for sid, hazard_by_rlz in enumerate(hazards_by_sid):
+            self.data[sid] = datadict = {}
+            for rlzi, hazard in enumerate(hazard_by_rlz):
+                datadict[rlzi] = lst = [None for imt in imts]
                 for imti, imt in enumerate(self.imts):
                     if kind == 'poe':
-                        lst[imti] = haz[imt]  # imls
+                        lst[imti] = hazard[imt]  # imls
                     else:  # gmf
-                        lst[imti] = haz[:, imti]
+                        lst[imti] = hazard[:, imti]
 
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
@@ -597,16 +601,16 @@ class HazardGetter(object):
         :param gsim: a GSIM instance
         :returns: an OrderedDict rlzi -> datadict
         """
-        if self.kind == 'gmf':
-            # save info useful for debugging into gmdata
-            I = len(self.imts)
-            for rlzi, datadict in self.data.items():
-                arr = numpy.zeros(I + 2, F32)  # imt, events, bytes
-                arr[-1] = 4 * I * len(datadict)  # nbytes
-                for lst in datadict.values():
-                    for i, gmvs in enumerate(lst):
-                        arr[i] += gmvs.sum()
-                self.gmdata[rlzi] += arr
+        #if self.kind == 'gmf':
+        #    # save info useful for debugging into gmdata
+        #    I = len(self.imts)
+        #    for rlzi, datadict in self.data.items():
+        #        arr = numpy.zeros(I + 2, F32)  # imt, events, bytes
+        #        arr[-1] = 4 * I * len(datadict)  # nbytes
+        #        for lst in datadict.values():
+        #            for i, gmvs in enumerate(lst):
+        #                arr[i] += gmvs.sum()
+        #        self.gmdata[rlzi] += arr
         return self.data
 
 
@@ -718,10 +722,10 @@ class GmfGetter(object):
             data = self.gen_gmv(gsim)
         hazard = collections.defaultdict(lambda: collections.defaultdict(list))
         for rlzi, sid, eid, gmv in data:
-            hazard[rlzi][sid].append((gmv, eid))
+            hazard[sid][rlzi].append((gmv, eid))
         for haz in hazard.values():
-            for sid in haz:
-                haz[sid] = numpy.array(haz[sid], self.gmv_eid_dt)
+            for rlzi in haz:
+                haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
         return hazard
 
 
