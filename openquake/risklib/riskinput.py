@@ -573,9 +573,9 @@ class HazardGetter(object):
         self.eids = eids
         self.data = collections.OrderedDict()
         self.num_rlzs, num_sids = hazards_by_rlz.shape[:2]
-        if len(hazards_by_rlz.shape) == 2:  # hcurves
+        if len(hazards_by_rlz.shape) == 2:  # hcurves, shape (R, N)
             hazards_by_sid = hazards_by_rlz.transpose(1, 0)
-        else:  # gmfs
+        else:  # gmfs, shape (R, N, E, I)
             hazards_by_sid = hazards_by_rlz.transpose(1, 0, 2, 3)
         for sid, hazard_by_rlz in enumerate(hazards_by_sid):
             self.data[sid] = datadict = {}
