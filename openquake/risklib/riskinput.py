@@ -601,16 +601,16 @@ class HazardGetter(object):
         :param gsim: a GSIM instance
         :returns: an OrderedDict rlzi -> datadict
         """
-        #if self.kind == 'gmf':
-        #    # save info useful for debugging into gmdata
-        #    I = len(self.imts)
-        #    for rlzi, datadict in self.data.items():
-        #        arr = numpy.zeros(I + 2, F32)  # imt, events, bytes
-        #        arr[-1] = 4 * I * len(datadict)  # nbytes
-        #        for lst in datadict.values():
-        #            for i, gmvs in enumerate(lst):
-        #                arr[i] += gmvs.sum()
-        #        self.gmdata[rlzi] += arr
+        if self.kind == 'gmf':
+            # save info useful for debugging into gmdata
+            I = len(self.imts)
+            for sid, datadict in self.data.items():
+                arr = numpy.zeros(I + 2, F32)  # imt, events, bytes
+                for rlzi, lst in datadict.items():
+                    arr[-1] += 4 * I  # nbytes
+                    for i, gmvs in enumerate(lst):
+                        arr[i] += gmvs.sum()
+                self.gmdata[rlzi] += arr
         return self.data
 
 
