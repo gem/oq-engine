@@ -19,7 +19,7 @@
 import os
 import getpass
 
-from openquake.baselib import config
+from openquake.baselib import config, datastore
 
 try:
     import openquakeplatform
@@ -181,7 +181,7 @@ if STANDALONE:
 
     INSTALLED_APPS += STANDALONE_APPS
 
-    FILE_PATH_FIELD_DIRECTORY = os.path.join(os.path.expanduser('~'), 'oqdata')
+    FILE_PATH_FIELD_DIRECTORY = datastore.get_datadir()
 
     CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
     CONTEXT_PROCESSORS.insert(0, 'django.template.context_processors.request')
