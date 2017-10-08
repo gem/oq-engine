@@ -238,15 +238,19 @@ class EventBasedRuptureCalculator(PSHACalculator):
         return acc
 
     def save_ruptures(self, ruptures_by_grp_id):
-        """Extend the 'events' dataset with the given ruptures"""
+        """
+        Extend the 'events' dataset with the events from the given ruptures;
+        also, save the ruptures if the flag `save_ruptures` is on.
+
+        :param ruptures_by_grp_id: a dictionary grp_id -> list of EBRuptures
+        """
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 if len(ebrs):
                     events = get_events(ebrs)
                     dset = self.datastore.extend('events', events)
                     if self.oqparam.save_ruptures:
-                        initial_eidx = len(dset) - len(events)
-                        self.rupser.save(ebrs, initial_eidx)
+                        self.rupser.save(ebrs, eidx=len(dset)-len(events))
 
     def post_execute(self, result):
         """
@@ -266,12 +270,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
             numpy.random.seed(self.oqparam.ses_seed)
             set_random_years(self.datastore,
                              int(self.oqparam.investigation_time))
-        h5 = self.datastore.hdf5
-        if 'ruptures' in h5:
-            self.datastore.set_nbytes('ruptures')
-        if 'events' in h5:
-            self.datastore.set_attrs('events', num_events=num_events)
-            self.datastore.set_nbytes('events')
 
 
 def set_random_years(dstore, investigation_time):
