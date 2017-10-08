@@ -237,13 +237,8 @@ def export_agg_losses_ebr(ekey, dstore):
         rup_data = {}
         event_by_grp = {}  # grp_id -> eid -> event
         for grp_id in csm_info.get_grp_ids(sm_id):
-            event_by_grp[grp_id] = event_by_eid = {}
-            try:
-                events = all_events[grp_id]
-            except KeyError:
-                continue
-            for event in events:
-                event_by_eid[event['eid']] = event
+            event_by_grp[grp_id] = {
+                event['eid']: event for event in all_events.get(grp_id, [])}
             if has_rup_data:
                 ruptures = calc.get_ruptures(dstore, the_events, grp_id)
                 rup_data.update(get_rup_data(ruptures))
