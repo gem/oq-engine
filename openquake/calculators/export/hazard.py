@@ -74,13 +74,14 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
+    events = dstore['events']
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = {}
     for grp in dstore['ruptures']:
         grp_id = int(grp[4:])  # strip grp-
         ruptures[grp_id] = []
-        for ebr in calc.get_ruptures(dstore, grp_id):
+        for ebr in calc.get_ruptures(dstore, events, grp_id):
             ruptures[grp_id].append(ebr.export(mesh, sm_by_grp))
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
@@ -97,6 +98,7 @@ def export_ruptures_csv(ekey, dstore):
     oq = dstore['oqparam']
     if 'scenario' in oq.calculation_mode:
         return []
+    events = dstore['events']
     dest = dstore.export_path('ruptures.csv')
     header = ('rupid multiplicity mag centroid_lon centroid_lat centroid_depth'
               ' trt strike dip rake boundary').split()
@@ -106,7 +108,7 @@ def export_ruptures_csv(ekey, dstore):
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
         rup_data = calc.RuptureData(trt, gsims[grp_id]).to_array(
-            calc.get_ruptures(dstore, grp_id))
+            calc.get_ruptures(dstore, events, grp_id))
         for r in rup_data:
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
@@ -781,7 +783,8 @@ def export_gmf_scenario_csv(ekey, dstore):
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     rup_id = int(mo.group(1))
     grp_ids = sorted(int(grp[4:]) for grp in dstore['ruptures'])
-    ruptures = list(calc._get_ruptures(dstore, grp_ids, rup_id))
+    events = dstore['events']
+    ruptures = list(calc._get_ruptures(dstore, events, grp_ids, rup_id))
     if not ruptures:
         logging.warn('There is no rupture %d', rup_id)
         return []

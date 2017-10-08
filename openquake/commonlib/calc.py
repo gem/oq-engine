@@ -560,17 +560,16 @@ class RuptureSerializer(object):
             del self.data[:]
 
 
-def get_ruptures(dstore, grp_id):
+def get_ruptures(dstore, events, grp_id):
     """
     Extracts the ruptures of the given grp_id
     """
-    return _get_ruptures(dstore, [grp_id], None)
+    return _get_ruptures(dstore, events, [grp_id], None)
 
 
-def _get_ruptures(dstore, grp_ids, rup_id):
+def _get_ruptures(dstore, events, grp_ids, rup_id):
     oq = dstore['oqparam']
     grp_trt = dstore['csm_info'].grp_trt()
-    all_events = dstore['events']
     for grp_id in grp_ids:
         trt = grp_trt[grp_id]
         grp = 'grp-%02d' % grp_id
@@ -614,7 +613,7 @@ def _get_ruptures(dstore, grp_ids, rup_id):
                 rupture.surface.mesh = RectangularMesh(
                     m['lon'], m['lat'], m['depth'])
             sids = dstore['sids'][rec['sidx']]
-            evs = all_events[rec['eidx1']:rec['eidx2']]
+            evs = events[rec['eidx1']:rec['eidx2']]
             ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
