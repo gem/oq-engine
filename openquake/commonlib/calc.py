@@ -21,7 +21,7 @@ import warnings
 import numpy
 import h5py
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.geo.mesh import (
     surface_to_mesh, point3d, RectangularMesh)
@@ -45,8 +45,8 @@ F64 = numpy.float64
 
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rup_id', U32), ('year', U32), ('ses', U32),
-    ('sample', U32)])
+    ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
+    ('ses', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
@@ -570,13 +570,15 @@ def get_ruptures(dstore, grp_id):
 def _get_ruptures(dstore, grp_ids, rup_id):
     oq = dstore['oqparam']
     grp_trt = dstore['csm_info'].grp_trt()
+    all_events = dstore['events']
     for grp_id in grp_ids:
         trt = grp_trt[grp_id]
         grp = 'grp-%02d' % grp_id
-        if grp not in dstore['events']:
+        try:
+            recs = dstore['ruptures/' + grp]
+        except KeyError:  # no ruptures in grp
             continue
-        events = dstore['events/' + grp]
-        for rec in dstore['ruptures/' + grp]:
+        for rec in recs:
             if rup_id is not None and rup_id != rec['serial']:
                 continue
             mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
@@ -612,7 +614,7 @@ def _get_ruptures(dstore, grp_ids, rup_id):
                 rupture.surface.mesh = RectangularMesh(
                     m['lon'], m['lat'], m['depth'])
             sids = dstore['sids'][rec['sidx']]
-            evs = events[rec['eidx1']:rec['eidx2']]
+            evs = all_events[rec['eidx1']:rec['eidx2']]
             ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']

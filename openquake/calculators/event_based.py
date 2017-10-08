@@ -186,7 +186,7 @@ def get_events(ebruptures):
     year = 0  # to be set later
     for ebr in ebruptures:
         for event in ebr.events:
-            rec = (event['eid'], ebr.serial, year, event['ses'],
+            rec = (event['eid'], ebr.serial, ebr.grp_id, year, event['ses'],
                    event['sample'])
             events.append(rec)
     return numpy.array(events, calc.stored_event_dt)
@@ -243,8 +243,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 if len(ebrs):
                     events = get_events(ebrs)
-                    dset = self.datastore.extend(
-                        'events/grp-%02d' % grp_id, events)
+                    dset = self.datastore.extend('events', events)
                     if self.oqparam.save_ruptures:
                         initial_eidx = len(dset) - len(events)
                         self.rupser.save(ebrs, initial_eidx)
@@ -266,8 +265,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                           autoflush=True):
             inv_time = int(self.oqparam.investigation_time)
             numpy.random.seed(self.oqparam.ses_seed)
-            for sm in sorted(self.datastore['events']):
-                set_random_years(self.datastore, 'events/' + sm, inv_time)
+            set_random_years(self.datastore, inv_time)
         h5 = self.datastore.hdf5
         if 'ruptures' in h5:
             self.datastore.set_nbytes('ruptures')
@@ -276,19 +274,19 @@ class EventBasedRuptureCalculator(PSHACalculator):
             self.datastore.set_nbytes('events')
 
 
-def set_random_years(dstore, events_sm, investigation_time):
+def set_random_years(dstore, investigation_time):
     """
     Sort the `events` array and attach year labels sensitive to the
     SES ordinal and the investigation time.
     """
-    events = dstore[events_sm].value
+    events = dstore['events'].value
     eids = numpy.sort(events['eid'])
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(eids, years))
     for event in events:
         idx = event['ses'] - 1  # starts from 0
         event['year'] = idx * investigation_time + year_of[event['eid']]
-    dstore[events_sm] = events
+    dstore['events'] = events
 
 
 # ######################## GMF calculator ############################ #

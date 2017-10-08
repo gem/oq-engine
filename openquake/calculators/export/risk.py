@@ -230,6 +230,7 @@ def export_agg_losses_ebr(ekey, dstore):
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    all_events = group_array(dstore['events'], 'grp_id')
     for sm_id, rlzs in rlzs_assoc.rlzs_by_smodel.items():
         # populate rup_data and event_by_eid
         rup_data = {}
@@ -237,7 +238,7 @@ def export_agg_losses_ebr(ekey, dstore):
         for grp_id in csm_info.get_grp_ids(sm_id):
             event_by_grp[grp_id] = event_by_eid = {}
             try:
-                events = dstore['events/grp-%02d' % grp_id]
+                events = all_events[grp_id]
             except KeyError:
                 continue
             for event in events:
