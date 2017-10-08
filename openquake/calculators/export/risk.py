@@ -230,7 +230,8 @@ def export_agg_losses_ebr(ekey, dstore):
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    all_events = group_array(dstore['events'], 'grp_id')
+    the_events = dstore['events'].value
+    all_events = group_array(the_events, 'grp_id')
     for sm_id, rlzs in rlzs_assoc.rlzs_by_smodel.items():
         # populate rup_data and event_by_eid
         rup_data = {}
@@ -244,8 +245,8 @@ def export_agg_losses_ebr(ekey, dstore):
             for event in events:
                 event_by_eid[event['eid']] = event
             if has_rup_data:
-                rup_data.update(
-                    get_rup_data(calc.get_ruptures(dstore, grp_id)))
+                ruptures = calc.get_ruptures(dstore, the_events, grp_id)
+                rup_data.update(get_rup_data(ruptures))
 
         for rlz in rlzs:
             rlzi = rlz.ordinal
