@@ -263,9 +263,9 @@ class EventBasedRuptureCalculator(PSHACalculator):
                      num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
-            inv_time = int(self.oqparam.investigation_time)
             numpy.random.seed(self.oqparam.ses_seed)
-            set_random_years(self.datastore, inv_time)
+            set_random_years(self.datastore,
+                             int(self.oqparam.investigation_time))
         h5 = self.datastore.hdf5
         if 'ruptures' in h5:
             self.datastore.set_nbytes('ruptures')
