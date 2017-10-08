@@ -28,7 +28,7 @@ from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.general import humansize, group_array, DictArray
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg, gmf
+from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import convert_to_array
@@ -89,7 +89,7 @@ def export_ruptures_xml(ekey, dstore):
 
 
 @export.add(('ruptures', 'csv'))
-def export_ses_csv(ekey, dstore):
+def export_ruptures_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
@@ -658,13 +658,8 @@ def export_gmf(ekey, dstore):
     fnames = []
     ruptures_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value
-    eventdict = {}
-    for grp in sorted(dstore['events']):
-        try:
-            events = dstore['events/' + grp]
-        except KeyError:  # source model producing zero ruptures
-            continue
-        eventdict.update((zip(events['eid'], events)))
+    events = dstore['events'].value
+    eventdict = dict(zip(events['eid'], events))
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
         ruptures = ruptures_by_rlz[rlzi]
         for eid, gmfa in group_array(gmf_arr, 'eid').items():
