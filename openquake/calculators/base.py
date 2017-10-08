@@ -752,5 +752,5 @@ def get_gmfs(calculator):
         # store the events, useful when read the GMFs from a file
         events = numpy.zeros(E, calc.stored_event_dt)
         events['eid'] = eids
-        dstore['events/grp-00'] = events
+        dstore['events'] = events
         return eids, gmfs

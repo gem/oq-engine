@@ -348,6 +348,7 @@ def get_ruptures_by_grp(dstore):
     """
     Extracts the dictionary `ruptures_by_grp` from the given calculator
     """
+    events = dstore['events']
     n = 0
     for grp in dstore['ruptures']:
         n += len(dstore['ruptures/' + grp])
@@ -359,7 +360,8 @@ def get_ruptures_by_grp(dstore):
         ruptures_by_grp = AccumDict(accum=[])
         for grp in dstore['ruptures']:
             grp_id = int(grp[4:])  # strip 'grp-'
-            ruptures_by_grp[grp_id] = list(calc.get_ruptures(dstore, grp_id))
+            ruptures = list(calc.get_ruptures(dstore, events, grp_id))
+            ruptures_by_grp[grp_id] = ruptures
     return ruptures_by_grp
 
 
