@@ -63,15 +63,17 @@ class PmapGetter(object):
     :param dstore: a DataStore instance
     :param lazy: if True, read directly from the datastore
     """
-    def __init__(self, dstore, lazy=False):
+    def __init__(self, dstore, sids=None, lazy=False):
         self.rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
         self.weights = dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
-        self.sids = None  # to be set
+        self.sids = sids
         self.nbytes = 0
+        if sids is not None and not self.lazy:  # populate the cache
+            self.get_pmap_by_grp(sids)
 
     def __enter__(self):
         if self.lazy:
@@ -87,12 +89,8 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a new instance of the getter, with the cache populated
         """
-        newgetter = object.__new__(self.__class__, self.dstore)
-        vars(newgetter).update(vars(self))
-        newgetter.sids = sids
-        if not self.lazy:  # populate the cache
-            newgetter.get_pmap_by_grp(sids)
-        return newgetter
+        assert sids is not None
+        return self.__class__(self.dstore, sids, self.lazy)
 
     def get(self, sids, rlzi):
         """
@@ -117,6 +115,10 @@ class PmapGetter(object):
         :returns: a list of R probability maps
         """
         return self.rlzs_assoc.combine_pmaps(self.get_pmap_by_grp(sids))
+
+    def get_hcurves(self, sids, imtls):
+        assert self.sids is not None, 'PmapGetter not bound to sids'
+        return self.get_pmaps(sids).combine2(imtls, sids)
 
     def get_pmap_by_grp(self, sids=None):
         """
