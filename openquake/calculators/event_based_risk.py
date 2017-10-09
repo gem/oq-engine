@@ -393,12 +393,12 @@ class EbriskCalculator(base.RiskCalculator):
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
-            if hasattr(res, 'ruptures_by_grp'):
+            if hasattr(res, 'ruptures_by_grp'):  # for UCERF
                 save_ruptures(self, res.ruptures_by_grp)
-            elif hasattr(res, 'events_by_grp'):
+            elif hasattr(res, 'events_by_grp'):  # for UCERF
                 for grp_id in res.events_by_grp:
                     events = res.events_by_grp[grp_id]
-                    self.datastore.extend('events/grp-%02d' % grp_id, events)
+                    self.datastore.extend('events', events)
             num_events[res.sm_id] += res.num_events
         if 'all_loss_ratios' in self.datastore:
             self.datastore['all_loss_ratios/num_losses'] = self.num_losses
