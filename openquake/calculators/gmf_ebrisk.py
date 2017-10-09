@@ -54,7 +54,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             eps = self.make_eps(self.E)
         eids, gmfs = base.get_gmfs(self)  # shape (G, N, E, I)
         self.R = len(gmfs)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps, eids)
+        self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses

@@ -499,7 +499,7 @@ class EbriskCalculator(base.RiskCalculator):
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
                 'all_loss_ratios/indices',
-                [numpy.array(self.indices[aid], indices_dt)
+                [numpy.array(self.indices[aid], riskinput.indices_dt)
                  for aid in range(self.A)])
             self.datastore.set_attrs(
                 'all_loss_ratios',
