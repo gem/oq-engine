@@ -21,7 +21,7 @@ import warnings
 import numpy
 import h5py
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.geo.mesh import (
     surface_to_mesh, point3d, RectangularMesh)
@@ -116,9 +116,14 @@ class PmapGetter(object):
         """
         return self.rlzs_assoc.combine_pmaps(self.get_pmap_by_grp(sids))
 
-    def get_hcurves(self, sids, imtls):
+    def get_hcurves(self, imtls):
+        """
+        :returns: an array of (R, N) hazard curves
+        """
         assert self.sids is not None, 'PmapGetter not bound to sids'
-        return self.get_pmaps(sids).combine2(imtls, sids)
+        pmaps = [pmap.convert2(imtls, self.sids)
+                 for pmap in self.get_pmaps(self.sids)]
+        return numpy.array(pmaps)
 
     def get_pmap_by_grp(self, sids=None):
         """
