@@ -232,15 +232,6 @@ class Asset(object):
         return '<Asset %s>' % self.idx
 
 
-def get_values(loss_type, assets, time_event=None):
-    """
-    :returns:
-        a numpy array with the values for the given assets, depending on the
-        loss_type.
-    """
-    return numpy.array([a.value(loss_type, time_event) for a in assets])
-
-
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
