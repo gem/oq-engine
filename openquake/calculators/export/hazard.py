@@ -28,11 +28,11 @@ from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.general import humansize, group_array, DictArray
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg, gmf
+from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import convert_to_array
-from openquake.risklib.riskinput import GmfGetter, GmfDataGetter
+from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -716,8 +716,7 @@ def export_gmf_data_csv(ekey, dstore):
     imts = list(oq.imtls)
     sitemesh = get_mesh(dstore['sitecol'])
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-    getter = GmfDataGetter(dstore['gmf_data'])
-    gmfa = getter.gen_gmv()
+    gmfa = dstore['gmf_data']['data'].value
     if eid is None:  # new format
         f = dstore.build_fname('sitemesh', '', 'csv')
         sids = numpy.arange(len(sitemesh), dtype=U32)
