@@ -297,7 +297,7 @@ class CompositeRiskModel(collections.Mapping):
                     if isinstance(haz, numpy.ndarray):
                         gmvs = haz['gmv']
                         if eids is None:  # scenario
-                            data = gmvs
+                            data = gmvs.T  # shape (E, I) -> (I, E)
                         else:  # event_based
                             data = {i: (gmvs[:, i], haz['eid'])
                                     for i in rangeI}
@@ -330,9 +330,8 @@ class GmfDataGetter(collections.Mapping):
 
     def __getitem__(self, sid):
         dset = self.dstore['gmf_data/data']
-        indices = self.dstore['gmf_data/indices'][sid]
-        array = numpy.concatenate([
-            dset[start:stop] for start, stop in indices])
+        idxs = self.dstore['gmf_data/indices'][sid]
+        array = numpy.concatenate([dset[start:stop] for start, stop in idxs])
         return group_array(array, 'rlzi')
 
     def __iter__(self):
