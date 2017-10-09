@@ -22,7 +22,8 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby, get_array, AccumDict
+from openquake.baselib.general import (
+    groupby, group_array, get_array, AccumDict)
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 from openquake.commonlib.calc import PmapGetter
@@ -44,8 +45,8 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
 
 by_taxonomy = operator.attrgetter('taxonomy')
-
 aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
+indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 class Output(object):
@@ -259,7 +260,7 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy in group:
                 epsgetter = riskinput.epsilon_getter
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
-        imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
+        imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
         if hasattr(hazard_getter, 'rlzs_by_gsim'):
             # save memory in event based risk by working one gsim at the time
             for gsim in hazard_getter.rlzs_by_gsim:
@@ -293,13 +294,16 @@ class CompositeRiskModel(collections.Mapping):
                 if len(haz_by_sid) == 0:  # no hazard for this site
                     continue
                 for rlzi, haz in sorted(haz_by_sid.items()):
-                    if isinstance(haz, numpy.ndarray):  # event_based
-                        eids = haz['eid']
+                    if isinstance(haz, numpy.ndarray):
                         gmvs = haz['gmv']
-                        data = {i: (gmvs[:, i], eids) for i in rangeI}
+                        if eids is None:  # scenario
+                            data = gmvs
+                        else:  # event_based
+                            data = {i: (gmvs[:, i], haz['eid'])
+                                    for i in rangeI}
                     elif eids is not None:  # gmf_ebrisk
                         data = {i: (haz[i], eids) for i in rangeI}
-                    else:  # classical or scenario from gmfs
+                    else:  # classical
                         data = haz
                     out = [None] * len(self.lti)
                     for lti, i in enumerate(rangeI):
@@ -315,6 +319,27 @@ class CompositeRiskModel(collections.Mapping):
         lines = ['%s: %s' % item for item in sorted(self.items())]
         return '<%s(%d, %d)\n%s>' % (
             self.__class__.__name__, len(lines), self.covs, '\n'.join(lines))
+
+
+class GmfDataGetter(collections.Mapping):
+    """
+    A dictionary-like object {sid: dictionary by realization index}
+    """
+    def __init__(self, dstore, sids):
+        self.dstore = dstore
+
+    def __getitem__(self, sid):
+        dset = self.dstore['gmf_data/data']
+        indices = self.dstore['gmf_data/indices'][sid]
+        array = numpy.concatenate([
+            dset[start:stop] for start, stop in indices])
+        return group_array(array, 'rlzi')
+
+    def __iter__(self):
+        return iter(self.sids)
+
+    def __len__(self):
+        return len(self.sids)
 
 
 class HazardGetter(object):
@@ -333,40 +358,40 @@ class HazardGetter(object):
     def __init__(self, dstore, kind, sids, imtls, eids=None):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
-        self.imts = list(imtls)
+        self.sids = sids
+        self.imtls = imtls
         self.eids = eids
-        self.data = collections.OrderedDict()
-        hazards_by_rlz = PmapGetter(dstore, sids).get_hcurves(imtls)
-        self.num_rlzs, num_sids = hazards_by_rlz.shape[:2]
-        if len(hazards_by_rlz.shape) == 2:  # hcurves, shape (R, N)
-            hazards_by_sid = hazards_by_rlz.transpose(1, 0)
-        else:  # gmfs, shape (R, N, E, I)
-            hazards_by_sid = hazards_by_rlz.transpose(1, 0, 2, 3)
-        for sid, hazard_by_rlz in enumerate(hazards_by_sid):
-            self.data[sid] = datadict = {}
-            for rlzi, hazard in enumerate(hazard_by_rlz):
-                datadict[rlzi] = lst = [None for imt in imtls]
-                for imti, imt in enumerate(self.imts):
-                    if kind == 'poe':
-                        lst[imti] = hazard[imt]  # imls
-                    else:  # gmf
-                        lst[imti] = hazard[:, imti]
-
+        self.num_rlzs = dstore['csm_info'].get_num_rlzs()
+        if kind == 'poe':  # hcurves, shape (R, N)
+            self._getter = PmapGetter(dstore, sids)
+        else:  # gmf
+            self._getter = GmfDataGetter(dstore, sids)
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
             # number of ground motion fields
             # dictionary rlzi -> array(imts, events, nbytes)
-            self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
-
-    def init(self):  # for API compatibility
-        pass
+            self.gmdata = AccumDict(
+                accum=numpy.zeros(len(self.imtls) + 2, F32))
 
     def get_hazard(self):
         """
         :param gsim: a GSIM instance
         :returns: an OrderedDict rlzi -> datadict
         """
-        return self.data
+        data = collections.OrderedDict()
+        if self.kind == 'poe':
+            hcurves = self._getter.get_hcurves(self.imtls)  # shape (R, N)
+            # why not idx instead of sid below??
+            for sid, hcurve_by_rlz in enumerate(hcurves.T):
+                data[sid] = datadict = {}
+                for rlzi, hcurve in enumerate(hcurve_by_rlz):
+                    datadict[rlzi] = lst = [None for imt in self.imtls]
+                    for imti, imt in enumerate(self.imtls):
+                        lst[imti] = hcurve[imt]  # imls
+        else:  # gmf
+            for sid in self.sids:
+                data[sid] = self._getter[sid]
+        return data
 
 
 class GmfGetter(object):
