@@ -32,7 +32,7 @@ from openquake.baselib import (
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, asset
 from openquake.commonlib import readinput, source, calc, riskmodels
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -357,7 +357,7 @@ class HazardCalculator(BaseCalculator):
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        return sitecol.filter(mask), riskinput.AssetCollection(
+        return sitecol.filter(mask), asset.AssetCollection(
             assets_by_site,
             self.exposure.assets_by_tag,
             self.exposure.cost_calculator,
