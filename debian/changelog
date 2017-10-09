@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Adds the Bindi et al. (2017) GMPEs for Joyner-Boore and Hypocentral
+    Distance
+
   [Michele Simionato]
   * Made it mandatory to specify the sites for all calculators reading the
     GMFs from a CSV file
