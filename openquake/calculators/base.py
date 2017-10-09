@@ -601,8 +601,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-    def check_poes(self, curves_by_trt_gsim):
-        """Overridden in ClassicalDamage"""
 
     def make_eps(self, num_ruptures):
         """
@@ -614,12 +612,10 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, hazards, eps=numpy.zeros(0), eids=None):
+    def build_riskinputs(self, kind, eps=numpy.zeros(0), eids=None):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
-        :param hazards:
-            a (composite) array of shape (R, N, ...)
         :param eps:
             a matrix of epsilons (possibly empty)
         :param eids:
@@ -627,7 +623,6 @@ class RiskCalculator(HazardCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        self.check_poes(hazards)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -646,7 +641,6 @@ class RiskCalculator(HazardCalculator):
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
                 sids = numpy.array([sid for sid, _weight in block])
-                reduced_hazards = hazards[:, sids]
                 reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
@@ -657,7 +651,8 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
-                    riskinput.HazardGetter(kind, reduced_hazards, imtls, eids),
+                    riskinput.HazardGetter(
+                        self.datastore, kind, sids, imtls, eids),
                     reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
