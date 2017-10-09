@@ -1,4 +1,12 @@
   [Michele Simionato]
+  * Changed the exporter of the event loss table to export all realizations
+    into a single file
+
+  [Graeme Weatherill]
+  * Adds the Bindi et al. (2017) GMPEs for Joyner-Boore and Hypocentral
+    Distance
+
+  [Michele Simionato]
   * Made it mandatory to specify the sites for all calculators reading the
     GMFs from a CSV file
   * Tested also the case of calculators requiring a shared_dir
