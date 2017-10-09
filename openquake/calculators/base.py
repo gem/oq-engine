@@ -650,10 +650,9 @@ class RiskCalculator(HazardCalculator):
                         if len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                ri = riskinput.RiskInput(
-                    riskinput.HazardGetter(
-                        self.datastore, kind, sids, imtls, eids),
-                    reduced_assets, reduced_eps)
+                hgetter = riskinput.HazardGetter(
+                    self.datastore, kind, sids, imtls, eids)
+                ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
@@ -740,10 +739,18 @@ def get_gmfs(calculator):
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
-        # gmfs has shape (R, N, E, I)
+        R, N, E, I = gmfs.shape
         dstore['gmf_data/data'] = get_gmv_data(
             haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
-
+        indices = []
+        for sid in haz_sitecol.sids:
+            lst = []
+            for r in range(R):
+                start = r * N * E + E * sid
+                lst.append((start, start + E))
+            indices.append(numpy.array(lst, riskinput.indices_dt))
+        dstore.save_vlen('gmf_data/indices', indices)
+        dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
         # store the events, useful when read the GMFs from a file
         events = numpy.zeros(E, calc.stored_event_dt)
         events['eid'] = eids
