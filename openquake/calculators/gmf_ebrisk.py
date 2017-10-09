@@ -75,7 +75,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         events = numpy.zeros(oq.number_of_ground_motion_fields,
                              calc.stored_event_dt)
         events['eid'] = eids
-        self.datastore['events/grp-00'] = events
+        self.datastore['events'] = events
 
     def post_execute(self, result):
         pass
