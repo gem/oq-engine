@@ -22,10 +22,9 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip, encode, decode
 from openquake.baselib.general import groupby, get_array, AccumDict
-from openquake.hazardlib import site, calc, valid
-from openquake.risklib import scientific, riskmodels, asset
+from openquake.hazardlib import site, calc
+from openquake.risklib import scientific, riskmodels
 
 
 class ValidationError(Exception):

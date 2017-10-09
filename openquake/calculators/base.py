@@ -651,10 +651,10 @@ class RiskCalculator(HazardCalculator):
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
                 for assets in reduced_assets:
-                    for asset in assets:
-                        asset.tagmask = self.tagmask[asset.ordinal]
+                    for ass in assets:
+                        ass.tagmask = self.tagmask[ass.ordinal]
                         if len(eps):
-                            reduced_eps[asset.ordinal] = eps[asset.ordinal]
+                            reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
                 ri = riskinput.RiskInput(
                     riskinput.HazardGetter(kind, reduced_hazards, imtls, eids),
