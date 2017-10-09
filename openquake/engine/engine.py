@@ -23,8 +23,10 @@ import os
 import re
 import sys
 import signal
+import logging
 import traceback
 import requests
+import platform
 
 from openquake.baselib.performance import Monitor
 from openquake.baselib import parallel, config, datastore, __version__
@@ -33,7 +35,7 @@ from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
-GITHUB = 'https://api.github.com/repos/gem/oq-engine'
+OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
@@ -204,7 +206,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     with logs.handle(job_id, log_level, log_file):  # run the job
         if USE_CELERY:
             set_concurrent_tasks_default()
-        msg = check_obsolete_version()
+        msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
@@ -259,17 +261,35 @@ def version_triple(tag):
     return tuple(int(n) for n in groups)
 
 
-def check_obsolete_version():
+def check_obsolete_version(calculation_mode='WebUI'):
     """
     Check if there is a newer version of the engine.
 
+    :param calculation_mode:
+         - the calculation mode when called from the engine
+         - an empty string when called from the WebUI
     :returns:
         - a message if the running version of the engine is obsolete
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
+    if os.environ.get('JENKINS_URL') or os.environ.get('TRAVIS'):
+        # avoid flooding our API server with requests from CI systems
+        return
+
+    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
+               (__version__, calculation_mode, platform.platform())}
     try:
-        json = requests.get(GITHUB + '/releases/latest', timeout=0.5).json()
+        logger = logging.getLogger()  # root logger
+        level = logger.level
+        # requests.get logs at level INFO: raising the level so that
+        # the log is hidden
+        logger.setLevel(logging.WARN)
+        try:
+            json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
+                                headers=headers).json()
+        finally:
+            logger.setLevel(level)  # back as it was
         tag_name = json['tag_name']
         current = version_triple(__version__)
         latest = version_triple(json['tag_name'])
