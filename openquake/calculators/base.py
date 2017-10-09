@@ -740,19 +740,25 @@ def get_gmfs(calculator):
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
         R, N, E, I = gmfs.shape
-        dstore['gmf_data/data'] = get_gmv_data(
-            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
-        indices = []
-        for sid in haz_sitecol.sids:
-            lst = []
-            for r in range(R):
-                start = r * N * E + E * sid
-                lst.append((start, start + E))
-            indices.append(numpy.array(lst, riskinput.indices_dt))
-        dstore.save_vlen('gmf_data/indices', indices)
-        dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
+        save_gmf_data(dstore, haz_sitecol.sids,
+                      gmfs[:, haz_sitecol.indices])
+
         # store the events, useful when read the GMFs from a file
         events = numpy.zeros(E, calc.stored_event_dt)
         events['eid'] = eids
         dstore['events'] = events
         return eids, gmfs
+
+
+def save_gmf_data(dstore, sids, gmfs):
+    offset = 0
+    dstore['gmf_data/data'] = gmfa = get_gmv_data(sids, gmfs)
+    dic = general.group_array(gmfa, 'sid')
+    lst = []
+    for sid in sids:
+        rows = dic.get(sid, ())
+        n = len(rows)
+        lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
+        offset += n
+    dstore.save_vlen('gmf_data/indices', lst)
+    dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
