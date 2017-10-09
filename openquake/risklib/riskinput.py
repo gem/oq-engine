@@ -25,6 +25,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, get_array, AccumDict
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
+from openquake.commonlib.calc import PmapGetter
 
 
 class ValidationError(Exception):
@@ -318,25 +319,24 @@ class CompositeRiskModel(collections.Mapping):
 
 class HazardGetter(object):
     """
+    :param dstore:
+        DataStore instance
     :param kind:
         kind of HazardGetter; can be 'poe' or 'gmf'
-    :param grp_id:
-        source group ID
-    :param rlzs_by_gsim:
-        a dictionary gsim -> realizations for that GSIM
-    :param hazards_by_rlz:
-        an array of curves of shape (R, N) or a GMF array of shape (R, N, E, I)
-    :param imts:
-        a list of IMT strings
+    :param sids:
+        hazard site IDs
+    :param imtls:
+        intensity measure types and levels object
     :param eids:
         an array of event IDs (or None)
     """
-    def __init__(self, kind, hazards_by_rlz, imts, eids=None):
+    def __init__(self, dstore, kind, sids, imtls, eids=None):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
-        self.imts = imts
+        self.imts = list(imtls)
         self.eids = eids
         self.data = collections.OrderedDict()
+        hazards_by_rlz = PmapGetter(dstore, sids).get_hcurves(imtls)
         self.num_rlzs, num_sids = hazards_by_rlz.shape[:2]
         if len(hazards_by_rlz.shape) == 2:  # hcurves, shape (R, N)
             hazards_by_sid = hazards_by_rlz.transpose(1, 0)
@@ -345,7 +345,7 @@ class HazardGetter(object):
         for sid, hazard_by_rlz in enumerate(hazards_by_sid):
             self.data[sid] = datadict = {}
             for rlzi, hazard in enumerate(hazard_by_rlz):
-                datadict[rlzi] = lst = [None for imt in imts]
+                datadict[rlzi] = lst = [None for imt in imtls]
                 for imti, imt in enumerate(self.imts):
                     if kind == 'poe':
                         lst[imti] = hazard[imt]  # imls
