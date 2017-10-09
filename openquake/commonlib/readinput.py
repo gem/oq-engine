@@ -34,7 +34,6 @@ from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput, read_nrml
 from openquake.baselib import datastore
