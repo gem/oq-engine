@@ -35,7 +35,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import riskmodels, riskinput, read_nrml
+from openquake.risklib import asset, riskmodels, riskinput, read_nrml
 from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
@@ -609,7 +609,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True)
     deductible_is_absolute = deductible.attrib.get('isAbsolute', True)
     time_events = set()
-    cc = riskmodels.CostCalculator(
+    cc = asset.CostCalculator(
         {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute)
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
@@ -641,7 +641,7 @@ def get_cost_calculator(oqparam):
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
-    :class:`openquake.risklib.riskmodels.Asset` instances.
+    :class:`openquake.risklib.asset.Asset` instances.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -660,38 +660,38 @@ def get_exposure(oqparam):
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
-    for idx, asset in enumerate(assets_node):
+    for idx, asset_node in enumerate(assets_node):
         values = {}
         deductibles = {}
         insurance_limits = {}
         retrofitteds = {}
-        with context(fname, asset):
-            asset_id = asset['id'].encode('utf8')
+        with context(fname, asset_node):
+            asset_id = asset_node['id'].encode('utf8')
             if asset_id in asset_refs:
                 raise read_nrml.DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             exposure.asset_refs.append(asset_id)
-            taxonomy = asset['taxonomy']
+            taxonomy = asset_node['taxonomy']
             if 'damage' in oqparam.calculation_mode:
                 # calculators of 'damage' kind require the 'number'
                 # if it is missing a KeyError is raised
-                number = asset.attrib['number']
+                number = asset_node.attrib['number']
             else:
                 # some calculators ignore the 'number' attribute;
                 # if it is missing it is considered 1, since we are going
                 # to multiply by it
                 try:
-                    number = asset['number']
+                    number = asset_node['number']
                 except KeyError:
                     number = 1
                 else:
                     if 'occupants' in all_cost_types:
                         values['occupants_None'] = number
-            location = asset.location['lon'], asset.location['lat']
+            location = asset_node.location['lon'], asset_node.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
-            tagnode = getattr(asset, 'tags', None)
+            tagnode = getattr(asset_node, 'tags', None)
             assets_by_tag = exposure.assets_by_tag
             if tagnode is not None:
                 # fill missing tagvalues with "?" and raise an error for
@@ -715,11 +715,11 @@ def get_exposure(oqparam):
                             'specified in the exposure' % ', '.join(dic))
             exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
-            costs = asset.costs
+            costs = asset_node.costs
         except AttributeError:
             costs = Node('costs', [])
         try:
-            occupancies = asset.occupancies
+            occupancies = asset_node.occupancies
         except AttributeError:
             occupancies = Node('occupancies', [])
         for cost in costs:
@@ -744,7 +744,7 @@ def get_exposure(oqparam):
                 values[cost_type] = None
         elif missing and 'damage' not in oqparam.calculation_mode:
             # missing the costs is okay for damage calculators
-            with context(fname, asset):
+            with context(fname, asset_node):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
@@ -757,11 +757,10 @@ def get_exposure(oqparam):
                 tot_occupants += values[occupants]
         if occupancies:  # store average occupants
             values['occupants_None'] = tot_occupants / len(occupancies)
-        area = float(asset.attrib.get('area', 1))
-        ass = riskmodels.Asset(
-            idx, taxonomy, number, location, values, area,
-            deductibles, insurance_limits, retrofitteds,
-            exposure.cost_calculator)
+        area = float(asset_node.attrib.get('area', 1))
+        ass = asset.Asset(idx, taxonomy, number, location, values, area,
+                          deductibles, insurance_limits, retrofitteds,
+                          exposure.cost_calculator)
         exposure.assets.append(ass)
     if region:
         logging.info('Read %d assets within the region_constraint '
@@ -798,7 +797,7 @@ def get_sitecol_assetcol(oqparam, exposure):
     for lonlat in zip(sitecol.lons, sitecol.lats):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
-    assetcol = riskinput.AssetCollection(
+    assetcol = asset.AssetCollection(
         assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
@@ -854,7 +853,7 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, eids, gmf array of shape (G, N, E, I)
+        sitecol, eids, gmf array of shape (R, N, E, I)
     """
     I = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
@@ -870,8 +869,8 @@ def get_gmfs(oqparam):
         assert len(eids) == oqparam.number_of_ground_motion_fields, (
             len(eids), oqparam.number_of_ground_motion_fields)
         eidx = {eid: e for e, eid in enumerate(eids)}
-        sids = numpy.unique(array['sid'])
-        gmfs = numpy.zeros((R, len(sids), len(eids), I), F32)
+        N = len(get_site_collection(oqparam))
+        gmfs = numpy.zeros((R, N, len(eids), I), F32)
         for row in array.view(dtlist):
             gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
     elif fname.endswith('.xml'):

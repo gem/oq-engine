@@ -32,7 +32,7 @@ from openquake.baselib import (
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, asset
 from openquake.commonlib import readinput, source, calc, riskmodels
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -357,7 +357,7 @@ class HazardCalculator(BaseCalculator):
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        return sitecol.filter(mask), riskinput.AssetCollection(
+        return sitecol.filter(mask), asset.AssetCollection(
             assets_by_site,
             self.exposure.assets_by_tag,
             self.exposure.cost_calculator,
@@ -703,7 +703,7 @@ def get_gmv_data(sids, gmfs):
 def get_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or gmf_ebrisk calculator
-    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
+    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (R, N, E, I)
     """
     dstore = calculator.datastore
     oq = dstore['oqparam']
@@ -742,14 +742,15 @@ def get_gmfs(calculator):
         if len(eids) != E:
             raise RuntimeError('Expected %d ground motion fields, found %d' %
                                (E, len(eids)))
-        # NB: get_gmfs redefine oq.sites in case of GMFs from XML
+        # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
+        # gmfs has shape (R, N, E, I)
         dstore['gmf_data/data'] = get_gmv_data(
             haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
 
         # store the events, useful when read the GMFs from a file
         events = numpy.zeros(E, calc.stored_event_dt)
         events['eid'] = eids
-        dstore['events/grp-00'] = events
+        dstore['events'] = events
         return eids, gmfs
