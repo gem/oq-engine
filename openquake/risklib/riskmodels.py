@@ -30,6 +30,15 @@ F32 = numpy.float32
 registry = CallableDict()
 
 
+def get_values(loss_type, assets, time_event=None):
+    """
+    :returns:
+        a numpy array with the values for the given assets, depending on the
+        loss_type.
+    """
+    return numpy.array([a.value(loss_type, time_event) for a in assets])
+
+
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -144,7 +153,7 @@ class Classical(RiskModel):
         n = len(assets)
         vf = self.risk_functions[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        values = asset.get_values(loss_type, assets)
+        values = get_values(loss_type, assets)
         lrcurves = numpy.array(
             [scientific.classical(
                 vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
@@ -289,7 +298,7 @@ class Scenario(RiskModel):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
         epsilons = [epsgetter(asset.ordinal, None) for asset in assets]
-        values = asset.get_values(loss_type, assets, self.time_event)
+        values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
             # there are no assets with a value
