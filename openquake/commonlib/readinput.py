@@ -35,7 +35,8 @@ from openquake.baselib import hdf5
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import asset, riskmodels, riskinput, read_nrml
+from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.risklib import asset, riskinput, read_nrml
 from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
@@ -834,7 +835,8 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
                              (imts[0], other_imt))
     lons, lats = zip(*sorted(points))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
+    return mesh, numpy.concatenate([numpy.array(lst)
+                                    for imt, lst in sorted(data.items())])
 
 
 def get_gmfs(oqparam):
@@ -873,7 +875,7 @@ def get_gmfs(oqparam):
     return eids, gmfs
 
 
-def get_hcurves(oqparam):
+def get_pmap(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -882,14 +884,14 @@ def get_hcurves(oqparam):
     """
     fname = oqparam.inputs['hazard_curves']
     if fname.endswith('.csv'):
-        return get_hcurves_from_csv(oqparam, fname)
+        return get_pmap_from_csv(oqparam, fname)
     elif fname.endswith('.xml'):
-        return get_hcurves_from_nrml(oqparam, fname)
+        return get_pmap_from_nrml(oqparam, fname)
     else:
         raise NotImplementedError('Reading from %s' % fname)
 
 
-def get_hcurves_from_csv(oqparam, fname):
+def get_pmap_from_csv(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -905,17 +907,14 @@ def get_hcurves_from_csv(oqparam, fname):
                          % oqparam.inputs['job_ini'])
     num_values = list(map(len, list(oqparam.imtls.values())))
     with open(oqparam.inputs['hazard_curves']) as csvfile:
-        mesh, hcurves_by_imt = get_mesh_csvdata(
+        mesh, hcurves = get_mesh_csvdata(
             csvfile, list(oqparam.imtls), num_values,
             valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
-    curves = zero_curves(len(mesh), oqparam.imtls)
-    for imt_ in oqparam.imtls:
-        curves[imt_] = hcurves_by_imt[imt_]
-    return sitecol, curves
+    return sitecol, ProbabilityMap.from_array(hcurves, sitecol.sids)
 
 
-def get_hcurves_from_nrml(oqparam, fname):
+def get_pmap_from_nrml(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -934,17 +933,15 @@ def get_hcurves_from_nrml(oqparam, fname):
         imtls[imt] = ~hcurves.IMLs
         data = sorted((~node.Point.pos, ~node.poEs) for node in hcurves[1:])
         hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
-    n = len(hcurves_by_imt[imt])
-    curves = zero_curves(n, imtls)
-    for imt in imtls:
-        curves[imt] = hcurves_by_imt[imt]
+    array = numpy.concatenate([numpy.array(lst)
+                               for imt, lst in sorted(hcurves_by_imt.items())])
     lons, lats = [], []
     for xy, poes in data:
         lons.append(xy[0])
         lats.append(xy[1])
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, curves
+    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 
 # used in get_scenario_from_nrml
