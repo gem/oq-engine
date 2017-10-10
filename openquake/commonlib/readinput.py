@@ -834,8 +834,7 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
                              (imts[0], other_imt))
     lons, lats = zip(*sorted(points))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    return mesh, numpy.concatenate([numpy.array(lst)
-                                    for imt, lst in sorted(data.items())])
+    return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
 
 
 def get_gmfs(oqparam):
@@ -910,7 +909,10 @@ def get_pmap_from_csv(oqparam, fname):
             csvfile, list(oqparam.imtls), num_values,
             valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, ProbabilityMap.from_array(hcurves, sitecol.sids)
+    array = numpy.zeros((len(sitecol), sum(num_values)))
+    for imt_ in hcurves:
+        array[:, oqparam.imtls.slicedic[imt_]] = hcurves[imt_]
+    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 
 def get_pmap_from_nrml(oqparam, fname):
