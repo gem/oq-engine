@@ -26,7 +26,6 @@ from openquake.baselib.general import (
     groupby, group_array, get_array, AccumDict)
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
-from openquake.commonlib.calc import PmapGetter
 
 
 class ValidationError(Exception):
@@ -352,20 +351,17 @@ class HazardGetter(object):
     :param eids:
         an array of event IDs (or None)
     """
-    def __init__(self, dstore, kind, sids, imtls, eids=None):
+    def __init__(self, dstore, kind, getter, imtls, eids=None):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
-        self.sids = sids
+        self.sids = getter.sids
+        self._getter = getter
         self.imtls = imtls
         self.eids = eids
         self.num_rlzs = dstore['csm_info'].get_num_rlzs()
         oq = dstore['oqparam']
         self.E = getattr(oq, 'number_of_ground_motion_fields', None)
         self.I = len(oq.imtls)
-        if kind == 'poe':  # hcurves, shape (R, N)
-            self._getter = PmapGetter(dstore, sids)
-        else:  # gmf
-            self._getter = GmfDataGetter(dstore, sids)
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
             # number of ground motion fields
