@@ -373,25 +373,27 @@ class HazardGetter(object):
             self.gmdata = AccumDict(
                 accum=numpy.zeros(len(self.imtls) + 2, F32))
 
-    def get_hazard(self):
-        """
-        :param gsim: a GSIM instance
-        :returns: an OrderedDict rlzi -> datadict
-        """
-        data = collections.OrderedDict()
+    def init(self):
+        self.data = collections.OrderedDict()
         if self.kind == 'poe':
             sid0 = self.sids.min()
             hcurves = self._getter.get_hcurves(self.imtls)  # shape (R, N)
             for idx, hcurve_by_rlz in enumerate(hcurves.T):
-                data[sid0 + idx] = datadict = {}
+                self.data[sid0 + idx] = datadict = {}
                 for rlzi, hcurve in enumerate(hcurve_by_rlz):
                     datadict[rlzi] = lst = [None for imt in self.imtls]
                     for imti, imt in enumerate(self.imtls):
                         lst[imti] = hcurve[imt]  # imls
         else:  # gmf
             for sid in self.sids:
-                data[sid] = self._getter[sid]
-        return data
+                self.data[sid] = self._getter[sid]
+
+    def get_hazard(self):
+        """
+        :param gsim: a GSIM instance
+        :returns: an OrderedDict rlzi -> datadict
+        """
+        return self.data
 
 
 class GmfGetter(object):
@@ -401,7 +403,7 @@ class GmfGetter(object):
     """
     kind = 'gmf'
 
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imts,
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imtls,
                  min_iml, truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete, sitecol
         self.grp_id = ebruptures[0].grp_id
@@ -409,21 +411,21 @@ class GmfGetter(object):
         self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
         self.sitecol = sitecol
-        self.imts = imts
+        self.imtls = imtls
         self.min_iml = min_iml
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
         self.gmf_data_dt = numpy.dtype(
             [('rlzi', U16), ('sid', U32),
-             ('eid', U64), ('gmv', (F32, (len(imts),)))])
+             ('eid', U64), ('gmv', (F32, (len(imtls),)))])
 
     def init(self):
         """
         Initialize the computers. Should be called on the workers
         """
         self.N = len(self.sitecol.complete)
-        self.I = I = len(self.imts)
+        self.I = I = len(self.imtls)
         self.R = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.gmv_dt = numpy.dtype(
             [('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
@@ -435,11 +437,11 @@ class GmfGetter(object):
             sites = site.FilteredSiteCollection(
                 ebr.sids, self.sitecol.complete)
             computer = calc.gmf.GmfComputer(
-                ebr, sites, self.imts, gsims,
+                ebr, sites, self.imtls, gsims,
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
-        # dictionary rlzi -> array(imts, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
+        # dictionary rlzi -> array(imtls, events, nbytes)
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 2, F32))
         self.eids = numpy.concatenate(
             [ebr.events['eid'] for ebr in self.ebruptures])
         # dictionary eid -> index
@@ -588,7 +590,9 @@ class RiskInputFromRuptures(object):
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
-            self.__class__.__name__, self.hazard_getter.imts, self.weight)
+            self.__class__.__name__,
+            list(self.hazard_getter.imtls),
+            self.weight)
 
 
 def make_eps(assetcol, num_samples, seed, correlation):
