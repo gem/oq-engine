@@ -324,6 +324,7 @@ class GmfDataGetter(collections.Mapping):
     """
     def __init__(self, dstore, sids):
         self.dstore = dstore
+        self.sids = sids
 
     def __getitem__(self, sid):
         dset = self.dstore['gmf_data/data']
