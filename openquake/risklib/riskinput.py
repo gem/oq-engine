@@ -374,6 +374,8 @@ class HazardGetter(object):
                 accum=numpy.zeros(len(self.imtls) + 2, F32))
 
     def init(self):
+        if hasattr(self, 'data'):  # alreay initialized
+            return
         self.data = collections.OrderedDict()
         if self.kind == 'poe':
             hcurves = self._getter.get_hcurves(self.imtls)  # shape (R, N)

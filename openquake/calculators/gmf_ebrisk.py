@@ -52,7 +52,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         else:
             logging.info('Building the epsilons')
             eps = self.make_eps(self.E)
-        eids, gmfs = base.get_gmfs(self)  # shape (G, N, E, I)
+        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
         self.R = len(gmfs)
         self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = self.assetcol
