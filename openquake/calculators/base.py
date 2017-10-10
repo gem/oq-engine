@@ -692,6 +692,8 @@ def get_gmv_data(sids, gmfs):
     R, N, E, I = gmfs.shape
     gmv_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+    # NB: ordering of the loops: first site, then event, then realization
+    # it is such that save_gmf_data saves the indices correctly for each sid
     it = ((r, sids[s], eid, gmfa[s, eid])
           for s, eid in itertools.product(
                   numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64))

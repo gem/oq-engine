@@ -118,6 +118,7 @@ class PmapGetter(object):
 
     def get_hcurves(self, imtls):
         """
+        :param imtls: intensity measure types and levels
         :returns: an array of (R, N) hazard curves
         """
         assert self.sids is not None, 'PmapGetter not bound to sids'
