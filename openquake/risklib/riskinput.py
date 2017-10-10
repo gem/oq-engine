@@ -360,7 +360,7 @@ class HazardGetter(object):
         self.eids = eids
         self.num_rlzs = dstore['csm_info'].get_num_rlzs()
         oq = dstore['oqparam']
-        self.E = oq.number_of_ground_motion_fields
+        self.E = getattr(oq, 'number_of_ground_motion_fields', None)
         self.I = len(oq.imtls)
         if kind == 'poe':  # hcurves, shape (R, N)
             self._getter = PmapGetter(dstore, sids)
@@ -385,7 +385,11 @@ class HazardGetter(object):
                         lst[imti] = hcurve[imt]  # imls
         else:  # gmf
             for sid in self.sids:
-                self.data[sid] = self._getter[sid]
+                self.data[sid] = data = self._getter[sid]
+                if not data:  # no GMVs, return 0, counted in no_damage
+                    self.data[sid] = {
+                        rlzi: numpy.zeros((self.E, self.I), [('gmv', F32)])
+                        for rlzi in range(self.num_rlzs)}
 
     def get_hazard(self):
         """
