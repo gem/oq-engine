@@ -28,7 +28,7 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.general import groupby, AccumDict, DictArray
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
@@ -934,14 +934,17 @@ def get_pmap_from_nrml(oqparam, fname):
         imtls[imt] = ~hcurves.IMLs
         data = sorted((~node.Point.pos, ~node.poEs) for node in hcurves[1:])
         hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
-    array = numpy.concatenate([numpy.array(lst)
-                               for imt, lst in sorted(hcurves_by_imt.items())])
     lons, lats = [], []
     for xy, poes in data:
         lons.append(xy[0])
         lats.append(xy[1])
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
+    num_levels = sum(len(v) for v in imtls.values())
+    array = numpy.zeros((len(sitecol), num_levels))
+    oqparam.imtls = DictArray(imtls)
+    for imt_ in hcurves_by_imt:
+        array[:, oqparam.imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
     return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 
