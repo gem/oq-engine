@@ -652,7 +652,7 @@ class RiskCalculator(HazardCalculator):
                 # build the riskinputs
                 hgetter = riskinput.HazardGetter(
                     self.datastore, kind, sids, imtls, eids)
-                hgetter.init()
+                hgetter.init()  # read the hazard data
                 ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
@@ -689,9 +689,9 @@ def get_gmv_data(sids, gmfs):
     gmv_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
     it = ((r, sids[s], eid, gmfa[s, eid])
-          for r, gmfa in enumerate(gmfs)
           for s, eid in itertools.product(
-                  numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64)))
+                  numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64))
+          for r, gmfa in enumerate(gmfs))
     return numpy.fromiter(it, gmv_data_dt)
 
 
