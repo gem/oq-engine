@@ -878,7 +878,7 @@ def get_pmap(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, imtls, curve array
+        sitecol, probability map
     """
     fname = oqparam.inputs['hazard_curves']
     if fname.endswith('.csv'):

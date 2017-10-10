@@ -228,7 +228,7 @@ class EbriskCalculator(base.RiskCalculator):
         :param sitecol: a SiteCollection instance
         :param assetcol: an AssetCollection instance
         :param riskmodel: a RiskModel instance
-        :param imtls: a list of Intensity Measure Types
+        :param imtls: Intensity Measure Types and Levels
         :param trunc_level: truncation level
         :param correl_model: correlation model
         :param min_iml: vector of minimum intensities, one per IMT
