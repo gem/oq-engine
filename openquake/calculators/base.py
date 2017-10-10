@@ -650,8 +650,12 @@ class RiskCalculator(HazardCalculator):
                         if len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
+                if kind == 'poe':  # hcurves, shape (R, N)
+                    getter = calc.PmapGetter(self.datastore, sids)
+                else:  # gmf
+                    getter = riskinput.GmfDataGetter(self.datastore, sids)
                 hgetter = riskinput.HazardGetter(
-                    self.datastore, kind, sids, imtls, eids)
+                    self.datastore, kind, getter, imtls, eids)
                 hgetter.init()  # read the hazard data
                 ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
