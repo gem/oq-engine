@@ -942,9 +942,9 @@ def get_pmap_from_nrml(oqparam, fname):
     sitecol = get_site_collection(oqparam, mesh)
     num_levels = sum(len(v) for v in imtls.values())
     array = numpy.zeros((len(sitecol), num_levels))
-    oqparam.imtls = DictArray(imtls)
+    imtls = DictArray(imtls)
     for imt_ in hcurves_by_imt:
-        array[:, oqparam.imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
+        array[:, imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
     return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 

@@ -30,7 +30,7 @@ from numpy.testing import assert_allclose
 from openquake.baselib import general
 from openquake.hazardlib import valid
 from openquake.risklib.riskinput import ValidationError
-from openquake.commonlib import readinput, writers
+from openquake.commonlib import readinput, writers, oqvalidation
 from openquake.qa_tests_data.classical import case_1, case_2
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
@@ -703,7 +703,7 @@ class TestLoadCurvesTestCase(unittest.TestCase):
     </hazardCurves>
 </nrml>
 ''', suffix='.xml')
-        oqparam = mock.Mock()
+        oqparam = object.__new__(oqvalidation.OqParam)
         oqparam.inputs = dict(hazard_curves=fname)
         sitecol, pmap = readinput.get_pmap(oqparam)
         self.assertEqual(len(sitecol), 2)
