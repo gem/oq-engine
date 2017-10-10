@@ -635,8 +635,8 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             sid_weight_pairs = [
-                (i, len(assets))
-                for i, assets in enumerate(assets_by_site)]
+                (sid, len(assets))
+                for sid, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:

@@ -248,18 +248,19 @@ class CompositeRiskModel(collections.Mapping):
         mon_risk = monitor('computing risk', measuremem=False)
         hazard_getter = riskinput.hazard_getter
         with mon_context:
-            if assetcol is None:
+            if assetcol is None:  # scenario, classical
                 assets_by_site = riskinput.assets_by_site
+                sid0 = hazard_getter.sids.min()
             else:
                 assets_by_site = assetcol.assets_by_site()
-
+                sid0 = 0  # event_based
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
-        for sid, assets in enumerate(assets_by_site):
+        for idx, assets in enumerate(assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
                 epsgetter = riskinput.epsilon_getter
-                dic[taxonomy].append((sid, group[taxonomy], epsgetter))
+                dic[taxonomy].append((sid0 + idx, group[taxonomy], epsgetter))
         imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
         if hasattr(hazard_getter, 'rlzs_by_gsim'):
             # save memory in event based risk by working one gsim at the time
@@ -379,10 +380,10 @@ class HazardGetter(object):
         """
         data = collections.OrderedDict()
         if self.kind == 'poe':
+            sid0 = self.sids.min()
             hcurves = self._getter.get_hcurves(self.imtls)  # shape (R, N)
-            # why not idx instead of sid below??
-            for sid, hcurve_by_rlz in enumerate(hcurves.T):
-                data[sid] = datadict = {}
+            for idx, hcurve_by_rlz in enumerate(hcurves.T):
+                data[sid0 + idx] = datadict = {}
                 for rlzi, hcurve in enumerate(hcurve_by_rlz):
                     datadict[rlzi] = lst = [None for imt in self.imtls]
                     for imti, imt in enumerate(self.imtls):
