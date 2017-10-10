@@ -739,6 +739,11 @@ def get_gmfs(calculator):
 
 
 def save_gmf_data(dstore, sitecol, gmfs):
+    """
+    :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
+    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param gmfs: an array of shape (R, N, E, I)
+    """
     offset = 0
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
     dic = general.group_array(gmfa, 'sid')
