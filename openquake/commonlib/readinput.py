@@ -28,14 +28,14 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.general import groupby, AccumDict, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import asset, riskmodels, riskinput, read_nrml
+from openquake.risklib import asset, riskinput, read_nrml
 from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
@@ -900,6 +900,7 @@ def get_hcurves(oqparam):
         raise NotImplementedError('Reading from %s' % fname)
 
 
+@deprecated('Reading hazard curves from CSV may change in the future')
 def get_hcurves_from_csv(oqparam, fname):
     """
     :param oqparam:
