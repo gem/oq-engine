@@ -316,7 +316,7 @@ def compute_gmfs_and_curves(getter, oq, monitor):
                     continue
                 with hc_mon:
                     gmvs = array['gmv']
-                    for imti, imt in enumerate(getter.imts):
+                    for imti, imt in enumerate(getter.imtls):
                         poes = calc._gmvs_to_haz_curve(
                             gmvs[:, imti], oq.imtls[imt],
                             oq.investigation_time, duration)
