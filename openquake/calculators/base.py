@@ -652,6 +652,7 @@ class RiskCalculator(HazardCalculator):
                 # build the riskinputs
                 hgetter = riskinput.HazardGetter(
                     self.datastore, kind, sids, imtls, eids)
+                hgetter.init()
                 ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
@@ -740,7 +741,7 @@ def get_gmfs(calculator):
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
         R, N, E, I = gmfs.shape
-        save_gmf_data(dstore, haz_sitecol.sids,
+        save_gmf_data(dstore, haz_sitecol,
                       gmfs[:, haz_sitecol.indices])
 
         # store the events, useful when read the GMFs from a file
@@ -750,12 +751,12 @@ def get_gmfs(calculator):
         return eids, gmfs
 
 
-def save_gmf_data(dstore, sids, gmfs):
+def save_gmf_data(dstore, sitecol, gmfs):
     offset = 0
-    dstore['gmf_data/data'] = gmfa = get_gmv_data(sids, gmfs)
+    dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
     dic = general.group_array(gmfa, 'sid')
     lst = []
-    for sid in sids:
+    for sid in sitecol.complete.sids:
         rows = dic.get(sid, ())
         n = len(rows)
         lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
