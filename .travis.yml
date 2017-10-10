@@ -34,6 +34,12 @@ jobs:
     after_success:
         - pip install sphinx==1.3.6 && cd doc/sphinx && make html
   - stage: tests
+    env: HMTK
+    script:
+        - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[hmtk\]' || test "$BRANCH" == "master"; then
+          nosetests --with-doctest -xvs -a'!slow' openquake.hmtk;
+          fi
+  - stage: tests
     env: DEMOS
     script:
         # Upload oqdata.zip to http://artifacts.openquake.org/travis/ only if
