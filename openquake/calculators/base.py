@@ -718,19 +718,6 @@ def get_gmfs(calculator):
             gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
         return eids, gmfs
 
-    if 'gmf_data/data' in dstore:
-        dset = dstore['gmf_data/data']
-        R = len(dstore['realizations'])
-        nrows = len(dset) // R
-        for r in range(R):
-            for s, sid in enumerate(haz_sitecol.sids):
-                start = r * nrows + E * s
-                array = dset[start: start + E]  # shape (E, I)
-                if numpy.unique(array['sid']) != [sid]:  # sanity check
-                    raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[r, sid] = array['gmv']
-        return eids, gmfs
-
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)

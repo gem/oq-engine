@@ -291,8 +291,6 @@ class CompositeRiskModel(collections.Mapping):
                     haz_by_sid = hazard[sid]
                 except KeyError:  # no hazard for this site
                     continue
-                if len(haz_by_sid) == 0:  # no hazard for this site
-                    continue
                 for rlzi, haz in sorted(haz_by_sid.items()):
                     if isinstance(haz, numpy.ndarray):
                         gmvs = haz['gmv']
@@ -303,7 +301,7 @@ class CompositeRiskModel(collections.Mapping):
                                     for i in rangeI}
                     elif eids is not None:  # gmf_ebrisk
                         data = {i: (haz[i], eids) for i in rangeI}
-                    else:  # classical
+                    else:  # classical or scenario_damage
                         data = haz
                     out = [None] * len(self.lti)
                     for lti, i in enumerate(rangeI):
@@ -361,6 +359,9 @@ class HazardGetter(object):
         self.imtls = imtls
         self.eids = eids
         self.num_rlzs = dstore['csm_info'].get_num_rlzs()
+        oq = dstore['oqparam']
+        self.E = oq.number_of_ground_motion_fields
+        self.I = len(oq.imtls)
         if kind == 'poe':  # hcurves, shape (R, N)
             self._getter = PmapGetter(dstore, sids)
         else:  # gmf
