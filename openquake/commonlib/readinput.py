@@ -28,14 +28,14 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.general import groupby, AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import asset, riskmodels, riskinput, read_nrml
+from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.risklib import asset, riskinput, read_nrml
 from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
@@ -694,14 +694,25 @@ def get_exposure(oqparam):
             tagnode = getattr(asset_node, 'tags', None)
             assets_by_tag = exposure.assets_by_tag
             if tagnode is not None:
-                for tagname, tagvalue in tagnode.attrib.items():
-                    if tagname not in assets_by_tag.tagnames:
-                        with context(fname, tagnode):
-                            raise ValueError(
-                                'Unknown tag %r or <tagNames> not '
-                                'specified in the exposure' % tagname)
-                    valid.nice_string(tagvalue)
-                    assets_by_tag['%s=%s' % (tagname, tagvalue)].append(idx)
+                # fill missing tagvalues with "?" and raise an error for
+                # unknown tagnames
+                with context(fname, tagnode):
+                    dic = tagnode.attrib.copy()
+                    for tagname in assets_by_tag.tagnames:
+                        try:
+                            tagvalue = dic.pop(tagname)
+                        except KeyError:
+                            tagvalue = '?'
+                        else:
+                            if tagvalue in '?*':
+                                raise ValueError(
+                                    'Invalid tagvalue="%s"' % tagvalue)
+                        tag = '%s=%s' % (tagname, tagvalue)
+                        assets_by_tag[tag].append(idx)
+                    if dic:
+                        raise ValueError(
+                            'Unknown tagname %s or <tagNames> not '
+                            'specified in the exposure' % ', '.join(dic))
             exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
             costs = asset_node.costs
@@ -873,23 +884,24 @@ def get_gmfs(oqparam):
     return eids, gmfs
 
 
-def get_hcurves(oqparam):
+def get_pmap(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, imtls, curve array
+        sitecol, probability map
     """
     fname = oqparam.inputs['hazard_curves']
     if fname.endswith('.csv'):
-        return get_hcurves_from_csv(oqparam, fname)
+        return get_pmap_from_csv(oqparam, fname)
     elif fname.endswith('.xml'):
-        return get_hcurves_from_nrml(oqparam, fname)
+        return get_pmap_from_nrml(oqparam, fname)
     else:
         raise NotImplementedError('Reading from %s' % fname)
 
 
-def get_hcurves_from_csv(oqparam, fname):
+@deprecated('Reading hazard curves from CSV may change in the future')
+def get_pmap_from_csv(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -905,17 +917,17 @@ def get_hcurves_from_csv(oqparam, fname):
                          % oqparam.inputs['job_ini'])
     num_values = list(map(len, list(oqparam.imtls.values())))
     with open(oqparam.inputs['hazard_curves']) as csvfile:
-        mesh, hcurves_by_imt = get_mesh_csvdata(
+        mesh, hcurves = get_mesh_csvdata(
             csvfile, list(oqparam.imtls), num_values,
             valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
-    curves = zero_curves(len(mesh), oqparam.imtls)
-    for imt_ in oqparam.imtls:
-        curves[imt_] = hcurves_by_imt[imt_]
-    return sitecol, curves
+    array = numpy.zeros((len(sitecol), sum(num_values)))
+    for imt_ in hcurves:
+        array[:, oqparam.imtls.slicedic[imt_]] = hcurves[imt_]
+    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 
-def get_hcurves_from_nrml(oqparam, fname):
+def get_pmap_from_nrml(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -934,17 +946,18 @@ def get_hcurves_from_nrml(oqparam, fname):
         imtls[imt] = ~hcurves.IMLs
         data = sorted((~node.Point.pos, ~node.poEs) for node in hcurves[1:])
         hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
-    n = len(hcurves_by_imt[imt])
-    curves = zero_curves(n, imtls)
-    for imt in imtls:
-        curves[imt] = hcurves_by_imt[imt]
     lons, lats = [], []
     for xy, poes in data:
         lons.append(xy[0])
         lats.append(xy[1])
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, curves
+    num_levels = sum(len(v) for v in imtls.values())
+    array = numpy.zeros((len(sitecol), num_levels))
+    imtls = DictArray(imtls)
+    for imt_ in hcurves_by_imt:
+        array[:, imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
+    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 
 # used in get_scenario_from_nrml
