@@ -535,8 +535,6 @@ class FragilityFunctionDiscrete(object):
         except TypeError:  # is a scalar
             if self.no_damage_limit and iml < self.no_damage_limit:
                 return 0.
-            # when the intensity measure level is above
-            # the range, we use the highest one
             return self.interp(highest_iml if iml > highest_iml else iml)
         else:
             iml = numpy.array(iml)
