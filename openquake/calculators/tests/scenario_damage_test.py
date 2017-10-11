@@ -60,14 +60,14 @@ RM       4,000
 ======== =========''', got)
 
         # test aggdamages, 1 realization x 3 damage states
-        dmg = extract(self.calc.datastore, 'aggdamages/structural',
-                      'taxonomy=RC', 'CRESTA=01.1')
+        [dmg] = extract(self.calc.datastore, 'aggdamages/structural',
+                        'taxonomy=RC', 'CRESTA=01.1')
         numpy.testing.assert_almost_equal(
-            [[[998.6327515, 720.0072021, 281.3600769]]], dmg)
+            [998.6327515, 720.0072021, 281.3600769], dmg)
         # test no intersection
         dmg = extract(self.calc.datastore, 'aggdamages/structural',
                       'taxonomy=RM', 'CRESTA=01.1')
-        self.assertEqual(len(dmg.array), 0)
+        self.assertEqual(len(dmg), 0)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1c(self):
