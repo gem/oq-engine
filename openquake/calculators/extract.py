@@ -205,7 +205,7 @@ def _filter_agg(assetcol, losses, selected):
             idxs &= assetcol.aids_by_tag[tag]
     if len(tagnames) > 1:
         raise ValueError('Too many * as tag values in %s' % tagnames)
-    elif not tagnames:  # return an array of shape (1, ..., R)
+    elif not tagnames:  # return an array of shape (..., R)
         return ArrayWrapper(
             _agg(losses, idxs), dict(selected=encode(selected)))
     else:  # return an array of shape (T, ..., R)
@@ -226,8 +226,8 @@ def extract_agglosses(dstore, loss_type, *tags):
 
     :returns:
         an array of shape (T, R) if one of the tag names has a `*` value
+        an array of shape (R,), being R the number of realizations
         an array of length 0 if there is no data for the given tags
-        an array of shape (1, R), being R the number of realizations
     """
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
