@@ -66,8 +66,14 @@ class DataStoreTestCase(unittest.TestCase):
 
     def test_read(self):
         # cas of a non-existing directory
-        with self.assertRaises(OSError):
-            read(42, datadir='/fake/directory')
+        if sys.platform == 'win32':
+            # On Windows an IOError exception is raised instead of
+            # an OSError one
+            with self.assertRaises(IOError):
+                read(42, datadir='/fake/directory')
+        else:
+            with self.assertRaises(OSError):
+                read(42, datadir='/fake/directory')
         # case of a non-existing file
         with self.assertRaises(IOError):
             read(42, datadir='/tmp')
