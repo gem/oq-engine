@@ -207,7 +207,7 @@ def _filter_agg(assetcol, losses, selected):
         raise ValueError('Too many * as tag values in %s' % tagnames)
     elif not tagnames:  # return an array of shape (1, ..., R)
         return ArrayWrapper(
-            _agg(losses, idxs)[None, ...], dict(selected=encode(selected)))
+            _agg(losses, idxs), dict(selected=encode(selected)))
     else:  # return an array of shape (T, ..., R)
         tags = [t for t in assetcol.tags() if t.startswith(tagname)]
         all_idxs = [idxs & assetcol.aids_by_tag[t] for t in tags]
