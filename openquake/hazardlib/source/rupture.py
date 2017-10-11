@@ -569,7 +569,9 @@ class EBRupture(object):
         self.events = events
         self.grp_id = grp_id
         self.serial = serial
-        self.sidx = self.eidx1 = self.eidx2 = 0  # to be set when needed
+        self.sidx = 0
+        self.eidx1 = 0
+        self.eidx2 = len(events)
 
     @property
     def weight(self):
