@@ -502,7 +502,7 @@ class RuptureSerializer(object):
         self.data = []
         self.nbytes = 0
 
-    def save(self, ebruptures, eidx):
+    def save(self, ebruptures, eidx=0):
         """
         Populate a dictionary of site IDs tuples and save the ruptures.
 
