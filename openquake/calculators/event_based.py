@@ -31,7 +31,7 @@ from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
+from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
@@ -289,8 +289,6 @@ def set_random_years(dstore, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
-
 
 def compute_gmfs_and_curves(getter, oq, monitor):
     """
@@ -318,7 +316,7 @@ def compute_gmfs_and_curves(getter, oq, monitor):
                     continue
                 with hc_mon:
                     gmvs = array['gmv']
-                    for imti, imt in enumerate(getter.imts):
+                    for imti, imt in enumerate(getter.imtls):
                         poes = calc._gmvs_to_haz_curve(
                             gmvs[:, imti], oq.imtls[imt],
                             oq.investigation_time, duration)
