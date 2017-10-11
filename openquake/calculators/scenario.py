@@ -87,6 +87,6 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         with self.monitor('saving gmfs', autoflush=True):
-            self.datastore['gmf_data/data'] = base.get_gmv_data(
-                self.sitecol.sids, numpy.array(list(self.gmfa.values())))
-            self.datastore.set_nbytes('gmf_data')
+            base.save_gmf_data(
+                self.datastore, self.sitecol,
+                numpy.array(list(self.gmfa.values())))
