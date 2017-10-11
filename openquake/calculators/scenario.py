@@ -52,7 +52,7 @@ class ScenarioCalculator(base.HazardCalculator):
                 maxdist)
         # eid, ses, occ, sample
         events = numpy.zeros(oq.number_of_ground_motion_fields,
-                             calc.event_dt)
+                             calc.stored_event_dt)
         events['eid'] = numpy.arange(oq.number_of_ground_motion_fields)
         self.datastore['events'] = events
         rupture = calc.EBRupture(rup, self.sitecol.sids, events)
