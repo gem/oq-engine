@@ -520,7 +520,8 @@ class FragilityFunctionDiscrete(object):
     def interp(self):
         if self._interp is not None:
             return self._interp
-        self._interp = interpolate.interp1d(self.imls, self.poes)
+        self._interp = interpolate.interp1d(self.imls, self.poes,
+                                            bounds_error=False)
         return self._interp
 
     def __call__(self, iml):
@@ -529,12 +530,21 @@ class FragilityFunctionDiscrete(object):
         Intensity Measure Level (IML).
         """
         highest_iml = self.imls[-1]
-
-        if self.no_damage_limit and iml < self.no_damage_limit:
-            return 0.
-        # when the intensity measure level is above
-        # the range, we use the highest one
-        return self.interp(highest_iml if iml > highest_iml else iml)
+        try:
+            len(iml)
+        except TypeError:  # is a scalar
+            if self.no_damage_limit and iml < self.no_damage_limit:
+                return 0.
+            # when the intensity measure level is above
+            # the range, we use the highest one
+            return self.interp(highest_iml if iml > highest_iml else iml)
+        else:
+            iml = numpy.array(iml)
+            iml[iml > highest_iml] = highest_iml
+            result = self.interp(iml)
+            if self.no_damage_limit:
+                result[iml < self.no_damage_limit] = 0
+            return result
 
     # so that the curve is pickeable
     def __getstate__(self):
