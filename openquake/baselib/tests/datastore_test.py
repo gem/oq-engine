@@ -66,15 +66,13 @@ class DataStoreTestCase(unittest.TestCase):
         self.assertIsNotNone(mo)
 
     def test_read(self):
-        # cas of a non-existing directory
+        # windows does not manage permissions properly. Skip the test
         if sys.platform == 'win32':
-            # On Windows an IOError exception is raised instead of
-            # an OSError one
-            with self.assertRaises(IOError):
-                read(42, datadir='/fake/directory')
-        else:
-            with self.assertRaises(OSError):
-                read(42, datadir='/fake/directory')
+            raise unittest.SkipTest('Windows')
+
+        # case of a non-existing directory
+        with self.assertRaises(OSError):
+            read(42, datadir='/fake/directory')
         # case of a non-existing file
         with self.assertRaises(IOError):
             read(42, datadir='/tmp')
