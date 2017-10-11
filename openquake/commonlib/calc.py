@@ -21,7 +21,7 @@ import warnings
 import numpy
 import h5py
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.geo.mesh import (
     surface_to_mesh, point3d, RectangularMesh)
