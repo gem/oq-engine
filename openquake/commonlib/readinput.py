@@ -28,7 +28,7 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib.general import groupby, AccumDict, DictArray
+from openquake.baselib.general import groupby, AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
@@ -889,6 +889,7 @@ def get_pmap(oqparam):
         raise NotImplementedError('Reading from %s' % fname)
 
 
+@deprecated('Reading hazard curves from CSV may change in the future')
 def get_pmap_from_csv(oqparam, fname):
     """
     :param oqparam:
