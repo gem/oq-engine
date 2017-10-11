@@ -71,18 +71,6 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.sourceconverter import SourceGroup
 
 
-def zero_curves(num_sites, imtls):
-    """
-    :param num_sites: the number of sites
-    :param imtls: the intensity measure levels dictionary
-    :returns: an array of zero curves with length num_sites
-    """
-    # numpy dtype for the hazard curves
-    imt_dt = numpy.dtype([(imt, float, 1 if imls is None else len(imls))
-                          for imt, imls in imtls.items()])
-    return numpy.zeros(num_sites, imt_dt)
-
-
 def rupture_weight_pairs(src):
     """
     Generator yielding (rupture, weight) for each rupture in the source
