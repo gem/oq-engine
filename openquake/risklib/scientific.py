@@ -536,7 +536,7 @@ class FragilityFunctionDiscrete(object):
             if self.no_damage_limit and iml < self.no_damage_limit:
                 return 0.
             return self.interp(highest_iml if iml > highest_iml else iml)
-        else:
+        else:  # is a sequence
             iml = numpy.array(iml)
             iml[iml > highest_iml] = highest_iml
             result = self.interp(iml)
