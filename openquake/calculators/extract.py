@@ -168,6 +168,8 @@ def extract_hazard(dstore, what):
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
     yield 'oqparam', dstore['oqparam']
+    yield 'realizations', dstore['realizations'].value
+    yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
@@ -205,8 +207,9 @@ def _filter_agg(assetcol, losses, tags):
     elif not tagnames:  # return an array of shape (..., R)
         return _agg(losses, idxs)
     else:  # return an array of shape (T, ..., R)
-        all_idxs = (idxs & assetcol.aids_by_tag[t] for t in assetcol.tags()
-                    if t.startswith(tagname))
+        all_idxs = [idxs & assetcol.aids_by_tag[t] for t in assetcol.tags()
+                    if t.startswith(tagname)]
+        # NB: using a generator expression for all_idxs caused issues (?)
         return numpy.array([_agg(losses, idxs) for idxs in all_idxs])
 
 
