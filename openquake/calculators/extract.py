@@ -209,11 +209,18 @@ def _filter_agg(assetcol, losses, selected):
         return ArrayWrapper(
             _agg(losses, idxs), dict(selected=encode(selected)))
     else:  # return an array of shape (T, ..., R)
-        tags = [t for t in assetcol.tags() if t.startswith(tagname)]
-        all_idxs = [idxs & assetcol.aids_by_tag[t] for t in tags]
+        [tagname] = tagnames
+        _tags = [t for t in assetcol.tags() if t.startswith(tagname)]
+        all_idxs = [idxs & assetcol.aids_by_tag[t] for t in _tags]
         # NB: using a generator expression for all_idxs caused issues (?)
+        data, tags = [], []
+        for idxs, tag in zip(all_idxs, _tags):
+            agglosses = _agg(losses, idxs)
+            if len(agglosses):
+                data.append(agglosses)
+                tags.append(tag)
         return ArrayWrapper(
-            numpy.array([_agg(losses, idxs) for idxs in all_idxs]),
+            numpy.array(data),
             dict(selected=encode(selected), tags=encode(tags)))
 
 
