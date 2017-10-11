@@ -161,6 +161,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
+        # extract agglosses with a * and a selection
+        obj = extract(self.calc.datastore, 'agglosses/structural',
+                      'state=*', 'cresta=0.11')
+        self.assertEqual(obj.selected, ['state=*', 'cresta=0.11'])
+        self.assertEqual(obj.tags, ['state=01'])
+        numpy.testing.assert_almost_equal(
+            obj.array, [[1299.3848877, 1561.6965332]])
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_7(self):
         # check independence from concurrent_tasks
