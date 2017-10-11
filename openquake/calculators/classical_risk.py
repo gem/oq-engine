@@ -108,31 +108,23 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             raise ValueError(
                 'insured_losses are not supported for classical_risk')
         if 'hazard_curves' in oq.inputs:  # read hazard from file
-            haz_sitecol, haz_curves = readinput.get_hcurves(oq)
+            haz_sitecol, pmap = readinput.get_pmap(oq)
+            self.datastore['poes/grp-00'] = pmap
             self.save_params()
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
             self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-            curves = [haz_curves]
-            self.R = 1  # there is one realization
-            weights = [1]
+            self.before_export()  # save 'realizations' dataset
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             if 'poes' not in self.datastore:  # when building short report
                 return
-            logging.info('Combining the hazard curves')
-            pgetter = calc.PmapGetter(self.datastore)
-            sids = self.sitecol.complete.sids
-            with self.monitor(
-                    'combining hcurves', measuremem=True, autoflush=True):
-                pmaps = pgetter.get_pmaps(sids)
-                curves = [pmap.convert(oq.imtls, len(sids)) for pmap in pmaps]
-            self.R = len(curves)
-            weights = self.datastore['realizations']['weight']
+        weights = self.datastore['realizations']['weight']
+        self.R = len(weights)
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs('poe', numpy.array(curves))
+            self.riskinputs = self.build_riskinputs('poe')
         self.param = dict(insured_losses=oq.insured_losses,
                           stats=oq.risk_stats(), weights=weights)
         self.N = len(self.assetcol)
