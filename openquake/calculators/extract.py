@@ -169,6 +169,8 @@ def extract_hazard(dstore, what):
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
     yield 'oqparam', dstore['oqparam']
+    yield 'realizations', dstore['realizations'].value
+    yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
