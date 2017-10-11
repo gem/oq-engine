@@ -275,5 +275,5 @@ def extract_aggcurves(dstore, loss_type, *tags):
     else:
         raise KeyError('No curves found in %s' % dstore)
     curves = _filter_agg(dstore['assetcol'], losses, tags)
-    curves.update(dstore.get_attrs('curves-stats'))
+    vars(curves).update(dstore.get_attrs('curves-stats'))
     return curves
