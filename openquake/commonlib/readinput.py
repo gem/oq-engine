@@ -331,13 +331,16 @@ def get_gsims(oqparam):
     return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
 
 
-def get_rupture(oqparam, sitecol):
+def get_rupture_sitecol(oqparam, sitecol):
     """
-    Returns an EBRupture by reading the `rupture_model` file and by filtering
-    the site collection.
+    Read the `rupture_model` file and by filter the site collection
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :returns:
+        a pair (EBRupture, FilteredSiteCollection)
     """
     rup_model = oqparam.inputs['rupture_model']
     [rup_node] = nrml.read(rup_model)

@@ -39,7 +39,7 @@ class ScenarioCalculator(base.HazardCalculator):
         oq = self.oqparam
         trunc_level = oq.truncation_level
         correl_model = oq.get_correl_model()
-        ebr, self.sitecol = readinput.get_rupture(oq, self.sitecol)
+        ebr, self.sitecol = readinput.get_rupture_sitecol(oq, self.sitecol)
         self.gsims = readinput.get_gsims(oq)
         self.datastore['events'] = ebr.events
         rupser = calc.RuptureSerializer(self.datastore)
