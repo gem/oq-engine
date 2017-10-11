@@ -83,11 +83,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agglosses/occupants')
-        numpy.testing.assert_almost_equal(tot, 0.01355099)
+        numpy.testing.assert_almost_equal(tot.array, 0.01355099)
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agglosses/occupants', 'taxonomy=*')
-        self.assertEqual(tbl.shape, (1, 1))  # single taxonomy, single rlz
+        self.assertEqual(tbl.array.shape, (1, 1))  # 1 taxonomy, 1 rlz
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_3(self):
