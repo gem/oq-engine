@@ -56,11 +56,8 @@ class ScenarioCalculator(base.HazardCalculator):
         events['eid'] = numpy.arange(oq.number_of_ground_motion_fields)
         self.datastore['events'] = events
         rupture = calc.EBRupture(rup, self.sitecol.sids, events)
-        rupture.sidx = 0
-        rupture.eidx1 = 0
-        rupture.eidx2 = len(events)
         rupser = calc.RuptureSerializer(self.datastore)
-        rupser.save([rupture], 0)
+        rupser.save([rupture])
         rupser.close()
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
