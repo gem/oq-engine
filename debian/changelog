@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Extended the FragilityFunctions to accept sequences/arrays of intensity
+    levels, as requested by Hyeuk Ryu
   * Deprecated reading hazard curves from CSV, since it was an experimental
     features and nobody is using it
   * Changed the exporter of the event loss table to export all realizations
