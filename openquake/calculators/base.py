@@ -601,8 +601,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-    def check_poes(self, curves_by_trt_gsim):
-        """Overridden in ClassicalDamage"""
 
     def make_eps(self, num_ruptures):
         """
@@ -614,12 +612,10 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, hazards, eps=numpy.zeros(0), eids=None):
+    def build_riskinputs(self, kind, eps=numpy.zeros(0), eids=None):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
-        :param hazards:
-            a (composite) array of shape (R, N, ...)
         :param eps:
             a matrix of epsilons (possibly empty)
         :param eids:
@@ -627,7 +623,6 @@ class RiskCalculator(HazardCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        self.check_poes(hazards)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -640,25 +635,29 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             sid_weight_pairs = [
-                (i, len(assets))
-                for i, assets in enumerate(assets_by_site)]
+                (sid, len(assets))
+                for sid, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
                 sids = numpy.array([sid for sid, _weight in block])
-                reduced_hazards = hazards[:, sids]
                 reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
                 for assets in reduced_assets:
-                    for asset in assets:
-                        asset.tagmask = self.tagmask[asset.ordinal]
+                    for ass in assets:
+                        ass.tagmask = self.tagmask[ass.ordinal]
                         if len(eps):
-                            reduced_eps[asset.ordinal] = eps[asset.ordinal]
+                            reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                ri = riskinput.RiskInput(
-                    riskinput.HazardGetter(kind, reduced_hazards, imtls, eids),
-                    reduced_assets, reduced_eps)
+                if kind == 'poe':  # hcurves, shape (R, N)
+                    getter = calc.PmapGetter(self.datastore, sids)
+                else:  # gmf
+                    getter = riskinput.GmfDataGetter(self.datastore, sids)
+                hgetter = riskinput.HazardGetter(
+                    self.datastore, kind, getter, imtls, eids)
+                hgetter.init()  # read the hazard data
+                ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
@@ -693,10 +692,12 @@ def get_gmv_data(sids, gmfs):
     R, N, E, I = gmfs.shape
     gmv_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
+    # NB: ordering of the loops: first site, then event, then realization
+    # it is such that save_gmf_data saves the indices correctly for each sid
     it = ((r, sids[s], eid, gmfa[s, eid])
-          for r, gmfa in enumerate(gmfs)
           for s, eid in itertools.product(
-                  numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64)))
+                  numpy.arange(N, dtype=U32), numpy.arange(E, dtype=U64))
+          for r, gmfa in enumerate(gmfs))
     return numpy.fromiter(it, gmv_data_dt)
 
 
@@ -723,19 +724,6 @@ def get_gmfs(calculator):
             gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
         return eids, gmfs
 
-    if 'gmf_data/data' in dstore:
-        dset = dstore['gmf_data/data']
-        R = len(dstore['realizations'])
-        nrows = len(dset) // R
-        for r in range(R):
-            for s, sid in enumerate(haz_sitecol.sids):
-                start = r * nrows + E * s
-                array = dset[start: start + E]  # shape (E, I)
-                if numpy.unique(array['sid']) != [sid]:  # sanity check
-                    raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[r, sid] = array['gmv']
-        return eids, gmfs
-
     elif 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)
@@ -745,12 +733,31 @@ def get_gmfs(calculator):
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
-        # gmfs has shape (R, N, E, I)
-        dstore['gmf_data/data'] = get_gmv_data(
-            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
+        R, N, E, I = gmfs.shape
+        save_gmf_data(dstore, haz_sitecol,
+                      gmfs[:, haz_sitecol.indices])
 
         # store the events, useful when read the GMFs from a file
         events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = eids
         dstore['events'] = events
         return eids, gmfs
+
+
+def save_gmf_data(dstore, sitecol, gmfs):
+    """
+    :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
+    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param gmfs: an array of shape (R, N, E, I)
+    """
+    offset = 0
+    dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
+    dic = general.group_array(gmfa, 'sid')
+    lst = []
+    for sid in sitecol.complete.sids:
+        rows = dic.get(sid, ())
+        n = len(rows)
+        lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
+        offset += n
+    dstore.save_vlen('gmf_data/indices', lst)
+    dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))

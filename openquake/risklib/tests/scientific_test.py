@@ -56,12 +56,16 @@ class BetaDistributionTestCase(unittest.TestCase):
 
 class TestMemoize(unittest.TestCase):
     def test_cache(self):
-        m = mock.Mock(return_value=3)
-        func = utils.memoized(m)
-        self.assertEqual(3, func())
-        self.assertEqual(3, func())
+        counts = []
 
-        self.assertEqual(1, m.call_count)
+        @utils.memoized
+        def func():
+            counts.append(None)
+            return 3
+        self.assertEqual(3, func())
+        self.assertEqual(3, func())
+        # check that func has been called only once, now two
+        self.assertEqual(1, len(counts))
 
 
 epsilons = scientific.make_epsilons(
