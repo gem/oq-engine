@@ -117,8 +117,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        _, gmfs = base.get_gmfs(self)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs)
+        base.get_gmfs(self)
+        self.riskinputs = self.build_riskinputs('gmf')
         self.param['tags'] = self.assetcol.tags()
 
     def post_execute(self, result):

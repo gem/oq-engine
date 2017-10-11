@@ -52,9 +52,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         else:
             logging.info('Building the epsilons')
             eps = self.make_eps(self.E)
-        eids, gmfs = base.get_gmfs(self)  # shape (G, N, E, I)
+        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
         self.R = len(gmfs)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps, eids)
+        self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
@@ -75,7 +75,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         events = numpy.zeros(oq.number_of_ground_motion_fields,
                              calc.stored_event_dt)
         events['eid'] = eids
-        self.datastore['events/grp-00'] = events
+        self.datastore['events'] = events
 
     def post_execute(self, result):
         pass

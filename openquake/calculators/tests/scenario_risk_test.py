@@ -123,7 +123,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_5(self):
-        # case with site model
+        # case with site model and 11 sites filled out of 17
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
@@ -154,6 +154,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
+        # a case with two GSIMs
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
         # check losses_by_tag
         fnames = export(('losses_by_tag-rlzs', 'csv'), self.calc.datastore)
@@ -176,7 +177,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
         tot = self.calc.datastore['losses_by_tag-rlzs'].value.sum()
-        self.assertAlmostEqual(tot / 1E6, 17.64311, 5)
+        self.assertAlmostEqual(tot / 1E6, 1.96813145)
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
