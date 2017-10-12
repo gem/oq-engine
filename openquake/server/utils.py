@@ -53,9 +53,6 @@ def get_user_data(request):
         name = (settings.DEFAULT_USER if
                 hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
 
-    if not group_memebers:
-        group_memebers.append(name)
-
     return {'name': name, 'group_memebers': group_memebers, 'acl_on': acl_on}
 
 
