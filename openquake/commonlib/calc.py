@@ -67,7 +67,7 @@ class PmapGetter(object):
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
-        self.weights = [rlz.weight for rlz in rlzs_assoc.realizations]
+        self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = sids
