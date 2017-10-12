@@ -22,6 +22,7 @@ Module exports :class:`PankowPechmann2004`.
 from __future__ import division
 
 import numpy as np
+from scipy.constants import g as gravity
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -47,7 +48,10 @@ class PankowPechmann2004(GMPE):
     #: Supported intensity measure component is VECTORIAL
     #: :attr:`~openquake.hazardlib.const.IMC.VECTORIAL`,
     #: NOTE: The paper indicates it as Geometric mean (to check)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VECTORIAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = set([
+        const.IMC.VECTORIAL,
+        const.IMC.RANDOM_HORIZONTAL
+    ])
 
     #: Supported standard deviation type is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
@@ -78,7 +82,7 @@ class PankowPechmann2004(GMPE):
         # In the original formulation of the GMPE, distinction is only made
         # between rock and soil sites, which I assumed separated by the Vs30
         # value of 910m/s (see equation 5 of the paper)
-        gamma = 0 if sites.vs30.any() > 910 else 1
+        gamma = np.array([0 if v > 910. else 1 for v in sites.vs30])
 
         mean = np.zeros_like(R)
 
@@ -88,12 +92,13 @@ class PankowPechmann2004(GMPE):
                 C['b5'] * np.log10(R) + \
                 C['b6'] * gamma
 
-        # Converting PSV ground motion in PSA
-        if imt != PGA() and imt != PGV():
-            mean *= 2.*np.pi/imt.period
-
         # Convert from base 10 to base e
         mean /= np.log10(np.e)
+
+        # Converting PSV to PSA
+        if imt != PGA() and imt != PGV():
+            omega = 2.*np.pi/imt.period
+            mean += np.log(omega/(gravity*100))
 
         # Computing standard deviation
         stddevs = self._get_stddevs(C, stddev_types,  dists.rjb.shape[0])
@@ -111,15 +116,16 @@ class PankowPechmann2004(GMPE):
                    for stddev_type in stddev_types)
 
         if self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT == 'Random horizontal':
-            # Using equation 8 of the paper
-            Sr = np.sqrt(C['SlZ']**2 + C['S3']**2)
+            # Using equation 8 of the paper,
+            # corrected as indicated in the erratum
+            Sr = np.sqrt(C['SlZ']**2 + (C['S3']/np.sqrt(2))**2)
         else:
             Sr = C['SlZ']
 
         stddevs = [np.zeros(num_sites) + Sr for _ in stddev_types]
         return stddevs
 
-    #: coefficient table provided by GSC
+    #: coefficient table provided by GSC (corrected as in the erratum)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt         Bv      b1      b2       b3       b5      b6      h     SlZ      S3
     pgv          0   2.252   0.490        0   -1.196   0.195   7.06   0.246   0.075

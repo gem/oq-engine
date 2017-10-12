@@ -26,6 +26,7 @@ class PankowPechmann2004TestCase(BaseGSIMTestCase):
         self.check('PP2004/PP2004_MEAN.csv',
                    max_discrep_percentage=0.1)
 
+    # NO TABLE HAS BEEN PROVIDED FOR STANDARD DEVIATIONS
     # def test_std_total(self):
     #    self.check('PP2004/PP2004_STD_TOTAL.csv',
     #               max_discrep_percentage=0.1)
