@@ -39,13 +39,13 @@ def get_user_data(request):
     """
 
     acl_on = settings.ACL_ON
-    group_memebers = []
+    group_members = []
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated():
             name = request.user.username
             groups = request.user.groups.values_list('name', flat=True)
             if groups:
-                group_memebers = list(User.objects.filter(groups__name=groups)
+                group_members = list(User.objects.filter(groups__name=groups)
                                       .values_list('username', flat=True))
         if request.user.is_superuser:
             acl_on = False
@@ -53,7 +53,7 @@ def get_user_data(request):
         name = (settings.DEFAULT_USER if
                 hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
 
-    return {'name': name, 'group_memebers': group_memebers, 'acl_on': acl_on}
+    return {'name': name, 'group_members': group_members, 'acl_on': acl_on}
 
 
 def oq_server_context_processor(request):
