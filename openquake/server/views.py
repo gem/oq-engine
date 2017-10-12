@@ -65,6 +65,7 @@ try:
 except ImportError:
     from django.core.servers.basehttp import FileWrapper
 
+
 read_nrml.update_validators()  # update risk validators
 
 METHOD_NOT_ALLOWED = 405
@@ -308,9 +309,9 @@ def calc(request, id=None):
     base_url = _get_base_url(request)
 
     user = utils.get_user_data(request)
-
+    allowed_users = user['group_memebers'] or user['user']
     calc_data = logs.dbcmd('get_calcs', request.GET,
-                           user['name'], user['acl_on'], id)
+                           allowed_users, user['acl_on'], id)
 
     response_data = []
     for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
@@ -470,7 +471,8 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if user['acl_on'] and info['user_name'] != user['name']:
+        allowed_users = user['group_memebers'] or user['user']
+        if user['acl_on'] and info['user_name'] not in allowed_users:
             return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
