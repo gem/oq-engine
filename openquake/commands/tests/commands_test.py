@@ -77,7 +77,7 @@ attribute       nbytes
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, path)
+            info(None, None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -85,22 +85,27 @@ attribute       nbytes
 
     def test_calculators(self):
         with Print.patch() as p:
-            info(True, None, None, None, None, '')
+            info(True, None, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info(None, True, None, None, None, '')
+            info(None, True, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_views(self):
         with Print.patch() as p:
-            info(None, None, True, None, None, '')
+            info(None, None, True, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info(None, None, None, True, None, '')
+            info(None, None, None, True, None, None, '')
+        self.assertGreater(len(str(p)), 10)
+
+    def test_extracts(self):
+        with Print.patch() as p:
+            info(None, None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
 
     # NB: info --report is tested in the packager

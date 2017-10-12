@@ -2,9 +2,60 @@ import os
 import sys
 import signal
 import logging
+import inspect
 import subprocess
+import traceback
 import multiprocessing
-from openquake.baselib import zeromq as z, parallel as p, general
+from openquake.baselib import zeromq as z, general
+from openquake.baselib.performance import Monitor
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
+
+
+def safely_call(func, args):
+    """
+    Call the given function with the given arguments safely, i.e.
+    by trapping the exceptions. Return a pair (result, exc_type)
+    where exc_type is None if no exceptions occur, otherwise it
+    is the exception class and the result is a string containing
+    error message and traceback.
+
+    :param func: the function to call
+    :param args: the arguments
+    """
+    with Monitor('total ' + func.__name__, measuremem=True) as child:
+        if args and hasattr(args[0], 'unpickle'):
+            # args is a list of Pickled objects
+            args = [a.unpickle() for a in args]
+        if args and isinstance(args[-1], Monitor):
+            mon = args[-1]
+            mon.children.append(child)  # child is a child of mon
+            child.hdf5path = mon.hdf5path
+        else:
+            mon = child
+        # FIXME check_mem_usage is disabled here because it's causing
+        # dead locks in threads when log messages are raised.
+        # Check is done anyway in other parts of the code (submit and iter);
+        # further investigation is needed
+        # check_mem_usage(mon)  # check if too much memory is used
+        # FIXME: this approach does not work with the Threadmap
+        mon._flush = False
+        try:
+            got = func(*args)
+            if inspect.isgenerator(got):
+                got = list(got)
+            res = got, None, mon
+        except:
+            etype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
+                   etype, mon)
+        finally:
+            mon._flush = True
+    return res
 
 
 def streamer(host, task_in_port, task_out_port):
@@ -154,17 +205,17 @@ class WorkerPool(object):
         """
         :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
         """
-        p.setproctitle('oq-zworker')
+        setproctitle('oq-zworker')
         for cmd, args in sock:
             backurl = args[-1].backurl  # attached to the monitor
             with z.Socket(backurl, z.zmq.PUSH, 'connect') as s:
-                s.send(p.safely_call(cmd, args))
+                s.send(safely_call(cmd, args))
 
     def start(self):
         """
         Start worker processes and a control loop
         """
-        p.setproctitle('oq-zworkerpool %s' % self.ctrl_url[6:])  # strip tcp://
+        setproctitle('oq-zworkerpool %s' % self.ctrl_url[6:])  # strip tcp://
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
