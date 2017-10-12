@@ -30,7 +30,7 @@ from numpy.testing import assert_allclose
 from openquake.baselib import general
 from openquake.hazardlib import valid
 from openquake.risklib.riskinput import ValidationError
-from openquake.commonlib import readinput, writers
+from openquake.commonlib import readinput, writers, oqvalidation
 from openquake.qa_tests_data.classical import case_1, case_2
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
@@ -626,8 +626,7 @@ PGA:float32,PGV:float32
         fname = os.path.join(DATADIR,  'gmfdata_err.xml')
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Found a missing etag '0000000001'",
-                      str(ctx.exception))
+        self.assertIn("Found a missing ruptureId 1", str(ctx.exception))
 
     def test_err2(self):
         # wrong mesh
@@ -704,13 +703,14 @@ class TestLoadCurvesTestCase(unittest.TestCase):
     </hazardCurves>
 </nrml>
 ''', suffix='.xml')
-        oqparam = mock.Mock()
+        oqparam = object.__new__(oqvalidation.OqParam)
         oqparam.inputs = dict(hazard_curves=fname)
-        sitecol, hcurves = readinput.get_hcurves(oqparam)
+        sitecol, pmap = readinput.get_pmap(oqparam)
         self.assertEqual(len(sitecol), 2)
         self.assertEqual(sorted(oqparam.hazard_imtls.items()),
                          [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
                           ('SA(0.025)', [0.005, 0.007, 0.0137])])
+        hcurves = pmap.convert(oqparam.imtls, 2)
         assert_allclose(hcurves['PGA'], numpy.array(
             [[0.098728, 0.098216, 0.094945, 0.092947],
              [0.98728, 0.98226, 0.94947, 0.92947]]))

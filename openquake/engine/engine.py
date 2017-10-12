@@ -20,22 +20,24 @@
 calculations."""
 
 import os
+import re
 import sys
 import signal
+import logging
 import traceback
+import requests
+import platform
 
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import valid
-from openquake.baselib import parallel
+from openquake.baselib import parallel, config, datastore, __version__
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import datastore, config, readinput
+from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
-TERMINATE = valid.boolean(
-    config.get('distribution', 'terminate_workers_on_revoke') or 'false')
-
-USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
+OQ_API = 'https://api.openquake.org'
+TERMINATE = config.distribution.terminate_workers_on_revoke
+USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
 if USE_CELERY:
     import celery.task.control
@@ -138,11 +140,13 @@ def raiseMasterKilled(signum, _stack):
     else:
         msg = 'Received a signal %d' % signum
 
-    for pid in parallel.executor.pids:
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except OSError: # pid not found
-            pass
+    # FIXME this code has been temporary disabled due issues with large
+    # computations and further investigation is need; code is left as reference
+    # for pid in parallel.executor.pids:
+    #     try:
+    #         os.kill(pid, signal.SIGKILL)
+    #     except OSError: # pid not found
+    #         pass
 
     raise MasterKilled(msg)
 
@@ -175,7 +179,8 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     oq = readinput.get_oqparam(cfg_file)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.DATADIR, hazard_calculation_id)
+                        username, datastore.get_datadir(),
+                        hazard_calculation_id)
     return job_id, oq
 
 
@@ -199,8 +204,11 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     """
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if USE_CELERY and os.environ.get('OQ_DISTRIBUTE') == 'celery':
+        if USE_CELERY:
             set_concurrent_tasks_default()
+        msg = check_obsolete_version(oqparam.calculation_mode)
+        if msg:
+            logs.LOG.warn(msg)
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         monitor.hdf5path = calc.datastore.hdf5path
         calc.from_engine = True
@@ -243,3 +251,52 @@ def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
     with calc._monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
                  close=False, **kw)  # don't close the datastore too soon
+
+
+def version_triple(tag):
+    """
+    returns: a triple of integers from a version tag
+    """
+    groups = re.match(r'v?(\d+)\.(\d+)\.(\d+)', tag).groups()
+    return tuple(int(n) for n in groups)
+
+
+def check_obsolete_version(calculation_mode='WebUI'):
+    """
+    Check if there is a newer version of the engine.
+
+    :param calculation_mode:
+         - the calculation mode when called from the engine
+         - an empty string when called from the WebUI
+    :returns:
+        - a message if the running version of the engine is obsolete
+        - the empty string if the engine is updated
+        - None if the check could not be performed (i.e. github is down)
+    """
+    if os.environ.get('JENKINS_URL') or os.environ.get('TRAVIS'):
+        # avoid flooding our API server with requests from CI systems
+        return
+
+    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
+               (__version__, calculation_mode, platform.platform())}
+    try:
+        logger = logging.getLogger()  # root logger
+        level = logger.level
+        # requests.get logs at level INFO: raising the level so that
+        # the log is hidden
+        logger.setLevel(logging.WARN)
+        try:
+            json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
+                                headers=headers).json()
+        finally:
+            logger.setLevel(level)  # back as it was
+        tag_name = json['tag_name']
+        current = version_triple(__version__)
+        latest = version_triple(json['tag_name'])
+    except:  # page not available or wrong version tag
+        return
+    if current < latest:
+        return ('Version %s of the engine is available, but you are '
+                'still using version %s' % (tag_name, __version__))
+    else:
+        return ''

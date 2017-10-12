@@ -31,9 +31,9 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import (
-    groupby, get_array, group_array, block_splitter, writetmp)
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.baselib.general import group_array, block_splitter, writetmp
+from openquake.hazardlib import (
+    nrml, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.commonlib import logictree
 
 
@@ -47,9 +47,7 @@ I32 = numpy.int32
 F32 = numpy.float32
 
 assoc_by_grp_dt = numpy.dtype(
-    [('grp_id', U16),
-     ('gsim_idx', U16),
-     ('rlzis', h5py.special_dtype(vlen=U16))])
+    [('gsim_idx', U16), ('rlzis', h5py.special_dtype(vlen=U16))])
 
 
 class LtRealization(object):
@@ -168,8 +166,8 @@ class RlzsAssoc(object):
                     rlz.weight = rlz.weight / tot_weight
 
         # populate rlzs_by_gsim
-        bygrp = operator.itemgetter(0)
-        for grp_id, arr in groupby(self.array, bygrp).items():
+        for grp, arr in self.array.items():
+            grp_id = int(grp[4:])
             gsims = self.gsims_by_grp_id[grp_id]
             self.rlzs_by_gsim[grp_id] = collections.OrderedDict(
                 (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
@@ -183,6 +181,31 @@ class RlzsAssoc(object):
     def weights(self):
         """Array with the weight of the realizations"""
         return numpy.array([rlz.weight for rlz in self.realizations])
+
+    def combine_pmaps(self, pmap_by_grp):
+        """
+        :param pmap_by_grp: dictionary group string -> probability map
+        :returns: a list of probability maps, one per realization
+        """
+        grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
+        num_levels = pmap_by_grp[grp].shape_y
+        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
+                 for _ in self.realizations]
+        for grp in pmap_by_grp:
+            for rec in self.array[grp]:
+                pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
+                for rlzi in rec['rlzis']:
+                    pmaps[rlzi] |= pmap
+        return pmaps
+
+    def compute_pmap_stats(self, pmap_by_grp, statfuncs):
+        """
+        :param pmap_by_grp: dictionary group string -> probability map
+        :param statfuncs: a list of statistical functions
+        :returns: a probability map containing all statistics
+        """
+        pmaps = self.combine_pmaps(pmap_by_grp)
+        return stats.compute_pmap_stats(pmaps, statfuncs, self.weights)
 
     def get_rlz(self, rlzstr):
         """
@@ -204,17 +227,18 @@ class RlzsAssoc(object):
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
     def __len__(self):
-        return len(self.array)
+        return sum(len(self.array[grp]) for grp in self.array)
 
     def __repr__(self):
         pairs = []
-        g = operator.itemgetter('grp_id', 'gsim_idx')
-        for (grp_id, gsim_idx), [rec] in groupby(self.array, g).items():
-            rlzs = rec['rlzis']
-            gsim = self.gsims_by_grp_id[grp_id][rec['gsim_idx']]
-            if len(rlzs) > 10:  # short representation
-                rlzs = ['%d realizations' % len(rlzs)]
-            pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
+        for grp in sorted(self.array):
+            grp_id = int(grp[4:])
+            for rec in self.array[grp]:
+                rlzs = rec['rlzis']
+                gsim = self.gsims_by_grp_id[grp_id][rec['gsim_idx']]
+                if len(rlzs) > 10:  # short representation
+                    rlzs = ['%d realizations' % len(rlzs)]
+                pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
             self.__class__.__name__, len(self), len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
@@ -383,10 +407,10 @@ class CompositionInfo(object):
         """
         Return an array assoc_by_grp
 
-        :param count_ruptures: a function src_group -> num_ruptures
+        :param count_ruptures: a function src_group_id -> num_ruptures
         """
         assoc = RlzsAssoc(self)
-        assoc_by_grp = []
+        assoc_by_grp = collections.defaultdict(list)
         offset = 0
         trtset = set(self.gsim_lt.tectonic_region_types)
         for smodel in self.source_models:
@@ -394,7 +418,7 @@ class CompositionInfo(object):
             trts = set()
             for sg in smodel.src_groups:
                 if count_ruptures:
-                    sg.eff_ruptures = count_ruptures(sg)
+                    sg.eff_ruptures = count_ruptures(sg.id)
                 if sg.eff_ruptures:
                     trts.add(sg.trt)
 
@@ -410,7 +434,9 @@ class CompositionInfo(object):
                 gsim_lt = self.gsim_lt
             offset = self._populate(
                 assoc, assoc_by_grp, gsim_lt, smodel, offset)
-        assoc.array = numpy.array(assoc_by_grp, assoc_by_grp_dt)
+        assoc.array = {
+            'grp-%02d' % sgid: numpy.array(assoc_by_grp[sgid], assoc_by_grp_dt)
+            for sgid in assoc_by_grp}
         if assoc.realizations:
             assoc._init()
         return assoc
@@ -500,8 +526,8 @@ class CompositionInfo(object):
                     if sg.eff_ruptures:
                         gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
                         dic[idx[i, gsim]].append(rlzi + offset)
-            assoc_by_grp.extend((sgid, j, numpy.array(rlzis, U16))
-                                for (sgid, j), rlzis in sorted(dic.items()))
+            for (sgid, j), rlzis in sorted(dic.items()):
+                assoc_by_grp[sgid].append((j, numpy.array(rlzis, U16)))
             assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             offset += len(indices)
         return offset

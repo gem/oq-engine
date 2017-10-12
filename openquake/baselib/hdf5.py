@@ -34,6 +34,7 @@ from openquake.baselib.python3compat import pickle, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
+vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
@@ -387,3 +388,16 @@ def array_of_vstr(lst):
         except AttributeError:
             ls.append(el)
     return numpy.array(ls, vstr)
+
+
+def save(path, items, **extra):
+    """
+    :param path: an .hdf5 pathname
+    :param items: a generator of pairs (key, array-like)
+    :param extra: extra attributes to be saved in the file
+    """
+    with File(path, 'w') as f:
+        for key, val in items:
+            f[key] = val
+        for k, v in extra.items():
+            f.attrs[k] = v

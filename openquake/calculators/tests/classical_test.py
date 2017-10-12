@@ -185,6 +185,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
 
+        # test extract; 'hazard/rlzs also works
+        haz = dict(extract(self.calc.datastore, 'hazard/rlz-0'))
+        self.assertEqual(
+            sorted(haz),
+            ['checksum32', 'hcurves-rlz-0', 'hmaps-rlz-0', 'oqparam',
+             'realizations', 'sitecol'])
+
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
         self.assert_curves_ok([
