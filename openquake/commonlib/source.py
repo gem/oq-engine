@@ -403,17 +403,21 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    def get_rlzs_assoc(self, count_ruptures=None):
+    def get_rlzs_assoc(self, count_ruptures=None, sm_lt_path=None):
         """
         Return an array assoc_by_grp
 
         :param count_ruptures: a function src_group_id -> num_ruptures
+	:param sm_lt_path: a logic tree path tuple used to select a source model
         """
         assoc = RlzsAssoc(self)
         assoc_by_grp = collections.defaultdict(list)
         offset = 0
         trtset = set(self.gsim_lt.tectonic_region_types)
         for smodel in self.source_models:
+            if sm_lt_path is not None:
+                if smodel.path != sm_lt_path:
+                    continue
             # collect the effective tectonic region types and ruptures
             trts = set()
             for sg in smodel.src_groups:
