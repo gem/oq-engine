@@ -24,6 +24,7 @@ import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
+from openquake.baselib.python3compat import decode
 from openquake.baselib.parallel import Sequential
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
@@ -234,6 +235,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
+        # extract curves by tag
+        tags = ['taxonomy=tax1', 'state=01', 'cresta=0.11']
+        a = extract(self.calc.datastore, 'aggcurves/structural', *tags)
+        self.assertEqual(a.array.shape, (4, 2))  # 4 stats, 2 return periods
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
@@ -244,10 +250,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check job_info is stored
-        job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
+        job_info = {decode(k) for k in dict(self.calc.datastore['job_info'])}
         self.assertIn('build_curves_maps.sent', job_info)
         self.assertIn('build_curves_maps.received', job_info)
-
         check_total_losses(self.calc)
 
     @attr('qa', 'risk', 'event_based_risk')

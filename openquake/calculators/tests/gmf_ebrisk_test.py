@@ -29,6 +29,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_2(self):
+        # case with 3 sites but gmvs only on 2 sites
         self.run_calc(case_2.__file__, 'job.ini', exports='csv')
         totloss = self.calc.datastore['agg_loss_table']['loss'].sum()
-        self.assertAlmostEqual(totloss, 1.0323775, places=6)
+        self.assertAlmostEqual(totloss, 0.69805837, places=6)
