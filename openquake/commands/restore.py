@@ -33,7 +33,7 @@ def restore(archive, oqdata):
     Build a new oqdata directory from the data contained in the zip archive
     """
     if not os.path.exists(archive):
-        raise OSError('%s does not exist' % archive)
+        sys.exit('%s does not exist' % archive)
     t0 = time.time()
     oqdata = os.path.abspath(oqdata)
     assert archive.endswith('.zip'), archive
