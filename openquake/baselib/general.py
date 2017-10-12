@@ -858,7 +858,7 @@ def safeprint(*args, **kwargs):
 def socket_ready(hostport):
     """
     :param hostport: a pair (host, port) or a string (tcp://)host:port
-    :returns: True if the socket is on and False otherwise
+    :returns: True if the socket is ready and False otherwise
     """
     if hasattr(hostport, 'startswith'):
         # string representation of the hostport combination

@@ -55,7 +55,7 @@ if parallel.oq_distribute() == 'zmq':
                 if not general.socket_ready(url):
                     logs.LOG.warn('%s is not running', host)
                     continue
-                num_workers += sock.send('num_workers')
+                num_workers += sock.send('get_num_workers')
         OqParam.concurrent_tasks.default = num_workers * 5
         logs.LOG.info('Using %d zmq workers', num_workers)
 
