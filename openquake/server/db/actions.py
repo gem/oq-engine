@@ -430,7 +430,7 @@ def calc_info(db, calc_id):
     return response_data
 
 
-def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
+def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
@@ -448,11 +448,6 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     """
     # helper to get job+calculation data from the oq-engine database
     filterdict = {}
-
-    # user_acl_on is true if settings.ACL_ON = True or when the user is a
-    # Django super user
-    if user_acl_on:
-        filterdict['user_name'] = user_name
 
     if id is not None:
         filterdict['id'] = id
@@ -480,8 +475,17 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
-              % (time_filter, limit), filterdict)
+    # user_acl_on is true if settings.ACL_ON = True or when the user is a
+    # Django super user
+    if user_acl_on:
+        users_filter = ("user_name IN ('%s')" %
+                        "', '".join([str(item) for item in allowed_users]))
+    else:
+        users_filter = 1
+
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s ORDER BY id DESC'
+              ' LIMIT %d'
+              % (time_filter, users_filter, limit), filterdict)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description) for job in jobs]
 
