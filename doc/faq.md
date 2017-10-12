@@ -32,6 +32,12 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ***
 
+### 32bit support
+
+The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Staring with version 2.3.0 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
+
+***
+
 ### Celery support
 
 Starting with OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
@@ -59,11 +65,17 @@ To make this change permanent, add it at the bottom of `.bashrc` or `.bash_profi
 
 ***
 
+### Swap partitions
+
+Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
+
+***
+
 ### OpenQuake Hazardlib errors
 ```bash
 pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
 ```
-Since OpenQuake Engine 2.5.0, the OpenQuake Hazardlib package has been merged with the OpenQuake Engine one.
+Since OpenQuake Engine 2.5, the OpenQuake Hazardlib package has been merged with the OpenQuake Engine one.
 
 If you are using git and you have the `PYTHONPATH` set you should update `oq-engine` and then remove `oq-hazardlib` from your filesystem and from the `PYTHONPATH`, to avoid any possible confusion.
 

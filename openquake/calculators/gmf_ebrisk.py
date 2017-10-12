@@ -41,30 +41,32 @@ class GmfEbRiskCalculator(base.RiskCalculator):
     def pre_execute(self):
         logging.warn('%s is still experimental', self.__class__.__name__)
         base.RiskCalculator.pre_execute(self)
-        logging.info('Building the epsilons')
         oq = self.oqparam
         self.L = len(self.riskmodel.lti)
-        self.T = len(self.assetcol.taxonomies)
+        self.T = len(self.assetcol.tags())
         self.A = len(self.assetcol)
         self.E = oq.number_of_ground_motion_fields
         self.I = oq.insured_losses + 1
         if oq.ignore_covs:
             eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
+            logging.info('Building the epsilons')
             eps = self.make_eps(self.E)
-        eids, gmfs = calc.get_gmfs(self.datastore, self.precalc)
+        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
         self.R = len(gmfs)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps, eids)
+        self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
-        self.param['asset_loss_table'] = oq.asset_loss_table or oq.loss_ratios
+        self.param['ses_ratio'] = oq.ses_ratio
+        self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['elt_dt'] = numpy.dtype(
-            [('eid', U64), ('loss', (F32, (self.L * self.I,)))])
+            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         self.taskno = 0
         self.start = 0
         self.datastore.create_dset('losses_by_tag-rlzs', F32,
                                    (self.T, self.R, self.L * self.I))
+
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
@@ -73,7 +75,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         events = numpy.zeros(oq.number_of_ground_motion_fields,
                              calc.stored_event_dt)
         events['eid'] = eids
-        self.datastore['events/grp-00'] = events
+        self.datastore['events'] = events
 
     def post_execute(self, result):
         pass

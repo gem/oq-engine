@@ -23,7 +23,7 @@ import operator
 from functools import partial
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, config, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.commonlib import datastore, source, calc, util
+from openquake.commonlib import source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -248,15 +248,15 @@ class PSHACalculator(base.HazardCalculator):
             acc[pmap.grp_id] |= pmap
         return acc
 
-    def count_eff_ruptures(self, result_dict, src_group):
+    def count_eff_ruptures(self, result_dict, src_group_id):
         """
         Returns the number of ruptures in the src_group (after filtering)
         or 0 if the src_group has been filtered away.
 
         :param result_dict: a dictionary with keys (grp_id, gsim)
-        :param src_group: a SourceGroup instance
+        :param src_group_id: the source group ID
         """
-        return result_dict.eff_ruptures.get(src_group.id, 0)
+        return result_dict.eff_ruptures.get(src_group_id, 0)
 
     def zerodict(self):
         """
@@ -335,6 +335,8 @@ class PSHACalculator(base.HazardCalculator):
         sm_ids = {sg.id: sm.ordinal for sm in self.csm.info.source_models
                   for sg in sm.src_groups}
 
+        num_tasks = 0
+        num_sources = 0
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -343,8 +345,6 @@ class PSHACalculator(base.HazardCalculator):
                     csm = self.csm.filter(src_filter)
             else:
                 src_filter = self.src_filter
-            num_tasks = 0
-            num_sources = 0
             for sm in csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
@@ -372,7 +372,7 @@ class PSHACalculator(base.HazardCalculator):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
                             num_sources += len(block)
-            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
     def store_source_info(self, infos, acc):
@@ -418,7 +418,6 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
 
 
-@util.reader
 def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
@@ -497,7 +496,7 @@ class ClassicalCalculator(PSHACalculator):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
                 pgetter = calc.PmapGetter(
-                    self.datastore.parent, lazy=True)
+                    self.datastore.parent, lazy=config.directory.shared_dir)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:
