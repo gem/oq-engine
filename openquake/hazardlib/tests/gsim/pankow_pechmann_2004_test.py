@@ -22,11 +22,15 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 class PankowPechmann2004TestCase(BaseGSIMTestCase):
     GSIM_CLASS = PankowPechmann2004
 
+    # Test data were taken from Table 2 of Pankow & Pechmann (2004)
+    # (some decimals are added manually, due to lack of precision).
+    # No table has been provided for the standard deviation,
+    # whose test is then still missing.
+
     def test_mean(self):
         self.check('PP2004/PP2004_MEAN.csv',
                    max_discrep_percentage=0.1)
 
-    # NO TABLE HAS BEEN PROVIDED FOR STANDARD DEVIATIONS
     # def test_std_total(self):
     #    self.check('PP2004/PP2004_STD_TOTAL.csv',
     #               max_discrep_percentage=0.1)
