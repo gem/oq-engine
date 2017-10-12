@@ -19,9 +19,15 @@
 import os
 import getpass
 
-from openquake.commonlib import config
+from openquake.baselib import config, datastore
 
-DB_SECTION = config.get_section('dbserver')
+try:
+    import openquakeplatform
+    STANDALONE = True
+except ImportError:
+    STANDALONE = False
+
+DB_SECTION = config.dbserver
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -115,8 +121,6 @@ INSTALLED_APPS += (
     'openquake.server',
 )
 
-STANDALONE_APPS = ()
-
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.
@@ -161,6 +165,27 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
+
+# OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
+STANDALONE_APPS = ()
+if STANDALONE:
+    INSTALLED_APPS += (
+        'openquakeplatform',
+    )
+
+    STANDALONE_APPS += (
+        'openquakeplatform_ipt',
+        'openquakeplatform_taxtweb',
+        'openquakeplatform_taxonomy',
+    )
+
+    INSTALLED_APPS += STANDALONE_APPS
+
+    FILE_PATH_FIELD_DIRECTORY = datastore.get_datadir()
+
+    CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
+    CONTEXT_PROCESSORS.insert(0, 'django.template.context_processors.request')
+    CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
 
 try:
     # Try to load a local_settings.py from the current folder; this is useful

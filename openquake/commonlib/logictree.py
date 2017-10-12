@@ -1295,7 +1295,7 @@ class GsimLogicTree(object):
         :returns: sorted list of available GSIMs for that trt
         """
         if rlzs is None:
-            if trt == '*':  # fake logictree
+            if trt == '*' or trt == b'*':  # fake logictree
                 [trt] = self.values
             gsims = self.values[trt]
         else:

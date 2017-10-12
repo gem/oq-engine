@@ -865,132 +865,6 @@ CurveParams = collections.namedtuple(
     ['index', 'loss_type', 'curve_resolution', 'ratios', 'user_provided'])
 
 
-class CurveBuilder(object):
-    """
-    Build curves for all loss types at the same time.
-
-    :param cbs: a list of :class:`CurveParams` instances
-    :param ses_ratio: the ses_ratio parameter in oqparam
-    :param insured_losses: insured losses flag from the job.ini
-    :param conditional_loss_poes: list of PoEs from the job.ini
-    """
-    def __init__(self, cps, ses_ratio, insured_losses,
-                 conditional_loss_poes=()):
-        self.cps = cps
-        self.ses_ratio = ses_ratio
-        self.I = insured_losses + 1
-        self.clp = conditional_loss_poes
-        loss_ratios = {cb.loss_type: len(cb.ratios)
-                       for cb in cps if cb.user_provided}
-        self.loss_curve_dt = build_loss_curve_dt(
-            loss_ratios, insured_losses)
-        dtlist = []
-        for i in range(self.I):
-            for cb in self.cps:
-                lt = cb.loss_type + '_ins' * i
-                dtlist.append((lt, (F32, len(cb.ratios))))
-        self.dt = numpy.dtype(dtlist)
-
-    def __getitem__(self, li):
-        L = len(self.cps)
-        return self.cps[li % L]
-
-    def __iter__(self):
-        return iter(self.cps)
-
-    def __len__(self):
-        return len(self.cps)
-
-    def build_maps(self, avalues, loss_ratios, weights, stats, mon):
-        """
-        :param avalues:
-            an array of asset values
-        :param loss_ratios:
-            as returned by the LossRatiosGetter.get_all
-        :param weights:
-            a list of realization weights
-        :param stats:
-            a record of statistic functions
-        :param mon:
-            a :class:`openquake.baselib.performance.Monitor` instance
-        :returns:
-            aids, loss_maps, loss_maps_stats
-        """
-        assert self.clp, 'No conditional_loss_poes in the job.ini!'
-        lti = {cb.loss_type: i for i, cb in enumerate(self)}
-        for lt, i in sorted(lti.items()):
-            lti[lt + '_ins'] = i
-        losses = {}
-        for cb in self.cps:
-            losses[cb.loss_type] = [avalue[cb.loss_type] * cb.ratios
-                                    for avalue in avalues]
-            if self.I == 2:
-                losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
-        all_poes = self.build_all_poes(len(avalues), loss_ratios, len(weights))
-        loss_maps = self._build_maps(losses, all_poes)
-        if len(weights) > 1 and stats:
-            statnames, statfuncs = zip(*stats)
-            stat_poes = compute_stats2(all_poes, statfuncs, weights)
-            loss_maps_stats = self._build_maps(losses, stat_poes)
-        else:
-            loss_maps_stats = None
-        return loss_maps, loss_maps_stats
-
-    def _build_maps(self, losses, all_poes):
-        shp = all_poes.shape + (len(self.clp), len(self.dt))  # (A, R, P, LI)
-        loss_maps = numpy.zeros(shp, F32)
-        for lti, lt in enumerate(all_poes.dtype.names):
-            loss_lt = losses[lt]
-            for a, poes in enumerate(all_poes):
-                losses_ = loss_lt[a]
-                for r, poes_ in enumerate(poes[lt]):
-                    for p, poe in enumerate(self.clp):
-                        clratio = conditional_loss_ratio(losses_, poes_, poe)
-                        loss_maps[a, r, p, lti] = clratio
-        return loss_maps
-
-    def build_all_poes(self, num_assets, loss_ratios, num_rlzs):
-        """
-        :param num_assets:
-            the number of assets in the given bunch
-        :param loss_ratios:
-            a list of loss ratios
-        :param num_rlzs:
-            the total number of realizations
-        :yields:
-            a matrix of shape (num_assets, R) of PoEs
-        """
-        L = len(self.cps)
-        LI = L * self.I
-        poes = numpy.zeros((num_assets, num_rlzs), self.dt)
-        for a in range(num_assets):
-            dic = group_array(loss_ratios[a], 'rlzi')
-            for r in range(num_rlzs):
-                try:
-                    ratios = dic[r]['ratios'].reshape(-1, LI)
-                except KeyError:
-                    continue  # no ratios for the given realization
-                for cb in self.cps:
-                    for i in range(self.I):
-                        lt = cb.index + L * i
-                        lrs = ratios[:, lt]
-                        counts = numpy.array([(lrs >= ratio).sum()
-                                              for ratio in cb.ratios], F32)
-                        poes[a, r][lt] = 1. - numpy.exp(
-                            - counts * self.ses_ratio)
-        return poes
-
-
-# should I use the ses_ratio here?
-def build_poes(counts, nses):
-    """
-    :param counts: an array of counts of exceedence for the bins
-    :param nses: number of stochastic event sets
-    :returns: an array of PoEs
-    """
-    return 1. - numpy.exp(- numpy.array(counts, F32) / nses)
-
-
 #
 # Scenario Damage
 #
@@ -1426,12 +1300,25 @@ class LossesByPeriodBuilder(object):
     :param num_events: number of events for each realization
     :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
-    def __init__(self, return_periods, loss_dt, weights, num_events, eff_time):
+    def __init__(self, return_periods, loss_dt, weights, num_events, eff_time,
+                 risk_investigation_time):
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
         self.num_events = num_events
         self.eff_time = eff_time
+        self.poes = 1. - numpy.exp(- risk_investigation_time / return_periods)
+
+    def pair(self, array, stats):
+        """
+        :return (array, array_stats) if stats, else (array, None)
+        """
+        if len(self.weights) > 1 and stats:
+            statnames, statfuncs = zip(*stats)
+            array_stats = compute_stats2(array, statfuncs, self.weights)
+        else:
+            array_stats = None
+        return array, array_stats
 
     # used in the EbrPostCalculator
     def build_all(self, asset_values, loss_ratios, stats=()):
@@ -1454,12 +1341,7 @@ class LossesByPeriodBuilder(object):
                     array[a, r][lt] = aval * losses_by_period(
                         recs['ratios'][:, li], self.return_periods,
                         self.num_events[r], self.eff_time)
-        if len(self.weights) > 1 and stats:
-            statnames, statfuncs = zip(*stats)
-            array_stats = compute_stats2(array, statfuncs, self.weights)
-        else:
-            array_stats = None
-        return array, array_stats
+        return self.pair(array, stats)
 
     # used in the LossCurvesExporter
     def build_rlz(self, asset_values, loss_ratios, rlzi):
@@ -1491,18 +1373,30 @@ class LossesByPeriodBuilder(object):
         """
         P, R = len(self.return_periods), len(self.weights)
         array = numpy.zeros((P, R), self.loss_dt)
-        for rlzstr in agg_loss_table:
-            r = int(rlzstr[4:])
+        dic = group_array(agg_loss_table, 'rlzi')
+        for r in dic:
             num_events = self.num_events[r]
-            losses = agg_loss_table[rlzstr]['loss']
+            losses = dic[r]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, lti].flatten()  # flatten only in ucerf
                 lbp = losses_by_period(
                     ls, self.return_periods, num_events, self.eff_time)
                 array[:, r][lt] = lbp
-        if len(self.weights) > 1 and stats:
-            statnames, statfuncs = zip(*stats)
-            array_stats = compute_stats2(array, statfuncs, self.weights)
-        else:
-            array_stats = None
-        return array, array_stats
+        return self.pair(array, stats)
+
+    def build_maps(self, losses, clp, stats=()):
+        """
+        :param losses: an array of shape (A, R, P)
+        :param clp: a list of C conditional loss poes
+        :param stats: list of pairs [(statname, statfunc), ...]
+        :returns: an array of loss_maps of shape (A, R, C, LI)
+        """
+        shp = losses.shape[:2] + (len(clp), len(losses.dtype))  # (A, R, C, LI)
+        array = numpy.zeros(shp, F32)
+        for lti, lt in enumerate(losses.dtype.names):
+            for a, losses_ in enumerate(losses[lt]):
+                for r, ls in enumerate(losses_):
+                    for c, poe in enumerate(clp):
+                        clratio = conditional_loss_ratio(ls, self.poes, poe)
+                        array[a, r, c, lti] = clratio
+        return self.pair(array, stats)
