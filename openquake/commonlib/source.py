@@ -407,8 +407,8 @@ class CompositionInfo(object):
         """
         Return an array assoc_by_grp
 
-        :param count_ruptures: a function src_group_id -> num_ruptures
-	:param sm_lt_path: a logic tree path tuple used to select a source model
+        :param count_ruptures: function src_group_id -> num_ruptures
+        :param sm_lt_path: logic tree path tuple used to select a source model
         """
         assoc = RlzsAssoc(self)
         assoc_by_grp = collections.defaultdict(list)
