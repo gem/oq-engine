@@ -220,7 +220,7 @@ class EbriskCalculator(base.RiskCalculator):
     # a different strategy should be used; the one used here is good when
     # there are few source models, so that we cannot parallelize on those
     def start_tasks(self, sm_id, ruptures_by_grp, sitecol,
-                    assetcol, riskmodel, imts, trunc_level, correl_model,
+                    assetcol, riskmodel, imtls, trunc_level, correl_model,
                     min_iml, monitor):
         """
         :param sm_id: source model ordinal
@@ -228,7 +228,7 @@ class EbriskCalculator(base.RiskCalculator):
         :param sitecol: a SiteCollection instance
         :param assetcol: an AssetCollection instance
         :param riskmodel: a RiskModel instance
-        :param imts: a list of Intensity Measure Types
+        :param imtls: Intensity Measure Types and Levels
         :param trunc_level: truncation level
         :param correl_model: correlation model
         :param min_iml: vector of minimum intensities, one per IMT
@@ -267,7 +267,7 @@ class EbriskCalculator(base.RiskCalculator):
                         len(self.assetcol), seeds[start: start + n_events])
                     start += n_events
                 getter = riskinput.GmfGetter(
-                    rlzs_by_gsim, rupts, sitecol, imts, min_iml,
+                    rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
                     trunc_level, correl_model, samples)
                 ri = riskinput.RiskInputFromRuptures(getter, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
@@ -293,7 +293,7 @@ class EbriskCalculator(base.RiskCalculator):
         self.I = oq.insured_losses + 1
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
-        imts = list(oq.imtls)
+        imtls = oq.imtls
         elt_dt = numpy.dtype(
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         csm_info = self.datastore['csm_info']
@@ -311,7 +311,7 @@ class EbriskCalculator(base.RiskCalculator):
                 samples=sm.samples,
                 seed=self.oqparam.random_seed)
             yield (sm.ordinal, ruptures_by_grp, self.sitecol.complete,
-                   param, self.riskmodel, imts, oq.truncation_level,
+                   param, self.riskmodel, imtls, oq.truncation_level,
                    correl_model, min_iml, mon)
 
     def execute(self):
@@ -393,12 +393,12 @@ class EbriskCalculator(base.RiskCalculator):
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
-            if hasattr(res, 'ruptures_by_grp'):
+            if hasattr(res, 'ruptures_by_grp'):  # for UCERF
                 save_ruptures(self, res.ruptures_by_grp)
-            elif hasattr(res, 'events_by_grp'):
+            elif hasattr(res, 'events_by_grp'):  # for UCERF
                 for grp_id in res.events_by_grp:
                     events = res.events_by_grp[grp_id]
-                    self.datastore.extend('events/grp-%02d' % grp_id, events)
+                    self.datastore.extend('events', events)
             num_events[res.sm_id] += res.num_events
         if 'all_loss_ratios' in self.datastore:
             self.datastore['all_loss_ratios/num_losses'] = self.num_losses
@@ -499,7 +499,7 @@ class EbriskCalculator(base.RiskCalculator):
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
                 'all_loss_ratios/indices',
-                [numpy.array(self.indices[aid], indices_dt)
+                [numpy.array(self.indices[aid], riskinput.indices_dt)
                  for aid in range(self.A)])
             self.datastore.set_attrs(
                 'all_loss_ratios',

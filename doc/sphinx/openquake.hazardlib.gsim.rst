@@ -171,6 +171,14 @@ bindi_2014
     :undoc-members:
     :show-inheritance:
 
+bindi_2017
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bindi_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 boore_1993
 ------------------------------------------
 
