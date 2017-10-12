@@ -63,11 +63,11 @@ class PmapGetter(object):
     :param dstore: a DataStore instance
     :param lazy: if True, read directly from the datastore
     """
-    def __init__(self, dstore, sids=None, lazy=False):
-        self.rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    def __init__(self, dstore, sids=None, lazy=False, rlzs_assoc=None):
+        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
-        self.weights = dstore['realizations']['weight']
+        self.weights = [rlz.weight for rlz in rlzs_assoc.realizations]
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = sids
