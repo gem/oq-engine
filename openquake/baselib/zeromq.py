@@ -116,21 +116,17 @@ class Socket(object):
                 else:
                     yield args
 
-    def send(self, obj, noblock=0):
+    def send(self, obj):
         """
         Send an object to the remote server; block and return the reply
         if the socket type is REQ.
 
         :param obj:
             the Python object to send
-        :param noblock:
-            if the socket is of type REQ and the reply is not ready, raise a
-            ZMQError or wait, depending on this flag
         """
-        # NB: noblock is not used yet
         self.zsocket.send_pyobj(obj)
         if self.socket_type == zmq.REQ:
-            return self.zsocket.recv_pyobj(noblock)
+            return self.zsocket.recv_pyobj()
 
     def __repr__(self):
         return '<%s %s %s %s>' % (self.__class__.__name__, self.end_point,
