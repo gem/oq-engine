@@ -1,11 +1,11 @@
 Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
-========================================= ========================
-localhost:/mnt/ssd/oqdata/calc_14418.hdf5 Thu Aug 17 11:47:33 2017
-checksum32                                2,404,162,686           
-engine_version                            2.6.0-gitbdd9d17        
-========================================= ========================
+============================================= ========================
+localhost:/home/michele/oqdata/calc_5478.hdf5 Fri Sep 22 11:28:55 2017
+checksum32                                    2,404,162,686           
+engine_version                                2.6.0-gite59d75a        
+============================================= ========================
 
 num_sites = 3, num_imts = 1
 
@@ -45,28 +45,20 @@ smlt_path weight source_model_file gsim_logic_tree num_realizations
 b_1       1.000  `fake <fake>`_    simple(2)       2/2             
 ========= ====== ================= =============== ================
 
-Required parameters per tectonic region type
---------------------------------------------
-====== ======================================= ========== ========== ==============
-grp_id gsims                                   distances  siteparams ruptparams    
-====== ======================================= ========== ========== ==============
-0      LinLee2008SSlab() YoungsEtAl1997SSlab() rhypo rrup vs30       hypo_depth mag
-====== ======================================= ========== ========== ==============
-
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,LinLee2008SSlab(): ['<0,b_1~b1,w=0.6>']
-  0,YoungsEtAl1997SSlab(): ['<1,b_1~b2,w=0.4>']>
+  0,LinLee2008SSlab(): [0]
+  0,YoungsEtAl1997SSlab(): [1]>
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.014     0.0       1     
-reading site collection 4.077E-05 0.0       1     
+filtering sites         0.011     0.0       1     
+reading site collection 3.028E-05 0.0       1     
 ======================= ========= ========= ======

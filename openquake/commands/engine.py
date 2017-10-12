@@ -20,9 +20,9 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import sap
+from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
-from openquake.commonlib import datastore, config, logs
+from openquake.commonlib import logs
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
@@ -101,8 +101,6 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     """
     Run a calculation using the traditional command line API
     """
-    config.abort_if_no_config_available()
-
     if run or run_hazard or run_risk:
         # the logging will be configured in engine.py
         pass
@@ -111,16 +109,15 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         logging.basicConfig(level=logging.INFO)
 
     if config_file:
-        os.environ[config.OQ_CONFIG_FILE_VAR] = os.path.abspath(
-            os.path.expanduser(config_file))
-        config.refresh()
+        config.load(os.path.abspath(os.path.expanduser(config_file)))
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
 
     # check if the datadir exists
-    if not os.path.exists(datastore.DATADIR):
-        os.makedirs(datastore.DATADIR)
+    datadir = datastore.get_datadir()
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
 
     dbserver.ensure_on()
     # check if we are talking to the right server

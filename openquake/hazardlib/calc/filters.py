@@ -281,7 +281,7 @@ class SourceFilter(object):
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
-        if rtree is None:
+        if sitecol is not None and rtree is None:
             logging.info('Using distance filtering [no rtree]')
 
     def get_affected_box(self, src):

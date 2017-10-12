@@ -1,11 +1,11 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-================================================ ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_14480.hdf5 Thu Aug 17 11:48:20 2017
-checksum32                                       1,302,227,115           
-engine_version                                   2.6.0-gitbdd9d17        
-================================================ ========================
+==================================================== ========================
+tstation.gem.lan:/home/michele/oqdata/calc_5540.hdf5 Fri Sep 22 11:29:50 2017
+checksum32                                           1,302,227,115           
+engine_version                                       2.6.0-gite59d75a        
+==================================================== ========================
 
 num_sites = 1, num_imts = 3
 
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ============================================================== ====================== ================
 smlt_path weight source_model_file                                              gsim_logic_tree        num_realizations
 ========= ====== ============================================================== ====================== ================
-b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(2,4,0,1,4,0,5) 4/4             
+b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(0,2,1,0,4,4,5) 4/4             
 ========= ====== ============================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -60,10 +60,10 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=4, rlzs=4)
-  4,AtkinsonBoore2003SSlab(): ['<0,b1~@_@_@_@_b51_@_@,w=0.2>']
-  4,LinLee2008SSlab(): ['<1,b1~@_@_@_@_b52_@_@,w=0.2>']
-  4,YoungsEtAl1997SSlab(): ['<2,b1~@_@_@_@_b53_@_@,w=0.2>']
-  4,ZhaoEtAl2006SSlab(): ['<3,b1~@_@_@_@_b54_@_@,w=0.4>']>
+  4,AtkinsonBoore2003SSlab(): [0]
+  4,LinLee2008SSlab(): [1]
+  4,YoungsEtAl1997SSlab(): [2]
+  4,ZhaoEtAl2006SSlab(): [3]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -75,26 +75,26 @@ simple_area_source_model.xml 4      Subduction Inslab 1           7770         7
 
 Informational data
 ------------------
-============================== ==================================================================================
-count_eff_ruptures.received    tot 14.07 KB, max_per_task 3.62 KB                                                
-count_eff_ruptures.sent        sources 76.61 KB, param 5.43 KB, srcfilter 2.81 KB, gsims 1.26 KB, monitor 1.26 KB
-hazard.input_weight            777.0                                                                             
-hazard.n_imts                  3                                                                                 
-hazard.n_levels                78                                                                                
-hazard.n_realizations          1280                                                                              
-hazard.n_sites                 1                                                                                 
-hazard.n_sources               1                                                                                 
-hazard.output_weight           78.0                                                                              
-hostname                       tstation.gem.lan                                                                  
-require_epsilons               False                                                                             
-============================== ==================================================================================
+=========================== ==================================================================================
+count_eff_ruptures.received tot 14.09 KB, max_per_task 3.63 KB                                                
+count_eff_ruptures.sent     sources 76.61 KB, param 5.43 KB, srcfilter 2.81 KB, monitor 1.28 KB, gsims 1.26 KB
+hazard.input_weight         777.0                                                                             
+hazard.n_imts               3                                                                                 
+hazard.n_levels             78                                                                                
+hazard.n_realizations       1280                                                                              
+hazard.n_sites              1                                                                                 
+hazard.n_sources            1                                                                                 
+hazard.output_weight        78.0                                                                              
+hostname                    tstation.gem.lan                                                                  
+require_epsilons            False                                                                             
+=========================== ==================================================================================
 
 Slowest sources
 ---------------
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-4      s46       AreaSource   7,770        0.033     1         370      
+4      s46       AreaSource   7,770        0.034     1         370      
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,7 +102,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.033     1     
+AreaSource   0.034     1     
 ============ ========= ======
 
 Duplicated sources
@@ -113,7 +113,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.011 4.864E-04 0.010 0.011 4        
+count_eff_ruptures 0.011 8.061E-04 0.010 0.011 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -121,12 +121,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.551     0.0       1     
-managing sources               0.096     0.0       1     
-total count_eff_ruptures       0.043     0.0       4     
+reading composite source model 4.710     0.0       1     
+managing sources               0.115     0.0       1     
+total count_eff_ruptures       0.044     0.0       4     
+store source_info              0.027     0.0       1     
 prefiltering source model      0.017     0.0       1     
-store source_info              0.014     0.0       1     
-aggregate curves               3.855E-04 0.0       4     
-reading site collection        4.125E-05 0.0       1     
-saving probability maps        2.313E-05 0.0       1     
+aggregate curves               4.015E-04 0.0       4     
+reading site collection        3.457E-05 0.0       1     
+saving probability maps        2.360E-05 0.0       1     
 ============================== ========= ========= ======
