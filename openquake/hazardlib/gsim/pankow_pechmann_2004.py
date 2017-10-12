@@ -31,9 +31,11 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 class PankowPechmann2004(GMPE):
     """
-    The SEA99 Ground-Motion Predictive Relations for Extensional
-    Tectonic Regimes: Revisions and a New Peak Ground Velocity Relation
-    (Kris L. Pankow and James C. Pechmann)
+    Implements GMPE developed by Kris L. Pankow and James C. Pechmann 
+    and published as "The SEA99 Ground-Motion Predictive Relations for Extensional
+    Tectonic Regimes: Revisions and a New Peak Ground Velocity Relation"
+    Bulletin of the Seismological Society of America,
+    Vol. 94, No. 1, pp. 341–348, February 2004
     """
     #: Supported tectonic region type is active shallow crust,
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
