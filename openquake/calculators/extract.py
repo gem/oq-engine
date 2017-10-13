@@ -28,6 +28,7 @@ else:
     memoized = lru_cache(100)
 from openquake.baselib.general import DictArray
 from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.python3compat import encode
 from openquake.commonlib import calc
 
 
@@ -140,6 +141,8 @@ def extract_hazard(dstore, what):
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
     yield 'oqparam', dstore['oqparam']
+    yield 'realizations', dstore['realizations'].value
+    yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
@@ -162,11 +165,11 @@ def _agg(losses, idxs):
     return losses[numpy.array(sorted(idxs))].sum(axis=0)
 
 
-def _filter_agg(assetcol, losses, tags):
+def _filter_agg(assetcol, losses, selected):
     # losses is an array of shape (A, ..., R) with A=#assets, R=#realizations
     idxs = set(range(len(assetcol)))
     tagnames = []
-    for tag in tags:
+    for tag in selected:
         tagname, tagvalue = tag.split('=', 1)
         if tagvalue == '*':
             tagnames.append(tagname)
@@ -175,12 +178,22 @@ def _filter_agg(assetcol, losses, tags):
     if len(tagnames) > 1:
         raise ValueError('Too many * as tag values in %s' % tagnames)
     elif not tagnames:  # return an array of shape (..., R)
-        return _agg(losses, idxs)
+        return ArrayWrapper(
+            _agg(losses, idxs), dict(selected=encode(selected)))
     else:  # return an array of shape (T, ..., R)
-        all_idxs = [idxs & assetcol.aids_by_tag[t] for t in assetcol.tags()
-                    if t.startswith(tagname)]
+        [tagname] = tagnames
+        _tags = [t for t in assetcol.tags() if t.startswith(tagname)]
+        all_idxs = [idxs & assetcol.aids_by_tag[t] for t in _tags]
         # NB: using a generator expression for all_idxs caused issues (?)
-        return numpy.array([_agg(losses, idxs) for idxs in all_idxs])
+        data, tags = [], []
+        for idxs, tag in zip(all_idxs, _tags):
+            agglosses = _agg(losses, idxs)
+            if len(agglosses):
+                data.append(agglosses)
+                tags.append(tag)
+        return ArrayWrapper(
+            numpy.array(data),
+            dict(selected=encode(selected), tags=encode(tags)))
 
 
 @extract.add('agglosses')
@@ -191,9 +204,9 @@ def extract_agglosses(dstore, loss_type, *tags):
     /extract/agglosses/structural?taxonomy=RC&zipcode=*
 
     :returns:
+        an array of shape (T, R) if one of the tag names has a `*` value
         an array of shape (R,), being R the number of realizations
         an array of length 0 if there is no data for the given tags
-        an array of shape (T, R) if one of the tag names has a `*` value
     """
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
@@ -241,4 +254,5 @@ def extract_aggcurves(dstore, loss_type, *tags):
     else:
         raise KeyError('No curves found in %s' % dstore)
     curves = _filter_agg(dstore['assetcol'], losses, tags)
-    return ArrayWrapper(curves, dstore.get_attrs('curves-stats'))
+    vars(curves).update(dstore.get_attrs('curves-stats'))
+    return curves
