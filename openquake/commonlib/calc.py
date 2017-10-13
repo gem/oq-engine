@@ -44,9 +44,6 @@ U64 = numpy.uint64
 F64 = numpy.float64
 
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
-stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
-    ('ses', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
@@ -510,7 +507,7 @@ class RuptureSerializer(object):
         self.data = []
         self.nbytes = 0
 
-    def save(self, ebruptures, eidx):
+    def save(self, ebruptures, eidx=0):
         """
         Populate a dictionary of site IDs tuples and save the ruptures.
 

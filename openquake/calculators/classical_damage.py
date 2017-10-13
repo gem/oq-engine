@@ -44,7 +44,7 @@ def classical_damage(riskinput, riskmodel, param, monitor):
         for outputs in riskmodel.gen_outputs(riskinput, monitor):
             for l, out in enumerate(outputs):
                 ordinals = [a.ordinal for a in outputs.assets]
-                result[outputs.r] += dict(zip(ordinals, out))
+                result[outputs.rlzi] += dict(zip(ordinals, out))
     return result
 
 
