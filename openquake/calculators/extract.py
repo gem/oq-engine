@@ -27,6 +27,7 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.general import DictArray
+from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import calc
 
@@ -72,35 +73,6 @@ class Extract(collections.OrderedDict):
             return extract_(dstore, key)
 
 extract = Extract()
-
-
-class ArrayWrapper(object):
-    """
-    A pickleable wrapper over an HDF5 dataset or group
-    """
-    def __init__(self, array, attrs):
-        vars(self).update(attrs)
-        self.array = array
-
-    def __iter__(self):
-        return iter(self.array)
-
-    def __len__(self):
-        return len(self.array)
-
-    def __getitem__(self, idx):
-        return self.array[idx]
-
-    def __toh5__(self):
-        return (self.array, {k: v for k, v in vars(self).items()
-                             if k != 'array' and not k.startswith('_')})
-
-    def __fromh5__(self, array, attrs):
-        self.__init__(array, attrs)
-
-    @property
-    def dtype(self):
-        return self.array.dtype
 
 
 @extract.add('asset_values', cache=True)

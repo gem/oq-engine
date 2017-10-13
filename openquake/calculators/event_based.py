@@ -33,7 +33,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -189,7 +189,7 @@ def get_events(ebruptures):
             rec = (event['eid'], ebr.serial, ebr.grp_id, year, event['ses'],
                    event['sample'])
             events.append(rec)
-    return numpy.array(events, calc.stored_event_dt)
+    return numpy.array(events, readinput.stored_event_dt)
 
 
 @base.calculators.add('event_based_rupture')
