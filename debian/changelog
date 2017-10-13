@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Added support for groups in the WebUI/API server
+
   [Michele Simionato]
   * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1&...`
     with the ability to select all tagvalues (`*`) for a given tagname
