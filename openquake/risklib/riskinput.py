@@ -504,10 +504,11 @@ class GmfGetter(object):
         """
         if data is None:
             data = self.gen_gmv(gsim)
-        hazard = collections.defaultdict(lambda: collections.defaultdict(list))
+        hazard = numpy.array([collections.defaultdict(list)
+                              for _ in range(self.N)])
         for rlzi, sid, eid, gmv in data:
             hazard[sid][rlzi].append((gmv, eid))
-        for haz in hazard.values():
+        for haz in hazard:
             for rlzi in haz:
                 haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
         return hazard
