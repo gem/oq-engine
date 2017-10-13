@@ -18,7 +18,6 @@
 import collections
 import numpy
 
-from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base

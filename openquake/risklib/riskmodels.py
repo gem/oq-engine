@@ -199,7 +199,7 @@ class ProbabilisticEventBased(RiskModel):
         :param assets:
            a list of assets on the same site and with the same taxonomy
         :param gmvs_eids:
-           a composite array of E elements with fields 'gmv' and 'eid'
+           a pair (gmvs, eids) with E values each
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
@@ -296,8 +296,9 @@ class Scenario(RiskModel):
         self.insured_losses = insured_losses
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
-        epsilons = [epsgetter(asset.ordinal, None) for asset in assets]
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
+        gmvs, eids = gmvs_eids
+        epsilons = [epsgetter(asset.ordinal, eids) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -317,7 +318,7 @@ class Scenario(RiskModel):
         loss_matrix.fill(numpy.nan)
 
         vf = self.risk_functions[loss_type]
-        means, covs, idxs = vf.interpolate(ground_motion_values)
+        means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         for i, eps in enumerate(epsilons):
             loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
@@ -345,11 +346,11 @@ class Damage(RiskModel):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
 
-    def __call__(self, loss_type, assets, gmvs, _eps=None):
+    def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
-        :param gmvs: an array of E elements
+        :param gmvs_eids: pairs (gmvs, eids), each one with E elements
         :param _eps: dummy parameter, unused
         :returns: N arrays of E x D elements
 
@@ -359,7 +360,7 @@ class Damage(RiskModel):
         n = len(assets)
         ffs = self.risk_functions[loss_type]
         damages = numpy.array(
-            [scientific.scenario_damage(ffs, gmv) for gmv in gmvs])
+            [scientific.scenario_damage(ffs, gmv) for gmv in gmvs_eids[0]])
         return [damages] * n
 
 
