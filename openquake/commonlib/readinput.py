@@ -331,6 +331,15 @@ def get_gsims(oqparam):
     return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
 
 
+def get_rlzs_by_gsim(oqparam):
+    """
+    Return an ordered dictionary gsim -> [realization]. Work for
+    gsim logic trees with a single tectonic region type.
+    """
+    cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
+    return cinfo.get_rlzs_assoc().rlzs_by_gsim[0]
+
+
 def get_rupture_sitecol(oqparam, sitecol):
     """
     Read the `rupture_model` file and by filter the site collection

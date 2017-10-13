@@ -21,7 +21,7 @@ import logging
 import collections
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, performance
 from openquake.baselib.general import (
     groupby, group_array, get_array, AccumDict)
 from openquake.hazardlib import site, calc
@@ -62,6 +62,11 @@ class Output(object):
 
     def __getitem__(self, l):
         return self.values[l]
+
+    def __repr__(self):
+        items = sorted('%s=%s' % item for item in vars(self).items()
+                       if item[0] != 'values')
+        return '<%s%s>' % (self.__class__.__name__, items)
 
 
 def get_refs(assets, hdf5path):
@@ -232,7 +237,8 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def gen_outputs(self, riskinput, monitor, assetcol=None):
+    def gen_outputs(self, riskinput, monitor=performance.Monitor(),
+                    assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
@@ -292,12 +298,9 @@ class CompositeRiskModel(collections.Mapping):
                     continue
                 for rlzi, haz in sorted(haz_by_sid.items()):
                     if isinstance(haz, numpy.ndarray):
-                        gmvs = haz['gmv']
-                        if eids is None:  # scenario
-                            data = gmvs.T  # shape (E, I) -> (I, E)
-                        else:  # event_based
-                            data = {i: (gmvs[:, i], haz['eid'])
-                                    for i in rangeI}
+                        # event based and scenario
+                        data = {i: (haz['gmv'][:, i], haz['eid'])
+                                for i in rangeI}
                     elif eids is not None:  # gmf_ebrisk
                         data = {i: (haz[i], eids) for i in rangeI}
                     else:  # classical
@@ -387,7 +390,8 @@ class HazardGetter(object):
                 self.data[sid] = data = self._getter[sid]
                 if not data:  # no GMVs, return 0, counted in no_damage
                     self.data[sid] = {
-                        rlzi: numpy.zeros((self.E, self.I), [('gmv', F32)])
+                        rlzi: numpy.zeros((self.E, self.I),
+                                          [('gmv', F32), ('eid', U64)])
                         for rlzi in range(self.num_rlzs)}
 
     def get_hazard(self):
@@ -406,7 +410,7 @@ class GmfGetter(object):
     kind = 'gmf'
 
     def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imtls,
-                 min_iml, truncation_level, correlation_model, samples):
+                 min_iml, truncation_level, correlation_model, samples=1):
         assert sitecol is sitecol.complete, sitecol
         self.grp_id = ebruptures[0].grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
