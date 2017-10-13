@@ -24,7 +24,7 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, source, calc
+from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 
@@ -48,7 +48,7 @@ def classical_risk(riskinput, riskmodel, param, monitor):
     result = dict(loss_curves=[], stat_curves=[])
     all_outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for outputs in all_outputs:
-        r = outputs.r
+        r = outputs.rlzi
         outputs.average_losses = AccumDict(accum=[])  # l -> array
         for l, (loss_curves, insured_curves) in enumerate(outputs):
             for i, asset in enumerate(outputs.assets):
@@ -72,7 +72,7 @@ def classical_risk(riskinput, riskmodel, param, monitor):
         l_idxs = range(len(riskmodel.lti))
         for assets, rows in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [w[row.r] for row in rows]
+            weights = [w[row.rlzi] for row in rows]
             row = rows[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):

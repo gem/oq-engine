@@ -50,13 +50,12 @@ def _aggregate(outputs, compositemodel, tagmask, agg, all_eids, result, param):
     ass = result['assratios']
     idx = dict(zip(all_eids, range(E)))
     for outs in outputs:
-        r = outs.r
-        for l, out in enumerate(outs):
-            if out is None:  # for GMFs below the minimum_intensity
+        r = outs.rlzi
+        for l, loss_ratios in enumerate(outs):
+            if loss_ratios is None:  # for GMFs below the minimum_intensity
                 continue
-            loss_ratios, eids = out
             loss_type = compositemodel.loss_types[l]
-            indices = numpy.array([idx[eid] for eid in eids])
+            indices = numpy.array([idx[eid] for eid in outs.eids])
 
             for aid, asset in enumerate(outs.assets):
                 ratios = loss_ratios[aid]
@@ -83,7 +82,7 @@ def _aggregate(outputs, compositemodel, tagmask, agg, all_eids, result, param):
                 if param['asset_loss_table']:
                     for i in range(I):
                         li = l + L * i
-                        for eid, ratio in zip(eids, ratios[:, i]):
+                        for eid, ratio in zip(outs.eids, ratios[:, i]):
                             if ratio > 0:
                                 ass.append((aid, r, eid, li, ratio))
 

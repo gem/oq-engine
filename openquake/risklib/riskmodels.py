@@ -22,6 +22,7 @@ import functools
 import numpy
 
 from openquake.baselib.general import CallableDict
+from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.hazardlib import valid
 from openquake.risklib import utils, scientific
 
@@ -47,9 +48,10 @@ class RiskModel(object):
     compositemodel = None  # set by get_risk_model
     kind = None  # must be set in subclasses
 
-    def __init__(self, taxonomy, risk_functions):
+    def __init__(self, taxonomy, risk_functions, insured_losses):
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
+        self.insured_losses = insured_losses
 
     @property
     def loss_types(self):
@@ -66,6 +68,14 @@ class RiskModel(object):
         """
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
+
+    def get_output(self, assets, data_by_lt, epsgetter):
+        """
+        returns an ArrayWrapper of shape (L, ...)
+        """
+        out = [self(lt, assets, data, epsgetter)
+               for lt, data in zip(self.loss_types, data_by_lt)]
+        return ArrayWrapper(numpy.array(out), {})
 
     def __toh5__(self):
         risk_functions = {lt: func for lt, func in self.risk_functions.items()}
@@ -222,7 +232,7 @@ class ProbabilisticEventBased(RiskModel):
                 loss_ratios[i, idxs, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
                     asset.insurance_limit(loss_type))
-        return loss_ratios, eids
+        return loss_ratios
 
 
 @registry.add('classical_bcr')
@@ -238,6 +248,7 @@ class ClassicalBCR(RiskModel):
                  interest_rate, asset_life_expectancy):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
+        self.insured_losses = False  # not implemented
         self.retro_functions = vulnerability_functions_retro
         self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
@@ -345,6 +356,7 @@ class Damage(RiskModel):
     def __init__(self, taxonomy, fragility_functions):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
+        self.insured_losses = False  # not implemented
 
     def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
         """
@@ -376,6 +388,7 @@ class ClassicalDamage(Damage):
                  risk_investigation_time):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
+        self.insured_losses = False  # not implemented
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
