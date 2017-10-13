@@ -1,4 +1,9 @@
+  [Daniele Viganò]
+  * Added support for groups in the WebUI/API server
+
   [Michele Simionato]
+  * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1&...`
+    with the ability to select all tagvalues (`*`) for a given tagname
   * Deprecated reading hazard curves from CSV, since it was an experimental
     features and nobody is using it
   * Changed the exporter of the event loss table to export all realizations
