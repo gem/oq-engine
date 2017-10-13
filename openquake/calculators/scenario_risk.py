@@ -62,7 +62,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
                   losses_by_tag=lbt, all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        r = outputs.r
+        r = outputs.rlzi
         assets = outputs.assets
         for l, losses in enumerate(outputs):
             if losses is None:  # this may happen
