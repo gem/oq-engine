@@ -289,7 +289,7 @@ class CompositeRiskModel(collections.Mapping):
     def _gen_outputs(self, hazard, imti, dic, eids):
         for taxonomy in sorted(dic):
             riskmodel = self[taxonomy]
-            rangeI = [imti[riskmodel.risk_functions[lt].imt]
+            rangeM = [imti[riskmodel.risk_functions[lt].imt]
                       for lt in self.loss_types]
             for sid, assets, epsgetter in dic[taxonomy]:
                 try:
@@ -300,15 +300,15 @@ class CompositeRiskModel(collections.Mapping):
                     if isinstance(haz, numpy.ndarray):
                         # event based and scenario
                         data = {i: (haz['gmv'][:, i], haz['eid'])
-                                for i in rangeI}
+                                for i in rangeM}
                     elif eids is not None:  # gmf_ebrisk
-                        data = {i: (haz[i], eids) for i in rangeI}
+                        data = {i: (haz[i], eids) for i in rangeM}
                     else:  # classical
                         data = haz
                     out = [None] * len(self.lti)
-                    for lti, i in enumerate(rangeI):
+                    for lti, m in enumerate(rangeM):
                         lt = self.loss_types[lti]
-                        out[lti] = riskmodel(lt, assets, data[i], epsgetter)
+                        out[lti] = riskmodel(lt, assets, data[m], epsgetter)
                     yield Output(self.loss_types, assets, out, sid, rlzi)
 
     def __toh5__(self):
