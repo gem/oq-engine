@@ -401,3 +401,38 @@ def save(path, items, **extra):
             f[key] = val
         for k, v in extra.items():
             f.attrs[k] = v
+
+
+class ArrayWrapper(object):
+    """
+    A pickleable and serializable wrapper over an array, HDF5 dataset or group
+    """
+    def __init__(self, array, attrs):
+        vars(self).update(attrs)
+        self.array = array
+
+    def __iter__(self):
+        return iter(self.array)
+
+    def __len__(self):
+        return len(self.array)
+
+    def __getitem__(self, idx):
+        return self.array[idx]
+
+    def __toh5__(self):
+        return (self.array, {k: v for k, v in vars(self).items()
+                             if k != 'array' and not k.startswith('_')})
+
+    def __fromh5__(self, array, attrs):
+        self.__init__(array, attrs)
+
+    @property
+    def dtype(self):
+        """dtype of the underlying array"""
+        return self.array.dtype
+
+    @property
+    def shape(self):
+        """shape of the underlying array"""
+        return self.array.shape
