@@ -70,21 +70,21 @@ def classical_risk(riskinput, riskmodel, param, monitor):
         w = param['weights']
         statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
-        for assets, rows in groupby(
+        for assets, outs in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [w[row.rlzi] for row in rows]
-            row = rows[0]
+            weights = [w[out.rlzi] for out in outs]
+            out = outs[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):
-                    avgs = numpy.array([r.average_losses[l][i] for r in rows])
+                    avgs = numpy.array([r.average_losses[l][i] for r in outs])
                     avg_stats = compute_stats(avgs, stats, weights)
-                    # row is index by the loss type index l and row[l]
+                    # out is index by the loss type index l and out[l]
                     # is a pair loss_curves, insured_loss_curves
                     # loss_curves[i, 0] are the i-th losses,
                     # loss_curves[i, 1] are the i-th poes
-                    losses = row[l][0][i, 0]
+                    losses = out[l][0][i, 0]
                     poes_stats = compute_stats(
-                        numpy.array([row[l][0][i, 1] for row in rows]),
+                        numpy.array([out[l][0][i, 1] for out in outs]),
                         stats, weights)
                     result['stat_curves'].append(
                         (l, asset.ordinal, losses, poes_stats, avg_stats))
