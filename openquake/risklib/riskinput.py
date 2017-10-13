@@ -48,27 +48,6 @@ aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-class Output(object):
-    """
-    A container for the losses of the assets on the given site ID for
-    the given realization ordinal.
-    """
-    def __init__(self, loss_types, assets, values, sid, rlzi):
-        self.loss_types = loss_types
-        self.assets = assets
-        self.values = values
-        self.sid = sid
-        self.r = rlzi
-
-    def __getitem__(self, l):
-        return self.values[l]
-
-    def __repr__(self):
-        items = sorted('%s=%s' % item for item in vars(self).items()
-                       if item[0] != 'values')
-        return '<%s%s>' % (self.__class__.__name__, items)
-
-
 def get_refs(assets, hdf5path):
     """
     Debugging method returning the string IDs of the assets from the datastore
@@ -299,17 +278,22 @@ class CompositeRiskModel(collections.Mapping):
                 for rlzi, haz in sorted(haz_by_sid.items()):
                     if isinstance(haz, numpy.ndarray):
                         # event based and scenario
-                        data = {i: (haz['gmv'][:, i], haz['eid'])
+                        eids = haz['eid']
+                        data = {i: (haz['gmv'][:, i], eids)
                                 for i in rangeM}
                     elif eids is not None:  # gmf_ebrisk
                         data = {i: (haz[i], eids) for i in rangeM}
                     else:  # classical
                         data = haz
-                    out = [None] * len(self.lti)
-                    for lti, m in enumerate(rangeM):
-                        lt = self.loss_types[lti]
-                        out[lti] = riskmodel(lt, assets, data[m], epsgetter)
-                    yield Output(self.loss_types, assets, out, sid, rlzi)
+                    data_by_lt = [data[imti[riskmodel.risk_functions[lt].imt]]
+                                  for lt in self.loss_types]
+                    out = riskmodel.get_output(assets, data_by_lt, epsgetter)
+                    out.loss_types = self.loss_types
+                    out.assets = assets
+                    out.sid = sid
+                    out.rlzi = rlzi
+                    out.eids = eids
+                    yield out
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
