@@ -579,10 +579,10 @@ nshmp_2014
     :undoc-members:
     :show-inheritance:
 
-panckow_pechmann_2004
+pankow_pechmann_2004
 ---------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.panckow_pechmann_2004
+.. automodule:: openquake.hazardlib.gsim.pankow_pechmann_2004
     :members:
     :undoc-members:
     :show-inheritance:
