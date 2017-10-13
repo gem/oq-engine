@@ -21,7 +21,7 @@ import logging
 import collections
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, performance
 from openquake.baselib.general import (
     groupby, group_array, get_array, AccumDict)
 from openquake.hazardlib import site, calc
@@ -46,22 +46,6 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
 by_taxonomy = operator.attrgetter('taxonomy')
 aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
-
-
-class Output(object):
-    """
-    A container for the losses of the assets on the given site ID for
-    the given realization ordinal.
-    """
-    def __init__(self, loss_types, assets, values, sid, rlzi):
-        self.loss_types = loss_types
-        self.assets = assets
-        self.values = values
-        self.sid = sid
-        self.r = rlzi
-
-    def __getitem__(self, l):
-        return self.values[l]
 
 
 def get_refs(assets, hdf5path):
@@ -232,7 +216,8 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def gen_outputs(self, riskinput, monitor, assetcol=None):
+    def gen_outputs(self, riskinput, monitor=performance.Monitor(),
+                    assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
@@ -283,7 +268,7 @@ class CompositeRiskModel(collections.Mapping):
     def _gen_outputs(self, hazard, imti, dic, eids):
         for taxonomy in sorted(dic):
             riskmodel = self[taxonomy]
-            rangeI = [imti[riskmodel.risk_functions[lt].imt]
+            rangeM = [imti[riskmodel.risk_functions[lt].imt]
                       for lt in self.loss_types]
             for sid, assets, epsgetter in dic[taxonomy]:
                 try:
@@ -292,21 +277,23 @@ class CompositeRiskModel(collections.Mapping):
                     continue
                 for rlzi, haz in sorted(haz_by_sid.items()):
                     if isinstance(haz, numpy.ndarray):
-                        gmvs = haz['gmv']
-                        if eids is None:  # scenario
-                            data = gmvs.T  # shape (E, I) -> (I, E)
-                        else:  # event_based
-                            data = {i: (gmvs[:, i], haz['eid'])
-                                    for i in rangeI}
+                        # event based and scenario
+                        eids = haz['eid']
+                        data = {i: (haz['gmv'][:, i], eids)
+                                for i in rangeM}
                     elif eids is not None:  # gmf_ebrisk
-                        data = {i: (haz[i], eids) for i in rangeI}
+                        data = {i: (haz[i], eids) for i in rangeM}
                     else:  # classical
                         data = haz
-                    out = [None] * len(self.lti)
-                    for lti, i in enumerate(rangeI):
-                        lt = self.loss_types[lti]
-                        out[lti] = riskmodel(lt, assets, data[i], epsgetter)
-                    yield Output(self.loss_types, assets, out, sid, rlzi)
+                    data_by_lt = [data[imti[riskmodel.risk_functions[lt].imt]]
+                                  for lt in self.loss_types]
+                    out = riskmodel.get_output(assets, data_by_lt, epsgetter)
+                    out.loss_types = self.loss_types
+                    out.assets = assets
+                    out.sid = sid
+                    out.rlzi = rlzi
+                    out.eids = eids
+                    yield out
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
@@ -387,7 +374,8 @@ class HazardGetter(object):
                 self.data[sid] = data = self._getter[sid]
                 if not data:  # no GMVs, return 0, counted in no_damage
                     self.data[sid] = {
-                        rlzi: numpy.zeros((self.E, self.I), [('gmv', F32)])
+                        rlzi: numpy.zeros((self.E, self.I),
+                                          [('gmv', F32), ('eid', U64)])
                         for rlzi in range(self.num_rlzs)}
 
     def get_hazard(self):
@@ -406,7 +394,7 @@ class GmfGetter(object):
     kind = 'gmf'
 
     def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imtls,
-                 min_iml, truncation_level, correlation_model, samples):
+                 min_iml, truncation_level, correlation_model, samples=1):
         assert sitecol is sitecol.complete, sitecol
         self.grp_id = ebruptures[0].grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
