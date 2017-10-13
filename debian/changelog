@@ -2,6 +2,7 @@
   * Added support for groups in the WebUI/API server
 
   [Michele Simionato]
+  * Added an experimental distribution mode of kind "zmq"
   * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1&...`
     with the ability to select all tagvalues (`*`) for a given tagname
   * Deprecated reading hazard curves from CSV, since it was an experimental
