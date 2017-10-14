@@ -17,16 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import inspect
 import logging
 
-from openquake.baselib import performance, sap, hdf5
-from openquake.commonlib import datastore
+from openquake.baselib import performance, sap, hdf5, datastore
 from openquake.calculators.extract import extract as extract_
 
 
 # the export is tested in the demos
 @sap.Script
-def extract(what, calc_id=-1):
+def extract(calc_id, what, extra):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     """
@@ -37,15 +37,16 @@ def extract(what, calc_id=-1):
     if parent_id:
         dstore.parent = datastore.read(parent_id)
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
-        dic = extract_(dstore, what)
-        if not hasattr(dic, 'keys'):
-            dic = {dic.__class__.__name__: dic}
+        items = extract_(dstore, what, *extra)
+        if not inspect.isgenerator(items):
+            items = [(items.__class__.__name__, items)]
         fname = '%s_%d.hdf5' % (what.replace('/', '-'), dstore.calc_id)
-        hdf5.save(fname, dic)
+        hdf5.save(fname, items)
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)
 
 
-extract.arg('what', 'string specifying what to export')
 extract.arg('calc_id', 'number of the calculation', type=int)
+extract.arg('what', 'string specifying what to export')
+extract.arg('extra', 'extra arguments', nargs='*')

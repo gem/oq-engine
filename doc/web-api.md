@@ -115,11 +115,14 @@ successfull, the list is empty.
 
 #### GET /v1/calc/:calc_id/extract/:spec
 
-Get a pickled file for the given output specification
+Get an .npz file for the given object specification. If `spec` ends with
+the extension `.attrs` the attributes of the underlying object (usually
+coming from an HDF5 dataset) are used to build the .npz file, while the
+object itself is not retrieved.
 
 Response:
 
-A single .pik file of Content-Type: application/octet-stream
+A single .npz file of Content-Type: application/octet-stream
 
 
 #### GET /v1/calc/:calc_id/results
@@ -229,6 +232,12 @@ Logout
 #### GET /engine_version
 
 Return a string with the OpenQuake engine version
+
+
+#### GET /engine_latest_version
+
+Return a string with if new versions have been released.
+Return 'None' if the version is not available
 
 
 #### GET /v1/available_gsims

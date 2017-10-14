@@ -34,6 +34,7 @@ from openquake.baselib.python3compat import pickle, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
+vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
@@ -389,14 +390,49 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
-def save(path, dic, **extra):
+def save(path, items, **extra):
     """
     :param path: an .hdf5 pathname
-    :param dic: a dictionary of array-like objects
+    :param items: a generator of pairs (key, array-like)
     :param extra: extra attributes to be saved in the file
     """
     with File(path, 'w') as f:
-        for key in sorted(dic):
-            f[key] = dic[key]
+        for key, val in items:
+            f[key] = val
         for k, v in extra.items():
             f.attrs[k] = v
+
+
+class ArrayWrapper(object):
+    """
+    A pickleable and serializable wrapper over an array, HDF5 dataset or group
+    """
+    def __init__(self, array, attrs):
+        vars(self).update(attrs)
+        self.array = array
+
+    def __iter__(self):
+        return iter(self.array)
+
+    def __len__(self):
+        return len(self.array)
+
+    def __getitem__(self, idx):
+        return self.array[idx]
+
+    def __toh5__(self):
+        return (self.array, {k: v for k, v in vars(self).items()
+                             if k != 'array' and not k.startswith('_')})
+
+    def __fromh5__(self, array, attrs):
+        self.__init__(array, attrs)
+
+    @property
+    def dtype(self):
+        """dtype of the underlying array"""
+        return self.array.dtype
+
+    @property
+    def shape(self):
+        """shape of the underlying array"""
+        return self.array.shape

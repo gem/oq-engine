@@ -20,6 +20,7 @@ import shutil
 import json
 import logging
 import os
+import inspect
 import getpass
 import tempfile
 try:
@@ -27,6 +28,7 @@ try:
 except ImportError:
     import urlparse
 import re
+import numpy
 
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -35,13 +37,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
+from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode, pickle
+from openquake.baselib.python3compat import unicode
 from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
-from openquake.commonlib import readinput, oqvalidation, logs, datastore
+from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
@@ -61,6 +64,7 @@ try:
     from wsgiref.util import FileWrapper  # Django >= 1.9
 except ImportError:
     from django.core.servers.basehttp import FileWrapper
+
 
 read_nrml.update_validators()  # update risk validators
 
@@ -195,6 +199,16 @@ def get_engine_version(request):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def get_engine_latest_version(request):
+    """
+    Return a string with if new versions have been released.
+    Return 'None' if the version is not available
+    """
+    return HttpResponse(engine.check_obsolete_version())
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def get_available_gsims(request):
     """
     Return a list of strings with the available GSIMs
@@ -295,9 +309,9 @@ def calc(request, id=None):
     base_url = _get_base_url(request)
 
     user = utils.get_user_data(request)
-
+    allowed_users = user['group_members'] or [user['name']]
     calc_data = logs.dbcmd('get_calcs', request.GET,
-                           user['name'], user['acl_on'], id)
+                           allowed_users, user['acl_on'], id)
 
     response_data = []
     for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
@@ -457,7 +471,8 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if user['acl_on'] and info['user_name'] != user['name']:
+        allowed_users = user['group_members'] or [user['name']]
+        if user['acl_on'] and info['user_name'] not in allowed_users:
             return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -569,9 +584,15 @@ def get_result(request, result_id):
     return response
 
 
+def _array(v):
+    if hasattr(v, '__toh5__'):
+        return v.__toh5__()[0]
+    return v
+
+
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def extract(request, calc_id, what):
+def extract(request, calc_id, what, attrs):
     """
     Wrapper over the `oq extract` command
     """
@@ -583,11 +604,20 @@ def extract(request, calc_id, what):
     # read the data and save them on a temporary .pik file
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         fd, fname = tempfile.mkstemp(
-            prefix=what.replace('/', '-'), suffix='.pik')
+            prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
-        obj = _extract(ds, what)
-        with open(fname, 'wb') as f:
-            pickle.dump(obj, f)
+        if attrs:  # extract the attributes only
+            array, attrs = None, ds.get_attrs(what)
+        else:  # extract the full HDF5 object
+            extra = ['%s=%s' % item for item in request.GET.items()]
+            obj = _extract(ds, what, *extra)
+            if inspect.isgenerator(obj):
+                array, attrs = None, {k: _array(v) for k, v in obj}
+            elif hasattr(obj, '__toh5__'):
+                array, attrs = obj.__toh5__()
+            else:  # assume obj is an array
+                array, attrs = obj, {}
+        numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
     stream = FileWrapper(open(fname, 'rb'))
