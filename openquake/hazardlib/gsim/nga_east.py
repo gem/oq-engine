@@ -471,7 +471,7 @@ class NGAEastBaseGMPE(GMPETable):
         the tables from hdf5 and hold them in memory.
         """
         fle = h5py.File(self.GMPE_TABLE, "r")
-        self.distance_type = fle["Distances"].attrs["metric"].decode('utf8')
+        self.distance_type = fle["Distances"].attrs["metric"]
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
         self.m_w = fle["Mw"][:]
@@ -678,9 +678,10 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
                             "b": PHI_SETUP[self.phi_model][key]["var_b"]}
         if self.ergodic:
             # IMT list should be taken from the PHI_S2SS_MODEL
-            imt_list = \
-                PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs.keys() +\
-                PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs.keys()
+            imt_list = list(
+                PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs.keys())
+            imt_list += \
+                list(PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs.keys())
         else:
             imt_list = phi_std.keys()
         phi_std = CoeffsTable(sa_damping=5, table=phi_std)

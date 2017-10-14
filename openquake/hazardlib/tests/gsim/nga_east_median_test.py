@@ -264,7 +264,7 @@ class HollenbackEtAl2015NGAEastGPTestCase(Boore2015NGAEastA04TestCase):
     MEAN_FILE = "nga_east_median_tables/NGAEast_PEER_GP_MEAN.csv"
 
 
-class HellenbackEtAl2015NGAEastGPTotalSigmaTestCase(
+class HollenbackEtAl2015NGAEastGPTotalSigmaTestCase(
         Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.HollenbackEtAl2015NGAEastGPTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_PEER_GP_MEAN.csv"
@@ -275,7 +275,7 @@ class HollenbackEtAl2015NGAEastEXTestCase(Boore2015NGAEastA04TestCase):
     MEAN_FILE = "nga_east_median_tables/NGAEast_PEER_EX_MEAN.csv"
 
 
-class HellenbackEtAl2015NGAEastEXTotalSigmaTestCase(
+class HollenbackEtAl2015NGAEastEXTotalSigmaTestCase(
         Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.HollenbackEtAl2015NGAEastEXTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_PEER_EX_MEAN.csv"
