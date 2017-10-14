@@ -76,7 +76,7 @@ class Socket(object):
             end_point = self.end_point.rsplit(':', 1)[0]  # strip port range
             self.zsocket = context.socket(self.socket_type)
             port = self.zsocket.bind_to_random_port(end_point, p1, p2)
-            self.true_end_point = '%s:%d' % (end_point, port)
+            self.port = port
         elif self.mode == 'bind':
             self.zsocket = bind(self.end_point, self.socket_type)
         else:  # connect
@@ -106,7 +106,7 @@ class Socket(object):
                         args = self.zsocket.recv_pyobj()
                     else:
                         continue
-                except (KeyboardInterrupt, zmq.error.ZMQError):
+                except (KeyboardInterrupt, zmq.ZMQError):
                     # sending SIGTERM raises ZMQError
                     break
                 if args[0] == 'stop':
@@ -120,14 +120,14 @@ class Socket(object):
         """
         Send an object to the remote server; block and return the reply
         if the socket type is REQ.
+
+        :param obj:
+            the Python object to send
         """
         self.zsocket.send_pyobj(obj)
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj()
 
-
-if __name__ == '__main__':
-    print('started echo server, pid=%d' % os.getpid())
-    sock = Socket('tcp://127.0.0.1:9000', zmq.REP)
-    for args in sock:  # server for testing purposes
-        sock.send(args)
+    def __repr__(self):
+        return '<%s %s %s %s>' % (self.__class__.__name__, self.end_point,
+                                  SOCKTYPE[self.socket_type], self.mode)

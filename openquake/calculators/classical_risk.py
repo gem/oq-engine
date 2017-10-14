@@ -24,7 +24,7 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, source, calc
+from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 
@@ -48,7 +48,7 @@ def classical_risk(riskinput, riskmodel, param, monitor):
     result = dict(loss_curves=[], stat_curves=[])
     all_outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for outputs in all_outputs:
-        r = outputs.r
+        r = outputs.rlzi
         outputs.average_losses = AccumDict(accum=[])  # l -> array
         for l, (loss_curves, insured_curves) in enumerate(outputs):
             for i, asset in enumerate(outputs.assets):
@@ -70,21 +70,21 @@ def classical_risk(riskinput, riskmodel, param, monitor):
         w = param['weights']
         statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
-        for assets, rows in groupby(
+        for assets, outs in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [w[row.r] for row in rows]
-            row = rows[0]
+            weights = [w[out.rlzi] for out in outs]
+            out = outs[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):
-                    avgs = numpy.array([r.average_losses[l][i] for r in rows])
+                    avgs = numpy.array([r.average_losses[l][i] for r in outs])
                     avg_stats = compute_stats(avgs, stats, weights)
-                    # row is index by the loss type index l and row[l]
+                    # out is index by the loss type index l and out[l]
                     # is a pair loss_curves, insured_loss_curves
                     # loss_curves[i, 0] are the i-th losses,
                     # loss_curves[i, 1] are the i-th poes
-                    losses = row[l][0][i, 0]
+                    losses = out[l][0][i, 0]
                     poes_stats = compute_stats(
-                        numpy.array([row[l][0][i, 1] for row in rows]),
+                        numpy.array([out[l][0][i, 1] for out in outs]),
                         stats, weights)
                     result['stat_curves'].append(
                         (l, asset.ordinal, losses, poes_stats, avg_stats))
@@ -108,31 +108,23 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             raise ValueError(
                 'insured_losses are not supported for classical_risk')
         if 'hazard_curves' in oq.inputs:  # read hazard from file
-            haz_sitecol, haz_curves = readinput.get_hcurves(oq)
+            haz_sitecol, pmap = readinput.get_pmap(oq)
+            self.datastore['poes/grp-00'] = pmap
             self.save_params()
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
             self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-            curves = [haz_curves]
-            self.R = 1  # there is one realization
-            weights = [1]
+            self.before_export()  # save 'realizations' dataset
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             if 'poes' not in self.datastore:  # when building short report
                 return
-            logging.info('Combining the hazard curves')
-            pgetter = calc.PmapGetter(self.datastore)
-            sids = self.sitecol.complete.sids
-            with self.monitor(
-                    'combining hcurves', measuremem=True, autoflush=True):
-                pmaps = pgetter.get_pmaps(sids)
-                curves = [pmap.convert(oq.imtls, len(sids)) for pmap in pmaps]
-            self.R = len(curves)
-            weights = self.datastore['realizations']['weight']
+        weights = self.datastore['realizations']['weight']
+        self.R = len(weights)
         with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs('poe', numpy.array(curves))
+            self.riskinputs = self.build_riskinputs('poe')
         self.param = dict(insured_losses=oq.insured_losses,
                           stats=oq.risk_stats(), weights=weights)
         self.N = len(self.assetcol)

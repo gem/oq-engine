@@ -28,14 +28,15 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib.general import groupby, AccumDict
+from openquake.baselib.general import groupby, AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
-    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import riskmodels, riskinput, read_nrml
+    calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.risklib import asset, riskinput, read_nrml
 from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
@@ -48,6 +49,13 @@ read_nrml.update_validators()
 NORMALIZATION_FACTOR = 1E-2
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
+
+stored_event_dt = numpy.dtype([
+    ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
+    ('ses', U32), ('sample', U32)])
 
 
 class DuplicatedPoint(Exception):
@@ -323,12 +331,25 @@ def get_gsims(oqparam):
     return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
 
 
-def get_rupture(oqparam):
+def get_rlzs_by_gsim(oqparam):
     """
-    Returns a hazardlib rupture by reading the `rupture_model` file.
+    Return an ordered dictionary gsim -> [realization]. Work for
+    gsim logic trees with a single tectonic region type.
+    """
+    cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
+    return cinfo.get_rlzs_assoc().rlzs_by_gsim[0]
+
+
+def get_rupture_sitecol(oqparam, sitecol):
+    """
+    Read the `rupture_model` file and by filter the site collection
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :returns:
+        a pair (EBRupture, FilteredSiteCollection)
     """
     rup_model = oqparam.inputs['rupture_model']
     [rup_node] = nrml.read(rup_model)
@@ -336,7 +357,19 @@ def get_rupture(oqparam):
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    return rup
+    rup.seed = oqparam.random_seed
+    maxdist = oqparam.maximum_distance['default']
+    sc = calc.filters.filter_sites_by_distance_to_rupture(
+        rup, maxdist, sitecol)
+    if sc is None:
+        raise RuntimeError(
+            'All sites were filtered out! maximum_distance=%s km' %
+            maxdist)
+    n = oqparam.number_of_ground_motion_fields
+    events = numpy.zeros(n, stored_event_dt)
+    events['eid'] = numpy.arange(n)
+    ebr = EBRupture(rup, sc.sids, events)
+    return ebr, sc
 
 
 def get_source_model_lt(oqparam):
@@ -609,7 +642,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True)
     deductible_is_absolute = deductible.attrib.get('isAbsolute', True)
     time_events = set()
-    cc = riskmodels.CostCalculator(
+    cc = asset.CostCalculator(
         {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute)
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
@@ -641,7 +674,7 @@ def get_cost_calculator(oqparam):
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
-    :class:`openquake.risklib.riskmodels.Asset` instances.
+    :class:`openquake.risklib.asset.Asset` instances.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -660,55 +693,66 @@ def get_exposure(oqparam):
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
-    for idx, asset in enumerate(assets_node):
+    for idx, asset_node in enumerate(assets_node):
         values = {}
         deductibles = {}
         insurance_limits = {}
         retrofitteds = {}
-        with context(fname, asset):
-            asset_id = asset['id'].encode('utf8')
+        with context(fname, asset_node):
+            asset_id = asset_node['id'].encode('utf8')
             if asset_id in asset_refs:
                 raise read_nrml.DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             exposure.asset_refs.append(asset_id)
-            taxonomy = asset['taxonomy']
+            taxonomy = asset_node['taxonomy']
             if 'damage' in oqparam.calculation_mode:
                 # calculators of 'damage' kind require the 'number'
                 # if it is missing a KeyError is raised
-                number = asset.attrib['number']
+                number = asset_node.attrib['number']
             else:
                 # some calculators ignore the 'number' attribute;
                 # if it is missing it is considered 1, since we are going
                 # to multiply by it
                 try:
-                    number = asset['number']
+                    number = asset_node['number']
                 except KeyError:
                     number = 1
                 else:
                     if 'occupants' in all_cost_types:
                         values['occupants_None'] = number
-            location = asset.location['lon'], asset.location['lat']
+            location = asset_node.location['lon'], asset_node.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
                 continue
-            tagnode = getattr(asset, 'tags', None)
+            tagnode = getattr(asset_node, 'tags', None)
             assets_by_tag = exposure.assets_by_tag
             if tagnode is not None:
-                for tagname, tagvalue in tagnode.attrib.items():
-                    if tagname not in assets_by_tag.tagnames:
-                        with context(fname, tagnode):
-                            raise ValueError(
-                                'Unknown tag %r or <tagNames> not '
-                                'specified in the exposure' % tagname)
-                    valid.nice_string(tagvalue)
-                    assets_by_tag['%s=%s' % (tagname, tagvalue)].append(idx)
+                # fill missing tagvalues with "?" and raise an error for
+                # unknown tagnames
+                with context(fname, tagnode):
+                    dic = tagnode.attrib.copy()
+                    for tagname in assets_by_tag.tagnames:
+                        try:
+                            tagvalue = dic.pop(tagname)
+                        except KeyError:
+                            tagvalue = '?'
+                        else:
+                            if tagvalue in '?*':
+                                raise ValueError(
+                                    'Invalid tagvalue="%s"' % tagvalue)
+                        tag = '%s=%s' % (tagname, tagvalue)
+                        assets_by_tag[tag].append(idx)
+                    if dic:
+                        raise ValueError(
+                            'Unknown tagname %s or <tagNames> not '
+                            'specified in the exposure' % ', '.join(dic))
             exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
-            costs = asset.costs
+            costs = asset_node.costs
         except AttributeError:
             costs = Node('costs', [])
         try:
-            occupancies = asset.occupancies
+            occupancies = asset_node.occupancies
         except AttributeError:
             occupancies = Node('occupancies', [])
         for cost in costs:
@@ -733,7 +777,7 @@ def get_exposure(oqparam):
                 values[cost_type] = None
         elif missing and 'damage' not in oqparam.calculation_mode:
             # missing the costs is okay for damage calculators
-            with context(fname, asset):
+            with context(fname, asset_node):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
@@ -746,11 +790,10 @@ def get_exposure(oqparam):
                 tot_occupants += values[occupants]
         if occupancies:  # store average occupants
             values['occupants_None'] = tot_occupants / len(occupancies)
-        area = float(asset.attrib.get('area', 1))
-        ass = riskmodels.Asset(
-            idx, taxonomy, number, location, values, area,
-            deductibles, insurance_limits, retrofitteds,
-            exposure.cost_calculator)
+        area = float(asset_node.attrib.get('area', 1))
+        ass = asset.Asset(idx, taxonomy, number, location, values, area,
+                          deductibles, insurance_limits, retrofitteds,
+                          exposure.cost_calculator)
         exposure.assets.append(ass)
     if region:
         logging.info('Read %d assets within the region_constraint '
@@ -787,7 +830,7 @@ def get_sitecol_assetcol(oqparam, exposure):
     for lonlat in zip(sitecol.lons, sitecol.lats):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
-    assetcol = riskinput.AssetCollection(
+    assetcol = asset.AssetCollection(
         assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
@@ -843,7 +886,7 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, eids, gmf array of shape (G, N, E, I)
+        sitecol, eids, gmf array of shape (R, N, E, I)
     """
     I = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
@@ -859,8 +902,8 @@ def get_gmfs(oqparam):
         assert len(eids) == oqparam.number_of_ground_motion_fields, (
             len(eids), oqparam.number_of_ground_motion_fields)
         eidx = {eid: e for e, eid in enumerate(eids)}
-        sids = numpy.unique(array['sid'])
-        gmfs = numpy.zeros((R, len(sids), len(eids), I), F32)
+        N = len(get_site_collection(oqparam))
+        gmfs = numpy.zeros((R, N, len(eids), I), F32)
         for row in array.view(dtlist):
             gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
     elif fname.endswith('.xml'):
@@ -874,23 +917,24 @@ def get_gmfs(oqparam):
     return eids, gmfs
 
 
-def get_hcurves(oqparam):
+def get_pmap(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, imtls, curve array
+        sitecol, probability map
     """
     fname = oqparam.inputs['hazard_curves']
     if fname.endswith('.csv'):
-        return get_hcurves_from_csv(oqparam, fname)
+        return get_pmap_from_csv(oqparam, fname)
     elif fname.endswith('.xml'):
-        return get_hcurves_from_nrml(oqparam, fname)
+        return get_pmap_from_nrml(oqparam, fname)
     else:
         raise NotImplementedError('Reading from %s' % fname)
 
 
-def get_hcurves_from_csv(oqparam, fname):
+@deprecated('Reading hazard curves from CSV may change in the future')
+def get_pmap_from_csv(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -906,17 +950,17 @@ def get_hcurves_from_csv(oqparam, fname):
                          % oqparam.inputs['job_ini'])
     num_values = list(map(len, list(oqparam.imtls.values())))
     with open(oqparam.inputs['hazard_curves']) as csvfile:
-        mesh, hcurves_by_imt = get_mesh_csvdata(
+        mesh, hcurves = get_mesh_csvdata(
             csvfile, list(oqparam.imtls), num_values,
             valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
-    curves = zero_curves(len(mesh), oqparam.imtls)
-    for imt_ in oqparam.imtls:
-        curves[imt_] = hcurves_by_imt[imt_]
-    return sitecol, curves
+    array = numpy.zeros((len(sitecol), sum(num_values)))
+    for imt_ in hcurves:
+        array[:, oqparam.imtls.slicedic[imt_]] = hcurves[imt_]
+    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 
-def get_hcurves_from_nrml(oqparam, fname):
+def get_pmap_from_nrml(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -935,17 +979,18 @@ def get_hcurves_from_nrml(oqparam, fname):
         imtls[imt] = ~hcurves.IMLs
         data = sorted((~node.Point.pos, ~node.poEs) for node in hcurves[1:])
         hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
-    n = len(hcurves_by_imt[imt])
-    curves = zero_curves(n, imtls)
-    for imt in imtls:
-        curves[imt] = hcurves_by_imt[imt]
     lons, lats = [], []
     for xy, poes in data:
         lons.append(xy[0])
         lats.append(xy[1])
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, curves
+    num_levels = sum(len(v) for v in imtls.values())
+    array = numpy.zeros((len(sitecol), num_levels))
+    imtls = DictArray(imtls)
+    for imt_ in hcurves_by_imt:
+        array[:, imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
+    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 
 # used in get_scenario_from_nrml

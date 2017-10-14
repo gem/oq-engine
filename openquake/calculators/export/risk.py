@@ -57,19 +57,6 @@ def get_rup_data(ebruptures):
         dic[ebr.serial] = (ebr.rupture.mag, point.x, point.y, point.z)
     return dic
 
-
-def copy_to(elt, rup_data, rup_ids):
-    """
-    Copy information from the ruptures into the elt array for
-    the given rupture serials.
-    """
-    assert len(elt) == len(rup_ids), (len(elt), len(rup_ids))
-    for i, serial in numpy.ndenumerate(rup_ids):
-        rec = elt[i]
-        rec['rup_id'] = serial
-        (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
-         rec['centroid_depth']) = rup_data[serial]
-
 # ############################### exporters ############################## #
 
 
@@ -214,77 +201,47 @@ def export_agg_losses_ebr(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    L = len(loss_types)
     name, ext = export.keyfunc(ekey)
-    agg_losses = group_array(dstore[name], 'rlzi')
+    agg_losses = dstore[name]
     has_rup_data = 'ruptures' in dstore
     extra_list = [('magnitude', F32),
                   ('centroid_lon', F32),
                   ('centroid_lat', F32),
                   ('centroid_depth', F32)] if has_rup_data else []
     oq = dstore['oqparam']
-    dtlist = ([('event_id', U64), ('rup_id', U32), ('year', U32)] +
-              extra_list + oq.loss_dt_list())
+    lti = oq.lti
+    dtlist = ([('event_id', U64), ('rup_id', U32), ('year', U32),
+               ('rlzi', U16)] + extra_list + oq.loss_dt_list())
     elt_dt = numpy.dtype(dtlist)
-    csm_info = dstore['csm_info']
-    rlzs_assoc = csm_info.get_rlzs_assoc()
+    elt = numpy.zeros(len(agg_losses), elt_dt)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for sm_id, rlzs in rlzs_assoc.rlzs_by_smodel.items():
-        # populate rup_data and event_by_eid
-        rup_data = {}
-        event_by_grp = {}  # grp_id -> eid -> event
-        for grp_id in csm_info.get_grp_ids(sm_id):
-            event_by_grp[grp_id] = event_by_eid = {}
-            try:
-                events = dstore['events/grp-%02d' % grp_id]
-            except KeyError:
-                continue
-            for event in events:
-                event_by_eid[event['eid']] = event
-            if has_rup_data:
-                rup_data.update(
-                    get_rup_data(calc.get_ruptures(dstore, grp_id)))
-
-        for rlz in rlzs:
-            rlzi = rlz.ordinal
-            if rlzi not in agg_losses:
-                continue
-            data = agg_losses[rlzi]
-            eids = data['eid']
-            losses = data['loss']
-            eids_, years, serials = get_eids_years_serials(event_by_grp, eids)
-            elt = numpy.zeros(len(eids), elt_dt)
-            elt['event_id'] = eids_
-            elt['year'] = years
-            if rup_data:
-                copy_to(elt, rup_data, serials)
-            for i, ins in enumerate(
-                    ['', '_ins'] if oq.insured_losses else ['']):
-                for l, loss_type in enumerate(loss_types):
-                    elt[loss_type + ins][:] = losses[:, l + L * i]
-            elt.sort(order=['year', 'event_id'])
-            dest = dstore.build_fname('agg_losses', rlz, 'csv')
-            writer.save(elt, dest)
+    the_events = dstore['events'].value
+    all_events = group_array(the_events, 'grp_id')
+    rup_data = {}
+    event_by_eid = {}  # eid -> event
+    # populate rup_data and event_by_eid
+    for grp_id, events in all_events.items():
+        for event in events:
+            event_by_eid[event['eid']] = event
+        if has_rup_data:
+            ruptures = calc.get_ruptures(dstore, the_events, grp_id)
+            rup_data.update(get_rup_data(ruptures))
+    for i, row in enumerate(agg_losses):
+        rec = elt[i]
+        event = event_by_eid[row['eid']]
+        rec['event_id'] = event['eid']
+        rec['year'] = event['year']
+        rec['rlzi'] = row['rlzi']
+        if rup_data:
+            rec['rup_id'] = rup_id = event['rup_id']
+            (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
+             rec['centroid_depth']) = rup_data[rup_id]
+        for lt, i in lti.items():
+            rec[lt] = row['loss'][i]
+    elt.sort(order=['year', 'event_id', 'rlzi'])
+    dest = dstore.build_fname('agg_losses', 'all', 'csv')
+    writer.save(elt, dest)
     return writer.getsaved()
-
-
-def get_eids_years_serials(events_by_grp, eids):
-    eids_ok = []
-    years = []
-    serials = []
-    for eid in eids:
-        for grp_id, event_by_eid in events_by_grp.items():
-            try:
-                event = event_by_eid[eid]
-            except KeyError:
-                continue
-            else:
-                eids_ok.append(event['eid'])
-                years.append(event['year'])
-                serials.append(event['rup_id'])
-                break
-    return numpy.array(eids_ok), numpy.array(years), numpy.array(serials)
 
 
 # this is used by classical_risk and event_based_risk

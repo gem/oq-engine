@@ -23,17 +23,14 @@ import importlib
 
 from openquake.baselib import sap
 from openquake.commonlib import __version__
-from openquake import commands, engine
+from openquake import commands
 from openquake.baselib import config
 
-USE_CELERY = config.distribution.oq_distribute == 'celery'
-
-# the environment variable has the precedence over the configuration file
-if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
-    os.environ['OQ_DISTRIBUTE'] = 'celery'
+if 'OQ_DISTRIBUTE' not in os.environ:
+    os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
 # force cluster users to use `oq engine` so that we have centralized logs
-if USE_CELERY and 'run' in sys.argv:
+if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
     sys.exit('You are on a cluster and you are using oq run?? '
              'Use oq engine --run instead!')
 
