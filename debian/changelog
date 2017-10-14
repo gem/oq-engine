@@ -3,7 +3,53 @@
     subduction interface and subduction slab events
   * Adds 'rvolc' (volcanic path distance) to the distance context
 
+  [Daniele Viganò]
+  * Added support for groups in the WebUI/API server
+
   [Michele Simionato]
+  * Added an experimental distribution mode of kind "zmq"
+  * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1&...`
+    with the ability to select all tagvalues (`*`) for a given tagname
+  * Deprecated reading hazard curves from CSV, since it was an experimental
+    features and nobody is using it
+  * Changed the exporter of the event loss table to export all realizations
+   into a single file
+
+  [Graeme Weatherill]
+  * Adds the Bindi et al. (2017) GMPEs for Joyner-Boore and Hypocentral
+    Distance
+
+  [Michele Simionato]
+  * Made it mandatory to specify the sites for all calculators reading the
+    GMFs from a CSV file
+  * Tested also the case of calculators requiring a shared_dir
+  * Improved the error checking when parsing vulnerability functions with PMF
+
+  [Daniele Viganò]
+  * Fixed a bug in `oq reset` command which was not stopping
+    the DbServer properly
+>>>>>>> master
+
+  [Michele Simionato]
+  * Implemented an API `/extract/aggcurves/loss_type?tagname1=tagvalue1&...`
+  * Implemented an API `/extract/aggdamages/loss_type?tagname1=tagvalue1&...`
+  * Every time a new calculation starts, we check if there is a newer version
+    of the engine available on GitHub
+  * Changed the search logic for the configuration file `openquake.cfg`
+  * Implemented an API `/extract/agglosses/loss_type?tagname1=tagvalue1&...`
+  * Fixed several bugs in the gmf_ebrisk calculator, in particular in presence
+    of asset correlation and missing values on some sites
+  * Fixed a bug with logging configured a WARN level instead of INFO level
+    if rtree was missing (affecting only `oq run`)
+  * Changed the ScenarioDamage demo to use two GSIMs
+  * Added a node `<tagNames>` in the exposure
+  * Added a web API to extract the attributes of a datastore object
+  * Fixed `oq to_shapefile` and `oq from_shapefile` to work with NRML 0.5
+    (except MultiPointSources)
+  * Added information about the loss units to the `agg_curve` outputs
+  * `oq extract hazard/rlzs` now extracts one realization at the time
+  * The rupture filtering is now applied during disaggregation
+  * Changed the /extract wen API to return a compressed .npz file
   * Fixed a bug with multi-realization disaggregation, celery and no
     shared_dir: now the calculation does not hang anymore
 

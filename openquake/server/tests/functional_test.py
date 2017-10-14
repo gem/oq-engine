@@ -21,6 +21,7 @@ Here there are some real functional tests starting an engine server and
 running computations.
 """
 from __future__ import print_function
+import io
 import os
 import re
 import sys
@@ -82,10 +83,10 @@ class EngineServerTestCase(unittest.TestCase):
     def wait(cls):
         # wait until all calculations stop
         while True:
+            time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 break
-            time.sleep(1)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
@@ -156,13 +157,26 @@ class EngineServerTestCase(unittest.TestCase):
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
 
+        extract_url = 'http://%s/v1/calc/%s/extract/' % (self.hostport, job_id)
+
+        # check extract/composite_risk_model.attrs
+        url = extract_url + 'composite_risk_model.attrs'
+        self.assertEqual(requests.get(url).status_code, 200)
+
         # check asset_values
-        url = 'http://%s/v1/calc/%s/extract/asset_values/0' % (
-            self.hostport, job_id)
-        resp = requests.get(url)
-        got = numpy.loads(resp.content)
-        self.assertEqual(len(got), 0)  # there are 0 assets on site 0
+        resp = requests.get(extract_url + 'asset_values/0')
+        got = numpy.load(io.BytesIO(resp.content))  # load npz file
+        self.assertEqual(len(got['array']), 0)  # there are 0 assets on site 0
         self.assertEqual(resp.status_code, 200)
+
+        # check avg_losses-rlzs
+        resp = requests.get(
+            extract_url + 'agglosses/structural?taxonomy=W-SLFB-1')
+        got = numpy.load(io.BytesIO(resp.content))  # load npz file
+        self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
+        self.assertEqual(resp.status_code, 200)
+
+        # TODO: check aggcurves
 
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
@@ -195,7 +209,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp['calculation_mode'], 'classical')
 
         # check the /extract endpoint
-        url = 'http://%s/v1/calc/%s/extract/sitecol' % (self.hostport, job_id)
+        url = 'http://%s/v1/calc/%s/extract/hazard/rlzs' % (
+            self.hostport, job_id)
         resp = requests.get(url)
         self.assertEqual(resp.status_code, 200)
 

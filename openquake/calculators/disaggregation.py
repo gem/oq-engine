@@ -28,6 +28,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.baselib import parallel
 from openquake.hazardlib import sourceconverter
 from openquake.commonlib import calc
@@ -82,9 +83,10 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
 
         # generate source, rupture, sites once per site
         with collecting_mon:
+            cmaker = ContextMaker(gsims, src_filter.integration_distance)
             bdata = disagg._collect_bins_data(
                 trt_num, sources, site, curves_dict[sid],
-                src_group_id, rlzs_by_gsim, gsims, oqparam.imtls,
+                src_group_id, rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor)
@@ -176,9 +178,11 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
 
         self.bin_edges = {}
         curves_dict = {sid: self.get_curves(sid) for sid in sitecol.sids}
+        # determine the number of effective source groups
+        sg_data = self.datastore['csm_info/sg_data']
+        num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
+        nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         all_args = []
-        num_trts = sum(len(sm.src_groups) for sm in self.csm.source_models)
-        nblocks = math.ceil(oq.concurrent_tasks / num_trts)
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
             trt_names = tuple(mod.trt for mod in smodel.src_groups)
@@ -190,7 +194,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
             for src_group in smodel.src_groups:
-                if src_group.id not in self.rlzs_assoc.gsims_by_grp_id:
+                if src_group.id not in self.rlzs_assoc.rlzs_by_gsim:
                     continue  # the group has been filtered away
                 for sid, site in zip(sitecol.sids, sitecol):
                     curves = curves_dict[sid]
