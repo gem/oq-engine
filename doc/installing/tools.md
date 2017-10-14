@@ -22,16 +22,6 @@ pip install -e oq-platform-taxtweb
 pip install -e oq-platform-taxonomy
 ```
 
-## Update Engine server settings
-
-In `openquake/server/`
-
-```bash
-cp local_settings.py.standalone local_settings.py
-```
-
-Or merge `local_settings.py.standalone` with any existing `local_settings.py`.
-
 ## Start the server
 
 ```bash

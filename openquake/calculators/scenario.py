@@ -18,7 +18,6 @@
 import collections
 import numpy
 
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
@@ -39,31 +38,14 @@ class ScenarioCalculator(base.HazardCalculator):
         oq = self.oqparam
         trunc_level = oq.truncation_level
         correl_model = oq.get_correl_model()
-        rup = readinput.get_rupture(oq)
-        rup.seed = self.oqparam.random_seed
+        ebr, self.sitecol = readinput.get_rupture_sitecol(oq, self.sitecol)
         self.gsims = readinput.get_gsims(oq)
-        maxdist = oq.maximum_distance['default']
-        with self.monitor('filtering sites', autoflush=True):
-            self.sitecol = filters.filter_sites_by_distance_to_rupture(
-                rup, maxdist, self.sitecol)
-        if self.sitecol is None:
-            raise RuntimeError(
-                'All sites were filtered out! maximum_distance=%s km' %
-                maxdist)
-        # eid, ses, occ, sample
-        events = numpy.zeros(oq.number_of_ground_motion_fields,
-                             calc.stored_event_dt)
-        events['eid'] = numpy.arange(oq.number_of_ground_motion_fields)
-        self.datastore['events/grp-00'] = events
-        rupture = calc.EBRupture(rup, self.sitecol.sids, events, 0, 0)
-        rupture.sidx = 0
-        rupture.eidx1 = 0
-        rupture.eidx2 = len(events)
+        self.datastore['events'] = ebr.events
         rupser = calc.RuptureSerializer(self.datastore)
-        rupser.save([rupture], 0)
+        rupser.save([ebr])
         rupser.close()
         self.computer = GmfComputer(
-            rupture, self.sitecol, oq.imtls, self.gsims,
+            ebr, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
         gsim_lt = readinput.get_gsim_lt(oq)
         cinfo = source.CompositionInfo.fake(gsim_lt)
@@ -87,6 +69,6 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         with self.monitor('saving gmfs', autoflush=True):
-            self.datastore['gmf_data/data'] = base.get_gmv_data(
-                self.sitecol.sids, numpy.array(list(self.gmfa.values())))
-            self.datastore.set_nbytes('gmf_data')
+            base.save_gmf_data(
+                self.datastore, self.sitecol,
+                numpy.array(list(self.gmfa.values())))

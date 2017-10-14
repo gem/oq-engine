@@ -44,7 +44,7 @@ def classical_damage(riskinput, riskmodel, param, monitor):
         for outputs in riskmodel.gen_outputs(riskinput, monitor):
             for l, out in enumerate(outputs):
                 ordinals = [a.ordinal for a in outputs.assets]
-                result[outputs.r] += dict(zip(ordinals, out))
+                result[outputs.rlzi] += dict(zip(ordinals, out))
     return result
 
 
@@ -54,18 +54,6 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     Scenario damage calculator
     """
     core_task = classical_damage
-
-    def check_poes(self, curves_by_rlz):
-        """
-        Raise an error if one PoE = 1, since it would produce a log(0) in
-        :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`
-        """
-        for curves in curves_by_rlz:
-            for imt in self.oqparam.imtls:
-                for sid, poes in enumerate(curves[imt]):
-                    if (poes == 1).any():
-                        raise ValueError('Found a PoE=1 for site_id=%d, %s'
-                                         % (sid, imt))
 
     def post_execute(self, result):
         """
