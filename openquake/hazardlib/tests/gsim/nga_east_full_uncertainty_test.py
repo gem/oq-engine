@@ -595,7 +595,7 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
 
     def test_all_nga_east_uncertainty(self):
         """
-        Tests every permuration of NGA East aleatory uncerainty model.
+        Tests every permuration of NGA East aleatory uncertainty model.
         NGA_EAST_SIGMA_FILES describes each uncertainty model, with each
         permutation defining separate tests of inter-event, intra-event and
         total standard deviation
