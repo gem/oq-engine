@@ -130,6 +130,9 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
+        # check the right number of events was stored
+        self.assertEqual(len(self.calc.datastore['events']), 90)
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
 

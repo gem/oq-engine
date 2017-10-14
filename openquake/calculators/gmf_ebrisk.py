@@ -19,7 +19,7 @@
 import logging
 import numpy
 
-from openquake.commonlib import calc
+from openquake.commonlib import readinput
 from openquake.calculators import base, event_based_risk as ebr
 
 U16 = numpy.uint16
@@ -52,9 +52,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         else:
             logging.info('Building the epsilons')
             eps = self.make_eps(self.E)
-        eids, gmfs = base.get_gmfs(self)  # shape (G, N, E, I)
+        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
         self.R = len(gmfs)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps, eids)
+        self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
@@ -73,9 +73,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
 
         events = numpy.zeros(oq.number_of_ground_motion_fields,
-                             calc.stored_event_dt)
+                             readinput.stored_event_dt)
         events['eid'] = eids
-        self.datastore['events/grp-00'] = events
+        self.datastore['events'] = events
 
     def post_execute(self, result):
         pass
