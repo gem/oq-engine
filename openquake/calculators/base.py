@@ -348,8 +348,9 @@ class HazardCalculator(BaseCalculator):
         for assets in self.assetcol.assets_by_site():
             if len(assets):
                 lon, lat = assets[0].location
-                site, min_dist = siteobjects.get_closest(lon, lat)
-                if min_dist <= asset_hazard_distance:
+                site, distance = siteobjects.get_closest(lon, lat)
+                if distance <= asset_hazard_distance:
+                    # keep the assets, otherwise discard them
                     assets_by_sid += {site.sid: list(assets)}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
