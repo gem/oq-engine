@@ -354,7 +354,7 @@ class HazardCalculator(BaseCalculator):
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associate any site to any assets within the '
-                'maximum distance of %s km' % asset_hazard_distance)
+                'asset_hazard_distance of %s km' % asset_hazard_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
