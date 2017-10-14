@@ -156,7 +156,8 @@ class ZhaoEtAl2016Asc(GMPE):
 
     def add_site_amplification(self, C, C_SITE, sites, sa_rock, idx, rup):
         """
-        Applies the site amplification scaling defined in equations
+        Applies the site amplification scaling defined in equations from 10
+        to 15
         """
         n_sites = sites.vs30.shape
         # Convert from reference rock to hard rock

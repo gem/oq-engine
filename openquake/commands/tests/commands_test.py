@@ -77,7 +77,7 @@ attribute       nbytes
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, path)
+            info(None, None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -85,22 +85,27 @@ attribute       nbytes
 
     def test_calculators(self):
         with Print.patch() as p:
-            info(True, None, None, None, None, '')
+            info(True, None, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info(None, True, None, None, None, '')
+            info(None, True, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_views(self):
         with Print.patch() as p:
-            info(None, None, True, None, None, '')
+            info(None, None, True, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info(None, None, None, True, None, '')
+            info(None, None, None, True, None, None, '')
+        self.assertGreater(len(str(p)), 10)
+
+    def test_extracts(self):
+        with Print.patch() as p:
+            info(None, None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
 
     # NB: info --report is tested in the packager
@@ -302,10 +307,19 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         self.assertIn('Edges points are not in the right order',
                       str(ctx.exception))
 
-    def test_roundtrip_valid(self):
-        # test the conversion to shapefile and back for a valid file
+    def test_roundtrip_valid_04(self):
+        # test the conversion to shapefile and back for a valid file NRML 0.4
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model.xml")
+        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        shpfiles = [os.path.join(self.OUTDIR, f)
+                    for f in os.listdir(self.OUTDIR)]
+        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+
+    def test_roundtrip_valid_05(self):
+        # test the conversion to shapefile and back for a valid file NRML 0.5
+        ssm = os.path.join(os.path.dirname(__file__),
+                           "data", "sample_source_model_05.xml")
         to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
