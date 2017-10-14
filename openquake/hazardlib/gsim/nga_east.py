@@ -62,14 +62,14 @@ Module exports :class:`NGAEastBaseGMPE`,
                :class:`HollenbackEtAl2015NGAEastEXTotalSigma`
 """
 from __future__ import division
-
+import os
 import h5py
 import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gsim_table import GMPETable, hdf_arrays_to_dict
-from openquake.hazardlib.imt import PGV, PGA, SA
+from openquake.hazardlib.imt import PGV
 from openquake.hazardlib import const
 
 # Common interpolation function
@@ -81,7 +81,7 @@ def _scaling(mean_tau, sd_tau2):
     Returns the chi-2 scaling factor from the mean and variance of the
     uncertainty model, as reported in equation 5.4 of Al Atik (2015)
     """
-    return (sd_tau2 ** 2.) / (2.0 * mean_tau ** 2.) 
+    return (sd_tau2 ** 2.) / (2.0 * mean_tau ** 2.)
 
 
 def _dof(mean_tau, sd_tau2):
@@ -115,7 +115,7 @@ GLOBAL_TAU_MEAN = {
 # Standard deviation of tau values from the global model - Table 5.1
 GLOBAL_TAU_SD = {
     "PGV": {"tau1": 0.0558, "tau2": 0.0554, "tau3": 0.0477, "tau4": 0.0449},
-    "SA": {"tau1": 0.0671, "tau2": 0.0688, "tau3": 0.0661, "tau4": 0.0491} 
+    "SA": {"tau1": 0.0671, "tau2": 0.0688, "tau3": 0.0661, "tau4": 0.0491}
 }
 
 
@@ -124,21 +124,21 @@ CENA_CONSTANT_TAU_MEAN = {"PGV": {"tau": 0.3441}, "SA": {"tau": 0.3695}}
 
 
 # Standard deviation of tau values from CENA constant-tau model
-CENA_CONSTANT_TAU_SD = {"PGV": {"tau": 0.0554}, "SA": {"tau":0.0688}}
+CENA_CONSTANT_TAU_SD = {"PGV": {"tau": 0.0554}, "SA": {"tau": 0.0688}}
 
 
 # Mean tau values from the CENA tau model
 CENA_TAU_MEAN = {
-    "PGV": {"tau1": 0.3477, "tau2": 0.3281, "tau3":0.3092},
-    "SA": {"tau1": 0.3730, "tau2": 0.3375, "tau3": 0.3064} 
-}
+    "PGV": {"tau1": 0.3477, "tau2": 0.3281, "tau3": 0.3092},
+    "SA": {"tau1": 0.3730, "tau2": 0.3375, "tau3": 0.3064}
+    }
 
 
 # Standard deviation of tau values from the CENA tau model
 CENA_TAU_SD = {
-    "PGV": {"tau1": 0.0554, "tau2": 0.0477, "tau3":0.0449},
-    "SA": {"tau1": 0.0688, "tau2": 0.0661, "tau3": 0.0491} 
-}
+    "PGV": {"tau1": 0.0554, "tau2": 0.0477, "tau3": 0.0449},
+    "SA": {"tau1": 0.0688, "tau2": 0.0661, "tau3": 0.0491}
+    }
 
 
 def global_tau(imt, mag, params):
@@ -448,9 +448,9 @@ class NGAEastBaseGMPE(GMPETable):
         :param float phi_s2ss_quantile:
             Epistemic uncertainty quantile for the site-to-site standard
             deviation models. Float in the range 0 to 1, or None (mean value
-            used)            
+            used)
         """
-        super(NGAEastGMPE, self).__init__(gmpe_table=gmpe_table)
+        super(NGAEastBaseGMPE, self).__init__(gmpe_table=gmpe_table)
         self.tau_model = tau_model
         self.phi_model = phi_model
         self.phi_s2ss_model = phi_s2ss_model
@@ -516,7 +516,7 @@ class NGAEastBaseGMPE(GMPETable):
         # Return Distance Tables
         imls = self._return_tables(rctx.mag, imt, "IMLs")
         # Get distance vector for the given magnitude
-        idx = numpy.searchsorted(self.m_w, rctx.mag)
+        idx = np.searchsorted(self.m_w, rctx.mag)
         dists = self.distances[:, 0, idx - 1]
         # Get mean and standard deviations
         mean = self._get_mean(imls, dctx, dists)
@@ -530,12 +530,12 @@ class NGAEastBaseGMPE(GMPETable):
                 rctx,
                 getattr(dctx, self.distance_type),
                 stddev_types)
-            mean = numpy.log(mean) + numpy.log(mean_amp)
+            mean = np.log(mean) + np.log(mean_amp)
             for iloc in range(len(stddev_types)):
                 stddevs[iloc] *= sigma_amp[iloc]
             return mean, stddevs
         else:
-            return numpy.log(mean), stddevs
+            return np.log(mean), stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
@@ -551,7 +551,7 @@ class NGAEastBaseGMPE(GMPETable):
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites)) 
+                stddevs.append(phi + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(tau + np.zeros(num_sites))
         return stddevs
@@ -571,7 +571,7 @@ class NGAEastBaseGMPE(GMPETable):
             C = self.PHI_S2SS[imt]
             phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
         return phi
-                      
+
 
 # For the total standard deviation model the magnitude boundaries depend on
 # the model selected
@@ -604,8 +604,7 @@ class NGAEastGMPE(NGAEastBaseGMPE):
             phi_s2ss_quantile=phi_s2ss_quantile)
 
 
-
-class NGAEastBaseGMPETotalSigma(NGAEastGMPE):
+class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
     """
     The Al Atik (2015) standard deviation model defines mean and quantiles
     for the inter- and intra-event residuals. However, it also defines
@@ -642,7 +641,7 @@ class NGAEastBaseGMPETotalSigma(NGAEastGMPE):
             standard deviation. Should be float between 0 and 1, or None (mean
             value taken)
         """
-        super(NGAEastGMPETotalSigma, self).__init__(gmpe_table=gmpe_table,
+        super(NGAEastBaseGMPETotalSigma, self).__init__(gmpe_table=gmpe_table,
             tau_model=tau_model, phi_model=phi_model,
             phi_s2ss_model=phi_s2ss_model, tau_quantile=None,
             phi_ss_quantile=None, phi_s2ss_quantile=None)
@@ -677,7 +676,13 @@ class NGAEastBaseGMPETotalSigma(NGAEastGMPE):
         for key in phi_std:
             phi_std[key] = {"a": PHI_SETUP[self.phi_model][key]["var_a"],
                             "b": PHI_SETUP[self.phi_model][key]["var_b"]}
-        imt_list = phi_std.keys()
+        if self.ergodic:
+            # IMT list should be taken from the PHI_S2SS_MODEL
+            imt_list = \
+                PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs.keys() +\
+                PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs.keys()
+        else:
+            imt_list = phi_std.keys()
         phi_std = CoeffsTable(sa_damping=5, table=phi_std)
         tau_bar, tau_std = self._get_tau_vector(self.TAU, tau_std, imt_list)
         phi_bar, phi_std = self._get_phi_vector(self.PHI_SS, phi_std, imt_list)
@@ -728,6 +733,7 @@ class NGAEastBaseGMPETotalSigma(NGAEastGMPE):
         """
         p_bar = {}
         p_std = {}
+
         for imt in imt_list:
             p_bar[imt] = []
             p_std[imt] = []
@@ -742,7 +748,7 @@ class NGAEastBaseGMPETotalSigma(NGAEastGMPE):
                         PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["mean"] ** 2.
                         )
                     phi_ss_std = np.sqrt(
-                        phi_ss_mean ** 2. +
+                        phi_ss_std ** 2. +
                         PHI_S2SS_MODEL[self.phi_s2ss_model][imt]["var"] ** 2.
                         )
                 p_bar[imt].append(phi_ss_mean)
@@ -767,8 +773,8 @@ class NGAEastBaseGMPETotalSigma(NGAEastGMPE):
                 u_m = self.magnitude_limits[i + 1]
                 if mag > l_m and mag <= u_m:
                     return ITPL(mag,
-                                C[self.tau_keys[i]],
                                 C[self.tau_keys[i + 1]],
+                                C[self.tau_keys[i]],
                                 l_m,
                                 u_m - l_m)
 
@@ -784,6 +790,7 @@ class NGAEastGMPETotalSigma(NGAEastBaseGMPETotalSigma):
     def __init__(self, tau_model="global", phi_model="global",
                  phi_s2ss_model=None, sigma_quantile=None):
         """
+        Instantiates the GMPE without the hdf5 table fort the median values
         """
         if not self.NGA_EAST_TABLE:
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
@@ -798,7 +805,9 @@ class NGAEastGMPETotalSigma(NGAEastBaseGMPETotalSigma):
 # /////////////////////////////////////////////////////////////////////////////
 BASE_PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
 
+
 # Boore (2015) suite
+
 
 class Boore2015NGAEastA04(NGAEastGMPE):
     """
@@ -994,6 +1003,7 @@ class DarraghEtAl2015NGAEast2CVSPTotalSigma(NGAEastGMPETotalSigma):
 
 # Yenier & Atkinson (2015)
 
+
 class YenierAtkinson2015NGAEast(NGAEastGMPE):
     """
     NGA East Model of Yenier & Atkinson (2015)
@@ -1005,6 +1015,7 @@ class YenierAtkinson2015NGAEast(NGAEastGMPE):
     NGA_EAST_TABLE = os.path.join(BASE_PATH,
                                   "NGAEast_YENIER_ATKINSON.hdf5")
 
+
 class YenierAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
     """
     NGA East Model of Yenier & Atkinson (2015) for use with the total sigma
@@ -1015,6 +1026,7 @@ class YenierAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
 
 
 # Pezeschk et al. (2015)
+
 
 class PezeschkEtAl2015NGAEastM1SS(NGAEastGMPE):
     """
@@ -1055,6 +1067,7 @@ class PezeschkEtAl2015NGAEastM2ESTotalSigma(NGAEastGMPETotalSigma):
 
 # Frankel (2015)
 
+
 class Frankel2015NGAEast(NGAEastGMPE):
     """
     NGA East Model of Frankel (2015) for application to Central & Eastern
@@ -1077,6 +1090,7 @@ class Frankel2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
                                   "NGAEast_FRANKEL_J15.hdf5")
 
 # Shahjouei & Pezeschk (2015)
+
 
 class ShahjoueiPezeschk2015NGAEast(NGAEastGMPE):
     """
@@ -1102,6 +1116,7 @@ class ShahjoueiPezeschk2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
 
 # Al Noman and Cramer (2015)
 
+
 class AlNomanCramer2015NGAEast(NGAEastGMPE):
     """
     NGA East Model of Al Noman & Cramer (2015) for application to Central &
@@ -1124,6 +1139,7 @@ class AlNomanCramer2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
                                   "NGAEast_ALNOMAN_CRAMER.hdf5")
 
 # Graizer (2015)
+
 
 class Graizer2015NGAEast(NGAEastGMPE):
     """
@@ -1148,6 +1164,7 @@ class Graizer2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
 
 # Hassani & Atkinson (2015)
 
+
 class HassaniAtkinson2015NGAEast(NGAEastGMPE):
     """
     NGA East Model of Hassani & Atkinson (2015) for application to Central &
@@ -1170,6 +1187,7 @@ class HassaniAtkinson2015NGAEastTotalSigma(NGAEastGMPETotalSigma):
                                   "NGAEast_HASSANI_ATKINSON.hdf5")
 
 # Hollenback et al. (2015)
+
 
 class HollenbackEtAl2015NGAEastGP(NGAEastGMPE):
     """
