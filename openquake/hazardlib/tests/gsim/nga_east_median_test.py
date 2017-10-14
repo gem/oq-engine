@@ -16,46 +16,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Test suite for NGA East GMPEs median value with pre-defined tables
+Test suite for NGA East GMPEs median value with pre-defined tables.
+
+The median values are taken from Excel tables supplied as an electronic
+appendix to:
+
+PEER (2015) "NGA-East: Adjustments to Median Ground-Motion Models for Central
+and Eastern North America", Pacific Earthquake Engineering Research Center,
+Report Number 2015/08, University of California, Berkeley, August 2015
 """
 
-import os
-import unittest
-import numpy as np
-import nga_east_base_v3 as neb
+import openquake.hazardlib.gsim.nga_east as neb
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
-    """
-    Modification of BaseGSIMTestCase to allow for the GSIM_CLASS attibute to
-    be defined as an instantiated GSIM class
-    """
-    def check(self, filename, max_discrep_percentage):
-        # gsim = self.GSIM_CLASS()
-        filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
-            self.GSIM_CLASS.__class__, open(filename), max_discrep_percentage)
-        s_att = self.get_context_attributes(sctx)
-        r_att = self.get_context_attributes(rctx)
-        d_att = self.get_context_attributes(dctx)
-        self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
-        self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
-        self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
-        self.assertTrue(
-            numpy.all(ctxs),
-            msg='Contexts objects have been changed by method '
-                'get_mean_and_stddevs')
-        if errors:
-            raise AssertionError(stats)
-        print()
-        print(stats)
-
-
 # A discrepancy of 0.1 % is tolerated
-MAX_DISC = 0.1 
+MAX_DISC = 0.1
+
 
 # Boore (2015)
+
 
 class Boore2015NGAEastA04TestCase(BaseGSIMTestCase):
     GSIM_CLASS = neb.Boore2015NGAEastA04
@@ -74,7 +54,7 @@ class Boore2015NGAEastA04TotalSigmaTestCase(Boore2015NGAEastA04TestCase):
 class Boore2015NGAEastAB14TestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.Boore2015NGAEastAB14
     MEAN_FILE = "nga_east_median_tables/NGAEast_BOORE_AB14_J15_MEAN.csv"
-    
+
 
 class Boore2015NGAEastAB14TotalSigmaTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.Boore2015NGAEastAB14TotalSigma
@@ -120,7 +100,9 @@ class Boore2015NGAEastSGD02TotalSigmaTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.Boore2015NGAEastSGD02TotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_BOORE_SGD02_J15_MEAN.csv"
 
+
 # Darragh et al. (2015)
+
 
 class DarraghEtAl2015NGAEast1CCSPTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.DarraghEtAl2015NGAEast1CCSP
@@ -165,7 +147,9 @@ class DarraghEtAl2015NGAEast2CVSPTotalSigmaTestCase(
     GSIM_CLASS = neb.DarraghEtAl2015NGAEast2CVSPTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_DARRAGH_2CVSP_MEAN.csv"
 
+
 # Yenier & Atkinson (2015)
+
 
 class YenierAtkinson2015NGAEastTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.YenierAtkinson2015NGAEast
@@ -177,7 +161,9 @@ class YenierAtkinson2015NGAEastTotalSigmaTestCase(
     GSIM_CLASS = neb.YenierAtkinson2015NGAEastTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_YENIER_ATKINSON_MEAN.csv"
 
+
 # Pezeschk et al (2015)
+
 
 class PezeschkEtAl2015NGAEastM1SSTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.PezeschkEtAl2015NGAEastM1SS
@@ -200,7 +186,9 @@ class PezeschkEtAl2015NGAEastM2ESTotalSigmaTestCase(
     GSIM_CLASS = neb.PezeschkEtAl2015NGAEastM2ESTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_PEZESCHK_M2ES_MEAN.csv"
 
+
 # Frankel (2015)
+
 
 class Frankel2015NGAEastTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.Frankel2015NGAEast
@@ -211,10 +199,12 @@ class Frankel2015NGAEastTotalSigmaTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.Frankel2015NGAEastTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_FRANKEL_J15_MEAN.csv"
 
+
 # Shahjouei & Pezeschk (2015)
 
+
 class ShahjoueiPezeschk2015NGAEastTestCase(Boore2015NGAEastA04TestCase):
-    GSIM_CLASS = neb.ShahjoueiPezeschkNGAEast
+    GSIM_CLASS = neb.ShahjoueiPezeschk2015NGAEast
     MEAN_FILE = "nga_east_median_tables/NGAEast_SHAHJOUEI_PEZESCHK_MEAN.csv"
 
 
@@ -223,10 +213,12 @@ class ShahjoueiPezeschk2015NGAEastTotalSigmaTestCase(
     GSIM_CLASS = neb.ShahjoueiPezeschk2015NGAEastTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_SHAHJOUEI_PEZESCHK_MEAN.csv"
 
+
 # Al Noman & Cramer (2015)
 
+
 class AlNomanCramer2015NGAEastTestCase(Boore2015NGAEastA04TestCase):
-    GSIM_CLASS = neb.AlNomanCramerNGAEast
+    GSIM_CLASS = neb.AlNomanCramer2015NGAEast
     MEAN_FILE = "nga_east_median_tables/NGAEast_ALNOMAN_CRAMER_MEAN.csv"
 
 
@@ -235,10 +227,12 @@ class AlNomanCramer2015NGAEastTotalSigmaTestCase(
     GSIM_CLASS = neb.AlNomanCramer2015NGAEastTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_ALNOMAN_CRAMER_MEAN.csv"
 
+
 # Gaizer (2015)
 
+
 class Graizer2015NGAEastTestCase(Boore2015NGAEastA04TestCase):
-    GSIM_CLASS = neb.GraizerNGAEast
+    GSIM_CLASS = neb.Graizer2015NGAEast
     MEAN_FILE = "nga_east_median_tables/NGAEast_GRAIZER_MEAN.csv"
 
 
@@ -247,7 +241,9 @@ class Graizer2015NGAEastTotalSigmaTestCase(
     GSIM_CLASS = neb.Graizer2015NGAEastTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_GRAIZER_MEAN.csv"
 
+
 # Hassani & Atkinson (2015)
+
 
 class HassaniAtkinson2015NGAEastTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.HassaniAtkinson2015NGAEast
@@ -259,7 +255,9 @@ class HassaniAtkinson2015NGAEastTotalSigmaTestCase(
     GSIM_CLASS = neb.HassaniAtkinson2015NGAEastTotalSigma
     MEAN_FILE = "nga_east_median_tables/NGAEast_HASSANI_ATKINSON_MEAN.csv"
 
+
 # Hollenback et al (2015)
+
 
 class HollenbackEtAl2015NGAEastGPTestCase(Boore2015NGAEastA04TestCase):
     GSIM_CLASS = neb.HollenbackEtAl2015NGAEastGP
