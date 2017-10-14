@@ -373,6 +373,7 @@ PHI_SETUP = {
     "global": PHI_SS_GLOBAL}
 
 
+# Phi site-to-site model for th Central & Eastern US
 PHI_S2SS_MODEL = {"cena": PHI_S2SS_CENA}
 
 
