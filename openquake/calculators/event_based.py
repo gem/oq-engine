@@ -381,6 +381,11 @@ def save_gmdata(calc, n_rlzs):
     logging.info('Generated %s of GMFs', humansize(array['nbytes'].sum()))
 
 
+def update_nbytes(dstore, key, array):
+    nbytes = dstore.get_attr(key, 'nbytes', 0)
+    dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
+
+
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
@@ -409,6 +414,9 @@ class EventBasedCalculator(ClassicalCalculator):
         if data is not None:
             with sav_mon:
                 hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
+                # it is important to save the number of bytes while the
+                # computation is going, to see the progress
+                update_nbytes(self.datastore, 'gmf_data/data', data)
                 for sid, start, stop in res['indices']:
                     self.indices[sid].append(
                         (start + self.offset, stop + self.offset))
