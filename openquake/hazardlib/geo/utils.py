@@ -58,11 +58,10 @@ class GeographicObjects(object):
             for i, (x, y) in enumerate(zip(xs, ys)):
                 self.index.insert(i, (x, y, x, y))
 
-    def get_closest(self, lon, lat, max_distance=None):
+    def get_closest(self, lon, lat):
         """
         Get the closest object to the given longitude and latitude
-        and its distance. If the `max_distance` is given and all objects
-        are farther than the maximum distance, returns (None, None).
+        and its distance.
 
         :param lon: longitude in degrees
         :param lat: latitude in degrees
@@ -76,8 +75,6 @@ class GeographicObjects(object):
         else:
             zeros = numpy.zeros_like(self.lons)
             idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
-        if max_distance is not None and min_dist > max_distance:
-            return None, None
         return self.objects[idx], min_dist
 
 
