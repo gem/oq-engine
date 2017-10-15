@@ -21,7 +21,7 @@ import warnings
 import numpy
 import h5py
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.geo.mesh import (
     surface_to_mesh, point3d, RectangularMesh)
@@ -44,9 +44,6 @@ U64 = numpy.uint64
 F64 = numpy.float64
 
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
-stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
-    ('ses', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
@@ -63,15 +60,17 @@ class PmapGetter(object):
     :param dstore: a DataStore instance
     :param lazy: if True, read directly from the datastore
     """
-    def __init__(self, dstore, lazy=False):
+    def __init__(self, dstore, sids=None, lazy=False):
         self.rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
         self.weights = dstore['realizations']['weight']
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
-        self.sids = None  # to be set
+        self.sids = sids
         self.nbytes = 0
+        if sids is not None and not self.lazy:  # populate the cache
+            self.get_pmap_by_grp(sids)
 
     def __enter__(self):
         if self.lazy:
@@ -87,12 +86,8 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a new instance of the getter, with the cache populated
         """
-        newgetter = object.__new__(self.__class__, self.dstore)
-        vars(newgetter).update(vars(self))
-        newgetter.sids = sids
-        if not self.lazy:  # populate the cache
-            newgetter.get_pmap_by_grp(sids)
-        return newgetter
+        assert sids is not None
+        return self.__class__(self.dstore, sids, self.lazy)
 
     def get(self, sids, rlzi):
         """
@@ -117,6 +112,16 @@ class PmapGetter(object):
         :returns: a list of R probability maps
         """
         return self.rlzs_assoc.combine_pmaps(self.get_pmap_by_grp(sids))
+
+    def get_hcurves(self, imtls):
+        """
+        :param imtls: intensity measure types and levels
+        :returns: an array of (R, N) hazard curves
+        """
+        assert self.sids is not None, 'PmapGetter not bound to sids'
+        pmaps = [pmap.convert2(imtls, self.sids)
+                 for pmap in self.get_pmaps(self.sids)]
+        return numpy.array(pmaps)
 
     def get_pmap_by_grp(self, sids=None):
         """
@@ -502,7 +507,7 @@ class RuptureSerializer(object):
         self.data = []
         self.nbytes = 0
 
-    def save(self, ebruptures, eidx):
+    def save(self, ebruptures, eidx=0):
         """
         Populate a dictionary of site IDs tuples and save the ruptures.
 

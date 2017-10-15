@@ -484,10 +484,10 @@ class FragilityFunctionContinuous(object):
         self.mean = mean
         self.stddev = stddev
 
-    def __call__(self, iml):
+    def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
-        Intensity Measure Level (IML).
+        Intensity Measure Levels (IMLs).
         """
         variance = self.stddev ** 2.0
         sigma = numpy.sqrt(numpy.log(
@@ -496,7 +496,7 @@ class FragilityFunctionContinuous(object):
         mu = self.mean ** 2.0 / numpy.sqrt(
             variance + self.mean ** 2.0)
 
-        return stats.lognorm.cdf(iml, sigma, scale=mu)
+        return stats.lognorm.cdf(imls, sigma, scale=mu)
 
     def __getstate__(self):
         return dict(limit_state=self.limit_state,
@@ -524,25 +524,18 @@ class FragilityFunctionDiscrete(object):
                                             bounds_error=False)
         return self._interp
 
-    def __call__(self, iml):
+    def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
-        Intensity Measure Level (IML).
+        Intensity Measure Levels (IMLs).
         """
         highest_iml = self.imls[-1]
-        try:
-            len(iml)
-        except TypeError:  # is a scalar
-            if self.no_damage_limit and iml < self.no_damage_limit:
-                return 0.
-            return self.interp(highest_iml if iml > highest_iml else iml)
-        else:  # is a sequence
-            iml = numpy.array(iml)
-            iml[iml > highest_iml] = highest_iml
-            result = self.interp(iml)
-            if self.no_damage_limit:
-                result[iml < self.no_damage_limit] = 0
-            return result
+        imls = numpy.array(imls)
+        imls[imls > highest_iml] = highest_iml
+        result = self.interp(imls)
+        if self.no_damage_limit:
+            result[imls < self.no_damage_limit] = 0
+        return result
 
     # so that the curve is pickeable
     def __getstate__(self):
@@ -877,13 +870,19 @@ CurveParams = collections.namedtuple(
 # Scenario Damage
 #
 
-def scenario_damage(fragility_functions, gmv):
+def scenario_damage(fragility_functions, gmvs):
     """
-    Compute the damage state fractions for the given ground motion value.
-    Return am array of M values where M is the numbers of damage states.
+    Compute the damage state fractions for the given ground motion values.
+    Return an array of (D, E) values where E is the number of ground motion
+    values and D is the numbers of damage states.
     """
-    return pairwise_diff(
-        [1] + [ff(gmv) for ff in fragility_functions] + [0])
+    E = len(gmvs)
+    lst = [numpy.ones(E)]
+    for f, ff in enumerate(fragility_functions):  # D - 1 functions
+        lst.append(ff(gmvs))
+    lst.append(numpy.zeros(E))
+    # convert a (D + 1, E) array into a (D, E) array
+    return pairwise_diff(numpy.array(lst))
 
 #
 # Classical Damage
