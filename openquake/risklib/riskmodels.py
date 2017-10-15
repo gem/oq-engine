@@ -22,6 +22,7 @@ import functools
 import numpy
 
 from openquake.baselib.general import CallableDict
+from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.hazardlib import valid
 from openquake.risklib import utils, scientific
 
@@ -47,9 +48,10 @@ class RiskModel(object):
     compositemodel = None  # set by get_risk_model
     kind = None  # must be set in subclasses
 
-    def __init__(self, taxonomy, risk_functions):
+    def __init__(self, taxonomy, risk_functions, insured_losses):
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
+        self.insured_losses = insured_losses
 
     @property
     def loss_types(self):
@@ -66,6 +68,14 @@ class RiskModel(object):
         """
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
+
+    def get_output(self, assets, data_by_lt, epsgetter):
+        """
+        returns an ArrayWrapper of shape (L, ...)
+        """
+        out = [self(lt, assets, data, epsgetter)
+               for lt, data in zip(self.loss_types, data_by_lt)]
+        return ArrayWrapper(numpy.array(out), {})
 
     def __toh5__(self):
         risk_functions = {lt: func for lt, func in self.risk_functions.items()}
@@ -199,7 +209,7 @@ class ProbabilisticEventBased(RiskModel):
         :param assets:
            a list of assets on the same site and with the same taxonomy
         :param gmvs_eids:
-           a composite array of E elements with fields 'gmv' and 'eid'
+           a pair (gmvs, eids) with E values each
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
@@ -222,7 +232,7 @@ class ProbabilisticEventBased(RiskModel):
                 loss_ratios[i, idxs, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
                     asset.insurance_limit(loss_type))
-        return loss_ratios, eids
+        return loss_ratios
 
 
 @registry.add('classical_bcr')
@@ -238,6 +248,7 @@ class ClassicalBCR(RiskModel):
                  interest_rate, asset_life_expectancy):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
+        self.insured_losses = False  # not implemented
         self.retro_functions = vulnerability_functions_retro
         self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
@@ -296,8 +307,9 @@ class Scenario(RiskModel):
         self.insured_losses = insured_losses
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
-        epsilons = [epsgetter(asset.ordinal, None) for asset in assets]
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
+        gmvs, eids = gmvs_eids
+        epsilons = [epsgetter(asset.ordinal, eids) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -317,7 +329,7 @@ class Scenario(RiskModel):
         loss_matrix.fill(numpy.nan)
 
         vf = self.risk_functions[loss_type]
-        means, covs, idxs = vf.interpolate(ground_motion_values)
+        means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         for i, eps in enumerate(epsilons):
             loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
@@ -344,23 +356,22 @@ class Damage(RiskModel):
     def __init__(self, taxonomy, fragility_functions):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
+        self.insured_losses = False  # not implemented
 
-    def __call__(self, loss_type, assets, gmvs, _eps=None):
+    def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
-        :param gmvs: an array of E elements
+        :param gmvs_eids: pairs (gmvs, eids), each one with E elements
         :param _eps: dummy parameter, unused
         :returns: N arrays of E x D elements
 
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        n = len(assets)
         ffs = self.risk_functions[loss_type]
-        damages = numpy.array(
-            [scientific.scenario_damage(ffs, gmv) for gmv in gmvs])
-        return [damages] * n
+        damages = scientific.scenario_damage(ffs, gmvs_eids[0])  # shape (D, E)
+        return [damages.T] * len(assets)
 
 
 @registry.add('classical_damage')
@@ -375,6 +386,7 @@ class ClassicalDamage(Damage):
                  risk_investigation_time):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
+        self.insured_losses = False  # not implemented
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
