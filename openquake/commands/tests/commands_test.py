@@ -280,7 +280,7 @@ class UpgradeNRMLTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
     </vulnerabilityModel>
 </nrml>''')
-        upgrade_nrml(tmpdir, False)
+        upgrade_nrml(tmpdir, False, False)
         shutil.rmtree(tmpdir)
 
 
