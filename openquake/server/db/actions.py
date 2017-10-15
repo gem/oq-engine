@@ -579,17 +579,17 @@ def get_result(db, result_id):
     return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
 
 
-def get_job(db, job_id, username):
+def get_job(db, job_id, username=None):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         ID of the current job
     :param username:
-        user name
+        user name (if None, ignore it)
     :returns: the full path to the datastore
     """
-    calc_id = get_job_id(db, job_id, username) or job_id
+    calc_id = get_job_id(db, job_id, username) if username else job_id
     return db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
 
 
