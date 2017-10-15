@@ -39,8 +39,7 @@ def extract(calc_id, what, extra):
         try:
             calc_id = dbcmd('get_job', calc_id).ds_calc_dir + '.hdf5'
         except dbapi.NotFound:
-            sys.exit('Calculation %s not found' % calc_id)
-        print(calc_id)
+            pass  # look at the file system
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
