@@ -17,11 +17,15 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import sys
 import inspect
 import logging
 
 from openquake.baselib import performance, sap, hdf5, datastore
+
+from openquake.commonlib.logs import dbcmd
 from openquake.calculators.extract import extract as extract_
+from openquake.server import dbserver, dbapi
 
 
 # the export is tested in the demos
@@ -31,7 +35,12 @@ def extract(calc_id, what, extra):
     Extract an output from the datastore and save it into an .hdf5 file.
     """
     logging.basicConfig(level=logging.INFO)
-    logging.warn('oq extract is experimental and subject to future changes')
+    if dbserver.get_status() == 'running':
+        try:
+            calc_id = dbcmd('get_job', calc_id).ds_calc_dir + '.hdf5'
+        except dbapi.NotFound:
+            sys.exit('Calculation %s not found' % calc_id)
+        print(calc_id)
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
