@@ -27,7 +27,7 @@ from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib.nrml import NRML05
-from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib import InvalidFile, nrml, sourceconverter
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific, read_nrml
 
@@ -83,7 +83,7 @@ def get_vulnerability_functions_04(fname):
     return vf_dict, categories
 
 
-def upgrade_file(path):
+def upgrade_file(path, multipoint):
     """Upgrade to the latest NRML version"""
     node0 = nrml.read(path, chatty=False)[0]
     shutil.copy(path, path + '.bak')  # make a backup of the original file
@@ -107,6 +107,8 @@ def upgrade_file(path):
                             dict(tectonicRegion=trt, name="group %s" % i),
                             nodes=srcs)
                        for i, (trt, srcs) in enumerate(dic.items(), 1)]
+        if multipoint:
+            sourceconverter.update_source_model(node0)
     with open(path, 'wb') as f:
         nrml.write([node0], f, gml=gml)
 
@@ -115,7 +117,7 @@ def upgrade_file(path):
 # we will implement a more general solution when we will need to pass
 # to version 0.6
 @sap.Script
-def upgrade_nrml(directory, dry_run):
+def upgrade_nrml(directory, dry_run, multipoint):
     """
     Upgrade all the NRML files contained in the given directory to the latest
     NRML version. Works by walking all subdirectories.
@@ -133,14 +135,19 @@ def upgrade_nrml(directory, dry_run):
                 except:  # not a NRML file
                     xmlns, tag = '', ''
                 if xmlns[1:] == NRML05:  # already upgraded
-                    pass
+                    if 'sourceModel' in tag and multipoint:
+                        print('upgrading to multiPointSources', path)
+                        node0 = nrml.read(path)[0]
+                        sourceconverter.update_source_model(node0)
+                        with open(path, 'wb') as f:
+                            nrml.write([node0], f, gml=True)
                 elif 'nrml/0.4' in xmlns and (
                         'vulnerability' in tag or 'fragility' in tag or
                         'sourceModel' in tag):
                     if not dry_run:
                         print('Upgrading', path)
                         try:
-                            upgrade_file(path)
+                            upgrade_file(path, multipoint)
                         except Exception as exc:
                             raise
                             print(exc)
@@ -150,3 +157,4 @@ def upgrade_nrml(directory, dry_run):
 
 upgrade_nrml.arg('directory', 'directory to consider')
 upgrade_nrml.flg('dry_run', 'test the upgrade without replacing the files')
+upgrade_nrml.flg('multipoint', 'replace PointSources with MultiPointSources')
