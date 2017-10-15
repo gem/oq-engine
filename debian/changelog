@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the scenario damage calculator by vectorizing the calculation
+    of the damage states
   * Extended the FragilityFunctions to accept sequences/arrays of intensity
     levels, as requested by Hyeuk Ryu
 
