@@ -872,15 +872,14 @@ CurveParams = collections.namedtuple(
 
 def scenario_damage(fragility_functions, gmvs):
     """
-    Compute the damage state fractions for the given ground motion values.
-    Return an array of (D, E) values where E is the number of ground motion
-    values and D is the numbers of damage states.
+    :param fragility_functions: a list of D - 1 fragility functions
+    :param gmvs: an array of E ground motion values
+    :returns: an array of (D, E) damage fractions
     """
-    E = len(gmvs)
-    lst = [numpy.ones(E)]
+    lst = [numpy.ones_like(gmvs)]
     for f, ff in enumerate(fragility_functions):  # D - 1 functions
         lst.append(ff(gmvs))
-    lst.append(numpy.zeros(E))
+    lst.append(numpy.zeros_like(gmvs))
     # convert a (D + 1, E) array into a (D, E) array
     return pairwise_diff(numpy.array(lst))
 
