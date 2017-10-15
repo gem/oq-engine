@@ -27,6 +27,8 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.general import DictArray
+from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.python3compat import encode
 from openquake.commonlib import calc
 
 
@@ -73,38 +75,12 @@ class Extract(collections.OrderedDict):
 extract = Extract()
 
 
-class ArrayWrapper(object):
-    """
-    A pickleable wrapper over an HDF5 dataset or group
-    """
-    def __init__(self, array, attrs):
-        vars(self).update(attrs)
-        self.array = array
-
-    def __iter__(self):
-        return iter(self.array)
-
-    def __len__(self):
-        return len(self.array)
-
-    def __getitem__(self, idx):
-        return self.array[idx]
-
-    def __toh5__(self):
-        return (self.array, {k: v for k, v in vars(self).items()
-                             if k != 'array' and not k.startswith('_')})
-
-    def __fromh5__(self, array, attrs):
-        self.__init__(array, attrs)
-
-    @property
-    def dtype(self):
-        return self.array.dtype
-
-
 @extract.add('asset_values', cache=True)
 def extract_asset_values(dstore, sid):
     """
+    Extract an array of asset values for the given sid. Use it as
+    /extract/asset_values/0
+
     :returns:
         (aid, loss_type1, ..., loss_typeN) composite array
     """
@@ -165,6 +141,8 @@ def extract_hazard(dstore, what):
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
     yield 'oqparam', dstore['oqparam']
+    yield 'realizations', dstore['realizations'].value
+    yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
@@ -178,30 +156,57 @@ def extract_hazard(dstore, what):
             yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
 
 
-def filter_agg(dstore, losses, tags):
-    # filter the losses with the tags and returns the aggregate
-    if not tags:
-        return losses.sum(axis=0)
-    assetcol = dstore['assetcol']
-    idxs = set(range(len(assetcol)))
-    # find the indices common to all tags
-    for tag in tags:
-        idxs &= set(assetcol.aids_by_tag[tag])
-    # numpy.array wants lists, not sets, hence the sorted below
+def _agg(losses, idxs):
+    shp = losses.shape[1:]
     if not idxs:
         # no intersection, return a 0-dim matrix
-        return numpy.zeros(0, losses.dtype)
+        return numpy.zeros((0,) + shp, losses.dtype)
+    # numpy.array wants lists, not sets, hence the sorted below
     return losses[numpy.array(sorted(idxs))].sum(axis=0)
+
+
+def _filter_agg(assetcol, losses, selected):
+    # losses is an array of shape (A, ..., R) with A=#assets, R=#realizations
+    idxs = set(range(len(assetcol)))
+    tagnames = []
+    for tag in selected:
+        tagname, tagvalue = tag.split('=', 1)
+        if tagvalue == '*':
+            tagnames.append(tagname)
+        else:
+            idxs &= assetcol.aids_by_tag[tag]
+    if len(tagnames) > 1:
+        raise ValueError('Too many * as tag values in %s' % tagnames)
+    elif not tagnames:  # return an array of shape (..., R)
+        return ArrayWrapper(
+            _agg(losses, idxs), dict(selected=encode(selected)))
+    else:  # return an array of shape (T, ..., R)
+        [tagname] = tagnames
+        _tags = [t for t in assetcol.tags() if t.startswith(tagname)]
+        all_idxs = [idxs & assetcol.aids_by_tag[t] for t in _tags]
+        # NB: using a generator expression for all_idxs caused issues (?)
+        data, tags = [], []
+        for idxs, tag in zip(all_idxs, _tags):
+            agglosses = _agg(losses, idxs)
+            if len(agglosses):
+                data.append(agglosses)
+                tags.append(tag)
+        return ArrayWrapper(
+            numpy.array(data),
+            dict(selected=encode(selected), tags=encode(tags)))
 
 
 @extract.add('agglosses')
 def extract_agglosses(dstore, loss_type, *tags):
     """
-    Aggregate losses of the given loss type and tags.
+    Aggregate losses of the given loss type and tags. Use it as
+    /extract/agglosses/structural?taxonomy=RC&zipcode=20126
+    /extract/agglosses/structural?taxonomy=RC&zipcode=*
 
     :returns:
-        array of shape (R,), being R the number of realizations or
-        array of length 0 if there is no data for the given tags
+        an array of shape (T, R) if one of the tag names has a `*` value
+        an array of shape (R,), being R the number of realizations
+        an array of length 0 if there is no data for the given tags
     """
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
@@ -212,13 +217,14 @@ def extract_agglosses(dstore, loss_type, *tags):
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)
-    return filter_agg(dstore, losses, tags)
+    return _filter_agg(dstore['assetcol'], losses, tags)
 
 
 @extract.add('aggdamages')
 def extract_aggdamages(dstore, loss_type, *tags):
     """
-    Aggregate damages of the given loss type and tags.
+    Aggregate damages of the given loss type and tags. Use it as
+    /extract/aggdamages/structural?taxonomy=RC&zipcode=20126
 
     :returns:
         array of shape (R, D), being R the number of realizations and D
@@ -229,14 +235,15 @@ def extract_aggdamages(dstore, loss_type, *tags):
         losses = dstore['dmg_by_asset'][loss_type]['mean']
     else:
         raise KeyError('No damages found in %s' % dstore)
-    return filter_agg(dstore, losses, tags)
+    return _filter_agg(dstore['assetcol'], losses, tags)
 
 
 @extract.add('aggcurves')
 def extract_aggcurves(dstore, loss_type, *tags):
     """
     Aggregate loss curves of the given loss type and tags for
-    event based risk calculations.
+    event based risk calculations. Use it as
+    /extract/aggcurves/structural?taxonomy=RC&zipcode=20126
 
     :returns:
         array of shape (S, P), being P the number of return periods
@@ -246,5 +253,6 @@ def extract_aggcurves(dstore, loss_type, *tags):
         losses = dstore['curves-stats'][loss_type]
     else:
         raise KeyError('No curves found in %s' % dstore)
-    curves = filter_agg(dstore, losses, tags)
-    return ArrayWrapper(curves, dstore.get_attrs('curves-stats'))
+    curves = _filter_agg(dstore['assetcol'], losses, tags)
+    vars(curves).update(dstore.get_attrs('curves-stats'))
+    return curves

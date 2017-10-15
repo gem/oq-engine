@@ -56,12 +56,16 @@ class BetaDistributionTestCase(unittest.TestCase):
 
 class TestMemoize(unittest.TestCase):
     def test_cache(self):
-        m = mock.Mock(return_value=3)
-        func = utils.memoized(m)
-        self.assertEqual(3, func())
-        self.assertEqual(3, func())
+        counts = []
 
-        self.assertEqual(1, m.call_count)
+        @utils.memoized
+        def func():
+            counts.append(None)
+            return 3
+        self.assertEqual(3, func())
+        self.assertEqual(3, func())
+        # check that func has been called only once, now two
+        self.assertEqual(1, len(counts))
 
 
 epsilons = scientific.make_epsilons(
@@ -461,8 +465,8 @@ class FragilityFunctionTestCase(unittest.TestCase):
                 'LS2', [0.1, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00])
             ]
 
-        self._close_to(scientific.scenario_damage(ffns, 0.7),
-                       scientific.scenario_damage(ffns, 0.8))
+        self._close_to(scientific.scenario_damage(ffns, [0.7]),
+                       scientific.scenario_damage(ffns, [0.8]))
 
     def test_dda_iml_below_range_damage_limit_defined(self):
         # corner case where we have a ground motion value
@@ -482,8 +486,8 @@ class FragilityFunctionTestCase(unittest.TestCase):
                 'LS2', [0.05, 0.1, 0.3, 0.5, 0.7],
                 [0, 0.05, 0.20, 0.50, 1.00], 0.5),
             ]
-        self._close_to([1.0, 0.0, 0.0],
-                       scientific.scenario_damage(ffns, 0.02))
+        self._close_to([[1.0], [0.0], [0.0]],
+                       scientific.scenario_damage(ffns, [0.02]))
 
     def test_gmv_between_no_damage_limit_and_first_iml(self):
         # corner case where we have a ground motion value
@@ -503,15 +507,8 @@ class FragilityFunctionTestCase(unittest.TestCase):
                 'LS2', [0.05, 0.1, 0.3, 0.5, 0.7],
                 [0, 0.00, 0.05, 0.20, 0.50], 0.05)]
 
-        self._close_to([0.975, 0.025, 0.],
-                       scientific.scenario_damage(ffs, 0.075))
-
-    def test_array_input(self):
-        # a FragilityFunction can take a list or array of IMLs as input
-        ff = scientific.FragilityFunctionDiscrete(
-            'LS1', [0.05, 0.1, 0.3, 0.5, 0.7],
-            [0, 0.05, 0.20, 0.50, 1.00], 0.05)
-        self._close_to(ff(numpy.array([0.2, 0.5])), [0.125, 0.5])
+        self._close_to([[0.975], [0.025], [0]],
+                       scientific.scenario_damage(ffs, [0.075]))
 
     def _close_to(self, expected, actual):
         numpy.testing.assert_allclose(actual, expected, atol=0.0, rtol=0.05)
