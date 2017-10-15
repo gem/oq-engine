@@ -32,21 +32,31 @@ import subprocess
 import tempfile
 import requests
 import numpy
+import socket
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
 from openquake.server.settings import DATABASE
+from openquake.server.utils import check_webserver_running
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
 
 
 class EngineServerTestCase(unittest.TestCase):
-    hostport = 'localhost:8761'
+    hostport = ''
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
+
+    @classmethod
+    def getsocket(cls):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('', 0))
+        cls.hostport = 'localhost:%s' % s.getsockname()[1]
+        s.close()
+        return cls.hostport
 
     @classmethod
     def post(cls, path, data=None, **params):
@@ -122,9 +132,9 @@ class EngineServerTestCase(unittest.TestCase):
 
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading'],
+             cls.getsocket(), '--noreload', '--nothreading'],
             env=env, stderr=cls.fd)  # redirect the server logs
-        time.sleep(5)
+        check_webserver_running('http://%s' % cls.hostport)
 
     @classmethod
     def tearDownClass(cls):
