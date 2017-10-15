@@ -33,7 +33,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -189,7 +189,7 @@ def get_events(ebruptures):
             rec = (event['eid'], ebr.serial, ebr.grp_id, year, event['ses'],
                    event['sample'])
             events.append(rec)
-    return numpy.array(events, calc.stored_event_dt)
+    return numpy.array(events, readinput.stored_event_dt)
 
 
 @base.calculators.add('event_based_rupture')
@@ -309,8 +309,8 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         with monitor('building hazard', measuremem=True):
             gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
-            hazard = sorted(getter.get_hazard(data=gmfdata).items())
-        for sid, hazardr in hazard:
+            hazard = getter.get_hazard(data=gmfdata)
+        for sid, hazardr in zip(getter.sids, hazard):
             for rlzi, array in hazardr.items():
                 if len(array) == 0:  # no data
                     continue
@@ -381,6 +381,11 @@ def save_gmdata(calc, n_rlzs):
     logging.info('Generated %s of GMFs', humansize(array['nbytes'].sum()))
 
 
+def update_nbytes(dstore, key, array):
+    nbytes = dstore.get_attr(key, 'nbytes', 0)
+    dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
+
+
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
@@ -409,6 +414,9 @@ class EventBasedCalculator(ClassicalCalculator):
         if data is not None:
             with sav_mon:
                 hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
+                # it is important to save the number of bytes while the
+                # computation is going, to see the progress
+                update_nbytes(self.datastore, 'gmf_data/data', data)
                 for sid, start, stop in res['indices']:
                     self.indices[sid].append(
                         (start + self.offset, stop + self.offset))

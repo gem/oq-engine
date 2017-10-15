@@ -738,7 +738,7 @@ def get_gmfs(calculator):
                       gmfs[:, haz_sitecol.indices])
 
         # store the events, useful when read the GMFs from a file
-        events = numpy.zeros(E, calc.stored_event_dt)
+        events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = eids
         dstore['events'] = events
         return eids, gmfs
