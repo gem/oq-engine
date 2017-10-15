@@ -196,6 +196,7 @@ def export_all_losses_npz(ekey, dstore):
 
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
+@depr('This output will be removed soon')
 def export_agg_losses_ebr(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
