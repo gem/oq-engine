@@ -20,7 +20,7 @@ from openquake.baselib import sap, datastore
 
 
 @sap.Script
-def plot_sites_assets(calc_id=-1):
+def plot_assets(calc_id=-1):
     """
     Plot the sites and the assets
     """
@@ -36,4 +36,4 @@ def plot_sites_assets(calc_id=-1):
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.')
     p.show()
 
-plot_sites_assets.arg('calc_id', 'a computation id', type=int)
+plot_assets.arg('calc_id', 'a computation id', type=int)
