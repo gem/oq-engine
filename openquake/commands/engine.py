@@ -35,10 +35,10 @@ MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 def get_job_id(job_id, username=None):
     username = username or getpass.getuser()
-    job_id = logs.dbcmd('get_job_id', job_id, username)
-    if not job_id:
+    job = logs.dbcmd('get_job', job_id, username)
+    if not job:
         sys.exit('Job %s of %s not found' % (job_id, username))
-    return job_id
+    return job.id
 
 
 def run_job(cfg_file, log_level='info', log_file=None, exports='',
