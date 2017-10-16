@@ -60,7 +60,7 @@ Table~\ref{output:scenario_loss_tag}.
 
 \input{oqum/risk/verbatim/output_scenario_loss_tag}
 
-The output file lists the mean loss aggregated for each building typology
+The output file lists the mean loss aggregated for each \glspl{tag}
 found in the exposure model for all loss types (amongst ``structural'',
 ``nonstructural'', ``contents'', or ``business\_interruption'') for which a
 \gls{vulnerabilitymodel} file was provided in the configuration file.
@@ -96,4 +96,16 @@ described below:
   \item \Verb+Standard Deviation+: the standard deviation of the total loss 
     across the portfolio of assets for the selected earthquake rupture.
 
-\end{itemize} 
+\end{itemize}
+
+
+\subsection{Scenario losses by event}
+\label{subsec:scenario_losses_event}
+
+The losses by event output lists the total losses for each realization of the
+scenario generated in the Monte Carlo simulation process for all loss types
+for which a \gls{vulnerabilitymodel} file was provided in the configuration
+file. These results are exported in a comma separate value (.csv) file as
+illustrated in the example shown in Table~\ref{output:scenario_loss_event}.
+
+
