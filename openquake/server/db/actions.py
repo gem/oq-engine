@@ -131,7 +131,7 @@ def get_job(db, job_id, username=None):
     job_id = int(job_id)
 
     if job_id > 0:
-        dic = dict(job_id=job_id)
+        dic = dict(id=job_id)
         if username:
             dic['user_name'] = username
         try:
