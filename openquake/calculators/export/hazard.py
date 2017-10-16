@@ -25,7 +25,8 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5, parallel, performance
-from openquake.baselib.general import humansize, group_array, DictArray
+from openquake.baselib.general import (
+    humansize, group_array, DictArray, deprecated)
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
@@ -335,6 +336,7 @@ def build_hcurves(getter, imtls, monitor):
 
 
 @export.add(('hcurves-rlzs', 'hdf5'))
+@deprecated('Use `oq extract hazard/all` instead')
 def export_hcurves_rlzs(ekey, dstore):
     """
     Export all hazard curves in a single .hdf5 file. This is not
