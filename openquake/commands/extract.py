@@ -31,7 +31,6 @@ def extract(calc_id, what, extra):
     Extract an output from the datastore and save it into an .hdf5 file.
     """
     logging.basicConfig(level=logging.INFO)
-    logging.warn('oq extract is experimental and subject to future changes')
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
