@@ -82,11 +82,3 @@ class StarmapTestCase(unittest.TestCase):
             'Monitor(\'test\').flush() must not be called in a worker', res[0])
         self.assertEqual(res[1], RuntimeError)
         self.assertEqual(res[2].operation, mon.operation)
-
-    if celery:
-        def test_received(self):
-            with mock.patch.dict('os.environ', OQ_DISTRIBUTE='celery'):
-                res = parallel.Starmap.apply(
-                    get_length, (numpy.arange(10),)).submit_all()
-                list(res)  # iterate on the results
-                self.assertGreater(len(res.received), 0)
