@@ -2,12 +2,12 @@ loss_type,damage_state,damage_value
 contents,no_damage_mean,1.411244E-01
 contents,no_damage_stdv,9.308699E-02
 contents,ds1_mean,1.538588E-01
-contents,ds1_stdv,5.717257E-02
+contents,ds1_stdv,5.717258E-02
 contents,ds2_mean,1.985395E-01
 contents,ds2_stdv,3.190935E-02
 contents,ds3_mean,2.420454E-01
 contents,ds3_stdv,3.670789E-02
-contents,ds4_mean,2.644319E-01
+contents,ds4_mean,2.644318E-01
 contents,ds4_stdv,1.519645E-01
 nonstructural,no_damage_mean,1.632276E-01
 nonstructural,no_damage_stdv,9.407055E-02
@@ -25,7 +25,7 @@ structural,ds1_mean,2.967513E-01
 structural,ds1_stdv,8.379072E-02
 structural,ds2_mean,1.374152E-01
 structural,ds2_stdv,7.029014E-02
-structural,ds3_mean,6.894679E-02
+structural,ds3_mean,6.894678E-02
 structural,ds3_stdv,5.046767E-02
 structural,ds4_mean,1.014241E-01
 structural,ds4_stdv,1.266570E-01
