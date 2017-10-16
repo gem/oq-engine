@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Deprecated several outputs: hcurves-rlzs, agg_loss_table, losses_total,
+    dmg_by_tag, dmg_total, losses_by_tag, losses_by_tag-rlzs
   * Extended the command `oq extract job_id` to check the database
   * Optimized the scenario damage calculator by vectorizing the calculation
     of the damage states
