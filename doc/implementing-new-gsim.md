@@ -22,8 +22,7 @@ cd oq-engine;
 nosetests -vsx openquake.hazardlib
 ```
 
-- Create a new .rst file (needed to generate automatically documentation) in this directory (several examples available):
-https://github.com/gem/oq-engine/tree/master/doc/sphinx/gsim
-
+- Update the following .rst file (needed to generate automatically documentation):
+https://github.com/gem/oq-engine/blob/master/doc/sphinx/openquake.hazardlib.gsim.rst
 - Check that the new code fulfils PEP8 standards (usually we do this using tools such as flake8 https://pypi.python.org/pypi/flake8) 
 http://legacy.python.org/dev/peps/pep-0008/
