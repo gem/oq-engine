@@ -22,6 +22,7 @@ python -m openquake.commands extract -2 hazard/rlzs
 python -m openquake.commands engine --lhc
 MPLBACKEND=Agg python -m openquake.commands plot -2
 MPLBACKEND=Agg python -m openquake.commands plot_uhs -2
+MPLBACKEND=Agg python -m openquake.commands plot_sites -2
 
 # fake a wrong calculation still in executing status (AreaSource)
 python -m openquake.commands db set_status 26 executing
