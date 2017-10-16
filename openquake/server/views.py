@@ -596,9 +596,8 @@ def extract(request, calc_id, what, attrs):
     """
     Wrapper over the `oq extract` command
     """
-    try:
-        job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
-    except dbapi.NotFound:
+    job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
+    if job is None:
         return HttpResponseNotFound()
 
     # read the data and save them on a temporary .pik file
@@ -642,9 +641,8 @@ def get_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
-    try:
-        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
-    except dbapi.NotFound:
+    job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    if job is None:
         return HttpResponseNotFound()
 
     fname = job.ds_calc_dir + '.hdf5'
@@ -661,9 +659,8 @@ def get_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """
-    try:
-        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
-    except dbapi.NotFound:
+    job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    if job is None:
         return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         oq = ds['oqparam']
