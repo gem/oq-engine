@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a debug command `oq plot_assets` and fixed `oq plot_sites`
   * Extended the command `oq extract job_id` to check the database
   * Optimized the scenario damage calculator by vectorizing the calculation
     of the damage states
