@@ -276,8 +276,9 @@ class SourceFilter(object):
         self.use_rtree = use_rtree and rtree and (
             integration_distance and sitecol is not None and
             sitecol.at_sea_level())
-        if self.use_rtree:
+        if sitecol is not None:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
+        if self.use_rtree:
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
