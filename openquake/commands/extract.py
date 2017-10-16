@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-import sys
 import inspect
 import logging
 
@@ -36,10 +35,9 @@ def extract(calc_id, what, extra):
     """
     logging.basicConfig(level=logging.INFO)
     if dbserver.get_status() == 'running':
-        try:
-            calc_id = dbcmd('get_job', calc_id).ds_calc_dir + '.hdf5'
-        except dbapi.NotFound:
-            pass  # look at the file system
+        job = dbcmd('get_job', calc_id)
+        if job is not None:
+            calc_id = job.ds_calc_dir + '.hdf5'
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
