@@ -70,6 +70,10 @@ class PankowPechmann2004(GMPE):
     #: see paragraph 'Predictor Variables', page 6.
     REQUIRES_DISTANCES = set(('rjb', ))
 
+    #: No independent tests - verification against paper for PGA and PGV,
+    #: but not for SA and Standard Deviations
+    non_verified = True
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
