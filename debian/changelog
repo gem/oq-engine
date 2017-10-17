@@ -1,3 +1,6 @@
+  [Valerio Poggi]
+  * Implemented the Pankow and Pechmann 2004 GMPE (not verified)
+
   [Graeme Weatherill]
   * Added Derras et al. (2014) GMPE
   * Implemented the Zhao et al. (2016) GMPE for active shallow crustal,
