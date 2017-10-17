@@ -195,7 +195,7 @@ class IntegrationDistance(collections.Mapping):
     >>> maxdist = IntegrationDistance({'default': [
     ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
     ...          (7, 400), (8, 800)]})
-    >>> maxdist('Some TRT', mag=.5)
+    >>> maxdist('Some TRT', mag=0.5)
     0
     >>> maxdist('Some TRT', mag=5.5)
     100
