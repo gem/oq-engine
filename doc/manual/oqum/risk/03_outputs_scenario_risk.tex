@@ -76,28 +76,6 @@ illustrated in the example shown in Table~\ref{output:scenario_loss_total}.
 
 \input{oqum/risk/verbatim/output_scenario_loss_total}
 
-The important attributes in a scenario total loss statistics output file are
-described below:
-
-
-\begin{itemize}
-
-  \item \Verb+LossType+: the type of losses that are being stored. This
-    parameter is taken from the \gls{vulnerabilitymodel} that was used in the
-    loss calculations (e.g. fatalities, economic loss).
-
-  \item \Verb+Unit+: this attribute defines the units in which the losses are
-    being measured (e.g. USD or EUR). These units are the same as those defined
-    in the \gls{exposuremodel} used for the calculation.
-
-  \item \Verb+Mean+: the mean total loss across the portfolio of assets for the
-    selected earthquake rupture.
-
-  \item \Verb+Standard Deviation+: the standard deviation of the total loss 
-    across the portfolio of assets for the selected earthquake rupture.
-
-\end{itemize}
-
 
 \subsection{Scenario losses by event}
 \label{subsec:scenario_losses_event}
@@ -107,5 +85,7 @@ scenario generated in the Monte Carlo simulation process for all loss types
 for which a \gls{vulnerabilitymodel} file was provided in the configuration
 file. These results are exported in a comma separate value (.csv) file as
 illustrated in the example shown in Table~\ref{output:scenario_loss_event}.
+
+\input{oqum/risk/verbatim/output_scenario_loss_event}
 
 
