@@ -16,7 +16,7 @@ jobs:
     env: HAZARDLIB
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
-          nosetests --with-doctest -xvs -a'!slow' openquake.baselib openquake.hazardlib;
+          nosetests --with-doctest -xvs -a'!slow' openquake.baselib openquake.hazardlib openquake.hmtk;
           fi
   - stage: tests
     env: ENGINE
@@ -48,7 +48,9 @@ jobs:
             chmod 600 .deploy_rsa &&
             eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
-            bin/oq reset --yes;
+            oq workers stop &&
+            bin/oq reset --yes &&
+            bin/oq dbserver status | grep -q 'dbserver not-running';
           fi
 
 before_install:

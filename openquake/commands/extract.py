@@ -20,25 +20,30 @@ from __future__ import print_function
 import inspect
 import logging
 
-from openquake.baselib import performance, sap, hdf5
-from openquake.commonlib import datastore
+from openquake.baselib import performance, sap, hdf5, datastore
+
+from openquake.commonlib.logs import dbcmd
 from openquake.calculators.extract import extract as extract_
+from openquake.server import dbserver
 
 
-# the export is tested in the demos
+# `oq extract` is tested in the demos
 @sap.Script
-def extract(what, calc_id=-1):
+def extract(calc_id, what, extra):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     """
     logging.basicConfig(level=logging.INFO)
-    logging.warn('oq extract is experimental and subject to future changes')
+    if dbserver.get_status() == 'running':
+        job = dbcmd('get_job', calc_id)
+        if job is not None:
+            calc_id = job.ds_calc_dir + '.hdf5'
     dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.parent = datastore.read(parent_id)
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
-        items = extract_(dstore, what)
+        items = extract_(dstore, what, *extra)
         if not inspect.isgenerator(items):
             items = [(items.__class__.__name__, items)]
         fname = '%s_%d.hdf5' % (what.replace('/', '-'), dstore.calc_id)
@@ -48,5 +53,6 @@ def extract(what, calc_id=-1):
         print(mon)
 
 
-extract.arg('what', 'string specifying what to export')
 extract.arg('calc_id', 'number of the calculation', type=int)
+extract.arg('what', 'string specifying what to export')
+extract.arg('extra', 'extra arguments', nargs='*')
