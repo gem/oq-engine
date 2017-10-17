@@ -171,6 +171,14 @@ bindi_2014
     :undoc-members:
     :show-inheritance:
 
+bindi_2017
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bindi_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 boore_1993
 ------------------------------------------
 
@@ -743,6 +751,14 @@ zhao_2006_swiss_coeffs
 ------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2006_swiss_coeffs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+zhao_2016
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zhao_2016
     :members:
     :undoc-members:
     :show-inheritance:
