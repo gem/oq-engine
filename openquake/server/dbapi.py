@@ -102,7 +102,8 @@ The queries can have different kind of `?` parameters:
   <sqlite3.Cursor object at ...>
 
 You can see how the interpolation works by calling the `expand` method
-that returns the interpolated template. In this case
+that returns the interpolated template (alternatively, there is a
+`debug=True` flag when calling `db` that prints the same info). In this case
 
 >>> db.expand('INSERT INTO job (?S) VALUES (?X)', ['id', 'value'], [3, 44])
 'INSERT INTO job (id, value) VALUES (?, ?)'
@@ -321,7 +322,8 @@ class Db(object):
         cursor = self.conn.cursor()
         templ, args = match(m_templ, *m_args)
         if kw.get('debug'):
-            print(templ, args)
+            print(templ)
+            print('args = %s' % repr(args))
         try:
             if args:
                 cursor.execute(templ, args)
