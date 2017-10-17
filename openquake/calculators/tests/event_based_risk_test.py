@@ -24,11 +24,13 @@ import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
+from openquake.baselib.python3compat import decode
 from openquake.baselib.parallel import Sequential
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
     occupants, case_1g, case_7a)
@@ -40,9 +42,9 @@ def check_total_losses(calc):
     loss_dt = calc.oqparam.loss_dt()
     LI = len(loss_dt.names)
     data1 = numpy.zeros(LI, numpy.float32)
-    for dset in dstore['agg_loss_table'].values():
-        for li, lt in enumerate(loss_dt.names):
-            data1[li] += dset['loss'][:, li].sum()
+    alt = dstore['agg_loss_table'].value
+    for li, lt in enumerate(loss_dt.names):
+        data1[li] += alt['loss'][:, li].sum()
 
     # check the sums are consistent with the ones coming from losses_by_tag
     tax_idx = dstore['assetcol'].get_tax_idx()
@@ -66,6 +68,10 @@ def check_total_losses(calc):
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
+
+    def check_attr(self, name, value):
+        got = self.calc.datastore.get_attr('agg_curves-stats', name)
+        numpy.testing.assert_equal(value, got)
 
     def assert_stats_ok(self, pkg, job_ini):
         out = self.run_calc(pkg.__file__, job_ini, exports='csv',
@@ -94,6 +100,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
                     'expected/%s' % strip_calc_id(fname), fname)
+
+        # make sure the agg_curves-stats has the right attrs
+        self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
+        self.check_attr('units', [b'EUR', b'EUR'])
+        self.check_attr('nbytes', 96)
 
         # test the loss curves exporter
         [f1] = export(('loss_curves/rlz-0', 'csv'), self.calc.datastore)
@@ -224,6 +235,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
+        # extract curves by tag
+        tags = ['taxonomy=tax1', 'state=01', 'cresta=0.11']
+        a = extract(self.calc.datastore, 'aggcurves/structural', *tags)
+        self.assertEqual(a.array.shape, (4, 2))  # 4 stats, 2 return periods
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
@@ -234,10 +250,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check job_info is stored
-        job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
+        job_info = {decode(k) for k in dict(self.calc.datastore['job_info'])}
         self.assertIn('build_curves_maps.sent', job_info)
         self.assertIn('build_curves_maps.received', job_info)
-
         check_total_losses(self.calc)
 
     @attr('qa', 'risk', 'event_based_risk')
