@@ -592,13 +592,14 @@ def _array(v):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def extract(request, calc_id, what, attrs):
+def extract(request, calc_id, what):
     """
-    Wrapper over the `oq extract` command
+    Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
+    only calculations owned by the current user can be retrieved.
     """
-    try:
-        job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
-    except dbapi.NotFound:
+    user = getpass.getuser() if settings.LOCKDOWN else None
+    job = logs.dbcmd('get_job', int(calc_id), user)
+    if job is None:
         return HttpResponseNotFound()
 
     # read the data and save them on a temporary .pik file
@@ -606,17 +607,14 @@ def extract(request, calc_id, what, attrs):
         fd, fname = tempfile.mkstemp(
             prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
-        if attrs:  # extract the attributes only
-            array, attrs = None, ds.get_attrs(what)
-        else:  # extract the full HDF5 object
-            extra = ['%s=%s' % item for item in request.GET.items()]
-            obj = _extract(ds, what, *extra)
-            if inspect.isgenerator(obj):
-                array, attrs = None, {k: _array(v) for k, v in obj}
-            elif hasattr(obj, '__toh5__'):
-                array, attrs = obj.__toh5__()
-            else:  # assume obj is an array
-                array, attrs = obj, {}
+        extra = ['%s=%s' % item for item in request.GET.items()]
+        obj = _extract(ds, what, *extra)
+        if inspect.isgenerator(obj):
+            array, attrs = None, {k: _array(v) for k, v in obj}
+        elif hasattr(obj, '__toh5__'):
+            array, attrs = obj.__toh5__()
+        else:  # assume obj is an array
+            array, attrs = obj, {}
         numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
@@ -642,9 +640,8 @@ def get_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
-    try:
-        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
-    except dbapi.NotFound:
+    job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    if job is None:
         return HttpResponseNotFound()
 
     fname = job.ds_calc_dir + '.hdf5'
@@ -661,9 +658,8 @@ def get_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """
-    try:
-        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
-    except dbapi.NotFound:
+    job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    if job is None:
         return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         oq = ds['oqparam']

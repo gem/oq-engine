@@ -340,7 +340,7 @@ class HazardCalculator(BaseCalculator):
         if some assets were discarded or if there were missing assets
         for some sites.
         """
-        maximum_distance = self.oqparam.asset_hazard_distance
+        asset_hazard_distance = self.oqparam.asset_hazard_distance
         siteobjects = geo.utils.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
             zip(sitecol.sids, sitecol.lons, sitecol.lats))
@@ -348,13 +348,14 @@ class HazardCalculator(BaseCalculator):
         for assets in self.assetcol.assets_by_site():
             if len(assets):
                 lon, lat = assets[0].location
-                site, _ = siteobjects.get_closest(lon, lat, maximum_distance)
-                if site:
+                site, distance = siteobjects.get_closest(lon, lat)
+                if distance <= asset_hazard_distance:
+                    # keep the assets, otherwise discard them
                     assets_by_sid += {site.sid: list(assets)}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associate any site to any assets within the '
-                'maximum distance of %s km' % maximum_distance)
+                'asset_hazard_distance of %s km' % asset_hazard_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
