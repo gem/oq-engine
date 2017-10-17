@@ -1,3 +1,8 @@
+  [Graeme Weatherill]
+  * Implemented the Zhao et al. (2016) GMPE for active shallow crustal,
+    subduction interface and subduction slab events
+  * Adds 'rvolc' (volcanic path distance) to the distance context
+  
   [Michele Simionato]
   * Added a debug command `oq plot_assets` and fixed `oq plot_sites`
   * Added a flag `--multipoint` to the command `oq upgrade_nrml`
@@ -34,6 +39,7 @@
   [Daniele Viganò]
   * Fixed a bug in `oq reset` command which was not stopping
     the DbServer properly
+>>>>>>> master
 
   [Michele Simionato]
   * Implemented an API `/extract/aggcurves/loss_type?tagname1=tagvalue1&...`
