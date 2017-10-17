@@ -166,6 +166,24 @@ class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
 
+class Piecewise(object):
+    """
+    Given two arrays x and y of non-decreasing values, build a piecewise
+    function associating to each x the corresponding y. If x is smaller
+    then the minimum x, the minimum y is returned; if x is larger than the
+    maximum x, the maximum y is returned.
+    """
+    def __init__(self, x, y):
+        self.y = y
+        # interpolating from x values to indices in the range [0: len(x)]
+        self.interp = interp1d(x, range(len(x)), bounds_error=False,
+                               fill_value=(0, len(x) - 1))
+
+    def __call__(self, x):
+        idx = numpy.int64(self.interp(x))
+        return self.y[idx]
+
+
 class IntegrationDistance(collections.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
@@ -206,9 +224,10 @@ class IntegrationDistance(collections.Mapping):
         try:
             md = self.interp[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
-            magdist = getdefault(self.magdist, trt)
-            md = self.interp[trt] = interp1d(
-                *magdist, bounds_error=False, fill_value='extrapolate')
+            mags, dists = getdefault(self.magdist, trt)
+            mags = numpy.concatenate([[0], mags])
+            dists = numpy.concatenate([[0], dists])
+            md = self.interp[trt] = Piecewise(mags, dists)
         return md(mag)
 
     def get_closest(self, sites, rupture, distance_type='rrup'):
