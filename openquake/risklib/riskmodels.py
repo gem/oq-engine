@@ -369,11 +369,9 @@ class Damage(RiskModel):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        n = len(assets)
         ffs = self.risk_functions[loss_type]
-        damages = numpy.array(
-            [scientific.scenario_damage(ffs, gmv) for gmv in gmvs_eids[0]])
-        return [damages] * n
+        damages = scientific.scenario_damage(ffs, gmvs_eids[0])  # shape (D, E)
+        return [damages.T] * len(assets)
 
 
 @registry.add('classical_damage')
