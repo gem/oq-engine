@@ -24,7 +24,7 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, source, calc
+from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 
@@ -48,7 +48,7 @@ def classical_risk(riskinput, riskmodel, param, monitor):
     result = dict(loss_curves=[], stat_curves=[])
     all_outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for outputs in all_outputs:
-        r = outputs.r
+        r = outputs.rlzi
         outputs.average_losses = AccumDict(accum=[])  # l -> array
         for l, (loss_curves, insured_curves) in enumerate(outputs):
             for i, asset in enumerate(outputs.assets):
@@ -70,21 +70,21 @@ def classical_risk(riskinput, riskmodel, param, monitor):
         w = param['weights']
         statnames, stats = zip(*param['stats'])
         l_idxs = range(len(riskmodel.lti))
-        for assets, rows in groupby(
+        for assets, outs in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [w[row.r] for row in rows]
-            row = rows[0]
+            weights = [w[out.rlzi] for out in outs]
+            out = outs[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):
-                    avgs = numpy.array([r.average_losses[l][i] for r in rows])
+                    avgs = numpy.array([r.average_losses[l][i] for r in outs])
                     avg_stats = compute_stats(avgs, stats, weights)
-                    # row is index by the loss type index l and row[l]
+                    # out is index by the loss type index l and out[l]
                     # is a pair loss_curves, insured_loss_curves
                     # loss_curves[i, 0] are the i-th losses,
                     # loss_curves[i, 1] are the i-th poes
-                    losses = row[l][0][i, 0]
+                    losses = out[l][0][i, 0]
                     poes_stats = compute_stats(
-                        numpy.array([row[l][0][i, 1] for row in rows]),
+                        numpy.array([out[l][0][i, 1] for out in outs]),
                         stats, weights)
                     result['stat_curves'].append(
                         (l, asset.ordinal, losses, poes_stats, avg_stats))

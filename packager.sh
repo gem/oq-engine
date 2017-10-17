@@ -393,7 +393,7 @@ _devtest_innervm_run () {
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib openquake/commonlib
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
 
-		 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib
+                 export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib openquake/hazardlib
 
 
 
@@ -590,7 +590,7 @@ celery_wait() {
 
 celery_wait $GEM_MAXLOOP"
 
-        # run all of the hazard and risk demos
+        # run one risk demo (event based risk)
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
 
@@ -611,12 +611,7 @@ celery_wait $GEM_MAXLOOP"
 
         /usr/share/openquake/engine/utils/celery-status 
         cd /usr/share/openquake/engine/demos
-        # run demos
-        for demo_dir in \$(find . -type d | sort); do
-           if [ -f \$demo_dir/job_hazard.ini ]; then
-               OQ_DISTRIBUTE=celery oq engine --run \$demo_dir/job_hazard.ini && oq engine --run \$demo_dir/job_risk.ini --hc -1
-           fi
-        done
+        OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
         
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out

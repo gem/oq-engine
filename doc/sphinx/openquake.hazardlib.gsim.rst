@@ -339,6 +339,14 @@ convertito_2012
     :undoc-members:
     :show-inheritance:
 
+derras_2014
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.derras_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dost_2004
 -----------------------------------------
 
@@ -751,6 +759,14 @@ zhao_2006_swiss_coeffs
 ------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2006_swiss_coeffs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+zhao_2016
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zhao_2016
     :members:
     :undoc-members:
     :show-inheritance:
