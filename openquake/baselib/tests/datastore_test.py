@@ -18,10 +18,11 @@
 
 import re
 import os
+import sys
 import unittest
 import tempfile
 import numpy
-from openquake.commonlib.datastore import DataStore, read
+from openquake.baselib.datastore import DataStore, read
 
 
 class DataStoreTestCase(unittest.TestCase):
@@ -65,7 +66,11 @@ class DataStoreTestCase(unittest.TestCase):
         self.assertIsNotNone(mo)
 
     def test_read(self):
-        # cas of a non-existing directory
+        # windows does not manage permissions properly. Skip the test
+        if sys.platform == 'win32':
+            raise unittest.SkipTest('Windows')
+
+        # case of a non-existing directory
         with self.assertRaises(OSError):
             read(42, datadir='/fake/directory')
         # case of a non-existing file

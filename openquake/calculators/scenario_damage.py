@@ -19,6 +19,7 @@
 import itertools
 import numpy
 
+from openquake.baselib.python3compat import encode
 from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
 from openquake.calculators import base, event_based
@@ -105,7 +106,7 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
     result = dict(d_asset=[], d_tag=numpy.zeros((T, R, L, E, D), F64),
                   c_asset=[], c_tag=numpy.zeros((T, R, L, E), F64))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        r = outputs.r
+        r = outputs.rlzi
         for l, damages in enumerate(outputs):
             loss_type = riskmodel.loss_types[l]
             c_model = c_models.get(loss_type)
@@ -147,8 +148,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        _, gmfs = base.get_gmfs(self)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs)
+        base.get_gmfs(self)
+        self.riskinputs = self.build_riskinputs('gmf')
         self.param['tags'] = self.assetcol.tags()
 
     def post_execute(self, result):
@@ -156,7 +157,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
-        tags = [t.encode('utf-8') for t in self.param['tags']]
+        tags = encode(self.param['tags'])
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         L = len(ltypes)
