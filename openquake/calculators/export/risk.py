@@ -257,9 +257,10 @@ def export_loss_curves(ekey, dstore):
 
 
 # this is used by classical_risk and event_based_risk
-@export.add(('loss_curves-rlzs', 'csv'), ('loss_curves-stats', 'csv'))
-def export_loss_curves2(ekey, dstore):
-    _, kind = ekey[0].split('-')  # rlzs or stats
+@export.add(('loss_curves-rlzs', 'csv'))
+def export_loss_curves_stats(ekey, dstore):
+    num_rlzs = len(dstore['realizations'])
+    kind = 'stats' if num_rlzs > 1 else 'rlzs'
     return export_loss_curves(('loss_curves/' + kind, 'csv'), dstore)
 
 
