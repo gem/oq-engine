@@ -23,6 +23,7 @@ import logging
 import operator
 import collections
 import numpy
+from decorator import FunctionMaker
 from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
@@ -30,6 +31,7 @@ from openquake.baselib.parallel import get_pickled_sizes
 from openquake.hazardlib import gsim, nrml, InvalidFile
 from openquake.commonlib import readinput
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 
@@ -100,7 +102,7 @@ def do_build_reports(directory):
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
 @sap.Script
-def info(calculators, gsims, views, exports, report, input_file=''):
+def info(calculators, gsims, views, exports, extracts, report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
@@ -123,6 +125,14 @@ def info(calculators, gsims, views, exports, report, input_file=''):
             print(exporter, formats)
             n += len(formats)
         print('There are %d exporters defined.' % n)
+    if extracts:
+        for key in extract:
+            func = extract[key]
+            if hasattr(func, '__wrapped__'):
+                fm = FunctionMaker(func.__wrapped__)
+            else:
+                fm = FunctionMaker(func)
+            print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
     if os.path.isdir(input_file) and report:
         with Monitor('info', measuremem=True) as mon:
             with mock.patch.object(logging.root, 'info'):  # reduce logging
@@ -154,5 +164,6 @@ info.flg('calculators', 'list available calculators')
 info.flg('gsims', 'list available GSIMs')
 info.flg('views', 'list available views')
 info.flg('exports', 'list available exports')
+info.flg('extracts', 'list available extracts', '-x')
 info.flg('report', 'build short report(s) in rst format')
 info.arg('input_file', 'job.ini file or zip archive')

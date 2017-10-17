@@ -20,7 +20,7 @@ import logging
 
 import numpy
 
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.calculators import base
@@ -62,7 +62,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
                   losses_by_tag=lbt, all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        r = outputs.r
+        r = outputs.rlzi
         assets = outputs.assets
         for l, losses in enumerate(outputs):
             if losses is None:  # this may happen
@@ -109,8 +109,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        _, gmfs = base.get_gmfs(self)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
+        base.get_gmfs(self)
+        self.riskinputs = self.build_riskinputs('gmf', eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
@@ -137,7 +137,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
             # losses by tag
             self.datastore['losses_by_tag-rlzs'] = result['losses_by_tag']
-            tags = [tag.encode('ascii') for tag in self.assetcol.tags()]
+            tags = encode(self.assetcol.tags())
             self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
                                      nbytes=result['losses_by_tag'].nbytes)
 

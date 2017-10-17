@@ -22,23 +22,30 @@ import getpass
 import collections
 import h5py
 
-from openquake.baselib import hdf5
-from openquake.commonlib import config
-from openquake.commonlib.writers import write_csv
-
-DATADIR = os.environ.get('OQ_DATADIR')
-if not DATADIR:
-    shared_dir = config.get('directory', 'shared_dir')
-    if shared_dir:
-        DATADIR = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
-    else:  # use the home of the user
-        DATADIR = os.path.join(os.path.expanduser('~'), 'oqdata')
+from openquake.baselib import hdf5, config
 
 
-def get_calc_ids(datadir=DATADIR):
+def get_datadir():
+    """
+    Extracts the path of the directory where the openquake data are stored
+    from the environment ($OQ_DATADIR) or from the shared_dir in the
+    configuration file.
+    """
+    datadir = os.environ.get('OQ_DATADIR')
+    if not datadir:
+        shared_dir = config.directory.shared_dir
+        if shared_dir:
+            datadir = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
+        else:  # use the home of the user
+            datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
+    return datadir
+
+
+def get_calc_ids(datadir=None):
     """
     Extract the available calculation IDs from the datadir, in order.
     """
+    datadir = datadir or get_datadir()
     if not os.path.exists(datadir):
         return []
     calc_ids = []
@@ -49,23 +56,25 @@ def get_calc_ids(datadir=DATADIR):
     return sorted(calc_ids)
 
 
-def get_last_calc_id(datadir=DATADIR):
+def get_last_calc_id(datadir=None):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
     """
+    datadir = datadir or get_datadir()
     calcs = get_calc_ids(datadir)
     if not calcs:
         return 0
     return calcs[-1]
 
 
-def hdf5new(datadir=DATADIR):
+def hdf5new(datadir=None):
     """
     Return a new `hdf5.File by` instance with name determined by the last
     calculation in the datadir (plus one). Set the .path attribute to the
     generated filename.
     """
+    datadir = datadir or get_datadir()
     calc_id = get_last_calc_id(datadir) + 1
     fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
     new = hdf5.File(fname, 'w')
@@ -73,7 +82,7 @@ def hdf5new(datadir=DATADIR):
     return new
 
 
-def extract_calc_id_datadir(hdf5path, datadir=DATADIR):
+def extract_calc_id_datadir(hdf5path, datadir=None):
     """
     Extract the calculation ID from the given hdf5path or integer:
 
@@ -84,6 +93,7 @@ def extract_calc_id_datadir(hdf5path, datadir=DATADIR):
        ...
     ValueError: Cannot extract calc_id from /mnt/ssd/oqdata/wrong_name.hdf5
     """
+    datadir = datadir or get_datadir()
     if hdf5path is None:  # use a new datastore
         return get_last_calc_id(datadir) + 1, datadir
     try:
@@ -97,7 +107,7 @@ def extract_calc_id_datadir(hdf5path, datadir=DATADIR):
     return calc_id, datadir
 
 
-def read(calc_id, mode='r', datadir=DATADIR):
+def read(calc_id, mode='r', datadir=None):
     """
     :param calc_id: calculation ID or hdf5path
     :param mode: 'r' or 'w'
@@ -106,6 +116,7 @@ def read(calc_id, mode='r', datadir=DATADIR):
 
     Read the datastore, if it exists and it is accessible.
     """
+    datadir = datadir or get_datadir()
     dstore = DataStore(calc_id, datadir, mode=mode)
     try:
         hc_id = dstore['oqparam'].hazard_calculation_id
@@ -142,8 +153,8 @@ class DataStore(collections.MutableMapping):
     and a dictionary and populating the object.
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
-    def __init__(self, calc_id=None, datadir=DATADIR,
-                 params=(), mode=None):
+    def __init__(self, calc_id=None, datadir=None, params=(), mode=None):
+        datadir = datadir or get_datadir()
         calc_id, datadir = extract_calc_id_datadir(calc_id, datadir)
         if not os.path.exists(datadir):
             os.makedirs(datadir)
@@ -176,24 +187,6 @@ class DataStore(collections.MutableMapping):
             self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
             if self.parent != () and self.parent.hdf5 is None:
                 self.parent.open()
-
-    @property
-    def export_dir(self):
-        """
-        Return the underlying export directory
-        """
-        try:
-            return self._export_dir
-        except AttributeError:
-            self._export_dir = self['oqparam'].export_dir
-            return self._export_dir
-
-    @export_dir.setter
-    def export_dir(self, value):
-        """
-        Set the export directory
-        """
-        self._export_dir = value
 
     @property
     def export_dir(self):
@@ -249,6 +242,13 @@ class DataStore(collections.MutableMapping):
             if default is None:
                 raise
             return default
+
+    def get_attrs(self, key):
+        """
+        :param key: dataset path
+        :returns: dictionary of attributes for that path
+        """
+        return dict(h5py.File.__getitem__(self.hdf5, key).attrs)
 
     def create_dset(self, key, dtype, shape=(None,), compression=None,
                     fillvalue=0, attrs=None):
@@ -345,12 +345,6 @@ class DataStore(collections.MutableMapping):
         else:
             fname = '%s-%s.%s' % (prefix, postfix, fmt)
         return self.export_path(fname, export_dir)
-
-    def export_csv(self, key):
-        """
-        Generic csv exporter
-        """
-        return write_csv(self.export_path(key, 'csv'), self[key])
 
     def flush(self):
         """Flush the underlying hdf5 file"""
