@@ -189,14 +189,18 @@ class IntegrationDistance(collections.Mapping):
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type. The integration distances can be scalars or
     list of pairs (magnitude, distance). Here is an example using 'default'
-    as tectonic region type sot that the same values will be used for all
+    as tectonic region type, so that the same values will be used for all
     tectonic region types:
 
     >>> maxdist = IntegrationDistance({'default': [
     ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
     ...          (7, 400), (8, 800)]})
+    >>> maxdist('Some TRT', mag=.5)
+    0
     >>> maxdist('Some TRT', mag=5.5)
-    array(150.0)
+    100
+    >>> maxdist('Some TRT', mag=8.5)
+    800
 
     It has also a method `.get_closest(sites, rupture)` returning the closest
     sites to the rupture and their distances. The integration distance can be
