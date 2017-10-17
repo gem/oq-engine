@@ -31,9 +31,9 @@ from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
+from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -186,10 +186,10 @@ def get_events(ebruptures):
     year = 0  # to be set later
     for ebr in ebruptures:
         for event in ebr.events:
-            rec = (event['eid'], ebr.serial, year, event['ses'],
+            rec = (event['eid'], ebr.serial, ebr.grp_id, year, event['ses'],
                    event['sample'])
             events.append(rec)
-    return numpy.array(events, calc.stored_event_dt)
+    return numpy.array(events, readinput.stored_event_dt)
 
 
 @base.calculators.add('event_based_rupture')
@@ -238,16 +238,19 @@ class EventBasedRuptureCalculator(PSHACalculator):
         return acc
 
     def save_ruptures(self, ruptures_by_grp_id):
-        """Extend the 'events' dataset with the given ruptures"""
+        """
+        Extend the 'events' dataset with the events from the given ruptures;
+        also, save the ruptures if the flag `save_ruptures` is on.
+
+        :param ruptures_by_grp_id: a dictionary grp_id -> list of EBRuptures
+        """
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 if len(ebrs):
                     events = get_events(ebrs)
-                    dset = self.datastore.extend(
-                        'events/grp-%02d' % grp_id, events)
+                    dset = self.datastore.extend('events', events)
                     if self.oqparam.save_ruptures:
-                        initial_eidx = len(dset) - len(events)
-                        self.rupser.save(ebrs, initial_eidx)
+                        self.rupser.save(ebrs, eidx=len(dset)-len(events))
 
     def post_execute(self, result):
         """
@@ -264,36 +267,27 @@ class EventBasedRuptureCalculator(PSHACalculator):
                      num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
-            inv_time = int(self.oqparam.investigation_time)
             numpy.random.seed(self.oqparam.ses_seed)
-            for sm in sorted(self.datastore['events']):
-                set_random_years(self.datastore, 'events/' + sm, inv_time)
-        h5 = self.datastore.hdf5
-        if 'ruptures' in h5:
-            self.datastore.set_nbytes('ruptures')
-        if 'events' in h5:
-            self.datastore.set_attrs('events', num_events=num_events)
-            self.datastore.set_nbytes('events')
+            set_random_years(self.datastore,
+                             int(self.oqparam.investigation_time))
 
 
-def set_random_years(dstore, events_sm, investigation_time):
+def set_random_years(dstore, investigation_time):
     """
     Sort the `events` array and attach year labels sensitive to the
     SES ordinal and the investigation time.
     """
-    events = dstore[events_sm].value
+    events = dstore['events'].value
     eids = numpy.sort(events['eid'])
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(eids, years))
     for event in events:
         idx = event['ses'] - 1  # starts from 0
         event['year'] = idx * investigation_time + year_of[event['eid']]
-    dstore[events_sm] = events
+    dstore['events'] = events
 
 
 # ######################## GMF calculator ############################ #
-
-indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 def compute_gmfs_and_curves(getter, oq, monitor):
@@ -315,15 +309,14 @@ def compute_gmfs_and_curves(getter, oq, monitor):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         with monitor('building hazard', measuremem=True):
             gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
-            hazard = sorted(getter.get_hazard(data=gmfdata).items())
-        for rlzi, hazardr in hazard:
-            for sid in getter.sids:
-                array = hazardr[sid]
+            hazard = getter.get_hazard(data=gmfdata)
+        for sid, hazardr in zip(getter.sids, hazard):
+            for rlzi, array in hazardr.items():
                 if len(array) == 0:  # no data
                     continue
                 with hc_mon:
                     gmvs = array['gmv']
-                    for imti, imt in enumerate(getter.imts):
+                    for imti, imt in enumerate(getter.imtls):
                         poes = calc._gmvs_to_haz_curve(
                             gmvs[:, imti], oq.imtls[imt],
                             oq.investigation_time, duration)
@@ -350,6 +343,7 @@ def get_ruptures_by_grp(dstore):
     """
     Extracts the dictionary `ruptures_by_grp` from the given calculator
     """
+    events = dstore['events']
     n = 0
     for grp in dstore['ruptures']:
         n += len(dstore['ruptures/' + grp])
@@ -361,7 +355,8 @@ def get_ruptures_by_grp(dstore):
         ruptures_by_grp = AccumDict(accum=[])
         for grp in dstore['ruptures']:
             grp_id = int(grp[4:])  # strip 'grp-'
-            ruptures_by_grp[grp_id] = list(calc.get_ruptures(dstore, grp_id))
+            ruptures = list(calc.get_ruptures(dstore, events, grp_id))
+            ruptures_by_grp[grp_id] = ruptures
     return ruptures_by_grp
 
 
@@ -384,6 +379,11 @@ def save_gmdata(calc, n_rlzs):
         array[rlzi] = tuple(gmv) + (events, nbytes)
     calc.datastore['gmdata'] = array
     logging.info('Generated %s of GMFs', humansize(array['nbytes'].sum()))
+
+
+def update_nbytes(dstore, key, array):
+    nbytes = dstore.get_attr(key, 'nbytes', 0)
+    dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
 
 
 @base.calculators.add('event_based')
@@ -414,6 +414,9 @@ class EventBasedCalculator(ClassicalCalculator):
         if data is not None:
             with sav_mon:
                 hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
+                # it is important to save the number of bytes while the
+                # computation is going, to see the progress
+                update_nbytes(self.datastore, 'gmf_data/data', data)
                 for sid, start, stop in res['indices']:
                     self.indices[sid].append(
                         (start + self.offset, stop + self.offset))

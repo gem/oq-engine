@@ -28,3 +28,4 @@ from openquake.hazardlib import (
 
 class InvalidFile(Exception):
     pass
+
