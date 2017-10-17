@@ -18,18 +18,16 @@
 
 import sys
 import time
-import socket
 import os.path
 import sqlite3
 import logging
 import threading
 import subprocess
-import psutil
 
-from openquake.baselib import sap, zeromq as z
+from openquake.baselib import config, sap, zeromq as z, workerpool as w
+from openquake.baselib.general import socket_ready
 from openquake.baselib.parallel import safely_call
-from openquake.hazardlib import valid
-from openquake.commonlib import config, logs
+from openquake.commonlib import logs
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
@@ -41,47 +39,67 @@ db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
+ZMQ = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
+
 
 class DbServer(object):
     """
     A server collecting the received commands into a queue
     """
-    def __init__(self, db, address, authkey,  num_workers=5):
+    def __init__(self, db, address, num_workers=5):
         self.db = db
+        self.master_host = address[0]
         self.frontend = 'tcp://%s:%s' % address
         self.backend = 'inproc://dbworkers'
-        self.authkey = authkey
         self.num_workers = num_workers
         self.pid = os.getpid()
+        self.master = w.WorkerMaster(**config.zworkers)
 
-    def worker(self, sock):
+    def dworker(self, sock):
+        # a database worker responding to commands
         for cmd_ in sock:
             cmd, args = cmd_[0], cmd_[1:]
             if cmd == 'getpid':
-                sock.rep((self.pid, None, None))
+                sock.send((self.pid, None, None))
                 continue
             try:
                 func = getattr(actions, cmd)
             except AttributeError:
-                sock.rep(('Invalid command ' + cmd, ValueError, None))
+                sock.send(('Invalid command ' + cmd, ValueError, None))
             else:
-                sock.rep(safely_call(func, (self.db,) + args))
+                sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
-        # start workers
-        workers = []
+        # start database worker threads
+        dworkers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
-            threading.Thread(target=self.worker, args=(sock,)).start()
-            workers.append(sock)
+            threading.Thread(target=self.dworker, args=(sock,)).start()
+            dworkers.append(sock)
         logging.warn('DB server started with %s on %s, pid=%d',
                      sys.executable, self.frontend, self.pid)
-        # start frontend->backend proxy
+        if ZMQ:
+            # start task_in->task_out streamer thread
+            c = config.zworkers
+            threading.Thread(
+                target=w.streamer,
+                args=(self.master_host, c.task_in_port, c.task_out_port)
+            ).start()
+            logging.warn('Task streamer started from %s -> %s',
+                         c.task_in_port, c.task_out_port)
+
+            # start zworkers and wait a bit for them
+            msg = self.master.start()
+            logging.warn(msg)
+            time.sleep(1)
+
+        # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
                         z.bind(self.backend, z.zmq.DEALER))
         except (KeyboardInterrupt, z.zmq.ZMQError):
-            for sock in workers:
+            for sock in dworkers:
                 sock.running = False
             logging.warn('DB server stopped')
 
@@ -100,19 +118,15 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        err = sock.connect_ex(address or config.DBS_ADDRESS)
-    finally:
-        sock.close()
-    return 'not-running' if err else 'running'
+    address = address or (config.dbserver.host, config.dbserver.port)
+    return 'running' if socket_ready(address) else 'not-running'
 
 
 def check_foreign():
     """
     Check if we the DbServer is the right one
     """
-    if not config.flag_set('dbserver', 'multi_user'):
+    if not config.dbserver.multi_user:
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
@@ -126,7 +140,7 @@ def ensure_on():
     Start the DbServer if it is off
     """
     if get_status() == 'not-running':
-        if valid.boolean(config.get('dbserver', 'multi_user')):
+        if config.dbserver.multi_user:
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
@@ -155,7 +169,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = config.DBS_ADDRESS
+        addr = (config.dbserver.host, config.dbserver.port)
 
     if dbpath:
         DATABASE['NAME'] = dbpath
@@ -175,7 +189,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     try:
-        DbServer(db, addr, config.DBS_AUTHKEY).start()
+        DbServer(db, addr).start()
     finally:
         db.close()
 
