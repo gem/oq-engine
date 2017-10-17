@@ -5,7 +5,7 @@ the configuration file:
 
 \begin{enumerate}
 
-  \item \Verb+dmg_per_asset+: this file contains the damage distribution
+  \item \Verb+dmg_by_asset+: this file contains the damage distribution
     statistics for each of the individual \glspl{asset} defined in the
     \gls{exposuremodel} that fall within the \Verb+region_constraint+ and have
     a computed \gls{acr:gmf} value available within the defined
@@ -13,11 +13,10 @@ the configuration file:
     buildings (\Verb+mean+) and associated standard deviation (\Verb+stddev+)
     of the number of buildings in each damage state are listed in this file.
 
-  \item \Verb+dmg_per_taxonomy+: this file contains the aggregated damage
-    distribution statistics for each of the \glspl{taxonomy} defined in the
-    \gls{exposuremodel}. For each \gls{taxonomy}, the mean number of
-    buildings (\Verb+mean+) and associated standard deviation (\Verb+stddev+)
-    of the number of buildings in each damage state are listed in this file.
+  \item \Verb+dmg_by_tag+: this file contains the aggregated damage
+    distribution statistics for each of the \glspl{tag} defined in the
+    \gls{exposuremodel}. For each \gls{tag}, the mean number of
+    buildings (\Verb+mean+) in each damage state are listed in this file.
 
   \item \Verb+dmg_total+: this file contains the aggregated damage
     distribution statistics for the entire portfolio of \glspl{asset} defined
@@ -93,19 +92,17 @@ provided in the configuration file in addition to the corresponding
 \label{subsubsec:scenario_taxonomy_damage_statistics}
 
 The Scenario Damage calculator also estimates the expected total number of
-buildings of a certain \gls{taxonomy} in each damage state. This distribution
-of damage per building \gls{taxonomy} is depicted in the example
-output file snippet in Table~\ref{output:scenario_damage_taxonomy}.
+buildings of a certain \gls{tag} in each damage state. This distribution
+of damage per building \gls{tag} is depicted in the example
+output file snippet in Table~\ref{output:scenario_damage_tag}.
 
-\input{oqum/risk/verbatim/output_scenario_damage_taxonomy}
+\input{oqum/risk/verbatim/output_scenario_damage_tag}
 
-The output file lists the mean and standard deviation of the total number
-of buildings in each damage state for each building typology found in the
+The output file lists the mean of the total number
+of buildings in each damage state for each tag found in the
 exposure model for all loss types (amongst
 ``structural'', ``nonstructural'', ``contents'', or
-``business\_interruption'') for which a \gls{consequencemodel} file was also
-provided in the configuration file in addition to the corresponding
-\gls{fragilitymodel} file.
+``business\_interruption'').
 
 
 \subsubsection{Total damage statistics}
