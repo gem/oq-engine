@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the magnitude-distance filter to be piecewise (no interpolation)
   * Added a debug command `oq plot_assets` and fixed `oq plot_sites`
   * Added a flag `--multipoint` to the command `oq upgrade_nrml`
   * Deprecated several outputs: hcurves-rlzs, agg_loss_table, losses_total,
