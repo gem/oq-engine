@@ -118,25 +118,37 @@ def delete_uncompleted_calculations(db, user):
     db("DELETE FROM job WHERE user_name=?x AND status != 'complete'", user)
 
 
-def get_job_id(db, job_id, username):
+def get_job(db, job_id, username=None):
     """
     If job_id is negative, return the last calculation of the current
     user, otherwise returns the job_id unchanged.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: a job ID (can be negative and can be nonexisting)
-    :param username: an user name
-    :returns: a valid job ID or None if the original job ID was invalid
+    :param username: an user name (if None, ignore it)
+    :returns: a valid job or None if the original job ID was invalid
     """
     job_id = int(job_id)
+
     if job_id > 0:
-        return job_id
-    joblist = db('SELECT id FROM job WHERE user_name=?x '
-                 'ORDER BY id DESC LIMIT ?x', username, - job_id)
+        dic = dict(id=job_id)
+        if username:
+            dic['user_name'] = username
+        try:
+            return db('SELECT * FROM job WHERE ?A', dic, one=True)
+        except NotFound:
+            return
+
+    # else negative job_id
+    if username:
+        joblist = db('SELECT * FROM job WHERE user_name=?x '
+                     'ORDER BY id DESC LIMIT ?x', username, -job_id)
+    else:
+        joblist = db('SELECT * FROM job ORDER BY id DESC LIMIT ?x', -job_id)
     if not joblist:  # no jobs
         return
     else:
-        return joblist[-1].id
+        return joblist[-1]
 
 
 def get_calc_id(db, datadir, job_id=None):
@@ -430,7 +442,7 @@ def calc_info(db, calc_id):
     return response_data
 
 
-def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
+def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
@@ -448,11 +460,6 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     """
     # helper to get job+calculation data from the oq-engine database
     filterdict = {}
-
-    # user_acl_on is true if settings.ACL_ON = True or when the user is a
-    # Django super user
-    if user_acl_on:
-        filterdict['user_name'] = user_name
 
     if id is not None:
         filterdict['id'] = id
@@ -480,8 +487,16 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
-              % (time_filter, limit), filterdict)
+    # user_acl_on is true if settings.ACL_ON = True or when the user is a
+    # Django super user
+    if user_acl_on:
+        users_filter = "user_name IN (?X)"
+    else:
+        users_filter = 1
+
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s'
+              ' ORDER BY id DESC LIMIT %d'
+              % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description) for job in jobs]
 
@@ -574,20 +589,6 @@ def get_result(db, result_id):
     job = db('SELECT job.*, ds_key FROM job, output WHERE '
              'oq_job_id=job.id AND output.id=?x', result_id, one=True)
     return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
-
-
-def get_job(db, job_id, username):
-    """
-    :param db:
-        a :class:`openquake.server.dbapi.Db` instance
-    :param job_id:
-        ID of the current job
-    :param username:
-        user name
-    :returns: the full path to the datastore
-    """
-    calc_id = get_job_id(db, job_id, username) or job_id
-    return db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
 
 
 def get_results(db, job_id):
