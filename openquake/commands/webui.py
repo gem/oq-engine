@@ -21,8 +21,7 @@ import sys
 import subprocess
 import webbrowser
 
-from openquake.baselib import sap
-from openquake.commonlib import config
+from openquake.baselib import sap, config
 from openquake.server import dbserver
 from openquake.server.utils import check_webserver_running
 
@@ -51,9 +50,7 @@ def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
     start the webui server in foreground or perform other operation on the
     django application
     """
-
-    dbpath = os.path.realpath(
-        os.path.expanduser(config.get('dbserver', 'file')))
+    dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')

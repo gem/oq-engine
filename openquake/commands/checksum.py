@@ -17,8 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import os.path
-from openquake.baselib import sap
-from openquake.commonlib import datastore, readinput
+from openquake.baselib import sap, datastore
+from openquake.commonlib import readinput
 
 
 @sap.Script
