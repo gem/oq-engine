@@ -17,8 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-from openquake.baselib import sap
-from openquake.commonlib import datastore
+from openquake.baselib import sap, datastore
 
 
 def make_figure(curves):

@@ -497,7 +497,7 @@ def view_assetcol(token, dstore):
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
     num_ruptures = sum(len(v) for v in dstore['ruptures'].values())
-    num_events = sum(len(v) for v in dstore['events'].values())
+    num_events = len(dstore['events'])
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),

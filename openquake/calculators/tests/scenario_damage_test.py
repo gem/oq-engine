@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import numpy
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib import InvalidFile
@@ -25,6 +26,7 @@ from openquake.qa_tests_data.scenario_damage import (
     case_6, case_7)
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
+from openquake.calculators.extract import extract
 from openquake.calculators.export import export
 from openquake.calculators.views import view
 
@@ -56,6 +58,16 @@ RC       2,000
 RM       4,000    
 *ALL*    6,000    
 ======== =========''', got)
+
+        # test aggdamages, 1 realization x 3 damage states
+        [dmg] = extract(self.calc.datastore, 'aggdamages/structural',
+                        'taxonomy=RC', 'CRESTA=01.1')
+        numpy.testing.assert_almost_equal(
+            [998.6327515, 720.0072021, 281.3600769], dmg)
+        # test no intersection
+        dmg = extract(self.calc.datastore, 'aggdamages/structural',
+                      'taxonomy=RM', 'CRESTA=01.1')
+        self.assertEqual(len(dmg), 0)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1c(self):

@@ -103,17 +103,28 @@ def get_vulnerability_functions_05(node, fname):
             raise InvalidFile(
                 'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
                 (taxonomy, fname, vfun.lineno))
+        num_probs = None
         if vfun['dist'] == 'PM':
             loss_ratios, probs = [], []
             for probabilities in vfun[1:]:
                 loss_ratios.append(probabilities['lr'])
                 probs.append(valid.probabilities(~probabilities))
-            probs = numpy.array(probs)
-            assert probs.shape == (len(loss_ratios), len(imls))
+                if num_probs is None:
+                    num_probs = len(probs[-1])
+                elif len(probs[-1]) != num_probs:
+                    raise ValueError(
+                        'Wrong number of probabilities (expected %d, '
+                        'got %d) in %s, line %d' %
+                        (num_probs, len(probs[-1]), fname,
+                         probabilities.lineno))
+            all_probs = numpy.array(probs)
+            assert all_probs.shape == (len(loss_ratios), len(imls)), (
+                len(loss_ratios), len(imls))
             vmodel[imt, taxonomy] = (
                 scientific.VulnerabilityFunctionWithPMF(
                     taxonomy, imt, imls, numpy.array(loss_ratios),
-                    probs))  # the seed will be set by readinput.get_risk_model
+                    all_probs))
+            # the seed will be set by readinput.get_risk_model
         else:
             with context(fname, vfun):
                 loss_ratios = ~vfun.meanLRs
