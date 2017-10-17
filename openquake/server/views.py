@@ -594,9 +594,11 @@ def _array(v):
 @require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
-    Wrapper over the `oq extract` command
+    Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
+    only calculations owned by the current user can be retrieved.
     """
-    job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
+    user = getpass.getuser() if settings.LOCKDOWN else None
+    job = logs.dbcmd('get_job', int(calc_id), user)
     if job is None:
         return HttpResponseNotFound()
 
