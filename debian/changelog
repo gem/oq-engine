@@ -40,7 +40,6 @@
   [Daniele Viganò]
   * Fixed a bug in `oq reset` command which was not stopping
     the DbServer properly
->>>>>>> master
 
   [Michele Simionato]
   * Implemented an API `/extract/aggcurves/loss_type?tagname1=tagvalue1&...`
