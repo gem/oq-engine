@@ -21,7 +21,6 @@ import json
 import logging
 import os
 import inspect
-import getpass
 import tempfile
 try:
     import urllib.parse as urlparse
@@ -641,7 +640,9 @@ def get_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
-    job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    user = utils.get_user_data(request)
+    username = user['name'] if user['acl_on'] else None
+    job = logs.dbcmd('get_job', int(job_id), username)
     if job is None:
         return HttpResponseNotFound()
 
@@ -659,7 +660,9 @@ def get_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """
-    job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    user = utils.get_user_data(request)
+    username = user['name'] if user['acl_on'] else None
+    job = logs.dbcmd('get_job', int(job_id), username)
     if job is None:
         return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
