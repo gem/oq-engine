@@ -100,7 +100,7 @@ class LossCurveExporter(object):
             aids = [self.str2asset[arefs[0]].ordinal]
         else:
             raise ValueError('Wrong specification in %s' % what)
-        return aids, arefs, spec or 'all', key
+        return aids, arefs, spec, key
 
     def export_csv(self, spec, asset_refs, curves_dict):
         """
@@ -126,7 +126,7 @@ class LossCurveExporter(object):
                         for loss, poe in zip(losses, poes):
                             data.append((aref, loss_type, loss, poe))
             dest = self.dstore.build_fname(
-                'loss_curves', '%s-%s' % (spec, key), 'csv')
+                'loss_curves', '%s-%s' % (spec, key) if spec else key, 'csv')
             writer.save(data, dest)
         return writer.getsaved()
 

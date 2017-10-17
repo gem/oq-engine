@@ -27,8 +27,8 @@ import platform
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib.performance import Monitor
-from openquake.commonlib import readinput, oqvalidation, datastore
+from openquake.baselib import performance, datastore
+from openquake.commonlib import readinput, oqvalidation
 
 
 REFERENCE_OS = 'Ubuntu-16.04' in platform.platform()
@@ -81,7 +81,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        monitor = Monitor(self.testdir)
+        monitor = performance.Monitor(self.testdir)
         return base.calculators(oq, monitor)
 
     def run_calc(self, testfile, job_ini, **kw):

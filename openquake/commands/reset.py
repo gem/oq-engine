@@ -19,8 +19,8 @@
 from __future__ import print_function
 import os
 import sys
-from openquake.baselib import sap
-from openquake.commonlib import config
+import signal
+from openquake.baselib import sap, config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
@@ -36,17 +36,17 @@ def reset(yes):
     if not ok:
         return
 
-    dbpath = os.path.realpath(
-        os.path.expanduser(config.get('dbserver', 'file')))
+    dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
 
     # user must be able to access and write the databse file to remove it
     if os.path.isfile(dbpath) and os.access(dbpath, os.W_OK):
         if dbserver.get_status() == 'running':
-            if config.flag_set('dbserver', 'multi_user'):
+            if config.dbserver.multi_user:
                 sys.exit('The oq dbserver must be stopped '
                          'before proceeding')
             else:
-                logs.dbcmd('stop')
+                pid = logs.dbcmd('getpid')
+                os.kill(pid, signal.SIGTERM)
                 print('dbserver stopped')
 
         try:
@@ -58,5 +58,6 @@ def reset(yes):
 
     # fast way of removing everything
     purge_all(fast=True)  # datastore of the current user
+
 
 reset.flg('yes', 'confirmation')
