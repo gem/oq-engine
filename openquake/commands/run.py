@@ -23,9 +23,9 @@ import logging
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, sap
+from openquake.baselib import performance, general, sap, datastore
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, datastore, oqvalidation
+from openquake.commonlib import readinput, oqvalidation
 from openquake.calculators import base, views
 
 calc_path = None  # set only when the flag --slowest is given

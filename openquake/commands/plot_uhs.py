@@ -18,8 +18,8 @@
 
 from __future__ import print_function
 import numpy
-from openquake.baselib import sap
-from openquake.commonlib import datastore, calc
+from openquake.baselib import sap, datastore
+from openquake.commonlib import calc
 
 
 def make_figure(indices, n_sites, imtls, poes, pmaps):

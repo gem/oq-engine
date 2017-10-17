@@ -8,13 +8,13 @@
         <costType name="structural" unit="USD" type="aggregated"/>
       </costTypes>
     </conversions>
+    <tagNames>CRESTA</tagNames>
     <assets>
       <asset id="a1" taxonomy="RM" number="3000">
         <location lon="15.48" lat="38.09"/>
         <costs>
           <cost type="structural" value="3000"/>
         </costs>
-        <tags CRESTA="01.1" />
       </asset>
       <asset id="a2" taxonomy="RC" number="2000">
         <location lon="15.56" lat="38.17"/>

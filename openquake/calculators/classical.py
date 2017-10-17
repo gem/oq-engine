@@ -23,7 +23,7 @@ import operator
 from functools import partial
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, config, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.commonlib import datastore, source, calc, config
+from openquake.commonlib import source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -335,6 +335,8 @@ class PSHACalculator(base.HazardCalculator):
         sm_ids = {sg.id: sm.ordinal for sm in self.csm.info.source_models
                   for sg in sm.src_groups}
 
+        num_tasks = 0
+        num_sources = 0
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -343,8 +345,6 @@ class PSHACalculator(base.HazardCalculator):
                     csm = self.csm.filter(src_filter)
             else:
                 src_filter = self.src_filter
-            num_tasks = 0
-            num_sources = 0
             for sm in csm.source_models:
                 param = dict(
                     truncation_level=oq.truncation_level,
@@ -372,7 +372,7 @@ class PSHACalculator(base.HazardCalculator):
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
                             num_sources += len(block)
-            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
     def store_source_info(self, infos, acc):
@@ -411,11 +411,27 @@ class PSHACalculator(base.HazardCalculator):
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
+                    fix_ones(pmap)  # avoid saving PoEs == 1
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=grp_trt[grp_id])
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
+
+
+def fix_ones(pmap):
+    """
+    Physically, an extremely small intensity measure level can have an
+    extremely large probability of exceedence, however that probability
+    cannot be exactly 1 unless the level is exactly 0. Numerically, the
+    PoE can be 1 and this give issues when calculating the damage (there
+    is a log(0) in :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
+    Here we solve the issue by replacing the unphysical probabilities 1
+    with .9999999999999999 (the float64 closest to 1).
+    """
+    for sid in pmap:
+        array = pmap[sid].array
+        array[array == 1.] = .9999999999999999
 
 
 def build_hcurves_and_stats(pgetter, hstats, monitor):
@@ -496,7 +512,7 @@ class ClassicalCalculator(PSHACalculator):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
                 pgetter = calc.PmapGetter(
-                    self.datastore.parent, lazy=config.SHARED_DIR_ON)
+                    self.datastore.parent, lazy=config.directory.shared_dir)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:

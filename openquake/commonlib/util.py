@@ -18,7 +18,7 @@
 
 from __future__ import division
 import numpy
-from openquake.commonlib import config
+from openquake.baselib import config
 
 F32 = numpy.float32
 
@@ -136,7 +136,7 @@ def shared_dir_on():
     """
     :returns: True if a shared_dir has been set in openquake.cfg, else False
     """
-    return config.SHARED_DIR_ON
+    return config.directory.shared_dir
 
 
 def reader(func):
@@ -144,5 +144,5 @@ def reader(func):
     Decorator used to mark functions that require read access to the
     file system.
     """
-    func.read_access = config.SHARED_DIR_ON
+    func.read_access = config.directory.shared_dir
     return func
