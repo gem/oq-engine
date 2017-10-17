@@ -33,7 +33,8 @@ from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
-    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+    calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput, read_nrml
 from openquake.baselib import datastore
@@ -48,6 +49,13 @@ read_nrml.update_validators()
 NORMALIZATION_FACTOR = 1E-2
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
+
+stored_event_dt = numpy.dtype([
+    ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
+    ('ses', U32), ('sample', U32)])
 
 
 class DuplicatedPoint(Exception):
@@ -323,12 +331,25 @@ def get_gsims(oqparam):
     return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
 
 
-def get_rupture(oqparam):
+def get_rlzs_by_gsim(oqparam):
     """
-    Returns a hazardlib rupture by reading the `rupture_model` file.
+    Return an ordered dictionary gsim -> [realization]. Work for
+    gsim logic trees with a single tectonic region type.
+    """
+    cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
+    return cinfo.get_rlzs_assoc().rlzs_by_gsim[0]
+
+
+def get_rupture_sitecol(oqparam, sitecol):
+    """
+    Read the `rupture_model` file and by filter the site collection
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :returns:
+        a pair (EBRupture, FilteredSiteCollection)
     """
     rup_model = oqparam.inputs['rupture_model']
     [rup_node] = nrml.read(rup_model)
@@ -336,7 +357,19 @@ def get_rupture(oqparam):
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    return rup
+    rup.seed = oqparam.random_seed
+    maxdist = oqparam.maximum_distance['default']
+    sc = calc.filters.filter_sites_by_distance_to_rupture(
+        rup, maxdist, sitecol)
+    if sc is None:
+        raise RuntimeError(
+            'All sites were filtered out! maximum_distance=%s km' %
+            maxdist)
+    n = oqparam.number_of_ground_motion_fields
+    events = numpy.zeros(n, stored_event_dt)
+    events['eid'] = numpy.arange(n)
+    ebr = EBRupture(rup, sc.sids, events)
+    return ebr, sc
 
 
 def get_source_model_lt(oqparam):
