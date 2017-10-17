@@ -29,7 +29,8 @@ import requests
 import platform
 
 from openquake.baselib.performance import Monitor
-from openquake.baselib import parallel, config, datastore, __version__
+from openquake.baselib import (
+    parallel, general, config, datastore, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
@@ -39,13 +40,32 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
 
-if USE_CELERY:
+if parallel.oq_distribute() == 'zmq':
+
+    def set_concurrent_tasks_default():
+        """
+        Set the default for concurrent_tasks based on the available
+        worker pools .
+        """
+        num_workers = 0
+        w = config.zworkers
+        for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
+            url = 'tcp://%s:%s' % (host, w.ctrl_port)
+            with z.Socket(url, z.zmq.REQ, 'connect') as sock:
+                if not general.socket_ready(url):
+                    logs.LOG.warn('%s is not running', host)
+                    continue
+                num_workers += sock.send('get_num_workers')
+        OqParam.concurrent_tasks.default = num_workers * 5
+        logs.LOG.info('Using %d zmq workers', num_workers)
+
+elif USE_CELERY:
     import celery.task.control
 
     def set_concurrent_tasks_default():
         """
-        Set the default for concurrent_tasks.
-        Returns the number of live celery nodes (i.e. the number of machines).
+        Set the default for concurrent_tasks based on the number of available
+        celery workers.
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
@@ -204,7 +224,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     """
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if USE_CELERY:
+        if os.environ.get('OQ_DISTRIBUTE') in ('zmq', 'celery'):
             set_concurrent_tasks_default()
         msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
