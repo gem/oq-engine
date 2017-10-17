@@ -84,10 +84,10 @@ class EngineServerTestCase(unittest.TestCase):
     def wait(cls):
         # wait until all calculations stop
         while True:
-            time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 break
+            time.sleep(1)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
