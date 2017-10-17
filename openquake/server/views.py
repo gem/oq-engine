@@ -597,8 +597,9 @@ def extract(request, calc_id, what):
     Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
     only calculations owned by the current user can be retrieved.
     """
-    user = getpass.getuser() if settings.LOCKDOWN else None
-    job = logs.dbcmd('get_job', int(calc_id), user)
+    user = utils.get_user_data(request)
+    username = user['name'] if user['acl_on'] else None
+    job = logs.dbcmd('get_job', int(calc_id), username)
     if job is None:
         return HttpResponseNotFound()
 
