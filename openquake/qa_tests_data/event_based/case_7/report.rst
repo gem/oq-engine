@@ -1,11 +1,11 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5553.hdf5 Fri Sep 22 11:30:03 2017
-checksum32                                           3,756,725,912           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     3,756,725,912      
+date           2017-10-18T18:23:17
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 3, num_imts = 2
 
@@ -74,8 +74,8 @@ Number of ruptures per tectonic region type
 ================= ====== ==================== =========== ============ ============
 source_model      grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================= ====== ==================== =========== ============ ============
-source_model1.xml 0      Active Shallow Crust 1           2456         2,456       
-source_model2.xml 1      Active Shallow Crust 1           2456         2,456       
+source_model1.xml 0      Active Shallow Crust 1           2,456        2,456       
+source_model2.xml 1      Active Shallow Crust 1           2,456        2,456       
 ================= ====== ==================== =========== ============ ============
 
 ============= =====
@@ -89,7 +89,7 @@ source_model2.xml 1      Active Shallow Crust 1           2456         2,456
 Informational data
 ------------------
 ========================= ===================================================================================
-compute_ruptures.received tot 2.11 MB, max_per_task 704.25 KB                                                
+compute_ruptures.received tot 2.12 MB, max_per_task 706.73 KB                                                
 compute_ruptures.sent     sources 165.93 KB, param 5.64 KB, src_filter 4.34 KB, monitor 1.9 KB, gsims 1.34 KB
 hazard.input_weight       7368.0                                                                             
 hazard.n_imts             2                                                                                  
@@ -132,7 +132,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.609 0.219  0.363 0.950 6        
+compute_ruptures   0.581 0.190  0.370 0.896 6        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -140,13 +140,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.651     0.0       6     
-filtering ruptures             0.668     0.0       2,598 
-managing sources               0.198     0.0       1     
-reading composite source model 0.116     0.0       1     
-saving ruptures                0.114     0.0       6     
+total compute_ruptures         3.485     0.258     6     
+filtering ruptures             0.635     0.0       2,598 
+managing sources               0.187     0.0       1     
+saving ruptures                0.139     0.0       6     
+reading composite source model 0.122     0.0       1     
 setting event years            0.070     0.0       1     
 store source_info              0.005     0.0       1     
-prefiltering source model      0.003     0.0       1     
-reading site collection        5.150E-05 0.0       1     
+prefiltering source model      0.002     0.0       1     
+reading site collection        5.364E-05 0.0       1     
 ============================== ========= ========= ======
