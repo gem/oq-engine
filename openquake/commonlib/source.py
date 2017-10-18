@@ -554,8 +554,6 @@ class CompositeSourceModel(collections.Sequence):
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models],
             self.weight)
-        self.max_mag = max(sg.max_mag for sm in self.source_models
-                           for sg in sm.src_groups)
         # dictionary src_group_id, source_id -> SourceInfo,
         # populated by the split_sources method
         self.infos = {}
