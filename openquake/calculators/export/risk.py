@@ -46,7 +46,7 @@ deprecated = depr('Use the csv exporter instead')
 
 
 def add_quotes(values):
-    # used to escape taxonomies in CSV files
+    # used to escape tags in CSV files
     return numpy.array([encode('"%s"' % val) for val in values], (bytes, 100))
 
 
