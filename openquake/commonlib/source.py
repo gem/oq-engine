@@ -554,6 +554,8 @@ class CompositeSourceModel(collections.Sequence):
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models],
             self.weight)
+        self.max_mag = max(sg.max_mag for sm in self.source_models
+                           for sg in sm.src_groups)
         # dictionary src_group_id, source_id -> SourceInfo,
         # populated by the split_sources method
         self.infos = {}
@@ -589,6 +591,15 @@ class CompositeSourceModel(collections.Sequence):
         :param sitecol: a SiteCollection instance
         :para src_filter: a SourceFilter instance
         """
+        for trt, magdist in src_filter.integration_distance.magdist.items():
+            if isinstance(magdist, list):  # list of pairs (mag, dist)
+                maxmag, maxdist = magdist[-1]
+                if maxmag < self.max_mag:
+                    logging.warn(
+                        'There is a source of magnitude %s but your filter is '
+                        'defined only up to magnitude %s [%s]: an integration '
+                        'distance of %s km will be used',
+                        self.max_mag, maxmag, trt, maxdist)
         source_models = []
         weight = 0
         for sm in self.source_models:
