@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 =================================================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5517.hdf5 Fri Sep 22 11:29:27 2017
-checksum32                                           3,398,720,512           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     3,398,720,512      
+date           2017-10-18T18:22:43
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 6, num_imts = 1
 
@@ -74,8 +74,8 @@ source_model.xml 0      Volcanic 1           440          440
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.71 KB, max_per_task 1021 B                                             
-count_eff_ruptures.sent     sources 5.96 KB, srcfilter 1.61 KB, param 1.18 KB, monitor 654 B, gsims 202 B
+count_eff_ruptures.received tot 1.71 KB, max_per_task 1020 B                                             
+count_eff_ruptures.sent     sources 5.96 KB, srcfilter 1.61 KB, param 1.18 KB, monitor 652 B, gsims 202 B
 hazard.input_weight         264.0                                                                        
 hazard.n_imts               1                                                                            
 hazard.n_levels             3                                                                            
@@ -92,7 +92,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   440          0.002     6         20       
+0      1         AreaSource   440          0.001     6         20       
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.002     1     
+AreaSource   0.001     1     
 ============ ========= ======
 
 Duplicated sources
@@ -111,7 +111,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 8.768E-04 0.001 0.003 2        
+count_eff_ruptures 0.001 3.325E-04 0.001 0.002 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -119,12 +119,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.012     0.0       1     
-reading composite source model 0.009     0.0       1     
-total count_eff_ruptures       0.004     0.0       2     
-store source_info              0.004     0.0       1     
-prefiltering source model      0.001     0.0       1     
-reading site collection        2.015E-04 0.0       1     
-aggregate curves               6.127E-05 0.0       2     
-saving probability maps        2.980E-05 0.0       1     
+managing sources               0.011     0.0       1     
+reading composite source model 0.008     0.0       1     
+store source_info              0.003     0.0       1     
+total count_eff_ruptures       0.003     0.0       2     
+prefiltering source model      0.001     0.199     1     
+reading site collection        1.762E-04 0.0       1     
+aggregate curves               5.293E-05 0.0       2     
+saving probability maps        2.503E-05 0.0       1     
 ============================== ========= ========= ======
