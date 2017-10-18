@@ -232,7 +232,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
         autoheader = build_header(data.dtype)
 
     if comment:
-        dest.write('# %s\n' % comment)
+        dest.write(encode('# %s\n' % comment))
 
     someheader = header or autoheader
     if header != 'no-header' and someheader:
