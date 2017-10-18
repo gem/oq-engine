@@ -1,8 +1,8 @@
 Release notes for the OpenQuake Engine, version 2.7
 ===================================================
 
-This release introduced several improvements and new features. Several
-bugs were fixed, some outputs were changed and there were a few
+This release introduced several improvements and new features. A few
+bugs were fixed, some outputs were changed and there were
 improvements to the installers, to the Web User Interface (WebUI) and
 to the engine itself.
 
@@ -20,8 +20,8 @@ disaggregation phase and this has been fixed too.
 
 The procedure to export the hazard curves in .hdf5 format
 with the command `oq export hcurves/all` had some bugs and has been
-deprecated.  Instead, we recommend a command `oq extract
-hazard/all` which is a lot more reliable and exports also the
+deprecated.  Instead, we recommend the command `oq extract
+hazard/all` which is more reliable and exports also the
 hazard maps and uniform hazard spectra.
 
 The command `oq to_shapefile` has been extended to work with source models
@@ -97,7 +97,7 @@ statistics.
 There has been a lot of refactoring going on with the risk
 calculators: the final goal is to make the risk calculators easy to
 use programmatically.  We are still at the beginning of the road, but
-significant steps in this direction have been taken,
+significant steps in this direction have been taken.
 
 WebUI/API
 ----------
@@ -125,9 +125,11 @@ with the QGIS plugin. In particular, the following sub-APIs have been
 implemented to aggregate losses, damages and curves in the scenario
 risk, damage and event based calculators respectively:
 
- /v1/calc/ID/extract/agglosses/LOSS_TYPE?tagname1=tagvalue1&...
- /v1/calc/ID/extract/aggdamages/LOSS_TYPE?tagname1=tagvalue1&...
- /v1/calc/ID/extract/aggcurves/LOSS_TYPE?tagname1=tagvalue1&...
+```
+/v1/calc/ID/extract/agglosses/LOSS_TYPE?tagname1=tagvalue1&...
+/v1/calc/ID/extract/aggdamages/LOSS_TYPE?tagname1=tagvalue1&...
+/v1/calc/ID/extract/aggcurves/LOSS_TYPE?tagname1=tagvalue1&...
+```
 
 If no tags are given, then full aggregation on all assets is performed.
 Using directly this API is discouraged, you should use the QGIS plugin
@@ -144,7 +146,8 @@ We added a command `oq plot_assets` to plot all the assets involved in
 a risk calculation, together with the hazard sites.
 
 The command `oq plot_sites` to plot hazard sites together with the hazard
-sources has been fixed, it had stopped working properly.
+sources has been fixed, it had stopped working properly. Now it is automatically
+tested.
 
 The command `oq upgrade_nrml` now understands a `--multipoint` flag which
 is useful to convert a source model containing pointSources into a model
@@ -164,7 +167,7 @@ new experimental distribution mechanism based on
 setting the environment variable `OQ_DISTRIBUTE=zmq`. The new
 distribution mechanism is not ready for production yet, but it has a
 huge potential for the future. On a single machine the zmq
-distribution has the following advantage, compared to the approach we
+distribution has the following advantages, compared to the approach we
 are using now:
 
 1. it requires less memory (no fork)
@@ -172,7 +175,7 @@ are using now:
 3. it is a real queue, i.e. it manages multiple users well.
 
 On a cluster, all of the above advantages apply and in addition we can
-save huge amount of memories now used by rabbitmq. Moreover, the
+save huge amount of memory now used by rabbitmq. Moreover, the
 engine will become a lot more HPC-friendly once rabbitmq and celery
 are abandoned.
 
@@ -186,7 +189,7 @@ Deprecations
 The classical_risk calculator can read the hazard curves from an XML
 file or from a CSV file in a custom format. This second feature has
 been deprecated since the format may change in the future or the
-feature can be removed (which could read from an .hdf5 file instead).
+feature can be removed (whe could read from an .hdf5 file instead).
 
 The following exporters have been deprecated: `hcurves-rlzs`, `agg_loss_table`,
 `losses_total`, `dmg_by_tag`, `dmg_total`, `losses_by_tag`,
@@ -196,7 +199,7 @@ The following exporters have been deprecated: `hcurves-rlzs`, `agg_loss_table`,
 Other
 -----
 
-As usual, a substantial amount of work went into testing and packaging.
+A substantial amount of work went into testing and packaging.
 Now we have automatic tests for macOS both for Python 2.7 and Python 3.5.
 Moreover now celery is tested on Linux both with Python 2.7 and Python 3.5.
 The Hazard Modeller Toolkit (HMTK) has been brought under continuous integration
