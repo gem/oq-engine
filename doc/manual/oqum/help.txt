@@ -3,7 +3,7 @@ usage: oq engine [--help]
                  [--log-file LOG_FILE]
                  [--show-log CALCULATION_ID]
                  [--config-file CONFIG_FILE]
-                 [--db-version]
+                 [--version-db]
                  [--upgrade-db]
                  [--what-if-I-upgrade]
                  [--run-hazard CONFIG_FILE]
@@ -43,7 +43,7 @@ optional arguments:
                         Build an HTML report of the computation at the given
                         date
   -u, --upgrade-db      Upgrade the openquake database
-  -d, --db-version      Show the current version of the openquake database
+  -v, --version-db      Show the current version of the openquake database
   -w, --what-if-I-upgrade
                         Show what will happen to the openquake database if you
                         upgrade
