@@ -209,4 +209,10 @@ poes = 0.1
 The final section of the configuration file is the one that contains the
 parameters controlling the types of output to be produced. Providing an export directory will tell OpenQuake where to place the output files when the \texttt{-{}-exports} flag is used when running the program. Setting \verb=mean_hazard_curves= to true will result in a specific output containing the mean curves of the logic tree, likewise \verb=quantile_hazard_curves= will produce separate files containing the quantile hazard curves at the quantiles listed (0.1, 0.5 and 0.9 in the example above, leave blank or omit if no quantiles are required). Setting \verb=uniform_hazard_spectra= to true will output the uniform hazard spectra at the same probabilities of exceedence (poes) as those specified by the later option \verb=poes=. The probabilities specified here correspond to the set investigation time. 
 
-By default, OpenQuake will export only the statistical results, i.e. mean curves and quantiles. If the user requires the complete results for all realizations, there is a specific command for that, `oq export hcurves/all`. Beware that if the logic tree contains a large number of end branches the process of exporting the results from each end branch can add a significant amount of time - possibly longer than the computation time - and result in a large volume of disk spaced being used. In this case it is best to postprocess the data programmatically. Please contact us and we will be happy to give directions on how to do that in Python.
+By default, OpenQuake will export only the statistical results, i.e. mean curves and quantiles.
+If the user requires the complete results for all realizations, there is a specific command for
+that, `oq extract hazard/all`. Beware that if the logic tree contains a large number of end
+branches the process of exporting the results from each end branch can add a significant
+amount of time - possibly longer than the computation time - and result in a large volume of
+disk spaced being used. In this case it is best to postprocess the data programmatically.
+Please contact us and we will be happy to give directions on how to do that in Python.
