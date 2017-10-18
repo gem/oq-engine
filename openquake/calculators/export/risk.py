@@ -597,6 +597,7 @@ def get_loss_ratios(lrgetter, monitor):
 
 
 @export.add(('asset_loss_table', 'hdf5'))
+@depr('This exporter will be removed soon')
 def export_asset_loss_table(ekey, dstore):
     """
     Export in parallel the asset loss table from the datastore.
