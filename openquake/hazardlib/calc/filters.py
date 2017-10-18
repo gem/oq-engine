@@ -235,7 +235,7 @@ class IntegrationDistance(collections.Mapping):
             md = self.interp[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
             mags, dists = getdefault(self.magdist, trt)
-            if mags[-1] < 10:
+            if mags[-1] < 10:  # use 500 km for mag > maxmag
                 mags = numpy.concatenate([mags, [10]])
                 dists = numpy.concatenate([dists, [500]])
             md = self.interp[trt] = Piecewise(mags, dists)
