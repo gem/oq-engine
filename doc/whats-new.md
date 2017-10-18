@@ -1,10 +1,10 @@
 Release notes for the OpenQuake Engine, version 2.7
 ===================================================
 
-This release introduced several improvements and new features in the
-hazard and risk domains. Several bugs were fixed, some outputs
-were changed and there were a few improvements to the installers, to
-the Web User Interface (WebUI) and to the engine itself.
+This release introduced several improvements and new features. Several
+bugs were fixed, some outputs were changed and there were a few
+improvements to the installers, to the Web User Interface (WebUI) and
+to the engine itself.
 
 Nearly 100 pull requests were closed. For the complete list of
 changes, please see the changelog:
@@ -20,7 +20,7 @@ disaggregation phase and this has been fixed too.
 
 The procedure to export the hazard curves in .hdf5 format
 with the command `oq export hcurves/all` had some bugs and has been
-deprecated.  Instead, there is now a command `oq extract
+deprecated.  Instead, we recommend a command `oq extract
 hazard/all` which is a lot more reliable and exports also the
 hazard maps and uniform hazard spectra.
 
@@ -44,16 +44,16 @@ from the engine and to have the QGIS plugin produce those outputs instead.
 This applies in particular to the aggregated outputs. We have deprecated
 them from the engine and they will be removed in future releases.
 
-We added is an aggregation API which is used by the QGIS plugin to perform
+We added an aggregation API which is used by the QGIS plugin to perform
 the aggregation on-the-fly. The API can also be used by third party
 applications. For people not using the QGIS plugin there is also a
 command-line interface providing the same aggregation features.
-So no features are lost and actually we have more features than before,
+No features are lost and actually we have more features than before,
 including rather sophisticated aggregations by tag. Such features are
 included in this release, but they are experimental for the moment and
 they will be documented in the next release.
 
-We added a node <tagNames> in the exposure which is now mandatory if
+We added a node `<tagNames>...</tagNames>` in the exposure which is mandatory if
 you want to use tags for the assets (a feature introduced in the engine 2.6).
 The Input Preparation Toolkit will soon be able to generate exposures with
 tags and at that moment this new feature will be documented properly.
@@ -64,20 +64,20 @@ the realization index. For the rest, the output is unchanged. It has
 been deprecated, anyway, because in the future it will likely disappear
 and be replaced with an API.
 
-The scenario_damage calculator has been optimized significantly (for instance
-the ScenarioDamage demo is now 17 times faster than before in the risk part).
-The trick was to vectorize the calculation, possible now that the fragility
-functions accept arrays as inputs (an user requested feature, thanks to
-Hyeuk Ryu).
+The scenario_damage calculator has been optimized significantly. In
+particular.  the ScenarioDamage demo is now 17 times faster than
+before in the risk part of the calculation. The trick was to vectorize
+the calculation of the damage fractions, possible now that the
+fragility functions accept arrays as inputs (an user-requested
+feature, thanks to Hyeuk Ryu for the suggestion).
 
-Another long standing bug has been fixed: if for numerical effects there are
-some probabilities of exceedence (PoEs) exactly identical to 1 in the hazard
-curves (this should not happen for non-zero levels, but depending on the
-truncation used in the GMPE and numerical rounding it may happen) now the
-classical damage calculator uses a cutoff and does not fail
-with a `log(1 - PoE)` going to infinity.
+Another long standing bug has been fixed: if for numerical effects or
+for the truncation used in the GMPEs there are some probabilities of
+exceedence (PoEs) exactly identical to 1 in the hazard curves now the
+classical damage calculator uses a cutoff and does not fail with a
+`log(1 - PoE)` going to infinity.
 
-If an user provides an invalid vulnerability function probability mass
+If an user provides an invalid vulnerability function with a probability mass
 function (PMF) now a much better error message is raised, including
 the line number where the mistake has been made.
 
@@ -131,8 +131,29 @@ risk, damage and event based calculators respectively:
 
 If no tags are given, then full aggregation on all assets is performed.
 Using directly this API is discouraged, you should use the QGIS plugin
-instead, which has a nice GUI to define the aggregation queries.
+instead, which has a nice GUI to define the aggregation queries. The
+API return .npz files, which are a good format for Python arrays.
 
+oq commands
+---------------
+
+The command `oq info` now understands an `--extract` flag that lists
+all the available extraction procedures.
+
+We added a command `oq plot_assets` to plot all the assets involved in
+a risk calculation, together with the hazard sites.
+
+The command `oq plot_sites` to plot hazard sites together with the hazard
+sources has been fixed, it had stopped working properly.
+
+The command `oq upgrade_nrml` now understands a `--multipoint` flag which
+is useful to convert a source model containing pointSources into a model
+containing multiPointSources.
+
+`oq run` was not logging properly in absence of rtree; this has been fixed.
+
+`oq reset` and `oq restore` have been made more robust against corner cases.
+ 
 Infrastructure
 --------------
 
@@ -159,12 +180,36 @@ Users interested in this kind of features should contact us; for the
 moment the development on this front is slow since it is a low priority
 for us.
 
-oq commands
----------------
+Deprecations
+------------
+
+The classical_risk calculator can read the hazard curves from an XML
+file or from a CSV file in a custom format. This second feature has
+been deprecated since the format may change in the future or the
+feature can be removed (which could read from an .hdf5 file instead).
+
+The following exporters have been deprecated: `hcurves-rlzs`, `agg_loss_table`,
+`losses_total`, `dmg_by_tag`, `dmg_total`, `losses_by_tag`,
+`losses_by_tag-rlzs`.
 
 
 Other
 -----
+
+As usual, a substantial amount of work went into testing and packaging.
+Now we have automatic tests for macOS both for Python 2.7 and Python 3.5.
+Moreover now celery is tested on Linux both with Python 2.7 and Python 3.5.
+The Hazard Modeller Toolkit (HMTK) has been brought under continuous integration
+(CI).
+
+As usual the internal format in the datastore has changed, so you cannot
+read calculations generated by previous versions of the engine.
+Now the name of the Python processes spawned by the engine is `oq-worker`:
+this is convenient, both for visualization/listing purposes and also for
+killing all the engine processes at once.
+
+We fixed an error in Windows, caused by a random seed being a numpy.uint32
+integer instead of a Python integer.
 
 [Our roadmap for abandoning Python 2](https://github.com/gem/oq-engine/issues/2803) has been updated. In short, we will not abandon it until the QGIS plugin
 is ported to Python 3 and therefore we are waiting for QGIS 3.0 to become
