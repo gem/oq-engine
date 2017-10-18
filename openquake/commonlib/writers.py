@@ -203,7 +203,7 @@ def extract_from(data, fields):
 
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     """
-    :param dest: file, filename or io.StringIO instance
+    :param dest: file, filename or io.BytesIO instance
     :param data: array to save
     :param sep: separator to use (default comma)
     :param fmt: formatting string (default '%12.8E')
@@ -220,7 +220,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
         # it must be closed by client code
         close = False
     elif not hasattr(dest, 'getvalue'):
-        # not a StringIO, assume dest is a filename
+        # not a BytesIO, assume dest is a filename
         dest = open(dest, 'wb')
     try:
         # see if data is a composite numpy array
