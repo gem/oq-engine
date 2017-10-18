@@ -1,5 +1,3 @@
-\begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\small,
-    firstnumber=1, numbers=left, numbersep=2pt]
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -11,7 +9,7 @@
 
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>
-                    ChiouYoungs2008
+                    BooreAtkinson2008
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
@@ -20,4 +18,3 @@
         </logicTreeBranchingLevel>
     </logicTree>
 </nrml>
-\end{Verbatim}
