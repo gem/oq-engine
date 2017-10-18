@@ -157,6 +157,9 @@ def get_distances(rupture, mesh, param):
         dist = rupture.get_cdppvalue(mesh)
     elif param == 'azimuth':
         dist = rupture.surface.get_azimuth(mesh)
+    elif param == "rvolc":
+        # Volcanic distance not yet supported, defaulting to zero
+        dist = numpy.zeros_like(mesh.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist

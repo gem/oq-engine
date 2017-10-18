@@ -13,7 +13,10 @@ The structure of the Seismic Source Logic Tree consists of at least one
 models, see Figure~\ref{fig:psha_input}).
 
 The example provided below shows the simplest Seismic Source Logic Tree
-structure that can be defined in a \gls{pshainputmodel} for \gls{acr:oqe}. It's a logic tree with just one branching level containing one \gls{branchset} with one branch used to define the initial seismic source model (its weight will be equal to one). 
+structure that can be defined in a \gls{pshainputmodel} for \gls{acr:oqe}.
+It's a logic tree with just one branching level containing one \gls{branchset}
+with one branch used to define the initial seismic source model (its weight
+will be equal to one).
 
 \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
 <?xml version="1.0" encoding="UTF-8"?>
@@ -34,19 +37,50 @@ structure that can be defined in a \gls{pshainputmodel} for \gls{acr:oqe}. It's 
 </nrml>
 \end{minted}
 
-%\input{oqum/hazard/verbatim/input_sslt.tex}
-
-The optional branching levels will contain rules that modify parameters of the sources in the initial seismic source model.
+The optional branching levels will contain rules that modify parameters of the
+sources in the initial seismic source model.
 
 For example, if the epistemic uncertainties to be considered are source
-geometry and maximum magnitude, the modeller can create a logic tree structure with three initial seismic source models (each one exploring a different definition of the geometry of sources) and one branching level accounting for the epistemic uncertainty on the maximum magnitude.
+geometry and maximum magnitude, the modeller can create a logic tree structure
+with three initial seismic source models (each one exploring a different
+definition of the geometry of sources) and one branching level accounting for
+the epistemic uncertainty on the maximum magnitude.
 
-Below we provide an example of such logic tree structure. Note that the uncertainty on the maximum magnitude is specified in terms of relative increments with respect to the initial maximum magnitude defined for each source in the initial seismic source models.
+Below we provide an example of such logic tree structure. Note that the
+uncertainty on the maximum magnitude is specified in terms of relative
+increments with respect to the initial maximum magnitude defined for each
+source in the initial seismic source models.
 
 \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_sslt_simple_lt.xml}
 \captionof{listing}{Example source model logic tree structure\label{lst:example_source_model_logic_tree}}
 
-%\input{oqum/hazard/verbatim/input_sslt_simple_lt.tex}
+Starting from \glsdesc{acr:oqe24}, it is also possible to split a source model
+into several files and read them as if they were a single file. The file names
+for the different files comprising a source model should be provided in the
+source model logic tree file. For instance, a source model could be split by
+tectonic region using the following syntax in the source model logic tree:
+
+\begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>
+		        active_shallow_sources.xml
+		        stable_shallow_sources.xml
+                    </uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>
+\end{minted}
+
 
 \subsection{The Seismic Source Model}
 \index{Input!Configuration file}
@@ -86,4 +120,3 @@ seismic source model:
 </ sourceModel >
 \end{minted}
 
-%\input{oqum/hazard/verbatim/input_ssm.tex}
