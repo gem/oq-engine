@@ -1,11 +1,11 @@
 Event Based QA Test, Case 12
 ============================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5556.hdf5 Fri Sep 22 11:30:31 2017
-checksum32                                           2,564,275,427           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     2,564,275,427      
+date           2017-10-18T18:23:46
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -84,8 +84,8 @@ source_model.xml 1      Stable Continental   1           1            1
 Informational data
 ------------------
 ========================= ==============================================================================
-compute_ruptures.received tot 112.83 KB, max_per_task 57.71 KB                                          
-compute_ruptures.sent     sources 2.59 KB, src_filter 1.34 KB, param 1.18 KB, monitor 650 B, gsims 193 B
+compute_ruptures.received tot 112.84 KB, max_per_task 57.72 KB                                          
+compute_ruptures.sent     sources 2.59 KB, src_filter 1.34 KB, param 1.18 KB, monitor 648 B, gsims 193 B
 hazard.input_weight       0.2                                                                           
 hazard.n_imts             1                                                                             
 hazard.n_levels           3                                                                             
@@ -102,8 +102,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  1            0.0       1         0        
 1      2         PointSource  1            0.0       1         0        
+0      1         PointSource  1            0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -122,7 +122,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.025 0.005  0.021 0.029 2        
+compute_ruptures   0.023 0.006  0.019 0.027 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -130,13 +130,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.050     0.0       2     
-setting event years            0.032     0.0       1     
+total compute_ruptures         0.046     0.0       2     
+setting event years            0.031     0.0       1     
 saving ruptures                0.022     0.0       2     
 store source_info              0.004     0.0       1     
 managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-filtering ruptures             0.001     0.0       2     
-prefiltering source model      6.847E-04 0.0       1     
-reading site collection        4.625E-05 0.0       1     
+filtering ruptures             8.790E-04 0.0       2     
+prefiltering source model      7.269E-04 0.0       1     
+reading site collection        4.768E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,11 +1,11 @@
 scenario hazard
 ===============
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5566.hdf5 Fri Sep 22 11:30:33 2017
-checksum32                                    3,387,430,932           
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     3,387,430,932      
+date           2017-10-18T18:23:47
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -72,7 +72,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
-reading exposure        0.004     0.0       1     
-reading site collection 4.768E-06 0.0       1     
+reading exposure        0.005     0.0       1     
+reading site collection 1.335E-05 0.0       1     
 ======================= ========= ========= ======
