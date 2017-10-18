@@ -196,15 +196,17 @@ class IntegrationDistance(collections.Mapping):
     tectonic region types:
 
     >>> maxdist = IntegrationDistance({'default': [
-    ...          (3, 30), (4, 40), (5, 100), (6, 200), (7, 400), (8, 800)]})
+    ...          (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
     >>> maxdist('Some TRT', mag=2.5)
     30
     >>> maxdist('Some TRT', mag=3)
     30
     >>> maxdist('Some TRT', mag=3.1)
     40
-    >>> maxdist('Some TRT', mag=8.5)
-    800
+    >>> maxdist('Some TRT', mag=8)
+    400
+    >>> maxdist('Some TRT', mag=8.5)  # 500 km are used above the maximum
+    500
 
     It has also a method `.get_closest(sites, rupture)` returning the closest
     sites to the rupture and their distances. The integration distance can be
@@ -233,6 +235,9 @@ class IntegrationDistance(collections.Mapping):
             md = self.interp[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
             mags, dists = getdefault(self.magdist, trt)
+            if mags[-1] < 10:
+                mags = numpy.concatenate([mags, [10]])
+                dists = numpy.concatenate([dists, [500]])
             md = self.interp[trt] = Piecewise(mags, dists)
         return md(mag)
 
