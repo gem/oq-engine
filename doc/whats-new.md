@@ -193,7 +193,7 @@ feature can be removed (whe could read from an .hdf5 file instead).
 
 The following exporters have been deprecated: `hcurves-rlzs`, `agg_loss_table`,
 `losses_total`, `dmg_by_tag`, `dmg_total`, `losses_by_tag`,
-`losses_by_tag-rlzs`.
+`losses_by_tag-rlzs`, `asset_loss_table`.
 
 
 Other
