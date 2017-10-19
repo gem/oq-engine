@@ -136,6 +136,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     performance = datastore.persistent_attribute('performance')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
+    require_source_model = True
 
     @property
     def taxonomies(self):
@@ -401,7 +402,7 @@ class HazardCalculator(BaseCalculator):
     def basic_pre_execute(self):
         oq = self.oqparam
         self.read_risk_data()
-        if 'scenario' not in oq.calculation_mode:
+        if self.require_source_model:
             wakeup_pool()  # fork before reading the source model
             if oq.hazard_calculation_id:  # already stored csm
                 logging.info('Reusing composite source model of calc #%d',
@@ -607,6 +608,7 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
+    require_source_model = False
 
     def make_eps(self, num_ruptures):
         """
