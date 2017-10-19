@@ -19,7 +19,7 @@
 import logging
 import numpy
 
-from openquake.commonlib import calc
+from openquake.commonlib import readinput
 from openquake.calculators import base, event_based_risk as ebr
 
 U16 = numpy.uint16
@@ -73,7 +73,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
 
         events = numpy.zeros(oq.number_of_ground_motion_fields,
-                             calc.stored_event_dt)
+                             readinput.stored_event_dt)
         events['eid'] = eids
         self.datastore['events'] = events
 

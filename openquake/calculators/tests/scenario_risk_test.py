@@ -83,11 +83,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agglosses/occupants')
-        numpy.testing.assert_almost_equal(tot, 0.01355099)
+        numpy.testing.assert_almost_equal(tot.array, 0.01355099)
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agglosses/occupants', 'taxonomy=*')
-        self.assertEqual(tbl.shape, (1, 1))  # single taxonomy, single rlz
+        self.assertEqual(tbl.array.shape, (1, 1))  # 1 taxonomy, 1 rlz
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_3(self):
@@ -160,6 +160,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fnames = export(('losses_by_tag-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        # extract agglosses with a * and a selection
+        obj = extract(self.calc.datastore, 'agglosses/structural',
+                      'state=*', 'cresta=0.11')
+        self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
+        self.assertEqual(obj.tags, [b'state=01'])
+        numpy.testing.assert_almost_equal(
+            obj.array, [[1299.3848877, 1561.6965332]])
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_7(self):

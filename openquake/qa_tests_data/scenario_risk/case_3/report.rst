@@ -1,11 +1,11 @@
 Scenario QA Test 3
 ==================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5562.hdf5 Fri Sep 22 11:30:32 2017
-checksum32                                           3,085,599,105           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     3,085,599,105      
+date           2017-10-18T18:23:46
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 4, num_imts = 3
 
@@ -84,11 +84,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-saving gmfs             0.011     0.0       1     
+saving gmfs             0.034     0.0       1     
+building riskinputs     0.027     0.0       1     
 reading exposure        0.007     0.0       1     
 computing gmfs          0.006     0.0       1     
-filtering sites         0.006     0.0       1     
-building epsilons       7.160E-04 0.0       1     
-building riskinputs     3.052E-04 0.0       1     
+building epsilons       6.897E-04 0.0       1     
 reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

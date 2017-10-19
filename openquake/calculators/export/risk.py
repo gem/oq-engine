@@ -22,7 +22,7 @@ import logging
 import numpy
 
 from openquake.baselib import hdf5, parallel, performance
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import decode, encode
 from openquake.baselib.general import (
     group_array, split_in_blocks, deprecated as depr)
 from openquake.hazardlib.stats import compute_stats2
@@ -46,8 +46,8 @@ deprecated = depr('Use the csv exporter instead')
 
 
 def add_quotes(values):
-    # used to escape taxonomies in CSV files
-    return numpy.array(['"%s"' % val for val in values], (bytes, 100))
+    # used to escape tags in CSV files
+    return numpy.array([encode('"%s"' % val) for val in values], (bytes, 100))
 
 
 def get_rup_data(ebruptures):
@@ -196,6 +196,7 @@ def export_all_losses_npz(ekey, dstore):
 
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
+@depr('This exporter will be removed soon')
 def export_agg_losses_ebr(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -255,6 +256,14 @@ def export_loss_curves(ekey, dstore):
     return loss_curves.LossCurveExporter(dstore).export('csv', what)
 
 
+# this is used by classical_risk and event_based_risk
+@export.add(('loss_curves-rlzs', 'csv'))
+def export_loss_curves_stats(ekey, dstore):
+    num_rlzs = len(dstore['realizations'])
+    kind = 'stats' if num_rlzs > 1 else 'rlzs'
+    return export_loss_curves(('loss_curves/' + kind, 'csv'), dstore)
+
+
 # used by classical_risk and event_based_risk
 @export.add(('loss_maps-rlzs', 'csv'), ('loss_maps-stats', 'csv'))
 def export_loss_maps_csv(ekey, dstore):
@@ -311,6 +320,7 @@ def export_damages_csv(ekey, dstore):
 
 
 @export.add(('losses_total', 'csv'))
+@depr('This output will be removed soon')
 def export_losses_total_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     value = dstore[ekey[0]].value
@@ -394,6 +404,7 @@ def export_dmg_by_asset_npz(ekey, dstore):
 
 
 @export.add(('dmg_by_tag', 'csv'))
+@depr('This output will be removed soon')
 def export_dmg_by_tag_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
     tags = add_quotes(dstore['assetcol'].tags())
@@ -409,6 +420,7 @@ def export_dmg_by_tag_csv(ekey, dstore):
 
 
 @export.add(('dmg_total', 'csv'))
+@depr('This output will be removed soon')
 def export_dmg_totalcsv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
@@ -506,6 +518,7 @@ def get_paths(rlz):
 
 # used by scenario_damage
 @export.add(('losses_by_tag', 'csv'))
+@depr('This output will be removed soon')
 def export_csq_by_tag_csv(ekey, dstore):
     tags = add_quotes(dstore['assetcol'].tags())
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
@@ -519,6 +532,7 @@ def export_csq_by_tag_csv(ekey, dstore):
 
 # used by event_based_risk and scenario_risk
 @export.add(('losses_by_tag-rlzs', 'csv'), ('losses_by_tag-stats', 'csv'))
+@depr('This output will be removed soon')
 def export_losses_by_tag_csv(ekey, dstore):
     oq = dstore['oqparam']
     tags = add_quotes(dstore['assetcol'].tags())
@@ -583,6 +597,7 @@ def get_loss_ratios(lrgetter, monitor):
 
 
 @export.add(('asset_loss_table', 'hdf5'))
+@depr('This exporter will be removed soon')
 def export_asset_loss_table(ekey, dstore):
     """
     Export in parallel the asset loss table from the datastore.
