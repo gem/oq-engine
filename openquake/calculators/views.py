@@ -491,7 +491,7 @@ def view_assetcol(token, dstore):
             columns[i] = taxonomies[assetcol.array[field]]
         else:
             columns[i] = assetcol.array[field]
-    return write_csv(io.StringIO(), [header] + list(zip(*columns)))
+    return write_csv(io.BytesIO(), [header] + list(zip(*columns)))
 
 
 @view.add('ruptures_events')

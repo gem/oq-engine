@@ -24,10 +24,10 @@ from openquake.baselib import performance, sap, hdf5, datastore
 
 from openquake.commonlib.logs import dbcmd
 from openquake.calculators.extract import extract as extract_
-from openquake.server import dbserver, dbapi
+from openquake.server import dbserver
 
 
-# the export is tested in the demos
+# `oq extract` is tested in the demos
 @sap.Script
 def extract(calc_id, what, extra):
     """
