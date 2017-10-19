@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 12
 =================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5538.hdf5 Fri Sep 22 11:29:45 2017
-checksum32                                           3,041,491,618           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     3,041,491,618      
+date           2017-10-18T18:23:01
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -84,8 +84,8 @@ source_model.xml 1      Stable Continental   1           1            1
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.18 KB, max_per_task 606 B                                              
-count_eff_ruptures.sent     sources 2.28 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 654 B, gsims 193 B
+count_eff_ruptures.received tot 1.18 KB, max_per_task 605 B                                              
+count_eff_ruptures.sent     sources 2.28 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 652 B, gsims 193 B
 hazard.input_weight         0.2                                                                          
 hazard.n_imts               1                                                                            
 hazard.n_levels             3                                                                            
@@ -102,8 +102,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  1            1.731E-04 1         1        
-1      2         PointSource  1            1.540E-04 1         1        
+0      1         PointSource  1            1.557E-04 1         1        
+1      2         PointSource  1            1.543E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -111,7 +111,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.271E-04 2     
+PointSource  3.099E-04 2     
 ============ ========= ======
 
 Duplicated sources
@@ -122,7 +122,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.602E-04 7.334E-05 7.083E-04 8.121E-04 2        
+count_eff_ruptures 7.837E-04 4.383E-06 7.806E-04 7.868E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -134,8 +134,8 @@ store source_info              0.004     0.0       1
 managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
 total count_eff_ruptures       0.002     0.0       2     
-prefiltering source model      6.728E-04 0.0       1     
-aggregate curves               4.435E-05 0.0       2     
-reading site collection        4.339E-05 0.0       1     
-saving probability maps        3.028E-05 0.0       1     
+prefiltering source model      6.700E-04 0.0       1     
+aggregate curves               4.268E-05 0.0       2     
+reading site collection        4.196E-05 0.0       1     
+saving probability maps        2.909E-05 0.0       1     
 ============================== ========= ========= ======
