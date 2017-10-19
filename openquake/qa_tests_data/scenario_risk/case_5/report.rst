@@ -1,11 +1,11 @@
 Scenario Risk with site model
 =============================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5568.hdf5 Fri Sep 22 11:30:33 2017
-checksum32                                           1,603,095,237           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,603,095,237      
+date           2017-10-18T18:23:48
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 11, num_imts = 2
 
@@ -86,11 +86,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.042     0.0       1     
-reading exposure        0.028     0.0       1     
+building riskinputs     0.058     0.0       1     
+reading exposure        0.027     0.0       1     
+saving gmfs             0.008     0.0       1     
 computing gmfs          0.004     0.0       1     
-saving gmfs             0.002     0.0       1     
-building riskinputs     6.106E-04 0.0       1     
-building epsilons       4.957E-04 0.0       1     
-reading site collection 5.245E-06 0.0       1     
+building epsilons       4.454E-04 0.0       1     
+reading site collection 4.530E-06 0.0       1     
 ======================= ========= ========= ======
