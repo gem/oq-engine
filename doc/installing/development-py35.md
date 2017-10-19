@@ -50,7 +50,13 @@ scl enable rh-python35 bash
 
 #### Xcode
 
-You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) first.
+You must install the Command Line Tools Package for Xcode first. You can install the Command Line Tools package without having to install the entire Xcode software by running:
+
+```bash
+xcode-select --install
+```
+
+If Xcode is already installed on your machine, then there is no need to install the command-line tools.
 
 #### Python 
 
