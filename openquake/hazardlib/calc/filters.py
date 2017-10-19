@@ -205,8 +205,8 @@ class IntegrationDistance(collections.Mapping):
     40
     >>> maxdist('Some TRT', mag=8)
     400
-    >>> maxdist('Some TRT', mag=8.5)  # 500 km are used above the maximum
-    500
+    >>> maxdist('Some TRT', mag=8.5)  # 2000 km are used above the maximum
+    2000
 
     It has also a method `.get_closest(sites, rupture)` returning the closest
     sites to the rupture and their distances. The integration distance can be
@@ -218,8 +218,7 @@ class IntegrationDistance(collections.Mapping):
         self.magdist = {}  # TRT -> (magnitudes, distances)
         for trt, value in self.dic.items():
             if isinstance(value, list):  # assume a list of pairs (mag, dist)
-                value.sort()  # make sure the list is sorted by magnitude
-                self.magdist[trt] = list(zip(*value))
+                self.magdist[trt] = value
             else:
                 self.dic[trt] = float(value)
 
@@ -234,10 +233,10 @@ class IntegrationDistance(collections.Mapping):
         try:
             md = self.interp[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
-            mags, dists = getdefault(self.magdist, trt)
-            if mags[-1] < 10:  # use 500 km for mag > maxmag
-                mags = numpy.concatenate([mags, [10]])
-                dists = numpy.concatenate([dists, [500]])
+            mags, dists = zip(*getdefault(self.magdist, trt))
+            if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
+                mags = numpy.concatenate([mags, [11]])
+                dists = numpy.concatenate([dists, [2000]])
             md = self.interp[trt] = Piecewise(mags, dists)
         return md(mag)
 

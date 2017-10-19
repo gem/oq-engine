@@ -249,20 +249,23 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange):
+    def __init__(self, minrange, maxrange, name=''):
         self.minrange = minrange
         self.maxrange = maxrange
+        self.name = name
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
         f = float_(value)
         if f > self.maxrange:
-            raise ValueError("'%s' is bigger than the max, '%s'" %
-                             (f, self.maxrange))
+            raise ValueError("%s %s is bigger than the maximum (%s)" %
+                             (self.name, f, self.maxrange))
         if f < self.minrange:
-            raise ValueError("'%s' is smaller than the min, '%s'" %
-                             (f, self.minrange))
+            raise ValueError("%s %s is smaller than the minimum (%s)" %
+                             (self.name, f, self.minrange))
         return f
+
+magnitude = FloatRange(-1, 11, 'magnitude')
 
 
 def not_empty(value):
@@ -780,7 +783,13 @@ def maximum_distance(value):
     :returns:
         a IntegrationDistance mapping
     """
-    return IntegrationDistance(floatdict(value))
+    dic = floatdict(value)
+    for trt, magdists in dic.items():
+        if isinstance(magdists, list):  # could be a scalar otherwise
+            magdists.sort()  # make sure the list is sorted by magnitude
+            for magdist in magdists:
+                magnitude(magdist[0])  # validate the magnitudes
+    return IntegrationDistance(dic)
 
 
 # ########################### SOURCES/RUPTURES ############################# #
