@@ -1,11 +1,11 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5546.hdf5 Fri Sep 22 11:29:56 2017
-checksum32                                           1,539,504,509           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,539,504,509      
+date           2017-10-18T18:23:12
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 2, num_imts = 1
 
@@ -74,7 +74,7 @@ Informational data
 ------------------
 ========================= ==========================================================================
 compute_ruptures.received max_per_task 355.08 KB, tot 355.08 KB                                     
-compute_ruptures.sent     sources 1.29 KB, src_filter 712 B, param 544 B, monitor 325 B, gsims 102 B
+compute_ruptures.sent     sources 1.29 KB, src_filter 712 B, param 544 B, monitor 324 B, gsims 102 B
 hazard.input_weight       0.2                                                                       
 hazard.n_imts             1                                                                         
 hazard.n_levels           1                                                                         
@@ -118,13 +118,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-setting event years            0.100     0.0       1     
-saving ruptures                0.057     0.0       1     
-total compute_ruptures         0.020     0.473     1     
+setting event years            0.099     0.0       1     
+saving ruptures                0.056     0.0       1     
+total compute_ruptures         0.020     0.406     1     
 store source_info              0.004     0.0       1     
 managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-filtering ruptures             5.739E-04 0.0       1     
-prefiltering source model      5.674E-04 0.0       1     
-reading site collection        4.172E-05 0.0       1     
+prefiltering source model      6.101E-04 0.0       1     
+filtering ruptures             5.190E-04 0.0       1     
+reading site collection        4.649E-05 0.0       1     
 ============================== ========= ========= ======

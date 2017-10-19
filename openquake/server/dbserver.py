@@ -42,6 +42,8 @@ db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
 ZMQ = os.environ.get(
     'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+
 
 class DbServer(object):
     """
@@ -118,7 +120,7 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    address = address or (config.dbserver.host, config.dbserver.port)
+    address = address or (config.dbserver.host, DBSERVER_PORT)
     return 'running' if socket_ready(address) else 'not-running'
 
 
@@ -169,7 +171,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = (config.dbserver.host, config.dbserver.port)
+        addr = (config.dbserver.host, DBSERVER_PORT)
 
     if dbpath:
         DATABASE['NAME'] = dbpath
@@ -192,6 +194,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         DbServer(db, addr).start()
     finally:
         db.close()
+
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')

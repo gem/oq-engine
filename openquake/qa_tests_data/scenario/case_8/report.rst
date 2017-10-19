@@ -1,11 +1,11 @@
 Scenario QA Test with AtkinsonBoore2003SInter
 =============================================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5480.hdf5 Fri Sep 22 11:28:55 2017
-checksum32                                    157,390,023             
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     157,390,023        
+date           2017-10-18T18:22:13
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 2, num_imts = 1
 
@@ -57,6 +57,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading site collection 2.933E-05 0.0       1     
+reading site collection 3.028E-05 0.0       1     
 ======================= ========= ========= ======
