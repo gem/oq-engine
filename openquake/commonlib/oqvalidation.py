@@ -451,7 +451,7 @@ class OqParam(valid.ParamSet):
             sites=bool(self.sites),
             sites_csv=self.inputs.get('sites', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
-            gmfs_csv=self.inputs.get('gmvs', 0),
+            gmfs_csv=self.inputs.get('gmfs', 0),
             region=bool(self.region),
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags

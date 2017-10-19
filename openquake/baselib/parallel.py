@@ -144,7 +144,6 @@ import socket
 import inspect
 import logging
 import operator
-import traceback
 import functools
 import subprocess
 import multiprocessing.dummy
@@ -160,6 +159,7 @@ except ImportError:
         "Do nothing"
 
 from openquake.baselib import hdf5, config
+from openquake.baselib.workerpool import safely_call, _starmap
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
@@ -216,49 +216,6 @@ def check_mem_usage(monitor=Monitor(),
         hostname = socket.gethostname()
         logging.warn('Using over %d%% of the memory in %s!',
                      used_mem_percent, hostname)
-
-
-def safely_call(func, args):
-    """
-    Call the given function with the given arguments safely, i.e.
-    by trapping the exceptions. Return a pair (result, exc_type)
-    where exc_type is None if no exceptions occur, otherwise it
-    is the exception class and the result is a string containing
-    error message and traceback.
-
-    :param func: the function to call
-    :param args: the arguments
-    """
-    with Monitor('total ' + func.__name__, measuremem=True) as child:
-        if args and hasattr(args[0], 'unpickle'):
-            # args is a list of Pickled objects
-            args = [a.unpickle() for a in args]
-        if args and isinstance(args[-1], Monitor):
-            mon = args[-1]
-            mon.children.append(child)  # child is a child of mon
-            child.hdf5path = mon.hdf5path
-        else:
-            mon = child
-        # FIXME check_mem_usage is disabled here because it's causing
-        # dead locks in threads when log messages are raised.
-        # Check is done anyway in other parts of the code (submit and iter);
-        # further investigation is needed
-        # check_mem_usage(mon)  # check if too much memory is used
-        # FIXME: this approach does not work with the Threadmap
-        mon._flush = False
-        try:
-            got = func(*args)
-            if inspect.isgenerator(got):
-                got = list(got)
-            res = got, None, mon
-        except:
-            etype, exc, tb = sys.exc_info()
-            tb_str = ''.join(traceback.format_tb(tb))
-            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
-                   etype, mon)
-        finally:
-            mon._flush = True
-    return res
 
 
 def mkfuture(result):
@@ -632,6 +589,15 @@ class Starmap(object):
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name, self.num_tasks)
+
+        elif self.distribute == 'zmq':  # experimental
+            allargs = self.add_task_no(self.task_args, pickle=False)
+            w = config.zworkers
+            it = _starmap(
+                self.task_func, allargs,
+                w.master_host, w.task_in_port, w.receiver_ports)
+            ntasks = next(it)
+            return IterResult(it, self.name, ntasks, self.progress, self.sent)
 
         elif self.distribute == 'qsub':  # experimental
             allargs = list(self.add_task_no(self.task_args, pickle=False))
