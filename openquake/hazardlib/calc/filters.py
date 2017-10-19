@@ -177,13 +177,13 @@ class Piecewise(object):
     maximum x, the maximum y is returned.
     """
     def __init__(self, x, y):
-        self.y = y
+        self.y = numpy.array(y)
         # interpolating from x values to indices in the range [0: len(x)]
         self.interp = interp1d(x, range(len(x)), bounds_error=False,
                                fill_value=(0, len(x) - 1))
 
     def __call__(self, x):
-        idx = numpy.int64(self.interp(x))
+        idx = numpy.int64(numpy.ceil(self.interp(x)))
         return self.y[idx]
 
 
@@ -196,14 +196,17 @@ class IntegrationDistance(collections.Mapping):
     tectonic region types:
 
     >>> maxdist = IntegrationDistance({'default': [
-    ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
-    ...          (7, 400), (8, 800)]})
-    >>> maxdist('Some TRT', mag=0.5)
-    0
-    >>> maxdist('Some TRT', mag=5.5)
-    100
-    >>> maxdist('Some TRT', mag=8.5)
-    800
+    ...          (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
+    >>> maxdist('Some TRT', mag=2.5)
+    30
+    >>> maxdist('Some TRT', mag=3)
+    30
+    >>> maxdist('Some TRT', mag=3.1)
+    40
+    >>> maxdist('Some TRT', mag=8)
+    400
+    >>> maxdist('Some TRT', mag=8.5)  # 500 km are used above the maximum
+    500
 
     It has also a method `.get_closest(sites, rupture)` returning the closest
     sites to the rupture and their distances. The integration distance can be
@@ -232,8 +235,9 @@ class IntegrationDistance(collections.Mapping):
             md = self.interp[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
             mags, dists = getdefault(self.magdist, trt)
-            mags = numpy.concatenate([[0], mags])
-            dists = numpy.concatenate([[0], dists])
+            if mags[-1] < 10:  # use 500 km for mag > maxmag
+                mags = numpy.concatenate([mags, [10]])
+                dists = numpy.concatenate([dists, [500]])
             md = self.interp[trt] = Piecewise(mags, dists)
         return md(mag)
 
