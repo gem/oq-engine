@@ -117,7 +117,7 @@ The WebUI now support groups of user, i.e. you can restrict the access
 as you want. The `admin` user sees a link in the WebUI from which she
 can directly configure the groups by using the Django admin interface.
 System administrators interested in using this feature should read
-https://github.com/gem/oq-engine/blob/master/doc/installing/server.md.
+https://github.com/gem/oq-engine/blob/engine-2.7/doc/installing/server.md.
 By default, no authentication is enabled and everything is visible
 to everybody.
 
