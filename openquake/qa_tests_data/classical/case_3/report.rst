@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 3
 ================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5525.hdf5 Fri Sep 22 11:29:41 2017
-checksum32                                           4,051,148,706           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     4,051,148,706      
+date           2017-10-18T18:22:48
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -67,14 +67,14 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ============
 source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           31353        31,353      
+source_model.xml 0      Active Shallow Crust 1           31,353       31,353      
 ================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 =========================== ==================================================================================
-count_eff_ruptures.received tot 1009.45 KB, max_per_task 65.08 KB                                             
-count_eff_ruptures.sent     sources 6.16 MB, srcfilter 10.69 KB, param 9.44 KB, monitor 5.11 KB, gsims 1.42 KB
+count_eff_ruptures.received tot 1009.43 KB, max_per_task 65.07 KB                                             
+count_eff_ruptures.sent     sources 6.16 MB, srcfilter 10.69 KB, param 9.44 KB, monitor 5.09 KB, gsims 1.42 KB
 hazard.input_weight         3135.3                                                                            
 hazard.n_imts               1                                                                                 
 hazard.n_levels             3                                                                                 
@@ -91,7 +91,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   31,353       1.742     1         31,353   
+0      1         AreaSource   31,353       1.594     1         31,353   
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -99,7 +99,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   1.742     1     
+AreaSource   1.594     1     
 ============ ========= ======
 
 Duplicated sources
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.139 0.024  0.096 0.159 16       
+count_eff_ruptures 0.128 0.026  0.065 0.156 16       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               6.404     0.0       1     
-reading composite source model 3.809     0.0       1     
-total count_eff_ruptures       2.219     5.051     16    
+managing sources               6.158     0.0       1     
+reading composite source model 3.775     0.0       1     
+total count_eff_ruptures       2.044     5.461     16    
 aggregate curves               0.033     0.0       16    
-store source_info              0.003     0.0       1     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.001     0.0       1     
-reading site collection        3.052E-05 0.0       1     
-saving probability maps        2.694E-05 0.0       1     
+reading site collection        3.171E-05 0.0       1     
+saving probability maps        2.742E-05 0.0       1     
 ============================== ========= ========= ======

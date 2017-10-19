@@ -1,11 +1,11 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5548.hdf5 Fri Sep 22 11:29:57 2017
-checksum32                                           1,497,102,793           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,497,102,793      
+date           2017-10-18T18:23:12
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 2, num_imts = 1
 
@@ -74,7 +74,7 @@ Informational data
 ------------------
 ========================= ==========================================================================
 compute_ruptures.received max_per_task 295.81 KB, tot 295.81 KB                                     
-compute_ruptures.sent     sources 1.29 KB, src_filter 712 B, param 544 B, monitor 325 B, gsims 102 B
+compute_ruptures.sent     sources 1.29 KB, src_filter 712 B, param 544 B, monitor 324 B, gsims 102 B
 hazard.input_weight       0.2                                                                       
 hazard.n_imts             1                                                                         
 hazard.n_levels           1                                                                         
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.017 NaN    0.017 0.017 1        
+compute_ruptures   0.013 NaN    0.013 0.013 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,13 +118,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-setting event years            0.082     0.0       1     
-saving ruptures                0.048     0.0       1     
-total compute_ruptures         0.017     0.074     1     
+setting event years            0.083     0.0       1     
+saving ruptures                0.047     0.0       1     
+total compute_ruptures         0.013     0.375     1     
 store source_info              0.004     0.0       1     
 managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-prefiltering source model      6.187E-04 0.0       1     
-filtering ruptures             5.863E-04 0.0       1     
-reading site collection        4.482E-05 0.0       1     
+prefiltering source model      6.323E-04 0.0       1     
+filtering ruptures             4.501E-04 0.0       1     
+reading site collection        4.554E-05 0.0       1     
 ============================== ========= ========= ======
