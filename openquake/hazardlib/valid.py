@@ -265,7 +265,7 @@ class FloatRange(object):
                              (self.name, f, self.minrange))
         return f
 
-magnitude = FloatRange(-1, 11, 'magnitude')
+magnitude = FloatRange(0, 11, 'magnitude')
 
 
 def not_empty(value):
