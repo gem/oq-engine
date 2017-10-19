@@ -1,5 +1,4 @@
   [Michele Simionato]
-  * Fixed a tricky segfault on macOS caused by a call to requests.get
   * Fixed the risk exporters for tags containing non-ASCII characters
 
   [Valerio Poggi]
