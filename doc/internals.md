@@ -44,6 +44,12 @@ A custom binging address and port can be specified at startup time as a custom d
 $ oq dbserver start 0.0.0.0:1985 /tmp/customdb.sqlite3
 ```
 
+A custom port can be also specified via `OQ_DBSERVER_PORT` env variable:
+
+```bash
+$ OQ_DBSERVER_PORT=1985 oq dbserver start
+```
+
 ### Celery
 
 Celery can be manually started via this command:

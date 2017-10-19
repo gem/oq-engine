@@ -25,6 +25,7 @@ import operator
 import itertools
 import traceback
 import collections
+from datetime import datetime
 import numpy
 
 from openquake.baselib import (
@@ -165,6 +166,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = engine_version
+        attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
