@@ -90,17 +90,8 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
-        try:
-            info = {decode(k): ast.literal_eval(decode(v))
-                    for k, v in dict(dstore['job_info']).items()}
-        except KeyError:  # job_info not in the datastore (scenario hazard)
-            info = dict(hostname='localhost')
-        dpath = dstore.hdf5path
-        mtime = os.path.getmtime(dpath)
-        host = '%s:%s' % (info['hostname'], decode(dpath))
-        updated = str(time.ctime(mtime))
         versions = sorted(dstore['/'].attrs.items())
-        self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
+        self.text += '\n\n' + views.rst_table(versions)
         self.text += '\n\nnum_sites = %d, num_imts = %d' % (
             len(dstore['sitecol']), len(oq.imtls))
 

@@ -1,11 +1,11 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5509.hdf5 Fri Sep 22 11:29:25 2017
-checksum32                                           2,582,625,613           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     2,582,625,613      
+date           2017-10-18T18:22:38
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 281, num_imts = 1
 
@@ -72,8 +72,8 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ============
 source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           2558         2,558       
-source_model.xml 1      Subduction Interface 1           3945         3,945       
+source_model.xml 0      Active Shallow Crust 1           2,558        2,558       
+source_model.xml 1      Subduction Interface 1           3,945        3,945       
 ================ ====== ==================== =========== ============ ============
 
 ============= =====
@@ -87,8 +87,8 @@ source_model.xml 1      Subduction Interface 1           3945         3,945
 Informational data
 ------------------
 ========================= =====================================================================================
-compute_ruptures.received tot 312 KB, max_per_task 76.58 KB                                                    
-compute_ruptures.sent     src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.49 KB, gsims 1.12 KB
+compute_ruptures.received tot 313.23 KB, max_per_task 77 KB                                                    
+compute_ruptures.sent     src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.48 KB, gsims 1.12 KB
 hazard.input_weight       7309372.0                                                                            
 hazard.n_imts             1                                                                                    
 hazard.n_levels           50                                                                                   
@@ -134,8 +134,8 @@ Slowest sources
 ====== ========= ================== ============ ========= ========= =========
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
-0      F         ComplexFaultSource 2,558        0.0       281       0        
 1      D         ComplexFaultSource 3,945        0.0       281       0        
+0      F         ComplexFaultSource 2,558        0.0       281       0        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -154,7 +154,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.915 0.415  0.606 1.957 11       
+compute_ruptures   0.901 0.442  0.589 2.059 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -162,15 +162,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         10       1.320     11    
-managing sources               1.359    0.0       1     
-filtering ruptures             0.396    0.0       489   
-reading site collection        0.203    0.0       1     
-assoc_assets_sites             0.178    0.0       1     
-reading composite source model 0.160    0.0       1     
-reading exposure               0.095    0.0       1     
-saving ruptures                0.060    0.0       11    
-setting event years            0.008    0.0       1     
-prefiltering source model      0.008    0.0       1     
+total compute_ruptures         9.909    0.480     11    
+managing sources               1.337    0.0       1     
+filtering ruptures             0.386    0.0       489   
+reading site collection        0.204    0.0       1     
+reading composite source model 0.174    0.0       1     
+assoc_assets_sites             0.172    0.0       1     
+reading exposure               0.092    0.0       1     
+saving ruptures                0.058    0.0       11    
+prefiltering source model      0.009    0.0       1     
 store source_info              0.007    0.0       1     
+setting event years            0.006    0.0       1     
 ============================== ======== ========= ======
