@@ -42,7 +42,7 @@ Current stable version is the **OpenQuake Engine 2.6** 'Gutenberg'. The document
 
 * [About](https://github.com/gem/oq-engine/blob/master/doc/about.md)
 * [FAQ](https://github.com/gem/oq-engine/blob/master/doc/faq.md)
-* [Manuals](http://storage.globalquakemodel.org/openquake/support/documentation/engine/#manual-latest-stable)
+* [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
 * [OQ Commands](https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
