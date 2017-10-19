@@ -300,8 +300,6 @@ def check_obsolete_version(calculation_mode='WebUI'):
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
                (__version__, calculation_mode, platform.platform())}
     try:
-        # we are not using requests.get here because it causes a segfault
-        # on macOS: https://github.com/gem/oq-engine/issues/3161
         req = Request(OQ_API + '/engine/latest', headers=headers)
         # NB: a timeout < 1 does not work
         data = urlopen(req, timeout=1).read()  # bytes
