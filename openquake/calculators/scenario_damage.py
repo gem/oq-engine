@@ -106,7 +106,7 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
     result = dict(d_asset=[], d_tag=numpy.zeros((T, R, L, E, D), F64),
                   c_asset=[], c_tag=numpy.zeros((T, R, L, E), F64))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        r = outputs.r
+        r = outputs.rlzi
         for l, damages in enumerate(outputs):
             loss_type = riskmodel.loss_types[l]
             c_model = c_models.get(loss_type)
