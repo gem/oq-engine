@@ -37,6 +37,7 @@ from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
 from openquake.server.settings import DATABASE
+from openquake.server.utils import check_webserver_running
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
@@ -124,7 +125,7 @@ class EngineServerTestCase(unittest.TestCase):
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'],
             env=env, stderr=cls.fd)  # redirect the server logs
-        time.sleep(5)
+        check_webserver_running('http://%s' % cls.hostport)
 
     @classmethod
     def tearDownClass(cls):

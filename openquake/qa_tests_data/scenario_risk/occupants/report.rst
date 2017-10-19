@@ -1,11 +1,11 @@
 Scenario QA Test for occupants
 ==============================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5560.hdf5 Fri Sep 22 11:30:32 2017
-checksum32                                    95,847,934              
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     95,847,934         
+date           2017-10-18T18:23:46
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 3, num_imts = 3
 
@@ -76,7 +76,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
-filtering sites         0.005     0.0       1     
-reading site collection 1.717E-05 0.0       1     
+reading exposure        0.007     0.0       1     
+reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

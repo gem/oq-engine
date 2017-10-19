@@ -78,7 +78,7 @@ Current stable version is the **OpenQuake Engine 2.6** 'Gutenberg'. The document
 
 #### VirtualBox
 
-* [Download OVA appliance](https://storage.globalquakemodel.org/ova/stable/)
+* [Download OVA appliance](https://downloads.openquake.org/ova/stable/)
 
 #### Docker
 

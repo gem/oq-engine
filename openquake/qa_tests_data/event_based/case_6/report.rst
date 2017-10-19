@@ -1,11 +1,11 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5544.hdf5 Fri Sep 22 11:29:56 2017
-checksum32                                           3,219,914,866           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     3,219,914,866      
+date           2017-10-18T18:23:09
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -75,8 +75,8 @@ Number of ruptures per tectonic region type
 ================= ====== ==================== =========== ============ ============
 source_model      grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================= ====== ==================== =========== ============ ============
-source_model1.xml 0      Active Shallow Crust 1           2456         2,456       
-source_model2.xml 1      Active Shallow Crust 1           2456         2,456       
+source_model1.xml 0      Active Shallow Crust 1           2,456        2,456       
+source_model2.xml 1      Active Shallow Crust 1           2,456        2,456       
 ================= ====== ==================== =========== ============ ============
 
 ============= =====
@@ -133,7 +133,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.983 0.646  0.390 1.658 4        
+compute_ruptures   0.975 0.642  0.386 1.650 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -141,13 +141,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.931     1.656     4     
-filtering ruptures             0.702     0.0       3,081 
-managing sources               0.195     0.0       1     
+total compute_ruptures         3.901     3.453     4     
+filtering ruptures             0.696     0.0       3,081 
+managing sources               0.186     0.0       1     
 saving ruptures                0.121     0.0       4     
-reading composite source model 0.117     0.0       1     
-setting event years            0.075     0.0       1     
+reading composite source model 0.110     0.0       1     
+setting event years            0.074     0.0       1     
 store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        4.768E-05 0.0       1     
+reading site collection        3.815E-05 0.0       1     
 ============================== ========= ========= ======

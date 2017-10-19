@@ -1,11 +1,11 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5572.hdf5 Fri Sep 22 11:30:35 2017
-checksum32                                           1,556,025,092           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,556,025,092      
+date           2017-10-18T18:23:48
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 83, num_imts = 2
 
@@ -47,9 +47,9 @@ Composite source model
 ======================== ====== ======================================================== ====================== ================
 smlt_path                weight source_model_file                                        gsim_logic_tree        num_realizations
 ======================== ====== ======================================================== ====================== ================
-AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(0,4,5,4,2,1,4) 4/4             
-FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(0,4,5,4,2,1,4) 4/4             
-SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(0,4,5,4,2,1,4) 0/0             
+AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(2,4,5,1,4,4,0) 4/4             
+FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(2,4,5,1,4,4,0) 4/4             
+SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(2,4,5,1,4,4,0) 0/0             
 ======================== ====== ======================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -81,8 +81,8 @@ Number of ruptures per tectonic region type
 ========================= ====== ==================== =========== ============ ============
 source_model              grp_id trt                  num_sources eff_ruptures tot_ruptures
 ========================= ====== ==================== =========== ============ ============
-models/src/as_model.xml   4      Active Shallow Crust 1           34884        3,876       
-models/src/fsbg_model.xml 9      Active Shallow Crust 2           7632         2,061       
+models/src/as_model.xml   4      Active Shallow Crust 1           34,884       3,876       
+models/src/fsbg_model.xml 9      Active Shallow Crust 2           7,632        2,061       
 ========================= ====== ==================== =========== ============ ============
 
 ============= ======
@@ -96,8 +96,8 @@ models/src/fsbg_model.xml 9      Active Shallow Crust 2           7632         2
 Informational data
 ------------------
 =========================== ================================================================================
-count_eff_ruptures.received tot 9.6 KB, max_per_task 621 B                                                  
-count_eff_ruptures.sent     sources 48.3 KB, param 21.58 KB, srcfilter 21 KB, monitor 5.11 KB, gsims 5.08 KB
+count_eff_ruptures.received tot 9.58 KB, max_per_task 617 B                                                 
+count_eff_ruptures.sent     sources 48.3 KB, param 21.58 KB, srcfilter 21 KB, monitor 5.09 KB, gsims 5.08 KB
 hazard.input_weight         15721.2                                                                         
 hazard.n_imts               2                                                                               
 hazard.n_levels             90                                                                              
@@ -124,7 +124,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.039     3     
+AreaSource   0.040     3     
 ============ ========= ======
 
 Duplicated sources
@@ -135,7 +135,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.003 6.239E-04 0.002 0.004 16       
+count_eff_ruptures 0.004 5.680E-04 0.002 0.004 16       
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -143,12 +143,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.623     0.0       1     
-prefiltering source model      0.115     0.0       10    
-managing sources               0.092     0.0       1     
-store source_info              0.071     0.0       1     
-total count_eff_ruptures       0.054     0.203     16    
+reading composite source model 0.602     0.0       1     
+managing sources               0.120     0.0       1     
+prefiltering source model      0.114     0.0       10    
+store source_info              0.073     0.0       1     
+total count_eff_ruptures       0.056     0.0       16    
 reading site collection        0.005     0.0       1     
-aggregate curves               2.360E-04 0.0       16    
-saving probability maps        2.527E-05 0.0       1     
+aggregate curves               2.351E-04 0.0       16    
+saving probability maps        2.599E-05 0.0       1     
 ============================== ========= ========= ======
