@@ -401,7 +401,7 @@ class HazardCalculator(BaseCalculator):
     def basic_pre_execute(self):
         oq = self.oqparam
         self.read_risk_data()
-        if 'source' in oq.inputs:
+        if 'scenario' not in oq.calculation_mode:
             wakeup_pool()  # fork before reading the source model
             if oq.hazard_calculation_id:  # already stored csm
                 logging.info('Reusing composite source model of calc #%d',
@@ -422,6 +422,9 @@ class HazardCalculator(BaseCalculator):
         self.init()
 
     def read_csm(self):
+        if 'source' not in self.oqparam.inputs:
+            raise ValueError('Missing source_model_logic_tree in %(job_ini)s'
+                             % self.oqparam.inputs)
         with self.monitor('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
         if self.is_stochastic:
