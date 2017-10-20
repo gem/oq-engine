@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 import collections
 from openquake.baselib.python3compat import configparser
 from openquake.baselib.general import git_suffix
@@ -40,17 +39,16 @@ class DotDict(collections.OrderedDict):
 
 config = DotDict()  # global configuration
 d = os.path.dirname
-fallback = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
+base = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
 if 'VIRTUAL_ENV' in os.environ:
     config.paths = [
-        os.path.join(os.environ['VIRTUAL_ENV'], 'openquake.cfg'),
-        fallback]
+        base, os.path.join(os.environ['VIRTUAL_ENV'], 'openquake.cfg')]
 else:  # installation from sources or packages, search in $HOME or /etc
-    config.paths = ['~/openquake.cfg', '/etc/openquake/openquake.cfg',
-                    fallback]
+    config.paths = [base, '/etc/openquake/openquake.cfg', '~/openquake.cfg']
 cfgfile = os.environ.get('OQ_CONFIG_FILE')
-if cfgfile:  # has the precedence
-    config.paths.insert(0, cfgfile)
+if cfgfile:
+    config.paths.append(cfgfile)
+# NB: the last file wins, since the parameters are overridden in order
 
 
 def read(*paths, **validators):
@@ -71,7 +69,7 @@ def read(*paths, **validators):
     Please note: settings in the site configuration file are overridden
     by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
-    paths = list(paths) + config.paths
+    paths = config.paths + list(paths)
     parser = configparser.SafeConfigParser()
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
     if not found:
