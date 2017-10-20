@@ -39,14 +39,12 @@ class DotDict(collections.OrderedDict):
 
 
 config = DotDict()  # global configuration
-d = os.path.dirname
-fallback = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
-if 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix'):
-    config.paths = [
-        os.path.join(os.environ.get('VIRTUAL_ENV', '~'), 'openquake.cfg'),
-        fallback]
-else:  # installation from packages, search in /etc
-    config.paths = ['/etc/openquake/openquake.cfg', fallback]
+if 'VIRTUAL_ENV' in os.environ:
+    config.paths = [os.path.join(os.environ['VIRTUAL_ENV'], 'openquake.cfg')]
+else:  # installation from sources or packages, search in $HOME or /etc
+    d = os.path.dirname
+    home_cfg = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
+    config.paths = [home_cfg, '/etc/openquake/openquake.cfg']
 cfgfile = os.environ.get('OQ_CONFIG_FILE')
 if cfgfile:  # has the precedence
     config.paths.insert(0, cfgfile)
@@ -75,6 +73,7 @@ def read(*paths, **validators):
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
     if not found:
         raise IOError('No configuration file found in %s' % str(paths))
+    config.found = found
     config.clear()
     for section in parser.sections():
         config[section] = sec = DotDict(parser.items(section))
