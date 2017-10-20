@@ -39,12 +39,15 @@ class DotDict(collections.OrderedDict):
 
 
 config = DotDict()  # global configuration
+d = os.path.dirname
+fallback = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
 if 'VIRTUAL_ENV' in os.environ:
-    config.paths = [os.path.join(os.environ['VIRTUAL_ENV'], 'openquake.cfg')]
+    config.paths = [
+        os.path.join(os.environ['VIRTUAL_ENV'], 'openquake.cfg'),
+        fallback]
 else:  # installation from sources or packages, search in $HOME or /etc
-    d = os.path.dirname
-    home_cfg = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
-    config.paths = [home_cfg, '/etc/openquake/openquake.cfg']
+    config.paths = ['~/openquake.cfg', '/etc/openquake/openquake.cfg',
+                    fallback]
 cfgfile = os.environ.get('OQ_CONFIG_FILE')
 if cfgfile:  # has the precedence
     config.paths.insert(0, cfgfile)
