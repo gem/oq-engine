@@ -594,8 +594,8 @@ class Starmap(object):
             allargs = self.add_task_no(self.task_args)
             w = config.zworkers
             it = _starmap(
-                self.task_func, allargs,
-                w.master_host, w.task_in_port, w.receiver_ports)
+                self.task_func, allargs, w.master_host,
+                w.ctrl_port, w.task_in_port, w.receiver_ports)
             ntasks = next(it)
             return IterResult(it, self.name, ntasks, self.progress, self.sent)
 
