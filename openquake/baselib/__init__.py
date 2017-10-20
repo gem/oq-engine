@@ -39,11 +39,14 @@ class DotDict(collections.OrderedDict):
 
 
 config = DotDict()  # global configuration
+d = os.path.dirname
+fallback = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
 if 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix'):
     config.paths = [
-        os.path.join(os.environ.get('VIRTUAL_ENV', '~'), 'openquake.cfg')]
+        os.path.join(os.environ.get('VIRTUAL_ENV', '~'), 'openquake.cfg'),
+        fallback]
 else:  # installation from packages, search in /etc
-    config.paths = ['/etc/openquake/openquake.cfg']
+    config.paths = ['/etc/openquake/openquake.cfg', fallback]
 cfgfile = os.environ.get('OQ_CONFIG_FILE')
 if cfgfile:  # has the precedence
     config.paths.insert(0, cfgfile)
@@ -93,8 +96,5 @@ def boolean(flag):
         return False
     raise ValueError('Unknown flag %r' % s)
 
-
-d = os.path.dirname
-config.read(os.path.join(d(d(__file__)), 'engine', 'openquake.cfg'),
-            soft_mem_limit=int, hard_mem_limit=int, port=int,
+config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=boolean)
