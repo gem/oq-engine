@@ -59,15 +59,17 @@ def reset_is_running(db):
 
 def set_status(db, job_id, status):
     """
-    Set the status 'created', 'executing', 'complete', 'failed'
+    Set the status 'created', 'executing', 'complete', 'failed', 'canceled'
     consistently with `is_running`.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
     :param status: status string
     """
-    assert status in ('created', 'executing', 'complete', 'failed'), status
-    if status in ('created', 'complete', 'failed'):
+    assert status in (
+        'created', 'executing', 'complete', 'canceled', 'failed'
+    ), status
+    if status in ('created', 'complete', 'failed', 'canceled'):
         is_running = 0
     else:  # 'executing'
         is_running = 1

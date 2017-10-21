@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap, config, workerpool
+from openquake.commonlib import logs
 
 
 @sap.Script
@@ -23,6 +24,7 @@ def stop(calc_id, kill=False):
     """
     Stop the given calculation with SIGTERM or SIGKILL
     """
+    logs.dbcmd('set_status', calc_id, 'canceled')
     master = workerpool.WorkerMaster(**config.zworkers)
     print(master.stop('kill' if kill else 'stop', calc_id))
 
