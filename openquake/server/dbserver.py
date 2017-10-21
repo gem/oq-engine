@@ -190,9 +190,12 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
+    dbs = DbServer(db, addr)
     try:
-        DbServer(db, addr).start()
+        dbs.start()
     finally:
+        if ZMQ:
+            logging.warn(dbs.master.stop())
         db.close()
 
 
