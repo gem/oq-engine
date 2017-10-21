@@ -881,8 +881,8 @@ def _get_free_port():
     # there are no free ports. NB: the port is free when extracted, but another
     # process may take it immediately, so this function is not safe against
     # race conditions. Moreover, once a port is taken, it is taken forever and
-    # never freed again. These restrictions as acceptable for usage in the
-    # tests, but only in that case.
+    # never considered free again, even if it is. These restrictions as
+    # acceptable for usage in the tests, but only in that case.
     while port_candidates:
         port = port_candidates.pop()
         if not socket_ready(('127.0.0.1', port)):  # no server listening
