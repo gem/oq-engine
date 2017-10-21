@@ -165,9 +165,9 @@ class WorkerMaster(object):
             subprocess.Popen(args)
         return 'starting %s' % starting
 
-    def stop(self):
+    def stop(self, cmd='stop', calc_id=0):
         """
-        Send a "stop" command to all worker pools
+        Send a "stop" or "kill" command to all worker pools
         """
         stopped = []
         for host, _ in self.host_cores:
@@ -176,24 +176,9 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                sock.send('stop')
+                sock.send((cmd, calc_id))
                 stopped.append(host)
-        return 'stopped %s' % stopped
-
-    def kill(self):
-        """
-        Send a "kill" command to all worker pools
-        """
-        killed = []
-        for host, _ in self.host_cores:
-            if self.status(host)[0][1] == 'not-running':
-                print('%s not running' % host)
-                continue
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
-            with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                sock.send('kill')
-                killed.append(host)
-        return 'killed %s' % killed
+        return 'stopped %s:%s' % (stopped, calc_id)
 
     def restart(self):
         """
@@ -259,9 +244,8 @@ class WorkerPool(object):
                     ctrlsock.send('ok')
                 elif cmd in ('stop', 'kill'):
                     ctrlsock.send(self.stop(cmd, *args))
-            elif msg in ('stop', 'kill'):
-                ctrlsock.send(self.stop(msg))
-                break
+                    if args == (0,):  # unconditional stop/kill
+                        break
             elif msg == 'getpid':
                 ctrlsock.send(self.pid)
             elif msg == 'get_num_workers':
