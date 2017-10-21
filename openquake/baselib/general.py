@@ -872,3 +872,19 @@ def socket_ready(hostport):
     finally:
         sock.close()
     return False if exc else True
+
+port_candidates = set(range(1920, 2000))
+
+
+def get_free_port():
+    """
+    Extract a free port in the range 1920:2000. Raise a RuntimeError if
+    there are no free ports. NB: the port is free when extracted, but another
+    process may take it immediately, so this function is not safe against race
+    conditions. It should be enough for testing purposes, though.
+    """
+    while port_candidates:
+        port = port_candidates.pop()
+        if not socket_ready(('127.0.0.1', port)):
+            return port
+    raise RuntimeError('No free ports in the range 1920:2000')
