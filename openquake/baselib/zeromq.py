@@ -81,6 +81,8 @@ class Socket(object):
             self.zsocket = bind(self.end_point, self.socket_type)
         else:  # connect
             self.zsocket = connect(self.end_point, self.socket_type)
+        if not port_range:
+            self.port = int(self.end_point.rsplit(':', 1)[1])
         self.zsocket.__enter__()
         return self
 
