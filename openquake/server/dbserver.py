@@ -73,7 +73,7 @@ class DbServer(object):
                 sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
-        # start database worker threads
+        """Start database worker threads"""
         dworkers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
@@ -104,6 +104,12 @@ class DbServer(object):
             for sock in dworkers:
                 sock.running = False
             logging.warn('DB server stopped')
+
+    def stop(self):
+        """Stop the DbServer and the zworkers if any"""
+        if ZMQ:
+            logging.warn(self.master.stop())
+        self.db.close()
 
 
 def different_paths(path1, path2):
@@ -194,9 +200,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     try:
         dbs.start()
     finally:
-        if ZMQ:
-            logging.warn(dbs.master.stop())
-        db.close()
+        dbs.stop()
 
 
 run_server.arg('dbhostport', 'dbhost:port')
