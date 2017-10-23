@@ -426,7 +426,7 @@ class EbriskCalculator(base.RiskCalculator):
         with self.monitor('saving event loss table', autoflush=True):
             if self.oqparam.calculation_mode == 'gmf_ebrisk':
                 for er, arr in group_array(agglosses, 'eid', 'rlzi').items():
-                    self.agglosses[er] += arr['loss']
+                    self.agglosses[er] += arr['loss'].sum(axis=0)  # shape LI
             else:
                 agglosses['rlzi'] += offset
                 self.datastore.extend('agg_loss_table', agglosses)
