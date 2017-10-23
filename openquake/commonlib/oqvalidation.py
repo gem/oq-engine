@@ -129,6 +129,7 @@ class OqParam(valid.ParamSet):
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
     sites_per_tile = valid.Param(valid.positiveint, 20000)
     sites_slice = valid.Param(valid.simple_slice, (None, None))
+    sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     taxonomies_from_model = valid.Param(valid.boolean, False)
