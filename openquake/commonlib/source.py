@@ -445,16 +445,13 @@ class CompositionInfo(object):
             if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
                 continue
 
-            if trts:
-                # use the selected tectonic region types
-                trts_ = set(trts)
-            else:
-                # collect the effective tectonic region types and ruptures
-                trts_ = set()
-                for sg in smodel.src_groups:
-                    if count_ruptures:
-                        sg.eff_ruptures = count_ruptures(sg.id)
-                    if sg.eff_ruptures:
+            # collect the effective tectonic region types and ruptures
+            trts_ = set()
+            for sg in smodel.src_groups:
+                if count_ruptures:
+                    sg.eff_ruptures = count_ruptures(sg.id)
+                if sg.eff_ruptures:
+                    if (trts and sg.trt in trts) or not trts:
                         trts_.add(sg.trt)
 
             # recompute the GSIM logic tree if needed
