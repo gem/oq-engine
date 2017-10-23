@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import collections
 from openquake.baselib.python3compat import configparser
 from openquake.baselib.general import git_suffix
@@ -40,9 +41,9 @@ class DotDict(collections.OrderedDict):
 config = DotDict()  # global configuration
 d = os.path.dirname
 base = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
-if 'VIRTUAL_ENV' in os.environ:
-    config.paths = [
-        base, os.path.join(os.environ['VIRTUAL_ENV'], 'openquake.cfg')]
+if (hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix')
+                                    and sys.base_prefix != sys.prefix)):
+    config.paths = [base, os.path.join(sys.prefix, 'openquake.cfg')]
 else:  # installation from sources or packages, search in $HOME or /etc
     config.paths = [base, '/etc/openquake/openquake.cfg', '~/openquake.cfg']
 cfgfile = os.environ.get('OQ_CONFIG_FILE')
@@ -60,7 +61,7 @@ def read(*paths, **validators):
 
     In the absence of this environment variable the following paths will be
     used:
-       - $VIRTUAL_ENV/openquake.cfg when in a virtualenv
+       - sys.prefix + /openquake.cfg when in a virtualenv
        - /etc/openquake/openquake.cfg outside of a virtualenv
 
     If those files are missing, the fallback is the source code:
