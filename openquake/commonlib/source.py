@@ -261,6 +261,29 @@ src_group_dt = numpy.dtype(
      ('sm_id', U32)])
 
 
+def accept_path(path, ref_path):
+    """
+    :param path: a logic tree path (list or tuple of strings)
+    :param ref_path: reference logic tree path
+    :returns: True if `path` is consistent with `ref_path`, False otherwise
+
+    >>> accept_path(['SM2'], ('SM2', 'a3b1'))
+    False
+    >>> accept_path(['SM2', '@'], ('SM2', 'a3b1'))
+    True
+    >>> accept_path(['@', 'a3b1'], ('SM2', 'a3b1'))
+    True
+    >>> accept_path('@@', ('SM2', 'a3b1'))
+    True
+    """
+    if len(path) != len(ref_path):
+        return False
+    for a, b in zip(path, ref_path):
+        if a != '@' and a != b:
+            return False
+    return True
+
+
 class CompositionInfo(object):
     """
     An object to collect information about the composition of
@@ -403,29 +426,38 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    def get_rlzs_assoc(self, count_ruptures=None):
+    def get_rlzs_assoc(self, count_ruptures=None,
+                       sm_lt_path=None, trts=None):
         """
         Return an array assoc_by_grp
 
-        :param count_ruptures: a function src_group_id -> num_ruptures
+        :param count_ruptures: function src_group_id -> num_ruptures
+        :param sm_lt_path: logic tree path tuple used to select a source model
+        :param gsim_lt_path: gsim logic tree path tuple
+        :param trts: tectonic region types to accept
         """
         assoc = RlzsAssoc(self)
         assoc_by_grp = collections.defaultdict(list)
         offset = 0
         trtset = set(self.gsim_lt.tectonic_region_types)
         for smodel in self.source_models:
+            # discard source models with non-acceptable lt_path
+            if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
+                continue
+
             # collect the effective tectonic region types and ruptures
-            trts = set()
+            trts_ = set()
             for sg in smodel.src_groups:
                 if count_ruptures:
                     sg.eff_ruptures = count_ruptures(sg.id)
                 if sg.eff_ruptures:
-                    trts.add(sg.trt)
+                    if (trts and sg.trt in trts) or not trts:
+                        trts_.add(sg.trt)
 
             # recompute the GSIM logic tree if needed
-            if trtset != trts:
+            if trtset != trts_:
                 before = self.gsim_lt.get_num_paths()
-                gsim_lt = self.gsim_lt.reduce(trts)
+                gsim_lt = self.gsim_lt.reduce(trts_)
                 after = gsim_lt.get_num_paths()
                 if count_ruptures and before > after:
                     logging.warn('Reducing the logic tree of %s from %d to %d '

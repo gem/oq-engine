@@ -29,7 +29,6 @@ class ScenarioCalculator(base.HazardCalculator):
     Scenario hazard calculator
     """
     is_stochastic = True
-    require_source_model = False
 
     def pre_execute(self):
         """
