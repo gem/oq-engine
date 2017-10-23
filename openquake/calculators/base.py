@@ -136,7 +136,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     performance = datastore.persistent_attribute('performance')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
-    require_source_model = True
 
     @property
     def taxonomies(self):
@@ -402,7 +401,7 @@ class HazardCalculator(BaseCalculator):
     def basic_pre_execute(self):
         oq = self.oqparam
         self.read_risk_data()
-        if self.require_source_model:
+        if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
             if oq.hazard_calculation_id:  # already stored csm
                 logging.info('Reusing composite source model of calc #%d',
@@ -424,8 +423,8 @@ class HazardCalculator(BaseCalculator):
 
     def read_csm(self):
         if 'source' not in self.oqparam.inputs:
-            raise ValueError('Missing source_model_logic_tree in %(job_ini)s'
-                             % self.oqparam.inputs)
+            raise ValueError('Missing source_model_logic_tree in %(job_ini)s '
+                             'or missing --hc option' % self.oqparam.inputs)
         with self.monitor('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
         if self.is_stochastic:
@@ -608,8 +607,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-    require_source_model = False
-
     def make_eps(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
