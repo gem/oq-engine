@@ -1,11 +1,11 @@
 Scenario Risk Test
 ==================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5567.hdf5 Fri Sep 22 11:30:33 2017
-checksum32                                    4,057,024,737           
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     4,057,024,737      
+date           2017-10-18T18:23:47
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 27, num_imts = 1
 
@@ -78,9 +78,9 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
+building riskinputs     0.091     0.0       1     
 assoc_assets_sites      0.016     0.0       2     
-reading exposure        0.007     0.0       1     
-building riskinputs     9.639E-04 0.0       1     
-building epsilons       4.890E-04 0.0       1     
-reading site collection 3.958E-05 0.0       1     
+reading exposure        0.008     0.0       1     
+building epsilons       5.250E-04 0.0       1     
+reading site collection 3.839E-05 0.0       1     
 ======================= ========= ========= ======

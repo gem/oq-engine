@@ -32,18 +32,19 @@ import subprocess
 import tempfile
 import requests
 import numpy
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import writetmp, _get_free_port
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
 from openquake.server.settings import DATABASE
+from openquake.server.utils import check_webserver_running
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
 
 
 class EngineServerTestCase(unittest.TestCase):
-    hostport = 'localhost:8761'
+    hostport = 'localhost:%d' % _get_free_port()
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
@@ -83,10 +84,10 @@ class EngineServerTestCase(unittest.TestCase):
     def wait(cls):
         # wait until all calculations stop
         while True:
-            time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 break
+            time.sleep(1)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
@@ -124,7 +125,7 @@ class EngineServerTestCase(unittest.TestCase):
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'],
             env=env, stderr=cls.fd)  # redirect the server logs
-        time.sleep(5)
+        check_webserver_running('http://%s' % cls.hostport)
 
     @classmethod
     def tearDownClass(cls):
