@@ -44,6 +44,7 @@ class TRT(ConstantContainer):
     STABLE_CONTINENTAL = 'Stable Shallow Crust'
     SUBDUCTION_INTERFACE = 'Subduction Interface'
     SUBDUCTION_INTRASLAB = 'Subduction IntraSlab'
+    UPPER_MANTLE = "Upper Mantle"
     VOLCANIC = 'Volcanic'
     GEOTHERMAL = 'Geothermal'
     INDUCED = 'Induced'

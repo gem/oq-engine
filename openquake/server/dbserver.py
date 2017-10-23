@@ -42,6 +42,8 @@ db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
 ZMQ = os.environ.get(
     'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+
 
 class DbServer(object):
     """
@@ -71,7 +73,7 @@ class DbServer(object):
                 sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
-        # start database worker threads
+        """Start database worker threads"""
         dworkers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
@@ -103,6 +105,12 @@ class DbServer(object):
                 sock.running = False
             logging.warn('DB server stopped')
 
+    def stop(self):
+        """Stop the DbServer and the zworkers if any"""
+        if ZMQ:
+            logging.warn(self.master.stop())
+        self.db.close()
+
 
 def different_paths(path1, path2):
     path1 = os.path.realpath(path1)  # expand symlinks
@@ -118,7 +126,7 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    address = address or (config.dbserver.host, config.dbserver.port)
+    address = address or (config.dbserver.host, DBSERVER_PORT)
     return 'running' if socket_ready(address) else 'not-running'
 
 
@@ -169,7 +177,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = (config.dbserver.host, config.dbserver.port)
+        addr = (config.dbserver.host, DBSERVER_PORT)
 
     if dbpath:
         DATABASE['NAME'] = dbpath
@@ -188,10 +196,12 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
+    dbs = DbServer(db, addr)
     try:
-        DbServer(db, addr).start()
+        dbs.start()
     finally:
-        db.close()
+        dbs.stop()
+
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')

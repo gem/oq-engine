@@ -35,10 +35,10 @@ MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 def get_job_id(job_id, username=None):
     username = username or getpass.getuser()
-    job_id = logs.dbcmd('get_job_id', job_id, username)
-    if not job_id:
+    job = logs.dbcmd('get_job', job_id, username)
+    if not job:
         sys.exit('Job %s of %s not found' % (job_id, username))
-    return job_id
+    return job.id
 
 
 def run_job(cfg_file, log_level='info', log_file=None, exports='',
@@ -264,9 +264,9 @@ engine._add('run_risk', '--run-risk', '--rr', help='Run a risk job with the '
 engine._add('run', '--run', help='Run a job with the specified config file',
             metavar='CONFIG_FILE')
 engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
-            help='List risk calculation information', action='store_true')
-engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
             help='List hazard calculation information', action='store_true')
+engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
+            help='List risk calculation information', action='store_true')
 engine._add('delete_calculation', '--delete-calculation', '--dc',
             help='Delete a calculation and all associated outputs',
             metavar='CALCULATION_ID', type=int)

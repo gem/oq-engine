@@ -1,11 +1,11 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5537.hdf5 Fri Sep 22 11:29:45 2017
-checksum32                                           1,751,642,476           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,751,642,476      
+date           2017-10-18T18:23:00
+engine_version 2.7.0-git16fce00   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -94,16 +94,16 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ============
 source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 5           1925         1,925       
-source_model.xml 1      Active Shallow Crust 5           2025         2,025       
-source_model.xml 2      Active Shallow Crust 5           2135         2,135       
-source_model.xml 3      Active Shallow Crust 5           2035         2,035       
-source_model.xml 4      Active Shallow Crust 5           1865         1,865       
-source_model.xml 5      Active Shallow Crust 5           2085         2,085       
-source_model.xml 6      Active Shallow Crust 5           2075         2,075       
-source_model.xml 7      Active Shallow Crust 5           2185         2,185       
-source_model.xml 8      Active Shallow Crust 5           1905         1,905       
-source_model.xml 9      Active Shallow Crust 5           2025         2,025       
+source_model.xml 0      Active Shallow Crust 5           1,925        1,925       
+source_model.xml 1      Active Shallow Crust 5           2,025        2,025       
+source_model.xml 2      Active Shallow Crust 5           2,135        2,135       
+source_model.xml 3      Active Shallow Crust 5           2,035        2,035       
+source_model.xml 4      Active Shallow Crust 5           1,865        1,865       
+source_model.xml 5      Active Shallow Crust 5           2,085        2,085       
+source_model.xml 6      Active Shallow Crust 5           2,075        2,075       
+source_model.xml 7      Active Shallow Crust 5           2,185        2,185       
+source_model.xml 8      Active Shallow Crust 5           1,905        1,905       
+source_model.xml 9      Active Shallow Crust 5           2,025        2,025       
 ================ ====== ==================== =========== ============ ============
 
 ============= ======
@@ -117,8 +117,8 @@ source_model.xml 9      Active Shallow Crust 5           2025         2,025
 Informational data
 ------------------
 =========================== ====================================================================================
-count_eff_ruptures.received tot 10.96 KB, max_per_task 716 B                                                    
-count_eff_ruptures.sent     sources 56.78 KB, srcfilter 11.36 KB, param 10.03 KB, monitor 5.43 KB, gsims 1.69 KB
+count_eff_ruptures.received tot 10.94 KB, max_per_task 715 B                                                    
+count_eff_ruptures.sent     sources 56.78 KB, srcfilter 11.36 KB, param 10.03 KB, monitor 5.41 KB, gsims 1.69 KB
 hazard.input_weight         2026.0                                                                              
 hazard.n_imts               1                                                                                   
 hazard.n_levels             3                                                                                   
@@ -135,26 +135,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-5      5         AreaSource   375          0.002     1         1        
-3      1         AreaSource   325          0.001     1         1        
-1      5         AreaSource   375          0.001     1         1        
-3      5         AreaSource   375          0.001     1         1        
 1      1         AreaSource   375          0.001     1         1        
+3      1         AreaSource   325          0.001     1         1        
+5      5         AreaSource   375          0.001     1         1        
+4      1         AreaSource   375          0.001     1         1        
+2      5         AreaSource   425          0.001     1         1        
+2      1         AreaSource   375          0.001     1         1        
 7      1         AreaSource   375          0.001     1         1        
-0      1         AreaSource   325          0.001     1         1        
+1      5         AreaSource   375          0.001     1         1        
+6      5         AreaSource   375          0.001     1         1        
 5      1         AreaSource   375          0.001     1         1        
-8      1         AreaSource   375          0.001     1         1        
-7      5         AreaSource   425          0.001     1         1        
-5      2         AreaSource   510          0.001     1         1        
-4      4         AreaSource   325          0.001     1         1        
-3      3         AreaSource   510          0.001     1         1        
-8      2         AreaSource   390          0.001     1         1        
-0      5         AreaSource   375          0.001     1         1        
+6      1         AreaSource   425          0.001     1         1        
+6      2         AreaSource   450          0.001     1         1        
 1      4         AreaSource   375          0.001     1         1        
-2      4         AreaSource   375          0.001     1         1        
-7      4         AreaSource   425          0.001     1         1        
+4      3         AreaSource   450          0.001     1         1        
+3      4         AreaSource   375          0.001     1         1        
 1      2         AreaSource   450          0.001     1         1        
-7      2         AreaSource   450          0.001     1         1        
+1      3         AreaSource   450          0.001     1         1        
+3      2         AreaSource   450          0.001     1         1        
+4      2         AreaSource   390          0.001     1         1        
+2      3         AreaSource   510          0.001     1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -162,7 +162,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.063     50    
+AreaSource   0.061     50    
 ============ ========= ======
 
 Duplicated sources
@@ -174,28 +174,28 @@ source_id calc_time src_group_ids
 2         0.012     0 1 2 3 4 5 6 7 8 9
 3         0.012     0 1 2 3 4 5 6 7 8 9
 4         0.012     0 1 2 3 4 5 6 7 8 9
-5         0.013     0 1 2 3 4 5 6 7 8 9
+5         0.012     0 1 2 3 4 5 6 7 8 9
 ========= ========= ===================
 Sources with the same ID but different parameters
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.005 0.002  0.002 0.008 17       
-================== ===== ====== ===== ===== =========
+================== ===== ====== ========= ===== =========
+operation-duration mean  stddev min       max   num_tasks
+count_eff_ruptures 0.004 0.002  9.341E-04 0.008 17       
+================== ===== ====== ========= ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.229     0.0       1     
-total count_eff_ruptures       0.079     0.0       17    
-prefiltering source model      0.032     0.0       1     
-managing sources               0.025     0.0       1     
-store source_info              0.006     0.0       1     
-aggregate curves               4.032E-04 0.0       17    
-reading site collection        4.792E-05 0.0       1     
-saving probability maps        3.099E-05 0.0       1     
+reading composite source model 0.172     0.0       1     
+total count_eff_ruptures       0.076     0.188     17    
+managing sources               0.031     0.0       1     
+prefiltering source model      0.025     0.0       1     
+store source_info              0.008     0.0       1     
+aggregate curves               6.449E-04 0.0       17    
+saving probability maps        3.910E-05 0.0       1     
+reading site collection        3.290E-05 0.0       1     
 ============================== ========= ========= ======
