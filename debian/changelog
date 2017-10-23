@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fix to the gmf_ebrisk calculator: the realization index in the event loss
+    table was incorrect
   * Added a way to restrict the source logic model tree by setting a sm_lt_path
     variable in the job.ini (experimental)
   * Fixed the precedence order when reading openquake.cfd
