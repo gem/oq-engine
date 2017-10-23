@@ -32,12 +32,10 @@ if settings.LOCKDOWN:
 
 def get_user_data(request):
     """
-    Returns the real username if authentication support is enabled and user is
-    authenticated, otherwise it returns "platform" as user for backward
-    compatibility.
-    Returns also if the user is 'superuser' or not.
+    Returns a dictionary with `name`, `group_members` and `acl_on` keys.
+    `name` is the real username if authentication support is enabled and user
+    is authenticated, otherwise it is None.
     """
-
     acl_on = settings.ACL_ON
     group_members = []
     if settings.LOCKDOWN and hasattr(request, 'user'):
@@ -46,7 +44,7 @@ def get_user_data(request):
             groups = request.user.groups.values_list('name', flat=True)
             if groups:
                 group_members = list(User.objects.filter(groups__name=groups)
-                                      .values_list('username', flat=True))
+                                     .values_list('username', flat=True))
         if request.user.is_superuser:
             acl_on = False
     else:

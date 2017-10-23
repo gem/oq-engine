@@ -35,8 +35,11 @@ from openquake.commonlib import calc
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
-    extract('sitecol', dstore)
+    extract('sitecol', dstore). It is also possibly to extract the
+    attributes, for instance with extract('sitecol.attrs', dstore).
     """
+    if dspath.endswith('.attrs'):
+        return ArrayWrapper(0, dstore.get_attrs(dspath[:-6]))
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
         return ArrayWrapper(obj.value, obj.attrs)

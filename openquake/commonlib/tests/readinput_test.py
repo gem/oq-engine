@@ -165,6 +165,17 @@ investigation_time = 50.
             readinput.get_site_collection(oqparam)
         self.assertIn('Could not discretize region', str(ctx.exception))
 
+    def test_invalid_magnitude_distance_filter(self):
+        source = general.writetmp("""
+[general]
+maximum_distance=[(200, 8)]
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_oqparam(source)
+        self.assertIn('magnitude 200.0 is bigger than the maximum (11): '
+                      'could not convert to maximum_distance:',
+                      str(ctx.exception))
+
 
 def sitemodel():
     return BytesIO(b'''\
@@ -615,7 +626,7 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
         eids, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
         assert_allclose(eids, range(5))
         self.assertEqual(
-            writers.write_csv(StringIO(), gmfa), '''\
+            writers.write_csv(BytesIO(), gmfa), b'''\
 PGA:float32,PGV:float32
 6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01,6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01
 1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01,1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01
