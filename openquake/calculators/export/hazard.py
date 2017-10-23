@@ -491,6 +491,8 @@ HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 @export.add(('hcurves', 'xml'), ('hcurves', 'geojson'))
 def export_hcurves_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
+    if fmt == 'geojson':
+        logging.warn('The geojson exporters will be removed soon')
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
@@ -527,6 +529,8 @@ def export_hcurves_xml_json(ekey, dstore):
 @export.add(('hmaps', 'xml'), ('hmaps', 'geojson'))
 def export_hmaps_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
+    if fmt == 'geojson':
+        logging.warn('The geojson exporters will be removed soon')
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
