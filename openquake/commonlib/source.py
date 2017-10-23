@@ -269,17 +269,17 @@ def accept_path(path, ref_path):
 
     >>> accept_path(['SM2'], ('SM2', 'a3b1'))
     False
-    >>> accept_path(['SM2', '*'], ('SM2', 'a3b1'))
+    >>> accept_path(['SM2', '@'], ('SM2', 'a3b1'))
     True
-    >>> accept_path(['*', 'a3b1'], ('SM2', 'a3b1'))
+    >>> accept_path(['@', 'a3b1'], ('SM2', 'a3b1'))
     True
-    >>> accept_path('**', ('SM2', 'a3b1'))
+    >>> accept_path('@@', ('SM2', 'a3b1'))
     True
     """
     if len(path) != len(ref_path):
         return False
     for a, b in zip(path, ref_path):
-        if a != '*' and a != b:
+        if a != '@' and a != b:
             return False
     return True
 
