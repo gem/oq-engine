@@ -1,6 +1,10 @@
   [Michele Simionato]
   * Added a check on missing `source_model_logic_tree`
 
+  * Added a way to restrict the source logic model tree by setting a sm_lt_path
+    variable in the job.ini (experimental)
+  * Fixed the precedence order when reading openquake.cfd
+
 python-oq-engine (2.7.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
