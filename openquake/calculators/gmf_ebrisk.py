@@ -81,6 +81,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             accum=numpy.zeros((1, self.L * self.I), F32))
 
     def post_execute(self, result):
+        """
+        Save the event loss table
+        """
         alt = numpy.zeros(self.E * self.R, self.param['elt_dt'])
         for (e, r), loss in self.agglosses.items():
             alt[self.E * int(r) + int(e)] = (e, r, loss)
