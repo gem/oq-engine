@@ -17,7 +17,7 @@ The OpenQuake Engine WebUI does not require any special software on the client s
 ## Using the OpenQuake Engine WebUI
 
 Open the browser and load the [http://localhost:8800/engine](http://localhost:8800/engine) page
-![WebUI main page](../img/webui-main.png)
+![WebUI main page](../img/webui-main.gif)
 
 ### Start a calculation
 
@@ -60,7 +60,7 @@ The calculation is removed from the calculations list, but it is not actually re
 
 A calculation can be in one of the following statuses: `created`, `executing`, `complete`, `failed`
 
-![WebUI calculations status](../img/webui-status.png)
+![WebUI calculations status](../img/webui-status.gif)
 
 The reason behind a `failed` calculation can be inspected by using the `Traceback` button.
 
