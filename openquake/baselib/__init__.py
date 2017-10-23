@@ -17,13 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 import collections
 from openquake.baselib.python3compat import configparser
 from openquake.baselib.general import git_suffix
 
 # the version is managed by packager.sh with a sed
-__version__ = '2.7.0'
+__version__ = '2.8.0'
 __version__ += git_suffix(__file__)
 
 
@@ -39,14 +38,17 @@ class DotDict(collections.OrderedDict):
 
 
 config = DotDict()  # global configuration
-if 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix'):
+d = os.path.dirname
+base = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
+if 'VIRTUAL_ENV' in os.environ:
     config.paths = [
-        os.path.join(os.environ.get('VIRTUAL_ENV', '~'), 'openquake.cfg')]
-else:  # installation from packages, search in /etc
-    config.paths = ['/etc/openquake/openquake.cfg']
+        base, os.path.join(os.environ['VIRTUAL_ENV'], 'openquake.cfg')]
+else:  # installation from sources or packages, search in $HOME or /etc
+    config.paths = [base, '/etc/openquake/openquake.cfg', '~/openquake.cfg']
 cfgfile = os.environ.get('OQ_CONFIG_FILE')
-if cfgfile:  # has the precedence
-    config.paths.insert(0, cfgfile)
+if cfgfile:
+    config.paths.append(cfgfile)
+# NB: the last file wins, since the parameters are overridden in order
 
 
 def read(*paths, **validators):
@@ -67,11 +69,12 @@ def read(*paths, **validators):
     Please note: settings in the site configuration file are overridden
     by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
-    paths = list(paths) + config.paths
+    paths = config.paths + list(paths)
     parser = configparser.SafeConfigParser()
     found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
     if not found:
         raise IOError('No configuration file found in %s' % str(paths))
+    config.found = found
     config.clear()
     for section in parser.sections():
         config[section] = sec = DotDict(parser.items(section))
@@ -93,8 +96,5 @@ def boolean(flag):
         return False
     raise ValueError('Unknown flag %r' % s)
 
-
-d = os.path.dirname
-config.read(os.path.join(d(d(__file__)), 'engine', 'openquake.cfg'),
-            soft_mem_limit=int, hard_mem_limit=int, port=int,
+config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=boolean)

@@ -36,6 +36,7 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 
 LOG = logging.getLogger()
 
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
 def dbcmd(action, *args):
     """
@@ -44,7 +45,7 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    sock = zeromq.Socket('tcp://%(host)s:%(port)s' % config.dbserver,
+    sock = zeromq.Socket('tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT),
                          zeromq.zmq.REQ, 'connect')
     with sock:
         res, etype, _mon = sock.send((action,) + args)
