@@ -19,6 +19,7 @@
 import logging
 import numpy
 
+from openquake.baselib import general
 from openquake.commonlib import readinput
 from openquake.calculators import base, event_based_risk as ebr
 
@@ -76,9 +77,14 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                              readinput.stored_event_dt)
         events['eid'] = eids
         self.datastore['events'] = events
+        self.agglosses = general.AccumDict(
+            accum=numpy.zeros((1, self.L * self.I), F32))
 
     def post_execute(self, result):
-        pass
+        alt = numpy.zeros(self.E * self.R, self.param['elt_dt'])
+        for (e, r), loss in self.agglosses.items():
+            alt[self.E * int(r) + int(e)] = (e, r, loss)
+        self.datastore['agg_loss_table'] = alt
 
     def combine(self, dummy, res):
         """
@@ -86,3 +92,4 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         :param res: a result dictionary
         """
         ebr.EbriskCalculator.__dict__['save_losses'](self, res, 0)
+        return 1
