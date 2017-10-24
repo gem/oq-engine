@@ -165,6 +165,17 @@ investigation_time = 50.
             readinput.get_site_collection(oqparam)
         self.assertIn('Could not discretize region', str(ctx.exception))
 
+    def test_invalid_magnitude_distance_filter(self):
+        source = general.writetmp("""
+[general]
+maximum_distance=[(200, 8)]
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_oqparam(source)
+        self.assertIn('magnitude 200.0 is bigger than the maximum (11): '
+                      'could not convert to maximum_distance:',
+                      str(ctx.exception))
+
 
 def sitemodel():
     return BytesIO(b'''\

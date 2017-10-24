@@ -32,7 +32,7 @@ import subprocess
 import tempfile
 import requests
 import numpy
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import writetmp, _get_free_port
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
@@ -44,7 +44,7 @@ if requests.__version__ < '1.0.0':
 
 
 class EngineServerTestCase(unittest.TestCase):
-    hostport = 'localhost:8761'
+    hostport = 'localhost:%d' % _get_free_port()
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
