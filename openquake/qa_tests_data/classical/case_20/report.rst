@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 20
 
 ============== ===================
 checksum32     3,909,444,611      
-date           2017-10-18T18:22:58
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:56
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -40,22 +40,22 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========================= ====== ====================================== =============== ================
-smlt_path                 weight source_model_file                      gsim_logic_tree num_realizations
-========================= ====== ====================================== =============== ================
-sm1_sg1_cog1_char_complex 0.070  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg1_cog1_char_plane   0.105  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg1_cog1_char_simple  0.175  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg1_cog2_char_complex 0.070  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg1_cog2_char_plane   0.105  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg1_cog2_char_simple  0.175  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg2_cog1_char_complex 0.030  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg2_cog1_char_plane   0.045  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg2_cog1_char_simple  0.075  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg2_cog2_char_complex 0.030  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg2_cog2_char_plane   0.045  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-sm1_sg2_cog2_char_simple  0.075  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========================= ====== ====================================== =============== ================
+========================= ====== =============== ================
+smlt_path                 weight gsim_logic_tree num_realizations
+========================= ====== =============== ================
+sm1_sg1_cog1_char_complex 0.070  trivial(1)      1/1             
+sm1_sg1_cog1_char_plane   0.105  trivial(1)      1/1             
+sm1_sg1_cog1_char_simple  0.175  trivial(1)      1/1             
+sm1_sg1_cog2_char_complex 0.070  trivial(1)      1/1             
+sm1_sg1_cog2_char_plane   0.105  trivial(1)      1/1             
+sm1_sg1_cog2_char_simple  0.175  trivial(1)      1/1             
+sm1_sg2_cog1_char_complex 0.030  trivial(1)      1/1             
+sm1_sg2_cog1_char_plane   0.045  trivial(1)      1/1             
+sm1_sg2_cog1_char_simple  0.075  trivial(1)      1/1             
+sm1_sg2_cog2_char_complex 0.030  trivial(1)      1/1             
+sm1_sg2_cog2_char_plane   0.045  trivial(1)      1/1             
+sm1_sg2_cog2_char_simple  0.075  trivial(1)      1/1             
+========================= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -125,8 +125,8 @@ source_model.xml 11     Active Shallow Crust 3           121          121
 Informational data
 ------------------
 =========================== ===================================================================================
-count_eff_ruptures.received tot 11.3 KB, max_per_task 674 B                                                    
-count_eff_ruptures.sent     sources 99.44 KB, srcfilter 12.02 KB, param 10.76 KB, monitor 5.73 KB, gsims 1.6 KB
+count_eff_ruptures.received tot 11.32 KB, max_per_task 678 B                                                   
+count_eff_ruptures.sent     sources 99.53 KB, srcfilter 12.02 KB, param 10.76 KB, monitor 5.75 KB, gsims 1.6 KB
 hazard.input_weight         2880.0                                                                             
 hazard.n_imts               1                                                                                  
 hazard.n_levels             4                                                                                  
@@ -143,26 +143,26 @@ Slowest sources
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-4      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-3      SFLT1     SimpleFaultSource         56           0.003     1         1        
 3      COMFLT1   ComplexFaultSource        62           0.003     1         1        
-4      COMFLT1   ComplexFaultSource        62           0.003     1         1        
-7      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-0      SFLT1     SimpleFaultSource         56           0.003     1         1        
-2      SFLT1     SimpleFaultSource         56           0.003     1         1        
-4      SFLT1     SimpleFaultSource         56           0.003     1         1        
-1      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-3      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-0      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
 2      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
-0      COMFLT1   ComplexFaultSource        29           0.003     1         1        
+4      COMFLT1   ComplexFaultSource        62           0.003     1         1        
 1      SFLT1     SimpleFaultSource         56           0.003     1         1        
-7      SFLT1     SimpleFaultSource         58           0.003     1         1        
-6      SFLT1     SimpleFaultSource         58           0.003     1         1        
-8      SFLT1     SimpleFaultSource         58           0.002     1         1        
-9      SFLT1     SimpleFaultSource         58           0.002     1         1        
+4      SFLT1     SimpleFaultSource         56           0.003     1         1        
+0      SFLT1     SimpleFaultSource         56           0.003     1         1        
+5      CHAR1     CharacteristicFaultSource 1            0.003     1         1        
+3      SFLT1     SimpleFaultSource         56           0.003     1         1        
+2      SFLT1     SimpleFaultSource         56           0.003     1         1        
+5      SFLT1     SimpleFaultSource         56           0.003     1         1        
 5      COMFLT1   ComplexFaultSource        62           0.002     1         1        
-2      COMFLT1   ComplexFaultSource        29           0.002     1         1        
+11     SFLT1     SimpleFaultSource         58           0.002     1         1        
+8      SFLT1     SimpleFaultSource         58           0.002     1         1        
+3      CHAR1     CharacteristicFaultSource 1            0.002     1         1        
+1      CHAR1     CharacteristicFaultSource 1            0.002     1         1        
+9      SFLT1     SimpleFaultSource         58           0.002     1         1        
+0      COMFLT1   ComplexFaultSource        29           0.002     1         1        
+11     CHAR1     CharacteristicFaultSource 1            0.002     1         1        
+8      CHAR1     CharacteristicFaultSource 1            0.002     1         1        
+1      COMFLT1   ComplexFaultSource        29           0.002     1         1        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -170,8 +170,8 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.028     12    
-ComplexFaultSource        0.028     12    
+CharacteristicFaultSource 0.026     12    
+ComplexFaultSource        0.027     12    
 SimpleFaultSource         0.028     12    
 ========================= ========= ======
 
@@ -180,8 +180,8 @@ Duplicated sources
 ========= ========= =========================
 source_id calc_time src_group_ids            
 ========= ========= =========================
-CHAR1     0.028     0 1 2 3 4 5 6 7 8 9 10 11
-COMFLT1   0.028     0 1 2 3 4 5 6 7 8 9 10 11
+CHAR1     0.026     0 1 2 3 4 5 6 7 8 9 10 11
+COMFLT1   0.027     0 1 2 3 4 5 6 7 8 9 10 11
 SFLT1     0.028     0 1 2 3 4 5 6 7 8 9 10 11
 ========= ========= =========================
 Sources with the same ID but different parameters
@@ -190,7 +190,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.005 0.003  0.001 0.009 18       
+count_eff_ruptures 0.005 0.002  0.003 0.008 18       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -198,12 +198,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.550     0.0       1     
-total count_eff_ruptures       0.096     0.0       18    
-managing sources               0.038     0.0       1     
+reading composite source model 0.580     0.0       1     
+total count_eff_ruptures       0.094     0.230     18    
+managing sources               0.042     0.0       1     
 prefiltering source model      0.035     0.0       1     
 store source_info              0.007     0.0       1     
-aggregate curves               6.120E-04 0.0       18    
-saving probability maps        3.743E-05 0.0       1     
-reading site collection        3.147E-05 0.0       1     
+aggregate curves               5.918E-04 0.0       18    
+saving probability maps        3.624E-05 0.0       1     
+reading site collection        3.052E-05 0.0       1     
 ============================== ========= ========= ======
