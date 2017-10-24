@@ -72,7 +72,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
             agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
                 result['agg'][:, r, l + L * i] += agglosses[:, i]
-            if asset_loss_table:
+            if param['asset_loss_table']:
                 aids = [asset.ordinal for asset in outputs.assets]
                 result['all_losses'][l, r] += AccumDict(zip(aids, losses))
     return result
@@ -107,6 +107,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.riskinputs = self.build_riskinputs('gmf', eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
+        self.param['asset_loss_table'] = self.oqparam.asset_loss_table
 
     def post_execute(self, result):
         """
