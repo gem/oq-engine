@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 8
 
 ============== ===================
 checksum32     745,347,419        
-date           2017-10-18T18:22:58
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:55
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -40,13 +40,13 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1_b2     0.300  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_b3     0.300  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_b4     0.400  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1_b2     0.300  trivial(1)      1/1             
+b1_b3     0.300  trivial(1)      1/1             
+b1_b4     0.400  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -89,8 +89,8 @@ source_model.xml 2      Active Shallow Crust 1           3,000        3,000
 Informational data
 ------------------
 =========================== ==========================================================================
-count_eff_ruptures.received tot 1.78 KB, max_per_task 606 B                                           
-count_eff_ruptures.sent     sources 3.46 KB, srcfilter 2 KB, param 1.79 KB, monitor 978 B, gsims 273 B
+count_eff_ruptures.received tot 1.78 KB, max_per_task 607 B                                           
+count_eff_ruptures.sent     sources 3.46 KB, srcfilter 2 KB, param 1.79 KB, monitor 981 B, gsims 273 B
 hazard.input_weight         900.0                                                                     
 hazard.n_imts               1                                                                         
 hazard.n_levels             4                                                                         
@@ -107,9 +107,9 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  3,000        1.397E-04 1         1        
-2      1         PointSource  3,000        1.090E-04 1         1        
-1      1         PointSource  3,000        1.023E-04 1         1        
+0      1         PointSource  3,000        1.919E-04 1         1        
+2      1         PointSource  3,000        1.905E-04 1         1        
+1      1         PointSource  3,000        1.085E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -117,7 +117,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.510E-04 3     
+PointSource  4.909E-04 3     
 ============ ========= ======
 
 Duplicated sources
@@ -125,7 +125,7 @@ Duplicated sources
 ========= ========= =============
 source_id calc_time src_group_ids
 ========= ========= =============
-1         3.510E-04 0 1 2        
+1         4.909E-04 0 1 2        
 ========= ========= =============
 Sources with the same ID but different parameters
 
@@ -133,7 +133,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 5.698E-04 9.445E-05 5.112E-04 6.788E-04 3        
+count_eff_ruptures 7.966E-04 2.403E-04 5.195E-04 9.463E-04 3        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -142,11 +142,11 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.016     0.0       1     
-prefiltering source model      0.014     0.0       1     
+prefiltering source model      0.015     0.0       1     
 managing sources               0.004     0.0       1     
 store source_info              0.004     0.0       1     
 total count_eff_ruptures       0.002     0.0       3     
-aggregate curves               6.509E-05 0.0       3     
-reading site collection        4.339E-05 0.0       1     
+aggregate curves               6.628E-05 0.0       3     
+reading site collection        4.363E-05 0.0       1     
 saving probability maps        2.980E-05 0.0       1     
 ============================== ========= ========= ======

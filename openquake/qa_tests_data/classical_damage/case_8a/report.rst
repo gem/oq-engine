@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     343,519,400        
-date           2017-10-18T18:22:17
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:13
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -42,11 +42,11 @@ structural_fragility    `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ simple(2)       2/2             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  simple(2)       2/2             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -76,8 +76,8 @@ source_model.xml 0      Active Shallow Crust 1           1,694        1,694
 Informational data
 ------------------
 =========================== ==================================================================================
-count_eff_ruptures.received tot 6.08 KB, max_per_task 729 B                                                   
-count_eff_ruptures.sent     sources 11.13 KB, srcfilter 6.68 KB, param 6.29 KB, monitor 3.18 KB, gsims 1.64 KB
+count_eff_ruptures.received tot 6.09 KB, max_per_task 730 B                                                   
+count_eff_ruptures.sent     sources 11.13 KB, srcfilter 6.68 KB, param 6.29 KB, monitor 3.19 KB, gsims 1.64 KB
 hazard.input_weight         1694.0                                                                            
 hazard.n_imts               1                                                                                 
 hazard.n_levels             8                                                                                 
@@ -108,7 +108,7 @@ Slowest sources
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      1         SimpleFaultSource 1,694        0.033     1         15       
+0      1         SimpleFaultSource 1,694        0.040     1         15       
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -116,7 +116,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.033     1     
+SimpleFaultSource 0.040     1     
 ================= ========= ======
 
 Duplicated sources
@@ -127,7 +127,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.004 0.002  0.002 0.007 10       
+count_eff_ruptures 0.005 0.003  0.003 0.014 10       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,13 +135,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.100     0.0       1     
-total count_eff_ruptures       0.039     0.0       10    
+managing sources               0.107     0.0       1     
+total count_eff_ruptures       0.047     0.0       10    
 reading composite source model 0.007     0.0       1     
 reading exposure               0.006     0.0       1     
-store source_info              0.006     0.0       1     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-aggregate curves               3.302E-04 0.0       10    
-saving probability maps        4.506E-05 0.0       1     
+aggregate curves               1.976E-04 0.0       10    
+saving probability maps        3.028E-05 0.0       1     
 reading site collection        6.437E-06 0.0       1     
 ============================== ========= ========= ======

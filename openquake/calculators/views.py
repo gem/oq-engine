@@ -221,16 +221,15 @@ def view_contents(token, dstore):
 def view_csm_info(token, dstore):
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
-    header = ['smlt_path', 'weight', 'source_model_file',
-              'gsim_logic_tree', 'num_realizations']
+    header = ['smlt_path', 'weight', 'gsim_logic_tree', 'num_realizations']
     rows = []
     for sm in csm_info.source_models:
         num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
         num_paths = sm.num_gsim_paths
-        link = "`%s <%s>`_" % (sm.name, sm.name)
-        row = ('_'.join(sm.path), sm.weight, link,
-               classify_gsim_lt(csm_info.gsim_lt), '%d/%d' %
-               (num_rlzs, num_paths))
+        row = ('_'.join(sm.path),
+               sm.weight,
+               classify_gsim_lt(csm_info.gsim_lt),
+               '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
 
