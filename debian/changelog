@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Fix to the gmf_ebrisk calculator: the realization index in the event loss
+    table was incorrect and too many rows were saved
+  * Added a way to restrict the source logic model tree by setting a sm_lt_path
+    variable in the job.ini (experimental)
+  * Fixed the precedence order when reading openquake.cfd
+
+python-oq-engine (2.7.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
   * Fixed the risk exporters for tags containing non-ASCII characters
 
   [Valerio Poggi]
@@ -71,6 +80,8 @@
   * Changed the /extract wen API to return a compressed .npz file
   * Fixed a bug with multi-realization disaggregation, celery and no
     shared_dir: now the calculation does not hang anymore
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 19 Oct 2017 13:53:08 +0200
 
 python-oq-engine (2.6.0-0~precise01) precise; urgency=low
 
