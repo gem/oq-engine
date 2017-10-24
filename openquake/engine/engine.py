@@ -22,13 +22,13 @@ calculations."""
 import os
 import re
 import sys
+import json
 import signal
-import logging
 import traceback
-import requests
 import platform
 
 from openquake.baselib.performance import Monitor
+from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
@@ -300,19 +300,12 @@ def check_obsolete_version(calculation_mode='WebUI'):
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
                (__version__, calculation_mode, platform.platform())}
     try:
-        logger = logging.getLogger()  # root logger
-        level = logger.level
-        # requests.get logs at level INFO: raising the level so that
-        # the log is hidden
-        logger.setLevel(logging.WARN)
-        try:
-            json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
-                                headers=headers).json()
-        finally:
-            logger.setLevel(level)  # back as it was
-        tag_name = json['tag_name']
+        req = Request(OQ_API + '/engine/latest', headers=headers)
+        # NB: a timeout < 1 does not work
+        data = urlopen(req, timeout=1).read()  # bytes
+        tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
-        latest = version_triple(json['tag_name'])
+        latest = version_triple(tag_name)
     except:  # page not available or wrong version tag
         return
     if current < latest:

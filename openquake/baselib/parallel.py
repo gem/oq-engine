@@ -591,7 +591,7 @@ class Starmap(object):
             return IterResult([fut], self.name, self.num_tasks)
 
         elif self.distribute == 'zmq':  # experimental
-            allargs = self.add_task_no(self.task_args, pickle=False)
+            allargs = self.add_task_no(self.task_args)
             w = config.zworkers
             it = _starmap(
                 self.task_func, allargs,

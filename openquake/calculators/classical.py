@@ -389,7 +389,7 @@ class PSHACalculator(base.HazardCalculator):
             self.source_info = array
             infos.clear()
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, acc))
+            partial(self.count_eff_ruptures, acc), self.oqparam.sm_lt_path)
         self.datastore['csm_info'] = self.csm.info
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that

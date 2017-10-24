@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
-    AccumDict, block_splitter, split_in_blocks)
+    AccumDict, block_splitter, split_in_blocks, group_array)
 from openquake.baselib import config
 from openquake.calculators import base, event_based
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -424,8 +424,12 @@ class EbriskCalculator(base.RiskCalculator):
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
         with self.monitor('saving event loss table', autoflush=True):
-            agglosses['rlzi'] += offset
-            self.datastore.extend('agg_loss_table', agglosses)
+            if self.oqparam.calculation_mode == 'gmf_ebrisk':
+                for er, arr in group_array(agglosses, 'eid', 'rlzi').items():
+                    self.agglosses[er] += arr['loss'].sum(axis=0)  # shape LI
+            else:
+                agglosses['rlzi'] += offset
+                self.datastore.extend('agg_loss_table', agglosses)
 
         if self.oqparam.asset_loss_table:
             with self.monitor('saving loss ratios', autoflush=True):
