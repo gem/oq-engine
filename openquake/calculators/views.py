@@ -28,7 +28,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, AccumDict, CallableDict)
+    humansize, groupby, DictArray, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import unicode, decode
@@ -690,30 +690,43 @@ def view_hmap(token, dstore):
     return rst_table(array)
 
 
-@view.add('synthetic_hcurves')
-def view_synthetic_hcurves(token, dstore):
+@view.add('flat_hcurves')
+def view_flat_hcurves(token, dstore):
     """
-    Display the synthetic hazard curves for the calculation. They are
+    Display the flat hazard curves for the calculation. They are
     used for debugging purposes when comparing the results of two
-    calculations, they have no physical meaning. They are the simple mean
-    of the PoEs arrays over source groups, gsims and number of sites.
+    calculations. They are the mean over the sites of the mean hazard
+    curves.
     """
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
-    array = numpy.zeros(len(oq.imtls.array), F32)
-    ngroups = 0
-    for sm in dstore['csm_info'].source_models:
-        for src_group in sm.src_groups:
-            grp_id = src_group.id
-            try:
-                pmap = dstore['poes/grp-%02d' % grp_id]
-            except KeyError:
-                continue
-            ngroups += 1
-            for sid in pmap:
-                array += pmap[sid].array.sum(axis=1) / pmap.shape_z
-    array /= (ngroups * nsites)
-    return oq.imtls.new(array)
+    mean = calc.PmapGetter(dstore).get_mean()
+    array = calc.convert_to_array(mean, nsites, oq.imtls)
+    res = numpy.zeros(1, array.dtype)
+    for name in array.dtype.names:
+        res[name] = array[name].mean()
+    return rst_table(res)
+
+
+@view.add('flat_hmaps')
+def view_flat_hmaps(token, dstore):
+    """
+    Display the flat hazard maps for the calculation. They are
+    used for debugging purposes when comparing the results of two
+    calculations. They are the mean over the sites of the mean hazard
+    maps.
+    """
+    oq = dstore['oqparam']
+    assert oq.poes
+    nsites = len(dstore['sitecol'])
+    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
+    mean = calc.PmapGetter(dstore).get_mean()
+    hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
+    array = calc.convert_to_array(hmaps, nsites, pdic)
+    res = numpy.zeros(1, array.dtype)
+    for name in array.dtype.names:
+        res[name] = array[name].mean()
+    return rst_table(res)
 
 
 @view.add('dupl_sources')
