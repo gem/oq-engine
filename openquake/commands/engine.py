@@ -264,9 +264,9 @@ engine._add('run_risk', '--run-risk', '--rr', help='Run a risk job with the '
 engine._add('run', '--run', help='Run a job with the specified config file',
             metavar='CONFIG_FILE')
 engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
-            help='List risk calculation information', action='store_true')
-engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
             help='List hazard calculation information', action='store_true')
+engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
+            help='List risk calculation information', action='store_true')
 engine._add('delete_calculation', '--delete-calculation', '--dc',
             help='Delete a calculation and all associated outputs',
             metavar='CALCULATION_ID', type=int)
