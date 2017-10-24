@@ -32,7 +32,6 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.export import export
-from openquake.calculators.extract import convert_to_array
 from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
@@ -249,7 +248,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     :param comment: comment to use as header of the exported CSV file
     """
     curves = util.compose_arrays(
-        sitemesh, convert_to_array(pmap, len(sitemesh), imtls))
+        sitemesh, calc.convert_to_array(pmap, len(sitemesh), imtls))
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -637,7 +636,7 @@ def export_hmaps_np(ekey, dstore):
     dic = {}
     for kind, hcurves in calc.PmapGetter(dstore).items():
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-        dic[kind] = convert_to_array(hmap, len(mesh), pdic)
+        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
     save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30),
             investigation_time=oq.investigation_time)
     return [fname]
