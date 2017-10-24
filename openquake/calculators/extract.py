@@ -108,32 +108,6 @@ def extract_asset_values(dstore, sid):
     return data
 
 
-def convert_to_array(pmap, nsites, imtls):
-    """
-    Convert the probability map into a composite array with header
-    of the form PGA-0.1, PGA-0.2 ...
-
-    :param pmap: probability map
-    :param nsites: total number of sites
-    :param imtls: a DictArray with IMT and levels
-    :returns: a composite array of lenght nsites
-    """
-    lst = []
-    # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
-    for imt, imls in imtls.items():
-        for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), numpy.float64))
-    curves = numpy.zeros(nsites, numpy.dtype(lst))
-    for sid, pcurve in pmap.items():
-        curve = curves[sid]
-        idx = 0
-        for imt, imls in imtls.items():
-            for iml in imls:
-                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
-                idx += 1
-    return curves
-
-
 @extract.add('hazard')
 def extract_hazard(dstore, what):
     """
@@ -151,12 +125,12 @@ def extract_hazard(dstore, what):
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     for kind, hcurves in calc.PmapGetter(dstore).items(what):
         logging.info('extracting hazard/%s', kind)
-        yield 'hcurves-' + kind, convert_to_array(hcurves, N, oq.imtls)
+        yield 'hcurves-' + kind, calc.convert_to_array(hcurves, N, oq.imtls)
         if oq.poes and oq.uniform_hazard_spectra:
             yield 'uhs-' + kind, calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
         if oq.poes and oq.hazard_maps:
             hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-            yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
+            yield 'hmaps-' + kind, calc.convert_to_array(hmaps, N, pdic)
 
 
 def _agg(losses, idxs):
