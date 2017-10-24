@@ -216,13 +216,12 @@ class RlzsAssoc(object):
             return
         return self.realizations[int(mo.group(1))]
 
-    def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
+    def _add_realizations(self, idx, lt_model, all_trts, gsim_rlzs):
         rlzs = []
         for i, gsim_rlz in enumerate(gsim_rlzs):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
-            self.gsim_by_trt.append(
-                dict(zip(gsim_lt.all_trts, gsim_rlz.value)))
+            self.gsim_by_trt.append(dict(zip(all_trts, gsim_rlz.value)))
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
@@ -314,6 +313,7 @@ class CompositionInfo(object):
         self.num_samples = num_samples
         self.source_models = source_models
         self.tot_weight = tot_weight
+        self.gsim_rlzs = list(self.gsim_lt)
 
     def get_info(self, sm_id):
         """
@@ -333,7 +333,7 @@ class CompositionInfo(object):
         idx = 0
         for sm in self.source_models:
             rlzs, allgsims = self._get_rlzs_gsims(
-                sm, self.gsim_lt, self.seed + idx)
+                sm, self.gsim_rlzs, self.seed + idx)
             idx += len(rlzs)
             for sg, gsims in zip(sm.src_groups, allgsims):
                 gsims_by_grp[sg.id] = gsims
@@ -409,6 +409,7 @@ class CompositionInfo(object):
                 rec['name'], rec['weight'], path, srcgroups,
                 num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
+        self.gsim_rlzs = list(self.gsim_lt)
         try:
             os.remove(tmp)  # gsim_lt file
         except NameError:  # tmp is defined only in the regular case, see above
@@ -462,10 +463,13 @@ class CompositionInfo(object):
                 if count_ruptures and before > after:
                     logging.warn('Reducing the logic tree of %s from %d to %d '
                                  'realizations', smodel.name, before, after)
+                gsim_rlzs = list(gsim_lt)
+                all_trts = gsim_lt.all_trts
             else:
-                gsim_lt = self.gsim_lt
+                gsim_rlzs = self.gsim_rlzs
+                all_trts = self.gsim_lt.all_trts
             offset = self._populate(
-                assoc, assoc_by_grp, gsim_lt, smodel, offset)
+                assoc, assoc_by_grp, all_trts, gsim_rlzs, smodel, offset)
         assoc.array = {
             'grp-%02d' % sgid: numpy.array(assoc_by_grp[sgid], assoc_by_grp_dt)
             for sgid in assoc_by_grp}
@@ -530,24 +534,26 @@ class CompositionInfo(object):
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
 
-    def _get_rlzs_gsims(self, smodel, gsim_lt, seed):
+    def _get_rlzs_gsims(self, smodel, all_rlzs, seed):
         if self.num_samples:  # sampling
-            all_rlzs = list(gsim_lt)
             rnd = random.Random(int(seed))
             rlzs = [all_rlzs[rnd.randint(0, len(all_rlzs) - 1)]
                     for _ in range(smodel.samples)]
         else:  # full enumeration
-            rlzs = logictree.get_effective_rlzs(gsim_lt)
+            rlzs = logictree.get_effective_rlzs(all_rlzs)
         if len(rlzs) > TWO16:
             raise ValueError(
                 'The source model %s has %d realizations, the maximum '
                 'is %d' % (smodel.name, len(rlzs), TWO16))
-        gsims = [gsim_lt.get_gsims(sg.trt, rlzs if self.num_samples else None)
+        gsims = [self.gsim_lt.get_gsims(
+            sg.trt, rlzs if self.num_samples else None)
                  for sg in smodel.src_groups]
         return rlzs, gsims
 
-    def _populate(self, assoc, assoc_by_grp, gsim_lt, smodel, offset):
-        rlzs, gsims = self._get_rlzs_gsims(smodel, gsim_lt, self.seed + offset)
+    def _populate(self, assoc, assoc_by_grp, all_trts, all_rlzs, smodel,
+                  offset):
+        rlzs, gsims = self._get_rlzs_gsims(
+            smodel, all_rlzs, self.seed + offset)
         if rlzs:
             indices = numpy.arange(offset, offset + len(rlzs))
             dic = collections.defaultdict(list)  # (sg.id, gsim_idx) -> rlzis
@@ -558,11 +564,11 @@ class CompositionInfo(object):
             for rlzi, rlz in enumerate(rlzs):
                 for i, sg in enumerate(smodel.src_groups):
                     if sg.eff_ruptures:
-                        gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
+                        gsim = self.gsim_lt.get_gsim_by_trt(rlz, sg.trt)
                         dic[idx[i, gsim]].append(rlzi + offset)
             for (sgid, j), rlzis in sorted(dic.items()):
                 assoc_by_grp[sgid].append((j, numpy.array(rlzis, U16)))
-            assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
+            assoc._add_realizations(indices, smodel, all_trts, rlzs)
             offset += len(indices)
         return offset
 
