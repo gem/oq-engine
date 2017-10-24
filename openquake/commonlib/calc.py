@@ -113,7 +113,7 @@ class PmapGetter(object):
         :returns: a new instance of the getter, with the cache populated
         """
         assert sids is not None
-        return self.__class__(self.dstore, sids, self.lazy)
+        return self.__class__(self.dstore, sids, self.lazy, self.rlzs_assoc)
 
     def get(self, sids, rlzi):
         """
