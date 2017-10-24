@@ -874,7 +874,7 @@ def socket_ready(hostport):
         sock.close()
     return False if exc else True
 
-port_candidates = range(1920, 2000)
+port_candidates = list(range(1920, 2000))
 
 
 def _get_free_port():
