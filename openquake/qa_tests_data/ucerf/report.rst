@@ -3,8 +3,8 @@ Ucerf test
 
 ============== ===================
 checksum32     2,080,369,829      
-date           2017-10-18T18:22:12
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:08
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 155, num_imts = 1
@@ -41,34 +41,34 @@ source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>
 
 Composite source model
 ----------------------
-========= ====== ============================================================================================================================================================ =============== ================
-smlt_path weight source_model_file                                                                                                                                            gsim_logic_tree num_realizations
-========= ====== ============================================================================================================================================================ =============== ================
-ltbr0001  0.006  `FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_   simple(2)       2/2             
-ltbr0002  0.006  `FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_   simple(2)       2/2             
-ltbr0003  0.050  `FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_   simple(2)       2/2             
-ltbr0037  0.006  `FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_             simple(2)       2/2             
-ltbr0038  0.006  `FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_             simple(2)       2/2             
-ltbr0039  0.050  `FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_1/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_             simple(2)       2/2             
-ltbr0541  0.019  `FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_ simple(2)       2/2             
-ltbr0542  0.019  `FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_ simple(2)       2/2             
-ltbr0543  0.150  `FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_1/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_ simple(2)       2/2             
-ltbr0577  0.019  `FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_           simple(2)       2/2             
-ltbr0578  0.019  `FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_           simple(2)       2/2             
-ltbr0579  0.150  `FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_1/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_           simple(2)       2/2             
-ltbr0721  0.006  `FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_   simple(2)       2/2             
-ltbr0722  0.006  `FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_   simple(2)       2/2             
-ltbr0723  0.050  `FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_2/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_   simple(2)       2/2             
-ltbr0757  0.006  `FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_             simple(2)       2/2             
-ltbr0758  0.006  `FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_             simple(2)       2/2             
-ltbr0759  0.050  `FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_2/ABM/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_             simple(2)       2/2             
-ltbr1261  0.019  `FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_ simple(2)       2/2             
-ltbr1262  0.019  `FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_ simple(2)       2/2             
-ltbr1263  0.150  `FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_2/GEOL/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_ simple(2)       2/2             
-ltbr1297  0.019  `FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_           simple(2)       2/2             
-ltbr1298  0.019  `FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_           simple(2)       2/2             
-ltbr1299  0.150  `FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <FM3_2/GEOL/HB08/DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_           simple(2)       2/2             
-========= ====== ============================================================================================================================================================ =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+ltbr0001  0.006  simple(2)       2/2             
+ltbr0002  0.006  simple(2)       2/2             
+ltbr0003  0.050  simple(2)       2/2             
+ltbr0037  0.006  simple(2)       2/2             
+ltbr0038  0.006  simple(2)       2/2             
+ltbr0039  0.050  simple(2)       2/2             
+ltbr0541  0.019  simple(2)       2/2             
+ltbr0542  0.019  simple(2)       2/2             
+ltbr0543  0.150  simple(2)       2/2             
+ltbr0577  0.019  simple(2)       2/2             
+ltbr0578  0.019  simple(2)       2/2             
+ltbr0579  0.150  simple(2)       2/2             
+ltbr0721  0.006  simple(2)       2/2             
+ltbr0722  0.006  simple(2)       2/2             
+ltbr0723  0.050  simple(2)       2/2             
+ltbr0757  0.006  simple(2)       2/2             
+ltbr0758  0.006  simple(2)       2/2             
+ltbr0759  0.050  simple(2)       2/2             
+ltbr1261  0.019  simple(2)       2/2             
+ltbr1262  0.019  simple(2)       2/2             
+ltbr1263  0.150  simple(2)       2/2             
+ltbr1297  0.019  simple(2)       2/2             
+ltbr1298  0.019  simple(2)       2/2             
+ltbr1299  0.150  simple(2)       2/2             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -161,5 +161,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 7.811E-04 0.0       1     
+reading site collection 7.830E-04 0.0       1     
 ======================= ========= ========= ======
