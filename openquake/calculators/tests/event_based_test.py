@@ -287,8 +287,8 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check that the exported file is parseable
         rupcoll = nrml.parse(fname, RuptureConverter(1))
-        self.assertEqual(list(rupcoll), [1])  # one group
-        self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
+        self.assertEqual(list(rupcoll), [0])  # one group
+        self.assertEqual(len(rupcoll[0]), 1)  # one EBRupture
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations

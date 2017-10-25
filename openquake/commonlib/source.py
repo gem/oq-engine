@@ -532,10 +532,7 @@ class CompositionInfo(object):
 
     def _get_rlzs_gsims(self, smodel, gsim_lt, seed):
         if self.num_samples:  # sampling
-            all_rlzs = list(gsim_lt)
-            rnd = random.Random(int(seed))
-            rlzs = [all_rlzs[rnd.randint(0, len(all_rlzs) - 1)]
-                    for _ in range(smodel.samples)]
+            rlzs = logictree.sample(list(gsim_lt), smodel.samples, seed)
         else:  # full enumeration
             rlzs = logictree.get_effective_rlzs(gsim_lt)
         if len(rlzs) > TWO16:
