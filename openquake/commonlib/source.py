@@ -532,9 +532,7 @@ class CompositionInfo(object):
 
     def _get_rlzs_gsims(self, smodel, gsim_lt, seed):
         if self.num_samples:  # sampling
-            rlzs = logictree.sample(
-                # the int is needed on Windows to convert numpy.uint32 objects
-                gsim_lt, smodel.samples, random.Random(int(seed)))
+            rlzs = logictree.sample(list(gsim_lt), smodel.samples, seed)
         else:  # full enumeration
             rlzs = logictree.get_effective_rlzs(gsim_lt)
         if len(rlzs) > TWO16:
