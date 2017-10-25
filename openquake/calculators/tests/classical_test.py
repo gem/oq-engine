@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
@@ -248,6 +249,27 @@ hazard_uhs-mean.csv
         # 3	0	 {6}
         # 3	1	 {7}
         # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
+
+        # reduction of the source model logic tree
+        cinfo = self.calc.datastore['csm_info']
+        ra0 = cinfo.get_rlzs_assoc()
+        self.assertEqual(
+            sorted(ra0.array), ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
+
+        ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM2', 'a3b1'])
+        self.assertEqual(len(ra.array), 1)
+        numpy.testing.assert_equal(
+            ra.array['grp-02']['gsim_idx'], ra0.array['grp-02']['gsim_idx'])
+
+        ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM1'])
+        self.assertEqual(sorted(ra.array), ['grp-00', 'grp-01'])
+        numpy.testing.assert_equal(ra.array['grp-00'], ra0.array['grp-00'])
+        numpy.testing.assert_equal(ra.array['grp-01'], ra0.array['grp-01'])
+
+        # reduction of the gsim logic tree
+        ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
+        self.assertEqual(sorted(ra.array), ['grp-00', 'grp-01'])
+        numpy.testing.assert_equal(ra.array['grp-00']['gsim_idx'], [0])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling

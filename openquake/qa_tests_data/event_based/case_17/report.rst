@@ -3,8 +3,8 @@ Event Based Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     1,177,921,015      
-date           2017-10-18T18:23:09
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:48:07
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -41,12 +41,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ========================================== =============== ================
-smlt_path weight source_model_file                          gsim_logic_tree num_realizations
-========= ====== ========================================== =============== ================
-b1        0.200  `source_model_1.xml <source_model_1.xml>`_ trivial(1)      1/1             
-b2        0.200  `source_model_2.xml <source_model_2.xml>`_ trivial(1)      4/1             
-========= ====== ========================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        0.200  trivial(1)      1/1             
+b2        0.200  trivial(1)      4/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -87,7 +87,7 @@ Informational data
 ------------------
 ========================= ==============================================================================
 compute_ruptures.received tot 5.12 KB, max_per_task 4.43 KB                                             
-compute_ruptures.sent     sources 3.03 KB, src_filter 1.34 KB, param 1.18 KB, monitor 648 B, gsims 182 B
+compute_ruptures.sent     sources 3.03 KB, src_filter 1.34 KB, param 1.18 KB, monitor 650 B, gsims 182 B
 hazard.input_weight       6.700000000000001                                                             
 hazard.n_imts             1                                                                             
 hazard.n_levels           3                                                                             
@@ -104,8 +104,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      2         PointSource  7            0.0       1         0        
 0      1         PointSource  39           0.0       1         0        
+1      2         PointSource  7            0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -124,7 +124,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.014 0.015  0.003 0.024 2        
+compute_ruptures   0.015 0.010  0.008 0.022 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -132,13 +132,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.028     0.0       2     
-store source_info              0.004     0.0       1     
+total compute_ruptures         0.030     0.0       2     
+store source_info              0.005     0.0       1     
 reading composite source model 0.004     0.0       1     
-saving ruptures                0.003     0.0       2     
 managing sources               0.003     0.0       1     
+saving ruptures                0.003     0.0       2     
+filtering ruptures             0.002     0.0       3     
 setting event years            0.002     0.0       1     
-prefiltering source model      8.433E-04 0.0       1     
-filtering ruptures             6.769E-04 0.0       3     
-reading site collection        6.795E-05 0.0       1     
+prefiltering source model      8.707E-04 0.0       1     
+reading site collection        5.317E-05 0.0       1     
 ============================== ========= ========= ======

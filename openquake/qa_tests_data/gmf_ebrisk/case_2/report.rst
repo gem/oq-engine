@@ -3,8 +3,8 @@ Event Based Risk from GMF
 
 ============== ===================
 checksum32     3,574,592,625      
-date           2017-10-18T18:23:06
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:48:04
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 3, num_imts = 2
@@ -42,11 +42,11 @@ structural_vulnerability `vulnerability_2IM.xml <vulnerability_2IM.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -78,8 +78,8 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 assoc_assets_sites      0.010     0.0       2     
-building riskinputs     0.009     0.0       1     
-reading exposure        0.005     0.0       1     
-building epsilons       1.619E-04 0.0       1     
-reading site collection 1.419E-04 0.0       1     
+building riskinputs     0.010     0.0       1     
+reading exposure        0.006     0.0       1     
+building epsilons       1.614E-04 0.0       1     
+reading site collection 1.595E-04 0.0       1     
 ======================= ========= ========= ======
