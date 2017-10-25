@@ -81,6 +81,9 @@ class Socket(object):
             self.zsocket = bind(self.end_point, self.socket_type)
         else:  # connect
             self.zsocket = connect(self.end_point, self.socket_type)
+        port = re.search(r':(\d+)$', self.end_point)
+        if port:
+            self.port = int(port.group(1))
         self.zsocket.__enter__()
         return self
 

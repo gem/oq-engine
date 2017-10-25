@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     914,633,900        
-date           2017-10-18T18:23:46
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:48:44
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -40,11 +40,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -73,8 +73,8 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 Informational data
 ------------------
 ========================= =========================================================================
-compute_ruptures.received max_per_task 34.29 KB, tot 34.29 KB                                      
-compute_ruptures.sent     sources 1.29 KB, src_filter 684 B, param 606 B, monitor 324 B, gsims 91 B
+compute_ruptures.received max_per_task 34.3 KB, tot 34.3 KB                                        
+compute_ruptures.sent     sources 1.29 KB, src_filter 684 B, param 606 B, monitor 325 B, gsims 91 B
 hazard.input_weight       0.1                                                                      
 hazard.n_imts             1                                                                        
 hazard.n_levels           3                                                                        
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.018 NaN    0.018 0.018 1        
+compute_ruptures   0.017 NaN    0.017 0.017 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,13 +118,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.018     0.0       1     
-setting event years            0.010     0.0       1     
+total compute_ruptures         0.017     0.0       1     
+setting event years            0.009     0.0       1     
 saving ruptures                0.007     0.0       1     
 store source_info              0.004     0.0       1     
 managing sources               0.002     0.0       1     
 reading composite source model 0.001     0.0       1     
-filtering ruptures             5.653E-04 0.0       1     
-prefiltering source model      5.331E-04 0.0       1     
+filtering ruptures             5.391E-04 0.0       1     
+prefiltering source model      5.314E-04 0.0       1     
 reading site collection        3.982E-05 0.0       1     
 ============================== ========= ========= ======

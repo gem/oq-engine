@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2017-10-18T18:23:00
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:57
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 3, num_imts = 3
@@ -41,11 +41,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ======================================================== =============== ================
-smlt_path weight source_model_file                                        gsim_logic_tree num_realizations
-========= ====== ======================================================== =============== ================
-b1        1.000  `vancouver_area_source.xml <vancouver_area_source.xml>`_ simple(3)       3/3             
-========= ====== ======================================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  simple(3)       3/3             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -76,8 +76,8 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2,430        2
 Informational data
 ------------------
 =========================== ====================================================================================
-count_eff_ruptures.received tot 3.23 KB, max_per_task 847 B                                                     
-count_eff_ruptures.sent     gsims 624.61 KB, sources 11.27 KB, param 3.96 KB, srcfilter 2.89 KB, monitor 1.27 KB
+count_eff_ruptures.received tot 3.23 KB, max_per_task 845 B                                                     
+count_eff_ruptures.sent     gsims 624.61 KB, sources 11.27 KB, param 3.96 KB, srcfilter 2.89 KB, monitor 1.28 KB
 hazard.input_weight         729.0                                                                               
 hazard.n_imts               3                                                                                   
 hazard.n_levels             36                                                                                  
@@ -113,7 +113,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 3.197E-04 0.001 0.002 4        
+count_eff_ruptures 0.002 3.789E-04 0.001 0.002 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -121,12 +121,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.020     0.0       1     
+reading composite source model 0.023     0.0       1     
 managing sources               0.017     0.0       1     
-total count_eff_ruptures       0.006     0.188     4     
+total count_eff_ruptures       0.006     0.191     4     
 store source_info              0.004     0.0       1     
 prefiltering source model      0.001     0.0       1     
-reading site collection        1.707E-04 0.0       1     
-aggregate curves               1.128E-04 0.0       4     
-saving probability maps        2.909E-05 0.0       1     
+reading site collection        2.019E-04 0.0       1     
+aggregate curves               1.135E-04 0.0       4     
+saving probability maps        2.885E-05 0.0       1     
 ============================== ========= ========= ======
