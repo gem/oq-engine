@@ -87,7 +87,7 @@ available at the moment:
 `OQ_DISTRIBUTE` set tp "ipython"
    use the ipyparallel concurrency mechanism (experimental)
 
-There is also an `OQ_DISTRIBUTE`="threadpool"; however the
+There is also an `OQ_DISTRIBUTE` = "threadpool"; however the
 performance of using threads instead of processes is normally bad for the
 kind of applications we are interested in (CPU-dominated, which large
 tasks such that the time to spawn a new process is negligible with
@@ -591,7 +591,7 @@ class Starmap(object):
             return IterResult([fut], self.name, self.num_tasks)
 
         elif self.distribute == 'zmq':  # experimental
-            allargs = self.add_task_no(self.task_args, pickle=False)
+            allargs = self.add_task_no(self.task_args)
             w = config.zworkers
             it = _starmap(
                 self.task_func, allargs,

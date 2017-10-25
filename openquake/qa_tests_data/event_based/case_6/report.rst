@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     3,219,914,866      
-date           2017-10-18T18:23:09
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:48:07
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -41,12 +41,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ======================================== =============== ================
-smlt_path weight source_model_file                        gsim_logic_tree num_realizations
-========= ====== ======================================== =============== ================
-b11       0.600  `source_model1.xml <source_model1.xml>`_ simple(3)       3/3             
-b12       0.400  `source_model2.xml <source_model2.xml>`_ simple(3)       3/3             
-========= ====== ======================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b11       0.600  simple(3)       3/3             
+b12       0.400  simple(3)       3/3             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -108,8 +108,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   2,456        0.0       1         0        
 1      1         AreaSource   2,456        0.0       1         0        
+0      1         AreaSource   2,456        0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -133,7 +133,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.975 0.642  0.386 1.650 4        
+compute_ruptures   0.992 0.649  0.399 1.669 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -141,13 +141,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.901     3.453     4     
-filtering ruptures             0.696     0.0       3,081 
-managing sources               0.186     0.0       1     
-saving ruptures                0.121     0.0       4     
+total compute_ruptures         3.966     3.621     4     
+filtering ruptures             0.683     0.0       3,081 
+managing sources               0.192     0.0       1     
+saving ruptures                0.120     0.0       4     
 reading composite source model 0.110     0.0       1     
-setting event years            0.074     0.0       1     
+setting event years            0.069     0.0       1     
 store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        3.815E-05 0.0       1     
+reading site collection        4.292E-05 0.0       1     
 ============================== ========= ========= ======
