@@ -624,8 +624,8 @@ class SourceModelLogicTree(object):
         if self.num_samples:
             # random sampling of the logic tree
             weight = 1. / self.num_samples
-            for _ in range(self.num_samples):
-                name, sm_lt_path = self.sample_path(self.seed)
+            for i in range(self.num_samples):
+                name, sm_lt_path = self.sample_path(self.seed + i)
                 yield Realization(name, weight, tuple(sm_lt_path), None,
                                   tuple(sm_lt_path))
         else:  # full enumeration
