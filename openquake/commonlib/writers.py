@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import logging
+import tempfile
 import numpy  # this is needed by the doctests, don't remove it
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.node import scientificformat
@@ -203,7 +205,7 @@ def extract_from(data, fields):
 
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     """
-    :param dest: file, filename or io.BytesIO instance
+    :param dest: None, file, filename or io.BytesIO instance
     :param data: array to save
     :param sep: separator to use (default comma)
     :param fmt: formatting string (default '%12.8E')
@@ -215,6 +217,9 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     close = True
     if len(data) == 0:
         logging.warn('%s is empty', dest)
+    if dest is None:  # write on a temporary file
+        fd, dest = tempfile.mkstemp(suffix='.csv')
+        os.close(fd)
     if hasattr(dest, 'write'):
         # file-like object in append mode
         # it must be closed by client code
