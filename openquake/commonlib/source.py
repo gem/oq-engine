@@ -153,8 +153,9 @@ class RlzsAssoc(object):
         if self.num_samples:
             assert len(self.realizations) == self.num_samples, (
                 len(self.realizations), self.num_samples)
+            tot_weight = sum(rlz.weight for rlz in self.realizations)
             for rlz in self.realizations:
-                rlz.weight = 1. / self.num_samples
+                rlz.weight /= tot_weight
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
@@ -536,9 +537,7 @@ class CompositionInfo(object):
 
     def _get_rlzs_gsims(self, smodel, all_rlzs, seed):
         if self.num_samples:  # sampling
-            rnd = random.Random(int(seed))
-            rlzs = [all_rlzs[rnd.randint(0, len(all_rlzs) - 1)]
-                    for _ in range(smodel.samples)]
+            rlzs = logictree.sample(all_rlzs, smodel.samples, seed)
         else:  # full enumeration
             rlzs = logictree.get_effective_rlzs(all_rlzs)
         if len(rlzs) > TWO16:
