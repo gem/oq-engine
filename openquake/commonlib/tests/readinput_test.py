@@ -83,7 +83,7 @@ export_dir = %s
             }
 
             with mock.patch('logging.warn') as warn:
-                params = getparams(readinput.get_oqparam(job_config))
+                params = getparams(readinput.get_oqparam(job_config, hc_id=1))
                 for key in expected_params:
                     self.assertEqual(expected_params[key], params[key])
                 items = sorted(params['inputs'].items())
@@ -123,11 +123,12 @@ export_dir = %s
 
             expected_params = {
                 'export_dir': TMP,
+                'hazard_calculation_id': 1,
                 'base_path': exp_base_path,
                 'calculation_mode': 'classical',
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': {'default': 1},
+                'maximum_distance': {'default': 1.0},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -139,7 +140,7 @@ export_dir = %s
                 'risk_investigation_time': 50.0,
             }
 
-            params = getparams(readinput.get_oqparam(source))
+            params = getparams(readinput.get_oqparam(source, hc_id=1))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
@@ -160,10 +161,21 @@ reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types = PGA
 investigation_time = 50.
 """)
-        oqparam = readinput.get_oqparam(source)
+        oqparam = readinput.get_oqparam(source, hc_id=1)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_site_collection(oqparam)
         self.assertIn('Could not discretize region', str(ctx.exception))
+
+    def test_invalid_magnitude_distance_filter(self):
+        source = general.writetmp("""
+[general]
+maximum_distance=[(200, 8)]
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_oqparam(source)
+        self.assertIn('magnitude 200.0 is bigger than the maximum (11): '
+                      'could not convert to maximum_distance:',
+                      str(ctx.exception))
 
 
 def sitemodel():

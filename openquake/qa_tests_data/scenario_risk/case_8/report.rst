@@ -3,8 +3,8 @@ Scenario Risk Maule Mw 8.8 reduced
 
 ============== ===================
 checksum32     4,058,514,510      
-date           2017-10-18T18:23:47
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:48:45
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 29, num_imts = 3
@@ -43,11 +43,11 @@ structural_vulnerability `structural_vulnerability_model_Res.xml <structural_vul
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -109,7 +109,7 @@ operation               time_sec memory_mb counts
 ======================= ======== ========= ======
 building riskinputs     0.082    0.0       1     
 assoc_assets_sites      0.038    0.0       2     
-reading exposure        0.020    0.0       1     
+reading exposure        0.019    0.0       1     
 building epsilons       0.001    0.0       1     
 reading site collection 0.001    0.0       1     
 ======================= ======== ========= ======
