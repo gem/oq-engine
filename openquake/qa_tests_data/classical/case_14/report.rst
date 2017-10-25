@@ -3,8 +3,8 @@ Classical PSHA QA test with sites_csv
 
 ============== ===================
 checksum32     762,001,888        
-date           2017-10-18T18:22:59
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:57
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 10, num_imts = 1
@@ -41,11 +41,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============ ====== ====================================== =============== ================
-smlt_path    weight source_model_file                      gsim_logic_tree num_realizations
-============ ====== ====================================== =============== ================
-simple_fault 1.000  `simple_fault.xml <simple_fault.xml>`_ simple(2)       2/2             
-============ ====== ====================================== =============== ================
+============ ====== =============== ================
+smlt_path    weight gsim_logic_tree num_realizations
+============ ====== =============== ================
+simple_fault 1.000  simple(2)       2/2             
+============ ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -75,8 +75,8 @@ simple_fault.xml 0      Active Shallow Crust 1           447          447
 Informational data
 ------------------
 =========================== ===================================================================================
-count_eff_ruptures.received tot 7.77 KB, max_per_task 669 B                                                    
-count_eff_ruptures.sent     sources 13.63 KB, srcfilter 11.88 KB, param 8.71 KB, monitor 4.14 KB, gsims 2.48 KB
+count_eff_ruptures.received tot 7.78 KB, max_per_task 670 B                                                    
+count_eff_ruptures.sent     sources 13.63 KB, srcfilter 11.88 KB, param 8.71 KB, monitor 4.15 KB, gsims 2.48 KB
 hazard.input_weight         4470.0                                                                             
 hazard.n_imts               1                                                                                  
 hazard.n_levels             13                                                                                 
@@ -93,7 +93,7 @@ Slowest sources
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      3         SimpleFaultSource 447          0.041     10        15       
+0      3         SimpleFaultSource 447          0.049     10        15       
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -101,7 +101,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.041     1     
+SimpleFaultSource 0.049     1     
 ================= ========= ======
 
 Duplicated sources
@@ -112,7 +112,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.004 0.002  0.002 0.010 13       
+count_eff_ruptures 0.004 0.002  0.003 0.010 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -121,11 +121,11 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 managing sources               0.066     0.0       1     
-total count_eff_ruptures       0.049     0.0       13    
-store source_info              0.005     0.0       1     
+total count_eff_ruptures       0.058     0.0       13    
 reading composite source model 0.004     0.0       1     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-aggregate curves               3.383E-04 0.0       13    
-reading site collection        2.003E-04 0.0       1     
-saving probability maps        3.672E-05 0.0       1     
+aggregate curves               2.508E-04 0.0       13    
+reading site collection        2.036E-04 0.0       1     
+saving probability maps        2.885E-05 0.0       1     
 ============================== ========= ========= ======

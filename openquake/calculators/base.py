@@ -422,6 +422,9 @@ class HazardCalculator(BaseCalculator):
         self.init()
 
     def read_csm(self):
+        if 'source' not in self.oqparam.inputs:
+            raise ValueError('Missing source_model_logic_tree in %(job_ini)s '
+                             'or missing --hc option' % self.oqparam.inputs)
         with self.monitor('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
         if self.is_stochastic:
@@ -604,7 +607,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-
     def make_eps(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
