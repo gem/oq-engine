@@ -12,7 +12,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <singlePlaneRupture
             id="44"
-            multiplicity="9"
+            multiplicity="4"
             >
                 <stochasticEventSets>
                     <SES
@@ -23,12 +23,12 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="2"
                     >
-                        188978561026 188978561028 188978561030 188978561031
+                        188978561026
                     </SES>
                     <SES
                     id="3"
                     >
-                        188978561027 188978561029 188978561032
+                        188978561027
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -53,7 +53,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </singlePlaneRupture>
             <singlePlaneRupture
             id="45"
-            multiplicity="6"
+            multiplicity="5"
             >
                 <stochasticEventSets>
                     <SES
@@ -69,7 +69,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="3"
                     >
-                        193273528324 193273528325
+                        193273528324
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -94,7 +94,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </singlePlaneRupture>
             <singlePlaneRupture
             id="46"
-            multiplicity="8"
+            multiplicity="4"
             >
                 <stochasticEventSets>
                     <SES
@@ -103,14 +103,9 @@ xmlns:gml="http://www.opengis.net/gml"
                         197568495616 197568495618 197568495619
                     </SES>
                     <SES
-                    id="2"
-                    >
-                        197568495621
-                    </SES>
-                    <SES
                     id="3"
                     >
-                        197568495617 197568495620 197568495622 197568495623
+                        197568495617
                     </SES>
                 </stochasticEventSets>
                 <magnitude>

@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     2,582,625,613      
-date           2017-10-18T18:22:38
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:35
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 281, num_imts = 1
@@ -43,11 +43,11 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1,1)    1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -87,8 +87,8 @@ source_model.xml 1      Subduction Interface 1           3,945        3,945
 Informational data
 ------------------
 ========================= =====================================================================================
-compute_ruptures.received tot 313.23 KB, max_per_task 77 KB                                                    
-compute_ruptures.sent     src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.48 KB, gsims 1.12 KB
+compute_ruptures.received tot 313.24 KB, max_per_task 77.01 KB                                                 
+compute_ruptures.sent     src_filter 571.66 KB, sources 42.67 KB, param 10.6 KB, monitor 3.49 KB, gsims 1.12 KB
 hazard.input_weight       7309372.0                                                                            
 hazard.n_imts             1                                                                                    
 hazard.n_levels           50                                                                                   
@@ -154,7 +154,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.901 0.442  0.589 2.059 11       
+compute_ruptures   0.922 0.466  0.596 2.130 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -162,15 +162,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         9.909    0.480     11    
-managing sources               1.337    0.0       1     
-filtering ruptures             0.386    0.0       489   
-reading site collection        0.204    0.0       1     
-reading composite source model 0.174    0.0       1     
-assoc_assets_sites             0.172    0.0       1     
-reading exposure               0.092    0.0       1     
-saving ruptures                0.058    0.0       11    
-prefiltering source model      0.009    0.0       1     
+total compute_ruptures         10       0.488     11    
+managing sources               1.389    0.0       1     
+filtering ruptures             0.381    0.0       489   
+reading site collection        0.206    0.0       1     
+assoc_assets_sites             0.171    0.0       1     
+reading composite source model 0.148    0.0       1     
+reading exposure               0.093    0.0       1     
+saving ruptures                0.063    0.0       11    
+prefiltering source model      0.008    0.0       1     
 store source_info              0.007    0.0       1     
 setting event years            0.006    0.0       1     
 ============================== ======== ========= ======
