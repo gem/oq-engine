@@ -270,7 +270,8 @@ class VulnerabilityFunction(object):
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
-        """Compute the LREM (Loss Ratio Exceedance Matrix).
+        """
+        Compute the LREM (Loss Ratio Exceedance Matrix).
 
         :param int steps:
             Number of steps between loss ratios.
@@ -420,10 +421,12 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
-        """Compute the LREM (Loss Ratio Exceedance Matrix).
+        """
+        Compute the LREM (Loss Ratio Exceedance Matrix).
         Required for the Classical Risk and BCR Calculators.
         Currently left unimplemented as the PMF format is used only for the
-        Scenario and Event Based Risk Calculators
+        Scenario and Event Based Risk Calculators.
+
         :param int steps:
             Number of steps between loss ratios.
         """
@@ -1229,7 +1232,7 @@ def return_periods(eff_time, num_losses):
     """
     :param eff_time: ses_per_logic_tree_path * investigation_time
     :param num_losses: used to determine the minimum period
-    ;returns: an array of 32 bit periods
+    :returns: an array of 32 bit periods
 
     Here are a few examples:
 
