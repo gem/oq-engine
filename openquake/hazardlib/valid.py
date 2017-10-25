@@ -84,6 +84,14 @@ def gsim(value, **kwargs):
         raise ValueError('Could not instantiate %s%s' % (value, kwargs))
 
 
+def logic_tree_path(value):
+    """
+    >>> logic_tree_path('SM2_a3b1')
+    ['SM2', 'a3b1']
+    """
+    return value.split('_')
+
+
 def compose(*validators):
     """
     Implement composition of validators. For instance
