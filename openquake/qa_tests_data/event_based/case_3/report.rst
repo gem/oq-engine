@@ -3,8 +3,8 @@ Event Based QA Test, Case 3
 
 ============== ===================
 checksum32     2,616,545,272      
-date           2017-10-18T18:23:13
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:48:10
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -40,11 +40,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ simple(2)       2/2             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  simple(2)       2/2             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -75,7 +75,7 @@ Informational data
 ------------------
 ========================= ==========================================================================
 compute_ruptures.received max_per_task 2.57 KB, tot 2.57 KB                                         
-compute_ruptures.sent     sources 1.29 KB, src_filter 684 B, param 605 B, monitor 324 B, gsims 168 B
+compute_ruptures.sent     sources 1.29 KB, src_filter 684 B, param 605 B, monitor 325 B, gsims 168 B
 hazard.input_weight       0.1                                                                       
 hazard.n_imts             1                                                                         
 hazard.n_levels           3                                                                         
@@ -125,7 +125,7 @@ total compute_ruptures         0.002     0.0       1
 managing sources               0.002     0.0       1     
 reading composite source model 0.001     0.0       1     
 setting event years            0.001     0.0       1     
-filtering ruptures             5.391E-04 0.0       1     
-prefiltering source model      5.276E-04 0.0       1     
-reading site collection        3.886E-05 0.0       1     
+filtering ruptures             4.909E-04 0.0       1     
+prefiltering source model      4.873E-04 0.0       1     
+reading site collection        3.743E-05 0.0       1     
 ============================== ========= ========= ======

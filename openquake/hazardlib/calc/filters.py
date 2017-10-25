@@ -169,19 +169,44 @@ class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
 
+class Piecewise(object):
+    """
+    Given two arrays x and y of non-decreasing values, build a piecewise
+    function associating to each x the corresponding y. If x is smaller
+    then the minimum x, the minimum y is returned; if x is larger than the
+    maximum x, the maximum y is returned.
+    """
+    def __init__(self, x, y):
+        self.y = numpy.array(y)
+        # interpolating from x values to indices in the range [0: len(x)]
+        self.interp = interp1d(x, range(len(x)), bounds_error=False,
+                               fill_value=(0, len(x) - 1))
+
+    def __call__(self, x):
+        idx = numpy.int64(numpy.ceil(self.interp(x)))
+        return self.y[idx]
+
+
 class IntegrationDistance(collections.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type. The integration distances can be scalars or
     list of pairs (magnitude, distance). Here is an example using 'default'
-    as tectonic region type sot that the same values will be used for all
+    as tectonic region type, so that the same values will be used for all
     tectonic region types:
 
     >>> maxdist = IntegrationDistance({'default': [
-    ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
-    ...          (7, 400), (8, 800)]})
-    >>> maxdist('Some TRT', mag=5.5)
-    array(150.0)
+    ...          (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
+    >>> maxdist('Some TRT', mag=2.5)
+    30
+    >>> maxdist('Some TRT', mag=3)
+    30
+    >>> maxdist('Some TRT', mag=3.1)
+    40
+    >>> maxdist('Some TRT', mag=8)
+    400
+    >>> maxdist('Some TRT', mag=8.5)  # 2000 km are used above the maximum
+    2000
 
     It has also a method `.get_closest(sites, rupture)` returning the closest
     sites to the rupture and their distances. The integration distance can be
@@ -193,8 +218,7 @@ class IntegrationDistance(collections.Mapping):
         self.magdist = {}  # TRT -> (magnitudes, distances)
         for trt, value in self.dic.items():
             if isinstance(value, list):  # assume a list of pairs (mag, dist)
-                value.sort()  # make sure the list is sorted by magnitude
-                self.magdist[trt] = list(zip(*value))
+                self.magdist[trt] = value
             else:
                 self.dic[trt] = float(value)
 
@@ -209,9 +233,11 @@ class IntegrationDistance(collections.Mapping):
         try:
             md = self.interp[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
-            magdist = getdefault(self.magdist, trt)
-            md = self.interp[trt] = interp1d(
-                *magdist, bounds_error=False, fill_value='extrapolate')
+            mags, dists = zip(*getdefault(self.magdist, trt))
+            if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
+                mags = numpy.concatenate([mags, [11]])
+                dists = numpy.concatenate([dists, [2000]])
+            md = self.interp[trt] = Piecewise(mags, dists)
         return md(mag)
 
     def get_closest(self, sites, rupture, distance_type='rrup'):
