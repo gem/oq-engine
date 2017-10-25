@@ -1364,7 +1364,7 @@ class SampleTestCase(unittest.TestCase):
         branches = [logictree.Branch(1, Decimal('0.2'), 'A'),
                     logictree.Branch(1, Decimal('0.3'), 'B'),
                     logictree.Branch(1, Decimal('0.5'), 'C')]
-        samples = logictree.sample(branches, 1000, random.Random(42))
+        samples = logictree.sample(branches, 1000, 42)
 
         def count(samples, value):
             counter = 0
@@ -1373,20 +1373,20 @@ class SampleTestCase(unittest.TestCase):
                     counter += 1
             return counter
 
-        self.assertEqual(count(samples, value='A'), 178)
-        self.assertEqual(count(samples, value='B'), 302)
-        self.assertEqual(count(samples, value='C'), 520)
+        self.assertEqual(count(samples, value='A'), 225)
+        self.assertEqual(count(samples, value='B'), 278)
+        self.assertEqual(count(samples, value='C'), 497)
 
     def test_sample_broken_branch_weights(self):
         branches = [logictree.Branch(0, Decimal('0.1'), 0),
                     logictree.Branch(1, Decimal('0.2'), 1)]
-        with self.assertRaises(AssertionError):
-            logictree.sample(branches, 1000, random.Random(42))
+        with self.assertRaises(ValueError):
+            logictree.sample(branches, 1000, 42)
 
     def test_sample_one_branch(self):
         # always the same branch is returned
         branches = [logictree.Branch(0, Decimal('1.0'), 0)]
-        bs = logictree.sample(branches, 10, random.Random(42))
+        bs = logictree.sample(branches, 10, 42)
         for b in bs:
             self.assertEqual(b.branch_id, 0)
 
@@ -2233,12 +2233,12 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         # test a large number of samples with the algorithm used in the engine
         counter = collections.Counter()
-        gsim_lt = self.parse_valid(xml, ['Volcanic'])
+        gsim_rlzs = list(self.parse_valid(xml, ['Volcanic']))
         for seed in range(1000):
-            rlz = logictree.sample_one(gsim_lt, random.Random(seed))
+            [rlz] = logictree.sample(gsim_rlzs, 1, seed)
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
-        self.assertEqual(counter, {('b1',): 414, ('b2',): 586})
+        self.assertEqual(counter, {('b1',): 413, ('b2',): 587})
 
     def test_get_gsim_by_trt(self):
         xml = _make_nrml("""\
@@ -2372,12 +2372,12 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.source_model_lt = readinput.get_source_model_lt(oqparam)
         self.gmpe_lt = readinput.get_gsim_lt(
             oqparam, ['Active Shallow Crust', 'Subduction Interface'])
-        self.rnd = random.Random(oqparam.random_seed)
+        self.seed = oqparam.random_seed
 
     def test_sample_source_model(self):
         [(sm_name, weight, branch_ids, _, _)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
-        self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
+        self.assertEqual(('b1', 'b4', 'b7'), branch_ids)
 
     def test_multi_sampling(self):
         orig_samples = self.source_model_lt.num_samples
@@ -2385,14 +2385,13 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         samples_dic = self.source_model_lt.samples_by_lt_path()
         try:
             self.assertEqual(samples_dic, collections.Counter(
-                {('b1', 'b4', 'b7'): 6, ('b1', 'b3', 'b7'): 2,
-                 ('b1', 'b5', 'b8'): 1, ('b1', 'b3', 'b6'): 1}))
+                {('b1', 'b4', 'b7'): 6, ('b1', 'b5', 'b8'): 4}))
         finally:
             self.source_model_lt.num_samples = orig_samples
 
     def test_sample_gmpe(self):
-        (value, weight, branch_ids, _, _) = logictree.sample_one(
-            self.gmpe_lt, self.rnd)
+        [(value, weight, branch_ids, _, _)] = logictree.sample(
+            list(self.gmpe_lt), 1, self.seed)
         self.assertEqual(value, ('ChiouYoungs2008()', 'SadighEtAl1997()'))
         self.assertEqual(weight, 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)

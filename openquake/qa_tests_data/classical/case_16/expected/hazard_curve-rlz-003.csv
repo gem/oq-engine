@@ -1,3 +1,3 @@
-# source_model_tree_path=('b11', 'b22', 'b31', 'b43', 'b52', 'b64', 'b73', 'b84', 'b92', 'b104', 'b112'), gsim_tree_path=('b11',), investigation_time=50.0,imt=PGA
+# source_model_tree_path=('b11', 'b22', 'b32', 'b42', 'b52', 'b62', 'b72', 'b82', 'b92', 'b102', 'b112'), gsim_tree_path=('b11',), investigation_time=50.0,imt=PGA
 lon,lat,depth,poe-0.005,poe-0.007,poe-0.0098
-0.00000,0.00000,0.00000,6.522423E-01,6.479808E-01,6.365380E-01
+0.00000,0.00000,0.00000,2.141784E-01,2.116466E-01,2.049650E-01
