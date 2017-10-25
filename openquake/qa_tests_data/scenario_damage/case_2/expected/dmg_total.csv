@@ -1,7 +1,0 @@
-loss_type,damage_state,damage_value
-structural,no_damage_mean,2.054796E+03
-structural,no_damage_stdv,1.346815E+03
-structural,LS1_mean,2.484225E+03
-structural,LS1_stdv,8.345295E+02
-structural,LS2_mean,1.460979E+03
-structural,LS2_stdv,9.420006E+02
