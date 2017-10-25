@@ -197,7 +197,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     :returns:
         a pair (job_id, oqparam)
     """
-    oq = readinput.get_oqparam(cfg_file)
+    oq = readinput.get_oqparam(cfg_file, hc_id=hazard_calculation_id)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
                         username, datastore.get_datadir(),
                         hazard_calculation_id)

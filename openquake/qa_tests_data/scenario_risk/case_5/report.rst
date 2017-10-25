@@ -3,8 +3,8 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     1,603,095,237      
-date           2017-10-18T18:23:48
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:48:46
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 11, num_imts = 2
@@ -42,11 +42,11 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -86,10 +86,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.058     0.0       1     
-reading exposure        0.027     0.0       1     
+building riskinputs     0.061     0.0       1     
+reading exposure        0.028     0.0       1     
 saving gmfs             0.008     0.0       1     
 computing gmfs          0.004     0.0       1     
-building epsilons       4.454E-04 0.0       1     
+building epsilons       4.578E-04 0.0       1     
 reading site collection 4.530E-06 0.0       1     
 ======================= ========= ========= ======

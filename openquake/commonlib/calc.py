@@ -52,6 +52,32 @@ BaseRupture.init()  # initialize rupture codes
 # ############## utilities for the classical calculator ############### #
 
 
+def convert_to_array(pmap, nsites, imtls):
+    """
+    Convert the probability map into a composite array with header
+    of the form PGA-0.1, PGA-0.2 ...
+
+    :param pmap: probability map
+    :param nsites: total number of sites
+    :param imtls: a DictArray with IMT and levels
+    :returns: a composite array of lenght nsites
+    """
+    lst = []
+    # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
+    for imt, imls in imtls.items():
+        for iml in imls:
+            lst.append(('%s-%s' % (imt, iml), numpy.float64))
+    curves = numpy.zeros(nsites, numpy.dtype(lst))
+    for sid, pcurve in pmap.items():
+        curve = curves[sid]
+        idx = 0
+        for imt, imls in imtls.items():
+            for iml in imls:
+                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
+                idx += 1
+    return curves
+
+
 class PmapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
@@ -87,7 +113,7 @@ class PmapGetter(object):
         :returns: a new instance of the getter, with the cache populated
         """
         assert sids is not None
-        return self.__class__(self.dstore, sids, self.lazy)
+        return self.__class__(self.dstore, sids, self.lazy, self.rlzs_assoc)
 
     def get(self, sids, rlzi):
         """
@@ -179,6 +205,14 @@ class PmapGetter(object):
             for k in sorted(self.dstore['hcurves']):
                 yield k, self.dstore['hcurves/' + k]
 
+    def get_mean(self):
+        """
+        Extract the mean curve as a ProbabilityMap
+        """
+        if len(self.weights) == 1:  # one realization
+            return self.get(self.sids, 0)
+        else:  # multiple realizations, assume hcurves/mean is there
+            return self.dstore['hcurves/mean']
 
 # ######################### hazard maps ################################### #
 
