@@ -4,7 +4,7 @@ _DRAFT_
 
 ## Prerequisites
 
-A working installation of the OpenQuake Engine in Python 2.7 venv. Please refer to [Development installation](development.md).
+A working installation of the OpenQuake Engine in a **Python 2.7** venv. Please refer to [Development installation](development.md).
 
 
 ## Clone repositories
