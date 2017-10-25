@@ -204,6 +204,49 @@ maximum_distance = {'Stable Continental Crust': 150.0,
                     'Active Shallow Crust': 200.0}
 \end{minted}
 
+An even more advanced approach is to use a maximum distance depending on the
+magnitude (magnitude-distance filter): in that case the user must specify
+the maximum distance per a discrete set of magnitudes. Here is an
+example:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+maximum_distance = {'Stable Continental Crust': [(8, 250), (7, 150), (5, 50)],
+                    'Active Shallow Crust': [(8, 300), (7, 200), (5, 100)]}
+\end{minted}
+
+You should read this example as follows: for Stable Continental Crust
+
+\begin{itemize}
+\item keep sites within 250 km from the rupture if the magnitude is <= 8
+\item keep sites within 150 km from the rupture if the magnitude is <= 7
+\item keep sites within 50 km from the rupture if the magnitude is <= 5
+\end{itemize}
+
+while for Active Shallow Crust
+
+\begin{itemize}
+\item keep sites within 300 km from the rupture if the magnitude is <= 8
+\item keep sites within 200 km from the rupture if the magnitude is <= 7
+\item keep sites within 100 km from the rupture if the magnitude is <= 5
+\end{itemize}
+
+It is also possible to define something like the following:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+maximum_distance = [(8, 250), (7, 150), (5, 50)]
+\end{minted}
+
+In this case the same magnitude-distance filter is used for all tectonic
+region types.
+
+If the magnitude is above the maximum magnitude of the filter
+(in this example 8) we keep the sites within 2000 km of the ruptures, i.e.
+effectively we do not filter.
+
+Notice that the filtering has a big impact on the performance, by
+reducing the maximum distance for small magnitudes one can easily
+speed up the calculations by 2-3 times or more, without losing much
+precision.
 
 \textbf{Output}
 

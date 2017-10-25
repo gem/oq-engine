@@ -766,7 +766,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
                           'Active Shallow Crust': 'ChiouYoungs2008()'})
         # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz.ordinal, 0)
-        self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b8'))
+        self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
@@ -825,14 +825,15 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=5)\n"
-            "0,SadighEtAl1997(): [0]\n"
-            "1,SadighEtAl1997(): [1 2 3 4]>")
+            "0,SadighEtAl1997(): [0 1 2]\n"
+            "1,SadighEtAl1997(): [3 4]>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()
         new = object.__new__(CompositionInfo)
         new.__fromh5__(dic, attrs)
-        self.assertEqual(repr(new), repr(csm.info))
+        self.assertEqual(repr(new), repr(csm.info).
+                         replace('0.20000000000000004', '0.2'))
 
 
 class FilterSourceTestCase(unittest.TestCase):

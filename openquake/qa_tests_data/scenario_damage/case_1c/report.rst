@@ -3,8 +3,8 @@ Scenario Damage
 
 ============== ===================
 checksum32     272,505,614        
-date           2017-10-18T18:22:13
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:09
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -41,11 +41,11 @@ structural_fragility `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -86,5 +86,5 @@ assoc_assets_sites      0.007     0.0       1
 saving gmfs             0.006     0.0       1     
 building riskinputs     0.006     0.0       1     
 computing gmfs          0.002     0.0       1     
-reading site collection 1.891E-04 0.0       1     
+reading site collection 1.869E-04 0.0       1     
 ======================= ========= ========= ======
