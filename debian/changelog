@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the deprecated risk outputs dmg_by_tag, dmg_total,
+    losses_by_tag, losses_total
   * Deprecated the .geojson exporters for hazard curves and maps
   * We now keep the realization weights in case of logic tree sampling (before
     they were rescaled to 1 / R and considered all equals)
