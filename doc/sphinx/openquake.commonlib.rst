@@ -57,14 +57,6 @@ openquake.calculators.reportwriter module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.risk_writers module
----------------------------------------
-
-.. automodule:: openquake.commonlib.risk_writers
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 openquake.commonlib.riskmodels module
 -------------------------------------
 
