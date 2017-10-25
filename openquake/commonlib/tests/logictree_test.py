@@ -1386,7 +1386,7 @@ class SampleTestCase(unittest.TestCase):
     def test_sample_one_branch(self):
         # always the same branch is returned
         branches = [logictree.Branch(0, Decimal('1.0'), 0)]
-        bs = logictree.sample(branches, 10, random.Random(42))
+        bs = logictree.sample(branches, 10, 42)
         for b in bs:
             self.assertEqual(b.branch_id, 0)
 
@@ -2235,7 +2235,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         counter = collections.Counter()
         gsim_lt = self.parse_valid(xml, ['Volcanic'])
         for seed in range(1000):
-            rlz = logictree.sample_one(gsim_lt, random.Random(seed))
+            [rlz] = logictree.sample(gsim_lt, 1, seed)
             counter[rlz.lt_path] += 1
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('b1',): 414, ('b2',): 586})
@@ -2372,7 +2372,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.source_model_lt = readinput.get_source_model_lt(oqparam)
         self.gmpe_lt = readinput.get_gsim_lt(
             oqparam, ['Active Shallow Crust', 'Subduction Interface'])
-        self.rnd = random.Random(oqparam.random_seed)
+        self.seed = oqparam.random_seed
 
     def test_sample_source_model(self):
         [(sm_name, weight, branch_ids, _, _)] = self.source_model_lt
@@ -2391,8 +2391,8 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
             self.source_model_lt.num_samples = orig_samples
 
     def test_sample_gmpe(self):
-        (value, weight, branch_ids, _, _) = logictree.sample_one(
-            self.gmpe_lt, self.rnd)
+        [(value, weight, branch_ids, _, _)] = logictree.sample(
+            self.gmpe_lt, 1, self.seed)
         self.assertEqual(value, ('ChiouYoungs2008()', 'SadighEtAl1997()'))
         self.assertEqual(weight, 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
