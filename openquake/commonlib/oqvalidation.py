@@ -195,6 +195,8 @@ class OqParam(valid.ParamSet):
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
 
+        self.check_source_model()
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and not self.iml_disagg:
@@ -598,3 +600,12 @@ class OqParam(valid.ParamSet):
         elif len(ok_imts) == 1:
             raise ValueError(
                 'There is a single IMT, uniform_hazard_spectra cannot be True')
+
+    def check_source_model(self):
+        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
+                'rupture_model' in self.inputs):
+            return
+        if 'source' not in self.inputs and not self.hazard_calculation_id:
+            raise ValueError('Missing source_model_logic_tree in %s '
+                             'or missing --hc option' %
+                             self.inputs.get('job_ini', 'job_ini'))
