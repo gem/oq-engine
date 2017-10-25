@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2017-10-18T18:22:43
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:40
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 6, num_imts = 1
@@ -41,11 +41,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -74,8 +74,8 @@ source_model.xml 0      Volcanic 1           440          440
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.71 KB, max_per_task 1020 B                                             
-count_eff_ruptures.sent     sources 5.96 KB, srcfilter 1.61 KB, param 1.18 KB, monitor 652 B, gsims 202 B
+count_eff_ruptures.received tot 1.71 KB, max_per_task 1021 B                                             
+count_eff_ruptures.sent     sources 5.96 KB, srcfilter 1.61 KB, param 1.18 KB, monitor 654 B, gsims 202 B
 hazard.input_weight         264.0                                                                        
 hazard.n_imts               1                                                                            
 hazard.n_levels             3                                                                            
@@ -109,10 +109,10 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.001 3.325E-04 0.001 0.002 2        
-================== ===== ========= ===== ===== =========
+================== ===== ========= ========= ===== =========
+operation-duration mean  stddev    min       max   num_tasks
+count_eff_ruptures 0.001 5.243E-04 7.348E-04 0.001 2        
+================== ===== ========= ========= ===== =========
 
 Slowest operations
 ------------------
@@ -122,9 +122,9 @@ operation                      time_sec  memory_mb counts
 managing sources               0.011     0.0       1     
 reading composite source model 0.008     0.0       1     
 store source_info              0.003     0.0       1     
-total count_eff_ruptures       0.003     0.0       2     
-prefiltering source model      0.001     0.199     1     
-reading site collection        1.762E-04 0.0       1     
-aggregate curves               5.293E-05 0.0       2     
-saving probability maps        2.503E-05 0.0       1     
+total count_eff_ruptures       0.002     0.0       2     
+prefiltering source model      0.001     0.0       1     
+reading site collection        1.576E-04 0.0       1     
+aggregate curves               5.317E-05 0.0       2     
+saving probability maps        2.456E-05 0.0       1     
 ============================== ========= ========= ======
