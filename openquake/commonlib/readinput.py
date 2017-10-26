@@ -907,6 +907,7 @@ def get_gmfs(oqparam):
         if missing_eids:
             raise InvalidFile('Missing eids in the gmfs.csv file: %s'
                               % missing_eids)
+        assert expected_eids == found_eids, (expected_eids, found_eids)
         eidx = {eid: e for e, eid in enumerate(eids)}
         sitecol = get_site_collection(oqparam)
         expected_sids = set(sitecol.sids)
