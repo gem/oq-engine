@@ -712,29 +712,25 @@ def get_gmfs(calculator):
     :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (R, N, E, I)
     """
     dstore = calculator.datastore
-    oq = dstore['oqparam']
-    num_assocs = dstore['csm_info'].get_num_rlzs()
-    sitecol = dstore['sitecol']
+    oq = calculator.oqparam
+    sitecol = calculator.sitecol
     if dstore.parent:
         haz_sitecol = dstore.parent['sitecol']  # S sites
     else:
         haz_sitecol = sitecol  # N sites
     N = len(haz_sitecol.complete)
     I = len(oq.imtls)
-    E = oq.number_of_ground_motion_fields
-    eids = numpy.arange(E)
-    gmfs = numpy.zeros((num_assocs, N, E, I))
-    if calculator.precalc:
-        for g, gsim in enumerate(calculator.precalc.gsims):
-            gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
-        return eids, gmfs
-
-    elif 'gmfs' in oq.inputs:  # from file
+    if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)
-        if len(eids) != E:
-            raise RuntimeError('Expected %d ground motion fields, found %d' %
-                               (E, len(eids)))
+        E = len(eids)
+        if hasattr(oq, 'number_of_ground_motion_fields'):
+            if oq.number_of_ground_motion_fields != E:
+                raise RuntimeError(
+                    'Expected %d ground motion fields, found %d' %
+                    (oq.number_of_ground_motion_fields, E))
+        else:  # set the number of GMFs from the file
+            oq.number_of_ground_motion_fields = E
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
@@ -746,6 +742,15 @@ def get_gmfs(calculator):
         events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = eids
         dstore['events'] = events
+        return eids, gmfs
+
+    elif calculator.precalc:  # from previous step
+        num_assocs = dstore['csm_info'].get_num_rlzs()
+        E = oq.number_of_ground_motion_fields
+        eids = numpy.arange(E)
+        gmfs = numpy.zeros((num_assocs, N, E, I))
+        for g, gsim in enumerate(calculator.precalc.gsims):
+            gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
         return eids, gmfs
 
 
