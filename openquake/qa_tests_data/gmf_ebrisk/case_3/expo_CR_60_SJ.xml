@@ -1,0 +1,1272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ex1"
+    taxonomySource="GEM taxonomy"
+    >
+        <description>
+            San Jose 60arcsec
+        </description>
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="per_asset" unit="EUR"/>
+            </costTypes>
+        </conversions>
+        <assets>
+            <asset
+            id="14759"
+            number="1.3000000E+01"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14765"
+            number="4.6000000E+01"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8027200E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14767"
+            number="2.6000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8193900E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14770"
+            number="1.6000000E+01"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.8193900E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="14777"
+            number="6.0000000E+00"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.8360500E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14784"
+            number="6.9000000E+01"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8360500E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14785"
+            number="9.0000000E+00"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8527200E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14799"
+            number="5.0000000E+00"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9027200E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14802"
+            number="3.7000000E+01"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="14825"
+            number="1.3100000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9360500E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14846"
+            number="1.6700000E+02"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9693900E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14847"
+            number="4.4000000E+01"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="14852"
+            number="1.9000000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4198490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="15034"
+            number="3.4000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15058"
+            number="1.2000000E+01"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8360500E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15060"
+            number="9.0000000E+00"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8693900E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15065"
+            number="2.8000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15068"
+            number="3.7000000E+01"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="15070"
+            number="2.3000000E+01"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15094"
+            number="6.3000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9527200E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15099"
+            number="2.0000000E+01"
+            taxonomy="MR/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9527200E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.5514019E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15110"
+            number="7.6000000E+01"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15117"
+            number="5.2800000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4181830E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15328"
+            number="3.6000000E+01"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8027200E+00" lon="-8.4165160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15338"
+            number="8.0000000E+00"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8360500E+00" lon="-8.4165160E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15355"
+            number="4.0000000E+00"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8693900E+00" lon="-8.4165160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15361"
+            number="2.4200000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4165160E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15383"
+            number="5.4000000E+01"
+            taxonomy="MR/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9360500E+00" lon="-8.4165160E+01"/>
+                <costs>
+                    <cost type="structural" value="2.5514019E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15387"
+            number="2.0000000E+01"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9527200E+00" lon="-8.4165160E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15400"
+            number="3.5800000E+02"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4165160E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15652"
+            number="3.7000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4148490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15655"
+            number="5.1000000E+01"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4148490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="15662"
+            number="1.3000000E+01"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8193900E+00" lon="-8.4148490E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15663"
+            number="5.0000000E+00"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.8193900E+00" lon="-8.4148490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="15689"
+            number="1.4000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8860500E+00" lon="-8.4148490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15707"
+            number="2.5100000E+02"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9027200E+00" lon="-8.4148490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15733"
+            number="5.0400000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9527200E+00" lon="-8.4148490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="15740"
+            number="1.6100000E+02"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9693900E+00" lon="-8.4148490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15942"
+            number="4.8000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15954"
+            number="1.2000000E+01"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8193900E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15963"
+            number="3.8000000E+01"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8360500E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15967"
+            number="5.4000000E+01"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8860500E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15975"
+            number="1.5600000E+02"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="15983"
+            number="4.1800000E+02"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9027200E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16008"
+            number="2.2150000E+03"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9527200E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16017"
+            number="2.8600000E+02"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16029"
+            number="4.8400000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4131830E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="16245"
+            number="4.1000000E+01"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16253"
+            number="1.0000000E+01"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.8193900E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="16256"
+            number="1.6000000E+01"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8193900E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16260"
+            number="2.0000000E+00"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.8360500E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16269"
+            number="2.8000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8527200E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16270"
+            number="1.0000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.8527200E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16280"
+            number="3.8000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.8693900E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16295"
+            number="3.8000000E+01"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8860500E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16301"
+            number="3.8000000E+02"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16335"
+            number="1.9100000E+02"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9527200E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16341"
+            number="2.6200000E+02"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16350"
+            number="2.3200000E+02"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9860500E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16352"
+            number="1.6080000E+03"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4115160E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16563"
+            number="8.0000000E+00"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.8027200E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16592"
+            number="1.7500000E+02"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8527200E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16606"
+            number="6.6100000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.8693900E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="16611"
+            number="1.8000000E+02"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8860500E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16613"
+            number="1.2500000E+02"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.8860500E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16638"
+            number="6.1300000E+02"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9193900E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16639"
+            number="3.9600000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9193900E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16658"
+            number="2.6700000E+02"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9527200E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16670"
+            number="5.0000000E+02"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9693900E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16671"
+            number="5.6000000E+01"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16675"
+            number="1.5760000E+03"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4098490E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16872"
+            number="2.0000000E+00"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.8027200E+00" lon="-8.4081830E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16881"
+            number="1.5000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8193900E+00" lon="-8.4081830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16919"
+            number="1.5100000E+02"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8860500E+00" lon="-8.4081830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16961"
+            number="6.5000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9527200E+00" lon="-8.4081830E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="16970"
+            number="1.3600000E+02"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4081830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17197"
+            number="5.0000000E+00"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17198"
+            number="3.5000000E+01"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8027200E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17204"
+            number="9.0000000E+01"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8193900E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17210"
+            number="9.7000000E+01"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8360500E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17219"
+            number="1.5600000E+02"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8360500E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17228"
+            number="1.1500000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8527200E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17254"
+            number="4.4920000E+03"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17275"
+            number="1.1280000E+03"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9360500E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="17302"
+            number="6.6000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9860500E+00" lon="-8.4065160E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17530"
+            number="1.3000000E+01"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17535"
+            number="5.6000000E+01"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8360500E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17544"
+            number="7.4000000E+01"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8360500E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17555"
+            number="9.7800000E+02"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17559"
+            number="7.5600000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17564"
+            number="6.4300000E+02"
+            taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17577"
+            number="8.5000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9027200E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17582"
+            number="1.4400000E+02"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17590"
+            number="6.4200000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9193900E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="17597"
+            number="4.0000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17598"
+            number="3.5100000E+02"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17603"
+            number="2.3000000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17613"
+            number="3.5000000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9527200E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17619"
+            number="1.8790000E+03"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17625"
+            number="2.4000000E+01"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17626"
+            number="6.9000000E+01"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17628"
+            number="4.8000000E+01"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17827"
+            number="2.1000000E+01"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17839"
+            number="1.1000000E+01"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8193900E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17845"
+            number="8.5000000E+01"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17847"
+            number="9.0000000E+00"
+            taxonomy="MR/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.5514019E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17848"
+            number="1.0000000E+01"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17879"
+            number="1.0800000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.8860500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17887"
+            number="6.1000000E+02"
+            taxonomy="MR/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9027200E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.5514019E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17893"
+            number="5.9000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9193900E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17902"
+            number="2.2800000E+02"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9360500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17903"
+            number="8.1000000E+01"
+            taxonomy="MATO/LN+DNO/HEX:1/Y99"
+            >
+                <location lat="9.9360500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8605607E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17919"
+            number="4.2100000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9527200E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17922"
+            number="1.1330000E+03"
+            taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6579433E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17928"
+            number="1.8100000E+02"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17936"
+            number="4.4200000E+02"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="17938"
+            number="7.6000000E+01"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="17939"
+            number="1.7300000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="18142"
+            number="4.0000000E+00"
+            taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8027200E+00" lon="-8.4015160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4149533E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="18148"
+            number="3.2000000E+01"
+            taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.8693900E+00" lon="-8.4015160E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9719626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="18185"
+            number="4.1000000E+01"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="18189"
+            number="1.0230000E+03"
+            taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8037383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="18193"
+            number="1.7500000E+02"
+            taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
+            >
+                <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7628598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="18195"
+            number="3.8000000E+01"
+            taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
+            >
+                <location lat="9.9527200E+00" lon="-8.4015160E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2592523E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="18210"
+            number="1.0690000E+03"
+            taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
+            >
+                <location lat="9.9693900E+00" lon="-8.4015160E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0485981E+05"/>
+                </costs>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>
