@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from nose.plugins.attrib import attr
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2
+from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3
 
 
 class GmfEbRiskTestCase(CalculatorTestCase):
@@ -38,3 +38,13 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
         self.assertAlmostEqual(totloss, 0.69805837, places=6)
+
+    @attr('qa', 'risk', 'gmf_ebrisk')
+    def test_case_3(self):
+        # case with 13 sites, 10 eids, and several 0 values
+        self.run_calc(case_3.__file__, 'job.ini', exports='csv')
+        alt = self.calc.datastore['agg_loss_table']
+        self.assertEqual(len(alt), 8)
+        self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
+        totloss = alt['loss'].sum(axis=0)
+        self.assertAlmostEqual(totloss, 1762755.5, places=6)
