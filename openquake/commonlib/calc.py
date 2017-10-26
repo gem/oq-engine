@@ -149,7 +149,7 @@ class PmapGetter(object):
                  for pmap in self.get_pmaps(self.sids)]
         return numpy.array(pmaps)
 
-    def get_pmap_by_grp(self, sids=None):
+    def get_pmap_by_grp(self, sids):
         """
         :param sids: an array of site IDs
         :returns: a dictionary of probability maps by source group
@@ -172,7 +172,7 @@ class PmapGetter(object):
                 self.nbytes += pmap.nbytes
         else:
             # make sure the cache refer to the right sids
-            assert sids is None or (sids == self.sids).all()
+            assert (sids == self.sids).all()
         return self._pmap_by_grp
 
     def items(self, kind=''):
