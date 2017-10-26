@@ -46,9 +46,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tags())
         self.A = len(self.assetcol)
-        self.E = oq.number_of_ground_motion_fields
         self.I = oq.insured_losses + 1
         eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
+        self.E = len(eids)
         if oq.ignore_covs:
             eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
