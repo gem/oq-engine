@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * The parameter `number_of_ground_motion_fields` is back to be optional in
+  * The parameter `number_of_ground_motion_fields` is back to being optional in
     scenario calculators reading the GMFs from a file, since it can be inferred
   * Removed the deprecated risk outputs dmg_by_tag, dmg_total,
     losses_by_tag, losses_total
