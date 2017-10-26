@@ -227,8 +227,8 @@ def export_agg_losses_ebr(ekey, dstore):
         if has_rup_data:
             ruptures = calc.get_ruptures(dstore, the_events, grp_id)
             rup_data.update(get_rup_data(ruptures))
-    for i, row in enumerate(agg_losses):
-        rec = elt[i]
+    for r, row in enumerate(agg_losses):
+        rec = elt[r]
         event = event_by_eid[row['eid']]
         rec['event_id'] = event['eid']
         rec['year'] = event['year']

@@ -84,9 +84,11 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         """
         Save the event loss table
         """
-        alt = numpy.zeros(self.E * self.R, self.param['elt_dt'])
+        alt = numpy.zeros(len(self.agglosses), self.param['elt_dt'])
+        i = 0
         for (e, r), loss in self.agglosses.items():
-            alt[self.E * int(r) + int(e)] = (e, r, loss)
+            alt[i] = (e, r, loss)
+            i += 1
         self.datastore['agg_loss_table'] = alt
 
     def combine(self, dummy, res):
