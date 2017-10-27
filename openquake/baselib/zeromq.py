@@ -38,6 +38,17 @@ def connect(end_point, socket_type):
     return sock
 
 
+def send(end_point, cmd, *args):
+    """
+    Send a command with arguments to a zmq REP server returning triples
+    """
+    with Socket(end_point, zmq.REQ, 'connect') as sock:
+        res, etype, _mon = sock.send((cmd,) + args)
+    if etype:
+        raise etype(res)
+    return res
+
+
 class Socket(object):
     """
     A Socket class to be used with code like the following::

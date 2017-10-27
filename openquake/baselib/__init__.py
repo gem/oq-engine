@@ -83,8 +83,6 @@ def read(*paths, **validators):
         config[section] = sec = DotDict(parser.items(section))
         for k, v in sec.items():
             sec[k] = validators.get(k, lambda x: x)(v)
-
-
 config.read = read
 
 
@@ -101,3 +99,7 @@ def boolean(flag):
 
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=boolean)
+
+
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+config.dbserver_url = 'tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT)

@@ -6,26 +6,13 @@ import inspect
 import subprocess
 import traceback
 import multiprocessing
-from openquake.baselib import zeromq as z, general
+from openquake.baselib import config, general, zeromq as z
 from openquake.baselib.performance import Monitor
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         "Do nothing"
-
-
-def send(port, cmd):
-    """
-    Send a command on a zmq server listening on localhost on the given port
-
-    :param port: a port (if '' is sent)
-    :param cmd: a Python object (usually a tuple) interpretable as command
-    """
-    if not port:
-        return
-    with z.Socket('tcp://127.0.0.1:%s' % port, z.zmq.REQ, 'connect') as sock:
-        return sock.send(cmd)
 
 
 def safely_call(func, args):
@@ -40,19 +27,28 @@ def safely_call(func, args):
     :param args: the arguments
     """
     with Monitor('total ' + func.__name__, measuremem=True) as child:
-        pid = os.getpid()
         if args and hasattr(args[0], 'unpickle'):
             # args is a list of Pickled objects
             args = [a.unpickle() for a in args]
-        if args and isinstance(args[-1], Monitor):
-            mon = args[-1]
-            mon.children.append(child)  # child is a child of mon
-            child.hdf5path = mon.hdf5path
-            calc_id = args[-1].calc_id
-            ctrl_port = getattr(mon, 'ctrl_port', '')
-            send(ctrl_port, ('set', pid, calc_id))
-        else:
-            mon = child
+
+        mon = args[-1] if isinstance(args[-1], Monitor) else Monitor()
+        mon.children.append(child)  # child is a child of mon
+        child.hdf5path = mon.hdf5path
+        calc_id = mon.calc_id
+
+        def abort(signum, stack):
+            # raise a JobCanceled exception if the current job has status
+            # 'canceled' in the database (assuming the dbserver is up)
+            job = z.send(mon.dbserver_url, 'get_job', calc_id)
+            if job.status == 'canceled':
+                raise JobCanceled(calc_id)
+        try:
+            # register the abort handler
+            signal.signal(signal.SIGABRT, abort)
+        except ValueError:
+            # if you are in a thread, do not register the handler
+            pass
+
         # FIXME: check_mem_usage is disabled here because it is causing
         # dead locks in threads when log messages are sent
         # Check is done anyway in other parts of the code (submit and iter);
@@ -72,7 +68,6 @@ def safely_call(func, args):
                    etype, mon)
         finally:
             mon._flush = True
-            send(getattr(mon, 'ctrl_port', ''), ('set', pid, 0))
     return res
 
 
@@ -102,8 +97,9 @@ def _starmap(func, iterargs, host, ctrl_port, task_in_port, receiver_ports):
         with z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
             n = 0
             for args in iterargs:
-                args[-1].backurl = backurl  # args[-1] is a Monitor instance
-                args[-1].ctrl_port = ctrl_port
+                mon = args[-1]  # Monitor instance
+                mon.backurl = backurl
+                mon.dbserver_url = config.dbserver_url
                 sender.send((func, args))
                 n += 1
         yield n
@@ -165,9 +161,9 @@ class WorkerMaster(object):
             subprocess.Popen(args)
         return 'starting %s' % starting
 
-    def stop(self, cmd='stop', calc_id=0):
+    def stop(self, cmd='term', calc_id=0):
         """
-        Send a "stop" or "kill" command to all worker pools
+        Send a "term", "kill" or "cancel" command to all worker pools
         """
         stopped = []
         for host, _ in self.host_cores:
@@ -176,28 +172,38 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                sock.send((cmd, calc_id))
-                stopped.append(host)
-        return 'stopped %s:%s' % (stopped, calc_id)
+                sock.send(cmd)
+            stopped.append(host)
+        return 'stopped %s' % stopped
 
-    def restart(self):
+    def restart(self, cmd='term'):
         """
         Stop and start again
         """
-        self.stop()
+        self.stop(cmd)
         self.start()
         return 'restarted'
 
 
+class JobCanceled(Exception):
+    """
+    Raised when a worker receives a SIGUSR1 and the currently running job
+    has status 'canceled'.
+    """
+
+
 class WorkerPool(object):
     """
-    A pool of workers accepting the command 'stop' and 'kill' and reading
+    A pool of workers receiving commands from the ctrl_url and reading the
     tasks to perform from the task_out_port.
 
     :param ctrl_url: zmq address of the control socket
     :param task_out_port: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
+    signal = {'term': signal.SIGTERM, 'kill': signal.SIGKILL,
+              'cancel': signal.SIGUSR1}
+
     def __init__(self, ctrl_url, task_out_port, num_workers='-1'):
         self.ctrl_url = ctrl_url
         self.task_out_port = task_out_port
@@ -236,16 +242,11 @@ class WorkerPool(object):
         # start control loop accepting the commands stop and kill
         ctrlsock = z.Socket(self.ctrl_url, z.zmq.REP, 'bind')
         for msg in ctrlsock:
-            if isinstance(msg, tuple):
-                cmd, args = msg[0], msg[1:]
-                if cmd == 'set':
-                    pid, calc_id = args
-                    self.running[pid] = calc_id
-                    ctrlsock.send('ok')
-                elif cmd in ('stop', 'kill'):
-                    ctrlsock.send(self.stop(cmd, *args))
-                    if args == (0,):  # unconditional stop/kill
-                        break
+            if msg in ('term', 'kill'):
+                ctrlsock.send(self.stop(msg))
+                break  # unconditional stop/kill
+            elif msg == 'cancel':
+                ctrlsock.send(self.stop(msg))
             elif msg == 'getpid':
                 ctrlsock.send(self.pid)
             elif msg == 'get_num_workers':
@@ -254,26 +255,18 @@ class WorkerPool(object):
                 ctrlsock.send('unknown command')
                 raise ValueError('Unknown command %s' % msg)
 
-    def stop(self, cmd, calc_id=0):
+    def stop(self, cmd):
         """
-        Send a SIGTERM/SIGKILL to all worker processes
+        Send a SIGTERM/SIGKILL/SIGUSR1 to all worker processes
 
         :param cmd:
-            the string 'stop' for SIGTERM or 'kill' for SIGKILL
-        :param calc_id:
-            if 0, kill all workers, otherwise restart the ones running the
-            given calc_id
+            the string 'term' for SIGTERM, 'kill' for SIGKILL, 'cancel' for
+            SIGUSR1
         """
-        sig = signal.SIGTERM if cmd == 'stop' else signal.SIGKILL
-        if calc_id:
-            for pid, calc in list(self.running.items()):
-                if calc == calc_id:  # restart process
-                    os.kill(pid, sig)
-                    self.start_proc()
-            return 'calculation %d stopped' % calc_id
+        sig = self.signal[cmd]
         for pid in self.running:
             os.kill(pid, sig)
-        return 'WorkerPool %s stopped' % self.ctrl_url
+        return 'WorkerPool %s %sed' % (self.ctrl_url, cmd)
 
 
 if __name__ == '__main__':

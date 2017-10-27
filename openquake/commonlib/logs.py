@@ -38,6 +38,7 @@ LOG = logging.getLogger()
 
 DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
+
 def dbcmd(action, *args):
     """
     A dispatcher to the database server.

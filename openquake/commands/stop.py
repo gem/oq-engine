@@ -15,18 +15,25 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import sys
 from openquake.baselib import sap, config, workerpool
 from openquake.commonlib import logs
 
 
 @sap.Script
-def stop(calc_id, kill=False):
+def stop(job_id):
     """
-    Stop the given calculation with SIGTERM or SIGKILL
+    Cancel the given job
     """
-    logs.dbcmd('set_status', calc_id, 'canceled')
+    job = logs.dbcmd('get_job', job_id)
+    if job is None:
+        sys.exit('There is no job %d' % job_id)
+    elif job.status not in ('executing', 'running'):
+        sys.exit('Job %d is %s' % (job_id, job.status))
+    logs.dbcmd('set_status', job_id, 'canceled')
     master = workerpool.WorkerMaster(**config.zworkers)
-    print(master.stop('kill' if kill else 'stop', calc_id))
+    master.stop('cancel')
+    print('%d canceled' % job_id)
 
-stop.arg('calc_id', 'calculation ID', type=int)
-stop.flg('kill', 'use SIGKILL')
+stop.arg('job_id', 'job ID', type=int)
