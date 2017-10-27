@@ -73,7 +73,12 @@ class DbServer(object):
                 sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
-        """Start database worker threads"""
+        """
+        Start database worker threads
+        """
+        # give a nice name to the process
+        w.setproctitle('oq-dbserver')
+
         dworkers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
