@@ -47,4 +47,4 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
-        self.assertAlmostEqual(totloss, 1762755.5, places=6)
+        self.assertAlmostEqual(totloss, 1790231.25)
