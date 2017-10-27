@@ -314,7 +314,17 @@ class CompositionInfo(object):
         self.num_samples = num_samples
         self.source_models = source_models
         self.tot_weight = tot_weight
-        self.gsim_rlzs = list(self.gsim_lt)
+
+    @property
+    def gsim_rlzs(self):
+        """
+        Build and cache the gsim logic tree realizations
+        """
+        try:
+            return self._gsim_rlzs
+        except AttributeError:
+            self._gsim_rlzs = list(self.gsim_lt)
+            return self._gsim_rlzs
 
     def get_info(self, sm_id):
         """
@@ -410,7 +420,6 @@ class CompositionInfo(object):
                 rec['name'], rec['weight'], path, srcgroups,
                 num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
-        self.gsim_rlzs = list(self.gsim_lt)
         try:
             os.remove(tmp)  # gsim_lt file
         except NameError:  # tmp is defined only in the regular case, see above
