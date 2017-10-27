@@ -182,7 +182,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params([os.path.join(basedir, job_ini)])
-
+    if hc_id:
+        job_ini.update(hazard_calculation_id=str(hc_id))
     oqparam = OqParam(**job_ini)
     oqparam.validate()
     return oqparam
@@ -899,8 +900,6 @@ def get_gmfs(oqparam):
         assert num_gmv == I, (num_gmv, I)
         dtlist.append(('gmv', (F32, num_gmv)))
         eids = numpy.unique(array['eid'])
-        assert len(eids) == oqparam.number_of_ground_motion_fields, (
-            len(eids), oqparam.number_of_ground_motion_fields)
         eidx = {eid: e for e, eid in enumerate(eids)}
         N = len(get_site_collection(oqparam))
         gmfs = numpy.zeros((R, N, len(eids), I), F32)

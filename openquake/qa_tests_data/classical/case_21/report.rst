@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2017-10-18T18:22:47
-engine_version 2.7.0-git16fce00   
+date           2017-10-24T05:47:44
+engine_version 2.8.0-git8e9cdf8   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -40,37 +40,37 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====================== ====== ====================================== =============== ================
-smlt_path              weight source_model_file                      gsim_logic_tree num_realizations
-====================== ====== ====================================== =============== ================
-b1_mfd1_high_dip_dip30 0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_high_dip_dip45 0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_high_dip_dip60 0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_low_dip_dip30  0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_low_dip_dip45  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_low_dip_dip60  0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_mid_dip_dip30  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_mid_dip_dip45  0.119  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_mid_dip_dip60  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_high_dip_dip30 0.014  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_high_dip_dip45 0.041  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_high_dip_dip60 0.014  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_low_dip_dip30  0.014  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_low_dip_dip45  0.041  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_low_dip_dip60  0.014  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_mid_dip_dip30  0.041  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_mid_dip_dip45  0.122  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_mid_dip_dip60  0.041  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_high_dip_dip30 0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_high_dip_dip45 0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_high_dip_dip60 0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_low_dip_dip30  0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_low_dip_dip45  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_low_dip_dip60  0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_mid_dip_dip30  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_mid_dip_dip45  0.119  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_mid_dip_dip60  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-====================== ====== ====================================== =============== ================
+====================== ====== =============== ================
+smlt_path              weight gsim_logic_tree num_realizations
+====================== ====== =============== ================
+b1_mfd1_high_dip_dip30 0.013  trivial(1)      1/1             
+b1_mfd1_high_dip_dip45 0.040  trivial(1)      1/1             
+b1_mfd1_high_dip_dip60 0.013  trivial(1)      1/1             
+b1_mfd1_low_dip_dip30  0.013  trivial(1)      1/1             
+b1_mfd1_low_dip_dip45  0.040  trivial(1)      1/1             
+b1_mfd1_low_dip_dip60  0.013  trivial(1)      1/1             
+b1_mfd1_mid_dip_dip30  0.040  trivial(1)      1/1             
+b1_mfd1_mid_dip_dip45  0.119  trivial(1)      1/1             
+b1_mfd1_mid_dip_dip60  0.040  trivial(1)      1/1             
+b1_mfd2_high_dip_dip30 0.014  trivial(1)      1/1             
+b1_mfd2_high_dip_dip45 0.041  trivial(1)      1/1             
+b1_mfd2_high_dip_dip60 0.014  trivial(1)      1/1             
+b1_mfd2_low_dip_dip30  0.014  trivial(1)      1/1             
+b1_mfd2_low_dip_dip45  0.041  trivial(1)      1/1             
+b1_mfd2_low_dip_dip60  0.014  trivial(1)      1/1             
+b1_mfd2_mid_dip_dip30  0.041  trivial(1)      1/1             
+b1_mfd2_mid_dip_dip45  0.122  trivial(1)      1/1             
+b1_mfd2_mid_dip_dip60  0.041  trivial(1)      1/1             
+b1_mfd3_high_dip_dip30 0.013  trivial(1)      1/1             
+b1_mfd3_high_dip_dip45 0.040  trivial(1)      1/1             
+b1_mfd3_high_dip_dip60 0.013  trivial(1)      1/1             
+b1_mfd3_low_dip_dip30  0.013  trivial(1)      1/1             
+b1_mfd3_low_dip_dip45  0.040  trivial(1)      1/1             
+b1_mfd3_low_dip_dip60  0.013  trivial(1)      1/1             
+b1_mfd3_mid_dip_dip30  0.040  trivial(1)      1/1             
+b1_mfd3_mid_dip_dip45  0.119  trivial(1)      1/1             
+b1_mfd3_mid_dip_dip60  0.040  trivial(1)      1/1             
+====================== ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -185,8 +185,8 @@ source_model.xml 26     Active Shallow Crust 2           221          221
 Informational data
 ------------------
 =========================== =====================================================================================
-count_eff_ruptures.received tot 33 KB, max_per_task 641 B                                                        
-count_eff_ruptures.sent     sources 60.27 KB, srcfilter 36.74 KB, param 32.87 KB, monitor 17.51 KB, gsims 4.89 KB
+count_eff_ruptures.received tot 33.05 KB, max_per_task 642 B                                                     
+count_eff_ruptures.sent     sources 60.27 KB, srcfilter 36.74 KB, param 32.87 KB, monitor 17.56 KB, gsims 4.89 KB
 hazard.input_weight         8175.0                                                                               
 hazard.n_imts               1                                                                                    
 hazard.n_levels             4                                                                                    
@@ -204,25 +204,25 @@ Slowest sources
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
 3      SFLT2     SimpleFaultSource 384          0.005     1         2        
-6      SFLT2     SimpleFaultSource 384          0.004     1         2        
 0      SFLT2     SimpleFaultSource 384          0.004     1         2        
-9      SFLT2     SimpleFaultSource 384          0.004     1         2        
-12     SFLT2     SimpleFaultSource 384          0.004     1         2        
-18     SFLT2     SimpleFaultSource 384          0.004     1         2        
+6      SFLT2     SimpleFaultSource 384          0.004     1         2        
+24     SFLT2     SimpleFaultSource 384          0.004     1         2        
 21     SFLT2     SimpleFaultSource 384          0.004     1         2        
 15     SFLT2     SimpleFaultSource 384          0.004     1         2        
-24     SFLT2     SimpleFaultSource 384          0.003     1         2        
-4      SFLT1     SimpleFaultSource 150          0.003     1         1        
-1      SFLT2     SimpleFaultSource 148          0.003     1         1        
-2      SFLT1     SimpleFaultSource 60           0.003     1         1        
-3      SFLT1     SimpleFaultSource 150          0.002     1         1        
-0      SFLT1     SimpleFaultSource 60           0.002     1         1        
-7      SFLT2     SimpleFaultSource 148          0.002     1         1        
-24     SFLT1     SimpleFaultSource 132          0.002     1         1        
-2      SFLT2     SimpleFaultSource 89           0.002     1         1        
+12     SFLT2     SimpleFaultSource 384          0.004     1         2        
+18     SFLT2     SimpleFaultSource 384          0.003     1         2        
+9      SFLT2     SimpleFaultSource 384          0.003     1         2        
+3      SFLT1     SimpleFaultSource 150          0.003     1         1        
+23     SFLT1     SimpleFaultSource 198          0.002     1         1        
+20     SFLT1     SimpleFaultSource 99           0.002     1         1        
 1      SFLT1     SimpleFaultSource 60           0.002     1         1        
-25     SFLT2     SimpleFaultSource 148          0.002     1         1        
+0      SFLT1     SimpleFaultSource 60           0.002     1         1        
+20     SFLT2     SimpleFaultSource 89           0.002     1         1        
+1      SFLT2     SimpleFaultSource 148          0.002     1         1        
 5      SFLT2     SimpleFaultSource 89           0.002     1         1        
+4      SFLT1     SimpleFaultSource 150          0.002     1         1        
+12     SFLT1     SimpleFaultSource 81           0.002     1         1        
+21     SFLT1     SimpleFaultSource 198          0.002     1         1        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -239,7 +239,7 @@ Duplicated sources
 source_id calc_time src_group_ids                                                         
 ========= ========= ======================================================================
 SFLT1     0.053     0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
-SFLT2     0.070     0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
+SFLT2     0.069     0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
 ========= ========= ======================================================================
 Sources with the same ID but different parameters
 
@@ -247,7 +247,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.003 7.878E-04 0.002 0.006 55       
+count_eff_ruptures 0.003 7.845E-04 0.002 0.006 55       
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -255,12 +255,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.367     0.0       1     
-managing sources               0.192     0.0       1     
+reading composite source model 0.390     0.0       1     
+managing sources               0.254     0.0       1     
 total count_eff_ruptures       0.152     0.0       55    
-prefiltering source model      0.050     0.0       1     
-store source_info              0.006     0.0       1     
-aggregate curves               9.501E-04 0.0       55    
-reading site collection        4.101E-05 0.0       1     
-saving probability maps        2.480E-05 0.0       1     
+prefiltering source model      0.049     0.0       1     
+store source_info              0.007     0.0       1     
+aggregate curves               0.002     0.0       55    
+reading site collection        3.910E-05 0.0       1     
+saving probability maps        3.052E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,7 +3,7 @@ usage: oq engine [--help]
                  [--log-file LOG_FILE]
                  [--show-log CALCULATION_ID]
                  [--config-file CONFIG_FILE]
-                 [--version-db]
+                 [--db-version]
                  [--upgrade-db]
                  [--what-if-I-upgrade]
                  [--run-hazard CONFIG_FILE]
@@ -25,7 +25,7 @@ usage: oq engine [--help]
 Run a calculation using the traditional command line API
 
 optional arguments:
-  -h, --help            show this help message and exit
+  --help, -h            Show this help message and exit
   --log-file LOG_FILE, -L LOG_FILE
                         Location where to store log messages; if not
                         specified, log messages will be printed to the console
@@ -34,17 +34,17 @@ optional arguments:
                         Disable calculation task distribution and run the
                         computation in a single process. This is intended for
                         use in debugging and profiling.
-  -y, --yes             Automatically answer "yes" when asked to confirm an
+  --yes, -y             Automatically answer "yes" when asked to confirm an
                         action
-  -c CONFIG_FILE, --config-file CONFIG_FILE
+  --config-file CONFIG_FILE, -c CONFIG_FILE
                         Custom openquake.cfg file, to override default
                         configurations
   --make-html-report YYYY-MM-DD|today, -r YYYY-MM-DD|today
                         Build an HTML report of the computation at the given
                         date
-  -u, --upgrade-db      Upgrade the openquake database
-  -v, --version-db      Show the current version of the openquake database
-  -w, --what-if-I-upgrade
+  --upgrade-db, -u      Upgrade the openquake database
+  --db-version, -d      Show the current version of the openquake database
+  --what-if-I-upgrade, -w
                         Show what will happen to the openquake database if you
                         upgrade
   --run-hazard CONFIG_FILE, --rh CONFIG_FILE
@@ -71,7 +71,7 @@ optional arguments:
   --export-outputs CALCULATION_ID TARGET_DIR, --eos CALCULATION_ID TARGET_DIR
                         Export all of the calculation outputs to the specified
                         directory
-  -e, --exports        Comma-separated string specifing the export formats,
+  --exports, -e         Comma-separated string specifing the export formats,
                         in order of priority
-  -l {debug, info, warn, error, critical}, --log-level {debug, info, warn, error, critical}
+  --log-level {debug, info, warn, error, critical}, -l {debug, info, warn, error, critical}
                         Defaults to "info"

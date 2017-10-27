@@ -1,5 +1,0 @@
-tag,structural~no_damage_mean,structural~no_damage_stdv,structural~slight_mean,structural~slight_stdv,structural~moderate_mean,structural~moderate_stdv,structural~extreme_mean,structural~extreme_stdv,structural~complete_mean,structural~complete_stdv
-"taxonomy=A",5.395278E+03,5.245749E+02,1.538847E+02,7.841138E+01,2.787181E+02,1.425767E+02,2.037399E+02,1.155993E+02,2.623795E+02,2.373828E+02
-"taxonomy=DS",4.479325E+01,1.146418E-01,4.331489E-02,2.401857E-02,7.126988E-02,3.951991E-02,4.669406E-02,2.589236E-02,4.546527E-02,2.521098E-02
-"taxonomy=UFB",2.273334E+02,1.356467E+02,1.288926E+02,4.069670E+01,1.567105E+02,3.097006E+01,1.025448E+02,3.403231E+01,1.385187E+02,1.060890E+02
-"taxonomy=W",2.120935E+01,1.797551E-01,4.680665E-01,1.064150E-01,2.577528E-01,5.860017E-02,5.376439E-02,1.222335E-02,1.106914E-02,2.516572E-03

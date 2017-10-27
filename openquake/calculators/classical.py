@@ -389,7 +389,7 @@ class PSHACalculator(base.HazardCalculator):
             self.source_info = array
             infos.clear()
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, acc))
+            partial(self.count_eff_ruptures, acc), self.oqparam.sm_lt_path)
         self.datastore['csm_info'] = self.csm.info
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that
@@ -512,12 +512,14 @@ class ClassicalCalculator(PSHACalculator):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
                 pgetter = calc.PmapGetter(
-                    self.datastore.parent, lazy=config.directory.shared_dir)
+                    self.datastore.parent, lazy=config.directory.shared_dir,
+                    rlzs_assoc=self.rlzs_assoc)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:
                 # workers read from the cache
-                pgetter = calc.PmapGetter(self.datastore)
+                pgetter = calc.PmapGetter(
+                    self.datastore, rlzs_assoc=self.rlzs_assoc)
                 allargs = self.gen_args(pgetter)
             ires = parallel.Starmap(
                 self.core_task.__func__, allargs).submit_all()

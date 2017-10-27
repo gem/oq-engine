@@ -1,4 +1,4 @@
-The Scenario Damage Calculator produces the following set of output files for
+The Scenario Damage Calculator produces the following output file for
 all loss types (amongst ``structural'', ``nonstructural'', ``contents'', or
 ``business\_interruption'') for which a fragility model file was provided in
 the configuration file:
@@ -13,6 +13,15 @@ the configuration file:
     buildings (\Verb+mean+) and associated standard deviation (\Verb+stddev+)
     of the number of buildings in each damage state are listed in this file.
 
+\end{enumerate}
+
+In addition, if the OpenQuake-QGIS \gls{acr:irmt} plugin is used for
+visualizing or exporting the results from a Scenario Damage Calculation, the
+following  additional outputs can be exported:
+
+\begin{enumerate}
+\setcounter{enumi}{2}
+
   \item \Verb+dmg_by_tag+: this file contains the aggregated damage
     distribution statistics for each of the \glspl{tag} defined in the
     \gls{exposuremodel}. For each \gls{tag}, the mean number of
@@ -26,8 +35,9 @@ the configuration file:
 
 \end{enumerate}
 
-In addition to the above output files which are produced for all Scenario
-Damage calculations, the following set of output files for all loss types
+In addition to the above asset-level damage output file which is
+produced for all Scenario Damage calculations, the following output file is
+also produced for all loss types
 (amongst ``structural'', ``nonstructural'', ``contents'', or
 ``business\_interruption'') for which a \gls{consequencemodel} file was also
 provided in the configuration file:
@@ -42,6 +52,15 @@ provided in the configuration file:
     \Verb+asset_hazard_distance+. For each \gls{asset}, the mean consequences
     (\Verb+mean+) and associated standard deviation (\Verb+stddev+) are listed
     in this file.
+
+\end{enumerate}
+
+In addition, if the OpenQuake-QGIS \gls{acr:irmt} plugin is used for
+visualizing or exporting the results from a Scenario Damage Calculation, the
+following  additional outputs can be exported:
+
+\begin{enumerate}
+\setcounter{enumi}{5}
 
   \item \Verb+losses_by_tag+: this file contains the aggregated scenario
     consequence statistics for each of the \glspl{tag} defined in the
