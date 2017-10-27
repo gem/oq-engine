@@ -616,10 +616,9 @@ class SourceModelLogicTree(object):
 
     def __iter__(self):
         """
-        Yield Realization tuples. Notice that
-        weight is not None only when the number_of_logic_tree_samples
-        is 0. In that case a full enumeration is performed, otherwise
-        a random sampling is performed.
+        Yield Realization tuples. Notice that the weight is homogeneous when
+        sampling is enabled, since it is accounted for in the sampling
+        procedure.
         """
         if self.num_samples:
             # random sampling of the logic tree
