@@ -39,7 +39,7 @@ scenario:
   ruptures, gmf_data
 
 scenario_risk:
-  losses_by_asset, losses_by_event, losses_by_tag-rlzs, agglosses-rlzs
+  losses_by_asset, losses_by_event, agglosses-rlzs
 
 scenario_damage:
-  dmg_by_asset, dmg_by_tag, dmg_total, losses_by_asset, losses_by_tag, losses_total
+  dmg_by_asset, losses_by_asset
