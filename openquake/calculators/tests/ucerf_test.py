@@ -25,9 +25,9 @@ from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 
-cluster = os.environ.get(
-    'OQ_DISTRIBUTE', config.distribution.oq_distribute) != 'futures'
-NO_SHARED_DIR = cluster and not config.directory.shared_dir
+celery = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'celery'
+NO_SHARED_DIR = celery and not config.directory.shared_dir
 
 
 @decorator
