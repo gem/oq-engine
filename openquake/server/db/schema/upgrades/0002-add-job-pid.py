@@ -14,7 +14,7 @@ job_sql = '''CREATE TABLE job(
      stop_time TIMESTAMP,
      relevant BOOL NOT NULL DEFAULT 1,
      ds_calc_dir TEXT NOT NULL,
-     pdi INTEGER NOT NULL DEFAULT 0)'''
+     pid INTEGER NOT NULL DEFAULT 0)'''
 
 
 def upgrade(conn, job_sql=job_sql):
