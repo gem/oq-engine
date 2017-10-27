@@ -626,10 +626,11 @@ class Starmap(object):
         the arguments by pickling them if pickle is True.
         """
         for task_no, args in enumerate(iterargs, 1):
-            if isinstance(args[-1], Monitor):
+            mon = args[-1]
+            if isinstance(mon, Monitor):
                 # add incremental task number and task weight
-                args[-1].task_no = task_no
-                args[-1].weight = getattr(args[0], 'weight', 1.)
+                mon.task_no = task_no
+                mon.weight = getattr(args[0], 'weight', 1.)
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}

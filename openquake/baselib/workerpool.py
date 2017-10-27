@@ -25,7 +25,6 @@ def manage_abort(calc_id, dbserver_url):
         job = z.send(dbserver_url, 'get_job', calc_id)
         if job.status == 'canceled':
             raise JobCanceled(calc_id)
-    print('registering abort for %d' % calc_id)
     try:
         # register the abort handler
         signal.signal(signal.SIGABRT, abort)
