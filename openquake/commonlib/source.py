@@ -24,7 +24,6 @@ import math
 import logging
 import operator
 import collections
-import random
 
 import h5py
 import numpy
