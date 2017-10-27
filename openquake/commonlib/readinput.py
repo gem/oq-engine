@@ -919,8 +919,15 @@ def get_gmfs(oqparam):
                 missing_sids)
         N = len(sitecol)
         gmfs = numpy.zeros((R, N, E, M), F32)
+        counter = collections.Counter()
         for row in array.view(dtlist):
-            gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
+            key = row['rlzi'], row['sid'], eidx[row['eid']]
+            gmfs[key] = row['gmv']
+            counter[key] += 1
+        dupl = [key for key in counter if counter[key] > 1]
+        if dupl:
+            raise InvalidFile('Duplicated (rlzi, sid, eid) in the GMFs file: '
+                              '%s' % dupl)
     elif fname.endswith('.xml'):
         eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
         N, E = gmfs_by_imt.shape
