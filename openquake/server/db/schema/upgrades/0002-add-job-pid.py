@@ -1,5 +1,5 @@
 # since the ALTER TABLE command in sqlite is limited, we need this
-# script add a pid column to the job table
+# script to add a pid column to the job table
 # see https://www.sqlite.org/lang_altertable.html for an explanation
 
 job_sql = '''CREATE TABLE job(
