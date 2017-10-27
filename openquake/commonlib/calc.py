@@ -209,12 +209,14 @@ class PmapGetter(object):
 
     def get_mean(self, grp=None):
         """
-        Extract the mean curve as a ProbabilityMap
+        Compute the mean curve as a ProbabilityMap
 
         :param grp:
             if not None must be a string of the form "grp-XX"; in that case
             returns the mean considering only the contribution for group XX
         """
+        if self.sids is None:
+            self.sids = self.dstore['sitecol'].complete.sids
         if len(self.weights) == 1:  # one realization
             return self.get(self.sids, 0, grp)
         else:  # multiple realizations, assume hcurves/mean is there
