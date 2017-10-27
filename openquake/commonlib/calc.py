@@ -218,10 +218,9 @@ class PmapGetter(object):
         if len(self.weights) == 1:  # one realization
             return self.get(self.sids, 0, grp)
         else:  # multiple realizations, assume hcurves/mean is there
-            return (self.dstore['hcurves/mean'] if grp is None
-                    else self.rlzs_assoc.compute_pmap_stats(
-                            {grp: self.dstore['poes/' + grp]},
-                            [stats.mean_curve]))
+            dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
+                   if grp is None else {grp: self.dstore['poes/' + grp]})
+            return self.rlzs_assoc.compute_pmap_stats(dic, [stats.mean_curve])
 
 # ######################### hazard maps ################################### #
 
