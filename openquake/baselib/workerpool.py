@@ -53,7 +53,7 @@ def safely_call(func, args):
         mon = args[-1] if isinstance(args[-1], Monitor) else Monitor()
         mon.children.append(child)  # child is a child of mon
         child.hdf5path = mon.hdf5path
-        if hasattr(mon, 'dbserver_url'):  # set by _starmap
+        if mon.calc_id and hasattr(mon, 'dbserver_url'):  # set by _starmap
             manage_abort(mon.calc_id, mon.dbserver_url)
 
         # FIXME: check_mem_usage is disabled here because it is causing
