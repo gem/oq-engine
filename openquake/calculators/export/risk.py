@@ -227,8 +227,8 @@ def export_agg_losses_ebr(ekey, dstore):
         if has_rup_data:
             ruptures = calc.get_ruptures(dstore, the_events, grp_id)
             rup_data.update(get_rup_data(ruptures))
-    for i, row in enumerate(agg_losses):
-        rec = elt[i]
+    for r, row in enumerate(agg_losses):
+        rec = elt[r]
         event = event_by_eid[row['eid']]
         rec['event_id'] = event['eid']
         rec['year'] = event['year']
@@ -316,18 +316,6 @@ def export_damages_csv(ekey, dstore):
     for tag, values in zip(tags, value.T):
         fname = dstore.build_fname('damages', tag, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
-    return writer.getsaved()
-
-
-@export.add(('losses_total', 'csv'))
-@depr('This output will be removed soon')
-def export_losses_total_csv(ekey, dstore):
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    value = dstore[ekey[0]].value
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz, values in zip(rlzs, value):
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        writer.save(numpy.array([values], value.dtype), fname)
     return writer.getsaved()
 
 
@@ -516,21 +504,7 @@ def get_paths(rlz):
     return dic
 
 
-# used by scenario_damage
-@export.add(('losses_by_tag', 'csv'))
-@depr('This output will be removed soon')
-def export_csq_by_tag_csv(ekey, dstore):
-    tags = add_quotes(dstore['assetcol'].tags())
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    value = dstore[ekey[0]].value  # matrix T x R
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        writer.save(compose_arrays(tags, values, 'tag'), fname)
-    return writer.getsaved()
-
-
-# used by event_based_risk and scenario_risk
+# used by event_based_risk
 @export.add(('losses_by_tag-rlzs', 'csv'), ('losses_by_tag-stats', 'csv'))
 @depr('This output will be removed soon')
 def export_losses_by_tag_csv(ekey, dstore):
