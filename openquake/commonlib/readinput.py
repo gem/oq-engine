@@ -900,8 +900,6 @@ def get_gmfs(oqparam):
         assert num_gmv == I, (num_gmv, I)
         dtlist.append(('gmv', (F32, num_gmv)))
         eids = numpy.unique(array['eid'])
-        assert len(eids) == oqparam.number_of_ground_motion_fields, (
-            len(eids), oqparam.number_of_ground_motion_fields)
         eidx = {eid: e for e, eid in enumerate(eids)}
         N = len(get_site_collection(oqparam))
         gmfs = numpy.zeros((R, N, len(eids), I), F32)
