@@ -15,6 +15,25 @@ except ImportError:
         "Do nothing"
 
 
+def manage_abort(calc_id, dbserver_url):
+    """
+    Register a callback for SIGABRT that raises a JobCanceled exception if
+    the given calculation has status 'canceled' in the database (assuming
+    the dbserver is up)
+    """
+    def abort(signum, stack):
+        job = z.send(dbserver_url, 'get_job', calc_id)
+        if job.status == 'canceled':
+            raise JobCanceled(calc_id)
+    print('registering abort for %d' % calc_id)
+    try:
+        # register the abort handler
+        signal.signal(signal.SIGABRT, abort)
+    except ValueError:
+        # if you are in a thread, do not register the handler
+        pass
+
+
 def safely_call(func, args):
     """
     Call the given function with the given arguments safely, i.e.
@@ -34,20 +53,8 @@ def safely_call(func, args):
         mon = args[-1] if isinstance(args[-1], Monitor) else Monitor()
         mon.children.append(child)  # child is a child of mon
         child.hdf5path = mon.hdf5path
-        calc_id = mon.calc_id
-
-        def abort(signum, stack):
-            # raise a JobCanceled exception if the current job has status
-            # 'canceled' in the database (assuming the dbserver is up)
-            job = z.send(mon.dbserver_url, 'get_job', calc_id)
-            if job.status == 'canceled':
-                raise JobCanceled(calc_id)
-        try:
-            # register the abort handler
-            signal.signal(signal.SIGABRT, abort)
-        except ValueError:
-            # if you are in a thread, do not register the handler
-            pass
+        if hasattr(mon, 'dbserver_url'):  # set by _starmap
+            manage_abort(mon.calc_id, mon.dbserver_url)
 
         # FIXME: check_mem_usage is disabled here because it is causing
         # dead locks in threads when log messages are sent
@@ -202,7 +209,7 @@ class WorkerPool(object):
     :param num_workers: a string with the number of workers (or '-1')
     """
     signal = {'term': signal.SIGTERM, 'kill': signal.SIGKILL,
-              'cancel': signal.SIGUSR1}
+              'cancel': signal.SIGABRT}
 
     def __init__(self, ctrl_url, task_out_port, num_workers='-1'):
         self.ctrl_url = ctrl_url
@@ -260,8 +267,8 @@ class WorkerPool(object):
         Send a SIGTERM/SIGKILL/SIGUSR1 to all worker processes
 
         :param cmd:
-            the string 'term' for SIGTERM, 'kill' for SIGKILL, 'cancel' for
-            SIGUSR1
+            the string 'term' for SIGTERM, 'kill' for SIGKILL,
+            'cancel' for SIGABRT
         """
         sig = self.signal[cmd]
         for pid in self.running:

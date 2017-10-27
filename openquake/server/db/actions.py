@@ -78,7 +78,8 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
+def create_job(db, calc_mode, description, user_name, datadir,
+               hc_id=None, pid=0):
     """
     Create job for the given user, return it.
 
@@ -94,6 +95,8 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
          Description of the calculation
     :param hc_id:
         If not None, then the created job is a risk job
+    :param pid:
+        ID of the process running the job
     :returns:
         :class:`openquake.server.db.models.OqJob` instance.
     """
@@ -103,6 +106,7 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
                description=description,
                user_name=user_name,
                hazard_calculation_id=hc_id,
+               pid=pid,
                is_running=0,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     job_id = db('INSERT INTO job (?S) VALUES (?X)',

@@ -16,7 +16,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
+import signal
 from openquake.baselib import sap, config, workerpool
 from openquake.commonlib import logs
 
@@ -32,6 +34,7 @@ def stop(job_id):
     elif job.status not in ('executing', 'running'):
         sys.exit('Job %d is %s' % (job_id, job.status))
     logs.dbcmd('set_status', job_id, 'canceled')
+    os.kill(job.pid, signal.SIGABRT)
     master = workerpool.WorkerMaster(**config.zworkers)
     master.stop('cancel')
     print('%d canceled' % job_id)
