@@ -20,7 +20,7 @@ from __future__ import print_function
 import os
 import sys
 from django.core.management import execute_from_command_line
-from openquake.server import executor, dbserver
+from openquake.server import dbserver
 from openquake.server.db import actions
 from openquake.commonlib import logs
 
@@ -52,5 +52,4 @@ if __name__ == "__main__":
         logs.dbcmd('upgrade_db')  # make sure the DB exists
         logs.dbcmd('reset_is_running')  # reset the flag is_running
 
-    with executor:
-        execute_from_command_line(sys.argv)
+    execute_from_command_line(sys.argv)
