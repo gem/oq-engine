@@ -18,12 +18,12 @@ except ImportError:
 def manage_abort(calc_id, dbserver_url):
     """
     Register a callback for SIGABRT that raises a JobCanceled exception if
-    the given calculation has status 'canceled' in the database (assuming
+    the given calculation has status 'aborted' in the database (assuming
     the dbserver is up)
     """
     def abort(signum, stack):
         job = z.send(dbserver_url, 'get_job', calc_id)
-        if job.status == 'canceled':
+        if job.status == 'aborted':
             raise JobCanceled(calc_id)
     try:
         # register the abort handler
@@ -169,7 +169,7 @@ class WorkerMaster(object):
 
     def stop(self, cmd='term', calc_id=0):
         """
-        Send a "term", "kill" or "cancel" command to all worker pools
+        Send a "term", "kill" or "abort" command to all worker pools
         """
         stopped = []
         for host, _ in self.host_cores:
@@ -194,7 +194,7 @@ class WorkerMaster(object):
 class JobCanceled(Exception):
     """
     Raised when a worker receives a SIGUSR1 and the currently running job
-    has status 'canceled'.
+    has status 'aborted'.
     """
 
 
@@ -208,7 +208,7 @@ class WorkerPool(object):
     :param num_workers: a string with the number of workers (or '-1')
     """
     signal = {'term': signal.SIGTERM, 'kill': signal.SIGKILL,
-              'cancel': signal.SIGABRT}
+              'abort': signal.SIGABRT}
 
     def __init__(self, ctrl_url, task_out_port, num_workers='-1'):
         self.ctrl_url = ctrl_url
@@ -251,7 +251,7 @@ class WorkerPool(object):
             if msg in ('term', 'kill'):
                 ctrlsock.send(self.stop(msg))
                 break  # unconditional stop/kill
-            elif msg == 'cancel':
+            elif msg == 'abort':
                 ctrlsock.send(self.stop(msg))
             elif msg == 'getpid':
                 ctrlsock.send(self.pid)
@@ -267,7 +267,7 @@ class WorkerPool(object):
 
         :param cmd:
             the string 'term' for SIGTERM, 'kill' for SIGKILL,
-            'cancel' for SIGABRT
+            'abort' for SIGABRT
         """
         sig = self.signal[cmd]
         for pid in self.running:

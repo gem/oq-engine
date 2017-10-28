@@ -33,10 +33,10 @@ def stop(job_id):
         sys.exit('There is no job %d' % job_id)
     elif job.status not in ('executing', 'running'):
         sys.exit('Job %d is %s' % (job_id, job.status))
-    logs.dbcmd('set_status', job_id, 'canceled')
+    logs.dbcmd('set_status', job_id, 'aborted')
     os.kill(job.pid, signal.SIGABRT)
     master = workerpool.WorkerMaster(**config.zworkers)
-    master.stop('cancel')
-    print('%d canceled' % job_id)
+    master.stop('abort')
+    print('%d aborted' % job_id)
 
 stop.arg('job_id', 'job ID', type=int)
