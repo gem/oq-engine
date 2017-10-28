@@ -22,6 +22,7 @@ import logging
 import os
 import inspect
 import tempfile
+import multiprocessing
 try:
     import urllib.parse as urlparse
 except ImportError:
@@ -50,7 +51,7 @@ from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
-from openquake.server import executor, utils, dbapi
+from openquake.server import utils, dbapi
 
 from django.conf import settings
 if settings.LOCKDOWN:
@@ -424,9 +425,7 @@ def run_calc(request):
 
     user = utils.get_user_data(request)
     try:
-        job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
-        # restart the process pool at the end of each job
-        fut .add_done_callback(lambda f: Starmap.restart())
+        job_id, _pid = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -444,12 +443,14 @@ def submit_job(job_ini, user_name, hazard_job_id=None,
                loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
     """
     Create a job object from the given job.ini file in the job directory
-    and submit it to the job queue. Returns the job ID.
+    and run it in a new process. Returns the job ID and PID.
     """
     job_id, oqparam = engine.job_from_file(job_ini, user_name, hazard_job_id)
-    fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
-                          logfile, exports, hazard_job_id)
-    return job_id, fut
+    proc = multiprocessing.Process(
+        target=engine.run_calc,
+        args=(job_id, oqparam, loglevel, logfile, exports, hazard_job_id))
+    proc.start()
+    return job_id, proc.pid
 
 
 @require_http_methods(['GET'])
