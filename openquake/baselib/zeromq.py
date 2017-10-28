@@ -140,7 +140,10 @@ class Socket(object):
         """
         self.zsocket.send_pyobj(obj)
         if self.socket_type == zmq.REQ:
-            return self.zsocket.recv_pyobj()
+            try:
+                return self.zsocket.recv_pyobj()
+            except (KeyboardInterrupt, zmq.ZMQError) as exc:
+                return (exc, exc.__class__, None)
 
     def __repr__(self):
         return '<%s %s %s %s>' % (self.__class__.__name__, self.end_point,
