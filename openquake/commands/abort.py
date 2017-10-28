@@ -19,14 +19,15 @@
 import os
 import sys
 import signal
+import psutil
 from openquake.baselib import sap, config, workerpool
 from openquake.commonlib import logs
 
 
 @sap.Script
-def stop(job_id):
+def abort(job_id):
     """
-    Cancel the given job
+    Abort the given job
     """
     job = logs.dbcmd('get_job', job_id)
     if job is None:
@@ -34,9 +35,11 @@ def stop(job_id):
     elif job.status not in ('executing', 'running'):
         sys.exit('Job %d is %s' % (job_id, job.status))
     logs.dbcmd('set_status', job_id, 'aborted')
-    os.kill(job.pid, signal.SIGABRT)
-    master = workerpool.WorkerMaster(**config.zworkers)
-    master.stop('abort')
+    name = 'oq-job-%d' % job_id
+    for p in psutil.process_iter():
+        if p.name() == name:
+            os.kill(p.pid, signal.SIGABRT)
+    workerpool.WorkerMaster(**config.zworkers).stop('abort')
     print('%d aborted' % job_id)
 
-stop.arg('job_id', 'job ID', type=int)
+abort.arg('job_id', 'job ID', type=int)

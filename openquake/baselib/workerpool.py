@@ -17,14 +17,14 @@ except ImportError:
 
 def manage_abort(calc_id, dbserver_url):
     """
-    Register a callback for SIGABRT that raises a JobCanceled exception if
+    Register a callback for SIGABRT that raises a JobAborted exception if
     the given calculation has status 'aborted' in the database (assuming
     the dbserver is up)
     """
     def abort(signum, stack):
         job = z.send(dbserver_url, 'get_job', calc_id)
         if job.status == 'aborted':
-            raise JobCanceled(calc_id)
+            raise JobAborted(calc_id)
     try:
         # register the abort handler
         signal.signal(signal.SIGABRT, abort)
@@ -191,7 +191,7 @@ class WorkerMaster(object):
         return 'restarted'
 
 
-class JobCanceled(Exception):
+class JobAborted(Exception):
     """
     Raised when a worker receives a SIGUSR1 and the currently running job
     has status 'aborted'.

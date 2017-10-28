@@ -26,7 +26,11 @@ import json
 import signal
 import traceback
 import platform
-
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
@@ -201,7 +205,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     oq = readinput.get_oqparam(cfg_file, hc_id=hazard_calculation_id)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
                         username, datastore.get_datadir(),
-                        hazard_calculation_id, os.getpid())
+                        hazard_calculation_id)
     return job_id, oq
 
 
@@ -223,6 +227,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     :param exports:
         A comma-separated string of export types.
     """
+    setproctitle('oq-job-%d' % job_id)
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
         if os.environ.get('OQ_DISTRIBUTE') in ('zmq', 'celery'):
