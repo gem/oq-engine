@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fixed a bug in gmf_ebrisk when the GMF file contains zeros and added more
+  * Fixed a bug in gmf_ebrisk when there are zero losses and added more
     validity checks on the CSV file
   * The parameter `number_of_ground_motion_fields` is back to being optional in
     scenario calculators reading the GMFs from a file, since it can be inferred
