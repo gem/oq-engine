@@ -314,7 +314,6 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
         if self.is_stochastic:  # disable tiling
             num_tiles = 1
         else:
@@ -330,9 +329,6 @@ class PSHACalculator(base.HazardCalculator):
             numheavy = len(self.csm.get_sources('heavy', maxweight))
             logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                          maxweight, numheavy, len(tiles))
-        sm_by_grp = self.csm.info.get_sm_by_grp()
-        num_tasks = 0
-        num_sources = 0
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -347,30 +343,39 @@ class PSHACalculator(base.HazardCalculator):
                 maximum_distance=oq.maximum_distance,
                 disagg=oq.poes_disagg or oq.iml_disagg,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-            for sm in csm.source_models:
-                for sg in sm.src_groups:
-                    gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                    if num_tiles <= 1:
-                        logging.info(
-                            'Sending source group #%d of %d (%s, %d sources)',
-                            sg.id + 1, ngroups, sg.trt, len(sg.sources))
-                    if oq.poes_disagg or oq.iml_disagg:  # only for disagg
-                        param['sm_id'] = sm_by_grp[sg.id]
-                    if sg.src_interdep == 'mutex':  # do not split the group
-                        self.csm.add_infos(sg.sources)
-                        sg.samples = sm.samples
-                        yield sg, src_filter, gsims, param, monitor
-                        num_tasks += 1
-                        num_sources += len(sg)
-                    else:
-                        for block in self.csm.split_sources(
-                                sg.sources, src_filter, maxweight):
-                            block.samples = sm.samples
-                            yield block, src_filter, gsims, param, monitor
-                            num_tasks += 1
-                            num_sources += len(block)
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+            for args in self._args_by_grp(
+                    csm, src_filter, param, num_tiles, maxweight):
+                yield args + (monitor,)
         source.split_map.clear()
+
+    def _args_by_grp(self, csm, src_filter, param, num_tiles, maxweight):
+        oq = self.oqparam
+        ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
+        num_tasks = 0
+        num_sources = 0
+        for sm in csm.source_models:
+            if oq.poes_disagg or oq.iml_disagg:  # only for disagg
+                param['sm_id'] = sm.ordinal
+            for sg in sm.src_groups:
+                gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
+                if num_tiles <= 1:
+                    logging.info(
+                        'Sending source group #%d of %d (%s, %d sources)',
+                        sg.id + 1, ngroups, sg.trt, len(sg.sources))
+                if sg.src_interdep == 'mutex':  # do not split the group
+                    self.csm.add_infos(sg.sources)
+                    sg.samples = sm.samples
+                    yield sg, src_filter, gsims, param
+                    num_tasks += 1
+                    num_sources += len(sg)
+                else:
+                    for block in self.csm.split_sources(
+                            sg.sources, src_filter, maxweight):
+                        block.samples = sm.samples
+                        yield block, src_filter, gsims, param
+                        num_tasks += 1
+                        num_sources += len(block)
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source
