@@ -140,31 +140,8 @@ class RlzsAssoc(object):
         self.num_samples = csm_info.num_samples
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
-        self.trt_by_grp = csm_info.grp_trt()
-        self.gsim_lt = csm_info.gsim_lt
         self.rlzs_by_gsim = {}  # dict grp_id -> dict
-        if self.num_samples:
-            self.gsim_rlzs = csm_info.gsim_rlzs
-            self.seed_samples_by_grp = {}
-            seed = self.seed
-            for sm in csm_info.source_models:
-                for grp in sm.src_groups:
-                    self.seed_samples_by_grp[grp.id] = seed, sm.samples
-                seed += sm.samples
-
-    def get_gsims(self, grp_id):
-        """
-        Get the GSIMs associated with the given group
-        """
-        trt = self.trt_by_grp[grp_id]
-        if self.num_samples:  # sampling
-            seed, samples = self.seed_samples_by_grp[grp_id]
-            numpy.random.seed(seed)
-            idxs = numpy.random.choice(len(self.gsim_rlzs), samples)
-            rlzs = [self.gsim_rlzs[i] for i in idxs]
-        else:  # full enumeration
-            rlzs = None
-        return self.gsim_lt.get_gsims(trt, rlzs)
+        self.get_gsims = csm_info.get_gsims
 
     def _init(self):
         """
@@ -335,6 +312,17 @@ class CompositionInfo(object):
         self.num_samples = num_samples
         self.source_models = source_models
         self.tot_weight = tot_weight
+        self.init()
+
+    def init(self):
+        self.trt_by_grp = self.grp_trt()
+        if self.num_samples:
+            self.seed_samples_by_grp = {}
+            seed = self.seed
+            for sm in self.source_models:
+                for grp in sm.src_groups:
+                    self.seed_samples_by_grp[grp.id] = seed, sm.samples
+                seed += sm.samples
 
     @property
     def gsim_rlzs(self):
@@ -346,6 +334,20 @@ class CompositionInfo(object):
         except AttributeError:
             self._gsim_rlzs = list(self.gsim_lt)
             return self._gsim_rlzs
+
+    def get_gsims(self, grp_id):
+        """
+        Get the GSIMs associated with the given group
+        """
+        trt = self.trt_by_grp[grp_id]
+        if self.num_samples:  # sampling
+            seed, samples = self.seed_samples_by_grp[grp_id]
+            numpy.random.seed(seed)
+            idxs = numpy.random.choice(len(self.gsim_rlzs), samples)
+            rlzs = [self.gsim_rlzs[i] for i in idxs]
+        else:  # full enumeration
+            rlzs = None
+        return self.gsim_lt.get_gsims(trt, rlzs)
 
     def get_info(self, sm_id):
         """
@@ -427,6 +429,7 @@ class CompositionInfo(object):
                 rec['name'], rec['weight'], path, srcgroups,
                 num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
+        self.init()
         try:
             os.remove(tmp)  # gsim_lt file
         except NameError:  # tmp is defined only in the regular case, see above
