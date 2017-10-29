@@ -590,10 +590,10 @@ def view_required_params_per_trt(token, dstore):
     """
     Display the parameters needed by each tectonic region type
     """
-    gsims_per_grp_id = sorted(
-        dstore['csm_info'].get_rlzs_assoc().gsims_by_grp_id.items())
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     tbl = []
-    for grp_id, gsims in gsims_per_grp_id:
+    for grp_id, trt in sorted(rlzs_assoc.trt_by_grp.items()):
+        gsims = rlzs_assoc.gsim_lt.get_gsims(trt)
         maker = ContextMaker(gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
