@@ -349,8 +349,6 @@ class PSHACalculator(base.HazardCalculator):
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
             for sm in csm.source_models:
                 for sg in sm.src_groups:
-                    for src in sg:
-                        src.samples = sm.samples
                     gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                     if num_tiles <= 1:
                         logging.info(
@@ -360,12 +358,14 @@ class PSHACalculator(base.HazardCalculator):
                         param['sm_id'] = sm_by_grp[sg.id]
                     if sg.src_interdep == 'mutex':  # do not split the group
                         self.csm.add_infos(sg.sources)
+                        sg.samples = sm.samples
                         yield sg, src_filter, gsims, param, monitor
                         num_tasks += 1
                         num_sources += len(sg)
                     else:
                         for block in self.csm.split_sources(
                                 sg.sources, src_filter, maxweight):
+                            block.samples = sm.samples
                             yield block, src_filter, gsims, param, monitor
                             num_tasks += 1
                             num_sources += len(block)

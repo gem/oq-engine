@@ -30,7 +30,8 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array, block_splitter, writetmp
+from openquake.baselib.general import (
+    groupby, group_array, block_splitter, writetmp, AccumDict)
 from openquake.hazardlib import (
     nrml, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.commonlib import logictree
@@ -717,6 +718,15 @@ class CompositeSourceModel(collections.Sequence):
                 elif kind == 'heavy' and src.weight > maxweight:
                     sources.append(src)
         return sources
+
+    def get_sources_by_trt(self):
+        """
+        Build a dictionary TRT string -> [{source_id: sources}, ...]
+        """
+        acc = AccumDict(accum=[])
+        for grp in self.src_groups:
+            acc[grp.trt].extend(grp)
+        return {trt: groupby(acc[trt], lambda x: x.source_id) for trt in acc}
 
     def get_num_sources(self):
         """
