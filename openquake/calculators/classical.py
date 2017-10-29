@@ -336,7 +336,6 @@ class PSHACalculator(base.HazardCalculator):
 
         num_tasks = 0
         num_sources = 0
-        get_gsims = self.csm.info.gsim_lt.get_gsims
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -354,7 +353,7 @@ class PSHACalculator(base.HazardCalculator):
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for sg in sm.src_groups:
-                    gsims = get_gsims(sg.trt)
+                    gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                     if num_tiles <= 1:
                         logging.info(
                             'Sending source group #%d of %d (%s, %d sources)',
