@@ -24,7 +24,6 @@ import math
 import logging
 import operator
 import collections
-import random
 
 import h5py
 import numpy
@@ -141,14 +140,17 @@ class RlzsAssoc(object):
         self.num_samples = csm_info.num_samples
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
-        self.gsims_by_grp_id = csm_info.get_gsims_by_grp()
+        self.trt_by_grp = csm_info.grp_trt()
+        self.gsim_lt = csm_info.gsim_lt
         self.rlzs_by_gsim = {}  # dict grp_id -> dict
+
+    def get_gsims(self, grp_id):
+        return self.gsim_lt.get_gsims(self.trt_by_grp[grp_id])
 
     def _init(self):
         """
         Finalize the initialization of the RlzsAssoc object by setting
-        the (reduced) weights of the realizations and the attribute
-        gsims_by_grp_id.
+        the (reduced) weights of the realizations.
         """
         if self.num_samples:
             assert len(self.realizations) == self.num_samples, (
@@ -169,7 +171,7 @@ class RlzsAssoc(object):
         # populate rlzs_by_gsim
         for grp, arr in self.array.items():
             grp_id = int(grp[4:])
-            gsims = self.gsims_by_grp_id[grp_id]
+            gsims = self.get_gsims(grp_id)
             self.rlzs_by_gsim[grp_id] = collections.OrderedDict(
                 (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
 
@@ -236,7 +238,7 @@ class RlzsAssoc(object):
             grp_id = int(grp[4:])
             for rec in self.array[grp]:
                 rlzs = rec['rlzis']
-                gsim = self.gsims_by_grp_id[grp_id][rec['gsim_idx']]
+                gsim = self.get_gsims(grp_id)[rec['gsim_idx']]
                 if len(rlzs) > 10:  # short representation
                     rlzs = ['%d realizations' % len(rlzs)]
                 pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
@@ -325,20 +327,6 @@ class CompositionInfo(object):
         num_samples = sm.samples if self.num_samples else 0
         return self.__class__(
             self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
-
-    def get_gsims_by_grp(self):
-        """
-        :returns: dictionary grp_id -> gsims
-        """
-        gsims_by_grp = {}
-        idx = 0
-        for sm in self.source_models:
-            rlzs, allgsims = self._get_rlzs_gsims(
-                sm, self.gsim_lt, self.seed + idx)
-            idx += len(rlzs)
-            for sg, gsims in zip(sm.src_groups, allgsims):
-                gsims_by_grp[sg.id] = gsims
-        return gsims_by_grp
 
     def get_samples_by_grp(self):
         """
