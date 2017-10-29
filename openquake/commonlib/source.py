@@ -722,9 +722,11 @@ class CompositeSourceModel(collections.Sequence):
     def get_sources_by_trt(self):
         """
         Build a dictionary TRT string -> [{source_id: sources}, ...]
+        NB: use this function only in absence of mutex groups
         """
         acc = AccumDict(accum=[])
         for grp in self.src_groups:
+            assert grp.src_interdep != 'mutex', grp
             acc[grp.trt].extend(grp)
         return {trt: groupby(acc[trt], lambda x: x.source_id) for trt in acc}
 
