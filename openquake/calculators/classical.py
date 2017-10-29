@@ -262,11 +262,11 @@ class PSHACalculator(base.HazardCalculator):
         """
         Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        gsims_by_grp = self.csm.info.get_gsims_by_grp()
+        csm_info = self.csm.info
         zd = AccumDict()
         num_levels = len(self.oqparam.imtls.array)
         for grp in self.csm.src_groups:
-            num_gsims = len(gsims_by_grp[grp.id])
+            num_gsims = len(csm_info.gsim_lt.get_gsims(grp.trt))
             zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
@@ -331,12 +331,12 @@ class PSHACalculator(base.HazardCalculator):
             numheavy = len(self.csm.get_sources('heavy', maxweight))
             logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                          maxweight, numheavy, len(tiles))
-        gsims_by_grp = self.csm.info.get_gsims_by_grp()
         sm_ids = {sg.id: sm.ordinal for sm in self.csm.info.source_models
                   for sg in sm.src_groups}
 
         num_tasks = 0
         num_sources = 0
+        get_gsims = self.csm.info.gsim_lt.get_gsims
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -354,7 +354,7 @@ class PSHACalculator(base.HazardCalculator):
                     samples=sm.samples, seed=oq.ses_seed,
                     ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for sg in sm.src_groups:
-                    gsims = gsims_by_grp[sg.id]
+                    gsims = get_gsims(sg.trt)
                     if num_tiles <= 1:
                         logging.info(
                             'Sending source group #%d of %d (%s, %d sources)',
