@@ -185,11 +185,10 @@ def classical(sources, src_filter, gsims, param, monitor):
     """
     truncation_level = param['truncation_level']
     imtls = param['imtls']
-    src_group_id = sources[0].src_group_id
-    assert src_group_id is not None
-    # sanity check: the src_group must be the same for all sources
+    trt = sources[0].tectonic_region_type
+    # sanity check: the trt must be the same for all sources
     for src in sources[1:]:
-        assert src.src_group_id == src_group_id
+        assert src.tectonic_region_type == trt
     if param['disagg']:
         sm_id = param['sm_id']
         bbs = [BoundingBox(sm_id, sid) for sid in src_filter.sitecol.sids]
@@ -342,15 +341,16 @@ class PSHACalculator(base.HazardCalculator):
                     csm = self.csm.filter(src_filter)
             else:
                 src_filter = self.src_filter
+            param = dict(
+                truncation_level=oq.truncation_level,
+                imtls=oq.imtls, seed=oq.ses_seed,
+                maximum_distance=oq.maximum_distance,
+                disagg=oq.poes_disagg or oq.iml_disagg,
+                ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
             for sm in csm.source_models:
-                param = dict(
-                    truncation_level=oq.truncation_level,
-                    imtls=oq.imtls,
-                    maximum_distance=oq.maximum_distance,
-                    disagg=oq.poes_disagg or oq.iml_disagg,
-                    samples=sm.samples, seed=oq.ses_seed,
-                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for sg in sm.src_groups:
+                    for src in sg:
+                        src.samples = sm.samples
                     gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                     if num_tiles <= 1:
                         logging.info(
