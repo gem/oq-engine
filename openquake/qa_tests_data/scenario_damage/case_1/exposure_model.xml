@@ -8,6 +8,7 @@
         <costType name="structural" unit="USD" type="aggregated"/>
       </costTypes>
     </conversions>
+    <tagNames>CRESTA region</tagNames>
     <assets>
       <asset id="a1" taxonomy="RM" number="3000">
         <location lon="15.48" lat="38.09"/>
@@ -20,6 +21,7 @@
         <costs>
           <cost type="structural" value="2000"/>
         </costs>
+        <tags CRESTA="01.1" region="Alhué" />
       </asset>
       <asset id="a3" taxonomy="RM" number="1000">
         <location lon="15.48" lat="38.25"/>

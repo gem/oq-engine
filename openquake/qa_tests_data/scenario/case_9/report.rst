@@ -1,11 +1,11 @@
 Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_1769.hdf5 Fri Jul  7 07:32:11 2017
-checksum32                               2,404,162,686           
-engine_version                           2.6.0-git50066b9        
-======================================== ========================
+============== ===================
+checksum32     2,404,162,686      
+date           2017-10-24T05:47:09
+engine_version 2.8.0-git8e9cdf8   
+============== ===================
 
 num_sites = 3, num_imts = 1
 
@@ -39,19 +39,11 @@ rupture_model   `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    simple(2)       2/2             
-========= ====== ================= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== ======================================= ========== ========== ==============
-grp_id gsims                                   distances  siteparams ruptparams    
-====== ======================================= ========== ========== ==============
-0      LinLee2008SSlab() YoungsEtAl1997SSlab() rhypo rrup vs30       hypo_depth mag
-====== ======================================= ========== ========== ==============
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  simple(2)       2/2             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,14 +51,13 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,LinLee2008SSlab(): ['<0,b_1~b1,w=0.6>']
-  0,YoungsEtAl1997SSlab(): ['<1,b_1~b2,w=0.4>']>
+  0,LinLee2008SSlab(): [0]
+  0,YoungsEtAl1997SSlab(): [1]>
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-reading site collection 3.123E-05 0.0       1     
+reading site collection 3.076E-05 0.0       1     
 ======================= ========= ========= ======

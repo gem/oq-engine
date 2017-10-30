@@ -21,6 +21,7 @@ Here there are some real functional tests starting an engine server and
 running computations.
 """
 from __future__ import print_function
+import io
 import os
 import re
 import sys
@@ -30,18 +31,20 @@ import unittest
 import subprocess
 import tempfile
 import requests
-from openquake.baselib.general import writetmp
+import numpy
+from openquake.baselib.general import writetmp, _get_free_port
 from openquake.engine.export import core
 from openquake.server.db import actions
-from openquake.server.manage import db
+from openquake.server.dbserver import db
 from openquake.server.settings import DATABASE
+from openquake.server.utils import check_webserver_running
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
 
 
 class EngineServerTestCase(unittest.TestCase):
-    hostport = 'localhost:8761'
+    hostport = 'localhost:%d' % _get_free_port()
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
@@ -122,7 +125,7 @@ class EngineServerTestCase(unittest.TestCase):
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'],
             env=env, stderr=cls.fd)  # redirect the server logs
-        time.sleep(5)
+        check_webserver_running('http://%s' % cls.hostport)
 
     @classmethod
     def tearDownClass(cls):
@@ -155,6 +158,27 @@ class EngineServerTestCase(unittest.TestCase):
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
 
+        extract_url = 'http://%s/v1/calc/%s/extract/' % (self.hostport, job_id)
+
+        # check extract/composite_risk_model.attrs
+        url = extract_url + 'composite_risk_model.attrs'
+        self.assertEqual(requests.get(url).status_code, 200)
+
+        # check asset_values
+        resp = requests.get(extract_url + 'asset_values/0')
+        got = numpy.load(io.BytesIO(resp.content))  # load npz file
+        self.assertEqual(len(got['array']), 0)  # there are 0 assets on site 0
+        self.assertEqual(resp.status_code, 200)
+
+        # check avg_losses-rlzs
+        resp = requests.get(
+            extract_url + 'agglosses/structural?taxonomy=W-SLFB-1')
+        got = numpy.load(io.BytesIO(resp.content))  # load npz file
+        self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
+        self.assertEqual(resp.status_code, 200)
+
+        # TODO: check aggcurves
+
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
         datadir, dskeys = actions.get_results(db, job_id)
@@ -184,6 +208,12 @@ class EngineServerTestCase(unittest.TestCase):
         # check oqparam
         resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
         self.assertEqual(resp['calculation_mode'], 'classical')
+
+        # check the /extract endpoint
+        url = 'http://%s/v1/calc/%s/extract/hazard/rlzs' % (
+            self.hostport, job_id)
+        resp = requests.get(url)
+        self.assertEqual(resp.status_code, 200)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error

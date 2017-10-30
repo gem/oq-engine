@@ -72,7 +72,7 @@ class PointSource(ParametricSeismicSource):
 
     MODIFICATIONS = set(())
 
-    RUPTURE_WEIGHT = 1 / 10.
+    RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

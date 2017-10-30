@@ -16,11 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import logging
+import tempfile
 import numpy  # this is needed by the doctests, don't remove it
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.node import scientificformat
+from openquake.baselib.python3compat import encode
 
 FIVEDIGITS = '%.5E'
 
@@ -97,7 +100,10 @@ htranslator = HeaderTranslator(
     '(eid):uint32',
     '(eid-\d+):float32',
     '(year):uint32',
+    '(return_period):uint32',
+    '(site_id):uint32',
     '(taxonomy):\|S100',
+    '(tag):\|S100',
     '(multiplicity):uint16',
     '(magnitude):float32',
     '(centroid_lon):float32',
@@ -199,7 +205,7 @@ def extract_from(data, fields):
 
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     """
-    :param dest: file, filename or io.StringIO instance
+    :param dest: None, file, filename or io.BytesIO instance
     :param data: array to save
     :param sep: separator to use (default comma)
     :param fmt: formatting string (default '%12.8E')
@@ -211,13 +217,16 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     close = True
     if len(data) == 0:
         logging.warn('%s is empty', dest)
+    if dest is None:  # write on a temporary file
+        fd, dest = tempfile.mkstemp(suffix='.csv')
+        os.close(fd)
     if hasattr(dest, 'write'):
         # file-like object in append mode
         # it must be closed by client code
         close = False
     elif not hasattr(dest, 'getvalue'):
-        # not a StringIO, assume dest is a filename
-        dest = open(dest, 'w')
+        # not a BytesIO, assume dest is a filename
+        dest = open(dest, 'wb')
     try:
         # see if data is a composite numpy array
         data.dtype.fields
@@ -228,11 +237,11 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
         autoheader = build_header(data.dtype)
 
     if comment:
-        dest.write('# %s\n' % comment)
+        dest.write(encode('# %s\n' % comment))
 
     someheader = header or autoheader
     if header != 'no-header' and someheader:
-        dest.write(sep.join(htranslator.write(someheader)) + u'\n')
+        dest.write(encode(sep.join(htranslator.write(someheader)) + u'\n'))
 
     if autoheader:
         all_fields = [col.split(':', 1)[0].split('~')
@@ -245,11 +254,11 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
                     row.append('%.5f' % val)
                 else:
                     row.append(scientificformat(val, fmt))
-            dest.write(sep.join(row) + u'\n')
+            dest.write(encode(sep.join(row) + u'\n'))
     else:
         for row in data:
-            dest.write(sep.join(scientificformat(col, fmt)
-                                for col in row) + u'\n')
+            dest.write(encode(sep.join(scientificformat(col, fmt)
+                                       for col in row) + u'\n'))
     if hasattr(dest, 'getvalue'):
         return dest.getvalue()[:-1]  # a newline is strangely added
     elif close:

@@ -1,11 +1,11 @@
 scenario hazard
 ===============
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_1856.hdf5 Fri Jul  7 07:33:34 2017
-checksum32                               3,387,430,932           
-engine_version                           2.6.0-git50066b9        
-======================================== ========================
+============== ===================
+checksum32     3,387,430,932      
+date           2017-10-24T05:48:46
+engine_version 2.8.0-git8e9cdf8   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -39,19 +39,11 @@ rupture_model `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,7 +51,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): ['<0,b_1~b1,w=1.0>']>
+  0,BooreAtkinson2008(): [0]>
 
 Exposure model
 --------------
@@ -80,7 +72,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.006     0.0       1     
 reading exposure        0.005     0.0       1     
-reading site collection 4.292E-06 0.0       1     
+reading site collection 4.768E-06 0.0       1     
 ======================= ========= ========= ======

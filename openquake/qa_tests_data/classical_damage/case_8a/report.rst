@@ -1,11 +1,11 @@
 Classical PSHA-Based Hazard
 ===========================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1788.hdf5 Fri Jul  7 07:32:14 2017
-checksum32                                      343,519,400             
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+============== ===================
+checksum32     343,519,400        
+date           2017-10-24T05:47:13
+engine_version 2.8.0-git8e9cdf8   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -42,11 +42,11 @@ structural_fragility    `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ simple(2)       2/2             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  simple(2)       2/2             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -62,32 +62,32 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,AkkarBommer2010(): ['<1,b1~b2,w=0.5>']
-  0,SadighEtAl1997(): ['<0,b1~b1,w=0.5>']>
+  0,AkkarBommer2010(): [1]
+  0,SadighEtAl1997(): [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ============
 source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           1694         1,694       
+source_model.xml 0      Active Shallow Crust 1           1,694        1,694       
 ================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
-============================== ==================================================================================
-count_eff_ruptures.received    tot 5.89 KB, max_per_task 675 B                                                   
-count_eff_ruptures.sent        sources 11.13 KB, srcfilter 6.68 KB, param 6.29 KB, monitor 3.14 KB, gsims 1.64 KB
-hazard.input_weight            1694.0                                                                            
-hazard.n_imts                  1                                                                                 
-hazard.n_levels                8                                                                                 
-hazard.n_realizations          2                                                                                 
-hazard.n_sites                 1                                                                                 
-hazard.n_sources               1                                                                                 
-hazard.output_weight           8.0                                                                               
-hostname                       tstation.gem.lan                                                                  
-require_epsilons               False                                                                             
-============================== ==================================================================================
+=========================== ==================================================================================
+count_eff_ruptures.received tot 6.09 KB, max_per_task 730 B                                                   
+count_eff_ruptures.sent     sources 11.13 KB, srcfilter 6.68 KB, param 6.29 KB, monitor 3.19 KB, gsims 1.64 KB
+hazard.input_weight         1694.0                                                                            
+hazard.n_imts               1                                                                                 
+hazard.n_levels             8                                                                                 
+hazard.n_realizations       2                                                                                 
+hazard.n_sites              1                                                                                 
+hazard.n_sources            1                                                                                 
+hazard.output_weight        8.0                                                                               
+hostname                    tstation.gem.lan                                                                  
+require_epsilons            False                                                                             
+=========================== ==================================================================================
 
 Exposure model
 --------------
@@ -119,6 +119,10 @@ source_class      calc_time counts
 SimpleFaultSource 0.040     1     
 ================= ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
@@ -131,13 +135,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.081     0.0       1     
-total count_eff_ruptures       0.048     0.0       10    
-reading composite source model 0.006     0.0       1     
-reading exposure               0.004     0.0       1     
-store source_info              0.003     0.0       1     
+managing sources               0.107     0.0       1     
+total count_eff_ruptures       0.047     0.0       10    
+reading composite source model 0.007     0.0       1     
+reading exposure               0.006     0.0       1     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-aggregate curves               1.538E-04 0.0       10    
-saving probability maps        2.646E-05 0.0       1     
-reading site collection        5.245E-06 0.0       1     
+aggregate curves               1.976E-04 0.0       10    
+saving probability maps        3.028E-05 0.0       1     
+reading site collection        6.437E-06 0.0       1     
 ============================== ========= ========= ======

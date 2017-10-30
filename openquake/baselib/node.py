@@ -311,7 +311,9 @@ class StreamingXMLWriter(object):
             return
         self.start_tag(tag, node.attrib)
         if node.text is not None:
-            self._write(escape(scientificformat(node.text).strip()))
+            txt = escape(scientificformat(node.text).strip())
+            if txt:
+                self._write(txt)
         for subnode in node:
             self.serialize(subnode)
         self.end_tag(tag)

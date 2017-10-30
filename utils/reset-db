@@ -95,6 +95,9 @@ if [[ "$answer" == "y" ]]; then
     find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \; || true
     if [ -z $skipnew ]; then
         startstop start
+        echo " * Migrating schema"
+        cd /usr/share/openquake/engine || true
+        oq webui migrate
         echo " * Database created"
     fi
     echo ''

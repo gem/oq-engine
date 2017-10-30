@@ -32,6 +32,9 @@ def with_slots(cls):
             target = attr(other)
             if isinstance(source, numpy.ndarray):
                 eq = numpy.array_equal(source, target)
+            elif hasattr(source, '_slots_'):
+                source.assert_equal(target)
+                eq = True
             else:
                 eq = source == target
             yield slot, source, target, eq
@@ -42,9 +45,9 @@ def with_slots(cls):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def assert_equal(self, other):
+    def assert_equal(self, other, ignore=()):
         for slot, source, target, eq in _compare(self, other):
-            if not eq:
+            if not eq and slot not in ignore:
                 raise AssertionError('slot %s: %s is different from %s' %
                                      (slot, source, target))
 

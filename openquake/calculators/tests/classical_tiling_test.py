@@ -27,10 +27,10 @@ class ClassicalTilingTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
         expected = [
-            'hazard_curve-mean.csv',
-            'quantile_curve-0.1.csv',
-            'hazard_map-mean.csv',
-            'quantile_map-0.1.csv',
+            'hazard_curve-mean-SA(0.1).csv', 'hazard_curve-mean-SA(0.2).csv',
+            'hazard_curve-mean-SA(0.5).csv', 'quantile_curve-0.1-SA(0.1).csv',
+            'quantile_curve-0.1-SA(0.2).csv', 'quantile_curve-0.1-SA(0.5).csv',
+            'hazard_map-mean.csv', 'quantile_map-0.1.csv',
         ]
         got = (out['hcurves', 'csv'] +
                out.get(('hmaps', 'csv'), []))

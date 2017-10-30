@@ -19,9 +19,10 @@
 import itertools
 import numpy
 
-from openquake.commonlib import riskmodels, calc
+from openquake.baselib.python3compat import encode
+from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
-from openquake.calculators import base
+from openquake.calculators import base, event_based
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -42,37 +43,6 @@ def dist_by_asset(data, multi_stat_dt):
     return out
 
 
-def dist_by_taxon(data, multi_stat_dt):
-    """
-    :param data: array of shape (T, R, L, ...)
-    :param multi_stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (T, R) with records of type multi_stat_dt
-    """
-    T, R, L = data.shape[:3]
-    out = numpy.zeros((T, R), multi_stat_dt)
-    for l, lt in enumerate(multi_stat_dt.names):
-        out_lt = out[lt]
-        for t, r in itertools.product(range(T), range(R)):
-            out_lt[t, r] = scientific.mean_std(data[t, r, l])
-    return out
-
-
-def dist_total(data, multi_stat_dt):
-    """
-    :param data: array of shape (T, R, L, ...)
-    :param multi_stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (R,) with records of type multi_stat_dt
-    """
-    T, R, L = data.shape[:3]
-    total = data.sum(axis=0)
-    out = numpy.zeros(R, multi_stat_dt)
-    for l, lt in enumerate(multi_stat_dt.names):
-        out_lt = out[lt]
-        for r in range(R):
-            out_lt[r] = scientific.mean_std(total[r, l])
-    return out
-
-
 def scenario_damage(riskinput, riskmodel, param, monitor):
     """
     Core function for a damage computation.
@@ -87,32 +57,33 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
         dictionary of extra parameters
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_taxonomy': damage array of shape T, R, L, E, D,
+                      'd_tag': damage array of shape T, R, L, E, D,
                       'c_asset': [(l, r, a, mean-stddev), ...],
-                      'c_taxonomy': damage array of shape T, R, L, E}
+                      'c_tag': damage array of shape T, R, L, E}
 
-    `d_asset` and `d_taxonomy` are related to the damage distributions
-    whereas `c_asset` and `c_taxonomy` are the consequence distributions.
+    `d_asset` and `d_tag` are related to the damage distributions
+    whereas `c_asset` and `c_tag` are the consequence distributions.
     If there is no consequence model `c_asset` is an empty list and
-    `c_taxonomy` is a zero-value array.
+    `c_tag` is a zero-valued array.
     """
     c_models = param['consequence_models']
     L = len(riskmodel.loss_types)
     R = riskinput.hazard_getter.num_rlzs
     D = len(riskmodel.damage_states)
     E = param['number_of_ground_motion_fields']
-    T = len(param['taxonomies'])
-    taxo2idx = {taxo: i for i, taxo in enumerate(param['taxonomies'])}
-    result = dict(d_asset=[], d_taxon=numpy.zeros((T, R, L, E, D), F64),
-                  c_asset=[], c_taxon=numpy.zeros((T, R, L, E), F64))
+    T = len(param['tags'])
+    result = dict(d_asset=[], d_tag=numpy.zeros((T, R, L, E, D), F64),
+                  c_asset=[], c_tag=numpy.zeros((T, R, L, E), F64))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        r = outputs.r
+        r = outputs.rlzi
         for l, damages in enumerate(outputs):
             loss_type = riskmodel.loss_types[l]
             c_model = c_models.get(loss_type)
-            for asset, fraction in zip(outputs.assets, damages):
-                t = taxo2idx[asset.taxonomy]
+            for a, fraction in enumerate(damages):
+                asset = outputs.assets[a]
                 damages = fraction * asset.number
+                t = asset.tagmask
+                result['d_tag'][t, r, l] += damages  # shape (E, D)
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
                     # NB: we add a 0 in front for nodamage state
@@ -121,11 +92,11 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
                     result['c_asset'].append(
                         (l, r, asset.ordinal,
                          scientific.mean_std(consequences)))
-                    result['c_taxon'][t, r, l, :] += consequences
+                    result['c_tag'][t, r, l] += consequences
                     # TODO: consequences for the occupants
                 result['d_asset'].append(
                     (l, r, asset.ordinal, scientific.mean_std(damages)))
-                result['d_taxon'][t, r, l, :] += damages
+    result['gmdata'] = riskinput.gmdata
     return result
 
 
@@ -142,13 +113,13 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
+        base.get_gmfs(self)
         self.param['number_of_ground_motion_fields'] = (
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs)
-        self.param['taxonomies'] = sorted(self.taxonomies)
+        self.riskinputs = self.build_riskinputs('gmf')
+        self.param['tags'] = self.assetcol.tags()
 
     def post_execute(self, result):
         """
@@ -173,10 +144,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = dist_by_asset(
             d_asset, multi_stat_dt)
-        self.datastore['dmg_by_taxon'] = dist_by_taxon(
-            result['d_taxon'], multi_stat_dt)
-        self.datastore['dmg_total'] = dist_total(
-            result['d_taxon'], multi_stat_dt)
 
         # consequence distributions
         if result['c_asset']:
@@ -186,7 +153,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 c_asset[a, r, l] = stat
             multi_stat_dt = self.oqparam.loss_dt(stat_dt)
             self.datastore['losses_by_asset'] = c_asset
-            self.datastore['losses_by_taxon'] = dist_by_taxon(
-                result['c_taxon'], multi_stat_dt)
-            self.datastore['losses_total'] = dist_total(
-                result['c_taxon'], multi_stat_dt)
+
+        # save gmdata
+        self.gmdata = result['gmdata']
+        for arr in self.gmdata.values():
+            arr[-2] = self.oqparam.number_of_ground_motion_fields  # events
+        event_based.save_gmdata(self, R)

@@ -63,7 +63,7 @@ def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
 
 
 def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
-                       rlzs_assoc, gsims, imtls, poes, truncation_level,
+                       rlzs_by_gsim, cmaker, imtls, poes, truncation_level,
                        n_epsilons, iml_disagg, mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
@@ -76,7 +76,6 @@ def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
     sitemesh = sitecol.mesh
     make_ctxt = mon('making contexts', measuremem=False)
     disagg_poe = mon('disaggregate_poe', measuremem=False)
-    cmaker = ContextMaker(gsims)
     for source in sources:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
@@ -95,13 +94,12 @@ def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
                 # a dictionary rlz.id, poe, imt_str -> (iml, prob_no_exceed)
-                for gsim in gsims:
+                for gsim in cmaker.gsims:
                     gs = str(gsim)
                     for imt_str, imls in imtls.items():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[src_group_id, gs]:
-                            rlzi = rlz.ordinal
+                        for rlzi in rlzs_by_gsim[gs]:
                             iml = iml_disagg.get(imt_str)
                             curve_poes = curves[rlzi, imt_str][::-1]
                             for k, v in _disagg(

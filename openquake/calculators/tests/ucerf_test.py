@@ -15,17 +15,40 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
+from decorator import decorator
+from nose.plugins.attrib import attr
+from openquake.baselib import config
 from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 
-from nose.plugins.attrib import attr
+celery = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'celery'
+NO_SHARED_DIR = celery and not config.directory.shared_dir
+
+
+@decorator
+def manage_shared_dir_error(func, self):
+    """
+    When the shared_dir is not configured, expect an error, unless
+    the distribution mechanism is set to futures.
+    """
+    if NO_SHARED_DIR:
+        with self.assertRaises(ValueError) as ctx:
+            func(self)
+        self.assertIn('You must configure the shared_dir in openquake.cfg',
+                      str(ctx.exception))
+    else:
+        func(self)
 
 
 class UcerfTestCase(CalculatorTestCase):
+
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
@@ -53,6 +76,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
@@ -66,16 +90,20 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hmap.rst', got)
 
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
-        [f1, f2] = export(('hcurves/all', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-rlz-000.csv', f1)
-        self.assertEqualFiles('expected/hazard_curve-rlz-001.csv', f2)
+        fnames = export(('hcurves/all', 'csv'), self.calc.datastore)
+        expected = ['hazard_curve-0-PGA.csv', 'hazard_curve-0-SA(0.1).csv',
+                    'hazard_curve-1-PGA.csv', 'hazard_curve-1-SA(0.1).csv']
+        for fname, exp in zip(fnames, expected):
+            self.assertEqualFiles('expected/' + exp, fname)
 
         # make sure this runs
         view('fullreport', self.calc.datastore)
 
     @attr('qa', 'hazard', 'ucerf_td')
+    @manage_shared_dir_error
     def test_classical_time_dep(self):
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             exports='csv')
@@ -87,6 +115,7 @@ class UcerfTestCase(CalculatorTestCase):
         view('fullreport', self.calc.datastore)
 
     @attr('qa', 'hazard', 'ucerf_td')
+    @manage_shared_dir_error
     def test_classical_time_dep_sampling(self):
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             number_of_logic_tree_samples='2',
@@ -96,12 +125,20 @@ class UcerfTestCase(CalculatorTestCase):
                               delta=1E-6)
 
     @attr('qa', 'risk', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based_risk(self):
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
+        # check the right number of events was stored
+        self.assertEqual(len(self.calc.datastore['events']), 79)
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+
+        # check the mean losses_by_period
+        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
 
         # make sure this runs
         view('fullreport', self.calc.datastore)

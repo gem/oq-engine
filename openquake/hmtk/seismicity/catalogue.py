@@ -27,7 +27,7 @@
 # risk and software design communities.
 #
 # The software is NOT distributed as part of GEM’s OpenQuake suite
-# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# (https://www.globalquakemodel.org/tools-products) and must be considered as a
 # separate entity. The software provided herein is designed and implemented
 # by scientific staff. It is not developed to the design standards, nor
 # subject to same level of critical review by professional software
@@ -333,8 +333,8 @@ class Catalogue(object):
         # If the histogram does not sum to 1.0 then remove the difference
         # from the lowest bin
         depth_hist = np.around(depth_hist, 3)
-        while np.sum(depth_hist) > 1.0:
-            depth_hist[-1] -= (np.sum(depth_hist) - 1.0)
+        while depth_hist.sum() - 1.0:
+            depth_hist[-1] -= depth_hist.sum() - 1.0
             depth_hist = np.around(depth_hist, 3)
 
         pmf_list = []

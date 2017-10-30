@@ -210,7 +210,7 @@ def pure_distances(mlons, mlats, slons, slats):
     """
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
-    result = numpy.zeros((len(mlons), len(slons)))
+    result = numpy.zeros(mlons.shape + slons.shape)
     if len(mlons) < len(slons):  # lots of sites
         for i in range(len(mlons)):
             a = numpy.sin((mlats[i] - slats) / 2.0)

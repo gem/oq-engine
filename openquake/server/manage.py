@@ -19,18 +19,10 @@
 from __future__ import print_function
 import os
 import sys
-import sqlite3
 from django.core.management import execute_from_command_line
-from openquake.server.settings import DATABASE
 from openquake.server import executor, dbserver
 from openquake.server.db import actions
-from openquake.server.dbapi import Db
 from openquake.commonlib import logs
-
-db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
-        detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)
-# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
-# OperationalError: "database is locked" disappear in the WebUI tests
 
 
 # bypass the DbServer and run the action directly
@@ -41,7 +33,7 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    return getattr(actions, action)(db, *args)
+    return getattr(actions, action)(dbserver.db, *args)
 
 
 # the code here is run in development mode; for instance

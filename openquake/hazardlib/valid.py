@@ -57,6 +57,11 @@ def disagg_outputs(value):
     return values
 
 
+class FromFile(object):  # fake GSIM
+    def __str__(self):
+        return 'FromFile'
+
+
 # more tests are in tests/valid_test.py
 def gsim(value, **kwargs):
     """
@@ -66,7 +71,7 @@ def gsim(value, **kwargs):
     'BooreAtkinson2011()'
     """
     if value == 'FromFile':
-        return 'FromFile'
+        return FromFile()
     elif value.endswith('()'):
         value = value[:-2]  # strip parenthesis
     try:
@@ -77,6 +82,14 @@ def gsim(value, **kwargs):
         return gsim_class(**kwargs)
     except TypeError:
         raise ValueError('Could not instantiate %s%s' % (value, kwargs))
+
+
+def logic_tree_path(value):
+    """
+    >>> logic_tree_path('SM2_a3b1')
+    ['SM2', 'a3b1']
+    """
+    return value.split('_')
 
 
 def compose(*validators):
@@ -239,23 +252,28 @@ ASSET_ID_LENGTH = 100
 simple_id = SimpleId(MAX_ID_LENGTH)
 asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
+nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
+    ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange):
+    def __init__(self, minrange, maxrange, name=''):
         self.minrange = minrange
         self.maxrange = maxrange
+        self.name = name
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
         f = float_(value)
         if f > self.maxrange:
-            raise ValueError("'%s' is bigger than the max, '%s'" %
-                             (f, self.maxrange))
+            raise ValueError("%s %s is bigger than the maximum (%s)" %
+                             (self.name, f, self.maxrange))
         if f < self.minrange:
-            raise ValueError("'%s' is smaller than the min, '%s'" %
-                             (f, self.minrange))
+            raise ValueError("%s %s is smaller than the minimum (%s)" %
+                             (self.name, f, self.minrange))
         return f
+
+magnitude = FloatRange(0, 11, 'magnitude')
 
 
 def not_empty(value):
@@ -773,7 +791,13 @@ def maximum_distance(value):
     :returns:
         a IntegrationDistance mapping
     """
-    return IntegrationDistance(floatdict(value))
+    dic = floatdict(value)
+    for trt, magdists in dic.items():
+        if isinstance(magdists, list):  # could be a scalar otherwise
+            magdists.sort()  # make sure the list is sorted by magnitude
+            for magdist in magdists:
+                magnitude(magdist[0])  # validate the magnitudes
+    return IntegrationDistance(dic)
 
 
 # ########################### SOURCES/RUPTURES ############################# #
@@ -922,6 +946,8 @@ def integers(value):
        ...
     ValueError: Not a list of integers: ' '
     """
+    if '.' in value:
+        raise ValueError('There are decimal points in %s' % value)
     values = value.replace(',', ' ').split()
     if not values:
         raise ValueError('Not a list of integers: %r' % value)

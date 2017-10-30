@@ -1,11 +1,11 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1835.hdf5 Fri Jul  7 07:33:01 2017
-checksum32                                      3,219,914,866           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+============== ===================
+checksum32     3,219,914,866      
+date           2017-10-24T05:48:07
+engine_version 2.8.0-git8e9cdf8   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -41,12 +41,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ======================================== =============== ================
-smlt_path weight source_model_file                        gsim_logic_tree num_realizations
-========= ====== ======================================== =============== ================
-b11       0.600  `source_model1.xml <source_model1.xml>`_ simple(3)       3/3             
-b12       0.400  `source_model2.xml <source_model2.xml>`_ simple(3)       3/3             
-========= ====== ======================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b11       0.600  simple(3)       3/3             
+b12       0.400  simple(3)       3/3             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -63,20 +63,20 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=6, rlzs=6)
-  0,BooreAtkinson2008(): ['<0,b11~b11,w=0.30000000298023216>']
-  0,CampbellBozorgnia2008(): ['<1,b11~b12,w=0.1800000017881393>']
-  0,ChiouYoungs2008(): ['<2,b11~b13,w=0.12000000119209286>']
-  1,BooreAtkinson2008(): ['<3,b12~b11,w=0.19999999701976784>']
-  1,CampbellBozorgnia2008(): ['<4,b12~b12,w=0.1199999982118607>']
-  1,ChiouYoungs2008(): ['<5,b12~b13,w=0.07999999880790715>']>
+  0,BooreAtkinson2008(): [0]
+  0,CampbellBozorgnia2008(): [1]
+  0,ChiouYoungs2008(): [2]
+  1,BooreAtkinson2008(): [3]
+  1,CampbellBozorgnia2008(): [4]
+  1,ChiouYoungs2008(): [5]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================= ====== ==================== =========== ============ ============
 source_model      grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================= ====== ==================== =========== ============ ============
-source_model1.xml 0      Active Shallow Crust 1           2456         2,456       
-source_model2.xml 1      Active Shallow Crust 1           2456         2,456       
+source_model1.xml 0      Active Shallow Crust 1           2,456        2,456       
+source_model2.xml 1      Active Shallow Crust 1           2,456        2,456       
 ================= ====== ==================== =========== ============ ============
 
 ============= =====
@@ -89,19 +89,19 @@ source_model2.xml 1      Active Shallow Crust 1           2456         2,456
 
 Informational data
 ------------------
-============================ ====================================================================================
-compute_ruptures.received    tot 2.53 MB, max_per_task 1.46 MB                                                   
-compute_ruptures.sent        sources 163.66 KB, src_filter 2.67 KB, param 2.43 KB, monitor 1.25 KB, gsims 1.04 KB
-hazard.input_weight          491.20000000000005                                                                  
-hazard.n_imts                1                                                                                   
-hazard.n_levels              5                                                                                   
-hazard.n_realizations        6                                                                                   
-hazard.n_sites               1                                                                                   
-hazard.n_sources             2                                                                                   
-hazard.output_weight         300.0                                                                               
-hostname                     tstation.gem.lan                                                                    
-require_epsilons             False                                                                               
-============================ ====================================================================================
+========================= ====================================================================================
+compute_ruptures.received tot 2.53 MB, max_per_task 1.46 MB                                                   
+compute_ruptures.sent     sources 163.66 KB, src_filter 2.67 KB, param 2.43 KB, monitor 1.27 KB, gsims 1.04 KB
+hazard.input_weight       491.20000000000005                                                                  
+hazard.n_imts             1                                                                                   
+hazard.n_levels           5                                                                                   
+hazard.n_realizations     6                                                                                   
+hazard.n_sites            1                                                                                   
+hazard.n_sources          2                                                                                   
+hazard.output_weight      300.0                                                                               
+hostname                  tstation.gem.lan                                                                    
+require_epsilons          False                                                                               
+========================= ====================================================================================
 
 Slowest sources
 ---------------
@@ -120,11 +120,20 @@ source_class calc_time counts
 AreaSource   0.0       2     
 ============ ========= ======
 
+Duplicated sources
+------------------
+========= ========= =============
+source_id calc_time src_group_ids
+========= ========= =============
+1         0.0       0 1          
+========= ========= =============
+Sources with the same ID but different parameters
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.980 0.652  0.380 1.660 4        
+compute_ruptures   0.992 0.649  0.399 1.669 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -132,13 +141,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.920     4.047     4     
-filtering ruptures             0.696     0.0       3,081 
+total compute_ruptures         3.966     3.621     4     
+filtering ruptures             0.683     0.0       3,081 
 managing sources               0.192     0.0       1     
-saving ruptures                0.130     0.0       4     
-reading composite source model 0.112     0.0       1     
-setting event years            0.068     0.0       1     
+saving ruptures                0.120     0.0       4     
+reading composite source model 0.110     0.0       1     
+setting event years            0.069     0.0       1     
 store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        3.934E-05 0.0       1     
+reading site collection        4.292E-05 0.0       1     
 ============================== ========= ========= ======

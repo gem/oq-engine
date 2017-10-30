@@ -28,6 +28,13 @@
                   <a href="{% url "index" %}">Back to Calculations</a>
                 </li>
                 {% endblock nav-items %}
+                {% if app_list %}
+                {# Take the first app in STANDALONE_APPS as landing page for tools #}
+                <li class="tools"><a href="{{ app_list.0.url }}">Tools</a></li>
+                {% endif %}
+                {% if user.is_superuser %}
+                <li class="admin"><a href="{% url 'admin:index' %}">Admin</a></li>
+                {% endif %}
               </ul>
             </nav>
           </div> <!-- ./span10 -->

@@ -20,16 +20,18 @@ from __future__ import print_function
 import os
 import re
 import getpass
-from openquake.baselib import sap
-from openquake.commonlib import datastore
+import shutil
+from openquake.baselib import sap, datastore
 from openquake.commonlib.logs import dbcmd
+
+datadir = datastore.get_datadir()
 
 
 def purge_one(calc_id, user):
     """
     Remove one calculation ID from the database and remove its datastore
     """
-    hdf5path = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
+    hdf5path = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     err = dbcmd('del_calc', calc_id, user)
     if err:
         print(err)
@@ -39,16 +41,21 @@ def purge_one(calc_id, user):
 
 
 # used in the reset command
-def purge_all(user=None):
+def purge_all(user=None, fast=False):
     """
     Remove all calculations of the given user
     """
     user = user or getpass.getuser()
-    for fname in os.listdir(datastore.DATADIR):
-        mo = re.match('calc_(\d+)\.hdf5', fname)
-        if mo is not None:
-            calc_id = int(mo.group(1))
-            purge_one(calc_id, user)
+    if os.path.exists(datadir):
+        if fast:
+            shutil.rmtree(datadir)
+            print('Removed %s' % datadir)
+        else:
+            for fname in os.listdir(datadir):
+                mo = re.match('calc_(\d+)\.hdf5', fname)
+                if mo is not None:
+                    calc_id = int(mo.group(1))
+                    purge_one(calc_id, user)
 
 
 @sap.Script
@@ -59,7 +66,7 @@ def purge(calc_id):
     """
     if calc_id < 0:
         try:
-            calc_id = datastore.get_calc_ids()[calc_id]
+            calc_id = datastore.get_calc_ids(datadir)[calc_id]
         except IndexError:
             print('Calculation %d not found' % calc_id)
             return

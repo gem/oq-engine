@@ -15,8 +15,8 @@ jobs:
   - stage: tests
     env: HAZARDLIB
     script:
-        - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[hazardlib\]' || test "$BRANCH" == "master"; then
-          nosetests --with-doctest -xvs -a'!slow' openquake.baselib openquake.hazardlib;
+        - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
+          nosetests --with-doctest -xvs -a'!slow' openquake.baselib openquake.hazardlib openquake.hmtk;
           fi
   - stage: tests
     env: ENGINE
@@ -39,8 +39,8 @@ jobs:
         # Upload oqdata.zip to http://artifacts.openquake.org/travis/ only if
         # the commit message includes a [demos] tag at the end or branch is master
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[demos\]' || test "$BRANCH" == "master"; then
-            time bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
-            bin/check_demos &&
+            OQ_DISTRIBUTE=zmq time bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
+            bin/check_demos && oq dbserver stop &&
             oq dump /tmp/oqdata.zip &&
             oq restore /tmp/oqdata.zip /tmp/oqdata &&
             helpers/zipdemos.sh $(pwd)/demos &&
@@ -48,7 +48,9 @@ jobs:
             chmod 600 .deploy_rsa &&
             eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
-            bin/oq reset --yes;
+            oq workers stop &&
+            bin/oq reset --yes &&
+            bin/oq dbserver status | grep -q 'dbserver not-running';
           fi
 
 before_install:

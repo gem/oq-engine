@@ -33,7 +33,6 @@ xmlns:gml="http://www.opengis.net/gml"
     name="group 1"
     tectonicRegion="Active Shallow Crust"
     >
-        
         <multiPointSource
         id="mps-0"
         name="multiPointSource-0"

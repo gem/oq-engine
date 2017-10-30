@@ -17,8 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import itertools
-import logging
+import warnings
 import numpy
 import h5py
 
@@ -30,7 +29,6 @@ from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, calc, probability_map
-from openquake.commonlib import readinput
 
 TWO16 = 2 ** 16
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -46,15 +44,38 @@ U64 = numpy.uint64
 F64 = numpy.float64
 
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
-stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rup_id', U32), ('year', U32), ('ses', U32),
-    ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
 BaseRupture.init()  # initialize rupture codes
 
 # ############## utilities for the classical calculator ############### #
+
+
+def convert_to_array(pmap, nsites, imtls):
+    """
+    Convert the probability map into a composite array with header
+    of the form PGA-0.1, PGA-0.2 ...
+
+    :param pmap: probability map
+    :param nsites: total number of sites
+    :param imtls: a DictArray with IMT and levels
+    :returns: a composite array of lenght nsites
+    """
+    lst = []
+    # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
+    for imt, imls in imtls.items():
+        for iml in imls:
+            lst.append(('%s-%s' % (imt, iml), numpy.float64))
+    curves = numpy.zeros(nsites, numpy.dtype(lst))
+    for sid, pcurve in pmap.items():
+        curve = curves[sid]
+        idx = 0
+        for imt, imls in imtls.items():
+            for iml in imls:
+                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
+                idx += 1
+    return curves
 
 
 class PmapGetter(object):
@@ -65,15 +86,17 @@ class PmapGetter(object):
     :param dstore: a DataStore instance
     :param lazy: if True, read directly from the datastore
     """
-    def __init__(self, dstore, lazy=False):
+    def __init__(self, dstore, sids=None, lazy=False, rlzs_assoc=None):
+        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.lazy = lazy
-        self.assoc_by_grp = dstore['csm_info/assoc_by_grp'].value
-        self.weights = self.dstore['realizations']['weight']
+        self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
-        self.sids = None  # to be set
+        self.sids = sids
         self.nbytes = 0
+        if sids is not None and not self.lazy:  # populate the cache
+            self.get_pmap_by_grp(sids)
 
     def __enter__(self):
         if self.lazy:
@@ -89,27 +112,8 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a new instance of the getter, with the cache populated
         """
-        newgetter = object.__new__(self.__class__, self.dstore)
-        vars(newgetter).update(vars(self))
-        newgetter.sids = sids
-        if not self.lazy:  # populate the cache
-            newgetter.get_pmap_by_grp(sids)
-        return newgetter
-
-    def combine_pmaps(self, pmap_by_grp):
-        """
-        :param pmap_by_grp: dictionary group string -> probability map
-        :returns: a list of probability maps, one per realization
-        """
-        pmaps = [probability_map.ProbabilityMap(self.num_levels, 1)
-                 for _ in self.weights]
-        for rec in self.assoc_by_grp:
-            grp = 'grp-%02d' % rec['grp_id']
-            if grp in pmap_by_grp:
-                pmap = pmap_by_grp[grp].extract(rec['gsim_idx'])
-                for rlzi in rec['rlzis']:
-                    pmaps[rlzi] |= pmap
-        return pmaps
+        assert sids is not None
+        return self.__class__(self.dstore, sids, self.lazy, self.rlzs_assoc)
 
     def get(self, sids, rlzi):
         """
@@ -119,13 +123,13 @@ class PmapGetter(object):
         """
         pmap_by_grp = self.get_pmap_by_grp(sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        for rec in self.assoc_by_grp:
-            grp = 'grp-%02d' % rec['grp_id']
+        for grp, array in self.rlzs_assoc.array.items():
             if grp in pmap_by_grp:
-                for r in rec['rlzis']:
-                    if r == rlzi:
-                        pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
-                        break
+                for rec in array:
+                    for r in rec['rlzis']:
+                        if r == rlzi:
+                            pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
+                            break
         return pmap
 
     def get_pmaps(self, sids):  # used in classical
@@ -133,7 +137,17 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
-        return self.combine_pmaps(self.get_pmap_by_grp(sids))
+        return self.rlzs_assoc.combine_pmaps(self.get_pmap_by_grp(sids))
+
+    def get_hcurves(self, imtls):
+        """
+        :param imtls: intensity measure types and levels
+        :returns: an array of (R, N) hazard curves
+        """
+        assert self.sids is not None, 'PmapGetter not bound to sids'
+        pmaps = [pmap.convert2(imtls, self.sids)
+                 for pmap in self.get_pmaps(self.sids)]
+        return numpy.array(pmaps)
 
     def get_pmap_by_grp(self, sids=None):
         """
@@ -191,6 +205,14 @@ class PmapGetter(object):
             for k in sorted(self.dstore['hcurves']):
                 yield k, self.dstore['hcurves/' + k]
 
+    def get_mean(self):
+        """
+        Extract the mean curve as a ProbabilityMap
+        """
+        if len(self.weights) == 1:  # one realization
+            return self.get(self.sids, 0)
+        else:  # multiple realizations, assume hcurves/mean is there
+            return self.dstore['hcurves/mean']
 
 # ######################### hazard maps ################################### #
 
@@ -233,7 +255,11 @@ def compute_hazard_maps(curves, imls, poes):
         raise ValueError('The curves have %d levels, %d were passed' %
                          (L, len(imls)))
     result = []
-    imls = numpy.log(numpy.array(imls[::-1]))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # avoid RuntimeWarning: divide by zero encountered in log
+        # happening in the classical_tiling tests
+        imls = numpy.log(numpy.array(imls[::-1]))
     for curve in curves:
         # the hazard curve, having replaced the too small poes with EPSILON
         curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
@@ -371,63 +397,6 @@ def make_uhs(pmap, imtls, poes, nsites):
             if imt in imts:
                 uhs[poe][imt] = array[:, i * P + j, 0]
     return uhs
-
-
-def get_gmv_data(sids, gmfs):
-    """
-    Convert an array of shape (R, N, E, I) into an array of type gmv_data_dt
-    """
-    R, N, E, I = gmfs.shape
-    gmv_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
-    it = ((r, sids[s], eid, gmfa[s, eid])
-          for r, gmfa in enumerate(gmfs)
-          for s, eid in itertools.product(range(N), range(E)))
-    return numpy.fromiter(it, gmv_data_dt)
-
-
-def get_gmfs(dstore, precalc=None):
-    """
-    :param dstore: a datastore
-    :param precalc: a scenario calculator with attribute .gmfa
-    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (G, N, E, I)
-    """
-    oq = dstore['oqparam']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    sitecol = dstore['sitecol']
-    if dstore.parent:
-        haz_sitecol = dstore.parent['sitecol']  # S sites
-    else:
-        haz_sitecol = sitecol  # N sites
-    N = len(haz_sitecol.complete)
-    I = len(oq.imtls)
-    E = oq.number_of_ground_motion_fields
-    eids = numpy.arange(E)
-    gmfs = numpy.zeros((len(rlzs_assoc), N, E, I))
-    if precalc:
-        for g, gsim in enumerate(precalc.gsims):
-            gmfs[g, sitecol.sids] = precalc.gmfa[gsim]
-        return eids, gmfs
-
-    if 'gmf_data/data' in dstore:
-        dset = dstore['gmf_data/data']
-        R = len(dstore['realizations'])
-        nrows = len(dset) // R
-        for r in range(R):
-            for s, sid in enumerate(haz_sitecol.sids):
-                start = r * nrows + E * s
-                array = dset[start: start + E]  # shape (E, I)
-                if numpy.unique(array['sid']) != [sid]:  # sanity check
-                    raise ValueError('The GMFs have been stored incorrectly')
-                gmfs[r, sid] = array['gmv']
-        return eids, gmfs
-
-    elif 'gmfs' in oq.inputs:  # from file
-        logging.info('Reading gmfs from file')
-        eids, gmfs = readinput.get_gmfs(oq)
-        dstore['gmf_data/data'] = get_gmv_data(
-            haz_sitecol.sids, gmfs[:, haz_sitecol.indices])
-        return eids, gmfs
 
 
 def fix_minimum_intensity(min_iml, imts):
@@ -572,7 +541,7 @@ class RuptureSerializer(object):
         self.data = []
         self.nbytes = 0
 
-    def save(self, ebruptures, eidx):
+    def save(self, ebruptures, eidx=0):
         """
         Populate a dictionary of site IDs tuples and save the ruptures.
 
@@ -630,23 +599,24 @@ class RuptureSerializer(object):
             del self.data[:]
 
 
-def get_ruptures(dstore, grp_id):
+def get_ruptures(dstore, events, grp_id):
     """
     Extracts the ruptures of the given grp_id
     """
-    return _get_ruptures(dstore, [grp_id], None)
+    return _get_ruptures(dstore, events, [grp_id], None)
 
 
-def _get_ruptures(dstore, grp_ids, rup_id):
+def _get_ruptures(dstore, events, grp_ids, rup_id):
     oq = dstore['oqparam']
     grp_trt = dstore['csm_info'].grp_trt()
     for grp_id in grp_ids:
         trt = grp_trt[grp_id]
         grp = 'grp-%02d' % grp_id
-        if grp not in dstore['events']:
+        try:
+            recs = dstore['ruptures/' + grp]
+        except KeyError:  # no ruptures in grp
             continue
-        events = dstore['events/' + grp]
-        for rec in dstore['ruptures/' + grp]:
+        for rec in recs:
             if rup_id is not None and rup_id != rec['serial']:
                 continue
             mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])

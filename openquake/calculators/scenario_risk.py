@@ -20,9 +20,8 @@ import logging
 
 import numpy
 
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import calc
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -57,12 +56,10 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     L = len(riskmodel.loss_types)
     R = riskinput.hazard_getter.num_rlzs
     I = param['insured_losses'] + 1
-    asset_loss_table = param['asset_loss_table']
-    lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
-                  losses_by_taxon=lbt, all_losses=AccumDict(accum={}))
+                  all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        r = outputs.r
+        r = outputs.rlzi
         assets = outputs.assets
         for l, losses in enumerate(outputs):
             if losses is None:  # this may happen
@@ -72,12 +69,10 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
                 stats['mean'][a] = losses[a].mean()
                 stats['stddev'][a] = losses[a].std(ddof=1)
                 result['avg'].append((l, r, asset.ordinal, stats[a]))
-                for i in range(I):
-                    lbt[asset.taxonomy][r, l + L * i] += losses[a].sum()
             agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
                 result['agg'][:, r, l + L * i] += agglosses[:, i]
-            if asset_loss_table:
+            if param['asset_loss_table']:
                 aids = [asset.ordinal for asset in outputs.assets]
                 result['all_losses'][l, r] += AccumDict(zip(aids, losses))
     return result
@@ -100,16 +95,15 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-
-        logging.info('Building the epsilons')
+        base.get_gmfs(self)
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields
+        logging.info('Building the epsilons')
         if self.oqparam.ignore_covs:
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        _, gmfs = calc.get_gmfs(self.datastore, self.precalc)
-        self.riskinputs = self.build_riskinputs('gmf', gmfs, eps)
+        self.riskinputs = self.build_riskinputs('gmf', eps)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
@@ -122,7 +116,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         loss_dt = self.oqparam.loss_dt()
         I = self.oqparam.insured_losses + 1
         with self.monitor('saving outputs', autoflush=True):
-            A = len(self.assetcol)
+            A, T = self.tagmask.shape
 
             # agg losses
             res = result['agg']
@@ -132,15 +126,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             agglosses = numpy.zeros((R, L * I), stat_dt)
             agglosses['mean'] = F32(mean)
             agglosses['stddev'] = F32(std)
-
-            # losses by taxonomy
-            taxid = {t: i for i, t in enumerate(
-                sorted(self.assetcol.taxonomies))}
-            T = len(taxid)
-            dset = self.datastore.create_dset(
-                'losses_by_taxon-rlzs', F32, (T, R, LI))
-            for tax, array in result['losses_by_taxon'].items():
-                dset[taxid[tax]] = array
 
             # losses by asset
             losses_by_asset = numpy.zeros((A, R, L * I), stat_dt)
@@ -153,6 +138,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             # losses by event
             self.datastore['losses_by_event'] = res  # shape (E, R, LI)
 
+            # all losses
             if self.oqparam.asset_loss_table:
                 array = numpy.zeros((A, E, R), loss_dt)
                 for (l, r), losses_by_aid in result['all_losses'].items():
@@ -162,3 +148,5 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                             lt = loss_dt.names[l + L * i]
                             array[lt][aid, :, r] = lba[:, i]
                 self.datastore['all_losses-rlzs'] = array
+                self.datastore.set_attrs('all_losses-rlzs',
+                                         tags=encode(self.assetcol.tags()))

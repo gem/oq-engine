@@ -1,11 +1,11 @@
 event based risk with PMF
 =========================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1803.hdf5 Fri Jul  7 07:32:33 2017
-checksum32                                      316,426,340             
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+============== ===================
+checksum32     316,426,340        
+date           2017-10-24T05:47:40
+engine_version 2.8.0-git8e9cdf8   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -43,11 +43,11 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -63,7 +63,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): ['<0,b1~b1,w=1.0>']>
+  0,BooreAtkinson2008(): [0]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -75,19 +75,19 @@ source_model.xml 0      Active Shallow Crust 1           482          482
 
 Informational data
 ------------------
-============================ ===========================================================================
-compute_ruptures.received    tot 28.83 KB, max_per_task 13.05 KB                                        
-compute_ruptures.sent        sources 7.78 KB, src_filter 2 KB, param 1.89 KB, monitor 960 B, gsims 306 B
-hazard.input_weight          482.0                                                                      
-hazard.n_imts                1                                                                          
-hazard.n_levels              8                                                                          
-hazard.n_realizations        1                                                                          
-hazard.n_sites               1                                                                          
-hazard.n_sources             1                                                                          
-hazard.output_weight         8.0                                                                        
-hostname                     tstation.gem.lan                                                           
-require_epsilons             False                                                                      
-============================ ===========================================================================
+========================= ===========================================================================
+compute_ruptures.received tot 29.15 KB, max_per_task 13.17 KB                                        
+compute_ruptures.sent     sources 7.78 KB, src_filter 2 KB, param 1.89 KB, monitor 975 B, gsims 306 B
+hazard.input_weight       482.0                                                                      
+hazard.n_imts             1                                                                          
+hazard.n_levels           8                                                                          
+hazard.n_realizations     1                                                                          
+hazard.n_sites            1                                                                          
+hazard.n_sources          1                                                                          
+hazard.output_weight      8.0                                                                        
+hostname                  tstation.gem.lan                                                           
+require_epsilons          False                                                                      
+========================= ===========================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -123,11 +123,15 @@ source_class      calc_time counts
 SimpleFaultSource 0.0       1     
 ================= ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.060 0.017  0.043 0.077 3        
+compute_ruptures   0.058 0.016  0.043 0.074 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -135,14 +139,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.179     0.0       3     
-managing sources               0.058     0.0       1     
-saving ruptures                0.012     0.0       3     
+total compute_ruptures         0.175     0.0       3     
+managing sources               0.059     0.0       1     
+saving ruptures                0.008     0.0       3     
 filtering ruptures             0.007     0.0       31    
-store source_info              0.006     0.0       1     
-reading exposure               0.006     0.0       1     
+reading exposure               0.007     0.0       1     
 reading composite source model 0.004     0.0       1     
-setting event years            0.002     0.0       1     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        6.676E-06 0.0       1     
+setting event years            0.002     0.0       1     
+reading site collection        6.199E-06 0.0       1     
 ============================== ========= ========= ======

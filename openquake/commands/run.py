@@ -17,15 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import os
 import collections
 import tempfile
 import logging
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, sap
+from openquake.baselib import performance, general, sap, datastore
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, datastore, oqvalidation
+from openquake.commonlib import readinput, oqvalidation
 from openquake.calculators import base, views
 
 calc_path = None  # set only when the flag --slowest is given
@@ -130,8 +131,9 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
 def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
         loglevel='info', pdb=None):
     """
-    Run a calculation.
+    Run a calculation with multiprocessing
     """
+    os.environ['OQ_DISTRIBUTE'] = 'futures'
     params = oqvalidation.OqParam.check(
         dict(p.split('=', 1) for p in param or ()))
     if slowest:

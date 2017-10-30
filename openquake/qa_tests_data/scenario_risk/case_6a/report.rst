@@ -1,11 +1,11 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_1852.hdf5 Fri Jul  7 07:33:34 2017
-checksum32                               1,923,070,683           
-engine_version                           2.6.0-git50066b9        
-======================================== ========================
+============== ===================
+checksum32     1,923,070,683      
+date           2017-10-24T05:48:45
+engine_version 2.8.0-git8e9cdf8   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -39,19 +39,11 @@ rupture_model   `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    simple(2)       2/2             
-========= ====== ================= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== ===================================== =========== ======================= =================
-grp_id gsims                                 distances   siteparams              ruptparams       
-====== ===================================== =========== ======================= =================
-0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-====== ===================================== =========== ======================= =================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  simple(2)       2/2             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,14 +51,13 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,BooreAtkinson2008(): ['<0,b_1~b1,w=0.75>']
-  0,ChiouYoungs2008(): ['<1,b_1~b2,w=0.25>']>
+  0,BooreAtkinson2008(): [0]
+  0,ChiouYoungs2008(): [1]>
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading site collection 3.672E-05 0.0       1     
+reading site collection 3.791E-05 0.0       1     
 ======================= ========= ========= ======

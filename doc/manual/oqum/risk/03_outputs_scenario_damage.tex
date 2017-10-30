@@ -1,11 +1,11 @@
-The Scenario Damage Calculator produces the following set of output files for
+The Scenario Damage Calculator produces the following output file for
 all loss types (amongst ``structural'', ``nonstructural'', ``contents'', or
 ``business\_interruption'') for which a fragility model file was provided in
 the configuration file:
 
 \begin{enumerate}
 
-  \item \Verb+dmg_dist_per_asset+: this file contains the damage distribution
+  \item \Verb+dmg_by_asset+: this file contains the damage distribution
     statistics for each of the individual \glspl{asset} defined in the
     \gls{exposuremodel} that fall within the \Verb+region_constraint+ and have
     a computed \gls{acr:gmf} value available within the defined
@@ -13,27 +13,31 @@ the configuration file:
     buildings (\Verb+mean+) and associated standard deviation (\Verb+stddev+)
     of the number of buildings in each damage state are listed in this file.
 
-  \item \Verb+dmg_dist_per_taxonomy+: this file contains the aggregated damage
-    distribution statistics for each of the \glspl{taxonomy} defined in the
-    \gls{exposuremodel}. For each \gls{taxonomy}, the mean number of
-    buildings (\Verb+mean+) and associated standard deviation (\Verb+stddev+)
-    of the number of buildings in each damage state are listed in this file.
+\end{enumerate}
 
-  \item \Verb+dmg_dist_total+: this file contains the aggregated damage
+In addition, if the OpenQuake-QGIS \gls{acr:irmt} plugin is used for
+visualizing or exporting the results from a Scenario Damage Calculation, the
+following  additional outputs can be exported:
+
+\begin{enumerate}
+\setcounter{enumi}{2}
+
+  \item \Verb+dmg_by_tag+: this file contains the aggregated damage
+    distribution statistics for each of the \glspl{tag} defined in the
+    \gls{exposuremodel}. For each \gls{tag}, the mean number of
+    buildings (\Verb+mean+) in each damage state are listed in this file.
+
+  \item \Verb+dmg_total+: this file contains the aggregated damage
     distribution statistics for the entire portfolio of \glspl{asset} defined
     in the \gls{exposuremodel}. The mean (\Verb+mean+) and associated standard
     deviation (\Verb+stddev+) of the total number of buildings in each
     damage state are listed in this file.
 
-  \item \Verb+collapse_map+: this file contains mean (\Verb+mean+) and
-    associated standard deviation (\Verb+stddev+) of the number of buildings
-    in the ultimate limit state for all \glspl{asset} at each of the unique
-    locations in the \gls{exposuremodel}.
-
 \end{enumerate}
 
-In addition to the above output files which are produced for all Scenario
-Damage calculations, the following set of output files for all loss types
+In addition to the above asset-level damage output file which is
+produced for all Scenario Damage calculations, the following output file is
+also produced for all loss types
 (amongst ``structural'', ``nonstructural'', ``contents'', or
 ``business\_interruption'') for which a \gls{consequencemodel} file was also
 provided in the configuration file:
@@ -49,9 +53,18 @@ provided in the configuration file:
     (\Verb+mean+) and associated standard deviation (\Verb+stddev+) are listed
     in this file.
 
-  \item \Verb+losses_by_taxon+: this file contains the aggregated scenario
-    consequence statistics for each of the \glspl{taxonomy} defined in the
-    \gls{exposuremodel}. For each \gls{taxonomy}, the mean consequences
+\end{enumerate}
+
+In addition, if the OpenQuake-QGIS \gls{acr:irmt} plugin is used for
+visualizing or exporting the results from a Scenario Damage Calculation, the
+following  additional outputs can be exported:
+
+\begin{enumerate}
+\setcounter{enumi}{5}
+
+  \item \Verb+losses_by_tag+: this file contains the aggregated scenario
+    consequence statistics for each of the \glspl{tag} defined in the
+    \gls{exposuremodel}. For each \gls{tag}, the mean consequences
     (\Verb+mean+) and associated standard deviation (\Verb+stddev+) are listed
     in this file.
 
@@ -81,48 +94,34 @@ This output contains the damage distribution statistics for each of the
 individual \glspl{asset} defined in the \gls{exposuremodel} that fall within
 the \Verb+region_constraint+ and have a computed \gls{acr:gmf} value available
 within the defined \Verb+asset_hazard_distance+. An example output file for
-structural damage is shown in the file snippet in Listing~\ref{lst:output_scenario_damage_asset}.
+structural damage is shown in the file snippet in 
+Table~\ref{output:scenario_damage_asset}.
 
-\begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}{oqum/risk/verbatim/output_scenario_damage_asset.xml}
-  \caption{Example scenario damage statistics per asset}
-  \label{lst:output_scenario_damage_asset}
-\end{listing}
+\input{oqum/risk/verbatim/output_scenario_damage_asset}
 
-The key fields in the above output file are the following:
-
-\begin{itemize}
-
-  \item \Verb+damageStates+: this field serves the purposes of storing the set
-    of damage states, as defined in the \gls{fragilitymodel} employed in the
-    calculations
-
-  \item \Verb+DDNode+: this attribute is used to store the damage distribution
-    of a number of \glspl{asset}, at a given location (defined within the
-    attribute \Verb+gml:Point+). For each \gls{asset}, the mean number of
-    buildings (\Verb+mean+) and associated standard deviation (\Verb+stddev+)
-    of the number of buildings in each damage state are listed.
-
-\end{itemize}
+The output file lists the mean and standard deviation of the number
+of buildings in each damage state for each asset in the exposure model
+for all loss types (amongst `structural'', ``nonstructural'', ``contents'', or
+``business\_interruption'') for which a \gls{consequencemodel} file was also
+provided in the configuration file in addition to the corresponding
+\gls{fragilitymodel} file.
 
 
 \subsubsection{Taxonomy damage statistics}
 \label{subsubsec:scenario_taxonomy_damage_statistics}
 
 The Scenario Damage calculator also estimates the expected total number of
-buildings of a certain \gls{taxonomy} in each damage state. This distribution
-of damage per building \gls{taxonomy} is depicted in the example
-output file snippet in Listing~\ref{lst:output_scenario_damage_taxonomy}.
+buildings of a certain \gls{tag} in each damage state. This distribution
+of damage per building \gls{tag} is depicted in the example
+output file snippet in Table~\ref{output:scenario_damage_tag}.
 
-\begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/output_scenario_damage_taxonomy.xml}
-  \caption{Example scenario damage statistics per taxonomy}
-  \label{lst:output_scenario_damage_taxonomy}
-\end{listing}
+\input{oqum/risk/verbatim/output_scenario_damage_tag}
 
-In the damage distribution per \gls{taxonomy}, each \Verb+DDNode+ contains the
-statistics of the number of buildings in each damage state, belonging to a
-given building class as specified by the \Verb+taxonomy+ attribute.
+The output file lists the mean of the total number
+of buildings in each damage state for each tag found in the
+exposure model for all loss types (amongst
+``structural'', ``nonstructural'', ``contents'', or
+``business\_interruption'').
 
 
 \subsubsection{Total damage statistics}
@@ -130,37 +129,10 @@ given building class as specified by the \Verb+taxonomy+ attribute.
 
 Finally, a total damage distribution output file is also generated, which
 contains the mean and standard deviation of the total number of buildings in
-each damage state, as illustrated in the example file in
-Listing~\ref{lst:output_scenario_damage_total}.
+each damage state, as illustrated in the example file in 
+Table~\ref{output:scenario_damage_tag}.
 
-\begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/output_scenario_damage_total.xml}
-  \caption{Example total damage statistics}
-  \label{lst:output_scenario_damage_total}
-\end{listing}
-
-
-\subsection{Scenario collapse maps}
-\label{subsec:scenario_collapse_map}
-
-Collapse maps are part of the Scenario Damage calculator outputs. These
-results provide the spatial distribution of the number of the buildings in the
-ultimate limit state throughout the area of interest. An example snippet from
-an output file depicting a collapse map for structural damage is presented
-below.
-
-\begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}{oqum/risk/verbatim/output_scenario_damage_collapse.xml}
-  \caption{Example collapse map}
-  \label{lst:output_scenario_damage_collapse}
-\end{listing}
-
-The results for a number of \glspl{asset} at a given location are stored
-within the field \Verb+CMNode+. This field is associated with a location
-(defined within the \Verb+gml:Point+ attribute) and it contains the mean
-number of buildings in the ultimate limit state (\Verb+mean+) and the
-corresponding standard deviation (\Verb+stdDev+) for each \gls{asset}
-(identified by the parameter \Verb+assetRef+).
+\input{oqum/risk/verbatim/output_scenario_damage_total}
 
 
 \subsection{Scenario consequence statistics}

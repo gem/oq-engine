@@ -181,7 +181,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
                                 np.log10(np.array([1.5, 2.0, 0.5])))
         period = 0.3
         expected_table[:, self.IDX] = (
-            10.0 ** interpolator(np.log10(period))) * np.ones(10.)
+            10.0 ** interpolator(np.log10(period))) * np.ones(10)
         np.testing.assert_array_almost_equal(
             self.amp_table.get_mean_table(imt_module.SA(period), rctx),
             expected_table)

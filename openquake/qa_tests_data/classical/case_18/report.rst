@@ -1,11 +1,11 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-=============================================== ========================
-tstation.gem.lan:/mnt/ssd/oqdata/calc_1824.hdf5 Fri Jul  7 07:32:50 2017
-checksum32                                      1,369,868,782           
-engine_version                                  2.6.0-git50066b9        
-=============================================== ========================
+============== ===================
+checksum32     1,369,868,782      
+date           2017-10-24T05:47:57
+engine_version 2.8.0-git8e9cdf8   
+============== ===================
 
 num_sites = 3, num_imts = 3
 
@@ -41,11 +41,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ======================================================== =============== ================
-smlt_path weight source_model_file                                        gsim_logic_tree num_realizations
-========= ====== ======================================================== =============== ================
-b1        1.000  `vancouver_area_source.xml <vancouver_area_source.xml>`_ simple(3)       3/3             
-========= ====== ======================================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  simple(3)       3/3             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -61,33 +61,33 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=3, rlzs=3)
-  0,GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5'): ['<2,b1~b13,w=0.16>']
-  0,GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5'): ['<0,b1~b11,w=0.16>']
-  0,GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5'): ['<1,b1~b12,w=0.68>']>
+  0,GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5'): [2]
+  0,GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5'): [0]
+  0,GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5'): [1]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ========================= ====== ==================== =========== ============ ============
 source_model              grp_id trt                  num_sources eff_ruptures tot_ruptures
 ========================= ====== ==================== =========== ============ ============
-vancouver_area_source.xml 0      Active Shallow Crust 1           2430         2,430       
+vancouver_area_source.xml 0      Active Shallow Crust 1           2,430        2,430       
 ========================= ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
-============================== ================================================================================
-count_eff_ruptures.received    tot 1.79 KB, max_per_task 1.09 KB                                               
-count_eff_ruptures.sent        gsims 312.3 KB, sources 9.05 KB, param 1.98 KB, srcfilter 1.45 KB, monitor 644 B
-hazard.input_weight            243.0                                                                           
-hazard.n_imts                  3                                                                               
-hazard.n_levels                36                                                                              
-hazard.n_realizations          3                                                                               
-hazard.n_sites                 3                                                                               
-hazard.n_sources               1                                                                               
-hazard.output_weight           108.0                                                                           
-hostname                       tstation.gem.lan                                                                
-require_epsilons               False                                                                           
-============================== ================================================================================
+=========================== ====================================================================================
+count_eff_ruptures.received tot 3.23 KB, max_per_task 845 B                                                     
+count_eff_ruptures.sent     gsims 624.61 KB, sources 11.27 KB, param 3.96 KB, srcfilter 2.89 KB, monitor 1.28 KB
+hazard.input_weight         729.0                                                                               
+hazard.n_imts               3                                                                                   
+hazard.n_levels             36                                                                                  
+hazard.n_realizations       3                                                                                   
+hazard.n_sites              3                                                                                   
+hazard.n_sources            1                                                                                   
+hazard.output_weight        108.0                                                                               
+hostname                    tstation.gem.lan                                                                    
+require_epsilons            False                                                                               
+=========================== ====================================================================================
 
 Slowest sources
 ---------------
@@ -105,24 +105,28 @@ source_class calc_time counts
 AreaSource   0.003     1     
 ============ ========= ======
 
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 0.001  0.002 0.004 2        
-================== ===== ====== ===== ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_eff_ruptures 0.002 3.789E-04 0.001 0.002 4        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.021     0.0       1     
-managing sources               0.015     0.0       1     
-store source_info              0.013     0.0       1     
-total count_eff_ruptures       0.006     0.0       2     
+reading composite source model 0.023     0.0       1     
+managing sources               0.017     0.0       1     
+total count_eff_ruptures       0.006     0.191     4     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.001     0.0       1     
-reading site collection        1.593E-04 0.0       1     
-aggregate curves               6.890E-05 0.0       2     
-saving probability maps        2.718E-05 0.0       1     
+reading site collection        2.019E-04 0.0       1     
+aggregate curves               1.135E-04 0.0       4     
+saving probability maps        2.885E-05 0.0       1     
 ============================== ========= ========= ======

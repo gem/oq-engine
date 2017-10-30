@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.boore_atkinson_2008 import (BooreAtkinson2008,
+                                                          Atkinson2010Hawaii)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -50,4 +51,20 @@ class BooreAtkinson2008TestCase(BaseGSIMTestCase):
                     
     def test_std_total_strike_slip(self):
         self.check('NGA/BA08/BA08_SIGTM_SS.csv',
+                    max_discrep_percentage=0.1)
+
+
+class Atkinson2010HawaiiTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = Atkinson2010Hawaii
+    
+    # Test data were kindly provided by Gail Atkinson
+    # (Note that it is here used a modified version of the table
+    # to get rid of distances less than 1km)
+
+    def test_mean(self):
+        self.check('NGA/BA08/A10H_MEDIAN_1KM.csv',
+                    max_discrep_percentage=0.6)
+
+    def test_std_total(self):
+        self.check('NGA/BA08/A10H_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)

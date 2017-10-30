@@ -18,71 +18,103 @@
 
 import sys
 import time
-import socket
-import sqlite3
 import os.path
+import sqlite3
 import logging
+import threading
 import subprocess
-from multiprocessing.connection import Listener
-from concurrent.futures import ThreadPoolExecutor
 
-from openquake.baselib import sap
+from openquake.baselib import config, sap, zeromq as z, workerpool as w
+from openquake.baselib.general import socket_ready
 from openquake.baselib.parallel import safely_call
-from openquake.hazardlib import valid
-from openquake.commonlib import config, logs
+from openquake.commonlib import logs
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
 
-# using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
-# ref: https://bugs.python.org/issue27126
-executor = ThreadPoolExecutor(1)
+
+db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+              detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)
+# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
+# OperationalError: "database is locked" disappear in the WebUI tests
+
+ZMQ = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
+
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
 
 class DbServer(object):
     """
     A server collecting the received commands into a queue
     """
-    def __init__(self, db, address, authkey):
+    def __init__(self, db, address, num_workers=5):
         self.db = db
-        self.address = address
-        self.authkey = authkey
+        self.master_host = address[0]
+        self.frontend = 'tcp://%s:%s' % address
+        self.backend = 'inproc://dbworkers'
+        self.num_workers = num_workers
+        self.pid = os.getpid()
+        self.master = w.WorkerMaster(**config.zworkers)
 
-    def loop(self):
-        listener = Listener(self.address, backlog=5, authkey=self.authkey)
-        logging.warn('DB server started with %s, listening on %s:%d...',
-                     sys.executable, *self.address)
-        try:
-            while True:
-                try:
-                    conn = listener.accept()
-                except KeyboardInterrupt:
-                    break
-                except:
-                    # unauthenticated connection, for instance by a port
-                    # scanner such as the one in manage.py
-                    continue
-                cmd_ = conn.recv()  # a tuple (name, arg1, ... argN)
-                cmd, args = cmd_[0], cmd_[1:]
-                logging.debug('Got ' + str(cmd_))
-                if cmd == 'stop':
-                    conn.send((None, None))
-                    conn.close()
-                    break
+    def dworker(self, sock):
+        # a database worker responding to commands
+        for cmd_ in sock:
+            cmd, args = cmd_[0], cmd_[1:]
+            if cmd == 'getpid':
+                sock.send((self.pid, None, None))
+                continue
+            try:
                 func = getattr(actions, cmd)
-                fut = executor.submit(safely_call, func, (self.db,) + args)
+            except AttributeError:
+                sock.send(('Invalid command ' + cmd, ValueError, None))
+            else:
+                sock.send(safely_call(func, (self.db,) + args))
 
-                def sendback(fut, conn=conn):
-                    res, etype, _mon = fut.result()
-                    if etype:
-                        logging.error(res)
-                    # send back the result and the exception class
-                    conn.send((res, etype))
-                    conn.close()
-                fut.add_done_callback(sendback)
-        finally:
-            listener.close()
+    def start(self):
+        """
+        Start database worker threads
+        """
+        # give a nice name to the process
+        w.setproctitle('oq-dbserver')
+
+        dworkers = []
+        for _ in range(self.num_workers):
+            sock = z.Socket(self.backend, z.zmq.REP, 'connect')
+            threading.Thread(target=self.dworker, args=(sock,)).start()
+            dworkers.append(sock)
+        logging.warn('DB server started with %s on %s, pid=%d',
+                     sys.executable, self.frontend, self.pid)
+        if ZMQ:
+            # start task_in->task_out streamer thread
+            c = config.zworkers
+            threading.Thread(
+                target=w.streamer,
+                args=(self.master_host, c.task_in_port, c.task_out_port)
+            ).start()
+            logging.warn('Task streamer started from %s -> %s',
+                         c.task_in_port, c.task_out_port)
+
+            # start zworkers and wait a bit for them
+            msg = self.master.start()
+            logging.warn(msg)
+            time.sleep(1)
+
+        # start frontend->backend proxy for the database workers
+        try:
+            z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
+                        z.bind(self.backend, z.zmq.DEALER))
+        except (KeyboardInterrupt, z.zmq.ZMQError):
+            for sock in dworkers:
+                sock.running = False
+            logging.warn('DB server stopped')
+
+    def stop(self):
+        """Stop the DbServer and the zworkers if any"""
+        if ZMQ:
+            logging.warn(self.master.stop())
+        self.db.close()
 
 
 def different_paths(path1, path2):
@@ -99,19 +131,15 @@ def get_status(address=None):
     :param address: pair (hostname, port)
     :returns: 'running' or 'not-running'
     """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        err = sock.connect_ex(address or config.DBS_ADDRESS)
-    finally:
-        sock.close()
-    return 'not-running' if err else 'running'
+    address = address or (config.dbserver.host, DBSERVER_PORT)
+    return 'running' if socket_ready(address) else 'not-running'
 
 
 def check_foreign():
     """
     Check if we the DbServer is the right one
     """
-    if not config.flag_set('dbserver', 'multi_user'):
+    if not config.dbserver.multi_user:
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
             return('You are trying to contact a DbServer from another'
@@ -125,7 +153,7 @@ def ensure_on():
     Start the DbServer if it is off
     """
     if get_status() == 'not-running':
-        if valid.boolean(config.get('dbserver', 'multi_user')):
+        if config.dbserver.multi_user:
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
@@ -154,7 +182,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = config.DBS_ADDRESS
+        addr = (config.dbserver.host, DBSERVER_PORT)
 
     if dbpath:
         DATABASE['NAME'] = dbpath
@@ -165,15 +193,20 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
-    db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
-                  detect_types=sqlite3.PARSE_DECLTYPES)
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)
-    db.conn.close()
+    # the line below is needed to work around a very subtle bug of sqlite;
+    # we need new connections, see https://github.com/gem/oq-engine/pull/3002
+    db.close()
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    DbServer(db, addr, config.DBS_AUTHKEY).loop()
+    dbs = DbServer(db, addr)
+    try:
+        dbs.start()
+    finally:
+        dbs.stop()
+
 
 run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')

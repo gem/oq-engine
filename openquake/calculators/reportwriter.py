@@ -55,7 +55,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
         if sites is not None:
             count += src.num_ruptures
             dt = time.time() - t0
-            acc.calc_times.append((src.source_id, len(sites), dt))
+            acc.calc_times.append((src.source_id, len(sites), src.weight, dt))
     acc.eff_ruptures = {acc.grp_id: count}
     return acc
 
@@ -64,40 +64,34 @@ class ReportWriter(object):
     """
     A particularly smart view over the datastore
     """
-    title = dict(
-        params='Parameters',
-        inputs='Input files',
-        csm_info='Composite source model',
-        required_params_per_trt='Required parameters per tectonic region type',
-        ruptures_per_trt='Number of ruptures per tectonic region type',
-        ruptures_events='Specific information for event based',
-        rlzs_assoc='Realizations per (TRT, GSIM)',
-        job_info='Informational data',
-        biggest_ebr_gmf='Maximum memory allocated for the GMFs',
-        avglosses_data_transfer='Estimated data transfer for the avglosses',
-        exposure_info='Exposure model',
-        short_source_info='Slowest sources',
-        task_slowest='Slowest task',
-        task_info='Information about the tasks',
-        times_by_source_class='Computation times by source typology',
-        performance='Slowest operations',
-    )
+    title = {
+        'params': 'Parameters',
+        'inputs': 'Input files',
+        'csm_info': 'Composite source model',
+        'dupl_sources': 'Duplicated sources',
+        'required_params_per_trt':
+        'Required parameters per tectonic region type',
+        'ruptures_per_trt': 'Number of ruptures per tectonic region type',
+        'ruptures_events': 'Specific information for event based',
+        'rlzs_assoc': 'Realizations per (TRT, GSIM)',
+        'job_info': 'Informational data',
+        'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
+        'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
+        'exposure_info': 'Exposure model',
+        'short_source_info': 'Slowest sources',
+        'task:0': 'Fastest task',
+        'task:-1': 'Slowest task',
+        'task_info': 'Information about the tasks',
+        'times_by_source_class': 'Computation times by source typology',
+        'performance': 'Slowest operations',
+    }
 
     def __init__(self, dstore):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
-        try:
-            info = {decode(k): ast.literal_eval(decode(v))
-                    for k, v in dict(dstore['job_info']).items()}
-        except KeyError:  # job_info not in the datastore (scenario hazard)
-            info = dict(hostname='localhost')
-        dpath = dstore.hdf5path
-        mtime = os.path.getmtime(dpath)
-        host = '%s:%s' % (info['hostname'], decode(dpath))
-        updated = str(time.ctime(mtime))
         versions = sorted(dstore['/'].attrs.items())
-        self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
+        self.text += '\n\n' + views.rst_table(versions)
         self.text += '\n\nnum_sites = %d, num_imts = %d' % (
             len(dstore['sitecol']), len(oq.imtls))
 
@@ -118,7 +112,9 @@ class ReportWriter(object):
             self.add(name)
         if 'csm_info' in ds:
             self.add('csm_info')
-            self.add('required_params_per_trt')
+            if ds['csm_info'].source_models[0].name != 'fake':
+                # required_params_per_trt makes no sense for GMFs from file
+                self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
         if 'source_info' in ds:
             self.add('ruptures_per_trt')
@@ -133,10 +129,12 @@ class ReportWriter(object):
         if 'source_info' in ds:
             self.add('short_source_info')
             self.add('times_by_source_class')
+            self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
             if 'classical' in ds['task_info']:
-                self.add('task_slowest')
+                self.add('task:0')
+                self.add('task:-1')
         if 'performance_data' in ds:
             self.add('performance')
         return self.text

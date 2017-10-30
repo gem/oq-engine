@@ -18,7 +18,7 @@
 
 from __future__ import division
 import numpy
-from openquake.commonlib import config
+from openquake.baselib import config
 
 F32 = numpy.float32
 
@@ -127,8 +127,8 @@ def get_assets(dstore):
     assetcol = dstore['assetcol']
     asset_refs = dstore['asset_refs'].value
     taxo = assetcol.taxonomies
-    asset_data = [(asset_refs[a['idx']], '"%s"' % taxo[a['taxonomy_id']],
-                   a['lon'], a['lat']) for a in assetcol.array]
+    asset_data = [(asset_refs[a['idx']], '"%s"' % t,
+                   a['lon'], a['lat']) for a, t in zip(assetcol.array, taxo)]
     return numpy.array(asset_data, asset_dt)
 
 
@@ -136,13 +136,13 @@ def shared_dir_on():
     """
     :returns: True if a shared_dir has been set in openquake.cfg, else False
     """
-    return config.SHARED_DIR_ON
+    return config.directory.shared_dir
 
 
 def reader(func):
     """
     Decorator used to mark functions that require read access to the
-    file system. It simply adds a thunk `shared_dir_on` to the function.
+    file system.
     """
-    func.shared_dir_on = shared_dir_on
+    func.read_access = config.directory.shared_dir
     return func

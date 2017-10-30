@@ -19,9 +19,9 @@ from __future__ import division
 import os
 import time
 import logging
-from openquake.baselib import sap, general, parallel
+from openquake.baselib import sap, general, parallel, datastore
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib import readinput, logs
 from openquake.commands import engine
 
 
@@ -53,8 +53,9 @@ def run_tiles(num_tiles, job_ini, poolsize=0):
                      len(calc_ids) + 1, num_tiles)
         return calc_ids + [calc_id]
     calc_ids = Starmap(engine.run_tile, task_args, poolsize).reduce(agg, [])
+    datadir = datastore.get_datadir()
     for calc_id in calc_ids:
-        print(os.path.join(datastore.DATADIR, 'calc_%d.hdf5' % calc_id))
+        print(os.path.join(datadir, 'calc_%d.hdf5' % calc_id))
     print('Total calculation time: %.1f h' % ((time.time() - t0) / 3600.))
 
 run_tiles.arg('num_tiles', 'number of tiles to generate',

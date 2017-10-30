@@ -56,10 +56,11 @@ install_requires = [
     'nose >=1.3, <1.4',
     'numpy >=1.8, <1.12',
     'scipy >=0.13, <0.18',
+    'pyzmq <17.0',
     'psutil >=1.2, <4.5',
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
-    'decorator >=3.4, <4.1',
+    'decorator >=3.4, <4.2',
     'django >=1.6, <1.12',
     'matplotlib >=1.5, <2.0',
     'requests >=2.2, <2.13',
@@ -74,6 +75,7 @@ if sys.version < '3':
     )
 
 extras_require = {
+    'setproctitle': ["setproctitle"],
     'prctl': ["python-prctl ==1.6.1"],
     'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'celery':  ["celery >=3.1, <4.0"],

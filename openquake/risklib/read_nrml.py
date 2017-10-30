@@ -15,6 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import re
 import logging
 import itertools
 import numpy
@@ -102,17 +103,28 @@ def get_vulnerability_functions_05(node, fname):
             raise InvalidFile(
                 'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
                 (taxonomy, fname, vfun.lineno))
+        num_probs = None
         if vfun['dist'] == 'PM':
             loss_ratios, probs = [], []
             for probabilities in vfun[1:]:
                 loss_ratios.append(probabilities['lr'])
                 probs.append(valid.probabilities(~probabilities))
-            probs = numpy.array(probs)
-            assert probs.shape == (len(loss_ratios), len(imls))
+                if num_probs is None:
+                    num_probs = len(probs[-1])
+                elif len(probs[-1]) != num_probs:
+                    raise ValueError(
+                        'Wrong number of probabilities (expected %d, '
+                        'got %d) in %s, line %d' %
+                        (num_probs, len(probs[-1]), fname,
+                         probabilities.lineno))
+            all_probs = numpy.array(probs)
+            assert all_probs.shape == (len(loss_ratios), len(imls)), (
+                len(loss_ratios), len(imls))
             vmodel[imt, taxonomy] = (
                 scientific.VulnerabilityFunctionWithPMF(
                     taxonomy, imt, imls, numpy.array(loss_ratios),
-                    probs))  # the seed will be set by readinput.get_risk_model
+                    all_probs))
+            # the seed will be set by readinput.get_risk_model
         else:
             with context(fname, vfun):
                 loss_ratios = ~vfun.meanLRs
@@ -356,6 +368,19 @@ def damage_triple(value, ds, mean, stddev):
     return ds, valid.positivefloat(mean), valid.positivefloat(stddev)
 
 
+def taxonomy(value):
+    """
+    Any ASCII character goes into a taxonomy, except spaces.
+    """
+    try:
+        value.encode('ascii')
+    except UnicodeEncodeError:
+        raise ValueError('tag %r is not ASCII' % value)
+    if re.search('\s', value):
+        raise ValueError('The taxonomy %r contains whitespace chars' % value)
+    return value
+
+
 def update_validators():
     """
     Call this to updade the global nrml.validators
@@ -408,4 +433,6 @@ def update_validators():
         'cf': asset_mean_stddev,
         'damage': damage_triple,
         'damageStates': valid.namelist,
+        'taxonomy': taxonomy,
+        'tagNames': valid.namelist,
     })

@@ -19,7 +19,6 @@ import os
 import time
 import socket
 from datetime import datetime
-from multiprocessing.connection import Client
 
 import numpy
 
@@ -165,17 +164,6 @@ class Monitor(object):
         "To be overridden in subclasses"
         if self.autoflush:
             self.flush()
-
-    def send(self, *args):
-        """
-        Send a command to the listener. Add the .calc_id as last argument.
-        """
-        if self.address:
-            client = Client(self.address, authkey=self.authkey)
-            try:
-                client.send(args + (self.calc_id,))
-            finally:
-                client.close()
 
     def save_info(self, dic):
         """

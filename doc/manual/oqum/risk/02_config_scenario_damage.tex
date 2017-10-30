@@ -52,8 +52,6 @@ displayed:
 Calculation 2680 completed in 13 seconds. Results:
   id | name
 5069 | dmg_by_asset
-5070 | dmg_by_taxon
-5071 | dmg_total
 \end{minted}
 
 Note that one or more of the following parameters can be used in the same job
@@ -126,9 +124,10 @@ recommended to set a reasonable search radius (in km) using the
 available hazard values, as shown in the job\_damage.ini example file above.
 
 The only new parameters introduced in risk configuration file for this example
-(Listing~\ref{lst:config_scenario_damage}) are the \Verb+region_constraint+
-and \Verb+asset_hazard_distance+ parameters, which are described below; all
-other parameters have already been described in earlier examples.
+(Listing~\ref{lst:config_scenario_damage}) are the \Verb+region_constraint+,
+\Verb+asset_hazard_distance+, and \Verb+time_event+ parameters, which are
+described below; all other parameters have already been described in earlier
+examples.
 
 \begin{itemize}
 
@@ -163,6 +162,13 @@ other parameters have already been described in earlier examples.
     asset location is associated with the asset. It is possible that the
     associated hazard input site might be located outside the polygon defined
     by the \Verb+region_constraint+.
+
+  \item \Verb+time_event+: this parameter indicates the time of day at which
+    the event occurs. The values that this parameter can be set to are 
+    currently limited to one of the three strings: \Verb+day+, \Verb+night+,
+    and \Verb+transit+. This parameter will be used to compute the number of
+    fatalities based on the number of occupants present in the various
+    \glspl{asset} at that time of day, as specified in the exposure model.
 
 \end{itemize}
 
@@ -349,9 +355,5 @@ displayed:
 Calculation 1579 completed in 37 seconds. Results:
   id | name
 8990 | losses_by_asset
-8991 | losses_by_taxon
-8992 | losses_total
 8993 | dmg_by_asset
-8994 | dmg_by_taxon
-8995 | dmg_total
 \end{minted}

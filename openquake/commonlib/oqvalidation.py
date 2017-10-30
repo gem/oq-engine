@@ -84,7 +84,6 @@ class OqParam(valid.ParamSet):
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
     loss_curve_resolution = valid.Param(valid.positiveint, 50)
-    loss_ratios = valid.Param(valid.loss_ratios, ())
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
@@ -121,6 +120,7 @@ class OqParam(valid.ParamSet):
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
+    return_periods = valid.Param(valid.positiveints, None)
     save_ruptures = valid.Param(valid.boolean, True)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -129,7 +129,9 @@ class OqParam(valid.ParamSet):
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
     sites_per_tile = valid.Param(valid.positiveint, 20000)
     sites_slice = valid.Param(valid.simple_slice, (None, None))
+    sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
+    split_sources = valid.Param(valid.boolean, True)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -192,6 +194,8 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
+
+        self.check_source_model()
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -271,7 +275,8 @@ class OqParam(valid.ParamSet):
 
         risk_investigation_time / investigation_time / ses_per_logic_tree_path
         """
-        assert self.investigation_time, 'investigation_time = 0!'
+        if self.investigation_time is None:
+            raise ValueError('Missing investigation_time in the .ini file')
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
@@ -318,6 +323,13 @@ class OqParam(valid.ParamSet):
 
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
+
+    @property
+    def lti(self):
+        """
+        Dictionary extended_loss_type -> extended_loss_type index
+        """
+        return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
 
     def loss_dt(self, dtype=F32):
         """
@@ -429,7 +441,12 @@ class OqParam(valid.ParamSet):
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
-        if ('risk' in self.calculation_mode or
+        has_sites = (self.sites is not None or 'sites' in self.inputs
+                     or 'site_model' in self.inputs)
+        if ('gmfs' in self.inputs and not has_sites and
+                not self.inputs['gmfs'].endswith('.xml')):
+            raise ValueError('Missing sites or sites_csv in the .ini file')
+        elif ('risk' in self.calculation_mode or
                 'damage' in self.calculation_mode or
                 'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
@@ -437,7 +454,7 @@ class OqParam(valid.ParamSet):
             sites=bool(self.sites),
             sites_csv=self.inputs.get('sites', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
-            gmfs_csv=self.inputs.get('gmvs', 0),
+            gmfs_csv=self.inputs.get('gmfs', 0),
             region=bool(self.region),
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags
@@ -573,15 +590,6 @@ class OqParam(valid.ParamSet):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
 
-    def is_valid_loss_ratios(self):
-        """
-        The loss types in the loss_ratios dictionary {loss_ratios} are not
-        the ones for which there are risk functions: {_risk_files}
-        """
-        ltypes = sorted(self.loss_ratios)
-        expected_ltypes = sorted(self.risk_files)
-        return not ltypes or ltypes == expected_ltypes
-
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
@@ -592,3 +600,12 @@ class OqParam(valid.ParamSet):
         elif len(ok_imts) == 1:
             raise ValueError(
                 'There is a single IMT, uniform_hazard_spectra cannot be True')
+
+    def check_source_model(self):
+        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
+                'rupture_model' in self.inputs):
+            return
+        if 'source' not in self.inputs and not self.hazard_calculation_id:
+            raise ValueError('Missing source_model_logic_tree in %s '
+                             'or missing --hc option' %
+                             self.inputs.get('job_ini', 'job_ini'))

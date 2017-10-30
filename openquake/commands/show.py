@@ -23,17 +23,16 @@ import getpass
 import logging
 import numpy
 
-from openquake.baselib import sap
-from openquake.hazardlib import valid, stats
-from openquake.commonlib import datastore, calc
+from openquake.baselib import sap, config
+from openquake.hazardlib import stats
+from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.commonlib import config
-from openquake.commonlib import logs
+from openquake.commonlib import logs, calc
 from openquake.calculators.views import view
+from openquake.calculators.extract import extract
 
-MULTI_USER = valid.boolean(config.get('dbserver', 'multi_user') or 'false')
-if MULTI_USER:
+if config.dbserver.multi_user:
     # get the datastore of the user who ran the job
     def read(calc_id):
         job = logs.dbcmd('get_job', calc_id, getpass.getuser())
@@ -56,15 +55,16 @@ def get_hcurves_and_means(dstore):
 
 
 @sap.Script
-def show(what, calc_id=-1):
+def show(what='contents', calc_id=-1, extra=()):
     """
     Show the content of a datastore (by default the last one).
     """
+    datadir = datastore.get_datadir()
     if what == 'all':  # show all
-        if not os.path.exists(datastore.DATADIR):
+        if not os.path.exists(datadir):
             return
         rows = []
-        for calc_id in datastore.get_calc_ids(datastore.DATADIR):
+        for calc_id in datastore.get_calc_ids(datadir):
             try:
                 ds = datastore.read(calc_id)
                 oq = ds['oqparam']
@@ -72,7 +72,7 @@ def show(what, calc_id=-1):
             except:
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
-                f = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
+                f = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
                 logging.warn('Unreadable datastore %s', f)
                 continue
             else:
@@ -100,6 +100,8 @@ def show(what, calc_id=-1):
             print('%s: rmsep=%s' % (rlz, dist))
     elif view.keyfunc(what) in view:
         print(view(what, ds))
+    elif what.split('/', 1)[0] in extract:
+        print(extract(ds, what, *extra))
     elif what in ds:
         obj = ds[what]
         if hasattr(obj, 'value'):  # an array
@@ -113,3 +115,4 @@ def show(what, calc_id=-1):
 
 show.arg('what', 'key or view of the datastore')
 show.arg('calc_id', 'calculation ID', type=int)
+show.arg('extra', 'extra arguments', nargs='*')

@@ -7,6 +7,7 @@
 * Django - Used by the API server and the WebUI
 * HDF5 - Used for storing and managing data
 * numpy and scipy - Fundamental packages for scientific computing with Python
+* pyzmq - Used for internal inter-process communications
 
 ### Optional dependencies
 

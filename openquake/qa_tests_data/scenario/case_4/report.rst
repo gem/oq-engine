@@ -1,11 +1,11 @@
 Scenario QA Test, Case 1
 ========================
 
-======================================== ========================
-localhost:/mnt/ssd/oqdata/calc_1772.hdf5 Fri Jul  7 07:32:11 2017
-checksum32                               3,130,447,207           
-engine_version                           2.6.0-git50066b9        
-======================================== ========================
+============== ===================
+checksum32     3,130,447,207      
+date           2017-10-24T05:47:09
+engine_version 2.8.0-git8e9cdf8   
+============== ===================
 
 num_sites = 3, num_imts = 1
 
@@ -39,19 +39,11 @@ site_model    `site_model.xml <site_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,13 +51,12 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008(): ['<0,b_1~b1,w=1.0>']>
+  0,BooreAtkinson2008(): [0]>
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-reading site collection 4.976E-04 0.0       1     
+reading site collection 5.193E-04 0.0       1     
 ======================= ========= ========= ======

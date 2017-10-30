@@ -20,12 +20,13 @@ from nose.plugins.attrib import attr
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_3, case_4, case_5,
-    case_6a, case_7, occupants, case_master)
+    case_6a, case_7, case_8, occupants, case_master)
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.views import view
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 
 
 def tot_loss(dstore):
@@ -50,11 +51,21 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg.csv', fname)
 
         # check the exported GMFs
-        [fname] = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-FromFile-PGA.csv', fname)
+        [fname, sitefile] = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-FromFile.csv', fname)
+        self.assertEqualFiles('expected/sites.csv', sitefile)
 
         [fname] = out['losses_by_event', 'csv']
         self.assertEqualFiles('expected/losses_by_event.csv', fname)
+
+        # check the asset values by sid
+        [val] = extract(self.calc.datastore, 'asset_values/0')
+        self.assertEqual(val['aref'], b'a2')
+        self.assertEqual(val['aid'], 0)
+        self.assertEqual(val['structural'], 2000.)
+
+        with self.assertRaises(IndexError):  # non-existing site_id
+            extract(self.calc.datastore, 'asset_values/1')
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
@@ -69,6 +80,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                             exports='csv')
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+
+        # test agglosses
+        tot = extract(self.calc.datastore, 'agglosses/occupants')
+        numpy.testing.assert_almost_equal(tot.array, 0.01355099)
+
+        # test agglosses with *
+        tbl = extract(self.calc.datastore, 'agglosses/occupants', 'taxonomy=*')
+        self.assertEqual(tbl.array.shape, (1, 1))  # 1 taxonomy, 1 rlz
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_3(self):
@@ -104,7 +123,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_5(self):
-        # case with site model
+        # case with site model and 11 sites filled out of 17
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
@@ -135,11 +154,23 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
+        # a case with two GSIMs
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
-        # check losses_by_taxon
-        fnames = export(('losses_by_taxon-rlzs', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        # check losses by taxonomy
+        agglosses = extract(self.calc.datastore, 'agglosses/structural',
+                            'taxonomy=*').array  # shape (T, R) = (3, 2)
+        numpy.testing.assert_almost_equal(
+            agglosses, [[1969.55847168, 2363.07958984],
+                        [712.85351562, 924.75616455],
+                        [986.706604, 1344.03710938]])
+
+        # extract agglosses with a * and a selection
+        obj = extract(self.calc.datastore, 'agglosses/structural',
+                      'state=*', 'cresta=0.11')
+        self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
+        self.assertEqual(obj.tags, [b'state=01'])
+        numpy.testing.assert_almost_equal(
+            obj.array, [[1299.3848877, 1561.6965332]])
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_7(self):
@@ -150,3 +181,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tot20 = tot_loss(self.calc.datastore)
         for name in tot10.dtype.names:
             numpy.testing.assert_almost_equal(tot10[name], tot20[name])
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_8(self):
+        # a complex scenario_risk from GMFs where the hazard sites are
+        # not in the asset locations
+        self.run_calc(case_8.__file__, 'job.ini')
+        agglosses = extract(self.calc.datastore, 'agglosses/structural')
+        numpy.testing.assert_almost_equal(agglosses.array, [984065.75])
+
+        # make sure the fullreport can be extracted
+        view('fullreport', self.calc.datastore)
