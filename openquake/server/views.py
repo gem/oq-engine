@@ -20,9 +20,10 @@ import shutil
 import json
 import logging
 import os
+import sys
 import inspect
 import tempfile
-import multiprocessing
+import subprocess
 try:
     import urllib.parse as urlparse
 except ImportError:
@@ -39,8 +40,8 @@ from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode
-from openquake.baselib.parallel import Starmap, safely_call
+from openquake.baselib.python3compat import unicode, pickle
+from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
@@ -427,6 +428,7 @@ def run_calc(request):
     try:
         job_id, _pid = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
+        raise
         # get the exception message
         exc_msg = str(exc)
         logging.error(exc_msg)
@@ -438,6 +440,14 @@ def run_calc(request):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
+RUNCALC = '''\
+from openquake.commonlib import readinput
+from openquake.engine import engine
+oqparam = readinput.get_oqparam('{job_ini}', hc_id={hazard_job_id})
+engine.run_calc({job_id}, oqparam, '{loglevel}', '{logfile}', '{exports}',
+                {hazard_job_id})
+'''
+
 
 def submit_job(job_ini, user_name, hazard_job_id=None,
                loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
@@ -445,12 +455,12 @@ def submit_job(job_ini, user_name, hazard_job_id=None,
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oqparam = engine.job_from_file(job_ini, user_name, hazard_job_id)
-    proc = multiprocessing.Process(
-        target=engine.run_calc,
-        args=(job_id, oqparam, loglevel, logfile, exports, hazard_job_id))
-    proc.start()
-    return job_id, proc.pid
+    job_id, _oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
+    runcalc = RUNCALC.format(job_ini=job_ini, loglevel=loglevel,
+                             logfile=logfile, exports=exports, job_id=job_id,
+                             hazard_job_id=hazard_job_id)
+    popen = subprocess.Popen([sys.executable, '-c', runcalc])
+    return job_id, popen.pid
 
 
 @require_http_methods(['GET'])
