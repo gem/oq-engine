@@ -30,7 +30,7 @@ from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
-    pmap_from_grp, ProbabilityMap)
+    pmap_from_grp, pmap_from_trt, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.commonlib import source, calc
@@ -232,19 +232,24 @@ class PSHACalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param pmap: a ProbabilityMap
+        :param pmap: a pmap or a dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            for src_id, nsites, srcweight, calc_time in pmap.calc_times:
-                src_id = src_id.split(':', 1)[0]
-                info = self.csm.infos[pmap.grp_id, src_id]
-                info.calc_time += calc_time
-                info.num_sites = max(info.num_sites, nsites)
-                info.num_split += 1
+            if not self.oqparam.remove_dupl_sources:
+                for src_id, nsites, srcweight, calc_time in pmap.calc_times:
+                    src_id = src_id.split(':', 1)[0]
+                    info = self.csm.infos[pmap.grp_id, src_id]
+                    info.calc_time += calc_time
+                    info.num_sites = max(info.num_sites, nsites)
+                    info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
             for bb in getattr(pmap, 'bbs', []):  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            acc[pmap.grp_id] |= pmap
+            if isinstance(pmap, ProbabilityMap):
+                acc[pmap.grp_id] |= pmap
+            else:  # dictionary of pmaps
+                for grp_id in pmap:
+                    acc[grp_id] |= pmap[grp_id]
         return acc
 
     def count_eff_ruptures(self, result_dict, src_group_id):
@@ -298,8 +303,9 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            ires = parallel.Starmap(
-                self.core_task.__func__, iterargs).submit_all()
+            func = (pmap_from_trt if self.oqparam.remove_dupl_sources
+                    else self.core_task.__func__)
+            ires = parallel.Starmap(func, iterargs).submit_all()
         acc = ires.reduce(self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
@@ -343,16 +349,24 @@ class PSHACalculator(base.HazardCalculator):
                 maximum_distance=oq.maximum_distance,
                 disagg=oq.poes_disagg or oq.iml_disagg,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-            for args in self._args_by_grp(
-                    csm, src_filter, param, num_tiles, maxweight):
+            if oq.remove_dupl_sources:
+                iterargs = self._args_by_trt(
+                    csm, src_filter, param, num_tiles, maxweight)
+            else:
+                iterargs = self._args_by_grp(
+                    csm, src_filter, param, num_tiles, maxweight)
+            num_tasks = 0
+            num_sources = 0
+            for args in iterargs:
+                num_tasks += 1
+                num_sources += len(args[0])
                 yield args + (monitor,)
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
     def _args_by_grp(self, csm, src_filter, param, num_tiles, maxweight):
         oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
-        num_tasks = 0
-        num_sources = 0
         for sm in csm.source_models:
             if oq.poes_disagg or oq.iml_disagg:  # only for disagg
                 param['sm_id'] = sm.ordinal
@@ -362,20 +376,25 @@ class PSHACalculator(base.HazardCalculator):
                     logging.info(
                         'Sending source group #%d of %d (%s, %d sources)',
                         sg.id + 1, ngroups, sg.trt, len(sg.sources))
+                self.csm.add_infos(sg.sources)
                 if sg.src_interdep == 'mutex':  # do not split the group
-                    self.csm.add_infos(sg.sources)
                     sg.samples = sm.samples
                     yield sg, src_filter, gsims, param
-                    num_tasks += 1
-                    num_sources += len(sg)
                 else:
                     for block in self.csm.split_sources(
                             sg.sources, src_filter, maxweight):
                         block.samples = sm.samples
                         yield block, src_filter, gsims, param
-                        num_tasks += 1
-                        num_sources += len(block)
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+
+    def _args_by_trt(self, csm, src_filter, param, num_tiles, maxweight):
+        dic = csm.get_sources_by_trt()
+        for trt, sources in dic.items():
+            gsims = self.csm.info.gsim_lt.get_gsims(trt)
+            for block in self.csm.split_sources(
+                    sources, src_filter, maxweight):
+                block.samples = sources[0].samples
+                param['sm_id'] = sources[0].sm_id
+                yield block, src_filter, gsims, param
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source
