@@ -721,14 +721,26 @@ class CompositeSourceModel(collections.Sequence):
 
     def get_sources_by_trt(self):
         """
-        Build a dictionary TRT string -> [{source_id: sources}, ...]
+        Build a dictionary TRT string -> sources without duplicates
         NB: use this function only in absence of mutex groups
         """
         acc = AccumDict(accum=[])
-        for grp in self.src_groups:
-            assert grp.src_interdep != 'mutex', grp
-            acc[grp.trt].extend(grp)
-        return {trt: groupby(acc[trt], lambda x: x.source_id) for trt in acc}
+        for sm in self.source_models:
+            for grp in sm.src_groups:
+                assert grp.src_interdep != 'mutex', grp
+                for src in grp:
+                    src.sm_id = sm.ordinal
+                    src.samples = sm.samples
+                acc[grp.trt].extend(grp)
+        dic = {}
+        for trt in acc:
+            dic[trt] = []
+            for grp in groupby(acc[trt], lambda x: x.source_id).values():
+                src = grp[0]
+                if len(grp) > 1:
+                    src.src_group_id = [s.src_group_id for s in grp]
+                dic[trt].append(src)
+        return dic
 
     def get_num_sources(self):
         """
@@ -779,12 +791,10 @@ class CompositeSourceModel(collections.Sequence):
         :yields: blocks of sources of weight around maxweight
         """
         light = [src for src in sources if src.weight <= maxweight]
-        self.add_infos(light)
         for block in block_splitter(
                 light, maxweight, weight=operator.attrgetter('weight')):
             yield block
         heavy = [src for src in sources if src.weight > maxweight]
-        self.add_infos(heavy)
         for src in heavy:
             srcs = split_filter_source(src, src_filter)
             for block in block_splitter(
