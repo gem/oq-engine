@@ -61,7 +61,7 @@ import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import DictArray, groupby
+from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.baselib.parallel import Sequential
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -118,6 +118,7 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons,
     """
     pmap = ProbabilityMap.build(
         len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=rup_indep)
+    eff_ruptures = 0
     try:
         for rup, weight in rupture_weight_pairs(src):
             with ctx_mon:  # compute distances
@@ -125,6 +126,7 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons,
                     sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
                 except FarAwayRupture:
                     continue
+            eff_ruptures += 1
             # compute probabilities and updates the pmap
             pnes = get_probability_no_exceedance(
                 rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel,
@@ -151,7 +153,9 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons,
         etype, err, tb = sys.exc_info()
         msg = '%s (source id=%s)' % (str(err), src.source_id)
         raise_(etype, msg, tb)
-    return ~pmap
+    tildemap = ~pmap
+    tildemap.eff_ruptures = eff_ruptures
+    return tildemap
 
 
 # this is used by the engine
@@ -215,6 +219,52 @@ def pmap_from_grp(
         pmap.eff_ruptures = {pmap.grp_id: pne_mons[0].counts}
         if group.grp_probability is not None:
             return pmap * group.grp_probability
+        return pmap
+
+
+# this is used by the engine
+def pmap_from_trt(
+        sources, source_site_filter, gsims, param, monitor=Monitor()):
+    """
+    Compute the hazard curves for a set of sources belonging to the same
+    tectonic region type for all the GSIMs associated to that TRT.
+
+    :returns:
+        a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
+        .eff_ruptures
+    """
+    maxdist = source_site_filter.integration_distance
+    srcs = []
+    grp_ids = set()
+    for src in sources:
+        if hasattr(src, '__iter__'):  # MultiPointSource
+            srcs.extend(src)
+        else:
+            srcs.append(src)
+        grp_ids.update(src.src_group_ids)
+    del sources
+    with GroundShakingIntensityModel.forbid_instantiation():
+        imtls = param['imtls']
+        trunclevel = param.get('truncation_level')
+        cmaker = ContextMaker(gsims, maxdist)
+        ctx_mon = monitor('making contexts', measuremem=False)
+        pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
+                    for gsim in gsims]
+        pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
+                          for grp_id in grp_ids})
+        pmap.calc_times = []  # pairs (src_id, delta_t)
+        pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
+        for src, s_sites in source_site_filter(srcs):
+            t0 = time.time()
+            poe = poe_map(
+                src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons)
+            for grp_id in src.src_group_ids:
+                pmap[grp_id] |= poe
+            pmap.calc_times.append(
+                (src.source_id, src.weight, len(s_sites), time.time() - t0))
+            # storing the number of contributing ruptures too
+            pmap.eff_ruptures += {grp_id: poe.eff_ruptures
+                                  for grp_id in src.src_group_ids}
         return pmap
 
 
