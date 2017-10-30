@@ -85,7 +85,7 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         vcl, flagvector = dec.decluster(self.cat, config)
         print('vcl:', vcl)
         print('flagvector:', flagvector, self.cat.data['flag'])
-        self.assertTrue(np.allclose(flagvector, self.cat.data['flag']))
+        np.testing.assert_allclose(flagvector, self.cat.data['flag'])
 
 class GardnerKnopoffType1_3DTestCase(GardnerKnopoffType1TestCase):
     """
@@ -102,5 +102,5 @@ class GardnerKnopoffType1_3DTestCase(GardnerKnopoffType1TestCase):
         vcl, flagvector = dec.decluster(self.cat, config)
         print('vcl:', vcl)
         print('flagvector:', flagvector, self.cat.data['flag'])
-        self.assertTrue(np.allclose(flagvector, self.cat.data['flag']))
+        np.testing.assert_allclose(flagvector, self.cat.data['flag'])
 
