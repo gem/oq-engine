@@ -134,8 +134,10 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                                   latitude[vsel],
                                   longitude[i],
                                   latitude[i]).flatten()
-                rhypo = np.sqrt(repi ** 2. + (depth[vsel] - depth[i]) ** 2.)
-                vsel[vsel] = rhypo <= sw_space[i]
+                rdist = self.get_distance(longitude[vsel], latitude[vsel],
+                                          longitude[i], latitude[i],
+                                          depth[vsel], depth[i])
+                vsel[vsel] = rdist <= sw_space[i]
                 temp_vsel = np.copy(vsel)
                 temp_vsel[i] = False
                 if any(temp_vsel):
@@ -156,3 +158,30 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
         flagvector = flagvector[id1]
 
         return vcl, flagvector
+
+    @staticmethod
+    def get_distance(longitude, latitude, lon_i, lat_i, depth=None,
+                     depth_i=None):
+        """
+        Uses epicentral distance
+        """
+        return haversine(longitude, latitude, lon_i, lat_i).flatten()
+
+
+@DECLUSTERER_METHODS.add(
+    "decluster",
+    time_distance_window=TIME_DISTANCE_WINDOW_FUNCTIONS,
+    fs_time_prop=np.float)
+class GardnerKnopoffType1_3D(GardnerKnopoffType1):
+    """
+    Adaptation of the Gardner & Knopoff Type 1 algorithim taking into account
+    depth
+    """
+    @staticmethod
+    def get_distance(longitude, latitude, lon_i, lat_i, depth=None,
+                     depth_i=None):
+        """
+        Uses hypocentral distance
+        """
+        repi = haversine(longitude, latitude, lon_i, lat_i).flatten()
+        return np.sqrt(repi ** 2. + (depth - depth_i) ** 2.)

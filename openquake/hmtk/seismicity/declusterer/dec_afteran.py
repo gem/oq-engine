@@ -106,14 +106,12 @@ class Afteran(BaseCatalogueDecluster):
             # Earthquake not allocated to cluster - perform calculation
             if vcl[imarker] == 0:
                 # Perform distance calculation
-                mdist = haversine(
-                    catalogue.data['longitude'],
-                    catalogue.data['latitude'],
-                    catalogue.data['longitude'][imarker],
-                    catalogue.data['latitude'][imarker]).flatten()
-                delta_depth = (catalogue.data["depth"] -
-                               catalogue.data["depth"][imarker]) ** 2.
-                mdist = np.sqrt(mdist ** 2. + delta_depth)
+                mdist = self._get_distance(catalogue.data["longitude"],
+                                           catalogue.data["latitude"],
+                                           catalogue.data["longitude"][imarker],
+                                           catalogue.data["latitude"][imarker],
+                                           catalogue.data["depth"],
+                                           catalogue.data["depth"][imarker])
                 # Select earthquakes inside distance window, later than
                 # mainshock and not already assigned to a cluster
                 vsel1 = np.where(
@@ -160,6 +158,14 @@ class Afteran(BaseCatalogueDecluster):
                     clust_index += 1
 
         return vcl, flagvector
+
+    @staticmethod
+    def _get_distance(longitude, latitude, lon_i, lat_i, depth, depth_i):
+        """
+        Returns the epicentral distance
+        """
+        return haversine(longitude, latitude, lon_i, lat_i).flatten()
+
 
     def _find_aftershocks(self, vsel, year_dec, time_window, imarker, neq):
         '''
@@ -237,3 +243,20 @@ class Afteran(BaseCatalogueDecluster):
                 return temp_vsel2, has_foreshocks
 
         return temp_vsel2, has_foreshocks
+
+
+@DECLUSTERER_METHODS.add(
+    "decluster",
+    time_distance_window=TIME_DISTANCE_WINDOW_FUNCTIONS,
+    time_window=np.float)
+class Afteran3D(Afteran):
+    """
+    Adaptation of the Afteran method with hypocentral distance
+    """
+    @staticmethod
+    def _get_distance(longitude, latitude, lon_i, lat_i, depth, depth_i):
+        """
+        Returns the hypocentral distance
+        """
+        mdist = haversine(longitude, latitude, lon_i, lat_i).flatten()
+        return np.sqrt(mdist ** 2. + (depth - depth_i) ** 2.)

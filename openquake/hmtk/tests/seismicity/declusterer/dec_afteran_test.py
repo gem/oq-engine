@@ -54,7 +54,7 @@ import unittest
 import os
 import numpy as np
 
-from openquake.hmtk.seismicity.declusterer.dec_afteran import Afteran
+from openquake.hmtk.seismicity.declusterer.dec_afteran import Afteran, Afteran3D
 from openquake.hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
 from openquake.hmtk.parsers.catalogue import CsvCatalogueParser
 
@@ -129,3 +129,19 @@ class AfteranTestCase(unittest.TestCase):
         model_result = self.dec._find_foreshocks(vsel, year_dec, 0.09, 2, 6)
         self.assertTrue(np.all(expected_result[0] == model_result[0]))
         self.assertFalse(model_result[1])
+
+
+class Afteran3DTestCase(AfteranTestCase):
+    """
+    Check the 3D model tool
+    """
+    def setUp(self):
+        """
+        Read the sample catalogue and test the Afteran algorithm in 3D
+        """
+        flnme = 'afteran_test_catalogue.csv'
+        filename = os.path.join(self.BASE_DATA_PATH, flnme)
+        parser = CsvCatalogueParser(filename)
+        self.cat = parser.read_file()
+        self.dec = Afteran3D()
+
