@@ -70,9 +70,12 @@ def reduce(fname, reduction_factor):
         model.nodes = random_filter(model, reduction_factor)
         num_nodes = len(model)
     elif model.tag.endswith('sourceModel'):
-        total = len(model)
-        model.nodes = random_filter(model, reduction_factor)
-        num_nodes = len(model)
+        assert node['xmlns'] == 'http://openquake.org/xmlns/nrml/0.5'
+        total = sum(len(sg) for sg in model)
+        num_nodes = 0
+        for sg in model:
+            sg.nodes = random_filter(sg, reduction_factor)
+            num_nodes += len(sg)
     else:
         raise RuntimeError('Unknown model tag: %s' % model.tag)
     shutil.copy(fname, fname + '.bak')
