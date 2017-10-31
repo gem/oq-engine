@@ -26,7 +26,7 @@ from openquake.commonlib import logs
 
 
 # bypass the DbServer and run the action directly
-def dbcmd(action, *args):
+def fakedbcmd(action, *args):
     """
     A dispatcher to the database server.
 
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     if 'runserver' in sys.argv:
         if '--nothreading' in sys.argv:
-            logs.dbcmd = dbcmd  # turn this on when debugging
+            logs.dbcmd = fakedbcmd  # turn this on when debugging
         # check if we are talking to the right server
         err = dbserver.check_foreign()
         if err:

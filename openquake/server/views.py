@@ -440,7 +440,7 @@ def run_calc(request):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
-try:
+try:  # ignore dead childs to avoid zombies, not working
     signal.signal(signal.SIGCHLD, signal.SIG_IGN)
 except:  # no SIGCHLD in some platforms
     pass
@@ -450,7 +450,7 @@ import os
 from openquake.commonlib import readinput, logs
 from openquake.engine import engine
 oqparam = readinput.get_oqparam('{job_ini}', hc_id={hazard_job_id})
-if {testmode}:
+if {testmode}:  # bypass dbserver
     from openquake.server import dbserver, db
     logs.dbcmd = lambda a, *args: getattr(db.actions, a)(dbserver.db, *args)
 engine.run_calc({job_id}, oqparam, 'info', os.devnull, '', {hazard_job_id})
@@ -462,11 +462,11 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    testmode = int(logs.dbcmd.__module__ == '__main__')  # bypass dbserver
+    testmode = int(logs.dbcmd.__name__ == 'fakedbcmd')  # bypass dbserver
     job_id, _oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
     runcalc = RUNCALC.format(job_ini=job_ini, job_id=job_id,
                              hazard_job_id=hazard_job_id, testmode=testmode)
-    devnull = getattr(subprocess, 'DEVNULL', None)
+    devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
     popen = subprocess.Popen([sys.executable, '-c', runcalc],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     return job_id, popen.pid
