@@ -235,7 +235,7 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap: a pmap or a dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            if not self.oqparam.remove_dupl_sources:
+            if not self.oqparam.optimize_same_id_sources:
                 for src_id, nsites, srcweight, calc_time in pmap.calc_times:
                     src_id = src_id.split(':', 1)[0]
                     info = self.csm.infos[pmap.grp_id, src_id]
@@ -303,7 +303,7 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            func = (pmap_from_trt if self.oqparam.remove_dupl_sources
+            func = (pmap_from_trt if self.oqparam.optimize_same_id_sources
                     else self.core_task.__func__)
             ires = parallel.Starmap(func, iterargs).submit_all()
         acc = ires.reduce(self.agg_dicts, self.zerodict())
@@ -349,7 +349,7 @@ class PSHACalculator(base.HazardCalculator):
                 maximum_distance=oq.maximum_distance,
                 disagg=oq.poes_disagg or oq.iml_disagg,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-            if oq.remove_dupl_sources:
+            if oq.optimize_same_id_sources:
                 iterargs = self._args_by_trt(
                     csm, src_filter, param, num_tiles, maxweight)
             else:
