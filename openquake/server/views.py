@@ -428,7 +428,6 @@ def run_calc(request):
     try:
         job_id, _pid = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
-        raise
         # get the exception message
         exc_msg = str(exc)
         logging.error(exc_msg)
@@ -441,23 +440,21 @@ def run_calc(request):
                         status=status)
 
 RUNCALC = '''\
+import os
 from openquake.commonlib import readinput
 from openquake.engine import engine
 oqparam = readinput.get_oqparam('{job_ini}', hc_id={hazard_job_id})
-engine.run_calc({job_id}, oqparam, '{loglevel}', '{logfile}', '{exports}',
-                {hazard_job_id})
+engine.run_calc({job_id}, oqparam, 'info', os.devnull, '', {hazard_job_id})
 '''
 
 
-def submit_job(job_ini, user_name, hazard_job_id=None,
-               loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
+def submit_job(job_ini, user_name, hazard_job_id=None):
     """
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
     job_id, _oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
-    runcalc = RUNCALC.format(job_ini=job_ini, loglevel=loglevel,
-                             logfile=logfile, exports=exports, job_id=job_id,
+    runcalc = RUNCALC.format(job_ini=job_ini, job_id=job_id,
                              hazard_job_id=hazard_job_id)
     popen = subprocess.Popen([sys.executable, '-c', runcalc])
     return job_id, popen.pid
