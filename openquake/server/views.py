@@ -18,6 +18,7 @@
 
 import shutil
 import json
+import signal
 import logging
 import os
 import sys
@@ -40,7 +41,7 @@ from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode, pickle
+from openquake.baselib.python3compat import unicode
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
@@ -439,6 +440,11 @@ def run_calc(request):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
+try:
+    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+except:  # no SIGCHLD in some platforms
+    pass
+
 RUNCALC = '''\
 import os
 from openquake.commonlib import readinput
@@ -456,7 +462,9 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     job_id, _oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
     runcalc = RUNCALC.format(job_ini=job_ini, job_id=job_id,
                              hazard_job_id=hazard_job_id)
-    popen = subprocess.Popen([sys.executable, '-c', runcalc])
+    devnull = getattr(subprocess, 'DEVNULL', None)
+    popen = subprocess.Popen([sys.executable, '-c', runcalc],
+                             stdin=devnull, stdout=devnull, stderr=devnull)
     return job_id, popen.pid
 
 
