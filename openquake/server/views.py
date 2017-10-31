@@ -448,15 +448,14 @@ except:  # no SIGCHLD in some platforms
 RUNCALC = '''\
 import os, sys
 from openquake.baselib.python3compat import pickle
-from openquake.commonlib import readinput, logs
 from openquake.engine import engine
-with open('{tmp_pik}', 'rb') as f:
-    oqparam = pickle.load(f)
-os.remove('{tmp_pik}')
-if {testmode}:  # bypass dbserver
+oqparam = pickle.loads(%(pik)r)
+if %(testmode)s:  # bypass dbserver
+    from openquake.commonlib import logs
     from openquake.server import dbserver, db
     logs.dbcmd = lambda a, *args: getattr(db.actions, a)(dbserver.db, *args)
-engine.run_calc({job_id}, oqparam, 'info', os.devnull, '', {hazard_job_id})
+engine.run_calc(%(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s)
+os.remove(__file__)
 '''
 
 
@@ -467,12 +466,13 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     """
     testmode = int(logs.dbcmd.__name__ == 'fakedbcmd')  # bypass dbserver
     job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
-    tmp_pik = writetmp(pickle.dumps(oq))
-    runcalc = RUNCALC.format(
-        job_id=job_id, hazard_job_id=hazard_job_id,
-        testmode=testmode, tmp_pik=tmp_pik)
+    pik = pickle.dumps(oq, protocol=0)  # human readable
+    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id,
+                          testmode=testmode, pik=pik)
+    tmp_py = writetmp(code, suffix='.py')
+    # print(code, tmp_py)  # useful when debugging
     devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
-    popen = subprocess.Popen([sys.executable, '-c', runcalc],
+    popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     return job_id, popen.pid
 
