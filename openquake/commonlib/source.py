@@ -733,13 +733,16 @@ class CompositeSourceModel(collections.Sequence):
                     src.samples = sm.samples
                 acc[grp.trt].extend(grp)
         dic = {}
+        weight = 0
         for trt in acc:
             dic[trt] = []
             for grp in groupby(acc[trt], lambda x: x.source_id).values():
                 src = grp[0]
+                weight += src.weight
                 if len(grp) > 1:
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
+        self.weight = weight
         return dic
 
     def get_num_sources(self):
