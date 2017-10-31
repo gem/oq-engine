@@ -31,7 +31,7 @@ commands = ['start', 'migrate', 'syncdb', 'createsuperuser', 'collectstatic']
 
 def rundjango(subcmd, hostport=None, skip_browser=False):
     args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
-    if subcmd == 'run_server':
+    if subcmd == 'start':
         args.append('--noreload')  # --noreload avoids surprises
     if hostport:
         args.append(hostport)
