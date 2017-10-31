@@ -452,6 +452,7 @@ from openquake.commonlib import readinput, logs
 from openquake.engine import engine
 with open('{tmp_pik}', 'rb') as f:
     oqparam = pickle.load(f)
+os.remove('{tmp_pik}')
 if {testmode}:  # bypass dbserver
     from openquake.server import dbserver, db
     logs.dbcmd = lambda a, *args: getattr(db.actions, a)(dbserver.db, *args)
