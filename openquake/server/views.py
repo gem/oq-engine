@@ -447,9 +447,12 @@ except:  # no SIGCHLD in some platforms
 
 RUNCALC = '''\
 import os
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logs
 from openquake.engine import engine
 oqparam = readinput.get_oqparam('{job_ini}', hc_id={hazard_job_id})
+if {testmode}:
+    from openquake.server import dbserver, db
+    logs.dbcmd = lambda a, *args: getattr(db.actions, a)(dbserver.db, *args)
 engine.run_calc({job_id}, oqparam, 'info', os.devnull, '', {hazard_job_id})
 '''
 
@@ -459,9 +462,10 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
+    testmode = int(logs.dbcmd.__module__ == '__main__')  # bypass dbserver
     job_id, _oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
     runcalc = RUNCALC.format(job_ini=job_ini, job_id=job_id,
-                             hazard_job_id=hazard_job_id)
+                             hazard_job_id=hazard_job_id, testmode=testmode)
     devnull = getattr(subprocess, 'DEVNULL', None)
     popen = subprocess.Popen([sys.executable, '-c', runcalc],
                              stdin=devnull, stdout=devnull, stderr=devnull)
