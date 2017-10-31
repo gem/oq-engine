@@ -41,7 +41,7 @@ from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode
+from openquake.baselib.python3compat import unicode, pickle
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
@@ -440,16 +440,18 @@ def run_calc(request):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
-try:  # ignore dead childs to avoid zombies, not working
+try:  # ignore dead childs to avoid zombies
     signal.signal(signal.SIGCHLD, signal.SIG_IGN)
 except:  # no SIGCHLD in some platforms
     pass
 
 RUNCALC = '''\
-import os
+import os, sys
+from openquake.baselib.python3compat import pickle
 from openquake.commonlib import readinput, logs
 from openquake.engine import engine
-oqparam = readinput.get_oqparam('{job_ini}', hc_id={hazard_job_id})
+with open('{tmp_pik}', 'rb') as f:
+    oqparam = pickle.load(f)
 if {testmode}:  # bypass dbserver
     from openquake.server import dbserver, db
     logs.dbcmd = lambda a, *args: getattr(db.actions, a)(dbserver.db, *args)
@@ -463,9 +465,11 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     and run it in a new process. Returns the job ID and PID.
     """
     testmode = int(logs.dbcmd.__name__ == 'fakedbcmd')  # bypass dbserver
-    job_id, _oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
-    runcalc = RUNCALC.format(job_ini=job_ini, job_id=job_id,
-                             hazard_job_id=hazard_job_id, testmode=testmode)
+    job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
+    tmp_pik = writetmp(pickle.dumps(oq))
+    runcalc = RUNCALC.format(
+        job_id=job_id, hazard_job_id=hazard_job_id,
+        testmode=testmode, tmp_pik=tmp_pik)
     devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
     popen = subprocess.Popen([sys.executable, '-c', runcalc],
                              stdin=devnull, stdout=devnull, stderr=devnull)

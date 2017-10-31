@@ -30,7 +30,8 @@ commands = ['start', 'migrate', 'syncdb', 'createsuperuser', 'collectstatic']
 
 
 def rundjango(subcmd, hostport=None, skip_browser=False):
-    args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
+    args = [sys.executable, '-m', 'openquake.server.manage', subcmd,
+            '--noreload']  # --noreload avoids surprises
     if hostport:
         args.append(hostport)
     p = subprocess.Popen(args)
