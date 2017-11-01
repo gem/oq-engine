@@ -31,14 +31,13 @@ import unittest
 import tempfile
 import numpy
 from django.test import Client
-from openquake.baselib.general import writetmp, _get_free_port
+from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
 
 
 class EngineServerTestCase(unittest.TestCase):
-    hostport = 'localhost:%d' % _get_free_port()
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
