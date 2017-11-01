@@ -77,7 +77,6 @@ class EngineServerTestCase(unittest.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 break
-            print(running_calcs)
             time.sleep(1)
 
     def postzip(self, archive):
