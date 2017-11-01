@@ -30,7 +30,7 @@ import time
 import unittest
 import tempfile
 import numpy
-from django.test import Client, TestCase
+from django.test import Client
 from openquake.baselib.general import writetmp, _get_free_port
 from openquake.engine.export import core
 from openquake.server.db import actions
@@ -49,7 +49,7 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def post_nrml(cls, data):
-        return cls.c.post('/v1/valid/', data)
+        return cls.c.post('/v1/valid/', dict(xml_text=data))
 
     @classmethod
     def get(cls, path, **data):
@@ -99,7 +99,6 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(cls, EngineServerTestCase).setUpClass()
         assert get_status() == 'running'
         cls.job_ids = []
         env = os.environ.copy()
@@ -233,25 +232,23 @@ class EngineServerTestCase(unittest.TestCase):
 
     # tests for nrml validation
 
-    def _test_validate_nrml_valid(self):
+    def test_validate_nrml_valid(self):
         valid_file = os.path.join(self.datadir, 'vulnerability_model.xml')
-        with open(valid_file, 'rb') as vf:
+        with open(valid_file) as vf:
             valid_content = vf.read()
-        data = dict(xml_text=valid_content)
-        resp = self.post_nrml(data)
+        resp = self.post_nrml(valid_content)
         self.assertEqual(resp.status_code, 200)
         resp_text_dict = json.loads(resp.content.decode('utf8'))
         self.assertTrue(resp_text_dict['valid'])
         self.assertIsNone(resp_text_dict['error_msg'])
         self.assertIsNone(resp_text_dict['error_line'])
 
-    def _test_validate_nrml_invalid(self):
+    def test_validate_nrml_invalid(self):
         invalid_file = os.path.join(self.datadir,
                                     'vulnerability_model_invalid.xml')
-        with open(invalid_file, 'rb') as vf:
+        with open(invalid_file) as vf:
             invalid_content = vf.read()
-        data = dict(xml_text=invalid_content)
-        resp = self.post_nrml(data)
+        resp = self.post_nrml(invalid_content)
         self.assertEqual(resp.status_code, 200)
         resp_text_dict = json.loads(resp.content.decode('utf8'))
         self.assertFalse(resp_text_dict['valid'])
@@ -260,23 +257,21 @@ class EngineServerTestCase(unittest.TestCase):
                       resp_text_dict['error_msg'])
         self.assertEqual(resp_text_dict['error_line'], 7)
 
-    def _test_validate_nrml_unclosed_tag(self):
+    def test_validate_nrml_unclosed_tag(self):
         invalid_file = os.path.join(self.datadir,
                                     'vulnerability_model_unclosed_tag.xml')
-        with open(invalid_file, 'rb') as vf:
+        with open(invalid_file) as vf:
             invalid_content = vf.read()
-        data = dict(xml_text=invalid_content)
-        resp = self.post_nrml(data)
+        resp = self.post_nrml(invalid_content)
         self.assertEqual(resp.status_code, 200)
         resp_text_dict = json.loads(resp.content.decode('utf8'))
         self.assertFalse(resp_text_dict['valid'])
         self.assertIn(u'mismatched tag', resp_text_dict['error_msg'])
         self.assertEqual(resp_text_dict['error_line'], 9)
 
-    def _test_validate_nrml_missing_parameter(self):
+    def test_validate_nrml_missing_parameter(self):
         # passing a wrong parameter, instead of the required 'xml_text'
-        data = dict(foo="bar")
-        resp = self.post_nrml(data)
+        resp = self.c.post('/v1/valid/', foo='bar')
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.content,
                          b'Please provide the "xml_text" parameter')
