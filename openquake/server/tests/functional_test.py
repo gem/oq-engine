@@ -36,7 +36,6 @@ from openquake.baselib.general import writetmp, _get_free_port
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
-from openquake.server.settings import DATABASE
 from openquake.server.utils import check_webserver_running
 
 if requests.__version__ < '1.0.0':
@@ -116,11 +115,6 @@ class EngineServerTestCase(unittest.TestCase):
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
         cls.fd, cls.errfname = tempfile.mkstemp(prefix='webui')
         print('Errors saved in %s' % cls.errfname, file=sys.stderr)
-
-        # sanity check, `oq dbserver start` should have created the dbdir
-        dbdir = os.path.dirname(DATABASE['NAME'])
-        assert os.path.exists(dbdir), dbdir
-
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'],
