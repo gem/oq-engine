@@ -54,9 +54,7 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
-        if not resp.content:
-            sys.stderr.write(open(cls.errfname).read())
-            return {}
+        assert resp.content
         try:
             return json.loads(resp.content.decode('utf8'))
         except:
@@ -104,14 +102,11 @@ class EngineServerTestCase(unittest.TestCase):
         # let's impersonate the user openquake, the one running the WebUI:
         # we need to set LOGNAME on Linux and USERNAME on Windows
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
-        cls.fd, cls.errfname = tempfile.mkstemp(prefix='webui')
-        print('Errors saved in %s' % cls.errfname, file=sys.stderr)
         cls.c = Client()
 
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-        os.close(cls.fd)
 
     def setUp(self):
         if sys.version_info[0] == 2:
