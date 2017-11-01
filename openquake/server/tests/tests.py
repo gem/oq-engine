@@ -114,7 +114,7 @@ class EngineServerTestCase(unittest.TestCase):
         os.close(cls.fd)
 
     def setUp(self):
-        if sys.version_info[0] == 2:  # Python 2
+        if sys.version_info[0] == 2:
             # in Python 2 the tests fail when doing _lgeos = load_dll(
             # 'geos_c', fallbacks=['libgeos_c.so.1', 'libgeos_c.so'])
             raise unittest.SkipTest('Python 2')
