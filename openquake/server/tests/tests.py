@@ -115,8 +115,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     def setUp(self):
         if sys.version_info[0] == 2:  # Python 2
-            # for mysterious reasons the tests hang on Python 2 but the
-            # WebUI works correctly
+            # in Python 2 the tests fail when doing _lgeos = load_dll(
+            # 'geos_c', fallbacks=['libgeos_c.so.1', 'libgeos_c.so'])
             raise unittest.SkipTest('Python 2')
 
     # tests
