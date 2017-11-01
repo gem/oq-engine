@@ -22,7 +22,7 @@ jobs:
     env: ENGINE
     before_script:
         - mkdir ~/oqdata
-        - bin/oq dbserver start
+        - bin/oq dbserver start &
     script:
         - nosetests --with-doctest -xvs -a'!slow' openquake.engine
         - nosetests --with-doctest -xvs -a'!slow' openquake.server
