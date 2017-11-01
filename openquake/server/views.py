@@ -466,7 +466,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     """
     testmode = int(logs.dbcmd.__name__ == 'fakedbcmd')  # bypass dbserver
     job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
-    pik = pickle.dumps(oq, protocol=0)  # human readable
+    pik = pickle.dumps(oq, protocol=0)  # human readable protocol
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id,
                           testmode=testmode, pik=pik)
     tmp_py = writetmp(code, suffix='.py')
