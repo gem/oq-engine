@@ -21,7 +21,6 @@ jobs:
   - stage: tests
     env: ENGINE
     before_script:
-        - mkdir ~/oqdata
         - bin/oq dbserver start &
     script:
         - nosetests --with-doctest -xvs -a'!slow' openquake.engine
