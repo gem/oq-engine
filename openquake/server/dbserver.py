@@ -171,8 +171,7 @@ def ensure_on():
 
 
 @sap.Script
-def run_server(dbhostport=None, dbpath=config.dbserver.file,
-               logfile=config.dbserver.log,
+def run_server(dbpath, dbhostport=None, logfile=config.dbserver.log,
                loglevel='WARN'):
     """
     Run the DbServer on the given database file and port. If not given,
@@ -205,8 +204,8 @@ def run_server(dbhostport=None, dbpath=config.dbserver.file,
         dbs.stop()
 
 
-run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')
+run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 
