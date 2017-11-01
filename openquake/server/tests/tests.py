@@ -28,16 +28,15 @@ import sys
 import json
 import time
 import unittest
-import subprocess
 import tempfile
 import requests
 import numpy
+from django.test import Client, TestCase
 from openquake.baselib.general import writetmp, _get_free_port
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
 from openquake.server.settings import DATABASE
-from openquake.server.utils import check_webserver_running
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
@@ -50,20 +49,16 @@ class EngineServerTestCase(unittest.TestCase):
     # general utilities
 
     @classmethod
-    def post(cls, path, data=None, **params):
-        return requests.post('http://%s/v1/calc/%s' % (cls.hostport, path),
-                             data, **params)
+    def post(cls, path, data=None):
+        return cls.c.post('/v1/calc/%s' % path, data)
 
     @classmethod
-    def post_nrml(cls, data=None, **params):
-        return requests.post(
-            'http://%s/v1/valid/' % cls.hostport,
-            data, **params)
+    def post_nrml(cls, data=None):
+        return cls.c.post('/v1/valid/', data)
 
     @classmethod
-    def get(cls, path, **params):
-        resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
-                            params=params)
+    def get(cls, path, **data):
+        resp = cls.c.get('/v1/calc/%s' % path, data)
         if not resp.text:
             sys.stderr.write(open(cls.errfname).read())
             return {}
@@ -75,10 +70,8 @@ class EngineServerTestCase(unittest.TestCase):
             return {}
 
     @classmethod
-    def get_text(cls, path, **params):
-        resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
-                            params=params)
-        return resp.text
+    def get_text(cls, path, **data):
+        return cls.c.get('v1/calc/%s' % path, data).text
 
     @classmethod
     def wait(cls):
@@ -108,6 +101,7 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        super(cls, EngineServerTestCase).setUpClass()
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
@@ -116,21 +110,12 @@ class EngineServerTestCase(unittest.TestCase):
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
         cls.fd, cls.errfname = tempfile.mkstemp(prefix='webui')
         print('Errors saved in %s' % cls.errfname, file=sys.stderr)
-
         # sanity check, `oq dbserver start` should have created the dbdir
-        dbdir = os.path.dirname(DATABASE['NAME'])
-        assert os.path.exists(dbdir), dbdir
-
-        cls.proc = subprocess.Popen(
-            [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading'],
-            env=env, stderr=cls.fd)  # redirect the server logs
-        check_webserver_running('http://%s' % cls.hostport)
+        cls.c = Client()
 
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-        cls.proc.kill()
         os.close(cls.fd)
 
     # tests
