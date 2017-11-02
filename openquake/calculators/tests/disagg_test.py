@@ -17,7 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import unittest
+import numpy
 from nose.plugins.attrib import attr
+from openquake.hazardlib.probability_map import combine
+from openquake.commonlib import calc
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.disagg import case_1, case_2
 
@@ -52,6 +55,17 @@ class DisaggregationTestCase(CalculatorTestCase):
              'poe-0.1-rlz-0-SA(0.025)-10.1-40.1_Lon_Lat.csv'],
             case_1.__file__,
             fmt='csv')
+
+        # disaggregation by source group
+        pgetter = calc.PmapGetter(self.calc.datastore)
+        pmaps = []
+        for grp in sorted(pgetter.dstore['poes']):
+            pmaps.append(pgetter.get_mean(grp))
+        # make sure that the combination of the contributions is okay
+        pmap = pgetter.get_mean()  # total mean map
+        cmap = combine(pmaps)  # combination of the mean maps per source group
+        for sid in pmap:
+            numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_2(self):
