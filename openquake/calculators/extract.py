@@ -26,7 +26,6 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.general import DictArray
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import calc
@@ -122,7 +121,7 @@ def extract_hazard(dstore, what):
     yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
     if oq.poes:
-        pdic = DictArray({imt: oq.poes for imt in oq.imtls})
+        pdic = {imt: oq.poes for imt in oq.imtls}
     for kind, hcurves in calc.PmapGetter(dstore).items(what):
         logging.info('extracting hazard/%s', kind)
         yield 'hcurves-' + kind, calc.convert_to_array(hcurves, N, oq.imtls)
