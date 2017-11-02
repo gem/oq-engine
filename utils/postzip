@@ -18,8 +18,17 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os, sys, json, requests
+from openquake.baselib import sap, config
 
-zipfile = sys.argv[1]
-dic = dict(archive=open(zipfile, 'rb'))
-resp = requests.post("http://localhost:8800/v1/calc/run", {}, files=dic)
-print(json.loads(resp.content))
+@sap.Script
+def postzip(zipfile):
+    """Post a zipfile to the WebUI"""
+    dic = dict(archive=open(zipfile, 'rb'))
+    # NB: there is no WebUI port in openquake.cfg for the moment
+    resp = requests.post("http://localhost:8800/v1/calc/run", {}, files=dic)
+    print(json.loads(resp.content))
+
+postzip.arg('zipfile', 'archive with the files of the computation')
+
+if __name__ == '__main__':
+    postzip.callfunc()
