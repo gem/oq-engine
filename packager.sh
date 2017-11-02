@@ -382,6 +382,8 @@ _devtest_innervm_run () {
                  fi
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
+                 echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
+                 nohup bin/oq dbserver start &>/tmp/dbserver.log </dev/null &
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server
 
