@@ -25,6 +25,7 @@ import sys
 import inspect
 import tempfile
 import subprocess
+import threading
 try:
     import urllib.parse as urlparse
 except ImportError:
@@ -468,6 +469,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
+    threading.Thread(target=popen.wait).start()
     return job_id, popen.pid
 
 
