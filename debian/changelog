@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * WebUI: now every job runs in its own process and has name oq-job-<ID>
+  * Refactored the WebUI tests to use the DbServer and django.test.Client
+  * Added an experimental feature `optimize_same_id_sources`
+  * Fixed a bug in gmf_ebrisk when there are zero losses and added more
+    validity checks on the CSV file
   * The parameter `number_of_ground_motion_fields` is back to being optional in
     scenario calculators reading the GMFs from a file, since it can be inferred
   * Removed the deprecated risk outputs dmg_by_tag, dmg_total,
