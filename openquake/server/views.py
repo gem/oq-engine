@@ -441,10 +441,6 @@ def run_calc(request):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
-try:  # ignore dead childs to avoid zombies
-    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
-except:  # no SIGCHLD in some platforms
-    pass
 
 RUNCALC = '''\
 import os, sys
