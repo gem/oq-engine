@@ -147,7 +147,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.csm = get_composite_source_model(self.oqparam)
-        self.gsims_by_grp = self.csm.info.get_gsims_by_grp()
+        self.gsims_by_grp = {grp.id: self.csm.info.get_gsims(grp.id)
+                             for sm in self.csm.source_models
+                             for grp in sm.src_groups}
         self.rup_data = {}
 
     def execute(self):
