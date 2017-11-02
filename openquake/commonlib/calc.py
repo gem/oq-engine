@@ -28,7 +28,7 @@ from openquake.hazardlib.geo.mesh import (
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, calc, probability_map
+from openquake.hazardlib import geo, calc, probability_map, stats
 
 TWO16 = 2 ** 16
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -115,21 +115,23 @@ class PmapGetter(object):
         assert sids is not None
         return self.__class__(self.dstore, sids, self.lazy, self.rlzs_assoc)
 
-    def get(self, sids, rlzi):
+    def get(self, sids, rlzi, grp=None):
         """
         :param sids: an array of S site IDs
         :param rlzi: a realization index
+        :param grp: None (all groups) or a string of the form "grp-XX"
         :returns: the hazard curves for the given realization
         """
         pmap_by_grp = self.get_pmap_by_grp(sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        for grp, array in self.rlzs_assoc.array.items():
-            if grp in pmap_by_grp:
-                for rec in array:
-                    for r in rec['rlzis']:
-                        if r == rlzi:
-                            pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
-                            break
+        grps = [grp] if grp is not None else sorted(pmap_by_grp)
+        for grp in grps:
+            array = self.rlzs_assoc.array[grp]
+            for rec in array:
+                for r in rec['rlzis']:
+                    if r == rlzi:
+                        pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
+                        break
         return pmap
 
     def get_pmaps(self, sids):  # used in classical
@@ -149,7 +151,7 @@ class PmapGetter(object):
                  for pmap in self.get_pmaps(self.sids)]
         return numpy.array(pmaps)
 
-    def get_pmap_by_grp(self, sids=None):
+    def get_pmap_by_grp(self, sids):
         """
         :param sids: an array of site IDs
         :returns: a dictionary of probability maps by source group
@@ -172,7 +174,7 @@ class PmapGetter(object):
                 self.nbytes += pmap.nbytes
         else:
             # make sure the cache refer to the right sids
-            assert sids is None or (sids == self.sids).all()
+            assert (sids == self.sids).all()
         return self._pmap_by_grp
 
     def items(self, kind=''):
@@ -205,14 +207,22 @@ class PmapGetter(object):
             for k in sorted(self.dstore['hcurves']):
                 yield k, self.dstore['hcurves/' + k]
 
-    def get_mean(self):
+    def get_mean(self, grp=None):
         """
-        Extract the mean curve as a ProbabilityMap
+        Compute the mean curve as a ProbabilityMap
+
+        :param grp:
+            if not None must be a string of the form "grp-XX"; in that case
+            returns the mean considering only the contribution for group XX
         """
+        if self.sids is None:
+            self.sids = self.dstore['sitecol'].complete.sids
         if len(self.weights) == 1:  # one realization
-            return self.get(self.sids, 0)
+            return self.get(self.sids, 0, grp)
         else:  # multiple realizations, assume hcurves/mean is there
-            return self.dstore['hcurves/mean']
+            dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
+                   if grp is None else {grp: self.dstore['poes/' + grp]})
+            return self.rlzs_assoc.compute_pmap_stats(dic, [stats.mean_curve])
 
 # ######################### hazard maps ################################### #
 
