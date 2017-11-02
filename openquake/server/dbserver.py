@@ -171,7 +171,8 @@ def ensure_on():
 
 
 @sap.Script
-def run_server(dbhostport=None, dbpath=config.dbserver.file,
+def run_server(dbhostport=None,
+               dbpath=os.path.expanduser(config.dbserver.file),
                logfile=config.dbserver.log,
                loglevel='WARN'):
     """
