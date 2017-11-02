@@ -22,6 +22,7 @@ jobs:
     env: ENGINE
     before_script:
         - mkdir ~/oqdata
+        - bin/oq dbserver start &
     script:
         - nosetests --with-doctest -xvs -a'!slow' openquake.engine
         - nosetests --with-doctest -xvs -a'!slow' openquake.server
@@ -32,6 +33,7 @@ jobs:
         - bin/oq webui migrate
         - cat /tmp/webui*
     after_success:
+        - bin/oq dbserver stop
         - pip install sphinx==1.3.6 && cd doc/sphinx && make html
   - stage: tests
     env: DEMOS
