@@ -24,14 +24,14 @@ import math
 import logging
 import operator
 import collections
-import random
 
 import h5py
 import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import group_array, block_splitter, writetmp
+from openquake.baselib.general import (
+    groupby, group_array, block_splitter, writetmp, AccumDict)
 from openquake.hazardlib import (
     nrml, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.commonlib import logictree
@@ -141,14 +141,13 @@ class RlzsAssoc(object):
         self.num_samples = csm_info.num_samples
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
-        self.gsims_by_grp_id = csm_info.get_gsims_by_grp()
         self.rlzs_by_gsim = {}  # dict grp_id -> dict
+        self.get_gsims = csm_info.get_gsims
 
     def _init(self):
         """
         Finalize the initialization of the RlzsAssoc object by setting
-        the (reduced) weights of the realizations and the attribute
-        gsims_by_grp_id.
+        the (reduced) weights of the realizations.
         """
         if self.num_samples:
             assert len(self.realizations) == self.num_samples, (
@@ -169,7 +168,7 @@ class RlzsAssoc(object):
         # populate rlzs_by_gsim
         for grp, arr in self.array.items():
             grp_id = int(grp[4:])
-            gsims = self.gsims_by_grp_id[grp_id]
+            gsims = self.get_gsims(grp_id)
             self.rlzs_by_gsim[grp_id] = collections.OrderedDict(
                 (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
 
@@ -217,13 +216,12 @@ class RlzsAssoc(object):
             return
         return self.realizations[int(mo.group(1))]
 
-    def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
+    def _add_realizations(self, idx, lt_model, all_trts, gsim_rlzs):
         rlzs = []
         for i, gsim_rlz in enumerate(gsim_rlzs):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
-            self.gsim_by_trt.append(
-                dict(zip(gsim_lt.all_trts, gsim_rlz.value)))
+            self.gsim_by_trt.append(dict(zip(all_trts, gsim_rlz.value)))
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
@@ -236,7 +234,7 @@ class RlzsAssoc(object):
             grp_id = int(grp[4:])
             for rec in self.array[grp]:
                 rlzs = rec['rlzis']
-                gsim = self.gsims_by_grp_id[grp_id][rec['gsim_idx']]
+                gsim = self.get_gsims(grp_id)[rec['gsim_idx']]
                 if len(rlzs) > 10:  # short representation
                     rlzs = ['%d realizations' % len(rlzs)]
                 pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
@@ -315,6 +313,42 @@ class CompositionInfo(object):
         self.num_samples = num_samples
         self.source_models = source_models
         self.tot_weight = tot_weight
+        self.init()
+
+    def init(self):
+        self.trt_by_grp = self.grp_trt()
+        if self.num_samples:
+            self.seed_samples_by_grp = {}
+            seed = self.seed
+            for sm in self.source_models:
+                for grp in sm.src_groups:
+                    self.seed_samples_by_grp[grp.id] = seed, sm.samples
+                seed += sm.samples
+
+    @property
+    def gsim_rlzs(self):
+        """
+        Build and cache the gsim logic tree realizations
+        """
+        try:
+            return self._gsim_rlzs
+        except AttributeError:
+            self._gsim_rlzs = list(self.gsim_lt)
+            return self._gsim_rlzs
+
+    def get_gsims(self, grp_id):
+        """
+        Get the GSIMs associated with the given group
+        """
+        trt = self.trt_by_grp[grp_id]
+        if self.num_samples:  # sampling
+            seed, samples = self.seed_samples_by_grp[grp_id]
+            numpy.random.seed(seed)
+            idxs = numpy.random.choice(len(self.gsim_rlzs), samples)
+            rlzs = [self.gsim_rlzs[i] for i in idxs]
+        else:  # full enumeration
+            rlzs = None
+        return self.gsim_lt.get_gsims(trt, rlzs)
 
     def get_info(self, sm_id):
         """
@@ -325,20 +359,6 @@ class CompositionInfo(object):
         num_samples = sm.samples if self.num_samples else 0
         return self.__class__(
             self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
-
-    def get_gsims_by_grp(self):
-        """
-        :returns: dictionary grp_id -> gsims
-        """
-        gsims_by_grp = {}
-        idx = 0
-        for sm in self.source_models:
-            rlzs, allgsims = self._get_rlzs_gsims(
-                sm, self.gsim_lt, self.seed + idx)
-            idx += len(rlzs)
-            for sg, gsims in zip(sm.src_groups, allgsims):
-                gsims_by_grp[sg.id] = gsims
-        return gsims_by_grp
 
     def get_samples_by_grp(self):
         """
@@ -410,6 +430,7 @@ class CompositionInfo(object):
                 rec['name'], rec['weight'], path, srcgroups,
                 num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
+        self.init()
         try:
             os.remove(tmp)  # gsim_lt file
         except NameError:  # tmp is defined only in the regular case, see above
@@ -463,10 +484,13 @@ class CompositionInfo(object):
                 if count_ruptures and before > after:
                     logging.warn('Reducing the logic tree of %s from %d to %d '
                                  'realizations', smodel.name, before, after)
+                gsim_rlzs = list(gsim_lt)
+                all_trts = gsim_lt.all_trts
             else:
-                gsim_lt = self.gsim_lt
+                gsim_rlzs = self.gsim_rlzs
+                all_trts = self.gsim_lt.all_trts
             offset = self._populate(
-                assoc, assoc_by_grp, gsim_lt, smodel, offset)
+                assoc, assoc_by_grp, all_trts, gsim_rlzs, smodel, offset)
         assoc.array = {
             'grp-%02d' % sgid: numpy.array(assoc_by_grp[sgid], assoc_by_grp_dt)
             for sgid in assoc_by_grp}
@@ -531,27 +555,29 @@ class CompositionInfo(object):
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
 
-    def _get_rlzs_gsims(self, smodel, gsim_lt, seed):
+    def _get_rlzs_gsims(self, smodel, all_rlzs, seed):
         if self.num_samples:
             # NB: the weights are considered when combining the results, not
             # when sampling, therefore there are no weights in the function
             # numpy.random.choice below
-            all_rlzs = list(gsim_lt)
             numpy.random.seed(seed)
             idxs = numpy.random.choice(len(all_rlzs), smodel.samples)
             rlzs = [all_rlzs[idx] for idx in idxs]
         else:  # full enumeration
-            rlzs = logictree.get_effective_rlzs(gsim_lt)
+            rlzs = logictree.get_effective_rlzs(all_rlzs)
         if len(rlzs) > TWO16:
             raise ValueError(
                 'The source model %s has %d realizations, the maximum '
                 'is %d' % (smodel.name, len(rlzs), TWO16))
-        gsims = [gsim_lt.get_gsims(sg.trt, rlzs if self.num_samples else None)
+        gsims = [self.gsim_lt.get_gsims(
+            sg.trt, rlzs if self.num_samples else None)
                  for sg in smodel.src_groups]
         return rlzs, gsims
 
-    def _populate(self, assoc, assoc_by_grp, gsim_lt, smodel, offset):
-        rlzs, gsims = self._get_rlzs_gsims(smodel, gsim_lt, self.seed + offset)
+    def _populate(self, assoc, assoc_by_grp, all_trts, all_rlzs, smodel,
+                  offset):
+        rlzs, gsims = self._get_rlzs_gsims(
+            smodel, all_rlzs, self.seed + offset)
         if rlzs:
             indices = numpy.arange(offset, offset + len(rlzs))
             dic = collections.defaultdict(list)  # (sg.id, gsim_idx) -> rlzis
@@ -562,11 +588,11 @@ class CompositionInfo(object):
             for rlzi, rlz in enumerate(rlzs):
                 for i, sg in enumerate(smodel.src_groups):
                     if sg.eff_ruptures:
-                        gsim = gsim_lt.get_gsim_by_trt(rlz, sg.trt)
+                        gsim = self.gsim_lt.get_gsim_by_trt(rlz, sg.trt)
                         dic[idx[i, gsim]].append(rlzi + offset)
             for (sgid, j), rlzis in sorted(dic.items()):
                 assoc_by_grp[sgid].append((j, numpy.array(rlzis, U16)))
-            assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
+            assoc._add_realizations(indices, smodel, all_trts, rlzs)
             offset += len(indices)
         return offset
 
@@ -693,6 +719,30 @@ class CompositeSourceModel(collections.Sequence):
                     sources.append(src)
         return sources
 
+    def get_sources_by_trt(self):
+        """
+        Build a dictionary TRT string -> sources without duplicates
+        """
+        acc = AccumDict(accum=[])
+        for sm in self.source_models:
+            for grp in sm.src_groups:
+                for src in grp:
+                    src.sm_id = sm.ordinal
+                    src.samples = sm.samples
+                acc[grp.trt].extend(grp)
+        dic = {}
+        weight = 0
+        for trt in acc:
+            dic[trt] = []
+            for grp in groupby(acc[trt], lambda x: x.source_id).values():
+                src = grp[0]
+                weight += src.weight
+                if len(grp) > 1:
+                    src.src_group_id = [s.src_group_id for s in grp]
+                dic[trt].append(src)
+        self.weight = weight
+        return dic
+
     def get_num_sources(self):
         """
         :returns: the total number of sources in the model
@@ -742,12 +792,10 @@ class CompositeSourceModel(collections.Sequence):
         :yields: blocks of sources of weight around maxweight
         """
         light = [src for src in sources if src.weight <= maxweight]
-        self.add_infos(light)
         for block in block_splitter(
                 light, maxweight, weight=operator.attrgetter('weight')):
             yield block
         heavy = [src for src in sources if src.weight > maxweight]
-        self.add_infos(heavy)
         for src in heavy:
             srcs = split_filter_source(src, src_filter)
             for block in block_splitter(
