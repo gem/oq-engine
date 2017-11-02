@@ -449,9 +449,11 @@ RUNCALC = '''\
 import os, sys
 from openquake.baselib.python3compat import pickle
 from openquake.engine import engine
-oqparam = pickle.loads(%(pik)r)
-engine.run_calc(%(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s)
-os.remove(__file__)
+if __name__ == '__main__':
+    oqparam = pickle.loads(%(pik)r)
+    engine.run_calc(
+        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s)
+    os.remove(__file__)
 '''
 
 
