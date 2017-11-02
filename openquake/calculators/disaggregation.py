@@ -66,7 +66,7 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
     """
     sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
+    gsims = rlzs_assoc.get_gsims(src_group_id)
     rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
