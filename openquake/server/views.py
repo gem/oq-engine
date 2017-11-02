@@ -25,6 +25,7 @@ import sys
 import inspect
 import tempfile
 import subprocess
+import threading
 try:
     import urllib.parse as urlparse
 except ImportError:
@@ -440,10 +441,6 @@ def run_calc(request):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
-try:  # ignore dead childs to avoid zombies
-    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
-except:  # no SIGCHLD in some platforms
-    pass
 
 RUNCALC = '''\
 import os, sys
@@ -470,6 +467,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
+    threading.Thread(target=popen.wait).start()
     return job_id, popen.pid
 
 
