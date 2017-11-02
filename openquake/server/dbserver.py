@@ -31,11 +31,11 @@ from openquake.commonlib import logs
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
-from openquake.server.settings import DATABASE
 
 
-db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
-              detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)
+db = dbapi.Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
+              isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
+              timeout=20)
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
@@ -171,7 +171,9 @@ def ensure_on():
 
 
 @sap.Script
-def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
+def run_server(dbhostport=None,
+               dbpath=os.path.expanduser(config.dbserver.file),
+               logfile=config.dbserver.log,
                loglevel='WARN'):
     """
     Run the DbServer on the given database file and port. If not given,
@@ -180,15 +182,11 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     if dbhostport:  # assume a string of the form "dbhost:port"
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
-        DATABASE['PORT'] = int(port)
     else:
         addr = (config.dbserver.host, DBSERVER_PORT)
 
-    if dbpath:
-        DATABASE['NAME'] = dbpath
-
     # create the db directory if needed
-    dirname = os.path.dirname(DATABASE['NAME'])
+    dirname = os.path.dirname(dbpath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
