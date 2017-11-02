@@ -113,6 +113,10 @@ class EngineServerTestCase(unittest.TestCase):
         cls.wait()
         os.close(cls.fd)
 
+    def setUp(self):
+        if sys.version_info[0] == 2:
+            raise unittest.SkipTest('Python 2')
+
     # tests
 
     def test_404(self):
