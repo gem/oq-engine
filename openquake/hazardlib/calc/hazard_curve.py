@@ -223,6 +223,7 @@ def pmap_from_grp(
 
 
 # this is used by the engine
+# TODO: decide how to manage the case of disaggregation
 def pmap_from_trt(
         sources, source_site_filter, gsims, param, monitor=Monitor()):
     """
