@@ -32,7 +32,9 @@ commands = ['start', 'migrate', 'syncdb', 'createsuperuser', 'collectstatic']
 def rundjango(subcmd, hostport=None, skip_browser=False):
     args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
     if subcmd == 'start':
-        args.append('--noreload')  # --noreload avoids surprises
+        # the reload functionality of the Django development server interferes
+        # with SIGCHLD and causes zombies, thus it is disabled
+        args.append('--noreload')
     if hostport:
         args.append(hostport)
     p = subprocess.Popen(args)
