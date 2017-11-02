@@ -138,11 +138,18 @@ class RlzsAssoc(object):
     def __init__(self, csm_info):
         self.array = None  # set by csm_info.get_rlzs_assoc()
         self.seed = csm_info.seed
+        self.csm_info = csm_info
         self.num_samples = csm_info.num_samples
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.rlzs_by_gsim = {}  # dict grp_id -> dict
-        self.get_gsims = csm_info.get_gsims
+
+    def get_gsims(self, grp_id):
+        """
+        :param grp_id: source group ID
+        :returns: the GSIMs for the given grp_id
+        """
+        return self.csm_info.get_gsims(grp_id)
 
     def _init(self):
         """
