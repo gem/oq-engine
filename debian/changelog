@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a feature `optimize_same_id_sources`
   * Fixed a bug in gmf_ebrisk when there are zero losses and added more
     validity checks on the CSV file
   * The parameter `number_of_ground_motion_fields` is back to being optional in
