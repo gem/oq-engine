@@ -722,12 +722,10 @@ class CompositeSourceModel(collections.Sequence):
     def get_sources_by_trt(self):
         """
         Build a dictionary TRT string -> sources without duplicates
-        NB: use this function only in absence of mutex groups
         """
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                assert grp.src_interdep != 'mutex', grp
                 for src in grp:
                     src.sm_id = sm.ordinal
                     src.samples = sm.samples

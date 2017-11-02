@@ -235,6 +235,8 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap: a pmap or a dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
+            # TODO: think about how to store source information for the case
+            # of optimize_same_id_sources = True
             if not self.oqparam.optimize_same_id_sources:
                 for src_id, nsites, srcweight, calc_time in pmap.calc_times:
                     src_id = src_id.split(':', 1)[0]
