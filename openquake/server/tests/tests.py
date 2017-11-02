@@ -54,9 +54,7 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
-        if not resp.content:
-            sys.stderr.write(open(cls.errfname).read())
-            return {}
+        assert resp.content
         try:
             return json.loads(resp.content.decode('utf8'))
         except:
@@ -76,7 +74,7 @@ class EngineServerTestCase(unittest.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 break
-            time.sleep(1)
+            time.sleep(0.5)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
@@ -104,17 +102,15 @@ class EngineServerTestCase(unittest.TestCase):
         # let's impersonate the user openquake, the one running the WebUI:
         # we need to set LOGNAME on Linux and USERNAME on Windows
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
-        cls.fd, cls.errfname = tempfile.mkstemp(prefix='webui')
-        print('Errors saved in %s' % cls.errfname, file=sys.stderr)
         cls.c = Client()
 
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-        os.close(cls.fd)
 
     def setUp(self):
         if sys.version_info[0] == 2:
+            # python 2 will die
             raise unittest.SkipTest('Python 2')
 
     # tests
@@ -180,7 +176,7 @@ class EngineServerTestCase(unittest.TestCase):
         # check that we get the expected outputs
         results = self.get('%s/results' % job_id)
         self.assertEqual(['fullreport', 'hcurves', 'hmaps', 'realizations',
-                          'sourcegroups', 'uhs'], [r['name'] for r in results])
+                          'sourcegroups'], [r['name'] for r in results])
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
