@@ -114,6 +114,10 @@ class EngineServerTestCase(unittest.TestCase):
             # 'geos_c', fallbacks=['libgeos_c.so.1', 'libgeos_c.so'])
             raise unittest.SkipTest('Python 2')
 
+    def setUp(self):
+        if sys.version_info[0] == 2:
+            raise unittest.SkipTest('Python 2')
+
     # tests
 
     def test_404(self):
