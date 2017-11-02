@@ -27,8 +27,6 @@ try:
 except ImportError:
     STANDALONE = False
 
-DB_SECTION = config.dbserver
-
 INSTALLED_APPS = ('openquake.server.db',)
 
 OQSERVER_ROOT = os.path.dirname(__file__)
@@ -66,11 +64,11 @@ STATICFILES_DIRS = [
 
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': os.path.expanduser(DB_SECTION.get('file')),
-    'LOG': os.path.expanduser(DB_SECTION.get('log')),
+    'NAME': os.path.expanduser(config.dbserver.file),
+    'LOG': os.path.expanduser(config.dbserver.log),
     'USER': getpass.getuser(),
-    'HOST': DB_SECTION.get('host'),
-    'PORT': DB_SECTION.get('port'),
+    'HOST': config.dbserver.host,
+    'PORT': config.dbserver.port,
 }
 DATABASES = {'default': DATABASE}
 
