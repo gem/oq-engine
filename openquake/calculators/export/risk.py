@@ -100,7 +100,8 @@ def export_avg_losses(ekey, dstore):
         if dskey in dstore:  # precomputed
             value = dstore[dskey].value
         else:  # computed on the fly
-            value = compute_stats2(value, stats, weights)
+            value = compute_stats2(
+                dstore['avg_losses-rlzs'].value, stats, weights)
     else:  # rlzs
         value = dstore[dskey].value  # shape (A, R, LI)
         tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
