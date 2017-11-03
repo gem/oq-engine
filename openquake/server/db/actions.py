@@ -573,10 +573,12 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    # strange: understand why the filter returns two lines
+    # strange: understand why the filter returns two lines or zero lines
     log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
-             job_id)[-1]
-    response_data = log.message.splitlines()
+             job_id)
+    if not log:
+        return []
+    response_data = log[-1].message.splitlines()
     return response_data
 
 

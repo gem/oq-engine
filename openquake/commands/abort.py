@@ -35,11 +35,11 @@ def abort(job_id):
     elif job.status not in ('executing', 'running'):
         sys.exit('Job %d is %s' % (job.id, job.status))
     logs.dbcmd('set_status', job.id, 'aborted')
+    workerpool.WorkerMaster(**config.zworkers).stop('abort')
     name = 'oq-job-%d' % job.id
     for p in psutil.process_iter():
         if p.name() == name:
             os.kill(p.pid, signal.SIGTERM)
-    workerpool.WorkerMaster(**config.zworkers).stop('abort')
     print('%d aborted' % job.id)
 
 abort.arg('job_id', 'job ID', type=int)

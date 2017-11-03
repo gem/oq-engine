@@ -58,7 +58,7 @@ if parallel.oq_distribute() == 'zmq':
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                 if not general.socket_ready(url):
-                    logs.LOG.warn('%s is not running', host)
+                    logs.LOG.warn('%s is not running', url)
                     continue
                 num_workers += sock.send('get_num_workers')
         OqParam.concurrent_tasks.default = num_workers * 5
@@ -176,17 +176,6 @@ def raiseMasterKilled(signum, _stack):
     raise MasterKilled(msg)
 
 
-# register the raiseMasterKilled callback for SIGTERM
-# when using the Django development server this module is imported by a thread,
-# so one gets a `ValueError: signal only works in main thread` that
-# can be safely ignored
-try:
-    signal.signal(signal.SIGTERM, raiseMasterKilled)
-    signal.signal(signal.SIGINT, raiseMasterKilled)
-except ValueError:
-    pass
-
-
 def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     Create a full job profile from a job config file.
@@ -227,6 +216,9 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     :param exports:
         A comma-separated string of export types.
     """
+    # register the raiseMasterKilled callback for SIGTERM
+    signal.signal(signal.SIGTERM, raiseMasterKilled)
+    signal.signal(signal.SIGINT, raiseMasterKilled)
     setproctitle('oq-job-%d' % job_id)
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job

@@ -24,10 +24,10 @@ def manage_abort(calc_id, dbserver_url):
     def abort(signum, stack):
         job = z.send(dbserver_url, 'get_job', calc_id)
         if job.status == 'aborted':
-            raise z.Aborted(calc_id)
+            raise z.Aborted
     try:
         # register the abort handler
-        signal.signal(signal.SIGTERM, abort)
+        signal.signal(signal.SIGABRT, abort)
     except ValueError:
         # if you are in a thread, do not register the handler
         pass
@@ -112,8 +112,8 @@ def _starmap(func, iterargs, host, ctrl_port, task_in_port, receiver_ports):
         for _ in range(n):
             try:
                 obj = receiver.zsocket.recv_pyobj()
-            except (KeyboardInterrupt, z.zmq.ZMQError):
-                return
+            except Exception as exc:
+                obj = (exc, exc.__class__, None)
             # receive n responses for the n requests sent
             yield obj
 
@@ -172,7 +172,7 @@ class WorkerMaster(object):
 
     def stop(self, cmd='term'):
         """
-        Send a "term", "kill" or "abort" command to all worker pools
+        Send a "term" or "kill" command to all worker pools
         """
         stopped = []
         for host, _ in self.host_cores:
@@ -203,7 +203,8 @@ class WorkerPool(object):
     :param task_out_port: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
-    signal = {'term': signal.SIGTERM, 'kill': signal.SIGKILL}
+    signal = {'term': signal.SIGTERM, 'kill': signal.SIGKILL,
+              'abort': signal.SIGABRT}
 
     def __init__(self, ctrl_url, task_out_port, num_workers='-1'):
         self.ctrl_url = ctrl_url
@@ -258,10 +259,11 @@ class WorkerPool(object):
 
     def stop(self, cmd):
         """
-        Send a SIGTERM/SIGKILL/SIGUSR1 to all worker processes
+        Send a SIGTERM/SIGKILL to all worker processes
 
         :param cmd:
-            the string 'term' for SIGTERM and 'kill' for SIGKILL
+            the string 'term' for SIGTERM, 'kill' for SIGKILL and 'abort' for
+            SIGABRT
         """
         sig = self.signal[cmd]
         for pid in self.running:
