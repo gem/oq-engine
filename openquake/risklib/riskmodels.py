@@ -176,6 +176,8 @@ class Classical(RiskModel):
         # utils.numpy_map(scientific.insured_loss_curve,
         # lrcurves, deductibles, limits), values)
         return rescale(lrcurves, values).transpose(2, 0, 1)
+        # transpose array from shape (N, 2, C) -> (C, N, 2)
+        # otherwise .get_output would fail
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
