@@ -29,17 +29,17 @@ def abort(job_id):
     """
     Abort the given job
     """
-    job = logs.dbcmd('get_job', job_id)
+    job = logs.dbcmd('get_job', job_id)  # job_id can be negative
     if job is None:
         sys.exit('There is no job %d' % job_id)
     elif job.status not in ('executing', 'running'):
-        sys.exit('Job %d is %s' % (job_id, job.status))
-    logs.dbcmd('set_status', job_id, 'aborted')
-    name = 'oq-job-%d' % job_id
+        sys.exit('Job %d is %s' % (job.id, job.status))
+    logs.dbcmd('set_status', job.id, 'aborted')
+    name = 'oq-job-%d' % job.id
     for p in psutil.process_iter():
         if p.name() == name:
             os.kill(p.pid, signal.SIGABRT)
     workerpool.WorkerMaster(**config.zworkers).stop('abort')
-    print('%d aborted' % job_id)
+    print('%d aborted' % job.id)
 
 abort.arg('job_id', 'job ID', type=int)
