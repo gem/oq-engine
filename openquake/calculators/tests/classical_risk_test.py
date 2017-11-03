@@ -101,8 +101,8 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         [fname] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-mean.csv', fname)
 
-        # check individual avg losses
-        fname = writetmp(view('loss_curves_avg', self.calc.datastore))
+        # check avg losses
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves_avg.txt', fname)
 
     @attr('qa', 'risk', 'classical_risk')
