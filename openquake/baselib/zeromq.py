@@ -26,6 +26,13 @@ SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
             zmq.ROUTER: 'ROUTER', zmq.DEALER: 'DEALER'}
 
 
+class Aborted(zmq.ZMQError):
+    """
+    Raised when a worker receives a SIGTERM and the currently running job
+    has status 'aborted'.
+    """
+
+
 def bind(end_point, socket_type):
     """
     Bind to a zmq URL; raise a proper error if the URL is invalid; return

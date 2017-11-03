@@ -17,14 +17,14 @@ except ImportError:
 
 def manage_abort(calc_id, dbserver_url):
     """
-    Register a callback for SIGTERM that raises a JobAborted exception if
+    Register a callback for SIGTERM that raises a Aborted exception if
     the given calculation has status 'aborted' in the database (assuming
     the dbserver is up)
     """
     def abort(signum, stack):
         job = z.send(dbserver_url, 'get_job', calc_id)
         if job.status == 'aborted':
-            raise JobAborted(calc_id)
+            raise z.Aborted(calc_id)
     try:
         # register the abort handler
         signal.signal(signal.SIGTERM, abort)
@@ -110,7 +110,10 @@ def _starmap(func, iterargs, host, ctrl_port, task_in_port, receiver_ports):
                 n += 1
         yield n
         for _ in range(n):
-            obj = receiver.zsocket.recv_pyobj()
+            try:
+                obj = receiver.zsocket.recv_pyobj()
+            except (KeyboardInterrupt, z.zmq.ZMQError):
+                return
             # receive n responses for the n requests sent
             yield obj
 
@@ -189,13 +192,6 @@ class WorkerMaster(object):
         self.stop(cmd)
         self.start()
         return 'restarted'
-
-
-class JobAborted(Exception):
-    """
-    Raised when a worker receives a SIGUSR1 and the currently running job
-    has status 'aborted'.
-    """
 
 
 class WorkerPool(object):
