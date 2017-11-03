@@ -189,15 +189,9 @@ def classical(sources, src_filter, gsims, param, monitor):
     # sanity check: the trt must be the same for all sources
     for src in sources[1:]:
         assert src.tectonic_region_type == trt
-    if param['disagg']:
-        sm_id = param['sm_id']
-        bbs = [BoundingBox(sm_id, sid) for sid in src_filter.sitecol.sids]
-    else:
-        bbs = []
     pmap = pmap_from_grp(
         sources, src_filter, imtls, gsims, truncation_level,
-        bbs=bbs, monitor=monitor)
-    pmap.bbs = bbs
+        param.get('bbs', []), monitor)
     return pmap
 
 source_data_dt = numpy.dtype(
@@ -245,7 +239,7 @@ class PSHACalculator(base.HazardCalculator):
                     info.num_sites = max(info.num_sites, nsites)
                     info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
-            for bb in getattr(pmap, 'bbs', []):  # for disaggregation
+            for bb in pmap.bbs:  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
             if isinstance(pmap, ProbabilityMap):
                 acc[pmap.grp_id] |= pmap
@@ -373,7 +367,8 @@ class PSHACalculator(base.HazardCalculator):
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
         for sm in csm.source_models:
             if oq.poes_disagg or oq.iml_disagg:  # only for disagg
-                param['sm_id'] = sm.ordinal
+                param['bbs'] = [BoundingBox(sm.ordinal, sid)
+                                for sid in src_filter.sitecol.sids]
             for sg in sm.src_groups:
                 gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                 if num_tiles <= 1:
