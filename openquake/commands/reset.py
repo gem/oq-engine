@@ -49,6 +49,7 @@ def reset(yes):
                 pid = logs.dbcmd('getpid')
                 os.kill(pid, signal.SIGTERM)
                 time.sleep(.5)  # give time to stop
+                assert dbserver.get_status() == 'not-running'
                 print('dbserver stopped')
         try:
             os.remove(dbpath)
