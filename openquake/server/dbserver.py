@@ -22,7 +22,7 @@ import os.path
 import sqlite3
 import logging
 import threading
-import subprocess
+import multiprocessing
 
 from openquake.baselib import config, sap, zeromq as z, workerpool as w
 from openquake.baselib.general import socket_ready
@@ -157,8 +157,7 @@ def ensure_on():
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
-        subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
-                          '-l', 'INFO'])
+        multiprocessing.Process(target=run_server).start()
 
         # wait for the dbserver to start
         waiting_seconds = 10

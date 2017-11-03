@@ -26,7 +26,7 @@ SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
             zmq.ROUTER: 'ROUTER', zmq.DEALER: 'DEALER'}
 
 
-class Aborted(zmq.ZMQError):
+class Aborted(Exception):
     """
     Raised when a worker receives a SIGTERM and the currently running job
     has status 'aborted'.
