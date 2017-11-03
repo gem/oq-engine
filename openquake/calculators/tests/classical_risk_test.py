@@ -40,11 +40,11 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqual(got, '0.05 0.10 0.20 0.40 0.80')
 
         # check loss curves
-        [fname] = export(('loss_curves/rlz-0', 'csv'), self.calc.datastore)
+        [fname] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves.csv', fname)
 
         # check loss maps
-        [fname] = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps.csv', fname)
 
     @attr('qa', 'risk', 'classical_risk')
@@ -53,7 +53,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         [fname] = export(('loss_curves/rlz-0', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves.csv', fname)
 
-        [fname] = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
+        [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps.csv', fname)
 
     @attr('qa', 'risk', 'classical_risk')
