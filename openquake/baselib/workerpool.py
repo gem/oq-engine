@@ -167,7 +167,7 @@ class WorkerMaster(object):
             subprocess.Popen(args)
         return 'starting %s' % starting
 
-    def stop(self, cmd='term', calc_id=0):
+    def stop(self, cmd='term'):
         """
         Send a "term", "kill" or "abort" command to all worker pools
         """
