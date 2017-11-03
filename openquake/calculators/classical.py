@@ -239,7 +239,7 @@ class PSHACalculator(base.HazardCalculator):
                     info.num_sites = max(info.num_sites, nsites)
                     info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
-            for bb in pmap.bbs:  # for disaggregation
+            for bb in getattr(pmap, 'bbs', []):  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
             if isinstance(pmap, ProbabilityMap):
                 acc[pmap.grp_id] |= pmap
