@@ -60,27 +60,28 @@ def classical_risk(riskinput, riskmodel, param, monitor):
 
     # compute statistics
     R = riskinput.hazard_getter.num_rlzs
-    if R > 1 and param['stats']:
-        w = param['weights']
-        statnames, stats = zip(*param['stats'])
-        l_idxs = range(len(riskmodel.lti))
-        for assets, outs in groupby(
-                all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [w[out.rlzi] for out in outs]
-            out = outs[0]
-            for l in l_idxs:
-                for i, asset in enumerate(assets):
-                    avgs = numpy.array([r.average_losses[l][i] for r in outs])
-                    avg_stats = compute_stats(avgs, stats, weights)
-                    # is a pair loss_curves, insured_loss_curves
-                    # out[l][:, i, 0] are the i-th losses
-                    # out[l][:, i, 1] are the i-th poes
-                    losses = out[l][:, i, 0]
-                    poes_stats = compute_stats(
-                        numpy.array([out[l][:, i, 1] for out in outs]),
-                        stats, weights)
-                    result['stat_curves'].append(
-                        (l, asset.ordinal, losses, poes_stats, avg_stats))
+    w = param['weights']
+    statnames, stats = zip(*param['stats'])
+    l_idxs = range(len(riskmodel.lti))
+    for assets, outs in groupby(
+            all_outputs, lambda o: tuple(o.assets)).items():
+        weights = [w[out.rlzi] for out in outs]
+        out = outs[0]
+        for l in l_idxs:
+            for i, asset in enumerate(assets):
+                avgs = numpy.array([r.average_losses[l][i] for r in outs])
+                avg_stats = compute_stats(avgs, stats, weights)
+                # is a pair loss_curves, insured_loss_curves
+                # out[l][:, i, 0] are the i-th losses
+                # out[l][:, i, 1] are the i-th poes
+                losses = out[l][:, i, 0]
+                poes_stats = compute_stats(
+                    numpy.array([out[l][:, i, 1] for out in outs]),
+                    stats, weights)
+                result['stat_curves'].append(
+                    (l, asset.ordinal, losses, poes_stats, avg_stats))
+    if R == 1:  # the realization is the same as the mean
+        del result['loss_curves']
     return result
 
 
@@ -136,30 +137,29 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.loss_curve_dt = scientific.build_loss_curve_dt(
             curve_res, self.oqparam.insured_losses)
         ltypes = self.riskmodel.loss_types
-        loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
-        avg_losses = numpy.zeros((self.A, self.R, self.L * self.I), F32)
-        for l, r, a, (losses, poes, avg) in result['loss_curves']:
-            lc = loss_curves[a, r][ltypes[l]]
-            avg_losses[a, r, l] = avg
-            base.set_array(lc['losses'], losses)
-            base.set_array(lc['poes'], poes)
-        self.datastore['avg_losses-rlzs'] = avg_losses
-        self.datastore['loss_curves-rlzs'] = loss_curves
 
-        # loss curves stats
-        if self.R > 1:
-            stats = [encode(n) for (n, f) in self.oqparam.risk_stats()]
-            stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
+        # loss curves stats are generated always
+        stats = [encode(n) for (n, f) in self.oqparam.risk_stats()]
+        stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
+        avg_losses = numpy.zeros((self.A, self.R, self.L * self.I), F32)
+        for l, a, losses, statpoes, statloss in result['stat_curves']:
+            stat_curves_lt = stat_curves[ltypes[l]]
+            for s in range(self.S):
+                avg_losses[a, s, l] = statloss[s]
+                base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
+                base.set_array(stat_curves_lt['losses'][a, s], losses)
+        self.datastore['avg_losses-stats'] = avg_losses
+        self.datastore.set_attrs('avg_losses-stats', stats=stats)
+        self.datastore['loss_curves-stats'] = stat_curves
+        self.datastore.set_attrs('loss_curves-stats', stats=stats)
+
+        if self.R > 1:  # individual realizations saved only if many
+            loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
             avg_losses = numpy.zeros((self.A, self.R, self.L * self.I), F32)
-            for l, a, losses, statpoes, statloss in result['stat_curves']:
-                stat_curves_lt = stat_curves[ltypes[l]]
-                for s in range(self.S):
-                    avg_losses[a, s, l] = statloss[s]
-                    base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
-                    base.set_array(stat_curves_lt['losses'][a, s], losses)
-            self.datastore['avg_losses-stats'] = avg_losses
-            self.datastore.set_attrs(
-                'avg_losses-stats', nbytes=avg_losses.nbytes, stats=stats)
-            self.datastore['loss_curves-stats'] = stat_curves
-            self.datastore.set_attrs(
-                'loss_curves-stats', nbytes=stat_curves.nbytes, stats=stats)
+            for l, r, a, (losses, poes, avg) in result['loss_curves']:
+                lc = loss_curves[a, r][ltypes[l]]
+                avg_losses[a, r, l] = avg
+                base.set_array(lc['losses'], losses)
+                base.set_array(lc['poes'], poes)
+            self.datastore['avg_losses-rlzs'] = avg_losses
+            self.datastore['loss_curves-rlzs'] = loss_curves
