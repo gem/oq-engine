@@ -439,26 +439,6 @@ def view_mean_avg_losses(token, dstore):
     return rst_table(losses, fmt=FIVEDIGITS)
 
 
-# this is used by the classical calculator
-@view.add('loss_curves_avg')
-def view_loss_curves_avg(token, dstore):
-    """
-    Returns the average losses computed from the loss curves; for each
-    asset shows all realizations.
-    """
-    array = dstore['loss_curves-rlzs'].value  # shape (N, R)
-    n, r = array.shape
-    lt_dt = numpy.dtype([(lt, numpy.float32, r) for lt in array.dtype.names])
-    avg = numpy.zeros(n, lt_dt)
-    for lt in array.dtype.names:
-        array_lt = array[lt]
-        for i, row in enumerate(array_lt):
-            avg[lt][i] = row['avg']
-    assets = util.get_assets(dstore)
-    losses = util.compose_arrays(assets, avg)
-    return rst_table(losses, fmt='%8.6E')
-
-
 @view.add('exposure_info')
 def view_exposure_info(token, dstore):
     """
