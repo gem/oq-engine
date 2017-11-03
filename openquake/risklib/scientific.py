@@ -1215,13 +1215,13 @@ def build_loss_curve_dt(curve_resolution, insured_losses=False):
     lc_list = []
     for lt in sorted(curve_resolution):
         C = curve_resolution[lt]
-        pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+        pairs = [('losses', (F32, C)), ('poes', (F32, C))]
         lc_dt = numpy.dtype(pairs)
         lc_list.append((str(lt), lc_dt))
     if insured_losses:
         for lt in sorted(curve_resolution):
             C = curve_resolution[lt]
-            pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+            pairs = [('losses', (F32, C)), ('poes', (F32, C))]
             lc_dt = numpy.dtype(pairs)
             lc_list.append((str(lt) + '_ins', lc_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
