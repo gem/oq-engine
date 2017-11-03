@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a command `oq abort <calc_id>`
   * WebUI: now every job runs in its own process and has name oq-job-<ID>
   * Refactored the WebUI tests to use the DbServer and django.test.Client
   * Added an experimental feature `optimize_same_id_sources`
