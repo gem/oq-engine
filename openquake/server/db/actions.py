@@ -59,15 +59,17 @@ def reset_is_running(db):
 
 def set_status(db, job_id, status):
     """
-    Set the status 'created', 'executing', 'complete', 'failed'
+    Set the status 'created', 'executing', 'complete', 'failed', 'aborted'
     consistently with `is_running`.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
     :param status: status string
     """
-    assert status in ('created', 'executing', 'complete', 'failed'), status
-    if status in ('created', 'complete', 'failed'):
+    assert status in (
+        'created', 'executing', 'complete', 'aborted', 'failed'
+    ), status
+    if status in ('created', 'complete', 'failed', 'aborted'):
         is_running = 0
     else:  # 'executing'
         is_running = 1
@@ -571,10 +573,12 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    # strange: understand why the filter returns two lines
+    # strange: understand why the filter returns two lines or zero lines
     log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
-             job_id)[-1]
-    response_data = log.message.splitlines()
+             job_id)
+    if not log:
+        return []
+    response_data = log[-1].message.splitlines()
     return response_data
 
 

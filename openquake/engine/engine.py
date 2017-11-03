@@ -165,7 +165,7 @@ def raiseMasterKilled(signum, _stack):
         msg = 'Received a signal %d' % signum
     for pid in parallel.executor.pids:  # when using futures
         try:
-            os.kill(pid, signal.SIGKILL)
+            os.kill(pid, signal.SIGTERM)
         except OSError:  # pid not found
             pass
     raise MasterKilled(msg)
