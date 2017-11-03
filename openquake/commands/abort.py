@@ -38,7 +38,7 @@ def abort(job_id):
     name = 'oq-job-%d' % job.id
     for p in psutil.process_iter():
         if p.name() == name:
-            os.kill(p.pid, signal.SIGABRT)
+            os.kill(p.pid, signal.SIGTERM)
     workerpool.WorkerMaster(**config.zworkers).stop('abort')
     print('%d aborted' % job.id)
 

@@ -17,7 +17,7 @@ except ImportError:
 
 def manage_abort(calc_id, dbserver_url):
     """
-    Register a callback for SIGABRT that raises a JobAborted exception if
+    Register a callback for SIGTERM that raises a JobAborted exception if
     the given calculation has status 'aborted' in the database (assuming
     the dbserver is up)
     """
@@ -27,7 +27,7 @@ def manage_abort(calc_id, dbserver_url):
             raise JobAborted(calc_id)
     try:
         # register the abort handler
-        signal.signal(signal.SIGABRT, abort)
+        signal.signal(signal.SIGTERM, abort)
     except ValueError:
         # if you are in a thread, do not register the handler
         pass
@@ -207,8 +207,7 @@ class WorkerPool(object):
     :param task_out_port: zmq address of the task streamer
     :param num_workers: a string with the number of workers (or '-1')
     """
-    signal = {'term': signal.SIGTERM, 'kill': signal.SIGKILL,
-              'abort': signal.SIGABRT}
+    signal = {'term': signal.SIGTERM, 'kill': signal.SIGKILL}
 
     def __init__(self, ctrl_url, task_out_port, num_workers='-1'):
         self.ctrl_url = ctrl_url
@@ -266,8 +265,7 @@ class WorkerPool(object):
         Send a SIGTERM/SIGKILL/SIGUSR1 to all worker processes
 
         :param cmd:
-            the string 'term' for SIGTERM, 'kill' for SIGKILL,
-            'abort' for SIGABRT
+            the string 'term' for SIGTERM and 'kill' for SIGKILL
         """
         sig = self.signal[cmd]
         for pid in self.running:

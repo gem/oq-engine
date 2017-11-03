@@ -35,7 +35,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z)
-from openquake.baselib.workerpool import manage_abort
+from openquake.baselib.workerpool import manage_abort, JobAborted
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
@@ -252,11 +252,12 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, duration)
             logs.dbcmd('finish', job_id, 'complete')
-        except:
+        except Exception as exc:
+            msg = 'aborted' if isinstance(exc, JobAborted) else 'failed'
             tb = traceback.format_exc()
             try:
                 logs.LOG.critical(tb)
-                logs.dbcmd('finish', job_id, 'failed')
+                logs.dbcmd('finish', job_id, msg)
             except:  # an OperationalError may always happen
                 sys.stderr.write(tb)
             raise
