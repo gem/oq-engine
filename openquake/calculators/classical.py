@@ -47,31 +47,30 @@ class BBdict(AccumDict):
     """
     A serializable dictionary containing bounding box information
     """
-    dt = numpy.dtype([('lt_model_id', U16), ('site_id', U16),
+    dt = numpy.dtype([('site_id', U16),
                       ('min_dist', F64), ('max_dist', F64),
                       ('east', F64), ('west', F64),
                       ('south', F64), ('north', F64)])
 
     def __toh5__(self):
         rows = []
-        for lt_model_id, site_id in self:
-            bb = self[lt_model_id, site_id]
-            rows.append((lt_model_id, site_id, bb.min_dist, bb.max_dist,
+        for site_id in self:
+            bb = self[site_id]
+            rows.append((site_id, bb.min_dist, bb.max_dist,
                          bb.east, bb.west, bb.south, bb.north))
         return numpy.array(rows, self.dt), {}
 
     def __fromh5__(self, array, attrs):
         for row in array:
-            lt_model_id = row['lt_model_id']
             site_id = row['site_id']
-            bb = BoundingBox(lt_model_id, site_id)
+            bb = BoundingBox(site_id)
             bb.min_dist = row['min_dist']
             bb.max_dist = row['max_dist']
             bb.east = row['east']
             bb.west = row['west']
             bb.north = row['north']
             bb.south = row['south']
-            self[lt_model_id, site_id] = bb
+            self[site_id] = bb
 
 
 # this is needed for the disaggregation
@@ -84,8 +83,7 @@ class BoundingBox(object):
     moreover the maximum and minimum longitudes and magnitudes are stored, by
     taking in account the international date line.
     """
-    def __init__(self, lt_model_id, site_id):
-        self.lt_model_id = lt_model_id
+    def __init__(self, site_id):
         self.site_id = site_id
         self.min_dist = self.max_dist = 0
         self.east = self.west = self.south = self.north = 0
@@ -240,7 +238,7 @@ class PSHACalculator(base.HazardCalculator):
                     info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
             for bb in getattr(pmap, 'bbs', []):  # for disaggregation
-                acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
+                acc.bb_dict[bb.site_id].update_bb(bb)
             if isinstance(pmap, ProbabilityMap):
                 acc[pmap.grp_id] |= pmap
             else:  # dictionary of pmaps
@@ -273,9 +271,7 @@ class PSHACalculator(base.HazardCalculator):
         zd.bb_dict = BBdict()
         if self.oqparam.poes_disagg or self.oqparam.iml_disagg:
             for sid in self.sitecol.sids:
-                for smodel in self.csm.source_models:
-                    zd.bb_dict[smodel.ordinal, sid] = BoundingBox(
-                        smodel.ordinal, sid)
+                zd.bb_dict[sid] = BoundingBox(sid)
         return zd
 
     def execute(self):
@@ -347,6 +343,9 @@ class PSHACalculator(base.HazardCalculator):
                 maximum_distance=oq.maximum_distance,
                 disagg=oq.poes_disagg or oq.iml_disagg,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+            if oq.poes_disagg or oq.iml_disagg:  # only for disagg
+                param['bbs'] = [BoundingBox(sid)
+                                for sid in src_filter.sitecol.sids]
             if oq.optimize_same_id_sources:
                 iterargs = self._args_by_trt(
                     csm, src_filter, param, num_tiles, maxweight)
@@ -363,12 +362,8 @@ class PSHACalculator(base.HazardCalculator):
         source.split_map.clear()
 
     def _args_by_grp(self, csm, src_filter, param, num_tiles, maxweight):
-        oq = self.oqparam
         ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
         for sm in csm.source_models:
-            if oq.poes_disagg or oq.iml_disagg:  # only for disagg
-                param['bbs'] = [BoundingBox(sm.ordinal, sid)
-                                for sid in src_filter.sitecol.sids]
             for sg in sm.src_groups:
                 gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                 if num_tiles <= 1:
