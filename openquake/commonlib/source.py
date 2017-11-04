@@ -144,13 +144,6 @@ class RlzsAssoc(object):
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.rlzs_by_gsim = {}  # dict grp_id -> dict
 
-    def get_gsims(self, grp_id):
-        """
-        :param grp_id: source group ID
-        :returns: the GSIMs for the given grp_id
-        """
-        return self.csm_info.get_gsims(grp_id)
-
     def _init(self):
         """
         Finalize the initialization of the RlzsAssoc object by setting
@@ -175,7 +168,7 @@ class RlzsAssoc(object):
         # populate rlzs_by_gsim
         for grp, arr in self.array.items():
             grp_id = int(grp[4:])
-            gsims = self.get_gsims(grp_id)
+            gsims = self.csm_info.get_gsims(grp_id)
             self.rlzs_by_gsim[grp_id] = collections.OrderedDict(
                 (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
 
@@ -241,7 +234,7 @@ class RlzsAssoc(object):
             grp_id = int(grp[4:])
             for rec in self.array[grp]:
                 rlzs = rec['rlzis']
-                gsim = self.get_gsims(grp_id)[rec['gsim_idx']]
+                gsim = self.csm_info.get_gsims(grp_id)[rec['gsim_idx']]
                 if len(rlzs) > 10:  # short representation
                     rlzs = ['%d realizations' % len(rlzs)]
                 pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
