@@ -37,7 +37,7 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
+def compute_disagg(src_filter, sources, gsims, rlzs_by_gsim,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -46,10 +46,10 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
         a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
     :param sources:
         list of hazardlib source objects
-    :param src_group_id:
-        numeric ID of a SourceGroup instance
-    :param rlzs_assoc:
-        a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param gsims:
+        list of GSIMs for the current source group
+    :param rlzs_by_gsim:
+        a dictionary GSIM -> realizations
     :param dict trt_names:
         a tuple of names for the given tectonic region type
     :param curves_dict:
@@ -66,8 +66,6 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
     """
     sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    gsims = rlzs_assoc.get_gsims(src_group_id)
-    rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -86,7 +84,7 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
             cmaker = ContextMaker(gsims, src_filter.integration_distance)
             bdata = disagg._collect_bins_data(
                 trt_num, sources, site, curves_dict[sid],
-                src_group_id, rlzs_by_gsim, cmaker, oqparam.imtls,
+                rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor)
@@ -234,9 +232,11 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                             sourceconverter.split_source(src), sitecol):
                         split_sources.append(split)
                 mon = self.monitor('disaggregation')
+                gsims = self.rlzs_assoc.get_gsims(src_group.id)
+                rlzs_by_gsim = self.rlzs_assoc.rlzs_by_gsim[src_group.id]
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
-                        (src_filter, srcs, src_group.id, self.rlzs_assoc,
+                        (src_filter, srcs, gsims, rlzs_by_gsim,
                          trt_names, curves_dict, bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
