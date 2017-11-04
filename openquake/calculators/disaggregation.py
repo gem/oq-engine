@@ -46,8 +46,6 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
         a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
     :param sources:
         list of hazardlib source objects
-    :param gsims:
-        list of GSIMs for the current source group
     :param rlzs_by_gsim:
         a dictionary GSIM -> realizations
     :param dict trt_names:
