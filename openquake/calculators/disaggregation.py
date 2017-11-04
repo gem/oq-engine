@@ -193,13 +193,11 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
             for src_group in smodel.src_groups:
-                if src_group.id not in self.rlzs_assoc.rlzs_by_gsim:
-                    continue  # the group has been filtered away
                 for sid, site in zip(sitecol.sids, sitecol):
                     curves = curves_dict[sid]
                     if not curves:
                         continue  # skip zero-valued hazard curves
-                    bb = bb_dict[sm_id, sid]
+                    bb = bb_dict[sid]
                     if not bb:
                         logging.info(
                             'location %s was too far, skipping disaggregation',
