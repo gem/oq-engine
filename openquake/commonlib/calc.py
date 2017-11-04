@@ -125,7 +125,7 @@ class PmapGetter(object):
         pmap_by_grp = self.get_pmap_by_grp(sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
         grps = [grp] if grp is not None else sorted(pmap_by_grp)
-        array = self.rlzs_assoc.get_array()
+        array = self.rlzs_assoc.by_grp()
         for grp in grps:
             for gsim_idx, rlzis in array[grp]:
                 for r in rlzis:
