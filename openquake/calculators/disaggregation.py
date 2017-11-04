@@ -233,7 +233,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                             sourceconverter.split_source(src), sitecol):
                         split_sources.append(split)
                 mon = self.monitor('disaggregation')
-                rlzs_by_gsim = self.rlzs_assoc.rlzs_by_gsim[src_group.id]
+                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(
+                    src_group.trt, sm_id)
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
                         (src_filter, srcs, rlzs_by_gsim, trt_names,
