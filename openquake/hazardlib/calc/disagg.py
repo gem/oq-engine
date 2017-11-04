@@ -93,7 +93,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
-                # a dictionary rlz.id, poe, imt_str -> (iml, prob_no_exceed)
+                # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
                 for gsim in cmaker.gsims:
                     gs = str(gsim)
                     for imt_str, imls in imtls.items():
