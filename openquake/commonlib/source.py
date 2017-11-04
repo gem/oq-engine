@@ -145,20 +145,25 @@ class RlzsAssoc(object):
         self.rlzs_by_gsim = {}  # dict grp_id -> dict
 
     # TODO: think of a way to remove .rlzs_by_gsim
-    def get_rlzs_by_gsim(self, trt, sm_id=None):
+    def get_rlzs_by_gsim(self, trt_or_grp_id, sm_id=None):
         """
         :param trt: a tectonic region type
         :param sm_id: source model ordinal (or None)
         :returns: a dictionary gsim -> rlzs
         """
+        if isinstance(trt_or_grp_id, (int, U32)):  # grp_id
+            trt = self.csm_info.trt_by_grp[trt_or_grp_id]
+            sm_id = self.csm_info.get_sm_by_grp()[trt_or_grp_id]
+        else:  # assume TRT string
+            trt = trt_or_grp_id
         acc = collections.defaultdict(list)
-        for rlz, gsim_by_trt in zip(self.realizations, self.gsim_by_trt):
-            r = rlz.ordinal
-            gsim = gsim_by_trt[trt]
-            if sm_id is None:
-                acc[gsim].append(r)
-            elif rlz in self.rlzs_by_smodel[sm_id]:
-                acc[gsim].append(r)
+        if sm_id is None:  # full dictionary
+            for rlz, gsim_by_trt in zip(self.realizations, self.gsim_by_trt):
+                acc[gsim_by_trt[trt]].append(rlz.ordinal)
+        else:  # dictionary for the selected source model
+            for rlz in self.rlzs_by_smodel[sm_id]:
+                gsim = self.gsim_by_trt[rlz.ordinal][trt]
+                acc[gsim].append(rlz.ordinal)
         return collections.OrderedDict(
             (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
 
