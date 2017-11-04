@@ -239,7 +239,8 @@ class RlzsAssoc(object):
             return
         return self.realizations[int(mo.group(1))]
 
-    def _add_realizations(self, idx, lt_model, all_trts, gsim_rlzs):
+    def _add_realizations(self, offset, lt_model, all_trts, gsim_rlzs):
+        idx = numpy.arange(offset, offset + len(gsim_rlzs))
         rlzs = []
         for i, gsim_rlz in enumerate(gsim_rlzs):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
@@ -511,11 +512,9 @@ class CompositionInfo(object):
                 gsim_rlzs = self.gsim_rlzs
                 all_trts = self.gsim_lt.all_trts
 
-            rlzs, _ = self._get_rlzs_gsims(
-                smodel, gsim_rlzs, self.seed + offset)
-            indices = numpy.arange(offset, offset + len(rlzs))
-            assoc._add_realizations(indices, smodel, all_trts, rlzs)
-            offset += len(indices)
+            rlzs = self._get_rlzs(smodel, gsim_rlzs, self.seed + offset)
+            assoc._add_realizations(offset, smodel, all_trts, rlzs)
+            offset += len(rlzs)
 
         if assoc.realizations:
             assoc._init()
@@ -578,7 +577,7 @@ class CompositionInfo(object):
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
 
-    def _get_rlzs_gsims(self, smodel, all_rlzs, seed):
+    def _get_rlzs(self, smodel, all_rlzs, seed):
         if self.num_samples:
             # NB: the weights are considered when combining the results, not
             # when sampling, therefore there are no weights in the function
@@ -592,10 +591,7 @@ class CompositionInfo(object):
             raise ValueError(
                 'The source model %s has %d realizations, the maximum '
                 'is %d' % (smodel.name, len(rlzs), TWO16))
-        gsims = [self.gsim_lt.get_gsims(
-            sg.trt, rlzs if self.num_samples else None)
-                 for sg in smodel.src_groups]
-        return rlzs, gsims
+        return rlzs
 
 
 class CompositeSourceModel(collections.Sequence):
