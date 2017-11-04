@@ -254,27 +254,25 @@ hazard_uhs-mean.csv
         cinfo = self.calc.datastore['csm_info']
         ra0 = cinfo.get_rlzs_assoc()
         self.assertEqual(
-            sorted(ra0.get_array()), ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
-        '''
+            sorted(ra0.by_grp()), ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
+
         ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM2', 'a3b1'])
-        self.assertEqual(len(ra.get_array()), 4)
-        gsim_idx = 0
+        self.assertEqual(len(ra.by_grp()), 1)
         numpy.testing.assert_equal(
-            ra.get_array()['grp-02'][gsim_idx],
-            ra0.get_array()['grp-02'][gsim_idx])
+            len(ra.by_grp()['grp-02']),
+            len(ra0.by_grp()['grp-02']))
 
         ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM1'])
-        self.assertEqual(sorted(ra.get_array()), ['grp-00', 'grp-01'])
+        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
         numpy.testing.assert_equal(
-            ra.get_array()['grp-00'], ra0.get_array()['grp-00'])
+            ra.by_grp()['grp-00'], ra0.by_grp()['grp-00'])
         numpy.testing.assert_equal(
-            ra.get_array()['grp-01'], ra0.get_array()['grp-01'])
+            ra.by_grp()['grp-01'], ra0.by_grp()['grp-01'])
 
         # reduction of the gsim logic tree
         ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
-        self.assertEqual(sorted(ra.get_array()), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(ra.get_array()['grp-00'][gsim_idx], [0])
-        '''
+        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
+        numpy.testing.assert_equal(ra.by_grp()['grp-00'][0], [0, [0, 1]])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
