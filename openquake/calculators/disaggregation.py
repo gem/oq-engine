@@ -182,6 +182,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
         nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         all_args = []
+        src_filter = SourceFilter(sitecol, oq.maximum_distance)
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
             trt_names = tuple(mod.trt for mod in smodel.src_groups)
@@ -192,39 +193,36 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 int(numpy.ceil(max_mag / mag_bin_width) + 1))
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
+            for sid, site in zip(sitecol.sids, sitecol):
+                curves = curves_dict[sid]
+                if not curves:
+                    continue  # skip zero-valued hazard curves
+                bb = bb_dict[sid]
+                if not bb:
+                    logging.info(
+                        'location %s was too far, skipping disaggregation',
+                        site.location)
+                    continue
+
+                dist_edges, lon_edges, lat_edges = bb.bins_edges(
+                    oq.distance_bin_width, oq.coordinate_bin_width)
+                logging.info(
+                    '[sid=%d] %d dist bins from %s to %s', sid,
+                    len(dist_edges) - 1, min(dist_edges), max(dist_edges))
+                logging.info(
+                    '[sid=%d] %d lon bins from %s to %s', sid,
+                    len(lon_edges) - 1, bb.west, bb.east)
+                logging.info(
+                    '[sid=%d] %d lat bins from %s to %s', sid,
+                    len(lon_edges) - 1, bb.south, bb.north)
+
+                self.bin_edges[sm_id, sid] = (
+                    mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
+
+            bin_edges = {sid: self.bin_edges[sm_id, sid]
+                         for sid in sitecol.sids
+                         if (sm_id, sid) in self.bin_edges}
             for src_group in smodel.src_groups:
-                for sid, site in zip(sitecol.sids, sitecol):
-                    curves = curves_dict[sid]
-                    if not curves:
-                        continue  # skip zero-valued hazard curves
-                    bb = bb_dict[sid]
-                    if not bb:
-                        logging.info(
-                            'location %s was too far, skipping disaggregation',
-                            site.location)
-                        continue
-
-                    dist_edges, lon_edges, lat_edges = bb.bins_edges(
-                        oq.distance_bin_width, oq.coordinate_bin_width)
-                    logging.info(
-                        '[sid=%d] %d dist bins from %s to %s', sid,
-                        len(dist_edges) - 1, min(dist_edges), max(dist_edges))
-                    logging.info(
-                        '[sid=%d] %d lon bins from %s to %s', sid,
-                        len(lon_edges) - 1, bb.west, bb.east)
-                    logging.info(
-                        '[sid=%d] %d lat bins from %s to %s', sid,
-                        len(lon_edges) - 1, bb.south, bb.north)
-
-                    self.bin_edges[sm_id, sid] = (
-                        mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-
-                bin_edges = {}
-                for sid, site in zip(sitecol.sids, sitecol):
-                    if (sm_id, sid) in self.bin_edges:
-                        bin_edges[sid] = self.bin_edges[sm_id, sid]
-
-                src_filter = SourceFilter(sitecol, oq.maximum_distance)
                 split_sources = []
                 for src in src_group:
                     for split, _sites in src_filter(
