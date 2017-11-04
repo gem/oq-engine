@@ -506,7 +506,12 @@ class CompositionInfo(object):
             else:
                 gsim_rlzs = self.gsim_rlzs
                 all_trts = self.gsim_lt.all_trts
-            offset = self._populate(assoc, all_trts, gsim_rlzs, smodel, offset)
+
+            rlzs, _ = self._get_rlzs_gsims(
+                smodel, gsim_rlzs, self.seed + offset)
+            indices = numpy.arange(offset, offset + len(rlzs))
+            assoc._add_realizations(indices, smodel, all_trts, rlzs)
+            offset += len(indices)
 
         if assoc.realizations:
             assoc._init()
@@ -587,15 +592,6 @@ class CompositionInfo(object):
             sg.trt, rlzs if self.num_samples else None)
                  for sg in smodel.src_groups]
         return rlzs, gsims
-
-    def _populate(self, assoc, all_trts, all_rlzs, smodel, offset):
-        rlzs, gsims = self._get_rlzs_gsims(
-            smodel, all_rlzs, self.seed + offset)
-        if rlzs:
-            indices = numpy.arange(offset, offset + len(rlzs))
-            assoc._add_realizations(indices, smodel, all_trts, rlzs)
-            offset += len(indices)
-        return offset
 
 
 class CompositeSourceModel(collections.Sequence):
