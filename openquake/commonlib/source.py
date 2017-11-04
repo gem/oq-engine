@@ -563,20 +563,6 @@ class CompositionInfo(object):
                 dic[src_group.id] = src_group.trt
         return dic
 
-    def __repr__(self):
-        info_by_model = collections.OrderedDict()
-        for sm in self.source_models:
-            info_by_model[sm.path] = (
-                '_'.join(map(decode, sm.path)),
-                decode(sm.name),
-                [sg.id for sg in sm.src_groups],
-                sm.weight,
-                self.get_num_rlzs(sm))
-        summary = ['%s, %s, grp=%s, weight=%s: %d realization(s)' % ibm
-                   for ibm in info_by_model.values()]
-        return '<%s\n%s>' % (
-            self.__class__.__name__, '\n'.join(summary))
-
     def _get_rlzs(self, smodel, all_rlzs, seed):
         if self.num_samples:
             # NB: the weights are considered when combining the results, not
@@ -592,6 +578,20 @@ class CompositionInfo(object):
                 'The source model %s has %d realizations, the maximum '
                 'is %d' % (smodel.name, len(rlzs), TWO16))
         return rlzs
+
+    def __repr__(self):
+        info_by_model = collections.OrderedDict()
+        for sm in self.source_models:
+            info_by_model[sm.path] = (
+                '_'.join(map(decode, sm.path)),
+                decode(sm.name),
+                [sg.id for sg in sm.src_groups],
+                sm.weight,
+                self.get_num_rlzs(sm))
+        summary = ['%s, %s, grp=%s, weight=%s: %d realization(s)' % ibm
+                   for ibm in info_by_model.values()]
+        return '<%s\n%s>' % (
+            self.__class__.__name__, '\n'.join(summary))
 
 
 class CompositeSourceModel(collections.Sequence):
