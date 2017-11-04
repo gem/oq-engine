@@ -62,9 +62,9 @@ def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
         yield (rlzi, round(poe, 4), imt_str), (iml, pne)
 
 
-def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
-                       rlzs_by_gsim, cmaker, imtls, poes, truncation_level,
-                       n_epsilons, iml_disagg, mon):
+def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
+                       imtls, poes, truncation_level, n_epsilons, iml_disagg,
+                       mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
