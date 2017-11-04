@@ -142,9 +142,7 @@ class RlzsAssoc(object):
         self.num_samples = csm_info.num_samples
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
-        self.rlzs_by_gsim = {}  # dict grp_id -> dict
 
-    # TODO: think of a way to remove .rlzs_by_gsim
     def get_rlzs_by_gsim(self, trt_or_grp_id, sm_id=None):
         """
         :param trt: a tectonic region type
@@ -187,13 +185,6 @@ class RlzsAssoc(object):
                 # logic tree reduction; we ensure the sum of the weights is 1
                 for rlz in self.realizations:
                     rlz.weight = rlz.weight / tot_weight
-
-        # populate rlzs_by_gsim
-        for grp, arr in self.array.items():
-            grp_id = int(grp[4:])
-            gsims = self.csm_info.get_gsims(grp_id)
-            self.rlzs_by_gsim[grp_id] = collections.OrderedDict(
-                (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
 
     @property
     def realizations(self):
