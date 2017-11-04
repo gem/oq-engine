@@ -84,7 +84,7 @@ class DbServer(object):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
             threading.Thread(target=self.dworker, args=(sock,)).start()
             dworkers.append(sock)
-        logging.warn('DB server started with %s on %s, pid=%d',
+        logging.warn('DB server started with %s on %s, pid %d',
                      sys.executable, self.frontend, self.pid)
         if ZMQ:
             # start task_in->task_out streamer thread
@@ -114,6 +114,7 @@ class DbServer(object):
         """Stop the DbServer and the zworkers if any"""
         if ZMQ:
             logging.warn(self.master.stop())
+            z.context.term()
         self.db.close()
 
 
