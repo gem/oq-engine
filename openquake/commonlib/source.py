@@ -145,7 +145,7 @@ class RlzsAssoc(object):
 
     def get_rlzs_by_gsim(self, trt_or_grp_id, sm_id=None):
         """
-        :param trt: a tectonic region type
+        :param trt_or_grp_id: a tectonic region type or a source group ID
         :param sm_id: source model ordinal (or None)
         :returns: a dictionary gsim -> rlzs
         """
