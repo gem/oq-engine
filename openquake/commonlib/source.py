@@ -159,11 +159,15 @@ class RlzsAssoc(object):
         return collections.OrderedDict(
             (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
 
-    def get_array(self):
+    def by_grp(self):
         dic = {}  # grp -> [(gsim_idx, rlzis), ...]
         for sm in self.csm_info.source_models:
             for sg in sm.src_groups:
+                if not sg.eff_ruptures:
+                    continue
                 rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
+                if not rlzs_by_gsim:
+                    continue
                 dic['grp-%02d' % sg.id] = [
                     (gsim_idx, rlzs_by_gsim[gsim])
                     for gsim_idx, gsim in enumerate(rlzs_by_gsim)]
@@ -209,7 +213,7 @@ class RlzsAssoc(object):
         num_levels = pmap_by_grp[grp].shape_y
         pmaps = [probability_map.ProbabilityMap(num_levels, 1)
                  for _ in self.realizations]
-        array = self.get_array()
+        array = self.by_grp()
         for grp in pmap_by_grp:
             for gsim_idx, rlzis in array[grp]:
                 pmap = pmap_by_grp[grp].extract(gsim_idx)
@@ -245,19 +249,19 @@ class RlzsAssoc(object):
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
     def __len__(self):
-        array = self.get_array()  # TODO: remove this
+        array = self.by_grp()  # TODO: remove this
         return sum(len(array[grp]) for grp in array)
 
     def __repr__(self):
         pairs = []
-        array = self.get_array()
+        array = self.by_grp()
         for grp in sorted(array):
             grp_id = int(grp[4:])
+            gsims = self.csm_info.get_gsims(grp_id)
             for gsim_idx, rlzis in array[grp]:
-                gsim = self.csm_info.get_gsims(grp_id)[gsim_idx]
                 if len(rlzis) > 10:  # short representation
                     rlzis = ['%d realizations' % len(rlzis)]
-                pairs.append(('%s,%s' % (grp_id, gsim), rlzis))
+                pairs.append(('%s,%s' % (grp_id, gsims[gsim_idx]), rlzis))
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
             self.__class__.__name__, len(self), len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
