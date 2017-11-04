@@ -144,6 +144,24 @@ class RlzsAssoc(object):
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.rlzs_by_gsim = {}  # dict grp_id -> dict
 
+    # TODO: think of a way to remove .rlzs_by_gsim
+    def get_rlzs_by_gsim(self, trt, sm_id=None):
+        """
+        :param trt: a tectonic region type
+        :param sm_id: source model ordinal (or None)
+        :returns: a dictionary gsim -> rlzs
+        """
+        acc = collections.defaultdict(list)
+        for rlz, gsim_by_trt in zip(self.realizations, self.gsim_by_trt):
+            r = rlz.ordinal
+            gsim = gsim_by_trt[trt]
+            if sm_id is None:
+                acc[gsim].append(r)
+            elif rlz in self.rlzs_by_smodel[sm_id]:
+                acc[gsim].append(r)
+        return collections.OrderedDict(
+            (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
+
     def _init(self):
         """
         Finalize the initialization of the RlzsAssoc object by setting
