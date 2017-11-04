@@ -37,7 +37,7 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(src_filter, sources, gsims, rlzs_by_gsim,
+def compute_disagg(src_filter, sources, rlzs_by_gsim,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -81,7 +81,8 @@ def compute_disagg(src_filter, sources, gsims, rlzs_by_gsim,
 
         # generate source, rupture, sites once per site
         with collecting_mon:
-            cmaker = ContextMaker(gsims, src_filter.integration_distance)
+            cmaker = ContextMaker(
+                rlzs_by_gsim, src_filter.integration_distance)
             bdata = disagg._collect_bins_data(
                 trt_num, sources, site, curves_dict[sid],
                 rlzs_by_gsim, cmaker, oqparam.imtls,
@@ -232,12 +233,11 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                             sourceconverter.split_source(src), sitecol):
                         split_sources.append(split)
                 mon = self.monitor('disaggregation')
-                gsims = self.csm.info.get_gsims(src_group.id)
                 rlzs_by_gsim = self.rlzs_assoc.rlzs_by_gsim[src_group.id]
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
-                        (src_filter, srcs, gsims, rlzs_by_gsim,
-                         trt_names, curves_dict, bin_edges, oq, mon))
+                        (src_filter, srcs, rlzs_by_gsim, trt_names,
+                         curves_dict, bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
