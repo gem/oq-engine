@@ -163,9 +163,7 @@ def _update_bbs(bbs, sites, jb_dists, rup):
 
 
 # this is used by the engine
-def pmap_from_grp(
-        sources, source_site_filter, imtls, gsims, truncation_level=None,
-        bbs=(), monitor=Monitor()):
+def pmap_from_grp(sources, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -184,7 +182,7 @@ def pmap_from_grp(
         trt = sources[0].tectonic_region_type
         group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
     grp_id = sources[0].src_group_id
-    maxdist = source_site_filter.integration_distance
+    maxdist = src_filter.integration_distance
     if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
         gsims = [gsims[trt]]
     srcs = []
@@ -195,7 +193,9 @@ def pmap_from_grp(
             srcs.append(src)
     del sources
     with GroundShakingIntensityModel.forbid_instantiation():
-        imtls = DictArray(imtls)
+        imtls = param['imtls']
+        trunclevel = param.get('truncation_level')
+        bbs = param.get('bbs', [])
         cmaker = ContextMaker(gsims, maxdist)
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
@@ -204,11 +204,11 @@ def pmap_from_grp(
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
         pmap.calc_times = []  # pairs (src_id, delta_t)
         pmap.grp_id = grp_id
-        for src, s_sites in source_site_filter(srcs):
+        for src, s_sites in src_filter(srcs):
             t0 = time.time()
             poemap = poe_map(
-                src, s_sites, imtls, cmaker, truncation_level, ctx_mon,
-                pne_mons, bbs, group.rup_interdep == 'indep')
+                src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons,
+                bbs, group.rup_interdep == 'indep')
             if src_indep:  # usual composition of probabilities
                 pmap |= poemap
             else:  # mutually exclusive probabilities
@@ -227,8 +227,7 @@ def pmap_from_grp(
 
 
 # this is used by the engine
-def pmap_from_trt(
-        sources, source_site_filter, gsims, param, monitor=Monitor()):
+def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -237,7 +236,7 @@ def pmap_from_trt(
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
         .eff_ruptures
     """
-    maxdist = source_site_filter.integration_distance
+    maxdist = src_filter.integration_distance
     srcs = []
     grp_ids = set()
     for src in sources:
@@ -259,7 +258,7 @@ def pmap_from_trt(
                           for grp_id in grp_ids})
         pmap.calc_times = []  # pairs (src_id, delta_t)
         pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
-        for src, s_sites in source_site_filter(srcs):
+        for src, s_sites in src_filter(srcs):
             t0 = time.time()
             poe = poe_map(
                 src, s_sites, imtls, cmaker, trunclevel,
@@ -321,16 +320,14 @@ def calc_hazard_curves(
         sitecol = ss_filter
         ss_filter = SourceFilter(sitecol, {})
 
-    imtls = DictArray(imtls)
+    param = dict(imtls=DictArray(imtls), truncation_level=truncation_level)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     for group in groups:
         if group.src_interdep == 'mutex':  # do not split the group
-            pmap |= pmap_from_grp(
-                group, ss_filter, imtls, gsim_by_trt, truncation_level)
+            pmap |= pmap_from_grp(group, ss_filter, gsim_by_trt, param)
         else:  # split the group and apply `pmap_from_grp` in parallel
             pmap |= apply(
-                pmap_from_grp,
-                (group, ss_filter, imtls, gsim_by_trt, truncation_level),
+                pmap_from_grp, (group, ss_filter, gsim_by_trt, param),
                 weight=operator.attrgetter('weight')).reduce(operator.or_)
     return pmap.convert(imtls, len(sitecol.complete))
