@@ -93,6 +93,17 @@ def capitalize(words):
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
 
+def get_id(src):
+    """
+    :param src: a source node or a hazardlib source
+    :returns: the source ID
+    """
+    try:
+        return src.source_id
+    except AttributeError:
+        return src['id']
+
+
 def _assert_equal_sources(nodes):
     if hasattr(nodes[0], 'source_id'):
         n0 = nodes[0]
@@ -641,7 +652,7 @@ class CompositeSourceModel(collections.Sequence):
             self.has_dupl_sources = 0
         else:
             for srcs in dupl_sources:
-                logging.warn('Found duplicated source %s', srcs[0].source_id)
+                logging.warn('Found duplicated source %s', get_id(srcs[0]))
             self.has_dupl_sources = len(dupl_sources)
 
     def get_model(self, sm_id):
