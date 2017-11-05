@@ -147,8 +147,8 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                                          data)
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'indep', 'mutex')
-        crv = pmap_from_grp(group, self.sites, self.imtls,
-                            gsim_by_trt, truncation_level=None)[0]
+        param = dict(imtls=self.imtls)
+        crv = pmap_from_grp(group, self.sites, gsim_by_trt, param)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv.array[:, 0], decimal=4)
 
