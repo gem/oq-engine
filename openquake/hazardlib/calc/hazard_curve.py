@@ -320,7 +320,8 @@ def calc_hazard_curves(
         sitecol = ss_filter
         ss_filter = SourceFilter(sitecol, {})
 
-    param = dict(imtls=DictArray(imtls), truncation_level=truncation_level)
+    imtls = DictArray(imtls)
+    param = dict(imtls=imtls, truncation_level=truncation_level)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     for group in groups:
