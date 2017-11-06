@@ -41,14 +41,14 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-def _aggregate(outputs, compositemodel, tagmask, agg, all_eids, result, param):
+def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
     # update the result dictionary and the agg array with each output
     E = len(all_eids)
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
-    losses_by_tag = result['losses_by_tag']
     ass = result['assratios']
     idx = dict(zip(all_eids, range(E)))
+    aids = result['aids']
     for out in outputs:
         r = out.rlzi
         for l, loss_ratios in enumerate(out):
@@ -57,27 +57,23 @@ def _aggregate(outputs, compositemodel, tagmask, agg, all_eids, result, param):
             loss_type = compositemodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
 
-            for aid, asset in enumerate(out.assets):
-                ratios = loss_ratios[aid]
+            for a, asset in enumerate(out.assets):
+                ratios = loss_ratios[a]  # shape (E, I)
                 aid = asset.ordinal
-                losses = ratios * asset.value(loss_type)  # shape (E, I)
+                losses = ratios * asset.value(loss_type)
 
                 # average losses
                 if param['avg_losses']:
                     rat = ratios.sum(axis=0) * param['ses_ratio']
+                    ai = aid if aids is None else a
                     for i in range(I):
-                        result['avglosses'][l + L * i, r][aid] += rat[i]
+                        result['avglosses'][l + L * i, r][ai] += rat[i]
 
                 # agglosses
                 for i in range(I):
                     # this is the critical loop: it is import to keep it
                     # vectorized in terms of the event indices
                     agg[indices, r, l + L * i] += losses[:, i]
-
-                # losses by tag
-                for i in range(I):
-                    tot = losses[:, i].sum()
-                    losses_by_tag[tagmask[aid], r, l + L * i] += tot
 
                 if param['asset_loss_table']:
                     for i in range(I):
@@ -134,21 +130,19 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     E = len(eids)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
-    tagmask = assetcol.tagmask()
-    A, T = tagmask.shape
+    aids = getattr(riskinput, 'aids', None)
+    A = len(assetcol) if aids is None else len(aids)
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     agg = numpy.zeros((E, R, L * I), F32)
-    result = dict(assratios=[],
-                  lrs_idx=AccumDict(accum=[]),  # aid -> start_stop list
-                  losses_by_tag=numpy.zeros((T, R, L * I), F32),
-                  aids=getattr(riskinput, 'aids', None))
+    result = dict(assratios=[], lrs_idx=AccumDict(accum=[]), aids=aids)
     if param['avg_losses']:
+        # dict (l, r) -> A losses
         result['avglosses'] = AccumDict(accum=numpy.zeros(A, F64))
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, tagmask, agg, eids, result, param)
+    _aggregate(outputs, riskmodel, agg, eids, result, param)
 
     # store info about the GMFs
     result['gmdata'] = riskinput.gmdata
@@ -363,12 +357,6 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = num_rlzs
         self.A = len(self.assetcol)
         self.tagmask = self.assetcol.tagmask()  # shape (A, T)
-        tags = encode(self.assetcol.tags())
-        T = len(tags)
-        self.datastore.create_dset('losses_by_tag-rlzs', F32,
-                                   (T, self.R, self.L * self.I))
-        self.datastore.set_attrs('losses_by_tag-rlzs', tags=tags,
-                                 nbytes=4 * T * self.R * self.L * self.I)
         if oq.asset_loss_table:
             # save all_loss_ratios
             self.alr_nbytes = 0
@@ -412,15 +400,13 @@ class EbriskCalculator(base.RiskCalculator):
         Save the event loss tables incrementally.
 
         :param dic:
-            dictionary with agglosses, assratios, losses_by_tag, avglosses,
-            lrs_idx
+            dictionary with agglosses, assratios, avglosses, lrs_idx
         :param offset:
             realization offset
         """
         aids = dic.pop('aids')
         agglosses = dic.pop('agglosses')
         assratios = dic.pop('assratios')
-        losses_by_tag = dic.pop('losses_by_tag')
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
         with self.monitor('saving event loss table', autoflush=True):
@@ -444,21 +430,14 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend('all_loss_ratios/data', assratios)
                 self.alr_nbytes += assratios.nbytes
 
-        # saving losses by tag is ultra-fast, so it is not monitored
-        dset = self.datastore['losses_by_tag-rlzs']
-        for r in range(losses_by_tag.shape[1]):
-            if aids is None:  # event_based_risk
-                dset[:, r + offset, :] += losses_by_tag[:, r, :]
-            else:  # gmf_ebrisk, there is no offset
-                dset[:, r, :] += losses_by_tag[:, r, :]
-
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
-                vs = self.vals[self.riskmodel.loss_types[l]]
                 if aids is None:  # event_based_risk
+                    vs = self.vals[self.riskmodel.loss_types[l]]
                     self.dset[:, r + offset, li] += ratios * vs
                 else:  # gmf_ebrisk, there is no offset
+                    vs = self.vals[aids][self.riskmodel.loss_types[l]]
                     self.dset[aids, r, li] += ratios * vs
         self.taskno += 1
 
