@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Stored the avg_losses in classical risk in the same way as in
+    event_based_risk and made them exportable with the same format
   * Removed the outputs losses_by_tag from the event based risk calculators
     and changed the default for the avg_losses flag to True
   * WebUI: now every job runs in its own process and has name oq-job-<ID>
