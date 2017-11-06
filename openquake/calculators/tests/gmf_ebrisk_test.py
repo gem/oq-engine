@@ -26,8 +26,6 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
         num_events = len(self.calc.datastore['agg_loss_table'])
         self.assertEqual(num_events, 10)
-        [fname] = out['losses_by_tag-rlzs', 'csv']
-        self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_2(self):
