@@ -156,10 +156,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         # a case with two GSIMs
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
-        # check losses_by_tag
-        fnames = export(('losses_by_tag-rlzs', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        # check losses by taxonomy
+        agglosses = extract(self.calc.datastore, 'agglosses/structural',
+                            'taxonomy=*').array  # shape (T, R) = (3, 2)
+        numpy.testing.assert_almost_equal(
+            agglosses, [[1969.55847168, 2363.07958984],
+                        [712.85351562, 924.75616455],
+                        [986.706604, 1344.03710938]])
 
         # extract agglosses with a * and a selection
         obj = extract(self.calc.datastore, 'agglosses/structural',
@@ -184,8 +187,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
-        tot = self.calc.datastore['losses_by_tag-rlzs'].value.sum()
-        self.assertAlmostEqual(tot / 1E6, 1.96813145)
+        agglosses = extract(self.calc.datastore, 'agglosses/structural')
+        numpy.testing.assert_almost_equal(agglosses.array, [984065.75])
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)

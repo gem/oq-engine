@@ -28,57 +28,46 @@ import sys
 import json
 import time
 import unittest
-import subprocess
 import tempfile
-import requests
 import numpy
-from openquake.baselib.general import writetmp, _get_free_port
+from django.test import Client
+from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
-from openquake.server.dbserver import db
-from openquake.server.settings import DATABASE
-from openquake.server.utils import check_webserver_running
-
-if requests.__version__ < '1.0.0':
-    requests.Response.text = property(lambda self: self.content)
+from openquake.server.dbserver import db, get_status
 
 
 class EngineServerTestCase(unittest.TestCase):
-    hostport = 'localhost:%d' % _get_free_port()
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
 
     @classmethod
-    def post(cls, path, data=None, **params):
-        return requests.post('http://%s/v1/calc/%s' % (cls.hostport, path),
-                             data, **params)
+    def post(cls, path, data=None):
+        return cls.c.post('/v1/calc/%s' % path, data)
 
     @classmethod
-    def post_nrml(cls, data=None, **params):
-        return requests.post(
-            'http://%s/v1/valid/' % cls.hostport,
-            data, **params)
+    def post_nrml(cls, data):
+        return cls.c.post('/v1/valid/', dict(xml_text=data))
 
     @classmethod
-    def get(cls, path, **params):
-        resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
-                            params=params)
-        if not resp.text:
-            sys.stderr.write(open(cls.errfname).read())
-            return {}
+    def get(cls, path, **data):
+        resp = cls.c.get('/v1/calc/%s' % path, data,
+                         HTTP_HOST='127.0.0.1')
+        assert resp.content
         try:
-            return json.loads(resp.text)
+            return json.loads(resp.content.decode('utf8'))
         except:
-            print('Invalid JSON, see %s' % writetmp(resp.text),
+            print('Invalid JSON, see %s' % writetmp(resp.content),
                   file=sys.stderr)
             return {}
 
     @classmethod
-    def get_text(cls, path, **params):
-        resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
-                            params=params)
-        return resp.text
+    def get_text(cls, path, **data):
+        resp = cls.c.get('/v1/calc/%s' % path, data)
+        if resp.status_code == 500:
+            raise Exception(resp.content.decode('utf8'))
+        return b''.join(resp.streaming_content)
 
     @classmethod
     def wait(cls):
@@ -87,15 +76,15 @@ class EngineServerTestCase(unittest.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 break
-            time.sleep(1)
+            time.sleep(0.5)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
-            resp = self.post('run', {}, files=dict(archive=a))
+            resp = self.post('run', dict(archive=a))
         try:
-            js = json.loads(resp.text)
+            js = json.loads(resp.content.decode('utf8'))
         except:
-            raise ValueError('Invalid JSON response: %r' % resp.text)
+            raise ValueError(b'Invalid JSON response: %r' % resp.content)
         if resp.status_code == 200:  # ok case
             job_id = js['job_id']
             self.job_ids.append(job_id)
@@ -108,36 +97,29 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        assert get_status() == 'running'
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
         # let's impersonate the user openquake, the one running the WebUI:
         # we need to set LOGNAME on Linux and USERNAME on Windows
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
-        cls.fd, cls.errfname = tempfile.mkstemp(prefix='webui')
-        print('Errors saved in %s' % cls.errfname, file=sys.stderr)
-
-        # sanity check, `oq dbserver start` should have created the dbdir
-        dbdir = os.path.dirname(DATABASE['NAME'])
-        assert os.path.exists(dbdir), dbdir
-
-        cls.proc = subprocess.Popen(
-            [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading'],
-            env=env, stderr=cls.fd)  # redirect the server logs
-        check_webserver_running('http://%s' % cls.hostport)
+        cls.c = Client()
 
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-        cls.proc.kill()
-        os.close(cls.fd)
+
+    def setUp(self):
+        if sys.version_info[0] == 2:
+            # python 2 will die
+            raise unittest.SkipTest('Python 2')
 
     # tests
 
     def test_404(self):
         # looking for a missing calc_id
-        resp = requests.get('http://%s/v1/calc/0' % self.hostport)
+        resp = self.c.get('/v1/calc/0')
         assert resp.status_code == 404, resp
 
     def test_ok(self):
@@ -158,22 +140,24 @@ class EngineServerTestCase(unittest.TestCase):
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
 
-        extract_url = 'http://%s/v1/calc/%s/extract/' % (self.hostport, job_id)
+        extract_url = '/v1/calc/%s/extract/' % job_id
 
         # check extract/composite_risk_model.attrs
         url = extract_url + 'composite_risk_model.attrs'
-        self.assertEqual(requests.get(url).status_code, 200)
+        self.assertEqual(self.c.get(url).status_code, 200)
 
         # check asset_values
-        resp = requests.get(extract_url + 'asset_values/0')
-        got = numpy.load(io.BytesIO(resp.content))  # load npz file
+        resp = self.c.get(extract_url + 'asset_values/0')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['array']), 0)  # there are 0 assets on site 0
         self.assertEqual(resp.status_code, 200)
 
         # check avg_losses-rlzs
-        resp = requests.get(
+        resp = self.c.get(
             extract_url + 'agglosses/structural?taxonomy=W-SLFB-1')
-        got = numpy.load(io.BytesIO(resp.content))  # load npz file
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
         self.assertEqual(resp.status_code, 200)
 
@@ -194,25 +178,23 @@ class EngineServerTestCase(unittest.TestCase):
         # check that we get the expected outputs
         results = self.get('%s/results' % job_id)
         self.assertEqual(['fullreport', 'hcurves', 'hmaps', 'realizations',
-                          'sourcegroups', 'uhs'], [r['name'] for r in results])
+                          'sourcegroups'], [r['name'] for r in results])
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
-        resp = requests.head('http://%s/v1/calc/result/%s?export_type=csv' %
-                             (self.hostport, hmaps_id))
+        resp = self.c.head('/v1/calc/result/%s?export_type=csv' % hmaps_id)
         # remove output ID digits from the filename
-        contentdisp = re.sub(r'\d', '', resp.headers['Content-Disposition'])
+        cd = re.sub(r'\d', '', resp._headers['content-disposition'][1])
         self.assertEqual(
-            contentdisp, 'attachment; filename=output--hazard_map-mean_.csv')
+            cd, 'attachment; filename=output--hazard_map-mean_.csv')
 
         # check oqparam
         resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
         self.assertEqual(resp['calculation_mode'], 'classical')
 
         # check the /extract endpoint
-        url = 'http://%s/v1/calc/%s/extract/hazard/rlzs' % (
-            self.hostport, job_id)
-        resp = requests.get(url)
+        url = '/v1/calc/%s/extract/hazard/rlzs' % job_id
+        resp = self.c.get(url)
         self.assertEqual(resp.status_code, 200)
 
     def test_err_1(self):
@@ -221,9 +203,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.wait()
 
         # download the datastore, even if incomplete
-        resp = requests.get('http://%s/v1/calc/%s/datastore'
-                            % (self.hostport, job_id))
-        self.assertGreater(len(resp.content), 1000)
+        resp = self.c.get('/v1/calc/%s/datastore' % job_id)
+        self.assertEqual(resp.status_code, 200)
 
         tb = self.get('%s/traceback' % job_id)
         if not tb:
@@ -246,19 +227,18 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertIn('Could not find any file of the form', tb_str)
 
     def test_available_gsims(self):
-        resp = requests.get('http://%s/v1/available_gsims' % self.hostport)
-        self.assertIn('ChiouYoungs2014PEER', resp.text)
+        resp = self.c.get('/v1/available_gsims')
+        self.assertIn(b'ChiouYoungs2014PEER', resp.content)
 
     # tests for nrml validation
 
     def test_validate_nrml_valid(self):
         valid_file = os.path.join(self.datadir, 'vulnerability_model.xml')
-        with open(valid_file, 'rb') as vf:
+        with open(valid_file) as vf:
             valid_content = vf.read()
-        data = dict(xml_text=valid_content)
-        resp = self.post_nrml(data)
+        resp = self.post_nrml(valid_content)
         self.assertEqual(resp.status_code, 200)
-        resp_text_dict = json.loads(resp.text)
+        resp_text_dict = json.loads(resp.content.decode('utf8'))
         self.assertTrue(resp_text_dict['valid'])
         self.assertIsNone(resp_text_dict['error_msg'])
         self.assertIsNone(resp_text_dict['error_line'])
@@ -266,12 +246,11 @@ class EngineServerTestCase(unittest.TestCase):
     def test_validate_nrml_invalid(self):
         invalid_file = os.path.join(self.datadir,
                                     'vulnerability_model_invalid.xml')
-        with open(invalid_file, 'rb') as vf:
+        with open(invalid_file) as vf:
             invalid_content = vf.read()
-        data = dict(xml_text=invalid_content)
-        resp = self.post_nrml(data)
+        resp = self.post_nrml(invalid_content)
         self.assertEqual(resp.status_code, 200)
-        resp_text_dict = json.loads(resp.text)
+        resp_text_dict = json.loads(resp.content.decode('utf8'))
         self.assertFalse(resp_text_dict['valid'])
         self.assertIn(u'Could not convert lossRatio->positivefloats:'
                       ' float -0.018800826 < 0',
@@ -281,19 +260,18 @@ class EngineServerTestCase(unittest.TestCase):
     def test_validate_nrml_unclosed_tag(self):
         invalid_file = os.path.join(self.datadir,
                                     'vulnerability_model_unclosed_tag.xml')
-        with open(invalid_file, 'rb') as vf:
+        with open(invalid_file) as vf:
             invalid_content = vf.read()
-        data = dict(xml_text=invalid_content)
-        resp = self.post_nrml(data)
+        resp = self.post_nrml(invalid_content)
         self.assertEqual(resp.status_code, 200)
-        resp_text_dict = json.loads(resp.text)
+        resp_text_dict = json.loads(resp.content.decode('utf8'))
         self.assertFalse(resp_text_dict['valid'])
         self.assertIn(u'mismatched tag', resp_text_dict['error_msg'])
         self.assertEqual(resp_text_dict['error_line'], 9)
 
     def test_validate_nrml_missing_parameter(self):
         # passing a wrong parameter, instead of the required 'xml_text'
-        data = dict(foo="bar")
-        resp = self.post_nrml(data)
+        resp = self.c.post('/v1/valid/', foo='bar')
         self.assertEqual(resp.status_code, 400)
-        self.assertEqual(resp.text, 'Please provide the "xml_text" parameter')
+        self.assertEqual(resp.content,
+                         b'Please provide the "xml_text" parameter')
