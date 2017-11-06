@@ -31,11 +31,11 @@ from openquake.commonlib import logs
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
-from openquake.server.settings import DATABASE
 
 
-db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
-              detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)
+db = dbapi.Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
+              isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
+              timeout=20)
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
@@ -73,13 +73,18 @@ class DbServer(object):
                 sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
-        """Start database worker threads"""
+        """
+        Start database worker threads
+        """
+        # give a nice name to the process
+        w.setproctitle('oq-dbserver')
+
         dworkers = []
         for _ in range(self.num_workers):
             sock = z.Socket(self.backend, z.zmq.REP, 'connect')
             threading.Thread(target=self.dworker, args=(sock,)).start()
             dworkers.append(sock)
-        logging.warn('DB server started with %s on %s, pid=%d',
+        logging.warn('DB server started with %s on %s, pid %d',
                      sys.executable, self.frontend, self.pid)
         if ZMQ:
             # start task_in->task_out streamer thread
@@ -109,6 +114,7 @@ class DbServer(object):
         """Stop the DbServer and the zworkers if any"""
         if ZMQ:
             logging.warn(self.master.stop())
+            z.context.term()
         self.db.close()
 
 
@@ -166,7 +172,8 @@ def ensure_on():
 
 
 @sap.Script
-def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
+def run_server(dbpath=os.path.expanduser(config.dbserver.file),
+               dbhostport=None, logfile=config.dbserver.log,
                loglevel='WARN'):
     """
     Run the DbServer on the given database file and port. If not given,
@@ -175,15 +182,11 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
     if dbhostport:  # assume a string of the form "dbhost:port"
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
-        DATABASE['PORT'] = int(port)
     else:
         addr = (config.dbserver.host, DBSERVER_PORT)
 
-    if dbpath:
-        DATABASE['NAME'] = dbpath
-
     # create the db directory if needed
-    dirname = os.path.dirname(DATABASE['NAME'])
+    dirname = os.path.dirname(dbpath)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
@@ -203,8 +206,8 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         dbs.stop()
 
 
-run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('dbpath', 'dbpath')
+run_server.arg('dbhostport', 'dbhost:port')
 run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 

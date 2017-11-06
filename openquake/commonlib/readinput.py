@@ -182,7 +182,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params([os.path.join(basedir, job_ini)])
-
+    if hc_id:
+        job_ini.update(hazard_calculation_id=str(hc_id))
     oqparam = OqParam(**job_ini)
     oqparam.validate()
     return oqparam
@@ -886,9 +887,9 @@ def get_gmfs(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        sitecol, eids, gmf array of shape (R, N, E, I)
+        sitecol, eids, gmf array of shape (R, N, E, M)
     """
-    I = len(oqparam.imtls)
+    M = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
         array = writers.read_composite_array(fname)
@@ -896,20 +897,41 @@ def get_gmfs(oqparam):
         # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
         num_gmv = len(array.dtype.names[3:])
-        assert num_gmv == I, (num_gmv, I)
+        assert num_gmv == M, (num_gmv, M)
         dtlist.append(('gmv', (F32, num_gmv)))
         eids = numpy.unique(array['eid'])
-        assert len(eids) == oqparam.number_of_ground_motion_fields, (
-            len(eids), oqparam.number_of_ground_motion_fields)
+        E = len(eids)
+        found_eids = set(eids)
+        expected_eids = set(range(E))  # expected incremental eids
+        missing_eids = expected_eids - found_eids
+        if missing_eids:
+            raise InvalidFile('Missing eids in the gmfs.csv file: %s'
+                              % missing_eids)
+        assert expected_eids == found_eids, (expected_eids, found_eids)
         eidx = {eid: e for e, eid in enumerate(eids)}
-        N = len(get_site_collection(oqparam))
-        gmfs = numpy.zeros((R, N, len(eids), I), F32)
+        sitecol = get_site_collection(oqparam)
+        expected_sids = set(sitecol.sids)
+        found_sids = set(numpy.unique(array['sid']))
+        missing_sids = found_sids - expected_sids
+        if missing_sids:
+            raise InvalidFile(
+                'Found site IDs missing in the sites.csv file: %s' %
+                missing_sids)
+        N = len(sitecol)
+        gmfs = numpy.zeros((R, N, E, M), F32)
+        counter = collections.Counter()
         for row in array.view(dtlist):
-            gmfs[row['rlzi'], row['sid'], eidx[row['eid']]] = row['gmv']
+            key = row['rlzi'], row['sid'], eidx[row['eid']]
+            gmfs[key] = row['gmv']
+            counter[key] += 1
+        dupl = [key for key in counter if counter[key] > 1]
+        if dupl:
+            raise InvalidFile('Duplicated (rlzi, sid, eid) in the GMFs file: '
+                              '%s' % dupl)
     elif fname.endswith('.xml'):
         eids, gmfs_by_imt = get_scenario_from_nrml(oqparam, fname)
         N, E = gmfs_by_imt.shape
-        gmfs = numpy.zeros((1, N, E, I), F32)
+        gmfs = numpy.zeros((1, N, E, M), F32)
         for imti, imtstr in enumerate(oqparam.imtls):
             gmfs[0, :, :, imti] = gmfs_by_imt[imtstr]
     else:

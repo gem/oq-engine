@@ -104,10 +104,10 @@ def export_ruptures_csv(ekey, dstore):
               ' trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
-    gsims = csm_info.get_rlzs_assoc().gsims_by_grp_id
+    get_gsims = csm_info.get_rlzs_assoc().get_gsims
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
-        rup_data = calc.RuptureData(trt, gsims[grp_id]).to_array(
+        rup_data = calc.RuptureData(trt, get_gsims(grp_id)).to_array(
             calc.get_ruptures(dstore, events, grp_id))
         for r in rup_data:
             rows.append(
@@ -490,6 +490,8 @@ HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 @export.add(('hcurves', 'xml'), ('hcurves', 'geojson'))
 def export_hcurves_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
+    if fmt == 'geojson':
+        logging.warn('The geojson exporters will be removed soon')
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
@@ -526,6 +528,8 @@ def export_hcurves_xml_json(ekey, dstore):
 @export.add(('hmaps', 'xml'), ('hmaps', 'geojson'))
 def export_hmaps_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
+    if fmt == 'geojson':
+        logging.warn('The geojson exporters will be removed soon')
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
