@@ -76,6 +76,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.datastore['events'] = events
         self.agglosses = general.AccumDict(
             accum=numpy.zeros(self.L * self.I, F32))
+        self.vals = self.assetcol.values()
 
     def post_execute(self, result):
         """
