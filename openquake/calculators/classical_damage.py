@@ -64,7 +64,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         """
         damages_dt = numpy.dtype([(ds, numpy.float32)
                                   for ds in self.riskmodel.damage_states])
-        damages = numpy.zeros((self.N, self.R), damages_dt)
+        damages = numpy.zeros((self.A, self.R), damages_dt)
         for r in result:
             for aid, fractions in result[r].items():
                 damages[aid, r] = tuple(fractions)
