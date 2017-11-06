@@ -69,10 +69,7 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): [0]>
-=============== ======
-attribute       nbytes
-=============== ======'''
+0,AkkarBommer2010(): [0]>'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -330,7 +327,7 @@ class DbTestCase(unittest.TestCase):
     def test_db(self):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
-                'openquake.commonlib.logs.dbcmd', manage.dbcmd):
+                'openquake.commonlib.logs.dbcmd', manage.fakedbcmd):
             db('db_version')
             try:
                 db('calc_info', (1,))

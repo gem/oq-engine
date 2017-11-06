@@ -20,13 +20,13 @@ from __future__ import print_function
 import os
 import sys
 from django.core.management import execute_from_command_line
-from openquake.server import executor, dbserver
+from openquake.server import dbserver
 from openquake.server.db import actions
 from openquake.commonlib import logs
 
 
 # bypass the DbServer and run the action directly
-def dbcmd(action, *args):
+def fakedbcmd(action, *args):
     """
     A dispatcher to the database server.
 
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     if 'runserver' in sys.argv:
         if '--nothreading' in sys.argv:
-            logs.dbcmd = dbcmd  # turn this on when debugging
+            logs.dbcmd = fakedbcmd  # turn this on when debugging
         # check if we are talking to the right server
         err = dbserver.check_foreign()
         if err:
@@ -52,5 +52,4 @@ if __name__ == "__main__":
         logs.dbcmd('upgrade_db')  # make sure the DB exists
         logs.dbcmd('reset_is_running')  # reset the flag is_running
 
-    with executor:
-        execute_from_command_line(sys.argv)
+    execute_from_command_line(sys.argv)
