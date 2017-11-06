@@ -23,11 +23,9 @@ from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3
 class GmfEbRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
+        self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
         num_events = len(self.calc.datastore['agg_loss_table'])
         self.assertEqual(num_events, 10)
-        [fname] = out['losses_by_tag-rlzs', 'csv']
-        self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_2(self):
@@ -48,3 +46,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
         self.assertAlmostEqual(totloss, 1790231.25)
+
+        # avg_losses-rlzs has shape (A, R, LI)
+        avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
+        self.assertAlmostEqual(avglosses, [2257871.5])
