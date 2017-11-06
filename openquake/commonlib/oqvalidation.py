@@ -47,7 +47,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
-    avg_losses = valid.Param(valid.boolean, False)
+    avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(), '')  # -> get_oqparam
     coordinate_bin_width = valid.Param(valid.positivefloat)
@@ -114,6 +114,7 @@ class OqParam(valid.ParamSet):
     region = valid.Param(valid.coordinates, None)
     region_constraint = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
+    optimize_same_id_sources = valid.Param(valid.boolean, False)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat)
@@ -194,6 +195,8 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
+
+        self.check_source_model()
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -598,3 +601,12 @@ class OqParam(valid.ParamSet):
         elif len(ok_imts) == 1:
             raise ValueError(
                 'There is a single IMT, uniform_hazard_spectra cannot be True')
+
+    def check_source_model(self):
+        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
+                'rupture_model' in self.inputs):
+            return
+        if 'source' not in self.inputs and not self.hazard_calculation_id:
+            raise ValueError('Missing source_model_logic_tree in %s '
+                             'or missing --hc option' %
+                             self.inputs.get('job_ini', 'job_ini'))

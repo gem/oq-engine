@@ -101,7 +101,7 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
                description=description,
                user_name=user_name,
                hazard_calculation_id=hc_id,
-               is_running=0,
+               is_running=1,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     job_id = db('INSERT INTO job (?S) VALUES (?X)',
                 job.keys(), job.values()).lastrowid

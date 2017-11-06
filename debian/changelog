@@ -1,4 +1,22 @@
   [Michele Simionato]
+  * Stored the avg_losses in classical risk in the same way as in
+    event_based_risk and made them exportable with the same format
+  * Removed the outputs losses_by_tag from the event based risk calculators
+    and changed the default for the avg_losses flag to True
+  * WebUI: now every job runs in its own process and has name oq-job-<ID>
+  * Refactored the WebUI tests to use the DbServer and django.test.Client
+  * Added an experimental feature `optimize_same_id_sources`
+  * Fixed a bug in gmf_ebrisk when there are zero losses and added more
+    validity checks on the CSV file
+  * The parameter `number_of_ground_motion_fields` is back to being optional in
+    scenario calculators reading the GMFs from a file, since it can be inferred
+  * Removed the deprecated risk outputs dmg_by_tag, dmg_total,
+    losses_by_tag, losses_total
+  * Deprecated the .geojson exporters for hazard curves and maps
+  * We now keep the realization weights in case of logic tree sampling (before
+    they were rescaled to 1 / R and considered all equals)
+  * Optimized sampling for extra-large logic trees
+  * Added a check on missing `source_model_logic_tree`
   * Fix to the gmf_ebrisk calculator: the realization index in the event loss
     table was incorrect and too many rows were saved
   * Added a way to restrict the source logic model tree by setting a sm_lt_path

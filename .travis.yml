@@ -21,7 +21,7 @@ jobs:
   - stage: tests
     env: ENGINE
     before_script:
-        - mkdir ~/oqdata
+        - oq dbserver start &
     script:
         - nosetests --with-doctest -xvs -a'!slow' openquake.engine
         - nosetests --with-doctest -xvs -a'!slow' openquake.server
@@ -29,10 +29,11 @@ jobs:
         - nosetests --with-doctest -xvs -a'!slow' openquake.risklib
         - nosetests --with-doctest -xvs -a'!slow' openquake.commonlib
         - nosetests --with-doctest -xvs -a'!slow' openquake.commands
-        - bin/oq webui migrate
-        - cat /tmp/webui*
+        - oq webui migrate
     after_success:
         - pip install sphinx==1.3.6 && cd doc/sphinx && make html
+    after_script:
+        - oq dbserver stop
   - stage: tests
     env: DEMOS
     script:
@@ -49,8 +50,8 @@ jobs:
             eval $(ssh-agent -s) && ssh-add .deploy_rsa &&
             scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip &&
             oq workers stop &&
-            bin/oq reset --yes &&
-            bin/oq dbserver status | grep -q 'dbserver not-running';
+            oq reset --yes &&
+            oq dbserver status | grep -q 'dbserver not-running';
           fi
 
 before_install:

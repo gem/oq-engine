@@ -388,15 +388,15 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    tax_idx = dstore['assetcol'].get_tax_idx()
     loss_dt = oq.loss_dt()
-    losses_by_tag = dstore['losses_by_tag-rlzs']
-    R = losses_by_tag.shape[1]  # shape (T, R, L')
+    R = len(dstore['realizations'])
+    by_rlzi = group_array(dstore['agg_loss_table'].value, 'rlzi')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
     for r in range(R):
+        loss = by_rlzi[r]['loss'].sum(axis=0)
         for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = losses_by_tag[tax_idx, r, l].sum()
+            data[r][lt] = loss[l]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
@@ -437,26 +437,6 @@ def view_mean_avg_losses(token, dstore):
     losses = util.compose_arrays(assets, data)
     losses.sort()
     return rst_table(losses, fmt=FIVEDIGITS)
-
-
-# this is used by the classical calculator
-@view.add('loss_curves_avg')
-def view_loss_curves_avg(token, dstore):
-    """
-    Returns the average losses computed from the loss curves; for each
-    asset shows all realizations.
-    """
-    array = dstore['loss_curves-rlzs'].value  # shape (N, R)
-    n, r = array.shape
-    lt_dt = numpy.dtype([(lt, numpy.float32, r) for lt in array.dtype.names])
-    avg = numpy.zeros(n, lt_dt)
-    for lt in array.dtype.names:
-        array_lt = array[lt]
-        for i, row in enumerate(array_lt):
-            avg[lt][i] = row['avg']
-    assets = util.get_assets(dstore)
-    losses = util.compose_arrays(assets, avg)
-    return rst_table(losses, fmt='%8.6E')
 
 
 @view.add('exposure_info')
@@ -590,10 +570,10 @@ def view_required_params_per_trt(token, dstore):
     """
     Display the parameters needed by each tectonic region type
     """
-    gsims_per_grp_id = sorted(
-        dstore['csm_info'].get_rlzs_assoc().gsims_by_grp_id.items())
+    csm_info = dstore['csm_info']
     tbl = []
-    for grp_id, gsims in gsims_per_grp_id:
+    for grp_id, trt in sorted(csm_info.grp_trt().items()):
+        gsims = csm_info.gsim_lt.get_gsims(trt)
         maker = ContextMaker(gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
