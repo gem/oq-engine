@@ -46,3 +46,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
         self.assertAlmostEqual(totloss, 1790231.25)
+
+        # avg_losses-rlzs has shape (A, R, LI)
+        avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
+        self.assertAlmostEqual(avglosses, [2257871.5])
