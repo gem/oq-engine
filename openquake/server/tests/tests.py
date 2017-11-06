@@ -28,13 +28,13 @@ import sys
 import json
 import time
 import unittest
-import tempfile
 import numpy
 from django.test import Client
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
+from openquake.commands.abort import abort
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -64,8 +64,10 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def get_text(cls, path, **data):
-        sc = cls.c.get('/v1/calc/%s' % path, data).streaming_content
-        return b''.join(sc)
+        resp = cls.c.get('/v1/calc/%s' % path, data)
+        if resp.status_code == 500:
+            raise Exception(resp.content.decode('utf8'))
+        return b''.join(resp.streaming_content)
 
     @classmethod
     def wait(cls):
@@ -189,6 +191,14 @@ class EngineServerTestCase(unittest.TestCase):
         url = '/v1/calc/%s/extract/hazard/rlzs' % job_id
         resp = self.c.get(url)
         self.assertEqual(resp.status_code, 200)
+
+    def test_abort(self):
+        job_id = self.postzip('archive_ok.zip')
+        time.sleep(1)  # give time
+        abort(job_id)
+        self.wait()
+        lastlog = self.get('%s/log/:' % job_id)[-1][-1]
+        self.assertIn('MasterKilled', lastlog)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
