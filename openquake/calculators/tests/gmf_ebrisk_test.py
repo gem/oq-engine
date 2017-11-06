@@ -23,7 +23,7 @@ from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3
 class GmfEbRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
+        self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
         num_events = len(self.calc.datastore['agg_loss_table'])
         self.assertEqual(num_events, 10)
 
