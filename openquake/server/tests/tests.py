@@ -64,8 +64,10 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def get_text(cls, path, **data):
-        sc = cls.c.get('/v1/calc/%s' % path, data).streaming_content
-        return b''.join(sc)
+        resp = cls.c.get('/v1/calc/%s' % path, data)
+        if resp.status_code == 500:
+            raise Exception(resp.content.decode('utf8'))
+        return b''.join(resp.streaming_content)
 
     @classmethod
     def wait(cls):

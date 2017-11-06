@@ -65,9 +65,6 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         self.taskno = 0
         self.start = 0
-        self.datastore.create_dset('losses_by_tag-rlzs', F32,
-                                   (self.T, self.R, self.L * self.I))
-
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
@@ -79,6 +76,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.datastore['events'] = events
         self.agglosses = general.AccumDict(
             accum=numpy.zeros(self.L * self.I, F32))
+        self.vals = self.assetcol.values()
 
     def post_execute(self, result):
         """
