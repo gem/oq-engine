@@ -14,4 +14,3 @@ sleep .25
 python3 -m openquake.commands engine --run hazard/ScenarioCase1/job.ini &
 sleep 2  # give time to start
 python3 -m openquake.commands abort -2  # the disaggregation
-echo '---------------------------------------------------'

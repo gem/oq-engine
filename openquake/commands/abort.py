@@ -20,7 +20,7 @@ import os
 import sys
 import signal
 import psutil
-from openquake.baselib import sap, config, workerpool
+from openquake.baselib import sap
 from openquake.commonlib import logs
 
 
