@@ -163,11 +163,13 @@ def raiseMasterKilled(signum, _stack):
         msg = 'The openquake master process was killed manually'
     else:
         msg = 'Received a signal %d' % signum
-    for pid in parallel.executor.pids:  # when using futures
-        try:
-            os.kill(pid, signal.SIGKILL)  # SIGTERM is not enough :-(
-        except OSError:  # pid not found
-            pass
+    if sys.version_info >= (3, 5, 0):
+        # Python 2 is buggy and this code would hang
+        for pid in parallel.executor.pids:  # when using futures
+            try:
+                os.kill(pid, signal.SIGKILL)  # SIGTERM is not enough :-(
+            except OSError:  # pid not found
+                pass
     raise MasterKilled(msg)
 
 
