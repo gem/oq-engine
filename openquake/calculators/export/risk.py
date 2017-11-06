@@ -81,24 +81,29 @@ def export_agg_curve_rlzs(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by event_based_risk
+# this is used by event_based_risk and classical_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    dskey = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    name, kind = ekey[0].split('-')
-    value = dstore[name + '-rlzs'].value  # shape (A, R, L')
+    name, kind = dskey.split('-')
     if kind == 'stats':
         weights = dstore['realizations']['weight']
         tags, stats = zip(*oq.risk_stats())
-        value = compute_stats2(value, stats, weights)
+        if dskey in dstore:  # precomputed
+            value = dstore[dskey].value
+        else:  # computed on the fly
+            value = compute_stats2(
+                dstore['avg_losses-rlzs'].value, stats, weights)
     else:  # rlzs
+        value = dstore[dskey].value  # shape (A, R, LI)
         tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
