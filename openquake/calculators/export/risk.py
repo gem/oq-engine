@@ -509,34 +509,6 @@ def get_paths(rlz):
     return dic
 
 
-# used by event_based_risk
-@export.add(('losses_by_tag-rlzs', 'csv'), ('losses_by_tag-stats', 'csv'))
-@depr('This output will be removed soon')
-def export_losses_by_tag_csv(ekey, dstore):
-    oq = dstore['oqparam']
-    tags = add_quotes(dstore['assetcol'].tags())
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    loss_types = oq.loss_dt().names
-    key, kind = ekey[0].split('-')
-    value = dstore[key + '-rlzs'].value
-    if kind == 'stats':
-        weights = dstore['realizations']['weight']
-        kinds, stats = zip(*oq.risk_stats())
-        value = compute_stats2(value, stats, weights)
-    else:  # rlzs
-        kinds = rlzs
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dt = numpy.dtype([('tag', tags.dtype)] + oq.loss_dt_list())
-    for kind, values in zip(kinds, value.transpose(1, 0, 2)):
-        fname = dstore.build_fname(key, kind, ekey[1])
-        array = numpy.zeros(len(values), dt)
-        array['tag'] = numpy.array(tags)
-        for l, lt in enumerate(loss_types):
-            array[lt] = values[:, l]
-        writer.save(array, fname)
-    return writer.getsaved()
-
-
 @export.add(('bcr-rlzs', 'csv'), ('bcr-stats', 'csv'))
 def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
