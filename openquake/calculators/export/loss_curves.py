@@ -147,8 +147,11 @@ class LossCurveExporter(object):
         """
         :returns: a dictionary key -> record of dtype loss_curve_dt
         """
-        if 'loss_curves-rlzs' in self.dstore:  # classical_risk
-            data = self.dstore['loss_curves-rlzs'][aids]  # shape (A, R)
+        if 'loss_curves-stats' in self.dstore:  # classical_risk
+            if self.R == 1:
+                data = self.dstore['loss_curves-stats'][aids]  # shape (A, R)
+            else:
+                data = self.dstore['loss_curves-rlzs'][aids]  # shape (A, R)
             if key.startswith('rlz-'):
                 rlzi = int(key[4:])
                 return {key: data[:, rlzi]}
@@ -176,10 +179,6 @@ class LossCurveExporter(object):
         :returns: a dictionary rlzi -> record of dtype loss_curve_dt
         """
         oq = self.dstore['oqparam']
-        num_rlzs = len(self.dstore['realizations'])
-        if num_rlzs == 1:
-            logging.error('There is a single realization, there are no stats')
-            return {}
         stats = oq.risk_stats()  # pair (name, func)
         stat2idx = {stat[0]: s for s, stat in enumerate(stats)}
         if 'loss_curves-stats' in self.dstore:  # classical_risk
