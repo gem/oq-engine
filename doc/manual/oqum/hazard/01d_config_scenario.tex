@@ -45,3 +45,20 @@ for all GMPEs specified in the logic tree file. The branch weights in the logic
 tree file are ignored in a scenario analysis and only the individual branch
 results are computed. Mean or quantile ground motion fields will not be 
 generated.
+
+The ground motion fields will be computed at each of the sites and for each of
+the intensity measure types specified in the job configuration file. The
+above calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+After the calculation is completed, a message similar to the following will be
+displayed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 260 completed in 3 seconds. Results:
+  id | name
+ 569 | gmf_data
+\end{minted}
