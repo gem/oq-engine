@@ -523,9 +523,7 @@ class HazardCalculator(BaseCalculator):
         if rm.damage_states:
             # best not to save them as bytes, they are used as headers
             attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)
-        self.datastore['loss_ratios'] = rm.get_loss_ratios()
         self.datastore.set_nbytes('composite_risk_model')
-        self.datastore.set_nbytes('loss_ratios')
         self.datastore.hdf5.flush()
 
     def assoc_assets(self, haz_sitecol):
