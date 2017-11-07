@@ -36,7 +36,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z, workerpool)
-from openquake.baselib.workerpool import manage_abort
+from openquake.baselib.workerpool import register_abort
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
@@ -234,7 +234,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         tb = 'None\n'
         try:
             logs.dbcmd('set_status', job_id, 'executing')
-            manage_abort(job_id, config.dbserver_url)
+            register_abort(job_id, config.dbserver_url)
             _do_run_calc(calc, exports, hazard_calculation_id, **kw)
             duration = monitor.duration
             expose_outputs(calc.datastore)

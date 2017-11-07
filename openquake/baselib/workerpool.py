@@ -15,7 +15,7 @@ except ImportError:
         "Do nothing"
 
 
-def manage_abort(calc_id, dbserver_url):
+def register_abort(calc_id, dbserver_url):
     """
     Register a callback for SIGTERM that raises a Aborted exception if
     the given calculation has status 'aborted' in the database (assuming
@@ -52,6 +52,8 @@ def safely_call(func, args):
         mon = args[-1] if isinstance(args[-1], Monitor) else Monitor()
         mon.children.append(child)  # child is a child of mon
         child.hdf5path = mon.hdf5path
+        if mon.calc_id and hasattr(mon, 'dbserver_url'):  # set by _starmap
+            register_abort(mon.calc_id, mon.dbserver_url)
 
         # FIXME: check_mem_usage is disabled here because it is causing
         # dead locks in threads when log messages are sent
@@ -61,8 +63,6 @@ def safely_call(func, args):
         # FIXME: this approach does not work with the Threadmap
         mon._flush = False
         try:
-            if mon.calc_id and hasattr(mon, 'dbserver_url'):  # set by _starmap
-                manage_abort(mon.calc_id, mon.dbserver_url)
             got = func(*args)
             if inspect.isgenerator(got):
                 got = list(got)
