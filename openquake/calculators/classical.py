@@ -332,7 +332,7 @@ class PSHACalculator(base.HazardCalculator):
                 num_tasks += 1
                 num_sources += len(args[0])
                 yield args + (monitor,)
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
     def _args_by_grp(self, csm, src_filter, param, num_tiles, maxweight):
