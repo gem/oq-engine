@@ -66,6 +66,7 @@ class MultiPointSource(ParametricSeismicSource):
                 point,
                 self.nodal_plane_distribution,
                 self.hypocenter_distribution)
+            ps.src_group_id = self.src_group_id
             yield ps
 
     def __len__(self):
