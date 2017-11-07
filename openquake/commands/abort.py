@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 import signal
 import psutil
 from openquake.baselib import sap, config, workerpool
@@ -31,9 +30,11 @@ def abort(job_id):
     """
     job = logs.dbcmd('get_job', job_id)  # job_id can be negative
     if job is None:
-        sys.exit('There is no job %d' % job_id)
+        print('There is no job %d' % job_id)
+        return
     elif job.status not in ('executing', 'running'):
-        sys.exit('Job %d is %s' % (job.id, job.status))
+        print('Job %d is %s' % (job.id, job.status))
+        return
     logs.dbcmd('set_status', job.id, 'aborted')
     workerpool.WorkerMaster(**config.zworkers).stop('abort')
     name = 'oq-job-%d' % job.id
