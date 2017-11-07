@@ -15,7 +15,6 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import logging
 import numpy
 from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
@@ -170,8 +169,8 @@ class LossCurveExporter(object):
             # this may be disabled in the future unless an asset is specified
             dic = {}
             for rlzi in range(self.R):
-                dic['rlz-%03d' % rlzi] = build(
-                    avalues, lrgetter.get(rlzi), rlzi)
+                ratios = lrgetter.get(rlzi)
+                dic['rlz-%03d' % rlzi] = build(avalues, ratios, rlzi)
             return dic
 
     def export_curves_stats(self, aids, key):
