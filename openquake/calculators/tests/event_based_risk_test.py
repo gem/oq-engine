@@ -215,6 +215,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # extract loss_curves/rlz-1 (with the first asset having zero losses)
+        [fname] = export(('loss_curves/rlz-1', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
+
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         assert fnames, 'loss_maps-rlzs not exported?'
         if REFERENCE_OS:
