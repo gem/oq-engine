@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Removed the obsolete parameter `loss_curve_resolution`
+  * Fixed a Python 3 unicode error with `oq engine --run job.zip`
   * Added a command `oq abort <calc_id>`
   * Stored the avg_losses in classical risk in the same way as in
     event_based_risk and made them exportable with the same format
