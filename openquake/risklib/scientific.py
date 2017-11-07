@@ -1363,7 +1363,10 @@ class LossesByPeriodBuilder(object):
         A, P = len(asset_values), len(self.return_periods)
         array = numpy.zeros((A, P), self.loss_dt)
         for a, asset_value in enumerate(asset_values):
-            ratios = loss_ratios[a]  # shape (E, LI)
+            try:
+                ratios = loss_ratios[a]  # shape (E, LI)
+            except KeyError:  # no loss ratios > 0 for the given asset
+                continue
             for li, lt in enumerate(self.loss_dt.names):
                 aval = asset_value[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(
