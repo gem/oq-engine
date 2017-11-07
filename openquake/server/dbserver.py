@@ -22,7 +22,7 @@ import os.path
 import sqlite3
 import logging
 import threading
-import multiprocessing
+import subprocess
 
 from openquake.baselib import config, sap, zeromq as z, workerpool as w
 from openquake.baselib.general import socket_ready
@@ -159,8 +159,12 @@ def ensure_on():
         if config.dbserver.multi_user:
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
-        # otherwise start the DbServer automatically
-        multiprocessing.Process(target=run_server).start()
+        # otherwise start the DbServer automatically; NB: I tried to use
+        # multiprocessing.Process(target=run_server).start() and apparently
+        # it works, but then run-demos.sh hangs after the end of the first
+        # calculation, but only if the DbServer is started by oq engine (!?)
+        subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
+                          '-l', 'INFO'])
 
         # wait for the dbserver to start
         waiting_seconds = 10
