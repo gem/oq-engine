@@ -39,7 +39,7 @@ def dbserver(cmd, dbhostport=None,
     elif cmd == 'stop':
         if status == 'running':
             pid = logs.dbcmd('getpid')
-            os.kill(pid, signal.SIGTERM)
+            os.kill(pid, signal.SIGINT)
         else:
             print('dbserver already stopped')
     elif cmd == 'start':

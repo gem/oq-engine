@@ -109,6 +109,8 @@ class DbServer(object):
             for sock in dworkers:
                 sock.running = False
             logging.warn('DB server stopped')
+        finally:
+            self.stop()
 
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
@@ -198,11 +200,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    dbs = DbServer(db, addr)
-    try:
-        dbs.start()
-    finally:
-        dbs.stop()
+    DbServer(db, addr).start()  # expects to be killed with CTRL-C
 
 
 run_server.arg('dbpath', 'dbpath')
