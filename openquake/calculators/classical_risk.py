@@ -15,11 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import logging
-
 import numpy
-
 from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
