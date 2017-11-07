@@ -22,7 +22,7 @@ import os.path
 import sqlite3
 import logging
 import threading
-import subprocess
+import multiprocessing
 
 from openquake.baselib import config, sap, zeromq as z, workerpool as w
 from openquake.baselib.general import socket_ready
@@ -109,6 +109,8 @@ class DbServer(object):
             for sock in dworkers:
                 sock.running = False
             logging.warn('DB server stopped')
+        finally:
+            self.stop()
 
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
@@ -158,8 +160,7 @@ def ensure_on():
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
-        subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
-                          '-l', 'INFO'])
+        multiprocessing.Process(target=run_server).start()
 
         # wait for the dbserver to start
         waiting_seconds = 10
@@ -199,11 +200,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    dbs = DbServer(db, addr)
-    try:
-        dbs.start()
-    finally:
-        dbs.stop()
+    DbServer(db, addr).start()  # expects to be killed with CTRL-C
 
 
 run_server.arg('dbpath', 'dbpath')
