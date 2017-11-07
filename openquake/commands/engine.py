@@ -158,7 +158,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             sys.exit('%s should be a .ini filename or a pair of filenames '
                      'separated by a comma' % run)
         for job_ini in job_inis:
-            open(job_ini).read()  # raise an IOError if the file does not exist
+            open(job_ini, 'rb').read()  # IOError if the file does not exist
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
 
