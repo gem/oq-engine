@@ -83,7 +83,6 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
-    loss_curve_resolution = valid.Param(valid.positiveint, 50)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
