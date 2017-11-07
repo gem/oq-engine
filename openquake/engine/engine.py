@@ -23,6 +23,7 @@ import os
 import re
 import sys
 import json
+import time
 import signal
 import traceback
 import platform
@@ -34,7 +35,7 @@ except ImportError:
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
-    parallel, general, config, datastore, __version__, zeromq as z)
+    parallel, general, config, datastore, __version__, zeromq as z, workerpool)
 from openquake.baselib.workerpool import manage_abort
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
@@ -44,6 +45,8 @@ from openquake.commonlib import logs
 OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
+ZMQ = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
 if parallel.oq_distribute() == 'zmq':
 
@@ -168,6 +171,9 @@ def raiseMasterKilled(signum, _stack):
                 os.kill(pid, signal.SIGKILL)  # SIGTERM is not enough :-(
             except OSError:  # pid not found
                 pass
+    if ZMQ:
+        workerpool.WorkerMaster(**config.zworkers).stop('abort')
+        logs.LOG.warn('Sending abort signal to the workers...')
     raise MasterKilled(msg)
 
 
@@ -239,7 +245,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, duration)
             logs.dbcmd('finish', job_id, 'complete')
-        except Exception as exc:
+        except BaseException as exc:
             msg = 'aborted' if isinstance(exc, z.Aborted) else 'failed'
             tb = traceback.format_exc()
             try:

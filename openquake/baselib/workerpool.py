@@ -52,8 +52,6 @@ def safely_call(func, args):
         mon = args[-1] if isinstance(args[-1], Monitor) else Monitor()
         mon.children.append(child)  # child is a child of mon
         child.hdf5path = mon.hdf5path
-        if mon.calc_id and hasattr(mon, 'dbserver_url'):  # set by _starmap
-            manage_abort(mon.calc_id, mon.dbserver_url)
 
         # FIXME: check_mem_usage is disabled here because it is causing
         # dead locks in threads when log messages are sent
@@ -63,6 +61,8 @@ def safely_call(func, args):
         # FIXME: this approach does not work with the Threadmap
         mon._flush = False
         try:
+            if mon.calc_id and hasattr(mon, 'dbserver_url'):  # set by _starmap
+                manage_abort(mon.calc_id, mon.dbserver_url)
             got = func(*args)
             if inspect.isgenerator(got):
                 got = list(got)
@@ -109,12 +109,12 @@ def _starmap(func, iterargs, host, ctrl_port, task_in_port, receiver_ports):
                 sender.send((func, args))
                 n += 1
         yield n
+        # receive n responses for the n requests sent
         for _ in range(n):
             try:
                 obj = receiver.zsocket.recv_pyobj()
-            except Exception as exc:
+            except BaseException as exc:
                 obj = (exc, exc.__class__, None)
-            # receive n responses for the n requests sent
             yield obj
 
 

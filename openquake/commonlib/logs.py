@@ -37,7 +37,6 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 LOG = logging.getLogger()
 
 
-# TODO: move this in baselib
 def dbcmd(action, *args):
     """
     A dispatcher to the database server.

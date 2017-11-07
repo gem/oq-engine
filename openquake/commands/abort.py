@@ -19,7 +19,7 @@
 import os
 import signal
 import psutil
-from openquake.baselib import sap, config, workerpool
+from openquake.baselib import sap
 from openquake.commonlib import logs
 
 
@@ -36,7 +36,6 @@ def abort(job_id):
         print('Job %d is %s' % (job.id, job.status))
         return
     logs.dbcmd('set_status', job.id, 'aborted')
-    workerpool.WorkerMaster(**config.zworkers).stop('abort')
     name = 'oq-job-%d' % job.id
     for p in psutil.process_iter():
         if p.name() == name:
