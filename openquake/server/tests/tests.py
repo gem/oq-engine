@@ -202,8 +202,6 @@ class EngineServerTestCase(unittest.TestCase):
         time.sleep(1)  # give time
         abort(job_id)
         self.wait()
-        lastlog = self.get('%s/log/:' % job_id)[-1][-1]
-        self.assertIn('MasterKilled', lastlog)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
