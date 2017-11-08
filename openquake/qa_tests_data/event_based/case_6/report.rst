@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     3,219,914,866      
-date           2017-11-08T16:32:26
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:07:24
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -108,8 +108,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      1         AreaSource   2,456        0.0       1         0        
 0      1         AreaSource   2,456        0.0       1         0        
+1      1         AreaSource   2,456        0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -120,15 +120,15 @@ source_class calc_time counts
 AreaSource   0.0       2     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.000 0.673  0.384 1.697 4        
+compute_ruptures   1.012 0.691  0.406 1.717 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -136,13 +136,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.999     3.918     4     
-filtering ruptures             0.699     0.0       3,081 
-managing sources               0.193     0.0       1     
-saving ruptures                0.126     0.0       4     
+total compute_ruptures         4.047     3.340     4     
+filtering ruptures             0.719     0.0       3,081 
+managing sources               0.190     0.0       1     
+saving ruptures                0.130     0.0       4     
 reading composite source model 0.113     0.0       1     
-setting event years            0.070     0.0       1     
-store source_info              0.005     0.0       1     
+setting event years            0.075     0.0       1     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        4.148E-05 0.0       1     
+reading site collection        4.077E-05 0.0       1     
 ============================== ========= ========= ======

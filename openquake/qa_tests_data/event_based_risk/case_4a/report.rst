@@ -3,8 +3,8 @@ Event Based Hazard
 
 ============== ===================
 checksum32     117,701,076        
-date           2017-11-08T16:31:39
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:06:36
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -108,8 +108,8 @@ Slowest sources
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-0      3         SimpleFaultSource         482          0.0       1         0        
 0      1         CharacteristicFaultSource 1            0.0       1         0        
+0      3         SimpleFaultSource         482          0.0       1         0        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -121,15 +121,15 @@ CharacteristicFaultSource 0.0       1
 SimpleFaultSource         0.0       1     
 ========================= ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.062 0.040  0.004 0.092 4        
+compute_ruptures   0.065 0.042  0.004 0.098 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -137,14 +137,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.248     0.012     4     
-managing sources               0.051     0.0       1     
-saving ruptures                0.012     0.0       4     
-reading composite source model 0.009     0.0       1     
-reading exposure               0.006     0.0       1     
+total compute_ruptures         0.260     0.043     4     
+managing sources               0.061     0.0       1     
+saving ruptures                0.013     0.0       4     
+reading composite source model 0.011     0.0       1     
+reading exposure               0.008     0.0       1     
 store source_info              0.006     0.0       1     
 prefiltering source model      0.003     0.0       1     
 setting event years            0.002     0.0       1     
 filtering ruptures             0.001     0.0       5     
-reading site collection        6.437E-06 0.0       1     
+reading site collection        7.629E-06 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ Classical PSHA - Loss fractions QA test
 
 ============== ===================
 checksum32     2,143,483,537      
-date           2017-11-08T16:31:23
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:06:20
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 12, num_imts = 1
@@ -112,7 +112,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      232       AreaSource   1,612        0.014     10        124      
+0      232       AreaSource   1,612        0.016     10        124      
 0      225       AreaSource   520          0.003     3         1        
 ====== ========= ============ ============ ========= ========= =========
 
@@ -121,32 +121,32 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.017     2     
+AreaSource   0.019     2     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.005 0.001  0.003 0.005 6        
-================== ===== ====== ===== ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_eff_ruptures 0.005 7.005E-04 0.004 0.006 6        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.937     0.0       1     
-managing sources               0.087     0.0       1     
-total count_eff_ruptures       0.028     4.176     6     
-prefiltering source model      0.009     0.430     1     
+reading composite source model 0.980     0.0       1     
+managing sources               0.049     0.0       1     
+total count_eff_ruptures       0.031     3.777     6     
+prefiltering source model      0.009     0.555     1     
 reading exposure               0.007     0.0       1     
-store source_info              0.004     0.0       1     
-aggregate curves               3.030E-04 0.0       6     
-saving probability maps        3.505E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+store source_info              0.003     0.0       1     
+aggregate curves               1.972E-04 0.0       6     
+saving probability maps        2.408E-05 0.0       1     
+reading site collection        6.676E-06 0.0       1     
 ============================== ========= ========= ======

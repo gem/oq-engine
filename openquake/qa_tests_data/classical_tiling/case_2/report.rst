@@ -3,8 +3,8 @@ Classical Tiling for Turkey reduced
 
 ============== ===================
 checksum32     1,556,025,092      
-date           2017-11-08T16:33:06
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:08:06
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 83, num_imts = 2
@@ -47,9 +47,9 @@ Composite source model
 ======================== ====== ====================== ================
 smlt_path                weight gsim_logic_tree        num_realizations
 ======================== ====== ====================== ================
-AreaSource               0.500  complex(2,4,0,1,5,4,4) 4/4             
-FaultSourceAndBackground 0.200  complex(2,4,0,1,5,4,4) 4/4             
-SeiFaCrust               0.300  complex(2,4,0,1,5,4,4) 0/0             
+AreaSource               0.500  complex(2,4,4,1,5,4,0) 4/4             
+FaultSourceAndBackground 0.200  complex(2,4,4,1,5,4,0) 4/4             
+SeiFaCrust               0.300  complex(2,4,4,1,5,4,0) 0/0             
 ======================== ====== ====================== ================
 
 Required parameters per tectonic region type
@@ -96,7 +96,7 @@ models/src/fsbg_model.xml 9      Active Shallow Crust 2           7,632        2
 Informational data
 ------------------
 =========================== =================================================================================
-count_eff_ruptures.received tot 9.74 KB, max_per_task 627 B                                                  
+count_eff_ruptures.received tot 9.74 KB, max_per_task 630 B                                                  
 count_eff_ruptures.sent     sources 48.49 KB, param 21.39 KB, srcfilter 21 KB, monitor 5.12 KB, gsims 5.08 KB
 hazard.input_weight         15721.2                                                                          
 hazard.n_imts               2                                                                                
@@ -127,15 +127,15 @@ source_class calc_time counts
 AreaSource   0.040     3     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.004 5.375E-04 0.002 0.004 16       
+count_eff_ruptures 0.003 5.613E-04 0.002 0.004 16       
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -143,12 +143,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.632     0.0       1     
-prefiltering source model      0.114     0.0       10    
-store source_info              0.065     0.0       1     
-total count_eff_ruptures       0.057     0.0       16    
-managing sources               0.053     0.0       1     
+reading composite source model 0.660     0.0       1     
+prefiltering source model      0.117     0.0       10    
+store source_info              0.058     0.0       1     
+total count_eff_ruptures       0.056     0.156     16    
+managing sources               0.054     0.0       1     
 reading site collection        0.005     0.0       1     
-aggregate curves               2.055E-04 0.0       16    
-saving probability maps        2.766E-05 0.0       1     
+aggregate curves               2.389E-04 0.0       16    
+saving probability maps        3.767E-05 0.0       1     
 ============================== ========= ========= ======

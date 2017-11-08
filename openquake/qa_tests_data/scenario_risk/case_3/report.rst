@@ -3,8 +3,8 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     3,085,599,105      
-date           2017-11-08T16:33:04
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:08:03
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 4, num_imts = 3
@@ -84,10 +84,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-saving gmfs             0.028     0.0       1     
+saving gmfs             0.032     0.0       1     
 building riskinputs     0.023     0.0       1     
 reading exposure        0.007     0.0       1     
-computing gmfs          0.005     0.0       1     
-building epsilons       6.154E-04 0.0       1     
-reading site collection 8.821E-06 0.0       1     
+computing gmfs          0.006     0.0       1     
+building epsilons       5.934E-04 0.0       1     
+reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======
