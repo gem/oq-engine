@@ -81,24 +81,29 @@ def export_agg_curve_rlzs(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by event_based_risk
+# this is used by event_based_risk and classical_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    dskey = ekey[0]
     oq = dstore['oqparam']
     dt = oq.loss_dt()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    name, kind = ekey[0].split('-')
-    value = dstore[name + '-rlzs'].value  # shape (A, R, L')
+    name, kind = dskey.split('-')
     if kind == 'stats':
         weights = dstore['realizations']['weight']
         tags, stats = zip(*oq.risk_stats())
-        value = compute_stats2(value, stats, weights)
+        if dskey in dstore:  # precomputed
+            value = dstore[dskey].value
+        else:  # computed on the fly
+            value = compute_stats2(
+                dstore['avg_losses-rlzs'].value, stats, weights)
     else:  # rlzs
+        value = dstore[dskey].value  # shape (A, R, LI)
         tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
@@ -257,7 +262,7 @@ def export_loss_curves(ekey, dstore):
 
 
 # this is used by classical_risk and event_based_risk
-@export.add(('loss_curves-rlzs', 'csv'))
+@export.add(('loss_curves-stats', 'csv'))
 def export_loss_curves_stats(ekey, dstore):
     num_rlzs = len(dstore['realizations'])
     kind = 'stats' if num_rlzs > 1 else 'rlzs'
@@ -502,34 +507,6 @@ def get_paths(rlz):
         dic['source_model_tree_path'] = ''
         dic['gsim_tree_path'] = '_'.join(rlz.lt_path)
     return dic
-
-
-# used by event_based_risk
-@export.add(('losses_by_tag-rlzs', 'csv'), ('losses_by_tag-stats', 'csv'))
-@depr('This output will be removed soon')
-def export_losses_by_tag_csv(ekey, dstore):
-    oq = dstore['oqparam']
-    tags = add_quotes(dstore['assetcol'].tags())
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    loss_types = oq.loss_dt().names
-    key, kind = ekey[0].split('-')
-    value = dstore[key + '-rlzs'].value
-    if kind == 'stats':
-        weights = dstore['realizations']['weight']
-        kinds, stats = zip(*oq.risk_stats())
-        value = compute_stats2(value, stats, weights)
-    else:  # rlzs
-        kinds = rlzs
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dt = numpy.dtype([('tag', tags.dtype)] + oq.loss_dt_list())
-    for kind, values in zip(kinds, value.transpose(1, 0, 2)):
-        fname = dstore.build_fname(key, kind, ekey[1])
-        array = numpy.zeros(len(values), dt)
-        array['tag'] = numpy.array(tags)
-        for l, lt in enumerate(loss_types):
-            array[lt] = values[:, l]
-        writer.save(array, fname)
-    return writer.getsaved()
 
 
 @export.add(('bcr-rlzs', 'csv'), ('bcr-stats', 'csv'))

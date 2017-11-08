@@ -1,4 +1,12 @@
   [Michele Simionato]
+  * Fixed `oq export loss_curves/rlzs` for event_based_risk/case_master
+  * Removed the obsolete parameter `loss_curve_resolution`
+  * Fixed a Python 3 unicode error with `oq engine --run job.zip`
+  * Added a command `oq abort <calc_id>`
+  * Stored the avg_losses in classical risk in the same way as in
+    event_based_risk and made them exportable with the same format
+  * Removed the outputs losses_by_tag from the event based risk calculators
+    and changed the default for the avg_losses flag to True
   * WebUI: now every job runs in its own process and has name oq-job-<ID>
   * Refactored the WebUI tests to use the DbServer and django.test.Client
   * Added an experimental feature `optimize_same_id_sources`

@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 6
 
 ============== ===================
 checksum32     3,056,992,103      
-date           2017-10-24T05:47:40
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:06:57
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -73,8 +73,8 @@ source_model.xml 0      Active Shallow Crust 2           140          140
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.18 KB, max_per_task 606 B                                              
-count_eff_ruptures.sent     sources 2.17 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 654 B, gsims 182 B
+count_eff_ruptures.received tot 1.2 KB, max_per_task 616 B                                               
+count_eff_ruptures.sent     sources 2.19 KB, srcfilter 1.34 KB, param 1.16 KB, monitor 656 B, gsims 182 B
 hazard.input_weight         287.0                                                                        
 hazard.n_imts               1                                                                            
 hazard.n_levels             3                                                                            
@@ -91,8 +91,8 @@ Slowest sources
 ====== ========= ================== ============ ========= ========= =========
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
-0      2         ComplexFaultSource 49           0.003     1         1        
-0      1         SimpleFaultSource  91           0.001     1         1        
+0      1         SimpleFaultSource  91           0.003     1         1        
+0      2         ComplexFaultSource 49           0.002     1         1        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -100,8 +100,8 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.003     1     
-SimpleFaultSource  0.001     1     
+ComplexFaultSource 0.002     1     
+SimpleFaultSource  0.003     1     
 ================== ========= ======
 
 Duplicated sources
@@ -110,22 +110,22 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.002 0.001  0.002 0.003 2        
-================== ===== ====== ===== ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_eff_ruptures 0.003 9.234E-04 0.002 0.004 2        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.090     0.0       1     
-total count_eff_ruptures       0.005     0.0       2     
-store source_info              0.003     0.0       1     
+reading composite source model 0.116     0.0       1     
+total count_eff_ruptures       0.006     0.031     2     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.003     0.0       1     
-managing sources               0.002     0.0       1     
-aggregate curves               4.697E-05 0.0       2     
-reading site collection        3.362E-05 0.0       1     
-saving probability maps        2.432E-05 0.0       1     
+managing sources               0.003     0.0       1     
+reading site collection        4.387E-05 0.0       1     
+aggregate curves               3.672E-05 0.0       2     
+saving probability maps        3.076E-05 0.0       1     
 ============================== ========= ========= ======

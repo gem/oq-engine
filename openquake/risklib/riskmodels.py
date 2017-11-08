@@ -130,7 +130,7 @@ class Classical(RiskModel):
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
         :param bool insured_losses:
-            True if insured loss curves should be computed
+            ignored since insured loss curves are not implemented
 
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
@@ -158,7 +158,7 @@ class Classical(RiskModel):
         :param _eps:
             ignored, here only for API compatibility with other calculators
         :returns:
-            a :class:`openquake.risklib.scientific.Classical.Output` instance.
+            an array of shape (C, N, 2)
         """
         n = len(assets)
         vf = self.risk_functions[loss_type]
@@ -168,16 +168,16 @@ class Classical(RiskModel):
             [scientific.classical(
                 vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
 
-        if self.insured_losses:
-            deductibles = [a.deductible(loss_type) for a in assets]
-            limits = [a.insurance_limit(loss_type) for a in assets]
-            insured_curves = rescale(
-                utils.numpy_map(scientific.insured_loss_curve,
-                                lrcurves, deductibles, limits), values)
-        else:
-            insured_curves = None
-
-        return rescale(lrcurves, values), insured_curves
+        # if in the future we wanted to implement insured_losses the
+        # following lines could be useful
+        # deductibles = [a.deductible(loss_type) for a in assets]
+        # limits = [a.insurance_limit(loss_type) for a in assets]
+        # insured_curves = rescale(
+        # utils.numpy_map(scientific.insured_loss_curve,
+        # lrcurves, deductibles, limits), values)
+        return rescale(lrcurves, values).transpose(2, 0, 1)
+        # transpose array from shape (N, 2, C) -> (C, N, 2)
+        # otherwise .get_output would fail
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
@@ -190,7 +190,7 @@ class ProbabilisticEventBased(RiskModel):
     kind = 'vulnerability'
 
     def __init__(
-            self, taxonomy, vulnerability_functions, loss_curve_resolution,
+            self, taxonomy, vulnerability_functions,
             conditional_loss_poes, insured_losses=False):
         """
         See :func:`openquake.risklib.scientific.event_based` for a description
@@ -198,7 +198,6 @@ class ProbabilisticEventBased(RiskModel):
         """
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
-        self.loss_curve_resolution = loss_curve_resolution
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
 
