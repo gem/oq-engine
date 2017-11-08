@@ -68,7 +68,7 @@ class ReportWriter(object):
         'params': 'Parameters',
         'inputs': 'Input files',
         'csm_info': 'Composite source model',
-        'dupl_sources': 'Same ID sources',
+        'dupl_sources': 'Duplicated sources',
         'required_params_per_trt':
         'Required parameters per tectonic region type',
         'ruptures_per_trt': 'Number of ruptures per tectonic region type',

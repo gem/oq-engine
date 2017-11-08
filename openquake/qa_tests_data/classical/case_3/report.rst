@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 3
 
 ============== ===================
 checksum32     4,051,148,706      
-date           2017-10-24T05:47:45
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:07:01
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -73,8 +73,8 @@ source_model.xml 0      Active Shallow Crust 1           31,353       31,353
 Informational data
 ------------------
 =========================== ==================================================================================
-count_eff_ruptures.received tot 1009.45 KB, max_per_task 65.08 KB                                             
-count_eff_ruptures.sent     sources 6.16 MB, srcfilter 10.69 KB, param 9.44 KB, monitor 5.11 KB, gsims 1.42 KB
+count_eff_ruptures.received tot 1009.59 KB, max_per_task 65.08 KB                                             
+count_eff_ruptures.sent     sources 6.16 MB, srcfilter 10.69 KB, param 9.25 KB, monitor 5.12 KB, gsims 1.42 KB
 hazard.input_weight         3135.3                                                                            
 hazard.n_imts               1                                                                                 
 hazard.n_levels             3                                                                                 
@@ -91,7 +91,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   31,353       1.624     1         31,353   
+0      1         AreaSource   31,353       1.653     1         31,353   
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -99,7 +99,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   1.624     1     
+AreaSource   1.653     1     
 ============ ========= ======
 
 Duplicated sources
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.131 0.023  0.094 0.152 16       
+count_eff_ruptures 0.130 0.027  0.075 0.160 16       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               6.140     0.0       1     
-reading composite source model 3.833     0.0       1     
-total count_eff_ruptures       2.101     5.344     16    
-aggregate curves               0.033     0.0       16    
+managing sources               6.381     0.0       1     
+reading composite source model 3.915     0.0       1     
+total count_eff_ruptures       2.075     5.406     16    
+aggregate curves               0.036     0.0       16    
 store source_info              0.004     0.0       1     
 prefiltering source model      0.001     0.0       1     
-reading site collection        3.862E-05 0.0       1     
-saving probability maps        2.933E-05 0.0       1     
+reading site collection        3.147E-05 0.0       1     
+saving probability maps        2.837E-05 0.0       1     
 ============================== ========= ========= ======
