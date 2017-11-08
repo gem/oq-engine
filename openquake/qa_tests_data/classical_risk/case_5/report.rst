@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2017-11-08T09:57:35
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:31:27
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== =============== ================
 smlt_path weight gsim_logic_tree num_realizations
 ========= ====== =============== ================
-b1        1.000  simple(1,4)     4/4             
+b1        1.000  simple(4,1)     4/4             
 ========= ====== =============== ================
 
 Required parameters per tectonic region type
@@ -87,7 +87,7 @@ source_model.xml 1      Subduction Interface 1           23           23
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.19 KB, max_per_task 607 B                                              
+count_eff_ruptures.received tot 1.2 KB, max_per_task 615 B                                               
 count_eff_ruptures.sent     sources 2.32 KB, param 1.91 KB, srcfilter 1.34 KB, monitor 656 B, gsims 425 B
 hazard.input_weight         4.6000000000000005                                                           
 hazard.n_imts               1                                                                            
@@ -105,8 +105,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      B         PointSource  23           1.717E-04 1         1        
-0      A         PointSource  23           1.028E-04 1         1        
+1      B         PointSource  23           1.731E-04 1         1        
+0      A         PointSource  23           1.705E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -114,18 +114,18 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  2.744E-04 2     
+PointSource  3.436E-04 2     
 ============ ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.277E-04 3.365E-04 4.897E-04 9.656E-04 2        
+count_eff_ruptures 8.678E-04 7.924E-05 8.118E-04 9.239E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -134,11 +134,11 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 store source_info              0.004     0.0       1     
-managing sources               0.003     0.0       1     
+managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-total count_eff_ruptures       0.001     0.0       2     
-prefiltering source model      7.055E-04 0.0       1     
-aggregate curves               4.268E-05 0.0       2     
-reading site collection        4.196E-05 0.0       1     
-saving probability maps        2.980E-05 0.0       1     
+total count_eff_ruptures       0.002     0.0       2     
+prefiltering source model      6.917E-04 0.0       1     
+reading site collection        3.982E-05 0.0       1     
+aggregate curves               3.672E-05 0.0       2     
+saving probability maps        3.004E-05 0.0       1     
 ============================== ========= ========= ======

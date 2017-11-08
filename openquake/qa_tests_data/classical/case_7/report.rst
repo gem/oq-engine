@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 7
 
 ============== ===================
 checksum32     359,954,679        
-date           2017-11-08T09:58:22
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:32:16
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -68,25 +68,25 @@ Realizations per (TRT, GSIM)
 
 Informational data
 ------------------
-====================== ======================================================================================
-hazard.input_weight    378.0                                                                                 
-hazard.n_imts          1                                                                                     
-hazard.n_levels        3                                                                                     
-hazard.n_realizations  2                                                                                     
-hazard.n_sites         1                                                                                     
-hazard.n_sources       3                                                                                     
-hazard.output_weight   3.0                                                                                   
-hostname               tstation.gem.lan                                                                      
-pmap_from_trt.received tot 2.38 KB, max_per_task 1.21 KB                                                     
-pmap_from_trt.sent     sources 2.23 KB, source_site_filter 1.34 KB, param 1.18 KB, monitor 656 B, gsims 182 B
-require_epsilons       False                                                                                 
-====================== ======================================================================================
+====================== ==============================================================================
+hazard.input_weight    378.0                                                                         
+hazard.n_imts          1                                                                             
+hazard.n_levels        3                                                                             
+hazard.n_realizations  2                                                                             
+hazard.n_sites         1                                                                             
+hazard.n_sources       3                                                                             
+hazard.output_weight   3.0                                                                           
+hostname               tstation.gem.lan                                                              
+pmap_from_trt.received tot 2.4 KB, max_per_task 1.21 KB                                              
+pmap_from_trt.sent     sources 2.23 KB, src_filter 1.34 KB, param 1.18 KB, monitor 656 B, gsims 182 B
+require_epsilons       False                                                                         
+====================== ==============================================================================
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-pmap_from_trt      0.816 0.179  0.689 0.942 2        
+pmap_from_trt      0.816 0.187  0.684 0.948 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -94,14 +94,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total pmap_from_trt            1.631     2.695     2     
-making contexts                1.051     0.0       140   
-reading composite source model 0.124     0.0       1     
+total pmap_from_trt            1.632     3.250     2     
+making contexts                1.070     0.0       140   
+reading composite source model 0.104     0.0       1     
 SadighEtAl1997().get_poes      0.017     0.0       140   
 saving probability maps        0.005     0.0       1     
-store source_info              0.004     0.0       1     
+store source_info              0.005     0.0       1     
 prefiltering source model      0.004     0.0       1     
-managing sources               0.003     0.0       1     
-aggregate curves               1.042E-04 0.0       2     
-reading site collection        4.411E-05 0.0       1     
+managing sources               0.002     0.0       1     
+aggregate curves               1.194E-04 0.0       2     
+reading site collection        3.481E-05 0.0       1     
 ============================== ========= ========= ======
