@@ -1,0 +1,26 @@
+By default, the scenario hazard calculator computes and stores
+\glspl{acr:gmf} for each GMPE specified in the job configuration file. The
+\glspl{acr:gmf} will be computed at each of the sites and for each of the
+intensity measure types specified in the job configuration file.
+
+Exporting the outputs from the \glspl{acr:gmf} in the xml format will produce
+an xml file for each realisation containing the corresponding ground motion
+fields. Listing~\ref{lst:output_gmf_scenario_xml} is an example of a \gls{acr:gmf}
+collection NRML file containing one \gls{acr:gmf}:
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_gmf_scenario.xml}
+  \caption{Example ground motion field collection output file for a scenario}
+  \label{lst:output_gmf_scenario_xml}
+\end{listing}
+
+Exporting the outputs from the \glspl{acr:gmf} in the csv format results in
+two csv files illustrated in the example files in
+Table~\ref{output:gmf_scenario} and Table~\ref{output:sitemesh}. The sites csv
+file provides the association between the site ids in the \glspl{acr:gmf} csv
+file with their latitude and longitude coordinates.
+
+\input{oqum/hazard/verbatim/output_gmf_scenario}
+
+\input{oqum/hazard/verbatim/output_sitemesh}
+
