@@ -17,10 +17,10 @@ the configuration file:
 
 In addition, if the OpenQuake-QGIS \gls{acr:irmt} plugin is used for
 visualizing or exporting the results from a Scenario Damage Calculation, the
-following  additional outputs can be exported:
+following additional outputs can be exported:
 
 \begin{enumerate}
-\setcounter{enumi}{2}
+\setcounter{enumi}{1}
 
   \item \Verb+dmg_by_tag+: this file contains the aggregated damage
     distribution statistics for each of the \glspl{tag} defined in the
@@ -43,7 +43,7 @@ also produced for all loss types
 provided in the configuration file:
 
 \begin{enumerate}
-\setcounter{enumi}{4}
+\setcounter{enumi}{3}
 
   \item \Verb+losses_by_asset+: this file contains the scenario consequence
     statistics for each of the individual \glspl{asset} defined in the
@@ -57,10 +57,10 @@ provided in the configuration file:
 
 In addition, if the OpenQuake-QGIS \gls{acr:irmt} plugin is used for
 visualizing or exporting the results from a Scenario Damage Calculation, the
-following  additional outputs can be exported:
+following additional outputs can be exported:
 
 \begin{enumerate}
-\setcounter{enumi}{5}
+\setcounter{enumi}{4}
 
   \item \Verb+losses_by_tag+: this file contains the aggregated scenario
     consequence statistics for each of the \glspl{tag} defined in the
@@ -107,12 +107,14 @@ provided in the configuration file in addition to the corresponding
 \gls{fragilitymodel} file.
 
 
-\subsubsection{Taxonomy damage statistics}
-\label{subsubsec:scenario_taxonomy_damage_statistics}
+\subsubsection{Damage statistics by tag}
+\label{subsubsec:scenario_tag_damage_statistics}
 
-The Scenario Damage calculator also estimates the expected total number of
-buildings of a certain \gls{tag} in each damage state. This distribution
-of damage per building \gls{tag} is depicted in the example
+If the OpenQuake-QGIS \gls{acr:irmt} plugin is used for visualizing or
+exporting the results, the Scenario Damage calculator can also estimate the
+expected total number of buildings of a certain combination of \glspl{tag} in
+each damage state and made available for export as a csv file. This
+distribution of damage per building \gls{tag} is depicted in the example
 output file snippet in Table~\ref{output:scenario_damage_tag}.
 
 \input{oqum/risk/verbatim/output_scenario_damage_tag}
@@ -127,10 +129,11 @@ exposure model for all loss types (amongst
 \subsubsection{Total damage statistics}
 \label{subsubsec:scenario_total_damage_statistics}
 
-Finally, a total damage distribution output file is also generated, which
-contains the mean and standard deviation of the total number of buildings in
-each damage state, as illustrated in the example file in 
-Table~\ref{output:scenario_damage_tag}.
+Finally, a total damage distribution output file can also be generated if the
+OpenQuake-QGIS \gls{acr:irmt} plugin is used for visualizing or exporting the
+results from a Scenario Damage Calculation, which will contain the mean and
+standard deviation of the total number of buildings in each damage state, as
+illustrated in the example file in Table~\ref{output:scenario_damage_tag}.
 
 \input{oqum/risk/verbatim/output_scenario_damage_total}
 
@@ -157,22 +160,14 @@ provided in the configuration file in addition to the corresponding
 \gls{fragilitymodel} file.
 
 
-\subsubsection{Taxonomy consequence statistics}
-\label{subsubsec:scenario_taxonomy_consequence_statistics}
-
-The Scenario Damage calculator also estimates the expected total consequences
-for buildings of a certain \gls{taxonomy}, as depicted in the sample output
-shown in Table~\ref{output:scenario_consequence_taxonomy}.
-
-\input{oqum/risk/verbatim/output_scenario_consequence_taxonomy}
-
-
 \subsubsection{Total consequence statistics}
 \label{subsubsec:scenario_total_consequence_statistics}
 
-Finally, a total consequences output file is also generated, which contains
-the mean and standard deviation of the total consequences for the selected
-scenario, as illustrated in the example shown in
+Finally, if the OpenQuake-QGIS \gls{acr:irmt} plugin is used for visualizing
+or exporting the results from a Scenario Damage Calculation, a total
+consequences output file can also be generated, which will contain the mean and
+standard deviation of the total consequences for the selected scenario, as
+illustrated in the example shown in
 Table~\ref{output:scenario_consequence_total}.
 
 \input{oqum/risk/verbatim/output_scenario_consequence_total}
