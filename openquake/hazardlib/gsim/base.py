@@ -534,7 +534,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         # take the minimum epsilon larger than standard_iml
         iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
 
-        return numpy.array([
+        poes = numpy.array([
             # take full disaggregated distribution for the case of
             # ``iml <= mean - truncation_level * stddev``
             contribution_by_bands
@@ -561,6 +561,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
 
             for i, idx in enumerate(iml_bin_indices)
         ])
+        return poes  # shape (nsites, neps)
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
