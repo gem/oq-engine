@@ -3,8 +3,8 @@ Classical PSHA — Area Source
 
 ============== ===================
 checksum32     3,283,112,543      
-date           2017-10-24T05:47:56
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:07:13
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -73,8 +73,8 @@ source_model.xml 0      Active Shallow Crust 1           11,132       11,132
 Informational data
 ------------------
 =========================== ================================================================================
-count_eff_ruptures.received tot 16.97 KB, max_per_task 4.27 KB                                              
-count_eff_ruptures.sent     sources 99.73 KB, param 2.88 KB, srcfilter 2.67 KB, monitor 1.28 KB, gsims 408 B
+count_eff_ruptures.received tot 17.01 KB, max_per_task 4.28 KB                                              
+count_eff_ruptures.sent     sources 99.78 KB, param 2.84 KB, srcfilter 2.67 KB, monitor 1.28 KB, gsims 408 B
 hazard.input_weight         1113.2                                                                          
 hazard.n_imts               1                                                                               
 hazard.n_levels             19                                                                              
@@ -91,7 +91,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   11,132       0.043     1         484      
+0      1         AreaSource   11,132       0.046     1         484      
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -99,7 +99,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.043     1     
+AreaSource   0.046     1     
 ============ ========= ======
 
 Duplicated sources
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.014 4.364E-05 0.013 0.014 4        
+count_eff_ruptures 0.014 1.107E-04 0.014 0.014 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.144     0.0       1     
-total count_eff_ruptures       0.054     0.0       4     
-reading composite source model 0.041     0.0       1     
-store source_info              0.004     0.0       1     
+managing sources               0.140     0.0       1     
+total count_eff_ruptures       0.057     0.0       4     
+reading composite source model 0.044     0.0       1     
+store source_info              0.003     0.0       1     
 prefiltering source model      0.001     0.0       1     
-aggregate curves               5.805E-04 0.0       4     
-reading site collection        4.148E-05 0.0       1     
-saving probability maps        2.956E-05 0.0       1     
+aggregate curves               5.751E-04 0.0       4     
+reading site collection        4.244E-05 0.0       1     
+saving probability maps        2.933E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     576,018,697        
-date           2017-10-24T05:47:58
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:07:15
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 2, num_imts = 7
@@ -44,8 +44,8 @@ Composite source model
 ============================= ====== =============== ================
 smlt_path                     weight gsim_logic_tree num_realizations
 ============================= ====== =============== ================
-smoothed_model_m_m0.2_b_e0.0  0.500  simple(0,0,4)   4/4             
-smoothed_model_m_m0.2_b_m0.05 0.500  simple(0,0,4)   4/4             
+smoothed_model_m_m0.2_b_e0.0  0.500  simple(4,0,0)   4/4             
+smoothed_model_m_m0.2_b_m0.05 0.500  simple(4,0,0)   4/4             
 ============================= ====== =============== ================
 
 Required parameters per tectonic region type
@@ -92,8 +92,8 @@ GridSources.xml 1      Tectonic_type_b 1           260          260
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.19 KB, max_per_task 608 B                                              
-count_eff_ruptures.sent     param 4.06 KB, sources 3.21 KB, srcfilter 1.39 KB, gsims 664 B, monitor 654 B
+count_eff_ruptures.received tot 1.21 KB, max_per_task 617 B                                              
+count_eff_ruptures.sent     param 4.04 KB, sources 3.23 KB, srcfilter 1.39 KB, gsims 664 B, monitor 656 B
 hazard.input_weight         52.0                                                                         
 hazard.n_imts               7                                                                            
 hazard.n_levels             133                                                                          
@@ -110,8 +110,8 @@ Slowest sources
 ====== ========= ================ ============ ========= ========= =========
 grp_id source_id source_class     num_ruptures calc_time num_sites num_split
 ====== ========= ================ ============ ========= ========= =========
-0      21        MultiPointSource 260          2.589E-04 1         1        
-1      21        MultiPointSource 260          2.358E-04 1         1        
+1      21        MultiPointSource 260          3.080E-04 1         1        
+0      21        MultiPointSource 260          2.933E-04 1         1        
 ====== ========= ================ ============ ========= ========= =========
 
 Computation times by source typology
@@ -119,23 +119,18 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 4.947E-04 2     
+MultiPointSource 6.013E-04 2     
 ================ ========= ======
 
 Duplicated sources
 ------------------
-========= ========= =============
-source_id calc_time src_group_ids
-========= ========= =============
-21        4.947E-04 0 1          
-========= ========= =============
-Sources with the same ID but different parameters
+There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.001 8.058E-05 0.001 0.001 2        
+count_eff_ruptures 0.001 8.767E-06 0.001 0.001 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -148,7 +143,7 @@ reading composite source model 0.004     0.0       1
 managing sources               0.003     0.0       1     
 total count_eff_ruptures       0.002     0.0       2     
 prefiltering source model      0.001     0.0       1     
-reading site collection        1.643E-04 0.0       1     
-aggregate curves               4.554E-05 0.0       2     
-saving probability maps        2.933E-05 0.0       1     
+reading site collection        1.667E-04 0.0       1     
+aggregate curves               3.982E-05 0.0       2     
+saving probability maps        2.861E-05 0.0       1     
 ============================== ========= ========= ======

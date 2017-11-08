@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2017-10-24T05:47:40
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:06:57
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 6, num_imts = 1
@@ -74,8 +74,8 @@ source_model.xml 0      Volcanic 1           440          440
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.71 KB, max_per_task 1021 B                                             
-count_eff_ruptures.sent     sources 5.96 KB, srcfilter 1.61 KB, param 1.18 KB, monitor 654 B, gsims 202 B
+count_eff_ruptures.received tot 1.73 KB, max_per_task 1.01 KB                                            
+count_eff_ruptures.sent     sources 5.98 KB, srcfilter 1.61 KB, param 1.16 KB, monitor 656 B, gsims 202 B
 hazard.input_weight         264.0                                                                        
 hazard.n_imts               1                                                                            
 hazard.n_levels             3                                                                            
@@ -92,7 +92,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         AreaSource   440          0.001     6         20       
+0      1         AreaSource   440          0.002     6         20       
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.001     1     
+AreaSource   0.002     1     
 ============ ========= ======
 
 Duplicated sources
@@ -109,22 +109,22 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ========= ===== =========
-operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 5.243E-04 7.348E-04 0.001 2        
-================== ===== ========= ========= ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_eff_ruptures 0.002 8.881E-04 0.001 0.003 2        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.011     0.0       1     
-reading composite source model 0.008     0.0       1     
-store source_info              0.003     0.0       1     
-total count_eff_ruptures       0.002     0.0       2     
+managing sources               0.013     0.0       1     
+reading composite source model 0.009     0.0       1     
+total count_eff_ruptures       0.004     0.0       2     
+store source_info              0.004     0.0       1     
 prefiltering source model      0.001     0.0       1     
-reading site collection        1.576E-04 0.0       1     
-aggregate curves               5.317E-05 0.0       2     
-saving probability maps        2.456E-05 0.0       1     
+reading site collection        1.903E-04 0.0       1     
+aggregate curves               5.603E-05 0.0       2     
+saving probability maps        2.956E-05 0.0       1     
 ============================== ========= ========= ======
