@@ -93,6 +93,17 @@ def capitalize(words):
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
 
+def get_id(src):
+    """
+    :param src: a source node or a hazardlib source
+    :returns: the source ID
+    """
+    try:
+        return src.source_id
+    except AttributeError:
+        return src['id']
+
+
 def _assert_equal_sources(nodes):
     if hasattr(nodes[0], 'source_id'):
         n0 = nodes[0]
@@ -142,14 +153,28 @@ class RlzsAssoc(object):
         self.num_samples = csm_info.num_samples
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
-        self.rlzs_by_gsim = {}  # dict grp_id -> dict
 
-    def get_gsims(self, grp_id):
+    def get_rlzs_by_gsim(self, trt_or_grp_id, sm_id=None):
         """
-        :param grp_id: source group ID
-        :returns: the GSIMs for the given grp_id
+        :param trt_or_grp_id: a tectonic region type or a source group ID
+        :param sm_id: source model ordinal (or None)
+        :returns: a dictionary gsim -> rlzs
         """
-        return self.csm_info.get_gsims(grp_id)
+        if isinstance(trt_or_grp_id, (int, U32)):  # grp_id
+            trt = self.csm_info.trt_by_grp[trt_or_grp_id]
+            sm_id = self.csm_info.get_sm_by_grp()[trt_or_grp_id]
+        else:  # assume TRT string
+            trt = trt_or_grp_id
+        acc = collections.defaultdict(list)
+        if sm_id is None:  # full dictionary
+            for rlz, gsim_by_trt in zip(self.realizations, self.gsim_by_trt):
+                acc[gsim_by_trt[trt]].append(rlz.ordinal)
+        else:  # dictionary for the selected source model
+            for rlz in self.rlzs_by_smodel[sm_id]:
+                gsim = self.gsim_by_trt[rlz.ordinal][trt]
+                acc[gsim].append(rlz.ordinal)
+        return collections.OrderedDict(
+            (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
 
     def _init(self):
         """
@@ -171,13 +196,6 @@ class RlzsAssoc(object):
                 # logic tree reduction; we ensure the sum of the weights is 1
                 for rlz in self.realizations:
                     rlz.weight = rlz.weight / tot_weight
-
-        # populate rlzs_by_gsim
-        for grp, arr in self.array.items():
-            grp_id = int(grp[4:])
-            gsims = self.get_gsims(grp_id)
-            self.rlzs_by_gsim[grp_id] = collections.OrderedDict(
-                (gsims[rec['gsim_idx']], rec['rlzis']) for rec in arr)
 
     @property
     def realizations(self):
@@ -241,7 +259,7 @@ class RlzsAssoc(object):
             grp_id = int(grp[4:])
             for rec in self.array[grp]:
                 rlzs = rec['rlzis']
-                gsim = self.get_gsims(grp_id)[rec['gsim_idx']]
+                gsim = self.csm_info.get_gsims(grp_id)[rec['gsim_idx']]
                 if len(rlzs) > 10:  # short representation
                     rlzs = ['%d realizations' % len(rlzs)]
                 pairs.append(('%s,%s' % (grp_id, gsim), rlzs))
@@ -634,7 +652,7 @@ class CompositeSourceModel(collections.Sequence):
             self.has_dupl_sources = 0
         else:
             for srcs in dupl_sources:
-                logging.warn('Found duplicated source %s', srcs[0].source_id)
+                logging.warn('Found duplicated source %s', get_id(srcs[0]))
             self.has_dupl_sources = len(dupl_sources)
 
     def get_model(self, sm_id):
