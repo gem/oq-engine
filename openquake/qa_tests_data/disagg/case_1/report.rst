@@ -3,8 +3,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 
 ============== ===================
 checksum32     629,585,928        
-date           2017-11-08T16:33:06
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:08:05
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 2, num_imts = 2
@@ -108,10 +108,10 @@ Slowest sources
 ====== ========= ================== ============ ========= ========= =========
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
-3      4         ComplexFaultSource 164          0.024     1         10       
-2      3         SimpleFaultSource  617          0.023     1         10       
-1      2         AreaSource         1,440        0.002     1         1        
-0      1         PointSource        15           1.888E-04 1         1        
+2      3         SimpleFaultSource  617          0.029     1         10       
+3      4         ComplexFaultSource 164          0.025     1         10       
+1      2         AreaSource         1,440        0.001     1         1        
+0      1         PointSource        15           2.062E-04 1         1        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -119,21 +119,21 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-AreaSource         0.002     1     
-ComplexFaultSource 0.024     1     
-PointSource        1.888E-04 1     
-SimpleFaultSource  0.023     1     
+AreaSource         0.001     1     
+ComplexFaultSource 0.025     1     
+PointSource        2.062E-04 1     
+SimpleFaultSource  0.029     1     
 ================== ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ========= ===== =========
 operation-duration mean  stddev min       max   num_tasks
-count_eff_ruptures 0.009 0.007  8.688E-04 0.018 6        
+count_eff_ruptures 0.010 0.007  9.778E-04 0.018 6        
 ================== ===== ====== ========= ===== =========
 
 Slowest operations
@@ -141,12 +141,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.141     0.0       1     
-total count_eff_ruptures       0.054     0.0       6     
-reading composite source model 0.028     0.0       1     
+managing sources               0.148     0.0       1     
+total count_eff_ruptures       0.060     0.0       6     
+reading composite source model 0.029     0.0       1     
 prefiltering source model      0.003     0.0       1     
 store source_info              0.003     0.0       1     
-aggregate curves               1.023E-04 0.0       6     
-reading site collection        3.481E-05 0.0       1     
-saving probability maps        2.480E-05 0.0       1     
+aggregate curves               1.175E-04 0.0       6     
+reading site collection        3.195E-05 0.0       1     
+saving probability maps        2.408E-05 0.0       1     
 ============================== ========= ========= ======

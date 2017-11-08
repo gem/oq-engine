@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2017-11-08T16:32:02
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:07:00
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 9
@@ -73,7 +73,7 @@ source_model.xml 0      Active Shallow Crust 1           260          260
 Informational data
 ------------------
 =========================== ===========================================================================
-count_eff_ruptures.received max_per_task 616 B, tot 616 B                                              
+count_eff_ruptures.received tot 616 B, max_per_task 616 B                                              
 count_eff_ruptures.sent     param 2.66 KB, sources 1.87 KB, srcfilter 684 B, monitor 328 B, gsims 102 B
 hazard.input_weight         26.0                                                                       
 hazard.n_imts               9                                                                          
@@ -102,15 +102,15 @@ source_class calc_time counts
 AreaSource   0.001     1     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 NaN    0.003 0.003 1        
+count_eff_ruptures 0.002 NaN    0.002 0.002 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.012     0.0       1     
+reading composite source model 0.011     0.0       1     
 store source_info              0.003     0.0       1     
-total count_eff_ruptures       0.003     0.0       1     
+total count_eff_ruptures       0.002     0.0       1     
 managing sources               0.002     0.0       1     
-prefiltering source model      9.441E-04 0.0       1     
-reading site collection        3.695E-05 0.0       1     
-saving probability maps        2.599E-05 0.0       1     
-aggregate curves               1.526E-05 0.0       1     
+prefiltering source model      0.001     0.0       1     
+reading site collection        3.624E-05 0.0       1     
+saving probability maps        2.313E-05 0.0       1     
+aggregate curves               1.574E-05 0.0       1     
 ============================== ========= ========= ======

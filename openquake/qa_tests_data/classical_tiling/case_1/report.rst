@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,205,782,117      
-date           2017-11-08T16:33:07
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:08:07
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 6, num_imts = 3
@@ -103,15 +103,15 @@ source_class calc_time counts
 AreaSource   0.008     1     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 3.681E-04 0.001 0.002 6        
+count_eff_ruptures 0.002 2.105E-04 0.002 0.002 6        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -119,12 +119,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.038     0.0       1     
-managing sources               0.016     0.0       1     
-total count_eff_ruptures       0.012     0.0       6     
-prefiltering source model      0.008     0.0       7     
-store source_info              0.003     0.0       1     
-reading site collection        0.002     0.0       1     
-aggregate curves               7.820E-05 0.0       6     
-saving probability maps        2.527E-05 0.0       1     
+reading composite source model 0.049     0.0       1     
+managing sources               0.018     0.0       1     
+total count_eff_ruptures       0.013     0.0       6     
+prefiltering source model      0.009     0.0       7     
+store source_info              0.004     0.0       1     
+reading site collection        0.003     0.0       1     
+aggregate curves               9.918E-05 0.0       6     
+saving probability maps        3.219E-05 0.0       1     
 ============================== ========= ========= ======

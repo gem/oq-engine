@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 18
 
 ============== ===================
 checksum32     2,067,964,765      
-date           2017-11-08T16:32:30
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:07:28
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -74,7 +74,7 @@ source_model.xml 0      Active Shallow Crust 1           3,000        3,000
 Informational data
 ------------------
 ========================= ===========================================================================
-compute_ruptures.received max_per_task 6.45 KB, tot 6.45 KB                                          
+compute_ruptures.received tot 6.45 KB, max_per_task 6.45 KB                                          
 compute_ruptures.sent     sources 13.04 KB, src_filter 684 B, param 602 B, monitor 326 B, gsims 257 B
 hazard.input_weight       900.0                                                                      
 hazard.n_imts             1                                                                          
@@ -103,15 +103,15 @@ source_class calc_time counts
 PointSource  0.0       1     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   3.788 NaN    3.788 3.788 1        
+compute_ruptures   3.829 NaN    3.829 3.829 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -119,13 +119,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.788     0.0       1     
-reading composite source model 0.007     0.0       1     
+total compute_ruptures         3.829     0.0       1     
 store source_info              0.006     0.0       1     
-prefiltering source model      0.005     0.0       1     
-saving ruptures                0.005     0.0       1     
+saving ruptures                0.006     0.0       1     
+reading composite source model 0.006     0.0       1     
+prefiltering source model      0.004     0.0       1     
 setting event years            0.002     0.0       1     
 managing sources               0.002     0.0       1     
 filtering ruptures             0.001     0.0       6     
-reading site collection        4.125E-05 0.0       1     
+reading site collection        3.028E-05 0.0       1     
 ============================== ========= ========= ======

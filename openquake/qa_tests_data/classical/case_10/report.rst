@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 10
 
 ============== ===================
 checksum32     873,192,949        
-date           2017-11-08T16:31:59
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:06:57
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -103,8 +103,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  3,000        1.152E-04 1         1        
-1      1         PointSource  3,000        1.099E-04 1         1        
+1      1         PointSource  3,000        2.024E-04 1         1        
+0      1         PointSource  3,000        1.469E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -112,18 +112,18 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  2.251E-04 2     
+PointSource  3.493E-04 2     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 5.517E-04 3.709E-06 5.491E-04 5.543E-04 2        
+count_eff_ruptures 8.476E-04 1.049E-04 7.734E-04 9.217E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -135,8 +135,8 @@ reading composite source model 0.012     0.0       1
 prefiltering source model      0.010     0.0       1     
 store source_info              0.004     0.0       1     
 managing sources               0.003     0.0       1     
-total count_eff_ruptures       0.001     0.0       2     
-reading site collection        4.506E-05 0.0       1     
-aggregate curves               3.743E-05 0.0       2     
-saving probability maps        3.076E-05 0.0       1     
+total count_eff_ruptures       0.002     0.0       2     
+reading site collection        3.982E-05 0.0       1     
+aggregate curves               3.910E-05 0.0       2     
+saving probability maps        3.004E-05 0.0       1     
 ============================== ========= ========= ======
