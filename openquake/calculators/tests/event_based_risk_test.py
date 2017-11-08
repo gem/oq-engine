@@ -46,14 +46,6 @@ def check_total_losses(calc):
     for li, lt in enumerate(loss_dt.names):
         data1[li] += alt['loss'][:, li].sum()
 
-    # check the sums are consistent with the ones coming from losses_by_tag
-    tax_idx = dstore['assetcol'].get_tax_idx()
-    data2 = numpy.zeros(LI, numpy.float32)
-    lbt = dstore['losses_by_tag-rlzs']
-    for li in range(LI):
-        data2[li] += lbt[tax_idx, :, li].sum()
-    numpy.testing.assert_allclose(data1, data2, 1E-6)
-
     # test the asset_loss_table exporter; notice that I need to disable
     # the parallelism to avoid reading bogus data: this is the usual
     # heisenbug when reading in parallel an .hdf5 generated in process
@@ -223,17 +215,17 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # extract loss_curves/rlz-1 (with the first asset having zero losses)
+        [fname] = export(('loss_curves/rlz-1', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
+
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         assert fnames, 'loss_maps-rlzs not exported?'
         if REFERENCE_OS:
             for fname in fnames:
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
-
-        fnames = export(('losses_by_tag-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'losses_by_tag-stats not exported?'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         # extract curves by tag
         tags = ['taxonomy=tax1', 'state=01', 'cresta=0.11']

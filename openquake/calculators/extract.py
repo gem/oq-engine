@@ -189,7 +189,7 @@ def extract_agglosses(dstore, loss_type, *tags):
     l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         losses = dstore['losses_by_asset'][:, :, l]['mean']
-    elif 'avg_losses-rlzs' in dstore:  # event_based_risk
+    elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)

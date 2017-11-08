@@ -166,32 +166,6 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-def classical(sources, src_filter, gsims, param, monitor):
-    """
-    :param sources:
-        a non-empty sequence of sources of homogeneous tectonic region type
-    :param src_filter:
-        source filter
-    :param gsims:
-        a list of GSIMs for the current tectonic region type
-    :param param:
-        a dictionary of parameters
-    :param monitor:
-        a monitor instance
-    :returns:
-        an AccumDict rlz -> curves
-    """
-    truncation_level = param['truncation_level']
-    imtls = param['imtls']
-    trt = sources[0].tectonic_region_type
-    # sanity check: the trt must be the same for all sources
-    for src in sources[1:]:
-        assert src.tectonic_region_type == trt
-    pmap = pmap_from_grp(
-        sources, src_filter, imtls, gsims, truncation_level,
-        param.get('bbs', []), monitor)
-    return pmap
-
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('weight', F32)])
 
@@ -216,7 +190,7 @@ class PSHACalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = classical
+    core_task = pmap_from_grp
     source_info = datastore.persistent_attribute('source_info')
 
     def agg_dicts(self, acc, pmap):
@@ -358,7 +332,7 @@ class PSHACalculator(base.HazardCalculator):
                 num_tasks += 1
                 num_sources += len(args[0])
                 yield args + (monitor,)
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
     def _args_by_grp(self, csm, src_filter, param, num_tiles, maxweight):

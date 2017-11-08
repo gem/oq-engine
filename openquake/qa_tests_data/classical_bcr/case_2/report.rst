@@ -3,8 +3,8 @@ Classical BCR test
 
 ============== ===================
 checksum32     233,068,017        
-date           2017-10-24T05:47:40
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:06:56
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 11, num_imts = 1
@@ -78,8 +78,8 @@ source_model.xml 0      Active Shallow Crust 3           792          828
 Informational data
 ------------------
 =========================== =================================================================================
-count_eff_ruptures.received tot 6.18 KB, max_per_task 1.74 KB                                                
-count_eff_ruptures.sent     sources 27.63 KB, srcfilter 4.71 KB, param 3.14 KB, monitor 1.6 KB, gsims 1.25 KB
+count_eff_ruptures.received tot 6.23 KB, max_per_task 1.75 KB                                                
+count_eff_ruptures.sent     sources 27.69 KB, srcfilter 4.71 KB, param 3.09 KB, monitor 1.6 KB, gsims 1.25 KB
 hazard.input_weight         831.6000000000001                                                                
 hazard.n_imts               1                                                                                
 hazard.n_levels             8                                                                                
@@ -114,7 +114,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      231       AreaSource   414          0.006     11        69       
+0      231       AreaSource   414          0.005     11        69       
 0      229       AreaSource   264          0.004     8         38       
 0      232       AreaSource   150          0.002     11        1        
 ====== ========= ============ ============ ========= ========= =========
@@ -135,7 +135,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 0.002  0.001 0.005 5        
+count_eff_ruptures 0.003 0.002  0.001 0.006 5        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -143,13 +143,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.049     0.0       1     
+managing sources               0.043     0.0       1     
 reading composite source model 0.042     0.0       1     
 total count_eff_ruptures       0.017     0.0       5     
 reading exposure               0.009     0.0       1     
-store source_info              0.007     0.0       1     
-prefiltering source model      0.003     0.0       1     
-aggregate curves               3.531E-04 0.0       5     
-saving probability maps        4.983E-05 0.0       1     
+store source_info              0.006     0.0       1     
+prefiltering source model      0.002     0.0       1     
+aggregate curves               2.837E-04 0.0       5     
+saving probability maps        4.506E-05 0.0       1     
 reading site collection        6.914E-06 0.0       1     
 ============================== ========= ========= ======

@@ -156,10 +156,9 @@ class CompositeRiskModel(collections.Mapping):
         return {imt: min(iml[imt]) for imt in iml}
 
     def make_curve_params(self, oqparam):
+        # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
         cps = []
-        default_loss_ratios = numpy.linspace(
-            0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
         for l, loss_type in enumerate(loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
@@ -177,10 +176,8 @@ class CompositeRiskModel(collections.Mapping):
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cp = scientific.CurveParams(
                     l, loss_type, max(curve_resolutions), ratios, True)
-            else:  # event_based or scenario calculators
-                cp = scientific.CurveParams(
-                    l, loss_type, oqparam.loss_curve_resolution,
-                    default_loss_ratios, False)
+            else:  # used only to store the association l -> loss_type
+                cp = scientific.CurveParams(l, loss_type, 0, [], False)
             cps.append(cp)
             self.lti[loss_type] = l
         return cps
