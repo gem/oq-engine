@@ -3,8 +3,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 
 ============== ===================
 checksum32     629,585,928        
-date           2017-11-08T09:59:12
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:33:06
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 2, num_imts = 2
@@ -90,8 +90,8 @@ source_model.xml 3      Active Shallow Crust 1           164          164
 Informational data
 ------------------
 =========================== ===============================================================================
-count_eff_ruptures.received tot 4.02 KB, max_per_task 756 B                                                
-count_eff_ruptures.sent     sources 9.46 KB, param 5.75 KB, srcfilter 4.17 KB, monitor 1.92 KB, gsims 588 B
+count_eff_ruptures.received tot 4.07 KB, max_per_task 764 B                                                
+count_eff_ruptures.sent     sources 9.46 KB, param 7.19 KB, srcfilter 4.17 KB, monitor 1.92 KB, gsims 588 B
 hazard.input_weight         1418.5                                                                         
 hazard.n_imts               2                                                                              
 hazard.n_levels             38                                                                             
@@ -109,9 +109,9 @@ Slowest sources
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
 3      4         ComplexFaultSource 164          0.024     1         10       
-2      3         SimpleFaultSource  617          0.017     1         10       
+2      3         SimpleFaultSource  617          0.023     1         10       
 1      2         AreaSource         1,440        0.002     1         1        
-0      1         PointSource        15           1.936E-04 1         1        
+0      1         PointSource        15           1.888E-04 1         1        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -121,19 +121,19 @@ source_class       calc_time counts
 ================== ========= ======
 AreaSource         0.002     1     
 ComplexFaultSource 0.024     1     
-PointSource        1.936E-04 1     
-SimpleFaultSource  0.017     1     
+PointSource        1.888E-04 1     
+SimpleFaultSource  0.023     1     
 ================== ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ========= ===== =========
 operation-duration mean  stddev min       max   num_tasks
-count_eff_ruptures 0.008 0.005  9.098E-04 0.015 6        
+count_eff_ruptures 0.009 0.007  8.688E-04 0.018 6        
 ================== ===== ====== ========= ===== =========
 
 Slowest operations
@@ -141,12 +141,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.144     0.0       1     
-total count_eff_ruptures       0.047     0.0       6     
-reading composite source model 0.034     0.0       1     
-prefiltering source model      0.004     0.0       1     
+managing sources               0.141     0.0       1     
+total count_eff_ruptures       0.054     0.0       6     
+reading composite source model 0.028     0.0       1     
+prefiltering source model      0.003     0.0       1     
 store source_info              0.003     0.0       1     
-aggregate curves               1.125E-04 0.0       6     
-reading site collection        4.196E-05 0.0       1     
-saving probability maps        2.670E-05 0.0       1     
+aggregate curves               1.023E-04 0.0       6     
+reading site collection        3.481E-05 0.0       1     
+saving probability maps        2.480E-05 0.0       1     
 ============================== ========= ========= ======

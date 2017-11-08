@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     852,550,231        
-date           2017-11-08T09:57:41
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:31:33
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 7, num_imts = 1
@@ -123,15 +123,15 @@ source_class      calc_time counts
 SimpleFaultSource 0.0       1     
 ================= ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.025 0.011  0.008 0.041 13       
+compute_ruptures   0.027 0.010  0.012 0.042 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,14 +139,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.322     0.691     13    
+total compute_ruptures         0.349     0.688     13    
 filtering ruptures             0.110     0.0       259   
-managing sources               0.064     0.0       1     
+managing sources               0.063     0.0       1     
 saving ruptures                0.044     0.0       13    
 reading exposure               0.008     0.0       1     
 reading composite source model 0.004     0.0       1     
 store source_info              0.004     0.0       1     
 setting event years            0.003     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2017-11-08T09:59:12
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:33:05
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 27, num_imts = 1
@@ -78,9 +78,9 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.101     0.0       1     
+building riskinputs     0.094     0.0       1     
 assoc_assets_sites      0.016     0.0       2     
 reading exposure        0.008     0.0       1     
-building epsilons       4.890E-04 0.0       1     
-reading site collection 4.005E-05 0.0       1     
+building epsilons       4.883E-04 0.0       1     
+reading site collection 3.815E-05 0.0       1     
 ======================= ========= ========= ======

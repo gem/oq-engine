@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ===================
 checksum32     1,751,642,476      
-date           2017-11-08T09:58:24
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:32:17
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -97,7 +97,7 @@ source_model.xml 4      Active Shallow Crust 5           2,295        2,295
 Informational data
 ------------------
 =========================== ================================================================================
-count_eff_ruptures.received tot 6.34 KB, max_per_task 690 B                                                 
+count_eff_ruptures.received tot 6.42 KB, max_per_task 698 B                                                 
 count_eff_ruptures.sent     sources 30.15 KB, srcfilter 6.68 KB, param 5.78 KB, monitor 3.2 KB, gsims 1020 B
 hazard.input_weight         2133.0                                                                          
 hazard.n_imts               1                                                                               
@@ -115,26 +115,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-4      1         AreaSource   425          0.002     1         1        
+4      1         AreaSource   425          0.001     1         1        
 2      1         AreaSource   375          0.001     1         1        
-3      1         AreaSource   425          0.001     1         1        
-1      5         AreaSource   375          0.001     1         1        
 0      1         AreaSource   375          0.001     1         1        
-2      5         AreaSource   375          0.001     1         1        
 0      5         AreaSource   375          0.001     1         1        
-4      5         AreaSource   425          0.001     1         1        
-3      5         AreaSource   425          0.001     1         1        
 1      1         AreaSource   375          0.001     1         1        
-3      2         AreaSource   510          0.001     1         1        
-2      4         AreaSource   375          0.001     1         1        
-1      4         AreaSource   375          0.001     1         1        
-1      2         AreaSource   450          0.001     1         1        
-4      4         AreaSource   425          0.001     1         1        
+3      5         AreaSource   425          0.001     1         1        
 4      2         AreaSource   510          0.001     1         1        
 2      2         AreaSource   450          0.001     1         1        
-0      2         AreaSource   450          0.001     1         1        
 4      3         AreaSource   510          0.001     1         1        
+4      4         AreaSource   425          0.001     1         1        
 2      3         AreaSource   450          0.001     1         1        
+2      4         AreaSource   375          0.001     1         1        
+0      3         AreaSource   450          9.897E-04 1         1        
+0      2         AreaSource   450          9.692E-04 1         1        
+0      4         AreaSource   375          9.491E-04 1         1        
+1      2         AreaSource   450          9.291E-04 1         1        
+1      3         AreaSource   450          9.258E-04 1         1        
+1      4         AreaSource   375          9.179E-04 1         1        
+3      1         AreaSource   425          8.864E-04 1         1        
+1      5         AreaSource   375          7.617E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -142,18 +142,18 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.033     25    
+AreaSource   0.024     25    
 ============ ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.004 0.002  0.002 0.006 10       
+count_eff_ruptures 0.003 0.002  0.001 0.005 10       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,12 +161,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.126     0.0       1     
-total count_eff_ruptures       0.043     0.0       10    
-managing sources               0.020     0.0       1     
-prefiltering source model      0.017     0.0       1     
-store source_info              0.007     0.0       1     
-aggregate curves               3.369E-04 0.0       10    
-reading site collection        4.745E-05 0.0       1     
-saving probability maps        4.101E-05 0.0       1     
+reading composite source model 0.127     0.0       1     
+total count_eff_ruptures       0.032     0.0       10    
+managing sources               0.017     0.0       1     
+prefiltering source model      0.016     0.0       1     
+store source_info              0.005     0.0       1     
+aggregate curves               2.053E-04 0.0       10    
+reading site collection        4.935E-05 0.0       1     
+saving probability maps        3.219E-05 0.0       1     
 ============================== ========= ========= ======
