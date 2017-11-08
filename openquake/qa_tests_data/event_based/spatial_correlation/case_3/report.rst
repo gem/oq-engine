@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 
 ============== ===================
 checksum32     1,772,213,365      
-date           2017-11-08T09:58:36
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:32:29
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 2, num_imts = 1
@@ -73,7 +73,7 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 Informational data
 ------------------
 ========================= =========================================================================
-compute_ruptures.received tot 710.6 KB, max_per_task 710.6 KB                                      
+compute_ruptures.received max_per_task 710.6 KB, tot 710.6 KB                                      
 compute_ruptures.sent     sources 1.3 KB, src_filter 712 B, param 533 B, monitor 326 B, gsims 102 B
 hazard.input_weight       0.2                                                                      
 hazard.n_imts             1                                                                        
@@ -102,15 +102,15 @@ source_class calc_time counts
 PointSource  0.0       1     
 ============ ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.037 NaN    0.037 0.037 1        
+compute_ruptures   0.028 NaN    0.028 0.028 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,13 +118,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-setting event years            0.190     0.0       1     
-saving ruptures                0.146     0.0       1     
-total compute_ruptures         0.037     1.547     1     
+setting event years            0.162     0.0       1     
+saving ruptures                0.114     0.0       1     
+total compute_ruptures         0.028     0.434     1     
 store source_info              0.004     0.0       1     
-managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-prefiltering source model      6.065E-04 0.0       1     
-filtering ruptures             5.906E-04 0.0       1     
-reading site collection        4.506E-05 0.0       1     
+managing sources               0.002     0.0       1     
+prefiltering source model      9.120E-04 0.0       1     
+filtering ruptures             4.358E-04 0.0       1     
+reading site collection        4.458E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ Calculation of the ground motion fields for a scenario
 
 ============== ===================
 checksum32     3,547,835,629      
-date           2017-11-08T09:57:36
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:31:28
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 7, num_imts = 1
