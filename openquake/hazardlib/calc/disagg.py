@@ -54,12 +54,11 @@ def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
             pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
             yield (rlzi, poe, imt_str), (iml, pne)
     else:  # there is a single IML provided by the user; compute the poe
-        poe = numpy.interp(iml, imls, curve_poes)
         with disagg_poe:
             [poes_given_rup_eps] = gsim.disaggregate_poe(
                 sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
         pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-        yield (rlzi, round(poe, 4), imt_str), (iml, pne)
+        yield (rlzi, None, imt_str), (iml, pne)
 
 
 def _collect_bins_data(trt_num, sources, site, curves, src_group_id,

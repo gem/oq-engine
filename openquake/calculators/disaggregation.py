@@ -34,7 +34,7 @@ from openquake.hazardlib import sourceconverter
 from openquake.commonlib import calc
 from openquake.calculators import base, classical
 
-DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
+DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
 def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
@@ -296,14 +296,14 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         lat = self.sitecol.lats[site_id]
         mag, dist, lons, lats, eps = bin_edges
         disp_name = DISAGG_RES_FMT % dict(
-            poe=poe, rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
-        self.datastore[disp_name] = {
+            poe='' if poe is None else 'poe-%s-' % poe,
+            rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
+        self.datastore[disp_name] = dic = {
             '_'.join(key): mat for key, mat in zip(disagg.pmf_map, matrix)}
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
         attrs['iml'] = iml
-        attrs['poe'] = poe
         attrs['trts'] = hdf5.array_of_vstr(trt_names)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
@@ -311,3 +311,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         attrs['lat_bin_edges'] = lats
         attrs['eps_bin_edges'] = eps
         attrs['location'] = (lon, lat)
+        if poe is not None:
+            attrs['poe'] = poe
+        # sanity check: all poe_prod should be the same
+        attrs['poe_prod'] = [1. - numpy.prod(1. - dic[pmf])
+                             for pmf in sorted(dic)]

@@ -71,11 +71,8 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_2(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_curves_ok(
-            ['poe-0.0872-rlz-3-PGA-0.0-0.0.xml',
-             'poe-0.0879-rlz-1-PGA--3.0--3.0.xml',
-             'poe-0.0913-rlz-2-PGA-0.0-0.0.xml',
-             'poe-0.0915-rlz-0-PGA--3.0--3.0.xml',
-             'poe-0.0965-rlz-1-PGA-0.0-0.0.xml',
-             'poe-0.1001-rlz-0-PGA-0.0-0.0.xml'],
+        self.assert_curves_ok([
+            'rlz-0-PGA--3.0--3.0.xml', 'rlz-0-PGA-0.0-0.0.xml',
+            'rlz-1-PGA--3.0--3.0.xml', 'rlz-1-PGA-0.0-0.0.xml',
+            'rlz-2-PGA-0.0-0.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
             case_2.__file__)
