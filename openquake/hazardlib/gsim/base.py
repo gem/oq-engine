@@ -532,7 +532,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         # take the minimum epsilon larger than standard_iml
         iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
         poe_lst = []
-        for lvl, bin in zip(standard_imls, iml_bin_indices):
+        for lvl, bin in zip(standard_imls, iml_bin_indices):  # one per site
             if bin == 0:
                 poe_lst.append(contribution_by_bands)
             elif bin > n_epsilons:
