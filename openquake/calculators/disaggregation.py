@@ -37,7 +37,7 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
+def compute_disagg(src_filter, sources, rlzs_by_gsim,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -46,10 +46,8 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
         a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
     :param sources:
         list of hazardlib source objects
-    :param src_group_id:
-        numeric ID of a SourceGroup instance
-    :param rlzs_assoc:
-        a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param rlzs_by_gsim:
+        a dictionary GSIM -> realizations
     :param dict trt_names:
         a tuple of names for the given tectonic region type
     :param curves_dict:
@@ -66,8 +64,6 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
     """
     sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    gsims = rlzs_assoc.get_gsims(src_group_id)
-    rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -83,10 +79,11 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
 
         # generate source, rupture, sites once per site
         with collecting_mon:
-            cmaker = ContextMaker(gsims, src_filter.integration_distance)
+            cmaker = ContextMaker(
+                rlzs_by_gsim, src_filter.integration_distance)
             bdata = disagg._collect_bins_data(
                 trt_num, sources, site, curves_dict[sid],
-                src_group_id, rlzs_by_gsim, cmaker, oqparam.imtls,
+                rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor)
@@ -183,6 +180,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
         nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         all_args = []
+        src_filter = SourceFilter(sitecol, oq.maximum_distance)
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
             trt_names = tuple(mod.trt for mod in smodel.src_groups)
@@ -193,51 +191,48 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 int(numpy.ceil(max_mag / mag_bin_width) + 1))
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
+            for sid, site in zip(sitecol.sids, sitecol):
+                curves = curves_dict[sid]
+                if not curves:
+                    continue  # skip zero-valued hazard curves
+                bb = bb_dict[sid]
+                if not bb:
+                    logging.info(
+                        'location %s was too far, skipping disaggregation',
+                        site.location)
+                    continue
+
+                dist_edges, lon_edges, lat_edges = bb.bins_edges(
+                    oq.distance_bin_width, oq.coordinate_bin_width)
+                logging.info(
+                    '[sid=%d] %d dist bins from %s to %s', sid,
+                    len(dist_edges) - 1, min(dist_edges), max(dist_edges))
+                logging.info(
+                    '[sid=%d] %d lon bins from %s to %s', sid,
+                    len(lon_edges) - 1, bb.west, bb.east)
+                logging.info(
+                    '[sid=%d] %d lat bins from %s to %s', sid,
+                    len(lon_edges) - 1, bb.south, bb.north)
+
+                self.bin_edges[sm_id, sid] = (
+                    mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
+
+            bin_edges = {sid: self.bin_edges[sm_id, sid]
+                         for sid in sitecol.sids
+                         if (sm_id, sid) in self.bin_edges}
             for src_group in smodel.src_groups:
-                if src_group.id not in self.rlzs_assoc.rlzs_by_gsim:
-                    continue  # the group has been filtered away
-                for sid, site in zip(sitecol.sids, sitecol):
-                    curves = curves_dict[sid]
-                    if not curves:
-                        continue  # skip zero-valued hazard curves
-                    bb = bb_dict[sm_id, sid]
-                    if not bb:
-                        logging.info(
-                            'location %s was too far, skipping disaggregation',
-                            site.location)
-                        continue
-
-                    dist_edges, lon_edges, lat_edges = bb.bins_edges(
-                        oq.distance_bin_width, oq.coordinate_bin_width)
-                    logging.info(
-                        '[sid=%d] %d dist bins from %s to %s', sid,
-                        len(dist_edges) - 1, min(dist_edges), max(dist_edges))
-                    logging.info(
-                        '[sid=%d] %d lon bins from %s to %s', sid,
-                        len(lon_edges) - 1, bb.west, bb.east)
-                    logging.info(
-                        '[sid=%d] %d lat bins from %s to %s', sid,
-                        len(lon_edges) - 1, bb.south, bb.north)
-
-                    self.bin_edges[sm_id, sid] = (
-                        mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-
-                bin_edges = {}
-                for sid, site in zip(sitecol.sids, sitecol):
-                    if (sm_id, sid) in self.bin_edges:
-                        bin_edges[sid] = self.bin_edges[sm_id, sid]
-
-                src_filter = SourceFilter(sitecol, oq.maximum_distance)
                 split_sources = []
                 for src in src_group:
                     for split, _sites in src_filter(
                             sourceconverter.split_source(src), sitecol):
                         split_sources.append(split)
                 mon = self.monitor('disaggregation')
+                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(
+                    src_group.trt, sm_id)
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
-                        (src_filter, srcs, src_group.id, self.rlzs_assoc,
-                         trt_names, curves_dict, bin_edges, oq, mon))
+                        (src_filter, srcs, rlzs_by_gsim, trt_names,
+                         curves_dict, bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)

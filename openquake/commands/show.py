@@ -105,7 +105,7 @@ def show(what='contents', calc_id=-1, extra=()):
     elif what in ds:
         obj = ds[what]
         if hasattr(obj, 'value'):  # an array
-            print(write_csv(io.StringIO(), obj.value))
+            print(write_csv(io.BytesIO(), obj.value).decode('utf8'))
         else:
             print(obj)
     else:
