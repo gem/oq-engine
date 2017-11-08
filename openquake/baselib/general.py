@@ -670,7 +670,8 @@ class DictArray(collections.Mapping):
     """
     def __init__(self, imtls):
         self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(imls) if hasattr(imls, '__len__') else 1)
+            [(str(imt), F64,
+              (len(imls),) if hasattr(imls, '__len__') else (1,))
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
