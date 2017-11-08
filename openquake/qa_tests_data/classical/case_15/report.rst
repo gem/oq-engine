@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     17,280,623         
-date           2017-11-08T16:31:59
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:06:56
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 3, num_imts = 2
@@ -116,9 +116,9 @@ Slowest sources
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 2      1         AreaSource   240          0.002     3         1        
-3      1         AreaSource   240          8.538E-04 3         1        
-1      2         PointSource  15           1.822E-04 3         1        
-0      1         PointSource  15           1.163E-04 3         1        
+3      1         AreaSource   240          0.001     3         1        
+0      1         PointSource  15           1.764E-04 3         1        
+1      2         PointSource  15           1.156E-04 3         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -126,19 +126,19 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.002     2     
-PointSource  2.985E-04 2     
+AreaSource   0.003     2     
+PointSource  2.921E-04 2     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ========= ===== =========
 operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 8.551E-04 5.767E-04 0.003 4        
+count_eff_ruptures 0.001 8.278E-04 5.691E-04 0.002 4        
 ================== ===== ========= ========= ===== =========
 
 Slowest operations
@@ -148,10 +148,10 @@ operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.010     0.0       1     
 total count_eff_ruptures       0.005     0.0       4     
-store source_info              0.005     0.0       1     
 managing sources               0.005     0.0       1     
+store source_info              0.005     0.0       1     
 prefiltering source model      0.002     0.0       1     
-aggregate curves               7.749E-05 0.0       4     
-reading site collection        4.745E-05 0.0       1     
-saving probability maps        3.242E-05 0.0       1     
+aggregate curves               8.011E-05 0.0       4     
+reading site collection        4.363E-05 0.0       1     
+saving probability maps        2.980E-05 0.0       1     
 ============================== ========= ========= ======

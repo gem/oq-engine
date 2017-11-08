@@ -3,8 +3,8 @@ Event Based QA Test, Case 12
 
 ============== ===================
 checksum32     2,564,275,427      
-date           2017-11-08T16:33:04
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:08:03
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -102,8 +102,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      2         PointSource  1            0.0       1         0        
 0      1         PointSource  1            0.0       1         0        
+1      2         PointSource  1            0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -114,15 +114,15 @@ source_class calc_time counts
 PointSource  0.0       2     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.015 0.001  0.015 0.016 2        
+compute_ruptures   0.021 0.012  0.013 0.030 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -130,13 +130,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.031     0.0       2     
-setting event years            0.029     0.0       1     
+total compute_ruptures         0.043     0.0       2     
+setting event years            0.032     0.0       1     
 saving ruptures                0.022     0.0       2     
 store source_info              0.004     0.0       1     
-managing sources               0.003     0.0       1     
-reading composite source model 0.003     0.0       1     
-prefiltering source model      7.539E-04 0.0       1     
-filtering ruptures             6.049E-04 0.0       2     
-reading site collection        5.484E-05 0.0       1     
+managing sources               0.002     0.0       1     
+reading composite source model 0.002     0.0       1     
+filtering ruptures             7.896E-04 0.0       2     
+prefiltering source model      7.195E-04 0.0       1     
+reading site collection        4.840E-05 0.0       1     
 ============================== ========= ========= ======

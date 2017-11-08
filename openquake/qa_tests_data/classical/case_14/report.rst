@@ -3,8 +3,8 @@ Classical PSHA QA test with sites_csv
 
 ============== ===================
 checksum32     762,001,888        
-date           2017-11-08T16:32:15
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:07:13
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 10, num_imts = 1
@@ -104,28 +104,28 @@ source_class      calc_time counts
 SimpleFaultSource 0.046     1     
 ================= ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.004 9.381E-04 0.003 0.007 13       
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_eff_ruptures 0.004 0.002  0.002 0.011 13       
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.064     0.0       1     
+managing sources               0.065     0.0       1     
 total count_eff_ruptures       0.055     0.0       13    
+store source_info              0.006     0.0       1     
 reading composite source model 0.004     0.0       1     
-store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
-aggregate curves               2.131E-04 0.0       13    
-reading site collection        2.034E-04 0.0       1     
-saving probability maps        3.147E-05 0.0       1     
+aggregate curves               3.619E-04 0.0       13    
+reading site collection        1.981E-04 0.0       1     
+saving probability maps        4.339E-05 0.0       1     
 ============================== ========= ========= ======
