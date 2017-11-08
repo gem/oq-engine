@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2017-11-08T09:58:09
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:32:02
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -185,7 +185,7 @@ source_model.xml 26     Active Shallow Crust 2           221          221
 Informational data
 ------------------
 =========================== =====================================================================================
-count_eff_ruptures.received tot 33.1 KB, max_per_task 643 B                                                      
+count_eff_ruptures.received tot 33.53 KB, max_per_task 651 B                                                     
 count_eff_ruptures.sent     sources 60.92 KB, srcfilter 36.74 KB, param 32.23 KB, monitor 17.62 KB, gsims 4.89 KB
 hazard.input_weight         8175.0                                                                               
 hazard.n_imts               1                                                                                    
@@ -203,26 +203,26 @@ Slowest sources
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      SFLT2     SimpleFaultSource 384          0.005     1         2        
-3      SFLT2     SimpleFaultSource 384          0.004     1         2        
-9      SFLT2     SimpleFaultSource 384          0.004     1         2        
+3      SFLT2     SimpleFaultSource 384          0.005     1         2        
 6      SFLT2     SimpleFaultSource 384          0.004     1         2        
-12     SFLT2     SimpleFaultSource 384          0.004     1         2        
+9      SFLT2     SimpleFaultSource 384          0.004     1         2        
 15     SFLT2     SimpleFaultSource 384          0.003     1         2        
+12     SFLT2     SimpleFaultSource 384          0.003     1         2        
+0      SFLT2     SimpleFaultSource 384          0.003     1         2        
 21     SFLT2     SimpleFaultSource 384          0.003     1         2        
-18     SFLT2     SimpleFaultSource 384          0.003     1         2        
 24     SFLT2     SimpleFaultSource 384          0.003     1         2        
-3      SFLT1     SimpleFaultSource 150          0.003     1         1        
+18     SFLT2     SimpleFaultSource 384          0.003     1         2        
 0      SFLT1     SimpleFaultSource 60           0.003     1         1        
+1      SFLT2     SimpleFaultSource 148          0.003     1         1        
 4      SFLT1     SimpleFaultSource 150          0.002     1         1        
-5      SFLT2     SimpleFaultSource 89           0.002     1         1        
-2      SFLT1     SimpleFaultSource 60           0.002     1         1        
-10     SFLT1     SimpleFaultSource 25           0.002     1         1        
-6      SFLT1     SimpleFaultSource 90           0.002     1         1        
+1      SFLT1     SimpleFaultSource 60           0.002     1         1        
+3      SFLT1     SimpleFaultSource 150          0.002     1         1        
 4      SFLT2     SimpleFaultSource 148          0.002     1         1        
-8      SFLT1     SimpleFaultSource 90           0.002     1         1        
-5      SFLT1     SimpleFaultSource 150          0.002     1         1        
 7      SFLT2     SimpleFaultSource 148          0.002     1         1        
+6      SFLT1     SimpleFaultSource 90           0.002     1         1        
+12     SFLT1     SimpleFaultSource 81           0.002     1         1        
+11     SFLT1     SimpleFaultSource 25           0.002     1         1        
+13     SFLT1     SimpleFaultSource 81           0.002     1         1        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -230,18 +230,18 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.114     54    
+SimpleFaultSource 0.103     54    
 ================= ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.003 8.500E-04 0.001 0.005 55       
+count_eff_ruptures 0.002 7.071E-04 0.001 0.004 55       
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -249,12 +249,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.366     0.0       1     
-managing sources               0.189     0.0       1     
-total count_eff_ruptures       0.142     0.0       55    
-prefiltering source model      0.049     0.0       1     
+reading composite source model 0.312     0.0       1     
+managing sources               0.190     0.0       1     
+total count_eff_ruptures       0.128     0.0       55    
+prefiltering source model      0.050     0.0       1     
 store source_info              0.006     0.0       1     
-aggregate curves               8.910E-04 0.0       55    
-reading site collection        4.029E-05 0.0       1     
-saving probability maps        2.551E-05 0.0       1     
+aggregate curves               7.854E-04 0.0       55    
+reading site collection        3.409E-05 0.0       1     
+saving probability maps        2.670E-05 0.0       1     
 ============================== ========= ========= ======

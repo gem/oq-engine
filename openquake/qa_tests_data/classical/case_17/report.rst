@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     575,048,364        
-date           2017-11-08T09:58:06
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:31:59
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -86,7 +86,7 @@ source_model_2.xml 1      Active Shallow Crust 1           7            7
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.19 KB, max_per_task 607 B                                              
+count_eff_ruptures.received tot 1.2 KB, max_per_task 615 B                                               
 count_eff_ruptures.sent     sources 2.58 KB, srcfilter 1.34 KB, param 1.16 KB, monitor 656 B, gsims 182 B
 hazard.input_weight         13.100000000000001                                                           
 hazard.n_imts               1                                                                            
@@ -104,8 +104,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      2         PointSource  7            1.523E-04 1         1        
-0      1         PointSource  39           1.497E-04 1         1        
+1      2         PointSource  7            1.314E-04 1         1        
+0      1         PointSource  39           1.142E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -113,18 +113,18 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.021E-04 2     
+PointSource  2.456E-04 2     
 ============ ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.219E-04 3.743E-05 6.955E-04 7.484E-04 2        
+count_eff_ruptures 5.882E-04 4.417E-05 5.569E-04 6.194E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -132,12 +132,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-store source_info              0.003     0.0       1     
+store source_info              0.004     0.0       1     
 reading composite source model 0.003     0.0       1     
 managing sources               0.003     0.0       1     
 total count_eff_ruptures       0.001     0.0       2     
-prefiltering source model      4.747E-04 0.0       1     
-aggregate curves               3.290E-05 0.0       2     
-reading site collection        3.004E-05 0.0       1     
-saving probability maps        2.337E-05 0.0       1     
+prefiltering source model      6.711E-04 0.0       1     
+reading site collection        4.339E-05 0.0       1     
+aggregate curves               3.958E-05 0.0       2     
+saving probability maps        3.171E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ Scenario QA Test, Case 3
 
 ============== ===================
 checksum32     785,876,355        
-date           2017-11-08T09:57:36
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:31:28
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 3, num_imts = 2
@@ -57,5 +57,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 3.076E-05 0.0       1     
+reading site collection 2.980E-05 0.0       1     
 ======================= ========= ========= ======

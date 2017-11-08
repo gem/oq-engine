@@ -3,8 +3,8 @@ Classical Tiling for Turkey reduced
 
 ============== ===================
 checksum32     1,556,025,092      
-date           2017-11-08T09:59:13
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:33:06
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 83, num_imts = 2
@@ -47,9 +47,9 @@ Composite source model
 ======================== ====== ====================== ================
 smlt_path                weight gsim_logic_tree        num_realizations
 ======================== ====== ====================== ================
-AreaSource               0.500  complex(4,4,2,4,1,5,0) 4/4             
-FaultSourceAndBackground 0.200  complex(4,4,2,4,1,5,0) 4/4             
-SeiFaCrust               0.300  complex(4,4,2,4,1,5,0) 0/0             
+AreaSource               0.500  complex(2,4,0,1,5,4,4) 4/4             
+FaultSourceAndBackground 0.200  complex(2,4,0,1,5,4,4) 4/4             
+SeiFaCrust               0.300  complex(2,4,0,1,5,4,4) 0/0             
 ======================== ====== ====================== ================
 
 Required parameters per tectonic region type
@@ -96,7 +96,7 @@ models/src/fsbg_model.xml 9      Active Shallow Crust 2           7,632        2
 Informational data
 ------------------
 =========================== =================================================================================
-count_eff_ruptures.received tot 9.62 KB, max_per_task 619 B                                                  
+count_eff_ruptures.received tot 9.74 KB, max_per_task 627 B                                                  
 count_eff_ruptures.sent     sources 48.49 KB, param 21.39 KB, srcfilter 21 KB, monitor 5.12 KB, gsims 5.08 KB
 hazard.input_weight         15721.2                                                                          
 hazard.n_imts               2                                                                                
@@ -114,8 +114,8 @@ Slowest sources
 ====== ============ ============ ============ ========= ========= =========
 grp_id source_id    source_class num_ruptures calc_time num_sites num_split
 ====== ============ ============ ============ ========= ========= =========
-4      AS_GEAS343   AreaSource   3,876        0.025     7         9        
-9      FSBG_TRBG103 AreaSource   1,755        0.009     5         4        
+4      AS_GEAS343   AreaSource   3,876        0.026     7         9        
+9      FSBG_TRBG103 AreaSource   1,755        0.011     5         4        
 9      FSBG_ARAS462 AreaSource   306          0.003     3         2        
 ====== ============ ============ ============ ========= ========= =========
 
@@ -124,18 +124,18 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.038     3     
+AreaSource   0.040     3     
 ============ ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.003 5.805E-04 0.002 0.004 16       
+count_eff_ruptures 0.004 5.375E-04 0.002 0.004 16       
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -143,12 +143,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.619     0.0       1     
+reading composite source model 0.632     0.0       1     
 prefiltering source model      0.114     0.0       10    
-managing sources               0.054     0.0       1     
-total count_eff_ruptures       0.053     0.0       16    
-store source_info              0.037     0.0       1     
+store source_info              0.065     0.0       1     
+total count_eff_ruptures       0.057     0.0       16    
+managing sources               0.053     0.0       1     
 reading site collection        0.005     0.0       1     
-aggregate curves               2.444E-04 0.0       16    
-saving probability maps        2.718E-05 0.0       1     
+aggregate curves               2.055E-04 0.0       16    
+saving probability maps        2.766E-05 0.0       1     
 ============================== ========= ========= ======

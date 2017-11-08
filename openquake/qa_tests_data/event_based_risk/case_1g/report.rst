@@ -3,8 +3,8 @@ event based risk with PMF
 
 ============== ===================
 checksum32     316,426,340        
-date           2017-11-08T09:58:05
-engine_version 2.8.0-gitb219703   
+date           2017-11-08T16:31:58
+engine_version 2.8.0-git96597d9   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -123,15 +123,15 @@ source_class      calc_time counts
 SimpleFaultSource 0.0       1     
 ================= ========= ======
 
-Duplicated sources
-------------------
+Same ID sources
+---------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.059 0.016  0.042 0.074 3        
+compute_ruptures   0.047 0.022  0.033 0.072 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,14 +139,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.177     0.0       3     
-managing sources               0.056     0.0       1     
-saving ruptures                0.008     0.0       3     
-filtering ruptures             0.007     0.0       31    
-reading exposure               0.007     0.0       1     
+total compute_ruptures         0.141     0.039     3     
+managing sources               0.062     0.0       1     
+saving ruptures                0.011     0.0       3     
+reading exposure               0.006     0.0       1     
+filtering ruptures             0.005     0.0       31    
+store source_info              0.005     0.0       1     
 reading composite source model 0.004     0.0       1     
-store source_info              0.004     0.0       1     
 prefiltering source model      0.002     0.0       1     
 setting event years            0.002     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        8.821E-06 0.0       1     
 ============================== ========= ========= ======
