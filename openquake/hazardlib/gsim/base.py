@@ -520,8 +520,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
 
         # compute iml value with respect to standard (mean=0, std=1)
         # normal distributions
-        iml_array = self.to_distribution_values(iml)
-        standard_imls = (iml_array - mean) / stddev
+        standard_imls = (self.to_distribution_values(iml) - mean) / stddev
         distribution = scipy.stats.truncnorm(- truncation_level,
                                              truncation_level)
         epsilons = numpy.linspace(- truncation_level, truncation_level,
