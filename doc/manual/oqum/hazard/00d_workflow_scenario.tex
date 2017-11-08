@@ -1,99 +1,52 @@
 In case of \gls{acr:ssha}, the input data consist of a single earthquake
-rupture model and one or more ground-motion models. Using the Ground Motion Field Calculator, multiple realizations of ground shaking can be computed, each realization sampling the aleatory uncertainties in the ground-motion model. The main calculator used to perform this analysis is the \emph{Ground Motion Field Calculator}, which was already introduced during the description of the event based PSHA workflow (see Section~\ref{subsec:event_based_psha} at page~\pageref{subsec:event_based_psha}).
+rupture model and one or more ground-motion models. Using the Ground Motion
+Field Calculator, multiple realizations of ground shaking can be computed,
+each realization sampling the aleatory uncertainties in the ground-motion
+model. The main calculator used to perform this analysis is the \emph{Ground
+Motion Field Calculator}, which was already introduced during the description
+of the event based PSHA workflow (see Section~\ref{subsec:event_based_psha} at
+page~\pageref{subsec:event_based_psha}).
 
-As the scenario calculator does not need to determine the probability of occurrence of the specific rupture, but only sufficient information to parameterise the location (as a three-dimensional surface), the magnitude and the style-of-faulting of the rupture, a more simplified NRML structure is needed. A \emph{rupture model} XML can be defined in the following formats:
+As the scenario calculator does not need to determine the probability of
+occurrence of the specific rupture, but only sufficient information to
+parameterise the location (as a three-dimensional surface), the magnitude and
+the style-of-faulting of the rupture, a more simplified NRML structure is
+sufficient compared to the source model structures described previously in
+Section~\ref{sec:source_typologies}.
+A \emph{rupture model} XML can be defined in the following formats:
 
 \begin{enumerate}
-    \item \emph{Simple Fault Rupture} - in which the geometry is defined by the trace of the fault rupture, the dip and the upper and lower seismogenic depths. An example is shown below:
-\begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <simpleFaultRupture>
-        <magnitude>7.0</magnitude>
-        <rake>90.0</rake>
-        <hypocenter lat="0.0" lon="0.0" depth="10.0"/>
-        <simpleFaultGeometry>
-            <gml:LineString>
-                <gml:posList>
-                    0.0 -0.3
-                    0.0  0.3
-                </gml:posList>
-            </gml:LineString>
-            <dip>90.0</dip>
-            <upperSeismoDepth>2.0</upperSeismoDepth>
-            <lowerSeismoDepth>20.0</lowerSeismoDepth>
-        </simpleFaultGeometry>
-    </simpleFaultRupture>
-</nrml>
-\end{minted}
-\\
-    \item \emph{Planar \& Multi-Planar Rupture} - in which the geometry is defined as a collection of one or more rectangular planes, each defined by four corners.
 
-    \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <multiPlanesRupture>
-        <magnitude>8.0</magnitude>
-        <rake>90.0</rake>
-        <hypocenter lat="-1.4" lon="1.1" depth="10.0"/>
-            <planarSurface strike="90.0" dip="45.0">
-                <topLeft lon="-0.8" lat="-2.3" depth="0.0" />
-                <topRight lon="-0.4" lat="-2.3" depth="0.0" />
-                <bottomLeft lon="-0.8" lat="-2.3890" depth="10.0" />
-                <bottomRight lon="-0.4" lat="-2.3890" depth="10.0" />
-            </planarSurface>
-            <planarSurface strike="30.94744" dip="30.0">
-                <topLeft lon="-0.42" lat="-2.3" depth="0.0" />
-                <topRight lon="-0.29967" lat="-2.09945" depth="0.0" />
-                <bottomLeft lon="-0.28629" lat="-2.38009" depth="10.0" />
-                <bottomRight lon="-0.16598" lat="-2.17955" depth="10.0" />
-            </planarSurface>
-    </multiPlanesRupture>
-</nrml> 
-\end{minted}
-\\
-    \item \emph{Complex Fault Rupture} - in which the geometry is defined by the upper, lower and (if applicable) intermediate edges of the fault rupture.
+    \item \emph{Simple Fault Rupture} - in which the geometry is defined by the
+    trace of the fault rupture, the dip and the upper and lower seismogenic
+    depths. An example is shown below in Listing~\ref{lst:input_rupture_simple}.
 
-\begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-    <?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <complexFaultRupture>
-        <magnitude>8.0</magnitude>
-        <rake>90.0</rake>
-        <hypocenter lat="-1.4" lon="1.1" depth="10.0"/>
-        <complexFaultGeometry>
-            <faultTopEdge>
-                <gml:LineString>
-                    <gml:posList>
-                        0.6 -1.5 2.0
-                        1.0 -1.3 5.0
-                        1.5 -1.0 8.0
-                    </gml:posList>
-                </gml:LineString>
-            </faultTopEdge>
-            <intermediateEdge>
-                <gml:LineString>
-                    <gml:posList>
-                        0.65 -1.55 4.0
-                        1.1  -1.4  10.0
-                        1.5  -1.2  20.0
-                    </gml:posList>
-                </gml:LineString>
-            </intermediateEdge>
-            <faultBottomEdge>
-                <gml:LineString>
-                    <gml:posList>
-                        0.65 -1.7 8.0
-                        1.1  -1.6 15.0
-                        1.5  -1.7 35.0
-                    </gml:posList>
-                </gml:LineString>
-            </faultBottomEdge>
-        </complexFaultGeometry>
-    </complexFaultRupture>
-</nrml>
-\end{minted}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_rupture_simple_fault.xml}
+  \caption{An example simple fault rupture input file}
+  \label{lst:input_rupture_simple}
+\end{listing}
+
+    \item \emph{Planar \& Multi-Planar Rupture} - in which the geometry is
+    defined as a collection of one or more rectangular planes, each defined
+    by four corners. An example of a multi-planar rupture is shown below
+    in Listing~\ref{lst:input_rupture_multi_planes}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_rupture_multi_planes.xml}
+  \caption{An example multi-planar rupture input file}
+  \label{lst:input_rupture_multi_planes}
+\end{listing}
+
+    \item \emph{Complex Fault Rupture} - in which the geometry is defined by
+    the upper, lower and (if applicable) intermediate edges of the fault
+    rupture. An example of a complex fault rupture is shown below in
+    Listing~\ref{lst:input_rupture_complex}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_rupture_complex.xml}
+  \caption{An example complex fault rupture input file}
+  \label{lst:input_rupture_complex}
+\end{listing}
+
 \end{enumerate}
