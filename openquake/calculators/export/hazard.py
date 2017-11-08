@@ -104,10 +104,9 @@ def export_ruptures_csv(ekey, dstore):
               ' trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
-    get_gsims = csm_info.get_rlzs_assoc().get_gsims
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
-        rup_data = calc.RuptureData(trt, get_gsims(grp_id)).to_array(
+        rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id)).to_array(
             calc.get_ruptures(dstore, events, grp_id))
         for r in rup_data:
             rows.append(
@@ -793,7 +792,7 @@ def export_gmf_scenario_csv(ekey, dstore):
         logging.warn('There is no rupture %d', rup_id)
         return []
     [ebr] = ruptures
-    rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[ebr.grp_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
     samples = samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     correl_model = oq.get_correl_model()

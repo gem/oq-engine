@@ -18,7 +18,7 @@ Listing~\ref{lst:config_classical_risk_combined}.
 
 \begin{listing}[htbp]
   \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_classical_risk_combined.ini}
-  \caption{Example combined configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_classical_risk_combined.ini}{Download example})}
+  \caption{Example combined configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/config_classical_risk_combined.ini}{Download example})}
   \label{lst:config_classical_risk_combined}
 \end{listing}
 
@@ -66,10 +66,9 @@ displayed:
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 Calculation 2749 completed in 24 seconds. Results:
   id | name
- 980 | loss_curves-rlzs
- 981 | loss_curves-stats
- 982 | loss_maps-rlzs
- 983 | loss_maps-stats
+3980 | loss_curves-stats
+3981 | loss_maps-stats
+3983 | avg_losses-stats
 \end{minted}
 
 
@@ -87,13 +86,13 @@ based on the hazard curves and \glspl{vulnerabilitymodel}.
 
 \begin{listing}[htbp]
   \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job\_hazard.ini]{ini}{oqum/risk/verbatim/config_classical_hazard.ini}
-  \caption{Example hazard configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_classical_hazard.ini}{Download example})}
+  \caption{Example hazard configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/config_classical_hazard.ini}{Download example})}
   \label{lst:config_classical_risk_hazard}
 \end{listing}
 
 \begin{listing}[htbp]
   \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job\_risk.ini]{ini}{oqum/risk/verbatim/config_classical_risk.ini}
-  \caption{Example risk configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_classical_risk.ini}{Download example})}
+  \caption{Example risk configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/config_classical_risk.ini}{Download example})}
   \label{lst:config_classical_risk}
 \end{listing}
 
