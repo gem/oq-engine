@@ -531,12 +531,12 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
 
         # take the minimum epsilon larger than standard_iml
         iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
-        poe_lst = []
+        poe_by_site = []
         for lvl, bin in zip(standard_imls, iml_bin_indices):  # one per site
             if bin == 0:
-                poe_lst.append(contribution_by_bands)
+                poe_by_site.append(contribution_by_bands)
             elif bin > n_epsilons:
-                poe_lst.append(numpy.zeros(n_epsilons))
+                poe_by_site.append(numpy.zeros(n_epsilons))
             else:
                 # for other cases (when ``lvl`` falls somewhere in the
                 # histogram):
@@ -550,8 +550,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
                     [distribution.sf(lvl) - contribution_by_bands[bin:].sum()],
                     # ... and all bins on the right go unchanged.
                     contribution_by_bands[bin:]])
-                poe_lst.append(poe)
-        poes = numpy.array(poe_lst)
+                poe_by_site.append(poe)
+        poes = numpy.array(poe_by_site)
         return poes  # shape (n_sites, n_epsilons)
 
     @abc.abstractmethod
