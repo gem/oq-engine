@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     1,989,351,768      
-date           2017-11-08T16:32:35
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:07:34
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 2, num_imts = 1
@@ -91,11 +91,11 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      8         AreaSource   1,812        0.0       1         0        
 0      2         AreaSource   2,334        0.0       2         0        
-0      3         AreaSource   1,760        0.0       2         0        
 0      1         AreaSource   7,020        0.0       2         0        
 0      9         AreaSource   897          0.0       2         0        
+0      8         AreaSource   1,812        0.0       1         0        
+0      3         AreaSource   1,760        0.0       2         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -106,15 +106,15 @@ source_class calc_time counts
 AreaSource   0.0       5     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.247 0.156  0.002 0.396 15       
+compute_ruptures   0.254 0.162  0.003 0.396 15       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -122,13 +122,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.704     0.0       15    
-reading composite source model 1.627     0.0       1     
-managing sources               0.661     0.0       1     
-saving ruptures                0.008     0.0       15    
+total compute_ruptures         3.804     0.0       15    
+reading composite source model 1.642     0.0       1     
+managing sources               0.737     0.0       1     
+saving ruptures                0.011     0.0       15    
+store source_info              0.006     0.0       1     
 prefiltering source model      0.005     0.0       1     
-store source_info              0.005     0.0       1     
 setting event years            0.002     0.0       1     
-filtering ruptures             8.452E-04 0.0       3     
-reading site collection        4.363E-05 0.0       1     
+filtering ruptures             8.533E-04 0.0       3     
+reading site collection        4.458E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     914,633,900        
-date           2017-11-08T16:33:04
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:08:03
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -73,7 +73,7 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 Informational data
 ------------------
 ========================= =========================================================================
-compute_ruptures.received max_per_task 34.3 KB, tot 34.3 KB                                        
+compute_ruptures.received tot 34.3 KB, max_per_task 34.3 KB                                        
 compute_ruptures.sent     sources 1.31 KB, src_filter 684 B, param 594 B, monitor 326 B, gsims 91 B
 hazard.input_weight       0.1                                                                      
 hazard.n_imts             1                                                                        
@@ -102,8 +102,8 @@ source_class calc_time counts
 PointSource  0.0       1     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
@@ -119,12 +119,12 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 total compute_ruptures         0.018     0.0       1     
-setting event years            0.009     0.0       1     
+setting event years            0.010     0.0       1     
 saving ruptures                0.008     0.0       1     
-store source_info              0.004     0.0       1     
+store source_info              0.003     0.0       1     
 managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-prefiltering source model      6.211E-04 0.0       1     
-filtering ruptures             5.543E-04 0.0       1     
-reading site collection        4.697E-05 0.0       1     
+filtering ruptures             5.655E-04 0.0       1     
+prefiltering source model      5.500E-04 0.0       1     
+reading site collection        4.292E-05 0.0       1     
 ============================== ========= ========= ======

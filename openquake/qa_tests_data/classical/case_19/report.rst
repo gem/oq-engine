@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     1,302,227,115      
-date           2017-11-08T16:32:18
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:07:16
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 3
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ====================== ================
 smlt_path weight gsim_logic_tree        num_realizations
 ========= ====== ====================== ================
-b1        1.000  complex(0,5,0,2,1,4,4) 4/4             
+b1        1.000  complex(4,0,4,5,1,2,0) 4/4             
 ========= ====== ====================== ================
 
 Required parameters per tectonic region type
@@ -94,7 +94,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-4      s46       AreaSource   7,770        0.029     1         370      
+4      s46       AreaSource   7,770        0.030     1         370      
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,31 +102,31 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.029     1     
+AreaSource   0.030     1     
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.009 6.690E-04 0.009 0.010 4        
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_eff_ruptures 0.010 0.003  0.005 0.012 4        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.907     0.0       1     
-managing sources               0.104     0.0       1     
-total count_eff_ruptures       0.037     0.0       4     
+reading composite source model 4.833     0.0       1     
+managing sources               0.099     0.0       1     
+total count_eff_ruptures       0.039     0.0       4     
 prefiltering source model      0.017     0.0       1     
-store source_info              0.015     0.0       1     
-aggregate curves               3.889E-04 0.0       4     
-reading site collection        3.552E-05 0.0       1     
-saving probability maps        2.599E-05 0.0       1     
+store source_info              0.014     0.0       1     
+aggregate curves               3.843E-04 0.0       4     
+reading site collection        4.148E-05 0.0       1     
+saving probability maps        2.337E-05 0.0       1     
 ============================== ========= ========= ======

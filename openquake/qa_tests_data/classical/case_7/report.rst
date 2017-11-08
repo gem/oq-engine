@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 7
 
 ============== ===================
 checksum32     359,954,679        
-date           2017-11-08T16:32:16
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:07:14
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -86,7 +86,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-pmap_from_trt      0.816 0.187  0.684 0.948 2        
+pmap_from_trt      0.828 0.188  0.695 0.962 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -94,14 +94,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total pmap_from_trt            1.632     3.250     2     
-making contexts                1.070     0.0       140   
-reading composite source model 0.104     0.0       1     
-SadighEtAl1997().get_poes      0.017     0.0       140   
-saving probability maps        0.005     0.0       1     
+total pmap_from_trt            1.657     3.109     2     
+making contexts                1.066     0.0       140   
+reading composite source model 0.137     0.0       1     
+SadighEtAl1997().get_poes      0.018     0.0       140   
 store source_info              0.005     0.0       1     
+saving probability maps        0.005     0.0       1     
 prefiltering source model      0.004     0.0       1     
 managing sources               0.002     0.0       1     
-aggregate curves               1.194E-04 0.0       2     
-reading site collection        3.481E-05 0.0       1     
+aggregate curves               1.218E-04 0.0       2     
+reading site collection        4.292E-05 0.0       1     
 ============================== ========= ========= ======

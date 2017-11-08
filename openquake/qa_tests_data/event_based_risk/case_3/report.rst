@@ -3,8 +3,8 @@ Event Based Risk Lisbon
 
 ============== ===================
 checksum32     1,228,666,719      
-date           2017-11-08T16:31:33
-engine_version 2.8.0-git96597d9   
+date           2017-11-08T18:06:30
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -99,8 +99,8 @@ SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 8           21,381       21,381
 Informational data
 ------------------
 ========================= ======================================================================================
-compute_ruptures.received tot 50.71 KB, max_per_task 5.99 KB                                                    
-compute_ruptures.sent     sources 988.66 KB, param 15.82 KB, src_filter 12.02 KB, monitor 5.73 KB, gsims 3.15 KB
+compute_ruptures.received tot 50.68 KB, max_per_task 5.99 KB                                                    
+compute_ruptures.sent     sources 988.65 KB, param 15.82 KB, src_filter 12.02 KB, monitor 5.73 KB, gsims 3.15 KB
 hazard.input_weight       13980.399999999998                                                                    
 hazard.n_imts             1                                                                                     
 hazard.n_levels           40                                                                                    
@@ -135,26 +135,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-3      10        AreaSource   4,482        0.0       1         0        
-3      7         AreaSource   1,690        0.0       1         0        
-1      5         AreaSource   2,349        0.0       1         0        
-2      1         AreaSource   4,163        0.0       1         0        
-2      0         AreaSource   24,435       0.0       1         0        
+1      7         AreaSource   1,690        0.0       1         0        
 0      1         AreaSource   4,163        0.0       1         0        
 1      3         AreaSource   3,509        0.0       1         0        
-1      7         AreaSource   1,690        0.0       1         0        
-2      2         AreaSource   19,923       0.0       1         0        
-1      10        AreaSource   4,482        0.0       1         0        
+3      3         AreaSource   3,509        0.0       1         0        
 3      5         AreaSource   2,349        0.0       1         0        
 3      4         AreaSource   1,280        0.0       1         0        
-3      8         AreaSource   1,440        0.0       1         0        
+3      7         AreaSource   1,690        0.0       1         0        
+0      0         AreaSource   24,435       0.0       1         0        
+1      10        AreaSource   4,482        0.0       1         0        
+2      1         AreaSource   4,163        0.0       1         0        
+1      5         AreaSource   2,349        0.0       1         0        
+2      0         AreaSource   24,435       0.0       1         0        
 1      9         AreaSource   2,508        0.0       1         0        
 3      9         AreaSource   2,508        0.0       1         0        
-0      2         AreaSource   19,923       0.0       1         0        
+2      2         AreaSource   19,923       0.0       1         0        
 1      8         AreaSource   1,440        0.0       1         0        
-1      4         AreaSource   1,280        0.0       1         0        
 1      6         AreaSource   4,123        0.0       1         0        
 3      6         AreaSource   4,123        0.0       1         0        
+0      2         AreaSource   19,923       0.0       1         0        
+3      8         AreaSource   1,440        0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -165,15 +165,15 @@ source_class calc_time counts
 AreaSource   0.0       22    
 ============ ========= ======
 
-Same ID sources
----------------
+Duplicated sources
+------------------
 There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.628 0.684  0.325 2.683 18       
+compute_ruptures   1.746 0.686  0.340 2.674 18       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -181,14 +181,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         29        0.570     18    
-reading composite source model 1.123     0.0       1     
-managing sources               1.030     0.0       1     
-saving ruptures                0.024     0.0       18    
-prefiltering source model      0.019     0.0       1     
-reading exposure               0.007     0.0       1     
-store source_info              0.004     0.0       1     
+total compute_ruptures         31        0.527     18    
+reading composite source model 0.989     0.0       1     
+managing sources               0.867     0.0       1     
+saving ruptures                0.029     0.0       18    
+prefiltering source model      0.012     0.0       1     
+store source_info              0.008     0.0       1     
+reading exposure               0.006     0.0       1     
 filtering ruptures             0.003     0.0       12    
-setting event years            0.001     0.0       1     
-reading site collection        5.960E-06 0.0       1     
+setting event years            0.002     0.0       1     
+reading site collection        5.484E-06 0.0       1     
 ============================== ========= ========= ======
