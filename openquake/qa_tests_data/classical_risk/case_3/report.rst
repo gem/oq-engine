@@ -2,9 +2,9 @@ Classical PSHA - Loss fractions QA test
 =======================================
 
 ============== ===================
-checksum32     266,561,964        
-date           2017-10-24T05:47:04
-engine_version 2.8.0-git8e9cdf8   
+checksum32     2,143,483,537      
+date           2017-11-08T09:57:31
+engine_version 2.8.0-gitb219703   
 ============== ===================
 
 num_sites = 12, num_imts = 1
@@ -25,7 +25,7 @@ area_source_discretization      10.0
 ground_motion_correlation_model None              
 random_seed                     23                
 master_seed                     0                 
-avg_losses                      False             
+avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -77,7 +77,7 @@ Informational data
 ------------------
 =========================== ================================================================================
 count_eff_ruptures.received tot 7.34 KB, max_per_task 1.38 KB                                               
-count_eff_ruptures.sent     sources 32.14 KB, srcfilter 5.81 KB, param 4.42 KB, monitor 1.92 KB, gsims 588 B
+count_eff_ruptures.sent     sources 32.21 KB, srcfilter 5.81 KB, param 4.35 KB, monitor 1.92 KB, gsims 588 B
 hazard.input_weight         1768.0000000000002                                                              
 hazard.n_imts               1                                                                               
 hazard.n_levels             19                                                                              
@@ -112,7 +112,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      232       AreaSource   1,612        0.014     10        124      
+0      232       AreaSource   1,612        0.015     10        124      
 0      225       AreaSource   520          0.003     3         1        
 ====== ========= ============ ============ ========= ========= =========
 
@@ -121,7 +121,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.017     2     
+AreaSource   0.018     2     
 ============ ========= ======
 
 Duplicated sources
@@ -132,7 +132,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.005 4.685E-04 0.004 0.006 6        
+count_eff_ruptures 0.005 2.461E-04 0.004 0.005 6        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -140,13 +140,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.929     0.0       1     
-managing sources               0.047     0.0       1     
-total count_eff_ruptures       0.030     4.109     6     
-prefiltering source model      0.009     0.551     1     
+reading composite source model 1.093     0.0       1     
+managing sources               0.045     0.0       1     
+total count_eff_ruptures       0.029     3.672     6     
+prefiltering source model      0.009     0.434     1     
 reading exposure               0.007     0.0       1     
 store source_info              0.003     0.0       1     
-aggregate curves               2.246E-04 0.0       6     
-saving probability maps        2.408E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+aggregate curves               2.024E-04 0.0       6     
+saving probability maps        2.575E-05 0.0       1     
+reading site collection        6.199E-06 0.0       1     
 ============================== ========= ========= ======

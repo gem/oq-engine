@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     865,392,691        
-date           2017-10-24T05:47:58
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T09:58:24
+engine_version 2.8.0-gitb219703   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ================ ================
 smlt_path weight gsim_logic_tree  num_realizations
 ========= ====== ================ ================
-b1        1.000  trivial(0,1,1,0) 1/1             
+b1        1.000  trivial(1,0,0,1) 1/1             
 ========= ====== ================ ================
 
 Required parameters per tectonic region type
@@ -84,8 +84,8 @@ NSHM_source_model-editedbkgd.xml 1      Subduction Interface 2           1      
 Informational data
 ------------------
 =========================== ===============================================================================
-count_eff_ruptures.received tot 1.21 KB, max_per_task 634 B                                                
-count_eff_ruptures.sent     sources 809.08 KB, param 1.59 KB, srcfilter 1.34 KB, monitor 654 B, gsims 187 B
+count_eff_ruptures.received tot 1.22 KB, max_per_task 635 B                                                
+count_eff_ruptures.sent     sources 809.11 KB, param 1.57 KB, srcfilter 1.34 KB, monitor 656 B, gsims 187 B
 hazard.input_weight         6.0                                                                            
 hazard.n_imts               1                                                                              
 hazard.n_levels             29                                                                             
@@ -103,8 +103,8 @@ Slowest sources
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
 1      21444     CharacteristicFaultSource 1            0.002     1         1        
-0      1         PointSource               20           1.938E-04 1         1        
-0      2         PointSource               20           1.132E-04 1         1        
+0      1         PointSource               20           1.860E-04 1         1        
+0      2         PointSource               20           1.087E-04 1         1        
 1      21445     CharacteristicFaultSource 1            0.0       1         0        
 ====== ========= ========================= ============ ========= ========= =========
 
@@ -114,7 +114,7 @@ Computation times by source typology
 source_class              calc_time counts
 ========================= ========= ======
 CharacteristicFaultSource 0.002     2     
-PointSource               3.071E-04 2     
+PointSource               2.947E-04 2     
 ========================= ========= ======
 
 Duplicated sources
@@ -125,7 +125,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.002 0.002  0.001 0.004 2        
+count_eff_ruptures 0.002 0.002  0.001 0.003 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -133,12 +133,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.233     0.0       1     
-store source_info              0.007     0.0       1     
+reading composite source model 0.278     0.0       1     
+store source_info              0.008     0.0       1     
 total count_eff_ruptures       0.005     0.0       2     
 prefiltering source model      0.004     0.0       1     
 managing sources               0.003     0.0       1     
-aggregate curves               8.368E-05 0.0       2     
-saving probability maps        4.721E-05 0.0       1     
-reading site collection        4.244E-05 0.0       1     
+aggregate curves               8.488E-05 0.0       2     
+saving probability maps        5.126E-05 0.0       1     
+reading site collection        4.005E-05 0.0       1     
 ============================== ========= ========= ======
