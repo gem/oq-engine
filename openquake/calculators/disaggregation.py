@@ -308,6 +308,6 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         attrs['location'] = (lon, lat)
         if poe is not None:
             attrs['poe'] = poe
-        # sanity check: all poe_prod should be the same
-        attrs['poe_prod'] = [1. - numpy.prod(1. - dic[pmf])
+        # sanity check: all poe_agg should be the same
+        attrs['poe_agg'] = [1. - numpy.prod(1. - dic[pmf])
                              for pmf in sorted(dic)]
