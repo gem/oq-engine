@@ -142,7 +142,7 @@ producing too small PoEs.'''
     def get_curves(self, sid):
         """
         Get all the relevant hazard curves for the given site ordinal.
-        Returns a dictionary {(rlz_id, imt) -> curve}.
+        Returns a dictionary rlz_id -> curve_by_imt.
         """
         dic = {}
         imtls = self.oqparam.imtls
@@ -165,7 +165,7 @@ producing too small PoEs.'''
                         'skipping site %d, rlz=%d, IMT=%s',
                         sid, rlz.ordinal, imt_str)
                     continue
-                dic[rlz.ordinal, imt_str] = poes[imt_str]
+                dic[rlz.ordinal] = poes
         return dic
 
     def full_disaggregation(self):
@@ -205,8 +205,10 @@ producing too small PoEs.'''
                 sid = sitecol.sids[i]
                 curve = curves[i]
                 # populate max_poe array
-                for (rlzi, imt), poes in curve.items():
-                    max_poe[rlzi][imt] = max(max_poe[rlzi][imt], poes.max())
+                for rlzi, poes in curve.items():
+                    for imt in oq.imtls:
+                        max_poe[rlzi][imt] = max(
+                            max_poe[rlzi][imt], poes[imt].max())
                 if not curve:
                     continue  # skip zero-valued hazard curves
                 bb = bb_dict[sid]
