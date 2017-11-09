@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     4,162,972,727      
-date           2017-10-24T05:47:14
-engine_version 2.8.0-git8e9cdf8   
+checksum32     852,550,231        
+date           2017-11-08T18:06:30
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 7, num_imts = 1
@@ -25,7 +25,7 @@ area_source_discretization      None
 ground_motion_correlation_model 'JB2009'          
 random_seed                     24                
 master_seed                     42                
-avg_losses                      False             
+avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -76,8 +76,8 @@ source_model.xml 0      Active Shallow Crust 1           482          482
 Informational data
 ------------------
 ========================= ====================================================================================
-compute_ruptures.received tot 252.6 KB, max_per_task 31.34 KB                                                 
-compute_ruptures.sent     sources 17.59 KB, src_filter 10.82 KB, param 6.97 KB, monitor 4.13 KB, gsims 1.29 KB
+compute_ruptures.received tot 252.62 KB, max_per_task 31.35 KB                                                
+compute_ruptures.sent     sources 17.75 KB, src_filter 10.82 KB, param 6.82 KB, monitor 4.14 KB, gsims 1.29 KB
 hazard.input_weight       3374.0                                                                              
 hazard.n_imts             1                                                                                   
 hazard.n_levels           1                                                                                   
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.026 0.013  0.009 0.053 13       
+compute_ruptures   0.024 0.009  0.009 0.043 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,14 +139,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.333     0.734     13    
-filtering ruptures             0.115     0.0       259   
-managing sources               0.062     0.0       1     
-saving ruptures                0.041     0.0       13    
-reading exposure               0.008     0.0       1     
-store source_info              0.005     0.0       1     
+total compute_ruptures         0.316     0.707     13    
+filtering ruptures             0.110     0.0       259   
+managing sources               0.066     0.0       1     
+saving ruptures                0.050     0.0       13    
+reading exposure               0.009     0.0       1     
 reading composite source model 0.004     0.0       1     
-setting event years            0.004     0.0       1     
+store source_info              0.004     0.0       1     
+setting event years            0.003     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        6.199E-06 0.0       1     
+reading site collection        7.629E-06 0.0       1     
 ============================== ========= ========= ======

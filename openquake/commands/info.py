@@ -78,7 +78,7 @@ def print_csm_info(fname):
     print(rlzs_assoc)
     dupl = [(srcs[0]['id'], len(srcs)) for srcs in csm.check_dupl_sources()]
     if dupl:
-        print(rst_table(dupl, ['source_id', 'duplicates']))
+        print(rst_table(dupl, ['source_id', 'multiplicity']))
     tot, pairs = get_pickled_sizes(rlzs_assoc)
     print(rst_table(pairs, ['attribute', 'nbytes']))
 
