@@ -164,7 +164,13 @@ class OqParam(valid.ParamSet):
                 'intensity_measure_types' in names_vals):
             logging.warn('Ignoring intensity_measure_types since '
                          'intensity_measure_types_and_levels is set')
-        if 'intensity_measure_types_and_levels' in names_vals:
+        if 'iml_disagg' in names_vals:
+            self.hazard_imtls = self.iml_disagg
+            if 'intensity_measure_types_and_levels' in names_vals:
+                raise ValueError(
+                    'Please remove the intensity_measure_types_and_levels: '
+                    'they will be inferred from the iml_disagg dictionary')
+        elif 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
         elif 'intensity_measure_types' in names_vals:
