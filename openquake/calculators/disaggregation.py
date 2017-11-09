@@ -204,10 +204,9 @@ producing too small PoEs.'''
             for i, site in enumerate(sitecol):
                 sid = sitecol.sids[i]
                 curve = curves[i]
-                for rlzi, imt in curve:
-                    maxc = curve[rlzi, imt].max()
-                    if maxc > max_poe[rlzi][imt]:
-                        max_poe[rlzi][imt] = maxc
+                # populate max_poe array
+                for (rlzi, imt), poes in curve.items():
+                    max_poe[rlzi][imt] = max(max_poe[rlzi][imt], poes.max())
                 if not curve:
                     continue  # skip zero-valued hazard curves
                 bb = bb_dict[sid]
