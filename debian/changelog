@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made sure that `oq dbserver stop` also stops the zmq workers if the zmq
+    distribution is enabled
   * Added a check when disaggregating for a PoE too big for the source model
   * If `iml_disagg` is given, forbid `intensity_measure_types_and_levels`
   * Fixed the disaggregation outputs when `iml_disagg` is given: the PoE has

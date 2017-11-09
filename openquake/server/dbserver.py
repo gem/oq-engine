@@ -109,6 +109,8 @@ class DbServer(object):
             for sock in dworkers:
                 sock.running = False
             logging.warn('DB server stopped')
+        finally:
+            self.stop()
 
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
@@ -157,7 +159,10 @@ def ensure_on():
         if config.dbserver.multi_user:
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
-        # otherwise start the DbServer automatically
+        # otherwise start the DbServer automatically; NB: I tried to use
+        # multiprocessing.Process(target=run_server).start() and apparently
+        # it works, but then run-demos.sh hangs after the end of the first
+        # calculation, but only if the DbServer is started by oq engine (!?)
         subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
                           '-l', 'INFO'])
 
@@ -199,11 +204,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    dbs = DbServer(db, addr)
-    try:
-        dbs.start()
-    finally:
-        dbs.stop()
+    DbServer(db, addr).start()  # expects to be killed with CTRL-C
 
 
 run_server.arg('dbpath', 'dbpath')
