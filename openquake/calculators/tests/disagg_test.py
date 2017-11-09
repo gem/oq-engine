@@ -22,7 +22,7 @@ from nose.plugins.attrib import attr
 from openquake.hazardlib.probability_map import combine
 from openquake.commonlib import calc
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.disagg import case_1, case_2
+from openquake.qa_tests_data.disagg import case_1, case_2, case_3
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -71,11 +71,19 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_2(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_curves_ok(
-            ['poe-0.0872-rlz-3-PGA-0.0-0.0.xml',
-             'poe-0.0879-rlz-1-PGA--3.0--3.0.xml',
-             'poe-0.0913-rlz-2-PGA-0.0-0.0.xml',
-             'poe-0.0915-rlz-0-PGA--3.0--3.0.xml',
-             'poe-0.0965-rlz-1-PGA-0.0-0.0.xml',
-             'poe-0.1001-rlz-0-PGA-0.0-0.0.xml'],
+        self.assert_curves_ok([
+            'rlz-0-PGA--3.0--3.0.xml', 'rlz-0-PGA-0.0-0.0.xml',
+            'rlz-1-PGA--3.0--3.0.xml', 'rlz-1-PGA-0.0-0.0.xml',
+            'rlz-2-PGA-0.0-0.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
             case_2.__file__)
+
+    @attr('qa', 'hazard', 'disagg')
+    def test_case_3(self):
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(case_3.__file__, 'job.ini')
+        self.assertEqual(str(ctx.exception), '''\
+You are trying to disaggregate for poe=0.1.
+However the source model #0, 'source_model_test_complex.xml',
+produces at most probabilities of 0.0362320992703 for rlz=#0, IMT=PGA.
+The disaggregation PoE is too big or your model is wrong,
+producing too small PoEs.''')

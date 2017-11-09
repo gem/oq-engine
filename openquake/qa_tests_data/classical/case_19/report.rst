@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     1,302,227,115      
-date           2017-10-24T05:47:59
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:07:16
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 3
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ====================== ================
 smlt_path weight gsim_logic_tree        num_realizations
 ========= ====== ====================== ================
-b1        1.000  complex(0,1,0,5,2,4,4) 4/4             
+b1        1.000  complex(4,0,4,5,1,2,0) 4/4             
 ========= ====== ====================== ================
 
 Required parameters per tectonic region type
@@ -76,8 +76,8 @@ simple_area_source_model.xml 4      Subduction Inslab 1           7,770        7
 Informational data
 ------------------
 =========================== ==================================================================================
-count_eff_ruptures.received tot 14.09 KB, max_per_task 3.63 KB                                                
-count_eff_ruptures.sent     sources 76.61 KB, param 5.36 KB, srcfilter 2.74 KB, monitor 1.28 KB, gsims 1.26 KB
+count_eff_ruptures.received tot 14.12 KB, max_per_task 3.64 KB                                                
+count_eff_ruptures.sent     sources 76.66 KB, param 5.31 KB, srcfilter 2.74 KB, monitor 1.28 KB, gsims 1.26 KB
 hazard.input_weight         777.0                                                                             
 hazard.n_imts               3                                                                                 
 hazard.n_levels             78                                                                                
@@ -94,7 +94,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-4      s46       AreaSource   7,770        0.032     1         370      
+4      s46       AreaSource   7,770        0.030     1         370      
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,7 +102,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.032     1     
+AreaSource   0.030     1     
 ============ ========= ======
 
 Duplicated sources
@@ -111,22 +111,22 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.010 4.875E-04 0.010 0.011 4        
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_eff_ruptures 0.010 0.003  0.005 0.012 4        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.882     0.0       1     
-managing sources               0.115     0.0       1     
-total count_eff_ruptures       0.041     0.0       4     
-store source_info              0.027     0.0       1     
+reading composite source model 4.833     0.0       1     
+managing sources               0.099     0.0       1     
+total count_eff_ruptures       0.039     0.0       4     
 prefiltering source model      0.017     0.0       1     
-aggregate curves               3.951E-04 0.0       4     
-reading site collection        5.221E-05 0.0       1     
-saving probability maps        2.480E-05 0.0       1     
+store source_info              0.014     0.0       1     
+aggregate curves               3.843E-04 0.0       4     
+reading site collection        4.148E-05 0.0       1     
+saving probability maps        2.337E-05 0.0       1     
 ============================== ========= ========= ======
