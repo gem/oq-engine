@@ -3,8 +3,8 @@ Scenario QA Test with Spatial Correlation - Case 1
 
 ============== ===================
 checksum32     1,970,708,270      
-date           2017-10-24T05:47:10
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:06:25
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 2, num_imts = 1
@@ -57,5 +57,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 3.028E-05 0.0       1     
+reading site collection 3.123E-05 0.0       1     
 ======================= ========= ========= ======

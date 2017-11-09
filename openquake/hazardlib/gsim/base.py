@@ -507,8 +507,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
 
         :returns:
             Contribution to probability of exceedance of ``iml`` coming
-            from different sigma bands in a form of 1d numpy array with
-            ``n_epsilons`` floats between 0 and 1.
+            from different sigma bands in the form of a 2d numpy array of
+            probabilities with shape (n_sites, n_epsilons)
         """
         if not truncation_level > 0:
             raise ValueError('truncation level must be positive')
@@ -520,9 +520,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
 
         # compute iml value with respect to standard (mean=0, std=1)
         # normal distributions
-        iml = self.to_distribution_values(iml)
-        standard_imls = (iml - mean) / stddev
-
+        standard_imls = (self.to_distribution_values(iml) - mean) / stddev
         distribution = scipy.stats.truncnorm(- truncation_level,
                                              truncation_level)
         epsilons = numpy.linspace(- truncation_level, truncation_level,
@@ -533,34 +531,28 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
 
         # take the minimum epsilon larger than standard_iml
         iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
-
-        return numpy.array([
-            # take full disaggregated distribution for the case of
-            # ``iml <= mean - truncation_level * stddev``
-            contribution_by_bands
-            if idx == 0 else
-
-            # take zeros if ``iml >= mean + truncation_level * stddev``
-            numpy.zeros(n_epsilons)
-            if idx >= n_epsilons + 1 else
-
-            # for other cases (when ``iml`` falls somewhere in the
-            # histogram):
-            numpy.concatenate((
-                # take zeros for bins that are on the left hand side
-                # from the bin ``iml`` falls into,
-                numpy.zeros(idx - 1),
-                # ... area of the portion of the bin containing ``iml``
-                # (the portion is limited on the left hand side by
-                # ``iml`` and on the right hand side by the bin edge),
-                [distribution.sf(standard_imls[i]) -
-                 contribution_by_bands[idx:].sum()],
-                # ... and all bins on the right go unchanged.
-                contribution_by_bands[idx:]
-            ))
-
-            for i, idx in enumerate(iml_bin_indices)
-        ])
+        poe_by_site = []
+        for lvl, bin in zip(standard_imls, iml_bin_indices):  # one per site
+            if bin == 0:
+                poe_by_site.append(contribution_by_bands)
+            elif bin > n_epsilons:
+                poe_by_site.append(numpy.zeros(n_epsilons))
+            else:
+                # for other cases (when ``lvl`` falls somewhere in the
+                # histogram):
+                poe = numpy.concatenate([
+                    # take zeros for bins that are on the left hand side
+                    # from the bin ``lvl`` falls into,
+                    numpy.zeros(bin - 1),
+                    # ... area of the portion of the bin containing ``lvl``
+                    # (the portion is limited on the left hand side by
+                    # ``lvl`` and on the right hand side by the bin edge),
+                    [distribution.sf(lvl) - contribution_by_bands[bin:].sum()],
+                    # ... and all bins on the right go unchanged.
+                    contribution_by_bands[bin:]])
+                poe_by_site.append(poe)
+        poes = numpy.array(poe_by_site)
+        return poes  # shape (n_sites, n_epsilons)
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
