@@ -28,7 +28,6 @@ import os
 import re
 import sys
 import copy
-import random
 import itertools
 import collections
 import operator
