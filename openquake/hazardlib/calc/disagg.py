@@ -99,16 +99,14 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                                         rupture, rlzi, imt, sctx,
                                         rctx, dctx, truncation_level,
                                         n_epsilons, disagg_poe)
-                                    k, v = (rlzi, poe, imt_str), (iml, pne)
-                                    pnes[k].append(v)
+                                    pnes[rlzi, poe, imt_str].append((iml, pne))
                             else:
                                 pne = _disagg(
                                     iml, imls, gsim,
                                     rupture, rlzi, imt, sctx,
                                     rctx, dctx, truncation_level,
                                     n_epsilons, disagg_poe)
-                                k, v = (rlzi, poe, imt_str), (iml, pne)
-                                pnes[k].append(v)
+                                pnes[rlzi, None, imt_str].append((iml, pne))
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
