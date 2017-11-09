@@ -42,14 +42,14 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def _disagg(poes, curves, imtls, iml_disagg, gsim, rupture, rlzi,
+def _disagg(poes, curves, imtls, iml_disagg, gsim, rupture,
             sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
     for imt_str, imls in imtls.items():
         imt = from_string(imt_str)
         imls = numpy.array(imls[::-1])
         iml = iml_disagg.get(imt_str)
         if iml is None:
-            the_imls = [numpy.interp(poe, curves[rlzi, imt_str][::-1], imls)
+            the_imls = [numpy.interp(poe, curves[imt_str][::-1], imls)
                         for poe in poes]
         else:
             poes = [None]
@@ -97,8 +97,8 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                 for gsim in cmaker.gsims:
                     for rlzi in rlzs_by_gsim[str(gsim)]:
                         for poe, imt, iml, pne in _disagg(
-                                poes, curves, imtls, iml_disagg, gsim, rupture,
-                                rlzi, sctx, rctx, dctx, truncation_level,
+                                poes, curves[rlzi], imtls, iml_disagg, gsim,
+                                rupture, sctx, rctx, dctx, truncation_level,
                                 n_epsilons, disagg_poe):
                             pnes[rlzi, poe, imt].append((iml, pne))
 
