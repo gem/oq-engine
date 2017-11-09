@@ -38,7 +38,7 @@ DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
 def compute_disagg(src_filter, sources, rlzs_by_gsim,
-                   trt_names, curves_dict, bin_edges, oqparam, monitor):
+                   trt_names, curves, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -50,8 +50,8 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
         a dictionary GSIM -> realizations
     :param dict trt_names:
         a tuple of names for the given tectonic region type
-    :param curves_dict:
-        a dictionary with the hazard curves for sites, realizations and IMTs
+    :param curves:
+        hazard curves for sites, realizations and IMTs
     :param bin_egdes:
         a dictionary site_id -> edges
     :param oqparam:
@@ -69,7 +69,8 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
     collecting_mon = monitor('collecting bins')
     arranging_mon = monitor('arranging bins')
 
-    for site, sid in zip(sitecol, sitecol.sids):
+    for i, site in enumerate(sitecol):
+        sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
             edges = bin_edges[sid]
@@ -82,7 +83,7 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
             cmaker = ContextMaker(
                 rlzs_by_gsim, src_filter.integration_distance)
             bdata = disagg._collect_bins_data(
-                trt_num, sources, site, curves_dict[sid],
+                trt_num, sources, site, curves[i],
                 rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
@@ -174,7 +175,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                      min(eps_edges), max(eps_edges))
 
         self.bin_edges = {}
-        curves_dict = {sid: self.get_curves(sid) for sid in sitecol.sids}
+        curves = [self.get_curves(sid) for sid in sitecol.sids]
         # determine the number of effective source groups
         sg_data = self.datastore['csm_info/sg_data']
         num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
@@ -191,9 +192,10 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 int(numpy.ceil(max_mag / mag_bin_width) + 1))
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
-            for sid, site in zip(sitecol.sids, sitecol):
-                curves = curves_dict[sid]
-                if not curves:
+            for i, site in enumerate(sitecol):
+                sid = sitecol.sids[i]
+                curve = curves[i]
+                if not curve:
                     continue  # skip zero-valued hazard curves
                 bb = bb_dict[sid]
                 if not bb:
@@ -232,7 +234,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
                         (src_filter, srcs, rlzs_by_gsim, trt_names,
-                         curves_dict, bin_edges, oq, mon))
+                         curves, bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
