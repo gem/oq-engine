@@ -42,23 +42,24 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-# yield (rlzi, poe, imt), (iml, pne)
-def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
+def _disagg(poes, curves, imtls, iml_disagg, gsim, rupture,
             sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
-    if iml is None:  # compute the IMLs from the given poes
-        for poe in poes:
-            iml = numpy.interp(poe, curve_poes, imls)
+    for imt_str, imls in imtls.items():
+        imt = from_string(imt_str)
+        imls = numpy.array(imls[::-1])
+        iml = iml_disagg.get(imt_str)
+        if iml is None:
+            the_imls = [numpy.interp(poe, curves[imt_str][::-1], imls)
+                        for poe in poes]
+        else:
+            poes = [None]
+            the_imls = [iml]
+        for poe, iml in zip(poes, the_imls):
             with disagg_poe:
                 [poes_given_rup_eps] = gsim.disaggregate_poe(
                     sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
             pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-            yield (rlzi, poe, imt_str), (iml, pne)
-    else:  # there is a single IML provided by the user; compute the poe
-        with disagg_poe:
-            [poes_given_rup_eps] = gsim.disaggregate_poe(
-                sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
-        pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-        yield (rlzi, None, imt_str), (iml, pne)
+            yield poe, imt_str, iml, pne
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -77,9 +78,11 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
     for source in sources:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
+            if iml_disagg:
+                dic = 
             for rupture, dist, pnes in cmaker.disaggregate(
                     site, source.iter_ruptures(),
-                    imt, iml, truncation_level, n_epsilons):
+                    iml_disagg, truncation_level, n_epsilons):
 
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
@@ -90,18 +93,25 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                 trts.append(tect_reg)
                 # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
                 for g, gsim in enumerate(cmaker.gsims):
-                    gs = str(gsim)
-                    for imt_str, imls in imtls.items():
-                        imt = from_string(imt_str)
-                        imls = numpy.array(imls[::-1])
-                        for rlzi in rlzs_by_gsim[gs]:
-                            iml = iml_disagg.get(imt_str)
-                            curve_poes = curves[rlzi, imt_str][::-1]
-                            for k, v in _disagg(
-                                    iml, poes, curve_poes, imls, gsim, rupture,
-                                    rlzi, imt, imt_str, sctx, rctx, dctx,
-                                    truncation_level, n_epsilons, disagg_poe):
-                                pnes[k].append(v)
+                    for rlzi in rlzs_by_gsim[str(gsim)]:
+                        if not iml_disagg:
+                            dic = {}
+                            for poe in poes:
+                                dic[poe] = {}
+                                for imt_str, imls in imtls.items():
+                                    imt = from_string(imt_str)
+                                    imls = numpy.array(imls[::-1])
+                                    data = curves[imt_str][::-1]
+                                    dic[poe][imt_str] = numpy.interp(
+                                        poe, data, imls)
+                        else:
+                            dic = {None: iml_disagg}
+                        for poe, imt, iml, pne in _disagg(
+                                poes, curves[rlzi], imtls, iml_disagg, gsim,
+                                rupture, sctx, rctx, dctx, truncation_level,
+                                n_epsilons, disagg_poe):
+                            pnes[rlzi, poe, imt].append((iml, pne))
+
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -114,6 +124,19 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                    numpy.array(lats, float),
                    numpy.array(trts, int),
                    pnes)
+
+
+def make_iml_by_imt(cmaker, rlzs_by_gsim, poes, imtls, curves):
+    dic = {}  # (g, rlzi) -> {imt: iml}
+    for g, gsim in enumerate(cmaker.gsims):
+        for rlzi in rlzs_by_gsim[str(gsim)]:
+            dic[g, rlzi] = d = {}
+            for poe in poes:
+                d[poe] = {}
+                for imt, imls in imtls.items():
+                    imls = numpy.array(imls[::-1])
+                    d[poe][imt] = numpy.interp(poe, curves[imt][::-1], imls)
+    return dic
 
 
 def disaggregation(
