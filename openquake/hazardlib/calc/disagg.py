@@ -73,27 +73,23 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
     trts = []
     pnes = collections.defaultdict(list)
     sitemesh = sitecol.mesh
-    make_ctxt = mon('making contexts', measuremem=False)
     disagg_poe = mon('disaggregate_poe', measuremem=False)
     for source in sources:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
-            for rupture in source.iter_ruptures():
-                with make_ctxt:
-                    try:
-                        sctx, rctx, dctx = cmaker.make_contexts(
-                            sitecol, rupture)
-                    except filters.FarAwayRupture:
-                        continue
+            for rupture, dist, pnes in cmaker.disaggregate(
+                    site, source.iter_ruptures(),
+                    imt, iml, truncation_level, n_epsilons):
+
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
-                dists.append(dctx.rjb[0])  # single site => single distance
+                dists.append(dist)
                 [closest_point] = rupture.surface.get_closest_points(sitemesh)
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
                 # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
-                for gsim in cmaker.gsims:
+                for g, gsim in enumerate(cmaker.gsims):
                     gs = str(gsim)
                     for imt_str, imls in imtls.items():
                         imt = from_string(imt_str)
