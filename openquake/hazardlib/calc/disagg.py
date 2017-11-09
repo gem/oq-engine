@@ -42,31 +42,34 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def _disagg(poes, curves, rlzis, imtls, iml_disagg, gsim, rupture,
+def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
             sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
     for imt_str, imls in imtls.items():
         imt = from_string(imt_str)
         imls = numpy.array(imls[::-1])
         iml = iml_disagg.get(imt_str)
         if iml is None:
-            for rlzi in rlzis:
-                for poe in poes:
-                    iml = numpy.interp(poe, curves[rlzi][imt_str][::-1], imls)
-                    with disagg_poe:
-                        [poes_given_rup_eps] = gsim.disaggregate_poe(
-                            sctx, rctx, dctx, imt, iml, truncation_level,
-                            n_epsilons)
-                    pne = rupture.get_probability_no_exceedance(
-                        poes_given_rup_eps)
-                    yield rlzi, poe, imt_str, iml, pne
+            for gsim in rlzs_by_gsim:
+                for rlzi in rlzs_by_gsim[gsim]:
+                    for poe in poes:
+                        iml = numpy.interp(
+                            poe, curves[rlzi][imt_str][::-1], imls)
+                        with disagg_poe:
+                            [poes_given_rup_eps] = gsim.disaggregate_poe(
+                                sctx, rctx, dctx, imt, iml, truncation_level,
+                                n_epsilons)
+                        pne = rupture.get_probability_no_exceedance(
+                            poes_given_rup_eps)
+                        yield rlzi, poe, imt_str, iml, pne
         else:
-            with disagg_poe:
-                [poes_given_rup_eps] = gsim.disaggregate_poe(
-                    sctx, rctx, dctx, imt, iml, truncation_level,
-                    n_epsilons)
-            pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-            for rlzi in rlzis:
-                yield rlzi, None, imt_str, iml, pne
+            for gsim in rlzs_by_gsim:
+                with disagg_poe:
+                    [poes_] = gsim.disaggregate_poe(
+                        sctx, rctx, dctx, imt, iml, truncation_level,
+                        n_epsilons)
+                    pne = rupture.get_probability_no_exceedance(poes_)
+                    for rlzi in rlzs_by_gsim[gsim]:
+                        yield rlzi, None, imt_str, iml, pne
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -101,13 +104,11 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
                 # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
-                for gsim in cmaker.gsims:
-                    for rlzi, poe, imt, iml, pne in _disagg(
-                            poes, curves, rlzs_by_gsim[str(gsim)], imtls,
-                            iml_disagg, gsim,
-                            rupture, sctx, rctx, dctx, truncation_level,
-                            n_epsilons, disagg_poe):
-                        pnes[rlzi, poe, imt].append((iml, pne))
+                for rlzi, poe, imt, iml, pne in _disagg(
+                        poes, curves, rlzs_by_gsim, imtls, iml_disagg,
+                        rupture, sctx, rctx, dctx, truncation_level,
+                        n_epsilons, disagg_poe):
+                    pnes[rlzi, poe, imt].append((iml, pne))
 
         except Exception as err:
             etype, err, tb = sys.exc_info()
