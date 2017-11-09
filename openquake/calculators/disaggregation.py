@@ -34,11 +34,11 @@ from openquake.hazardlib import sourceconverter
 from openquake.commonlib import calc
 from openquake.calculators import base, classical
 
-DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
+DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
 def compute_disagg(src_filter, sources, rlzs_by_gsim,
-                   trt_names, curves_dict, bin_edges, oqparam, monitor):
+                   trt_names, curves, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -50,8 +50,8 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
         a dictionary GSIM -> realizations
     :param dict trt_names:
         a tuple of names for the given tectonic region type
-    :param curves_dict:
-        a dictionary with the hazard curves for sites, realizations and IMTs
+    :param curves:
+        hazard curves for sites, realizations and IMTs
     :param bin_egdes:
         a dictionary site_id -> edges
     :param oqparam:
@@ -69,7 +69,8 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
     collecting_mon = monitor('collecting bins')
     arranging_mon = monitor('arranging bins')
 
-    for site, sid in zip(sitecol, sitecol.sids):
+    for i, site in enumerate(sitecol):
+        sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
             edges = bin_edges[sid]
@@ -82,7 +83,7 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
             cmaker = ContextMaker(
                 rlzs_by_gsim, src_filter.integration_distance)
             bdata = disagg._collect_bins_data(
-                trt_num, sources, site, curves_dict[sid],
+                trt_num, sources, site, curves[i],
                 rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
@@ -114,6 +115,13 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     Classical PSHA disaggregation calculator
     """
+    POE_TOO_BIG = '''\
+You are trying to disaggregate for poe=%s.
+However the source model #%d, %r,
+produces at most probabilities of %s for rlz=#%d, IMT=%s.
+The disaggregation PoE is too big or your model is wrong,
+producing too small PoEs.'''
+
     def post_execute(self, nbytes_by_kind):
         """Performs the disaggregation"""
         self.full_disaggregation()
@@ -174,13 +182,15 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                      min(eps_edges), max(eps_edges))
 
         self.bin_edges = {}
-        curves_dict = {sid: self.get_curves(sid) for sid in sitecol.sids}
+        curves = [self.get_curves(sid) for sid in sitecol.sids]
         # determine the number of effective source groups
         sg_data = self.datastore['csm_info/sg_data']
         num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
         nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         all_args = []
         src_filter = SourceFilter(sitecol, oq.maximum_distance)
+        R = len(self.rlzs_assoc.realizations)
+        max_poe = numpy.zeros(R, oq.imt_dt())
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
             trt_names = tuple(mod.trt for mod in smodel.src_groups)
@@ -191,9 +201,13 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 int(numpy.ceil(max_mag / mag_bin_width) + 1))
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
-            for sid, site in zip(sitecol.sids, sitecol):
-                curves = curves_dict[sid]
-                if not curves:
+            for i, site in enumerate(sitecol):
+                sid = sitecol.sids[i]
+                curve = curves[i]
+                # populate max_poe array
+                for (rlzi, imt), poes in curve.items():
+                    max_poe[rlzi][imt] = max(max_poe[rlzi][imt], poes.max())
+                if not curve:
                     continue  # skip zero-valued hazard curves
                 bb = bb_dict[sid]
                 if not bb:
@@ -217,6 +231,16 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 self.bin_edges[sm_id, sid] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
+            # check for too big poes_disagg
+            for poe in oq.poes_disagg:
+                for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
+                    rlzi = rlz.ordinal
+                    for imt in oq.imtls:
+                        min_poe = max_poe[rlzi][imt]
+                        if poe > min_poe:
+                            raise ValueError(self.POE_TOO_BIG % (
+                                poe, sm_id, smodel.name, min_poe, rlzi, imt))
+
             bin_edges = {sid: self.bin_edges[sm_id, sid]
                          for sid in sitecol.sids
                          if (sm_id, sid) in self.bin_edges}
@@ -232,7 +256,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
                         (src_filter, srcs, rlzs_by_gsim, trt_names,
-                         curves_dict, bin_edges, oq, mon))
+                         curves, bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
@@ -291,14 +315,14 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         lat = self.sitecol.lats[site_id]
         mag, dist, lons, lats, eps = bin_edges
         disp_name = DISAGG_RES_FMT % dict(
-            poe=poe, rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
-        self.datastore[disp_name] = {
+            poe='' if poe is None else 'poe-%s-' % poe,
+            rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
+        self.datastore[disp_name] = dic = {
             '_'.join(key): mat for key, mat in zip(disagg.pmf_map, matrix)}
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
         attrs['iml'] = iml
-        attrs['poe'] = poe
         attrs['trts'] = hdf5.array_of_vstr(trt_names)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
@@ -306,3 +330,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         attrs['lat_bin_edges'] = lats
         attrs['eps_bin_edges'] = eps
         attrs['location'] = (lon, lat)
+        if poe is not None:
+            attrs['poe'] = poe
+        # sanity check: all poe_agg should be the same
+        attrs['poe_agg'] = [1. - numpy.prod(1. - dic[pmf])
+                            for pmf in sorted(dic)]

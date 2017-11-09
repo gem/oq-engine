@@ -873,12 +873,11 @@ def export_disagg_xml(ekey, dstore):
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
-        poe = attrs['poe']
+        poe = attrs['poe_agg']
         iml = attrs['iml']
         imt, sa_period, sa_damping = from_string(attrs['imt'])
         fname = dstore.export_path(key + '.xml')
         lon, lat = attrs['location']
-        # TODO: add poe=poe below
         writer = writercls(
             fname, investigation_time=oq.investigation_time,
             imt=imt, smlt_path='_'.join(rlz.sm_lt_path),
@@ -892,7 +891,7 @@ def export_disagg_xml(ekey, dstore):
             tectonic_region_types=attrs['trts'],
         )
         data = [
-            DisaggMatrix(poe, iml, dim_labels, matrix['_'.join(dim_labels)])
+            DisaggMatrix(poe[i], iml, dim_labels, matrix['_'.join(dim_labels)])
             for i, dim_labels in enumerate(disagg.pmf_map)]
         writer.serialize(data)
         fnames.append(fname)
