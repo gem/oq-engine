@@ -231,11 +231,11 @@ producing too small PoEs.'''
 
                 self.bin_edges[sm_id, sid] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-            for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
-                rlzi = rlz.ordinal
-                for imt in oq.imtls:
-                    min_poe = max_poe[rlzi][imt]
-                    for poe in oq.poes_disagg:
+            for poe in oq.poes_disagg:
+                for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
+                    rlzi = rlz.ordinal
+                    for imt in oq.imtls:
+                        min_poe = max_poe[rlzi][imt]
                         if poe > min_poe:
                             raise ValueError(self.POE_TOO_BIG % (
                                 poe, sm_id, smodel.name, min_poe, rlzi, imt))
