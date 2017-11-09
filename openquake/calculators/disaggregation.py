@@ -117,8 +117,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     POE_TOO_BIG = '''\
 You are trying to disaggregate for poe=%s.
-However the source model #%d, %r
-produces at most probabilities of %s for IMT=%s.
+However the source model #%d, %r,
+produces at most probabilities of %s for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
@@ -193,7 +193,6 @@ producing too small PoEs.'''
         max_poe = numpy.zeros(R, oq.imt_dt())
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
-            rs = [rlz.ordinal for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]]
             trt_names = tuple(mod.trt for mod in smodel.src_groups)
             max_mag = max(mod.max_mag for mod in smodel.src_groups)
             min_mag = min(mod.min_mag for mod in smodel.src_groups)
@@ -232,13 +231,14 @@ producing too small PoEs.'''
 
                 self.bin_edges[sm_id, sid] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-
-            for poe in oq.poes_disagg:
+            for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
+                rlzi = rlz.ordinal
                 for imt in oq.imtls:
-                    min_poe = max_poe[rs][imt].min()
-                    if poe > min_poe:
-                        raise ValueError(self.POE_TOO_BIG % (
-                            poe, sm_id, smodel.name, min_poe, imt))
+                    min_poe = max_poe[rlzi][imt]
+                    for poe in oq.poes_disagg:
+                        if poe > min_poe:
+                            raise ValueError(self.POE_TOO_BIG % (
+                                poe, sm_id, smodel.name, min_poe, rlzi, imt))
             bin_edges = {sid: self.bin_edges[sm_id, sid]
                          for sid in sitecol.sids
                          if (sm_id, sid) in self.bin_edges}
