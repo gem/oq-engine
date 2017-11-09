@@ -52,7 +52,7 @@ def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
                     truncation_level, n_epsilons)
             for rlzi in rlzs_by_gsim[gsim]:
                 for imt in pne:
-                    yield rlzi, None, str(imt), iml_dict[imt], pne[imt]
+                    yield rlzi, None, str(imt), iml_disagg[imt], pne[imt]
         return
     for poe in poes:
         for gsim in rlzs_by_gsim:
@@ -60,9 +60,8 @@ def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
                 dic = {}
                 for imt_str, imls in imtls.items():
                     imt = from_string(imt_str)
-                    imls = numpy.array(imls[::-1])
                     dic[imt] = numpy.interp(
-                        poe, curves[rlzi][imt_str][::-1], imls)
+                        poe, curves[rlzi][imt_str][::-1], imls[::-1])
                 with disagg_pne:
                     pne = gsim.disaggregate_pne(
                         rupture, sctx, rctx, dctx, dic,
