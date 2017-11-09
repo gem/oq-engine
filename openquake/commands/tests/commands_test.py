@@ -38,7 +38,7 @@ from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
-from openquake.qa_tests_data.classical import case_1
+from openquake.qa_tests_data.classical import case_1, case_9
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
@@ -104,6 +104,13 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         with Print.patch() as p:
             info(None, None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
+
+    def test_job_ini(self):
+        path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        with Print.patch() as p:
+            info(None, None, None, None, None, None, path)
+        # this is a test with multiple same ID sources
+        self.assertIn('multiplicity', str(p))
 
     # NB: info --report is tested in the packager
 
