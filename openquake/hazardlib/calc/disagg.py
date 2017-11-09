@@ -43,22 +43,13 @@ BinData = collections.namedtuple(
 
 
 # yield (rlzi, poe, imt), (iml, pne)
-def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
+def _disagg(iml, poe, imls, gsim, rupture, rlzi, imt, imt_str,
             sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
-    if iml is None:  # compute the IMLs from the given poes
-        for poe in poes:
-            iml = numpy.interp(poe, curve_poes, imls)
-            with disagg_poe:
-                [poes_given_rup_eps] = gsim.disaggregate_poe(
-                    sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
-            pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-            yield (rlzi, poe, imt_str), (iml, pne)
-    else:  # there is a single IML provided by the user; compute the poe
         with disagg_poe:
             [poes_given_rup_eps] = gsim.disaggregate_poe(
                 sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
         pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-        yield (rlzi, None, imt_str), (iml, pne)
+        yield (rlzi, poe, imt_str), (iml, pne)
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -100,12 +91,23 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                         imls = numpy.array(imls[::-1])
                         for rlzi in rlzs_by_gsim[gs]:
                             iml = iml_disagg.get(imt_str)
-                            curve_poes = curves[rlzi, imt_str][::-1]
-                            for k, v in _disagg(
-                                    iml, poes, curve_poes, imls, gsim, rupture,
-                                    rlzi, imt, imt_str, sctx, rctx, dctx,
-                                    truncation_level, n_epsilons, disagg_poe):
-                                pnes[k].append(v)
+                            if iml is None:
+                                curve_poes = curves[rlzi, imt_str][::-1]
+                                for poe in poes:
+                                    iml = numpy.interp(poe, curve_poes, imls)
+                                    for k, v in _disagg(
+                                            iml, poe, imls, gsim,
+                                            rupture, rlzi, imt, imt_str, sctx,
+                                            rctx, dctx, truncation_level,
+                                            n_epsilons, disagg_poe):
+                                        pnes[k].append(v)
+                            else:
+                                for k, v in _disagg(
+                                        iml, None, imls, gsim,
+                                        rupture, rlzi, imt, imt_str, sctx,
+                                        rctx, dctx, truncation_level,
+                                        n_epsilons, disagg_poe):
+                                    pnes[k].append(v)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
