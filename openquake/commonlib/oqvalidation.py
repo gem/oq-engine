@@ -330,6 +330,12 @@ class OqParam(valid.ParamSet):
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
+    def imt_dt(self):
+        """
+        :returns: a numpy dtype {imt: float}
+        """
+        return numpy.dtype([(imt, float) for imt in self.imtls])
+
     @property
     def lti(self):
         """
