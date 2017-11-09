@@ -43,33 +43,30 @@ BinData = collections.namedtuple(
 
 
 def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
-            sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
+            sctx, rctx, dctx, truncation_level, n_epsilons, disagg_pne):
     for imt_str, imls in imtls.items():
         imt = from_string(imt_str)
-        imls = numpy.array(imls[::-1])
         iml = iml_disagg.get(imt_str)
         if iml is None:
-            for gsim in rlzs_by_gsim:
-                for rlzi in rlzs_by_gsim[gsim]:
-                    for poe in poes:
+            imls = numpy.array(imls[::-1])
+            for poe in poes:
+                for gsim in rlzs_by_gsim:
+                    for rlzi in rlzs_by_gsim[gsim]:
                         iml = numpy.interp(
                             poe, curves[rlzi][imt_str][::-1], imls)
-                        with disagg_poe:
-                            [poes_given_rup_eps] = gsim.disaggregate_poe(
-                                sctx, rctx, dctx, imt, iml, truncation_level,
-                                n_epsilons)
-                        pne = rupture.get_probability_no_exceedance(
-                            poes_given_rup_eps)
+                        with disagg_pne:
+                            pne = gsim.disaggregate_pne(
+                                rupture, sctx, rctx, dctx, imt, iml,
+                                truncation_level, n_epsilons)
                         yield rlzi, poe, imt_str, iml, pne
         else:
             for gsim in rlzs_by_gsim:
-                with disagg_poe:
-                    [poes_] = gsim.disaggregate_poe(
-                        sctx, rctx, dctx, imt, iml, truncation_level,
+                with disagg_pne:
+                    pne = gsim.disaggregate_pne(
+                        rupture, sctx, rctx, dctx, imt, iml, truncation_level,
                         n_epsilons)
-                    pne = rupture.get_probability_no_exceedance(poes_)
-                    for rlzi in rlzs_by_gsim[gsim]:
-                        yield rlzi, None, imt_str, iml, pne
+                for rlzi in rlzs_by_gsim[gsim]:
+                    yield rlzi, None, imt_str, iml, pne
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -85,7 +82,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
     pnes = collections.defaultdict(list)
     sitemesh = sitecol.mesh
     make_ctxt = mon('making contexts', measuremem=False)
-    disagg_poe = mon('disaggregate_poe', measuremem=False)
+    disagg_pne = mon('disaggregate_pne', measuremem=False)
     for source in sources:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
@@ -107,7 +104,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                 for rlzi, poe, imt, iml, pne in _disagg(
                         poes, curves, rlzs_by_gsim, imtls, iml_disagg,
                         rupture, sctx, rctx, dctx, truncation_level,
-                        n_epsilons, disagg_poe):
+                        n_epsilons, disagg_pne):
                     pnes[rlzi, poe, imt].append((iml, pne))
 
         except Exception as err:
