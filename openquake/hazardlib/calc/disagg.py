@@ -44,29 +44,33 @@ BinData = collections.namedtuple(
 
 def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
             sctx, rctx, dctx, truncation_level, n_epsilons, disagg_pne):
-    for imt_str, imls in imtls.items():
-        imt = from_string(imt_str)
-        iml = iml_disagg.get(imt_str)
-        if iml is None:
-            imls = numpy.array(imls[::-1])
-            for poe in poes:
-                for gsim in rlzs_by_gsim:
-                    for rlzi in rlzs_by_gsim[gsim]:
-                        iml = numpy.interp(
-                            poe, curves[rlzi][imt_str][::-1], imls)
-                        with disagg_pne:
-                            pne = gsim.disaggregate_pne(
-                                rupture, sctx, rctx, dctx, imt, iml,
-                                truncation_level, n_epsilons)
-                        yield rlzi, poe, imt_str, iml, pne
-        else:
-            for gsim in rlzs_by_gsim:
+    if iml_disagg:
+        iml_dict = {from_string(imt): iml_disagg[imt]
+                    for imt, iml in iml_disagg.items()}
+        for gsim in rlzs_by_gsim:
+            with disagg_pne:
+                pne = gsim.disaggregate_pne(
+                    rupture, sctx, rctx, dctx, iml_dict,
+                    truncation_level, n_epsilons)
+            for rlzi in rlzs_by_gsim[gsim]:
+                for imt in pne:
+                    yield rlzi, None, str(imt), iml_dict[imt], pne[imt]
+        return
+    for poe in poes:
+        for gsim in rlzs_by_gsim:
+            for rlzi in rlzs_by_gsim[gsim]:
+                dic = {}
+                for imt_str, imls in imtls.items():
+                    imt = from_string(imt_str)
+                    imls = numpy.array(imls[::-1])
+                    dic[imt] = numpy.interp(
+                        poe, curves[rlzi][imt_str][::-1], imls)
                 with disagg_pne:
                     pne = gsim.disaggregate_pne(
-                        rupture, sctx, rctx, dctx, imt, iml, truncation_level,
-                        n_epsilons)
-                for rlzi in rlzs_by_gsim[gsim]:
-                    yield rlzi, None, imt_str, iml, pne
+                        rupture, sctx, rctx, dctx, dic,
+                        truncation_level, n_epsilons)
+                for imt in pne:
+                    yield rlzi, poe, str(imt), dic[imt], pne[imt]
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
