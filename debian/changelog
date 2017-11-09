@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Added a check when disaggregating for a PoE too big for the source model
+  * If `iml_disagg` is given, forbid `intensity_measure_types_and_levels`
   * Fixed the disaggregation outputs when `iml_disagg` is given: the PoE has
     been removed by the name of the output and correct PoE is in the XML file
   * Fixed `oq export loss_curves/rlzs` for event_based_risk/case_master

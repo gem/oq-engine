@@ -651,10 +651,10 @@ def check_levels(imls, imt):
     :param imt: the intensity measure type
 
     >>> check_levels([0.1, 0.2], 'PGA')  # ok
-    >>> check_levels([0.1], 'PGA')
+    >>> check_levels([], 'PGA')
     Traceback (most recent call last):
        ...
-    ValueError: Not enough imls for PGA: [0.1]
+    ValueError: No imls for PGA: []
     >>> check_levels([0.2, 0.1], 'PGA')
     Traceback (most recent call last):
        ...
@@ -664,8 +664,8 @@ def check_levels(imls, imt):
        ...
     ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
-    if len(imls) < 2:
-        raise ValueError('Not enough imls for %s: %s' % (imt, imls))
+    if len(imls) < 1:
+        raise ValueError('No imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
