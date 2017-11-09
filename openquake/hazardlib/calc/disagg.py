@@ -45,12 +45,10 @@ BinData = collections.namedtuple(
 def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
             sctx, rctx, dctx, truncation_level, n_epsilons, disagg_pne):
     if iml_disagg:
-        iml_dict = {from_string(imt): iml_disagg[imt]
-                    for imt, iml in iml_disagg.items()}
         for gsim in rlzs_by_gsim:
             with disagg_pne:
                 pne = gsim.disaggregate_pne(
-                    rupture, sctx, rctx, dctx, iml_dict,
+                    rupture, sctx, rctx, dctx, iml_disagg,
                     truncation_level, n_epsilons)
             for rlzi in rlzs_by_gsim[gsim]:
                 for imt in pne:
@@ -87,6 +85,8 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
     sitemesh = sitecol.mesh
     make_ctxt = mon('making contexts', measuremem=False)
     disagg_pne = mon('disaggregate_pne', measuremem=False)
+    iml_disagg = {from_string(imt): iml_disagg[imt]
+                  for imt, iml in iml_disagg.items()}
     for source in sources:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
