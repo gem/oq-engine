@@ -171,6 +171,9 @@ class RlzsAssoc(object):
             (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
 
     def by_grp(self):
+        """
+        :returns: a dictionary grp -> [(gsim_idx, rlzis), ...]
+        """
         dic = {}  # grp -> [(gsim_idx, rlzis), ...]
         for sm in self.csm_info.source_models:
             for sg in sm.src_groups:
