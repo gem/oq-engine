@@ -42,14 +42,13 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-# yield (rlzi, poe, imt), (iml, pne)
-def _disagg(iml, poe, imls, gsim, rupture, rlzi, imt, imt_str,
+def _disagg(iml, imls, gsim, rupture, rlzi, imt,
             sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
         with disagg_poe:
             [poes_given_rup_eps] = gsim.disaggregate_poe(
                 sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
         pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-        yield (rlzi, poe, imt_str), (iml, pne)
+        return pne
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -95,19 +94,21 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                                 curve_poes = curves[rlzi, imt_str][::-1]
                                 for poe in poes:
                                     iml = numpy.interp(poe, curve_poes, imls)
-                                    for k, v in _disagg(
-                                            iml, poe, imls, gsim,
-                                            rupture, rlzi, imt, imt_str, sctx,
-                                            rctx, dctx, truncation_level,
-                                            n_epsilons, disagg_poe):
-                                        pnes[k].append(v)
-                            else:
-                                for k, v in _disagg(
-                                        iml, None, imls, gsim,
-                                        rupture, rlzi, imt, imt_str, sctx,
+                                    pne = _disagg(
+                                        iml, imls, gsim,
+                                        rupture, rlzi, imt, sctx,
                                         rctx, dctx, truncation_level,
-                                        n_epsilons, disagg_poe):
+                                        n_epsilons, disagg_poe)
+                                    k, v = (rlzi, poe, imt_str), (iml, pne)
                                     pnes[k].append(v)
+                            else:
+                                pne = _disagg(
+                                    iml, imls, gsim,
+                                    rupture, rlzi, imt, sctx,
+                                    rctx, dctx, truncation_level,
+                                    n_epsilons, disagg_poe)
+                                k, v = (rlzi, poe, imt_str), (iml, pne)
+                                pnes[k].append(v)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
