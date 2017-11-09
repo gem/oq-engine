@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     796,188,147        
-date           2017-10-24T05:47:56
-engine_version 2.8.0-git8e9cdf8   
+date           2017-11-08T18:07:12
+engine_version 2.8.0-gite3d0f56   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -73,8 +73,8 @@ source_model.xml 0      Active Shallow Crust 1           91           91
 Informational data
 ------------------
 =========================== ========================================================================
-count_eff_ruptures.received max_per_task 606 B, tot 606 B                                           
-count_eff_ruptures.sent     sources 1.05 KB, srcfilter 684 B, param 604 B, monitor 327 B, gsims 91 B
+count_eff_ruptures.received tot 615 B, max_per_task 615 B                                           
+count_eff_ruptures.sent     sources 1.06 KB, srcfilter 684 B, param 592 B, monitor 328 B, gsims 91 B
 hazard.input_weight         91.0                                                                    
 hazard.n_imts               1                                                                       
 hazard.n_levels             3                                                                       
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.015     0.0       1     
+reading composite source model 0.020     0.0       1     
 total count_eff_ruptures       0.004     0.0       1     
 store source_info              0.003     0.0       1     
-prefiltering source model      0.001     0.0       1     
-managing sources               0.001     0.0       1     
-reading site collection        4.387E-05 0.0       1     
-saving probability maps        2.265E-05 0.0       1     
-aggregate curves               1.740E-05 0.0       1     
+prefiltering source model      0.002     0.0       1     
+managing sources               0.002     0.0       1     
+reading site collection        4.411E-05 0.0       1     
+saving probability maps        2.909E-05 0.0       1     
+aggregate curves               1.884E-05 0.0       1     
 ============================== ========= ========= ======

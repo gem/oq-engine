@@ -24,7 +24,6 @@ from __future__ import print_function, unicode_literals
 from openquake.baselib.python3compat import decode
 import os
 import sys
-import ast
 import mock
 import time
 
@@ -57,6 +56,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
             dt = time.time() - t0
             acc.calc_times.append((src.source_id, len(sites), src.weight, dt))
     acc.eff_ruptures = {acc.grp_id: count}
+    acc.bbs = []
     return acc
 
 
