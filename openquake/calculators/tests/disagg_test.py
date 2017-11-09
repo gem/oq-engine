@@ -22,7 +22,7 @@ from nose.plugins.attrib import attr
 from openquake.hazardlib.probability_map import combine
 from openquake.commonlib import calc
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.disagg import case_1, case_2
+from openquake.qa_tests_data.disagg import case_1, case_2, case_3
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -76,3 +76,14 @@ class DisaggregationTestCase(CalculatorTestCase):
             'rlz-1-PGA--3.0--3.0.xml', 'rlz-1-PGA-0.0-0.0.xml',
             'rlz-2-PGA-0.0-0.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
             case_2.__file__)
+
+    @attr('qa', 'hazard', 'disagg')
+    def test_case_3(self):
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(case_3.__file__, 'job.ini')
+        self.assertEqual(str(ctx.exception), '''\
+You are trying to disaggregate for poe=0.1.
+However the source model #0, 'source_model_test_complex.xml',
+produces at most probabilities of 0.0362320992703 for rlz=#0, IMT=PGA.
+The disaggregation PoE is too big or your model is wrong,
+producing too small PoEs.''')
