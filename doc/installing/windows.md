@@ -3,7 +3,7 @@
 The OpenQuake Engine is available for Windows in the form of **self-installable binary distribution**.
 
 - this distribution includes its own distribution of the dependencies needed by the OpenQuake Engine
-    - Python 2.7
+    - Python 3.5
     - Python dependencies (pip, numpy, scipy, h5py, django, shapely, rtree and few more)
 - multiple versions can be installed alongside
 - currently does not support Celery (and will never do)
