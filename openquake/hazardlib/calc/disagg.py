@@ -54,17 +54,16 @@ def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
             pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
             yield (rlzi, poe, imt_str), (iml, pne)
     else:  # there is a single IML provided by the user; compute the poe
-        poe = numpy.interp(iml, imls, curve_poes)
         with disagg_poe:
             [poes_given_rup_eps] = gsim.disaggregate_poe(
                 sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
         pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-        yield (rlzi, round(poe, 4), imt_str), (iml, pne)
+        yield (rlzi, None, imt_str), (iml, pne)
 
 
-def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
-                       rlzs_by_gsim, cmaker, imtls, poes, truncation_level,
-                       n_epsilons, iml_disagg, mon):
+def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
+                       imtls, poes, truncation_level, n_epsilons, iml_disagg,
+                       mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
@@ -93,7 +92,7 @@ def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
-                # a dictionary rlz.id, poe, imt_str -> (iml, prob_no_exceed)
+                # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
                 for gsim in cmaker.gsims:
                     gs = str(gsim)
                     for imt_str, imls in imtls.items():
@@ -234,8 +233,8 @@ def _collect_bins_data_old(sources, site, imt, iml, gsims,
     # here we ignore filtered site collection because either it is the same
     # as the original one (with one site), or the source/rupture is filtered
     # out and doesn't show up in the filter's output
-    for src_idx, (source, s_sites) in \
-            enumerate(source_site_filter(sources, sitecol)):
+    for src_idx, (source, s_sites) in enumerate(
+            source_site_filter(sources, sitecol)):
         try:
             tect_reg = source.tectonic_region_type
             gsim = gsims[tect_reg]
@@ -280,10 +279,8 @@ def _collect_bins_data_old(sources, site, imt, iml, gsims,
     tect_reg_types = numpy.array(tect_reg_types, int)
     probs_no_exceed = numpy.array(probs_no_exceed, float)
 
-    trt_bins = [
-        trt for (num, trt) in sorted((num, trt)
-                                     for (trt, num) in trt_nums.items())
-    ]
+    trt_bins = [trt for (num, trt) in sorted((num, trt)
+                for (trt, num) in trt_nums.items())]
 
     return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
 
@@ -302,27 +299,24 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
-        int(numpy.ceil(mags.max() / mag_bin_width) + 1)
-    )
+        int(numpy.ceil(mags.max() / mag_bin_width) + 1))
 
     dist_bins = dist_bin_width * numpy.arange(
         int(numpy.floor(dists.min() / dist_bin_width)),
-        int(numpy.ceil(dists.max() / dist_bin_width) + 1)
-    )
+        int(numpy.ceil(dists.max() / dist_bin_width) + 1))
 
     west, east, north, south = get_spherical_bounding_box(lons, lats)
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
     east = numpy.ceil(east / coord_bin_width) * coord_bin_width
     lon_extent = get_longitudinal_extent(west, east)
+
     lon_bins, _, _ = npoints_between(
         west, 0, 0, east, 0, 0,
-        numpy.round(lon_extent / coord_bin_width + 1)
-    )
+        numpy.round(lon_extent / coord_bin_width + 1))
 
     lat_bins = coord_bin_width * numpy.arange(
         int(numpy.floor(south / coord_bin_width)),
-        int(numpy.ceil(north / coord_bin_width) + 1)
-    )
+        int(numpy.ceil(north / coord_bin_width) + 1))
 
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
@@ -335,8 +329,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed) = \
-        bins_data
+    mags, dists, lons, lats, tect_reg_types, trt_bins, pnes = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
     dim1 = len(mag_bins) - 1
@@ -366,12 +359,9 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
-    for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in \
-        enumerate(
+    for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in enumerate(
             zip(mags_idx, dists_idx, lons_idx, lats_idx, tect_reg_types)):
-
-        diss_matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= \
-            probs_no_exceed[i, :]
+        diss_matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pnes[i, :]
 
     return 1 - diss_matrix
 
