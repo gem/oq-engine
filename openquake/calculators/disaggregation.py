@@ -115,6 +115,13 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     Classical PSHA disaggregation calculator
     """
+    POE_TOO_BIG = '''\
+You are trying to disaggregate for poe=%s.
+However the source model #%d, %r
+produces at most probabilities of %s for IMT=%s.
+The disaggregation PoE is too big or your model is wrong,
+producing too small PoEs.'''
+
     def post_execute(self, nbytes_by_kind):
         """Performs the disaggregation"""
         self.full_disaggregation()
@@ -182,8 +189,11 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         all_args = []
         src_filter = SourceFilter(sitecol, oq.maximum_distance)
+        R = len(self.rlzs_assoc.realizations)
+        max_poe = numpy.zeros(R, oq.imt_dt())
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
+            rs = [rlz.ordinal for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]]
             trt_names = tuple(mod.trt for mod in smodel.src_groups)
             max_mag = max(mod.max_mag for mod in smodel.src_groups)
             min_mag = min(mod.min_mag for mod in smodel.src_groups)
@@ -195,6 +205,10 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
             for i, site in enumerate(sitecol):
                 sid = sitecol.sids[i]
                 curve = curves[i]
+                for rlzi, imt in curve:
+                    maxc = curve[rlzi, imt].max()
+                    if maxc > max_poe[rlzi][imt]:
+                        max_poe[rlzi][imt] = maxc
                 if not curve:
                     continue  # skip zero-valued hazard curves
                 bb = bb_dict[sid]
@@ -219,6 +233,12 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 self.bin_edges[sm_id, sid] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
+            for poe in oq.poes_disagg:
+                for imt in oq.imtls:
+                    min_poe = max_poe[rs][imt].min()
+                    if poe > min_poe:
+                        raise ValueError(self.POE_TOO_BIG % (
+                            poe, sm_id, smodel.name, min_poe, imt))
             bin_edges = {sid: self.bin_edges[sm_id, sid]
                          for sid in sitecol.sids
                          if (sm_id, sid) in self.bin_edges}
@@ -312,4 +332,4 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
             attrs['poe'] = poe
         # sanity check: all poe_agg should be the same
         attrs['poe_agg'] = [1. - numpy.prod(1. - dic[pmf])
-                             for pmf in sorted(dic)]
+                            for pmf in sorted(dic)]
