@@ -23,9 +23,10 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 """
 from __future__ import division
 import sys
-import numpy
 import warnings
 import collections
+import numpy
+import scipy.stats
 
 from openquake.baselib.python3compat import raise_, range
 from openquake.hazardlib.calc import filters
@@ -58,6 +59,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                   for imt, iml in iml_disagg.items()}
     if iml_disagg:
         poes = [None]
+    truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     for source in sources:
         tect_reg = trt_num[source.tectonic_region_type]
 
@@ -74,7 +76,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
         try:
             for rupture, site_dist, iml_pne in cmaker.disaggregate(
                     sitecol, source.iter_ruptures(), imldict,
-                    truncation_level, n_epsilons, mon):
+                    truncnorm, n_epsilons, mon):
 
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
