@@ -242,15 +242,16 @@ producing too small PoEs.'''
             bin_edges = {sid: self.bin_edges[sm_id, sid]
                          for sid in sitecol.sids
                          if (sm_id, sid) in self.bin_edges}
-            for src_group in smodel.src_groups:
+            for sg in smodel.src_groups:
                 split_sources = []
-                for src in src_group:
+                for src in sg:
                     for split, _sites in src_filter(
                             sourceconverter.split_source(src), sitecol):
                         split_sources.append(split)
+                if not split_sources:
+                    continue
                 mon = self.monitor('disaggregation')
-                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(
-                    src_group.trt, sm_id)
+                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(sg.trt, sm_id)
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
                         (src_filter, srcs, rlzs_by_gsim, trt_names,
