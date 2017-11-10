@@ -33,10 +33,11 @@ import scipy.stats
 from scipy.special import ndtr
 import numpy
 
-from openquake.hazardlib import const, calc
+from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.calc.filters import IntegrationDistance, get_distances
-from openquake.baselib.general import DeprecationWarning
+from openquake.hazardlib.calc.filters import (
+    IntegrationDistance, get_distances, FarAwayRupture)
+from openquake.baselib.general import DeprecationWarning, deprecated
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import with_metaclass
 
@@ -321,7 +322,7 @@ class ContextMaker(object):
         for rupture in ruptures:
             try:
                 sctx, rctx, dctx = self.make_contexts(sitecol, rupture)
-            except calc.filters.FarAwayRupture:
+            except FarAwayRupture:
                 continue
 
             pnedict = {}  # poe, imt, iml, rlzi -> pne
@@ -567,8 +568,9 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
-    # TODO: deprecate this since it is slow and not used by the engine
+    # deprecated since it is slow and not used by the engine
     # alternatively, it should take truncnorm in input, not truncation_level
+    @deprecated('This method will disappear soon')
     def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
                          truncation_level, n_epsilons):
         """
