@@ -299,7 +299,7 @@ class ContextMaker(object):
         return rupture.get_probability_no_exceedance(poes)
 
     def disaggregate(self, sitecol, ruptures, imldict,
-                     truncation_level, n_epsilons, disagg_pne):
+                     truncnorm, n_epsilons, disagg_pne):
         """
         Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
@@ -307,12 +307,8 @@ class ContextMaker(object):
         :param imldict: dictionary poe, gsim, imt, rlzi -> iml
         :yields: triples (rupture, site_dist, iml_pne)
         """
-        assert truncation_level > 0, truncation_level
         assert len(sitecol) == 1, sitecol
-
-        truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
-        epsilons = numpy.linspace(- truncation_level, truncation_level,
-                                  n_epsilons + 1)
+        epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
         for rupture in ruptures:
             try:
                 sctx, rctx, dctx = self.make_contexts(sitecol, rupture)

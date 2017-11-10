@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Optimized the disaggregation calculator by instantiating
+    `scipy.stats.truncnorm` only once per task and not once per rupture
+  * Optimized the disaggregation calculator when `iml_disagg` is specified,
+    by caching intermediate results
   * Made sure that `oq dbserver stop` also stops the zmq workers if the zmq
     distribution is enabled
   * Added a check when disaggregating for a PoE too big for the source model
