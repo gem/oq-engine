@@ -304,7 +304,12 @@ class ContextMaker(object):
         Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
 
-        :param imldict: dictionary poe, gsim, imt, rlzi -> iml
+        :param sitecol: a SiteCollection with a single site
+        :param ruptures: an iterator over ruptures
+        :param imldict: a dictionary poe, gsim, imt, rlzi -> iml
+        :param truncnorm: an instance of scipy.stats.truncnorm
+        :param n_epsilons: the number of epsilons
+        :param disagg_pne: a monitor of the disaggregation time
         :yields: triples (rupture, site_dist, iml_pne)
         """
         assert len(sitecol) == 1, sitecol
