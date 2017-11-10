@@ -74,7 +74,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
         try:
             for rupture, site_dist, iml_pne in cmaker.disaggregate(
                     sitecol, source.iter_ruptures(), imldict,
-                    truncation_level, n_epsilons):
+                    truncation_level, n_epsilons, mon):
 
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
