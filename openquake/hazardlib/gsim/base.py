@@ -261,6 +261,43 @@ class ContextMaker(object):
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
+    def _disaggregate_pne(self, gsim, rupture, sctx, rctx, dctx, imt, iml,
+                          truncnorm, epsilons):
+        n_epsilons = len(epsilons) - 1
+
+        # compute mean and standard deviations
+        mean, [stddev] = gsim.get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, [const.StdDev.TOTAL])
+
+        # compute iml value with respect to standard (mean=0, std=1)
+        # normal distributions
+        [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
+
+        # compute epsilon bins contributions
+        contributions = (truncnorm.cdf(epsilons[1:]) -
+                         truncnorm.cdf(epsilons[:-1]))
+
+        # take the minimum epsilon larger than lvl
+        bin = numpy.searchsorted(epsilons, lvl)
+        if bin == 0:
+            poes = contributions
+        elif bin > n_epsilons:
+            poes = numpy.zeros(n_epsilons)
+        else:
+            # for other cases (when ``lvl`` falls somewhere in the
+            # histogram):
+            poes = numpy.concatenate([
+                # take zeros for bins that are on the left hand side
+                # from the bin ``lvl`` falls into,
+                numpy.zeros(bin - 1),
+                # ... area of the portion of the bin containing ``lvl``
+                # (the portion is limited on the left hand side by
+                # ``lvl`` and on the right hand side by the bin edge),
+                [truncnorm.sf(lvl) - contributions[bin:].sum()],
+                # ... and all bins on the right go unchanged.
+                contributions[bin:]])
+        return rupture.get_probability_no_exceedance(poes)
+
     def disaggregate(self, sitecol, ruptures, imldict,
                      truncation_level, n_epsilons):
         """
@@ -283,40 +320,15 @@ class ContextMaker(object):
                 continue
 
             iml_pne = {}  # poe, gsim, imt, rlzi -> iml, pne
+            cache = {}  # gsim, imt, iml -> pne
             for (poe, gsim, imt, rlzi), iml in imldict.items():
-                # compute mean and standard deviations
-                mean, [stddev] = gsim.get_mean_and_stddevs(
-                    sctx, rctx, dctx, imt, [const.StdDev.TOTAL])
-
-                # compute iml value with respect to standard (mean=0, std=1)
-                # normal distributions
-                [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
-
-                # compute epsilon bins contributions
-                contributions = (truncnorm.cdf(epsilons[1:]) -
-                                 truncnorm.cdf(epsilons[:-1]))
-
-                # take the minimum epsilon larger than lvl
-                bin = numpy.searchsorted(epsilons, lvl)
-                if bin == 0:
-                    poes = contributions
-                elif bin > n_epsilons:
-                    poes = numpy.zeros(n_epsilons)
-                else:
-                    # for other cases (when ``lvl`` falls somewhere in the
-                    # histogram):
-                    poes = numpy.concatenate([
-                        # take zeros for bins that are on the left hand side
-                        # from the bin ``lvl`` falls into,
-                        numpy.zeros(bin - 1),
-                        # ... area of the portion of the bin containing ``lvl``
-                        # (the portion is limited on the left hand side by
-                        # ``lvl`` and on the right hand side by the bin edge),
-                        [truncnorm.sf(lvl) - contributions[bin:].sum()],
-                        # ... and all bins on the right go unchanged.
-                        contributions[bin:]])
-
-                pne = rupture.get_probability_no_exceedance(poes)
+                try:
+                    pne = cache[gsim, imt, iml]
+                except KeyError:
+                    pne = self._disaggregate_pne(
+                        gsim, rupture, sctx, rctx, dctx, imt, iml,
+                        truncnorm, epsilons)
+                    cache[gsim, imt, iml] = pne
                 iml_pne[poe, gsim, imt, rlzi] = (iml, pne)
             [rjb_dist] = dctx.rjb  # 1 site => 1 distance
             yield rupture, rjb_dist, iml_pne
