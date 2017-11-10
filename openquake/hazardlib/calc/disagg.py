@@ -23,9 +23,10 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 """
 from __future__ import division
 import sys
-import numpy
 import warnings
 import collections
+import numpy
+import scipy.stats
 
 from openquake.baselib.python3compat import raise_, range
 from openquake.hazardlib.calc import filters
@@ -42,27 +43,6 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
-            sctx, rctx, dctx, truncation_level, n_epsilons, disagg_pne):
-    if iml_disagg:
-        poes = [None]
-    for poe in poes:
-        for imt_str, imls in imtls.items():
-            imt = from_string(imt_str)
-            for gsim in rlzs_by_gsim:
-                iml = {}
-                for rlzi in rlzs_by_gsim[gsim]:
-                    iml[rlzi] = numpy.interp(
-                        poe, curves[rlzi][imt_str][::-1], imls[::-1]
-                    ) if poe is not None else imls[0]
-                with disagg_pne:
-                    pne = gsim.disaggregate_pne(
-                        rupture, sctx, rctx, dctx, imt, iml,
-                        truncation_level, n_epsilons)
-                for rlzi in pne:
-                    yield rlzi, poe, imt_str, iml[rlzi], pne[rlzi]
-
-
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                        imtls, poes, truncation_level, n_epsilons, iml_disagg,
                        mon):
@@ -73,35 +53,42 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
     lons = []
     lats = []
     trts = []
-    pnes = collections.defaultdict(list)
+    pnes = collections.defaultdict(list)  # (rlzi, poe, imt) -> [iml_pne...]
     sitemesh = sitecol.mesh
-    make_ctxt = mon('making contexts', measuremem=False)
-    disagg_pne = mon('disaggregate_pne', measuremem=False)
     iml_disagg = {from_string(imt): iml_disagg[imt]
                   for imt, iml in iml_disagg.items()}
+    if iml_disagg:
+        poes = [None]
+    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
+    truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     for source in sources:
+        tect_reg = trt_num[source.tectonic_region_type]
+
+        # populate imldict poe, gsim, imt, rlzi -> iml
+        imldict = {}
+        for poe in poes:
+            for gsim in rlzs_by_gsim:
+                for imt_str, imls in imtls.items():
+                    imt = from_string(imt_str)
+                    for rlzi in rlzs_by_gsim[gsim]:
+                        imldict[poe, gsim, imt, rlzi] = numpy.interp(
+                            poe, curves[rlzi][imt_str][::-1], imls[::-1]
+                        ) if poe is not None else imls[0]
         try:
-            tect_reg = trt_num[source.tectonic_region_type]
-            for rupture in source.iter_ruptures():
-                with make_ctxt:
-                    try:
-                        sctx, rctx, dctx = cmaker.make_contexts(
-                            sitecol, rupture)
-                    except filters.FarAwayRupture:
-                        continue
+            for rupture, site_dist, iml_pne in cmaker.disaggregate(
+                    sitecol, source.iter_ruptures(), imldict,
+                    truncnorm, n_epsilons, mon):
+
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
-                dists.append(dctx.rjb[0])  # single site => single distance
+                dists.append(site_dist)
                 [closest_point] = rupture.surface.get_closest_points(sitemesh)
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
                 # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
-                for rlzi, poe, imt, iml, pne in _disagg(
-                        poes, curves, rlzs_by_gsim, imtls, iml_disagg,
-                        rupture, sctx, rctx, dctx, truncation_level,
-                        n_epsilons, disagg_pne):
-                    pnes[rlzi, poe, imt].append((iml, pne))
+                for (poe, gsim, imt, rlzi), pair in iml_pne.items():
+                    pnes[rlzi, poe, str(imt)].append(pair)
 
         except Exception as err:
             etype, err, tb = sys.exc_info()
