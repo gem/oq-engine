@@ -95,6 +95,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err)
             raise_(etype, msg, tb)
+
     return BinData(numpy.array(mags, float),
                    numpy.array(dists, float),
                    numpy.array(lons, float),
@@ -187,9 +188,12 @@ def disaggregation(
         return None, None
     [(key, pnes)] = bdata.pnes.items()
     bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats, pnes, bdata.trts]
+    trt_bins = [trt for (num, trt) in sorted((num, trt)
+                for (trt, num) in trt_num.items())]
+    bin_edges = _define_bins(
+        bins, mag_bin_width, dist_bin_width, coord_bin_width,
+        truncation_level, n_epsilons) + (trt_bins,)
     # mag_edges, dist_edges, lon_edges, lat_edges, eps_edges, trt_edges
-    bin_edges = _define_bins(bins, mag_bin_width, dist_bin_width,
-                             coord_bin_width, truncation_level, n_epsilons)
     diss_matrix = _arrange_data_in_bins(bins, bin_edges)
     return bin_edges, diss_matrix
 
@@ -204,7 +208,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, tect_reg_types, trt_bins = bins_data
+    mags, dists, lons, lats, _pnes, trt_bins = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -230,7 +234,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
 
-    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
+    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
 
 
 def _arrange_data_in_bins(bins_data, bin_edges):
@@ -238,7 +242,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    mags, dists, lons, lats, pnes, tect_reg_types = bins_data
+    mags, dists, lons, lats, pnes, trts = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
     dim1 = len(mag_bins) - 1
@@ -269,7 +273,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     lats_idx[lats_idx == dim4] = dim4 - 1
 
     for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in enumerate(
-            zip(mags_idx, dists_idx, lons_idx, lats_idx, tect_reg_types)):
+            zip(mags_idx, dists_idx, lons_idx, lats_idx, trts)):
         diss_matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pnes[i, :]
 
     return 1 - diss_matrix
