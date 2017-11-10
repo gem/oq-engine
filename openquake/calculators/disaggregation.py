@@ -87,7 +87,7 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
                 rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
-                monitor)
+                monitor('disaggregate_pne', measuremem=False))
 
         for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
             # extract the probabilities of non-exceedance for the
