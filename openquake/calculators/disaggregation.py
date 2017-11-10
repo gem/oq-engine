@@ -94,7 +94,7 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
             # bins in a format handy for hazardlib
             bins = [bdata.mags, bdata.dists,
                     bdata.lons, bdata.lats,
-                    bdata.trts, None, pnes]
+                    pnes, bdata.trts]
 
             # call disagg._arrange_data_in_bins
             with arranging_mon:
