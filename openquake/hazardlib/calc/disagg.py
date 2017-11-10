@@ -29,6 +29,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.python3compat import raise_, range
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -45,7 +46,7 @@ BinData = collections.namedtuple(
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                        imtls, poes, truncation_level, n_epsilons, iml_disagg,
-                       mon):
+                       mon=Monitor()):
     # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
@@ -103,9 +104,9 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
 
 
 def disaggregation(
-        sources, site, imt, iml, gsims, truncation_level,
+        sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_site_filter=filters.source_site_noop_filter):
+        source_filter=filters.source_site_noop_filter):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
@@ -143,7 +144,7 @@ def disaggregation(
         class.
     :param iml:
         Intensity measure level. A float value in units of ``imt``.
-    :param gsims:
+    :param gsim_by_trt:
         Tectonic region type to GSIM objects mapping.
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
@@ -157,7 +158,7 @@ def disaggregation(
     :param coord_bin_width:
         Longitude and latitude histograms discretization step,
         in decimal degrees.
-    :param source_site_filter:
+    :param source_filter:
         Optional source-site filter function. See
         :mod:`openquake.hazardlib.calc.filters`.
 
@@ -171,99 +172,26 @@ def disaggregation(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
-    bins_data = _collect_bins_data_old(sources, site, imt, iml, gsims,
-                                       truncation_level, n_epsilons,
-                                       source_site_filter)
-    if all(len(x) == 0 for x in bins_data):
+    trts = sorted(set(src.tectonic_region_type for src in sources))
+    trt_num = dict((trt, i) for i, trt in enumerate(trts))
+    rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
+    cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
+    bdata = _collect_bins_data(
+        trt_num, sources, site, None, rlzs_by_gsim, cmaker, {str(imt): [iml]},
+        None, truncation_level, n_epsilons, {str(imt): iml})
+    if all(len(x) == 0 for x in bdata):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
-            % site,
-            RuntimeWarning
-        )
+            % site, RuntimeWarning)
         return None, None
-
-    bin_edges = _define_bins(bins_data, mag_bin_width, dist_bin_width,
+    [(key, pnes)] = bdata.pnes.items()
+    bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats, pnes, bdata.trts]
+    # mag_edges, dist_edges, lon_edges, lat_edges, eps_edges, trt_edges
+    bin_edges = _define_bins(bins, mag_bin_width, dist_bin_width,
                              coord_bin_width, truncation_level, n_epsilons)
-    diss_matrix = _arrange_data_in_bins(bins_data, bin_edges)
+    diss_matrix = _arrange_data_in_bins(bins, bin_edges)
     return bin_edges, diss_matrix
-
-
-def _collect_bins_data_old(sources, site, imt, iml, gsims,
-                           truncation_level, n_epsilons,
-                           source_site_filter=filters.source_site_noop_filter):
-    """
-    Extract values of magnitude, distance, closest point, tectonic region
-    types and PoE distribution.
-
-    This method processes the source model (generates ruptures) and collects
-    all needed parameters to arrays. It also defines tectonic region type
-    bins sequence.
-    """
-    mags = []
-    dists = []
-    lons = []
-    lats = []
-    tect_reg_types = []
-    probs_no_exceed = []
-    sitecol = SiteCollection([site])
-    sitemesh = sitecol.mesh
-
-    _next_trt_num = 0
-    trt_nums = {}
-    # here we ignore filtered site collection because either it is the same
-    # as the original one (with one site), or the source/rupture is filtered
-    # out and doesn't show up in the filter's output
-    for src_idx, (source, s_sites) in enumerate(
-            source_site_filter(sources, sitecol)):
-        try:
-            tect_reg = source.tectonic_region_type
-            gsim = gsims[tect_reg]
-            cmaker = ContextMaker([gsim])
-            if tect_reg not in trt_nums:
-                trt_nums[tect_reg] = _next_trt_num
-                _next_trt_num += 1
-            tect_reg = trt_nums[tect_reg]
-
-            for rupture in source.iter_ruptures():
-                # extract rupture parameters of interest
-                mags.append(rupture.mag)
-                [jb_dist] = rupture.surface.get_joyner_boore_distance(sitemesh)
-                dists.append(jb_dist)
-                [closest_point] = rupture.surface.get_closest_points(sitemesh)
-                lons.append(closest_point.longitude)
-                lats.append(closest_point.latitude)
-                tect_reg_types.append(tect_reg)
-
-                # compute conditional probability of exceeding iml given
-                # the current rupture, and different epsilon level, that is
-                # ``P(IMT >= iml | rup, epsilon_bin)`` for each of epsilon bins
-                sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
-                [poes_given_rup_eps] = gsim.disaggregate_poe(
-                    sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
-                )
-
-                # collect probability of a rupture causing no exceedances
-                probs_no_exceed.append(
-                    rupture.get_probability_no_exceedance(poes_given_rup_eps)
-                )
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, str(err))
-            raise_(etype, msg, tb)
-
-    mags = numpy.array(mags, float)
-    dists = numpy.array(dists, float)
-    lons = numpy.array(lons, float)
-    lats = numpy.array(lats, float)
-    tect_reg_types = numpy.array(tect_reg_types, int)
-    probs_no_exceed = numpy.array(probs_no_exceed, float)
-
-    trt_bins = [trt for (num, trt) in sorted((num, trt)
-                for (trt, num) in trt_nums.items())]
-
-    return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -276,7 +204,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, tect_reg_types, trt_bins, _ = bins_data
+    mags, dists, lons, lats, tect_reg_types, trt_bins = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -310,7 +238,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    mags, dists, lons, lats, tect_reg_types, trt_bins, pnes = bins_data
+    mags, dists, lons, lats, pnes, tect_reg_types = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
     dim1 = len(mag_bins) - 1
