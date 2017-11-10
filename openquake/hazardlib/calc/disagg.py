@@ -59,6 +59,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                   for imt, iml in iml_disagg.items()}
     if iml_disagg:
         poes = [None]
+    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     for source in sources:
         tect_reg = trt_num[source.tectonic_region_type]
@@ -101,19 +102,6 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                    numpy.array(lats, float),
                    numpy.array(trts, int),
                    pnes)
-
-
-def make_iml_by_imt(cmaker, rlzs_by_gsim, poes, imtls, curves):
-    dic = {}  # (g, rlzi) -> {imt: iml}
-    for g, gsim in enumerate(cmaker.gsims):
-        for rlzi in rlzs_by_gsim[str(gsim)]:
-            dic[g, rlzi] = d = {}
-            for poe in poes:
-                d[poe] = {}
-                for imt, imls in imtls.items():
-                    imls = numpy.array(imls[::-1])
-                    d[poe][imt] = numpy.interp(poe, curves[imt][::-1], imls)
-    return dic
 
 
 def disaggregation(

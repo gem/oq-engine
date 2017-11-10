@@ -558,6 +558,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
+    # TODO: deprecate this since it is slow and not used by the engine
+    # alternatively, it should take truncnorm in input, not truncation_level
     def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
                          truncation_level, n_epsilons):
         """
