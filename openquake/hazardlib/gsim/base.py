@@ -554,14 +554,21 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         poes = numpy.array(poe_by_site)
         return poes  # shape (n_sites, n_epsilons)
 
-    def disaggregate_pne(self, rupture, sctx, rctx, dctx, iml_dict,
+    def disaggregate_pne(self, rupture, sctx, rctx, dctx, imt, iml_by_key,
                          truncation_level, n_epsilons):
-        pne = {}
-        for imt, iml in iml_dict.items():
-            [poes] = self.disaggregate_poe(sctx, rctx, dctx, imt, iml,
-                                           truncation_level, n_epsilons)
-            pne[imt] = rupture.get_probability_no_exceedance(poes)
-        return pne
+        """
+        Disaggregate a dictionary of values iml_by_key and returns a dictionary
+        of probabilities of no exceedence pne_by_key.
+        """
+        pne_by_key = {}
+        cache = {}
+        for iml in set(iml_by_key.values()):  # unique values
+            [poes] = self.disaggregate_poe(
+                sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
+            cache[iml] = rupture.get_probability_no_exceedance(poes)
+        for key in iml_by_key:
+            pne_by_key[key] = cache[iml_by_key[key]]
+        return pne_by_key
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
