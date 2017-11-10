@@ -37,6 +37,7 @@ from openquake.hazardlib import const, calc
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import IntegrationDistance, get_distances
 from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -299,7 +300,7 @@ class ContextMaker(object):
         return rupture.get_probability_no_exceedance(poes)
 
     def disaggregate(self, sitecol, ruptures, imldict,
-                     truncnorm, n_epsilons, disagg_pne):
+                     truncnorm, n_epsilons, disagg_pne=Monitor()):
         """
         Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
@@ -308,9 +309,12 @@ class ContextMaker(object):
         :param ruptures: an iterator over ruptures
         :param imldict: a dictionary poe, gsim, imt, rlzi -> iml
         :param truncnorm: an instance of scipy.stats.truncnorm
-        :param n_epsilons: the number of epsilons
+        :param n_epsilons: the number of bins
         :param disagg_pne: a monitor of the disaggregation time
-        :yields: triples (rupture, site_dist, iml_pne)
+        :yields:
+            triples (rupture, site_dist, iml_pne) where iml_pne is a
+            dictionary poe, gsim, imt, iml, rlzi -> pne where pne is
+            an array of length n_epsilons of probabilities of no exceedence
         """
         assert len(sitecol) == 1, sitecol
         epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
@@ -320,7 +324,7 @@ class ContextMaker(object):
             except calc.filters.FarAwayRupture:
                 continue
 
-            iml_pne = {}  # poe, gsim, imt, rlzi -> iml, pne
+            pnedict = {}  # poe, imt, iml, rlzi -> pne
             cache = {}  # gsim, imt, iml -> pne
             for (poe, gsim, imt, rlzi), iml in imldict.items():
                 try:
@@ -331,9 +335,9 @@ class ContextMaker(object):
                             gsim, rupture, sctx, rctx, dctx, imt, iml,
                             truncnorm, epsilons)
                     cache[gsim, imt, iml] = pne
-                iml_pne[poe, gsim, imt, rlzi] = (iml, pne)
+                pnedict[poe, str(imt), iml, rlzi] = pne
             [rjb_dist] = dctx.rjb  # 1 site => 1 distance
-            yield rupture, rjb_dist, iml_pne
+            yield rupture, rjb_dist, pnedict
 
 
 @functools.total_ordering

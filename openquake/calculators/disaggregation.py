@@ -88,17 +88,13 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor('disaggregate_pne', measuremem=False))
-
-        for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
+        for (poe, imt, iml, rlzi), pnes in bdata.pnes.items():
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
-            iml = iml_pne_pairs[0][0]
-            probs = numpy.array([p for (i, p) in iml_pne_pairs], float)
-
             # bins in a format handy for hazardlib
             bins = [bdata.mags, bdata.dists,
                     bdata.lons, bdata.lats,
-                    bdata.trts, None, probs]
+                    bdata.trts, None, pnes]
 
             # call disagg._arrange_data_in_bins
             with arranging_mon:

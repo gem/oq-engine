@@ -53,7 +53,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
     lons = []
     lats = []
     trts = []
-    pnes = collections.defaultdict(list)  # (rlzi, poe, imt) -> [iml_pne...]
+    pnes = collections.defaultdict(list)  # poe, imt, iml, rlzi -> pnes
     sitemesh = sitecol.mesh
     iml_disagg = {from_string(imt): iml_disagg[imt]
                   for imt, iml in iml_disagg.items()}
@@ -75,7 +75,7 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                             poe, curves[rlzi][imt_str][::-1], imls[::-1]
                         ) if poe is not None else imls[0]
         try:
-            for rupture, site_dist, iml_pne in cmaker.disaggregate(
+            for rupture, site_dist, pnedict in cmaker.disaggregate(
                     sitecol, source.iter_ruptures(), imldict,
                     truncnorm, n_epsilons, mon):
 
@@ -86,22 +86,20 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
-                # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
-                for (poe, gsim, imt, rlzi), pair in iml_pne.items():
-                    pnes[rlzi, poe, str(imt)].append(pair)
+                for k, v in pnedict.items():
+                    pnes[k].append(v)
 
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err)
             raise_(etype, msg, tb)
-
     return BinData(numpy.array(mags, float),
                    numpy.array(dists, float),
                    numpy.array(lons, float),
                    numpy.array(lats, float),
                    numpy.array(trts, int),
-                   pnes)
+                   {k: numpy.array(pnes[k]) for k in pnes})
 
 
 def disaggregation(
@@ -191,7 +189,6 @@ def disaggregation(
     return bin_edges, diss_matrix
 
 
-# TODO: remove the duplication
 def _collect_bins_data_old(sources, site, imt, iml, gsims,
                            truncation_level, n_epsilons,
                            source_site_filter=filters.source_site_noop_filter):
