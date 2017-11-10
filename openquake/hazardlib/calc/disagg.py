@@ -60,8 +60,7 @@ def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
                 pne = gsim.disaggregate_pne(
                     rupture, sctx, rctx, dctx, imts, iml,
                     truncation_level, n_epsilons)
-                for imt, rlzi in pne:
-                    yield rlzi, poe, str(imt), iml[imt, rlzi], pne[imt, rlzi]
+                yield poe, iml, pne
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -98,11 +97,13 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
                 # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
-                for rlzi, poe, imt, iml, pne in _disagg(
+                for poe, iml, pne in _disagg(
                         poes, curves, rlzs_by_gsim, imtls, iml_disagg,
                         rupture, sctx, rctx, dctx, truncation_level,
                         n_epsilons, disagg_pne):
-                    pnes[rlzi, poe, imt].append((iml, pne))
+                    for imt, rlzi in iml:
+                        pnes[rlzi, poe, str(imt)].append(
+                            (iml[imt, rlzi], pne[imt, rlzi]))
 
         except Exception as err:
             etype, err, tb = sys.exc_info()
