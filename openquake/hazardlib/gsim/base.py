@@ -33,7 +33,7 @@ import scipy.stats
 from scipy.special import ndtr
 import numpy
 
-from openquake.hazardlib import const, calc, site as sitemod
+from openquake.hazardlib import const, calc
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import IntegrationDistance, get_distances
 from openquake.baselib.general import DeprecationWarning
@@ -261,16 +261,18 @@ class ContextMaker(object):
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
-    def disaggregate(self, site, ruptures, rlzs_by_gsim, imt, imldict,
+    def disaggregate(self, sitecol, ruptures, imldict,
                      truncation_level, n_epsilons):
         """
-        Disaggregate (separate) PoE of `iml` in different contributions
+        Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
-        """
-        if not truncation_level > 0:
-            raise ValueError('truncation level must be positive')
 
-        sitecol = sitemod.SiteCollection([site])
+        :param imldict: dictionary poe, gsim, imt, rlzi -> iml
+        :yields: triples (rupture, site_dist, iml_pne)
+        """
+        assert truncation_level > 0, truncation_level
+        assert len(sitecol) == 1, sitecol
+
         truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
         epsilons = numpy.linspace(- truncation_level, truncation_level,
                                   n_epsilons + 1)
@@ -279,36 +281,45 @@ class ContextMaker(object):
                 sctx, rctx, dctx = self.make_contexts(sitecol, rupture)
             except calc.filters.FarAwayRupture:
                 continue
-            for gsim in self.gsims:
-                for rlzi in rlzs_by_gsim[gsim]:
-                    iml = imldict[gsim][rlzi]
-                    # compute mean and standard deviations
-                    mean, [stddev] = gsim.get_mean_and_stddevs(
-                        sctx, rctx, dctx, imt, [const.StdDev.TOTAL])
 
-                    # compute iml value with respect to standard
-                    # (mean=0, std=1) normal truncnorms
-                    [standard_iml] = (
-                        gsim.to_truncnorm_values(iml) - mean) / stddev
-                    # compute epsilon bins contributions
-                    contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
-                                             truncnorm.cdf(epsilons[:-1]))
+            iml_pne = {}  # poe, gsim, imt, rlzi -> iml, pne
+            for (poe, gsim, imt, rlzi), iml in imldict.items():
+                # compute mean and standard deviations
+                mean, [stddev] = gsim.get_mean_and_stddevs(
+                    sctx, rctx, dctx, imt, [const.StdDev.TOTAL])
 
-                    # take the minimum epsilon larger than standard_iml
-                    bin = numpy.searchsorted(epsilons, standard_iml)
-                    if bin == 0:  # first bin
-                        poe = contribution_by_bands
-                    elif bin > n_epsilons:  # outside bin
-                        poe = numpy.zeros(n_epsilons)
-                    else:
-                        # when standard_iml falls in the histogram
-                        cbb = contribution_by_bands[bin:]
-                        poe = numpy.concatenate([
-                            numpy.zeros(bin - 1),
-                            [truncnorm.sf(standard_iml) - cbb.sum()], cbb])
-                    pne = rupture.get_probability_no_exceedance(poe)
-                    [rjb_dist] = dctx.rjb  # 1 site => 1 distance
-                    yield rupture, rjb_dist, rlzi, imt, iml, pne
+                # compute iml value with respect to standard (mean=0, std=1)
+                # normal distributions
+                [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
+
+                # compute epsilon bins contributions
+                contributions = (truncnorm.cdf(epsilons[1:]) -
+                                 truncnorm.cdf(epsilons[:-1]))
+
+                # take the minimum epsilon larger than lvl
+                bin = numpy.searchsorted(epsilons, lvl)
+                if bin == 0:
+                    poes = contributions
+                elif bin > n_epsilons:
+                    poes = numpy.zeros(n_epsilons)
+                else:
+                    # for other cases (when ``lvl`` falls somewhere in the
+                    # histogram):
+                    poes = numpy.concatenate([
+                        # take zeros for bins that are on the left hand side
+                        # from the bin ``lvl`` falls into,
+                        numpy.zeros(bin - 1),
+                        # ... area of the portion of the bin containing ``lvl``
+                        # (the portion is limited on the left hand side by
+                        # ``lvl`` and on the right hand side by the bin edge),
+                        [truncnorm.sf(lvl) - contributions[bin:].sum()],
+                        # ... and all bins on the right go unchanged.
+                        contributions[bin:]])
+
+                pne = rupture.get_probability_no_exceedance(poes)
+                iml_pne[poe, gsim, imt, rlzi] = (iml, pne)
+            [rjb_dist] = dctx.rjb  # 1 site => 1 distance
+            yield rupture, rjb_dist, iml_pne
 
 
 @functools.total_ordering
@@ -602,22 +613,6 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
                 poe_by_site.append(poe)
         poes = numpy.array(poe_by_site)
         return poes  # shape (n_sites, n_epsilons)
-
-    def disaggregate_pne(self, rupture, sctx, rctx, dctx, imt, iml_by_key,
-                         truncation_level, n_epsilons):
-        """
-        Disaggregate a dictionary of values iml_by_key and returns a dictionary
-        of probabilities of no exceedence pne_by_key.
-        """
-        pne_by_key = {}
-        cache = {}
-        for iml in set(iml_by_key.values()):  # unique values
-            [poes] = self.disaggregate_poe(
-                sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
-            cache[iml] = rupture.get_probability_no_exceedance(poes)
-        for key in iml_by_key:
-            pne_by_key[key] = cache[iml_by_key[key]]
-        return pne_by_key
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
