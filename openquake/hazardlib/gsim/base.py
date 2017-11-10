@@ -299,7 +299,7 @@ class ContextMaker(object):
         return rupture.get_probability_no_exceedance(poes)
 
     def disaggregate(self, sitecol, ruptures, imldict,
-                     truncation_level, n_epsilons):
+                     truncation_level, n_epsilons, disagg_pne):
         """
         Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
@@ -325,9 +325,10 @@ class ContextMaker(object):
                 try:
                     pne = cache[gsim, imt, iml]
                 except KeyError:
-                    pne = self._disaggregate_pne(
-                        gsim, rupture, sctx, rctx, dctx, imt, iml,
-                        truncnorm, epsilons)
+                    with disagg_pne:
+                        pne = self._disaggregate_pne(
+                            gsim, rupture, sctx, rctx, dctx, imt, iml,
+                            truncnorm, epsilons)
                     cache[gsim, imt, iml] = pne
                 iml_pne[poe, gsim, imt, rlzi] = (iml, pne)
             [rjb_dist] = dctx.rjb  # 1 site => 1 distance
