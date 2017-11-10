@@ -42,23 +42,25 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-# yield (rlzi, poe, imt), (iml, pne)
-def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
-            sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
-    if iml is None:  # compute the IMLs from the given poes
-        for poe in poes:
-            iml = numpy.interp(poe, curve_poes, imls)
-            with disagg_poe:
-                [poes_given_rup_eps] = gsim.disaggregate_poe(
-                    sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
-            pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-            yield (rlzi, poe, imt_str), (iml, pne)
-    else:  # there is a single IML provided by the user; compute the poe
-        with disagg_poe:
-            [poes_given_rup_eps] = gsim.disaggregate_poe(
-                sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
-        pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-        yield (rlzi, None, imt_str), (iml, pne)
+def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
+            sctx, rctx, dctx, truncation_level, n_epsilons, disagg_pne):
+    if iml_disagg:
+        poes = [None]
+    for poe in poes:
+        for imt_str, imls in imtls.items():
+            imt = from_string(imt_str)
+            for gsim in rlzs_by_gsim:
+                iml = {}
+                for rlzi in rlzs_by_gsim[gsim]:
+                    iml[rlzi] = numpy.interp(
+                        poe, curves[rlzi][imt_str][::-1], imls[::-1]
+                    ) if poe is not None else imls[0]
+                with disagg_pne:
+                    pne = gsim.disaggregate_pne(
+                        rupture, sctx, rctx, dctx, imt, iml,
+                        truncation_level, n_epsilons)
+                for rlzi in pne:
+                    yield rlzi, poe, imt_str, iml[rlzi], pne[rlzi]
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -74,7 +76,9 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
     pnes = collections.defaultdict(list)
     sitemesh = sitecol.mesh
     make_ctxt = mon('making contexts', measuremem=False)
-    disagg_poe = mon('disaggregate_poe', measuremem=False)
+    disagg_pne = mon('disaggregate_pne', measuremem=False)
+    iml_disagg = {from_string(imt): iml_disagg[imt]
+                  for imt, iml in iml_disagg.items()}
     for source in sources:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
@@ -93,19 +97,12 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
                 # pnes: (rlz.id, poe, imt_str) -> [(iml, probs), ...]
-                for gsim in cmaker.gsims:
-                    gs = str(gsim)
-                    for imt_str, imls in imtls.items():
-                        imt = from_string(imt_str)
-                        imls = numpy.array(imls[::-1])
-                        for rlzi in rlzs_by_gsim[gs]:
-                            iml = iml_disagg.get(imt_str)
-                            curve_poes = curves[rlzi, imt_str][::-1]
-                            for k, v in _disagg(
-                                    iml, poes, curve_poes, imls, gsim, rupture,
-                                    rlzi, imt, imt_str, sctx, rctx, dctx,
-                                    truncation_level, n_epsilons, disagg_poe):
-                                pnes[k].append(v)
+                for rlzi, poe, imt, iml, pne in _disagg(
+                        poes, curves, rlzs_by_gsim, imtls, iml_disagg,
+                        rupture, sctx, rctx, dctx, truncation_level,
+                        n_epsilons, disagg_pne):
+                    pnes[rlzi, poe, imt].append((iml, pne))
+
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
