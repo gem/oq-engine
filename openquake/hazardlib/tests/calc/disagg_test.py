@@ -77,7 +77,8 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae(lon_bins, [0, 2.4])
         aaae(lat_bins, [0, 2.4])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
-        aaae(matrix.shape, (2, 28, 1, 1, 3, 60))
+        self.assertEqual(trt_bins, [self.trt])
+        aaae(matrix.shape, (2, 28, 1, 1, 3, 1))
         aaae(matrix.sum(), 6.14179818e-11)
 
 
