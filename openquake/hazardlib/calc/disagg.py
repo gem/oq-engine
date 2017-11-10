@@ -44,23 +44,24 @@ BinData = collections.namedtuple(
 
 def _disagg(poes, curves, rlzs_by_gsim, imtls, iml_disagg, rupture,
             sctx, rctx, dctx, truncation_level, n_epsilons, disagg_pne):
+    imts = [from_string(imt) for imt in imtls]
     if iml_disagg:
         poes = [None]
     for poe in poes:
-        for imt_str, imls in imtls.items():
-            imt = from_string(imt_str)
-            for gsim in rlzs_by_gsim:
-                iml = {}
+        for gsim in rlzs_by_gsim:
+            iml = {}
+            for imt_str, imls in imtls.items():
+                imt = from_string(imt_str)
                 for rlzi in rlzs_by_gsim[gsim]:
-                    iml[rlzi] = numpy.interp(
+                    iml[imt, rlzi] = numpy.interp(
                         poe, curves[rlzi][imt_str][::-1], imls[::-1]
                     ) if poe is not None else imls[0]
-                with disagg_pne:
-                    pne = gsim.disaggregate_pne(
-                        rupture, sctx, rctx, dctx, imt, iml,
-                        truncation_level, n_epsilons)
-                for rlzi in pne:
-                    yield rlzi, poe, imt_str, iml[rlzi], pne[rlzi]
+            with disagg_pne:
+                pne = gsim.disaggregate_pne(
+                    rupture, sctx, rctx, dctx, imts, iml,
+                    truncation_level, n_epsilons)
+                for imt, rlzi in pne:
+                    yield rlzi, poe, str(imt), iml[imt, rlzi], pne[imt, rlzi]
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
