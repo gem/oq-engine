@@ -123,7 +123,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, _pnes, trt_bins = bins_data
+    mags, dists, lons, lats, _eps, _trts = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
