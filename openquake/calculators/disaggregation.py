@@ -174,8 +174,6 @@ producing too small PoEs.'''
         sitecol = self.sitecol
         mag_bin_width = self.oqparam.mag_bin_width
         eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
-        logging.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
-                     min(eps_edges), max(eps_edges))
 
         self.bin_edges = {}
         curves = [self.get_curves(sid) for sid in sitecol.sids]
@@ -195,8 +193,6 @@ producing too small PoEs.'''
             mag_edges = mag_bin_width * numpy.arange(
                 int(numpy.floor(min_mag / mag_bin_width)),
                 int(numpy.ceil(max_mag / mag_bin_width) + 1))
-            logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
-                         min_mag, max_mag)
             for i, site in enumerate(sitecol):
                 sid = sitecol.sids[i]
                 curve = curves[i]
@@ -216,18 +212,11 @@ producing too small PoEs.'''
 
                 dist_edges, lon_edges, lat_edges = bb.bins_edges(
                     oq.distance_bin_width, oq.coordinate_bin_width)
-                logging.info(
-                    '[sid=%d] %d dist bins from %s to %s', sid,
-                    len(dist_edges) - 1, min(dist_edges), max(dist_edges))
-                logging.info(
-                    '[sid=%d] %d lon bins from %s to %s', sid,
-                    len(lon_edges) - 1, bb.west, bb.east)
-                logging.info(
-                    '[sid=%d] %d lat bins from %s to %s', sid,
-                    len(lon_edges) - 1, bb.south, bb.north)
-
-                self.bin_edges[sm_id, sid] = (
+                self.bin_edges[sm_id, sid] = bs = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
+                shape = disagg.BinData(
+                    *[len(edges) - 1 for edges in bs] + [len(trt_names)])
+                logging.info('%s for model %d, sid %d', shape, sm_id, sid)
 
             # check for too big poes_disagg
             for poe in oq.poes_disagg:
