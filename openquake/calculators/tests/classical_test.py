@@ -187,7 +187,7 @@ class ClassicalTestCase(CalculatorTestCase):
                               delta=1E-5)
 
         # test extract; 'hazard/rlzs also works
-        haz = dict(extract(self.calc.datastore, 'hazard/rlz-0'))
+        haz = dict(extract(self.calc.datastore, 'qgis-hazard/rlz-0'))
         self.assertEqual(
             sorted(haz),
             ['checksum32', 'hcurves-rlz-0', 'hmaps-rlz-0', 'oqparam',
