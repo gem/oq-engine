@@ -25,7 +25,7 @@ from openquake.hazardlib.probability_map import combine
 from openquake.commonlib import calc
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.disagg import case_1, case_2, case_3, case_4
+from openquake.qa_tests_data.disagg import case_1, case_2, case_3, case_master
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -93,7 +93,7 @@ producing too small PoEs.''')
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_4(self):
-        self.run_calc(case_4.__file__, 'job.ini')
+        self.run_calc(case_master.__file__, 'job.ini')
         fname = writetmp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
