@@ -159,7 +159,7 @@ class PmapGetter(object):
         if self._pmap_by_grp is None:  # populate the cache
             self._pmap_by_grp = {}
             for grp, dset in self.dstore['poes'].items():
-                sid2idx = {sid: i for i, sid in enumerate(sids)}
+                sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
                 L, I = dset.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, I)
                 for sid in sids:
