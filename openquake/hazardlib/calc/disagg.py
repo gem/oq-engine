@@ -43,9 +43,32 @@ from openquake.hazardlib.gsim.base import ContextMaker
 BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
 
 
-def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
-                       imtls, poes, truncation_level, n_epsilons, iml_disagg,
-                       mon=Monitor()):
+def make_imldict(rlzs_by_gsim, imtls, iml_disagg=None, poes_disagg=(None,),
+                 curves=None):
+    """
+    :returns: a dictionary poe, gsim, imt, rlzi -> iml
+
+    If iml_disagg is given, poe is None and the values are all the same for a
+    given imt for any gsim and rlzi.
+    """
+    if iml_disagg:
+        poes_disagg = [None]
+        iml_disagg = {from_string(imt): iml_disagg[imt]
+                      for imt, iml in iml_disagg.items()}
+    imldict = {}
+    for poe in poes_disagg:
+        for gsim in rlzs_by_gsim:
+            for imt_str, imls in imtls.items():
+                imt = from_string(imt_str)
+                for rlzi in rlzs_by_gsim[gsim]:
+                    imldict[poe, gsim, imt, rlzi] = numpy.interp(
+                        poe, curves[rlzi][imt_str][::-1], imls[::-1]
+                    ) if poe is not None else imls[0]
+    return imldict
+
+
+def _collect_bins_data(trt_num, sources, site, cmaker, imldict,
+                       truncation_level, n_epsilons, mon=Monitor()):
     # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
@@ -55,25 +78,10 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
     trts = []
     pnes = collections.defaultdict(list)  # poe, imt, iml, rlzi -> pnes
     sitemesh = sitecol.mesh
-    iml_disagg = {from_string(imt): iml_disagg[imt]
-                  for imt, iml in iml_disagg.items()}
-    if iml_disagg:
-        poes = [None]
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     for source in sources:
         tect_reg = trt_num[source.tectonic_region_type]
-
-        # populate imldict poe, gsim, imt, rlzi -> iml
-        imldict = {}
-        for poe in poes:
-            for gsim in rlzs_by_gsim:
-                for imt_str, imls in imtls.items():
-                    imt = from_string(imt_str)
-                    for rlzi in rlzs_by_gsim[gsim]:
-                        imldict[poe, gsim, imt, rlzi] = numpy.interp(
-                            poe, curves[rlzi][imt_str][::-1], imls[::-1]
-                        ) if poe is not None else imls[0]
         try:
             for rupture, site_dist, pnedict in cmaker.disaggregate(
                     sitecol, source.iter_ruptures(), imldict,
@@ -282,9 +290,9 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
+    imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]})
     bdata = _collect_bins_data(
-        trt_num, sources, site, None, rlzs_by_gsim, cmaker, {str(imt): [iml]},
-        None, truncation_level, n_epsilons, {str(imt): iml})
+        trt_num, sources, site, cmaker, imldict, truncation_level, n_epsilons)
     if all(len(x) == 0 for x in bdata):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(
