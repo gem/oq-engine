@@ -41,7 +41,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 # a 6-uple containing float 4 arrays mags, dists, lons, lats,
 # 1 int array trts and a list of dictionaries pnes
 BinData = collections.namedtuple(
-    'BinData', 'mags, dists, lons, lats, trts, pnes')
+    'BinData', 'mags, dists, lons, lats, pnes, trts')
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -100,8 +100,8 @@ def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
                    numpy.array(dists, float),
                    numpy.array(lons, float),
                    numpy.array(lats, float),
-                   numpy.array(trts, int),
-                   {k: numpy.array(pnes[k]) for k in pnes})
+                   {k: numpy.array(pnes[k]) for k in pnes},
+                   numpy.array(trts, int))
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
