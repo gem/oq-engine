@@ -96,7 +96,7 @@ class PmapGetter(object):
         self.sids = sids
         self.nbytes = 0
         if sids is not None and not self.lazy:  # populate the cache
-            self.get_pmap_by_grp(sids)
+            self._get_pmap_by_grp(sids)
 
     def __enter__(self):
         if self.lazy:
@@ -115,22 +115,22 @@ class PmapGetter(object):
         assert sids is not None
         return self.__class__(self.dstore, sids, self.lazy, self.rlzs_assoc)
 
-    def get(self, sids, rlzi, grp=None):
+    def get(self, rlzi, grp=None):
         """
-        :param sids: an array of S site IDs
         :param rlzi: a realization index
         :param grp: None (all groups) or a string of the form "grp-XX"
         :returns: the hazard curves for the given realization
         """
-        pmap_by_grp = self.get_pmap_by_grp(sids)
+        assert self.sids is not None
+        pbg = self._get_pmap_by_grp(self.sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        grps = [grp] if grp is not None else sorted(pmap_by_grp)
+        grps = [grp] if grp is not None else sorted(pbg)
         for grp in grps:
             array = self.rlzs_assoc.array[grp]
             for rec in array:
                 for r in rec['rlzis']:
                     if r == rlzi:
-                        pmap |= pmap_by_grp[grp].extract(rec['gsim_idx'])
+                        pmap |= pbg[grp].extract(rec['gsim_idx'])
                         break
         return pmap
 
@@ -139,7 +139,7 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
-        return self.rlzs_assoc.combine_pmaps(self.get_pmap_by_grp(sids))
+        return self.rlzs_assoc.combine_pmaps(self._get_pmap_by_grp(sids))
 
     def get_hcurves(self, imtls):
         """
@@ -151,11 +151,7 @@ class PmapGetter(object):
                  for pmap in self.get_pmaps(self.sids)]
         return numpy.array(pmaps)
 
-    def get_pmap_by_grp(self, sids):
-        """
-        :param sids: an array of site IDs
-        :returns: a dictionary of probability maps by source group
-        """
+    def _get_pmap_by_grp(self, sids):
         if self._pmap_by_grp is None:  # populate the cache
             self._pmap_by_grp = {}
             for grp, dset in self.dstore['poes'].items():
@@ -195,14 +191,14 @@ class PmapGetter(object):
                 for k in sorted(self.dstore['hcurves']):
                     yield k, self.dstore['hcurves/' + k]
             elif num_rlzs == 1:
-                yield 'rlz-000', self.get(self.sids, 0)
+                yield 'rlz-000', self.get(0)
             return
         if 'poes' in self.dstore and kind in ('rlzs', 'all'):
             for rlzi in range(num_rlzs):
-                hcurves = self.get(self.sids, rlzi)
+                hcurves = self.get(rlzi)
                 yield 'rlz-%03d' % rlzi, hcurves
         elif 'poes' in self.dstore and kind.startswith('rlz-'):
-            yield kind, self.get(self.sids, int(kind[4:]))
+            yield kind, self.get(int(kind[4:]))
         if 'hcurves' in self.dstore and kind in ('stats', 'all'):
             for k in sorted(self.dstore['hcurves']):
                 yield k, self.dstore['hcurves/' + k]
@@ -218,7 +214,7 @@ class PmapGetter(object):
         if self.sids is None:
             self.sids = self.dstore['sitecol'].complete.sids
         if len(self.weights) == 1:  # one realization
-            return self.get(self.sids, 0, grp)
+            return self.get(0, grp)
         else:  # multiple realizations, assume hcurves/mean is there
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
