@@ -82,20 +82,17 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
         with collecting_mon:
             cmaker = ContextMaker(
                 rlzs_by_gsim, src_filter.integration_distance)
-            bdata = disagg._collect_bins_data(
+            bd = disagg._collect_bins_data(
                 trt_num, sources, site, curves[i],
                 rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor('disaggregate_pne', measuremem=False))
-        for (poe, imt, iml, rlzi), pnes in bdata.pnes.items():
+        for (poe, imt, iml, rlzi), pnes in bd.eps.items():
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
             # bins in a format handy for hazardlib
-            bins = [bdata.mags, bdata.dists,
-                    bdata.lons, bdata.lats,
-                    pnes, bdata.trts]
-
+            bins = [bd.mags, bd.dists,  bd.lons, bd.lats, pnes, bd.trts]
             # call disagg._arrange_data_in_bins
             with arranging_mon:
                 key = (sid, rlzi, poe, imt, iml, trt_names)
