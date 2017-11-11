@@ -40,8 +40,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 
 # a 6-uple containing float 4 arrays mags, dists, lons, lats,
 # 1 int array trts and a list of dictionaries pnes
-BinData = collections.namedtuple(
-    'BinData', 'mags, dists, lons, lats, pnes, trts')
+BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
 
 
 def _collect_bins_data(trt_num, sources, site, curves, rlzs_by_gsim, cmaker,
@@ -292,7 +291,7 @@ def disaggregation(
             'No ruptures have contributed to the hazard at site %s'
             % site, RuntimeWarning)
         return None, None
-    [pnes] = bdata.pnes.values()
+    [pnes] = bdata.eps.values()
     bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats, pnes, bdata.trts]
     trt_bins = [trt for (num, trt) in sorted((num, trt)
                 for (trt, num) in trt_num.items())]
