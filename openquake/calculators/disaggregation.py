@@ -142,7 +142,7 @@ producing too small PoEs.'''
         """
         dic = {}
         imtls = self.oqparam.imtls
-        pgetter = calc.PmapGetter(self.datastore, sids=numpy.array([sid])
+        pgetter = calc.PmapGetter(self.datastore, sids=numpy.array([sid]))
         for rlz in self.rlzs_assoc.realizations:
             try:
                 pmap = pgetter.get(rlz.ordinal)
