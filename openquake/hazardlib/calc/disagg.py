@@ -43,7 +43,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
 
 
-def make_imldict(rlzs_by_gsim, imtls, iml_disagg=None, poes_disagg=(None,),
+def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
                  curves=None):
     """
     :returns: a dictionary poe, gsim, imt, rlzi -> iml
@@ -55,6 +55,8 @@ def make_imldict(rlzs_by_gsim, imtls, iml_disagg=None, poes_disagg=(None,),
         poes_disagg = [None]
         iml_disagg = {from_string(imt): iml_disagg[imt]
                       for imt, iml in iml_disagg.items()}
+    elif not curves:  # there could be no hazard for the given site
+        return {}
     imldict = {}
     for poe in poes_disagg:
         for gsim in rlzs_by_gsim:
@@ -290,7 +292,7 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
-    imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]})
+    imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
     bdata = _collect_bins_data(
         trt_num, sources, site, cmaker, imldict, truncation_level, n_epsilons)
     if all(len(x) == 0 for x in bdata):
