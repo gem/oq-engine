@@ -333,47 +333,6 @@ def build_hcurves(getter, imtls, monitor):
     return getter.sids, curves
 
 
-@export.add(('hcurves-rlzs', 'hdf5'))
-@deprecated('Use `oq extract hazard/all` instead')
-def export_hcurves_rlzs(ekey, dstore):
-    """
-    Export all hazard curves in a single .hdf5 file. This is not
-    recommended, even if this exporter is parallel and very efficient.
-    I was able to export 6 GB of curves per minute. However for large
-    calculations it is then impossible to view the .hdf5 file with the
-    hdfviewer because you will run out of memory. Also, compression is not
-    enabled, otherwise all the time will be spent in the compression phase
-    in the controller node with the workers doing nothing.
-    The  recommended way to postprocess large computations is to instantiate
-    the PmapGetter and to work one block of sites at the time,
-    discarding what it is not needed. The exporter here is meant for
-    small/medium calculation and as an example of what you should
-    implement yourself if you need to postprocess the hazard curves.
-    """
-    oq = dstore['oqparam']
-    imtls = oq.imtls
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    sitecol = dstore['sitecol']
-    pgetter = calc.PmapGetter(dstore, rlzs_assoc)
-    N = len(sitecol)
-    R = len(rlzs_assoc.realizations)
-    fname = dstore.export_path('%s.%s' % ekey)
-    monitor = performance.Monitor(ekey[0], fname)
-    size = humansize(dstore.get_attr('poes', 'nbytes'))
-    logging.info('Reading %s of probability maps', size)
-    allargs = [(pgetter.new(tile.sids), imtls, monitor)
-               for tile in sitecol.split_in_tiles(R)]
-    with hdf5.File(fname, 'w') as f:
-        f['imtls'] = imtls
-        dset = f.create_dataset('hcurves-rlzs', (N, R), imtls.dt)
-        dset.attrs['investigation_time'] = oq.investigation_time
-        logging.info('Building the hazard curves for %d sites, %d rlzs', N, R)
-        for sids, allcurves in parallel.Starmap(build_hcurves, allargs):
-            for sid, curves in zip(sids, allcurves):
-                dset[sid] = curves
-    return [fname]
-
-
 def get_kkf(ekey):
     """
     :param ekey: export key, for instance ('uhs/rlz-1', 'xml')
