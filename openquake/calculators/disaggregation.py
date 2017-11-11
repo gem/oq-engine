@@ -82,11 +82,12 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
         with collecting_mon:
             cmaker = ContextMaker(
                 rlzs_by_gsim, src_filter.integration_distance)
+            imldict = disagg.make_imldict(
+                rlzs_by_gsim, oqparam.imtls, oqparam.iml_disagg,
+                oqparam.poes_disagg, curves[i])
             bd = disagg._collect_bins_data(
-                trt_num, sources, site, curves[i],
-                rlzs_by_gsim, cmaker, oqparam.imtls,
-                oqparam.poes_disagg, oqparam.truncation_level,
-                oqparam.num_epsilon_bins, oqparam.iml_disagg,
+                trt_num, sources, site, cmaker, imldict,
+                oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
         for (poe, imt, iml, rlzi), pnes in bd.eps.items():
             # extract the probabilities of non-exceedance for the
