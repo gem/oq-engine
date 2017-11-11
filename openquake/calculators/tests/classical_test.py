@@ -186,8 +186,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
 
-        # test extract; 'hazard/rlzs also works
-        haz = dict(extract(self.calc.datastore, 'hazard/rlz-0'))
+        # test extract/qgis-hazard/rlzs also works
+        haz = dict(extract(self.calc.datastore, 'qgis-hazard/rlz-0'))
         self.assertEqual(
             sorted(haz),
             ['checksum32', 'hcurves-rlz-0', 'hmaps-rlz-0', 'oqparam',
