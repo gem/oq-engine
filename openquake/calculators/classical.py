@@ -432,10 +432,8 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('combine pmaps'):
+    with monitor('combine pmaps'), pgetter:
         pmaps = pgetter.get_pmaps(pgetter.sids)
-    if not pgetter.eager:  # on a cluster with a shared directory
-        pgetter.dstore.close()
     if sum(len(pmap) for pmap in pmaps) == 0:  # no data
         return {}
     pmap_by_kind = {}
