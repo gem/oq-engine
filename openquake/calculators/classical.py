@@ -500,8 +500,9 @@ class ClassicalCalculator(PSHACalculator):
             if self.datastore.parent != ():
                 # workers read from the parent datastore
                 pgetter = calc.PmapGetter(
-                    self.datastore.parent, lazy=config.directory.shared_dir,
-                    rlzs_assoc=self.rlzs_assoc)
+                    self.datastore.parent,
+                    rlzs_assoc=self.rlzs_assoc,
+                    eager=not config.directory.shared_dir)
                 allargs = list(self.gen_args(pgetter))
                 self.datastore.parent.close()
             else:
