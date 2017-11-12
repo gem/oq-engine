@@ -490,8 +490,7 @@ class ClassicalCalculator(PSHACalculator):
             monitor = self.monitor('build_hcurves_and_stats')
             hstats = oq.hazard_stats()
             allargs = (
-                (calc.PmapGetter(
-                    self.datastore, tile.sids, self.rlzs_assoc),
+                (calc.PmapGetter(self.datastore, tile.sids, self.rlzs_assoc),
                  hstats, monitor)
                 for tile in self.sitecol.split_in_tiles(oq.concurrent_tasks))
             ires = parallel.Starmap(
