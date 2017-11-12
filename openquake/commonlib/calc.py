@@ -86,36 +86,32 @@ class PmapGetter(object):
     :param dstore: a DataStore instance
     :param lazy: if True, read directly from the datastore
     """
-    def __init__(self, dstore, sids=None, eager=True, rlzs_assoc=None):
+    def __init__(self, dstore, sids=None, rlzs_assoc=None):
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
-        self.eager = eager
         self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = sids
         self.nbytes = 0
-        if self.eager and sids is None:
+        if sids is None:
             self.sids = dstore['sitecol'].complete.sids
-        if self.eager:
-            self._get_pmap_by_grp(self.sids)
-
-    def __enter__(self):
-        if not self.eager:
-            self.dstore.__enter__()
-        return self
-
-    def __exit__(self, *args):
-        if not self.eager:
-            self.dstore.__exit__(*args)
-
-    def new(self, sids):
-        """
-        :param sids: an array of S site IDs
-        :returns: a new instance of the getter, with the cache populated
-        """
-        assert sids is not None
-        return self.__class__(self.dstore, sids, self.eager, self.rlzs_assoc)
+        # populate _pmap_by_grp
+        self._pmap_by_grp = {}
+        if 'poes' in self.dstore:
+            for grp, dset in self.dstore['poes'].items():
+                sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
+                L, I = dset.shape[1:]
+                pmap = probability_map.ProbabilityMap(L, I)
+                for sid in self.sids:
+                    try:
+                        idx = sid2idx[sid]
+                    except KeyError:
+                        continue
+                    else:
+                        pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
+                self._pmap_by_grp[grp] = pmap
+                self.nbytes += pmap.nbytes
 
     def get(self, rlzi, grp=None):
         """
