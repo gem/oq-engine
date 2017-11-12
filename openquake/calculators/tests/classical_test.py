@@ -186,7 +186,24 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
 
-        # test extract/qgis-hazard/rlzs also works
+        # test extract/hazard/rlzs
+        dic = dict(extract(self.calc.datastore, 'hazard/rlzs'))
+        hcurves = sorted(k for k in dic if k.startswith('hcurves'))
+        hmaps = sorted(k for k in dic if k.startswith('hmaps'))
+        self.assertEqual(hcurves, ['hcurves/PGA/rlz-000',
+                                   'hcurves/PGA/rlz-001',
+                                   'hcurves/PGA/rlz-002',
+                                   'hcurves/PGA/rlz-003',
+                                   'hcurves/SA(0.2)/rlz-000',
+                                   'hcurves/SA(0.2)/rlz-001',
+                                   'hcurves/SA(0.2)/rlz-002',
+                                   'hcurves/SA(0.2)/rlz-003'])
+        self.assertEqual(hmaps, ['hmaps/poe-0.2/rlz-000',
+                                 'hmaps/poe-0.2/rlz-001',
+                                 'hmaps/poe-0.2/rlz-002',
+                                 'hmaps/poe-0.2/rlz-003'])
+
+        # test extract/qgis-hazard/rlz-0 also works
         haz = dict(extract(self.calc.datastore, 'qgis-hazard/rlz-0'))
         self.assertEqual(
             sorted(haz),
