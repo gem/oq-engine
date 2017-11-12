@@ -96,7 +96,7 @@ class PmapGetter(object):
         self.sids = sids
         self.nbytes = 0
         if self.eager and sids is None:
-            self.sids = dstore['sitecol'].sids
+            self.sids = dstore['sitecol'].complete.sids
         if self.eager:
             self._get_pmap_by_grp(self.sids)
 
@@ -177,8 +177,6 @@ class PmapGetter(object):
             if there is only one or the statistics otherwise.
         """
         num_rlzs = len(self.weights)
-        if self.sids is None:
-            self.sids = self.dstore['sitecol'].complete.sids
         if not kind:  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
