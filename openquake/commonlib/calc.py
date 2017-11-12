@@ -84,13 +84,13 @@ class PmapGetter(object):
     specific realization.
 
     :param dstore: a DataStore instance
-    :param lazy: if True, read directly from the datastore
+    :param sids: the subset of sites to consider (if None, all sites)
+    :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
     def __init__(self, dstore, sids=None, rlzs_assoc=None):
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = sids
         self.nbytes = 0
@@ -99,6 +99,7 @@ class PmapGetter(object):
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
+            # build probability maps restricted to the given sids
             for grp, dset in self.dstore['poes'].items():
                 sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
                 L, I = dset.shape[1:]
