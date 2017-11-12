@@ -434,6 +434,8 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
     with monitor('combine pmaps'):
         pmaps = pgetter.get_pmaps(pgetter.sids)
+    if not pgetter.eager:  # on a cluster with shared directory
+        pgetter.dstore.close()
     if sum(len(pmap) for pmap in pmaps) == 0:  # no data
         return {}
     pmap_by_kind = {}
