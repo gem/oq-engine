@@ -86,25 +86,27 @@ class PmapGetter(object):
     :param dstore: a DataStore instance
     :param lazy: if True, read directly from the datastore
     """
-    def __init__(self, dstore, sids=None, lazy=False, rlzs_assoc=None):
+    def __init__(self, dstore, sids=None, eager=True, rlzs_assoc=None):
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
-        self.lazy = lazy
+        self.eager = eager
         self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self._pmap_by_grp = None  # cache
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = sids
         self.nbytes = 0
-        if sids is not None and not self.lazy:  # populate the cache
-            self._get_pmap_by_grp(sids)
+        if self.eager and sids is None:
+            self.sids = dstore['sitecol'].sids
+        if self.eager:
+            self._get_pmap_by_grp(self.sids)
 
     def __enter__(self):
-        if self.lazy:
+        if not self.eager:
             self.dstore.__enter__()
         return self
 
     def __exit__(self, *args):
-        if self.lazy:
+        if not self.eager:
             self.dstore.__exit__(*args)
 
     def new(self, sids):
@@ -113,7 +115,7 @@ class PmapGetter(object):
         :returns: a new instance of the getter, with the cache populated
         """
         assert sids is not None
-        return self.__class__(self.dstore, sids, self.lazy, self.rlzs_assoc)
+        return self.__class__(self.dstore, sids, self.eager, self.rlzs_assoc)
 
     def get(self, rlzi, grp=None):
         """
