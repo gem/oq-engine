@@ -121,15 +121,14 @@ class PmapGetter(object):
         :returns: the hazard curves for the given realization
         """
         assert self.sids is not None
-        pbg = self._get_pmap_by_grp(self.sids)
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        grps = [grp] if grp is not None else sorted(pbg)
+        grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
         for grp in grps:
             array = self.rlzs_assoc.array[grp]
             for rec in array:
                 for r in rec['rlzis']:
                     if r == rlzi:
-                        pmap |= pbg[grp].extract(rec['gsim_idx'])
+                        pmap |= self._pmap_by_grp[grp].extract(rec['gsim_idx'])
                         break
         return pmap
 
@@ -138,7 +137,7 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
-        return self.rlzs_assoc.combine_pmaps(self._get_pmap_by_grp(sids))
+        return self.rlzs_assoc.combine_pmaps(self._pmap_by_grp)
 
     def get_hcurves(self, imtls):
         """
@@ -149,28 +148,6 @@ class PmapGetter(object):
         pmaps = [pmap.convert2(imtls, self.sids)
                  for pmap in self.get_pmaps(self.sids)]
         return numpy.array(pmaps)
-
-    def _get_pmap_by_grp(self, sids):
-        if self._pmap_by_grp is None:  # populate the cache
-            self._pmap_by_grp = {}
-            for grp, dset in self.dstore['poes'].items():
-                sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
-                L, I = dset.shape[1:]
-                pmap = probability_map.ProbabilityMap(L, I)
-                for sid in sids:
-                    try:
-                        idx = sid2idx[sid]
-                    except KeyError:
-                        continue
-                    else:
-                        pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
-                self._pmap_by_grp[grp] = pmap
-                self.sids = sids  # store the sids used in the cache
-                self.nbytes += pmap.nbytes
-        else:
-            # make sure the cache refer to the right sids
-            assert (sids == self.sids).all()
-        return self._pmap_by_grp
 
     def items(self, kind=''):
         """
