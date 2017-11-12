@@ -432,7 +432,7 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('combine pmaps'), pgetter:
+    with monitor('combine pmaps'):
         pmaps = pgetter.get_pmaps(pgetter.sids)
     if sum(len(pmap) for pmap in pmaps) == 0:  # no data
         return {}

@@ -100,15 +100,6 @@ class PmapGetter(object):
         if self.eager:
             self._get_pmap_by_grp(self.sids)
 
-    def __enter__(self):
-        if not self.eager:
-            self.dstore.__enter__()
-        return self
-
-    def __exit__(self, *args):
-        if not self.eager:
-            self.dstore.__exit__(*args)
-
     def new(self, sids):
         """
         :param sids: an array of S site IDs
