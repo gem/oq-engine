@@ -24,9 +24,7 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5, parallel, performance
-from openquake.baselib.general import (
-    humansize, group_array, DictArray, deprecated)
+from openquake.baselib.general import humansize, group_array, DictArray
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
@@ -362,7 +360,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    for kind, hcurves in calc.PmapGetter(dstore).items(kind):
+    for kind, hcurves in calc.PmapGetter(dstore, eager=False).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
