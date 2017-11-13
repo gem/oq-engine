@@ -169,10 +169,6 @@ producing too small PoEs.'''
 
         self.bin_edges = {}
         curves = [self.get_curves(sid) for sid in sitecol.sids]
-        # determine the number of effective source groups
-        sg_data = self.datastore['csm_info/sg_data']
-        num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
-        nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         all_args = []
         src_filter = SourceFilter(sitecol, oq.maximum_distance)
         R = len(self.rlzs_assoc.realizations)
@@ -198,6 +194,7 @@ producing too small PoEs.'''
         # read sources
         sources_by_trt = self.csm.get_sources_by_trt()
         trts = tuple(sorted(sources_by_trt))
+        nblocks = math.ceil(oq.concurrent_tasks / len(trts))
 
         # build mag_edges
         min_mag = min(sg.min_mag for smodel in self.csm.source_models
