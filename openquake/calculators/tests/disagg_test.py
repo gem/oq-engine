@@ -92,7 +92,7 @@ The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.''')
 
     @attr('qa', 'hazard', 'disagg')
-    def test_case_4(self):
+    def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
         fname = writetmp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
