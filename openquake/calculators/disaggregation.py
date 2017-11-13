@@ -180,7 +180,7 @@ producing too small PoEs.'''
         max_poe = numpy.zeros(R, oq.imt_dt())
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
-            trt_names = tuple(mod.trt for mod in smodel.src_groups)
+            trt_names = tuple(sorted(mod.trt for mod in smodel.src_groups))
             max_mag = max(mod.max_mag for mod in smodel.src_groups)
             min_mag = min(mod.min_mag for mod in smodel.src_groups)
             mag_edges = mag_bin_width * numpy.arange(
