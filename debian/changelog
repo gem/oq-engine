@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added more validity checks on the job.ini file for disaggregation
   * Optimized the disaggregation calculator by instantiating
     `scipy.stats.truncnorm` only once per task and not once per rupture
   * Optimized the disaggregation calculator when `iml_disagg` is specified,
