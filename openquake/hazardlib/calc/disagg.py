@@ -303,11 +303,9 @@ def disaggregation(
         return None, None
     [pnes] = bdata.eps.values()
     bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats, pnes, bdata.trts]
-    trt_bins = [trt for (num, trt) in sorted((num, trt)
-                for (trt, num) in trt_num.items())]
     bin_edges = _define_bins(
         bins, mag_bin_width, dist_bin_width, coord_bin_width,
-        truncation_level, n_epsilons) + (trt_bins,)
+        truncation_level, n_epsilons) + (sorted(trt_num),)
     # mag_edges, dist_edges, lon_edges, lat_edges, eps_edges, trt_edges
     diss_matrix = _arrange_data_in_bins(bins, bin_edges)
     return bin_edges, diss_matrix
