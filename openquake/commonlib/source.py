@@ -269,11 +269,11 @@ class RlzsAssoc(object):
 
     def __repr__(self):
         pairs = []
-        array = self.by_grp()
-        for grp in sorted(array):
+        dic = self.by_grp()
+        for grp in sorted(dic):
             grp_id = int(grp[4:])
             gsims = self.csm_info.get_gsims(grp_id)
-            for gsim_idx, rlzis in array[grp]:
+            for gsim_idx, rlzis in dic[grp]:
                 if len(rlzis) > 10:  # short representation
                     rlzis = ['%d realizations' % len(rlzis)]
                 pairs.append(('%s,%s' % (grp_id, gsims[gsim_idx]), rlzis))

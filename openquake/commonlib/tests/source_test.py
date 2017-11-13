@@ -771,7 +771,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc(size=2, rlzs=1)\n0,ChiouYoungs2008(): "
+            "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997(): "
             "[0]\n1,ChiouYoungs2008(): [0]>")
 
     def test_many_rlzs(self):
