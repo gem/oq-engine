@@ -135,10 +135,10 @@ producing too small PoEs.'''
         """
         dic = {}
         imtls = self.oqparam.imtls
-        pgetter = calc.PmapGetter(self.datastore)
+        pgetter = calc.PmapGetter(self.datastore, sids=numpy.array([sid]))
         for rlz in self.rlzs_assoc.realizations:
             try:
-                pmap = pgetter.get(numpy.array([sid]), rlz.ordinal)
+                pmap = pgetter.get(rlz.ordinal)
             except ValueError:  # empty pmaps
                 logging.info(
                     'hazard curve contains all zero probabilities; '
