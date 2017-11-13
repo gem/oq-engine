@@ -87,18 +87,14 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
                 rlzs_by_gsim, cmaker, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, oqparam.iml_disagg,
-                monitor)
-
-        for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
+                monitor('disaggregate_pne', measuremem=False))
+        for (poe, imt, iml, rlzi), pnes in bdata.pnes.items():
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
-            iml = iml_pne_pairs[0][0]
-            probs = numpy.array([p for (i, p) in iml_pne_pairs], float)
-
             # bins in a format handy for hazardlib
             bins = [bdata.mags, bdata.dists,
                     bdata.lons, bdata.lats,
-                    bdata.trts, None, probs]
+                    pnes, bdata.trts]
 
             # call disagg._arrange_data_in_bins
             with arranging_mon:
@@ -142,7 +138,7 @@ producing too small PoEs.'''
     def get_curves(self, sid):
         """
         Get all the relevant hazard curves for the given site ordinal.
-        Returns a dictionary {(rlz_id, imt) -> curve}.
+        Returns a dictionary rlz_id -> curve_by_imt.
         """
         dic = {}
         imtls = self.oqparam.imtls
@@ -165,7 +161,7 @@ producing too small PoEs.'''
                         'skipping site %d, rlz=%d, IMT=%s',
                         sid, rlz.ordinal, imt_str)
                     continue
-                dic[rlz.ordinal, imt_str] = poes[imt_str]
+                dic[rlz.ordinal] = poes
         return dic
 
     def full_disaggregation(self):
@@ -205,8 +201,10 @@ producing too small PoEs.'''
                 sid = sitecol.sids[i]
                 curve = curves[i]
                 # populate max_poe array
-                for (rlzi, imt), poes in curve.items():
-                    max_poe[rlzi][imt] = max(max_poe[rlzi][imt], poes.max())
+                for rlzi, poes in curve.items():
+                    for imt in oq.imtls:
+                        max_poe[rlzi][imt] = max(
+                            max_poe[rlzi][imt], poes[imt].max())
                 if not curve:
                     continue  # skip zero-valued hazard curves
                 bb = bb_dict[sid]

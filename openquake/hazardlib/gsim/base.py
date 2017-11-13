@@ -35,8 +35,10 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.calc.filters import IntegrationDistance, get_distances
-from openquake.baselib.general import DeprecationWarning
+from openquake.hazardlib.calc.filters import (
+    IntegrationDistance, get_distances, FarAwayRupture)
+from openquake.baselib.general import DeprecationWarning, deprecated
+from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -260,6 +262,83 @@ class ContextMaker(object):
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
+
+    def _disaggregate_pne(self, gsim, rupture, sctx, rctx, dctx, imt, iml,
+                          truncnorm, epsilons):
+        n_epsilons = len(epsilons) - 1
+
+        # compute mean and standard deviations
+        mean, [stddev] = gsim.get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, [const.StdDev.TOTAL])
+
+        # compute iml value with respect to standard (mean=0, std=1)
+        # normal distributions
+        [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
+
+        # compute epsilon bins contributions
+        contributions = (truncnorm.cdf(epsilons[1:]) -
+                         truncnorm.cdf(epsilons[:-1]))
+
+        # take the minimum epsilon larger than lvl
+        bin = numpy.searchsorted(epsilons, lvl)
+        if bin == 0:
+            poes = contributions
+        elif bin > n_epsilons:
+            poes = numpy.zeros(n_epsilons)
+        else:
+            # for other cases (when ``lvl`` falls somewhere in the
+            # histogram):
+            poes = numpy.concatenate([
+                # take zeros for bins that are on the left hand side
+                # from the bin ``lvl`` falls into,
+                numpy.zeros(bin - 1),
+                # ... area of the portion of the bin containing ``lvl``
+                # (the portion is limited on the left hand side by
+                # ``lvl`` and on the right hand side by the bin edge),
+                [truncnorm.sf(lvl) - contributions[bin:].sum()],
+                # ... and all bins on the right go unchanged.
+                contributions[bin:]])
+        return rupture.get_probability_no_exceedance(poes)
+
+    def disaggregate(self, sitecol, ruptures, imldict,
+                     truncnorm, n_epsilons, disagg_pne=Monitor()):
+        """
+        Disaggregate (separate) PoE of `imldict` in different contributions
+        each coming from `n_epsilons` distribution bins.
+
+        :param sitecol: a SiteCollection with a single site
+        :param ruptures: an iterator over ruptures
+        :param imldict: a dictionary poe, gsim, imt, rlzi -> iml
+        :param truncnorm: an instance of scipy.stats.truncnorm
+        :param n_epsilons: the number of bins
+        :param disagg_pne: a monitor of the disaggregation time
+        :yields:
+            triples (rupture, site_dist, iml_pne) where iml_pne is a
+            dictionary poe, gsim, imt, iml, rlzi -> pne where pne is
+            an array of length n_epsilons of probabilities of no exceedence
+        """
+        assert len(sitecol) == 1, sitecol
+        epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
+        for rupture in ruptures:
+            try:
+                sctx, rctx, dctx = self.make_contexts(sitecol, rupture)
+            except FarAwayRupture:
+                continue
+
+            pnedict = {}  # poe, imt, iml, rlzi -> pne
+            cache = {}  # gsim, imt, iml -> pne
+            for (poe, gsim, imt, rlzi), iml in imldict.items():
+                try:
+                    pne = cache[gsim, imt, iml]
+                except KeyError:
+                    with disagg_pne:
+                        pne = self._disaggregate_pne(
+                            gsim, rupture, sctx, rctx, dctx, imt, iml,
+                            truncnorm, epsilons)
+                    cache[gsim, imt, iml] = pne
+                pnedict[poe, str(imt), iml, rlzi] = pne
+            [rjb_dist] = dctx.rjb  # 1 site => 1 distance
+            yield rupture, rjb_dist, pnedict
 
 
 @functools.total_ordering
@@ -489,6 +568,9 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
+    # deprecated since it is slow and not used by the engine
+    # alternatively, it should take truncnorm in input, not truncation_level
+    @deprecated('This method will disappear soon')
     def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
                          truncation_level, n_epsilons):
         """
@@ -530,9 +612,9 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
                                  distribution.cdf(epsilons[:-1]))
 
         # take the minimum epsilon larger than standard_iml
-        iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
+        bins = numpy.searchsorted(epsilons, standard_imls)
         poe_by_site = []
-        for lvl, bin in zip(standard_imls, iml_bin_indices):  # one per site
+        for lvl, bin in zip(standard_imls, bins):  # one per site
             if bin == 0:
                 poe_by_site.append(contribution_by_bands)
             elif bin > n_epsilons:
