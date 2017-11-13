@@ -202,7 +202,7 @@ producing too small PoEs.'''
         # build mag_edges
         min_mag = min(sg.min_mag for smodel in self.csm.source_models
                       for sg in smodel.src_groups)
-        max_mag = min(sg.max_mag for smodel in self.csm.source_models
+        max_mag = max(sg.max_mag for smodel in self.csm.source_models
                       for sg in smodel.src_groups)
         mag_edges = mag_bin_width * numpy.arange(
             int(numpy.floor(min_mag / mag_bin_width)),
