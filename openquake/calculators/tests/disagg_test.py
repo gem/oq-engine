@@ -15,14 +15,17 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
 import unittest
 import numpy
 from nose.plugins.attrib import attr
+from openquake.baselib.general import writetmp
 from openquake.hazardlib.probability_map import combine
 from openquake.commonlib import calc
+from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.disagg import case_1, case_2, case_3
+from openquake.qa_tests_data.disagg import case_1, case_2, case_3, case_master
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -87,3 +90,10 @@ However the source model #0, 'source_model_test_complex.xml',
 produces at most probabilities of 0.0362320992703 for rlz=#0, IMT=PGA.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.''')
+
+    @attr('qa', 'hazard', 'disagg')
+    def test_case_4(self):
+        self.run_calc(case_master.__file__, 'job.ini')
+        fname = writetmp(view('mean_disagg', self.calc.datastore))
+        self.assertEqualFiles('expected/mean_disagg.rst', fname)
+        os.remove(fname)
