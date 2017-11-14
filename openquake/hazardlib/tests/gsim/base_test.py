@@ -74,42 +74,10 @@ class _FakeGSIMTestCase(unittest.TestCase):
         kwargs = default_kwargs
         return self.gsim.get_poes(**kwargs)
 
-    def _disaggregate_poe(self, **kwargs):
-        default_kwargs = dict(
-            sctx=SitesContext(),
-            rctx=RuptureContext(),
-            dctx=DistancesContext(),
-            imt=self.DEFAULT_IMT(),
-            iml=2.0,
-            truncation_level=1.0,
-            n_epsilons=3,
-        )
-        default_kwargs.update(kwargs)
-        kwargs = default_kwargs
-        return self.gsim.disaggregate_poe(**kwargs)
-
     def _assert_value_error(self, func, error, **kwargs):
         with self.assertRaises(ValueError) as ar:
             func(**kwargs)
         self.assertEqual(str(ar.exception), error)
-
-
-class GetPoEsWrongInputTestCase(_FakeGSIMTestCase):
-    def test_wrong_imt(self):
-        err = 'imt must be an instance of IMT subclass'
-        self._assert_value_error(self._get_poes, err, imt='something')
-        self._assert_value_error(self._disaggregate_poe, err, imt='something')
-        err = 'imt PGV is not supported by FakeGSIM'
-        self._assert_value_error(self._get_poes, err, imt=PGV())
-        self._assert_value_error(self._disaggregate_poe, err, imt=PGV())
-
-    def test_wrong_truncation_level(self):
-        err = 'truncation level must be zero, positive number or None'
-        self._assert_value_error(self._get_poes, err, truncation_level=-0.1)
-        self._assert_value_error(self._get_poes, err, truncation_level=-1)
-        err = 'truncation level must be positive'
-        self._assert_value_error(self._disaggregate_poe, err,
-                                 truncation_level=-0.1)
 
 
 class GetPoEsTestCase(_FakeGSIMTestCase):
