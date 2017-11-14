@@ -230,7 +230,7 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def make_contexts(self, site_collection, rupture):
+    def make_contexts(self, site_collection, rupture, filter=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -257,7 +257,7 @@ class ContextMaker(object):
         """
         rctx = self.make_rupture_context(rupture)
         sites, distances = self.maximum_distance.get_closest(
-            site_collection, rupture, 'rjb')
+            site_collection, rupture, 'rjb', filter)
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
@@ -269,7 +269,7 @@ class ContextMaker(object):
         each coming from `n_epsilons` distribution bins.
 
         :param sitecol: a SiteCollection
-        :param ruptures: an iterator over ruptures
+        :param ruptures: an iterator over ruptures of the same TRT
         :param imldict: a dictionary poe, gsim, imt, rlzi -> iml
         :param truncnorm: an instance of scipy.stats.truncnorm
         :param n_epsilons: the number of bins
@@ -280,25 +280,18 @@ class ContextMaker(object):
         """
         epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
         for rupture in ruptures:
-            try:
-                sctx, rctx, dctx = self.make_contexts(sitecol, rupture)
-            except FarAwayRupture:
+            sctx, rctx, dctx = self.make_contexts(sitecol, rupture, filter=0)
+            if (dctx.rjb > self.maximum_distance(  # far away rupture
+                    rupture.tectonic_region_type, rupture.mag)).all():
                 continue
             pnes = []
-            cache = {}  # gsim, imt, iml -> pne
-            # if imldict comes from iml_disagg, it has duplicated values
-            # we are using a cache to avoid duplicating computation
+            # NB: given a rlzi there is a single gsim at fixed TRT
             for (poe, gsim, imt, rlzi), iml in zip(quartets, imls):
-                try:
-                    pne = cache[gsim, imt, iml]
-                except KeyError:
-                    with disagg_pne:
-                        poes = gsim.disaggregate_poe(
-                            sctx, rctx, dctx, imt_module.from_string(imt),
-                            iml, truncnorm, epsilons)
-                        pne = rupture.get_probability_no_exceedance(poes)
-                    cache[gsim, imt, iml] = pne
-                pnes.append(pne)
+                with disagg_pne:
+                    poes = gsim.disaggregate_poe(
+                        sctx, rctx, dctx, imt_module.from_string(imt),
+                        iml, truncnorm, epsilons)
+                pnes.append(rupture.get_probability_no_exceedance(poes))
             yield rupture, dctx.rjb, numpy.array(pnes)  # shape (Q, N, E)
 
 
@@ -550,12 +543,9 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             from different sigma bands in the form of a 2d numpy array of
             probabilities with shape (n_sites, n_epsilons)
         """
-        self._check_imt(imt)
-
         # compute mean and standard deviations
         mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                    [const.StdDev.TOTAL])
-
         # compute iml value with respect to standard (mean=0, std=1)
         # normal distributions
         standard_imls = (self.to_distribution_values(iml) - mean) / stddev

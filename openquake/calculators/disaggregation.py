@@ -70,7 +70,16 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
     collecting_mon = monitor('collecting bins')
     arranging_mon = monitor('arranging bins')
 
+    # collect bins data
+    with collecting_mon:
+        bd = disagg._collect_bins_data(
+            trt_num, sources, sitecol, cmaker, quartets,
+            imls, oqparam.truncation_level, oqparam.num_epsilon_bins,
+            monitor('disaggregate_pne', measuremem=False))
     for i, site in enumerate(sitecol):
+        if len(bd.dists[:, i]) == 0:  # all filtered out
+            continue
+
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
@@ -79,20 +88,14 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             # bin_edges for a given site are missing if the site is far away
             continue
 
-        # collect bins data
-        with collecting_mon:
-            bd = disagg._collect_bins_data(
-                trt_num, sources, SiteCollection([site]), cmaker, quartets,
-                imls[i], oqparam.truncation_level, oqparam.num_epsilon_bins,
-                monitor('disaggregate_pne', measuremem=False))
-            if len(bd.mags) == 0:  # all filtered out
-                continue
-
         # bd.eps has shape (U, Q, N, E)
         # the number of quartets Q is P x M x R
         for q, pnes in enumerate(bd.eps.transpose(1, 0, 2, 3)):
             poe, _gsim, imt, rlzi = quartets[q]
-            iml = imls[i][q]
+            if oqparam.iml_disagg:
+                iml = oqparam.iml_disagg[imt]
+            else:
+                iml = imls[q][i]
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
             # bins in a format handy for hazardlib
@@ -243,13 +246,13 @@ producing too small PoEs.'''
                 rlzs_by_gsim, src_filter.integration_distance)
             quartets = disagg.make_quartets(
                 rlzs_by_gsim, oq.imtls, oq.poes_disagg)
-            imls = [disagg.make_imls(
+            imls = disagg.make_imls(
                 rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
-                curve) for curve in curves]
+                curves)
             for srcs in split_in_blocks(split_sources, nblocks):
                 all_args.append(
-                    (src_filter, srcs, cmaker, quartets, imls, trts,
-                     self.bin_edges, oq, mon))
+                    (src_filter, srcs, cmaker, quartets, imls,
+                     trts, self.bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)

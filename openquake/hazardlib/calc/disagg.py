@@ -31,7 +31,6 @@ import scipy.stats
 from openquake.baselib.python3compat import raise_, range
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
@@ -41,6 +40,15 @@ from openquake.hazardlib.gsim.base import ContextMaker
 # a 6-uple containing float 4 arrays mags, dists, lons, lats,
 # 1 int array trts and a list of dictionaries pnes
 BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
+
+
+def _imls(curves, poe, imt, imls, rlzi):
+    if poe is None:  # scalar iml
+        return imls[0]
+    # else return interpolated intensity measure levels
+    levels = [numpy.interp(poe, curve[rlzi][imt][::-1], imls[::-1])
+              if curve else numpy.nan for curve in curves]
+    return numpy.array(levels)
 
 
 def make_imls(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
@@ -60,11 +68,8 @@ def make_imls(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
         for gsim in rlzs_by_gsim:
             for imt, imls in imtls.items():
                 for rlzi in rlzs_by_gsim[gsim]:
-                    iml = numpy.interp(
-                        poe, curves[rlzi][imt][::-1], imls[::-1]
-                    ) if poe is not None else imls[0]
-                    levels.append(iml)
-    return levels
+                    levels.append(_imls(curves, poe, imt, imls, rlzi))
+    return levels  # shape Q x N
 
 
 def make_quartets(rlzs_by_gsim, imtls, poes_disagg=()):
