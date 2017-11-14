@@ -233,7 +233,7 @@ class OqParam(valid.ParamSet):
         # check for GMFs from file
         if ('gmfs' in self.inputs and not self.sites and
                 'sites' not in self.inputs):
-            raise ValueError('You forgot sites or sites_csv in the job.ini!')
+            raise ValueError('You forgot sites|sites_csv in the job.ini!')
 
         # checks for ucerf
         if 'ucerf' in self.calculation_mode:

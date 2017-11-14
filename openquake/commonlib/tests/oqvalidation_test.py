@@ -345,7 +345,7 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='scenario_damage',
                 inputs=inputs,
                 maximum_distance='400')
-        self.assertIn('You forgot sites or sites_csv in the job.ini!',
+        self.assertIn('You forgot sites|sites_csv in the job.ini!',
                       str(ctx.exception))
 
     def test_disaggregation(self):
