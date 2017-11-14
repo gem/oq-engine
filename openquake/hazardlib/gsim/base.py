@@ -281,9 +281,9 @@ class ContextMaker(object):
         epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
         for rupture in ruptures:
             sctx, rctx, dctx = self.make_contexts(sitecol, rupture, filter=0)
-            if (dctx.rjb > self.maximum_distance(  # far away rupture
-                    rupture.tectonic_region_type, rupture.mag)).all():
-                continue
+            if (self.maximum_distance and (dctx.rjb > self.maximum_distance(
+                    rupture.tectonic_region_type, rupture.mag)).all()):
+                continue  # far away rupture
             pnes = []
             # NB: given a rlzi there is a single gsim at fixed TRT
             for (poe, gsim, imt, rlzi), iml in zip(quartets, imls):
