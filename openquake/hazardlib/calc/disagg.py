@@ -51,41 +51,29 @@ def _imls(curves, poe, imt, imls, rlzi):
     return numpy.array(levels)
 
 
-def make_imls(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
-              curves=None):
+def build_ql(rlzs_by_gsim, imtls, poes_disagg=(), curves=None):
     """
-    :returns: a list of intensity measure level, on per quartet
+    :returns: (quartets, levels) in a form suitable for disaggregation
+    """
+    poes_disagg = poes_disagg or (None,)
+    quartets = []
+    for poe in poes_disagg:
+        for gsim in rlzs_by_gsim:
+            for imt in imtls:
+                for rlzi in rlzs_by_gsim[gsim]:
+                    quartets.append((poe, gsim, imt, rlzi))
 
-    If iml_disagg is given, poe is None and the values are all the same for a
-    given imt for any gsim and rlzi.
-    """
-    if iml_disagg:
-        poes_disagg = [None]
-    levels = []
+    levels = []  # shape Q x N
     for poe in poes_disagg:
         for gsim in rlzs_by_gsim:
             for imt, imls in imtls.items():
                 for rlzi in rlzs_by_gsim[gsim]:
                     levels.append(_imls(curves, poe, imt, imls, rlzi))
-    return levels  # shape Q x N
-
-
-def make_quartets(rlzs_by_gsim, imtls, poes_disagg=()):
-    """
-    :returns: a list of quartets (poe, gsim, imt, rlzi)
-    """
-    quartets = []
-    for poe in poes_disagg or [None, ]:
-        for gsim in rlzs_by_gsim:
-            for imt in imtls:
-                for rlzi in rlzs_by_gsim[gsim]:
-                    quartets.append((poe, gsim, imt, rlzi))
-    return quartets
+    return quartets, levels
 
 
 def _collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
                        truncation_level, n_epsilons, mon=Monitor()):
-    # returns a BinData instance
     mags = []
     dists = []
     lons = []
@@ -306,8 +294,7 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
-    quartets = make_quartets(rlzs_by_gsim, {str(imt): [iml]})
-    imls = make_imls(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
+    quartets, imls = build_ql(rlzs_by_gsim, {str(imt): [iml]})
     bdata = _collect_bins_data(
         trt_num, sources, SiteCollection([site]), cmaker, quartets, imls,
         truncation_level, n_epsilons)

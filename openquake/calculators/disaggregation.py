@@ -77,7 +77,7 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             imls, oqparam.truncation_level, oqparam.num_epsilon_bins,
             monitor('disaggregate_pne', measuremem=False))
     for i, site in enumerate(sitecol):
-        if len(bd.dists[:, i]) == 0:  # all filtered out
+        if len(bd.mags) == 0 or len(bd.dists[:, i]) == 0:  # all filtered out
             continue
 
         sid = sitecol.sids[i]
@@ -239,20 +239,17 @@ producing too small PoEs.'''
                 for split, _sites in src_filter(
                         sourceconverter.split_source(src), sitecol):
                     split_sources.append(split)
-                if not split_sources:
-                    continue
+            if not split_sources:
+                continue
             mon = self.monitor('disaggregation')
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt)
             cmaker = ContextMaker(
                 rlzs_by_gsim, src_filter.integration_distance)
-            quartets = disagg.make_quartets(
-                rlzs_by_gsim, oq.imtls, oq.poes_disagg)
-            imls = disagg.make_imls(
-                rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
-                curves)
+            quartets, levels = disagg.build_ql(
+                rlzs_by_gsim, oq.imtls, oq.poes_disagg, curves)
             for srcs in split_in_blocks(split_sources, nblocks):
                 all_args.append(
-                    (src_filter, srcs, cmaker, quartets, imls,
+                    (src_filter, srcs, cmaker, quartets, levels,
                      trts, self.bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(

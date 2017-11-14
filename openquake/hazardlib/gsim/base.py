@@ -286,11 +286,12 @@ class ContextMaker(object):
                 continue  # far away rupture
             pnes = []
             cache = {}  # (gsim, imt, iml ...) -> pne
-            # NB: given a rlzi there is a single gsim at fixed TRT
+            # NB: given a rlzi there is a single gsim at fixed TRT, so there
+            # P x M x R quartets
             for (poe, gsim, imt, rlzi), iml in zip(quartets, imls):
                 key = (gsim, imt) + tuple(iml)
                 try:
-                    pne = cache[key]
+                    pne = cache[key]  # this may happen if iml_disagg is given
                 except KeyError:
                     with disagg_pne:
                         poes = gsim.disaggregate_poe(
