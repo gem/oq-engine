@@ -23,7 +23,7 @@ import operator
 from functools import partial
 import numpy
 
-from openquake.baselib import parallel, config, datastore
+from openquake.baselib import parallel, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -413,7 +413,8 @@ def fix_ones(pmap):
     extremely large probability of exceedence, however that probability
     cannot be exactly 1 unless the level is exactly 0. Numerically, the
     PoE can be 1 and this give issues when calculating the damage (there
-    is a log(0) in :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
+    is a log(0) in
+    :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
     Here we solve the issue by replacing the unphysical probabilities 1
     with .9999999999999999 (the float64 closest to 1).
     """
@@ -432,7 +433,7 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
-    with monitor('combine pmaps'), pgetter:
+    with monitor('combine pmaps'):
         pmaps = pgetter.get_pmaps(pgetter.sids)
     if sum(len(pmap) for pmap in pmaps) == 0:  # no data
         return {}
@@ -451,17 +452,6 @@ class ClassicalCalculator(PSHACalculator):
     """
     pre_calculator = 'psha'
     core_task = build_hcurves_and_stats
-
-    def gen_args(self, pgetter):
-        """
-        :param pgetter: PmapGetter instance
-        :yields: arguments for the function build_hcurves_and_stats
-        """
-        monitor = self.monitor('build_hcurves_and_stats')
-        hstats = self.oqparam.hazard_stats()
-        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            newgetter = pgetter.new(tile.sids)
-            yield newgetter, hstats, monitor
 
     def execute(self):
         """
@@ -497,22 +487,14 @@ class ClassicalCalculator(PSHACalculator):
         self.datastore.flush()
 
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
-            if self.datastore.parent != ():
-                # workers read from the parent datastore
-                pgetter = calc.PmapGetter(
-                    self.datastore.parent, lazy=config.directory.shared_dir,
-                    rlzs_assoc=self.rlzs_assoc)
-                allargs = list(self.gen_args(pgetter))
-                self.datastore.parent.close()
-            else:
-                # workers read from the cache
-                pgetter = calc.PmapGetter(
-                    self.datastore, rlzs_assoc=self.rlzs_assoc)
-                allargs = self.gen_args(pgetter)
+            monitor = self.monitor('build_hcurves_and_stats')
+            hstats = oq.hazard_stats()
+            allargs = (
+                (calc.PmapGetter(self.datastore, tile.sids, self.rlzs_assoc),
+                 hstats, monitor)
+                for tile in self.sitecol.split_in_tiles(oq.concurrent_tasks))
             ires = parallel.Starmap(
                 self.core_task.__func__, allargs).submit_all()
-        if self.datastore.parent != ():
-            self.datastore.parent.open()  # if closed
         nbytes = ires.reduce(self.save_hcurves)
         return nbytes
 
