@@ -23,6 +23,7 @@ from openquake.baselib import config, datastore
 
 try:
     import openquakeplatform
+    from openquakeplatform.settings import STANDALONE_APPS
     STANDALONE = True
 except ImportError:
     STANDALONE = False
@@ -165,16 +166,9 @@ LOGGING = {
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
-STANDALONE_APPS = ()
 if STANDALONE:
     INSTALLED_APPS += (
         'openquakeplatform',
-    )
-
-    STANDALONE_APPS += (
-        'openquakeplatform_ipt',
-        'openquakeplatform_taxtweb',
-        'openquakeplatform_taxonomy',
     )
 
     INSTALLED_APPS += STANDALONE_APPS
