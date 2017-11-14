@@ -37,8 +37,8 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(src_filter, sources, rlzs_by_gsim,
-                   trt_names, curves, bin_edges, oqparam, monitor):
+def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
+                   oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -46,12 +46,12 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
         a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
     :param sources:
         list of hazardlib source objects
-    :param rlzs_by_gsim:
-        a dictionary GSIM -> realizations
+    :param cmaker:
+        a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
+    :param imldict:
+        a list of dictionaries poe, gsim, imt, rlzi -> iml
     :param dict trt_names:
         a tuple of names for the given tectonic region type
-    :param curves:
-        hazard curves for sites, realizations and IMTs
     :param bin_egdes:
         a dictionary site_id -> edges
     :param oqparam:
@@ -80,20 +80,15 @@ def compute_disagg(src_filter, sources, rlzs_by_gsim,
 
         # generate source, rupture, sites once per site
         with collecting_mon:
-            cmaker = ContextMaker(
-                rlzs_by_gsim, src_filter.integration_distance)
-            imldict = disagg.make_imldict(
-                rlzs_by_gsim, oqparam.imtls, oqparam.iml_disagg,
-                oqparam.poes_disagg, curves[i])
             bd = disagg._collect_bins_data(
-                trt_num, sources, site, cmaker, imldict,
+                trt_num, sources, site, cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
         for (poe, imt, iml, rlzi), pnes in bd.eps.items():
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
             # bins in a format handy for hazardlib
-            bins = [bd.mags, bd.dists,  bd.lons, bd.lats, pnes, bd.trts]
+            bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
             # call disagg._arrange_data_in_bins
             with arranging_mon:
                 key = (sid, rlzi, poe, imt, iml, trt_names)
@@ -185,7 +180,7 @@ producing too small PoEs.'''
         max_poe = numpy.zeros(R, oq.imt_dt())
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
-            trt_names = tuple(mod.trt for mod in smodel.src_groups)
+            trt_names = tuple(sorted(mod.trt for mod in smodel.src_groups))
             max_mag = max(mod.max_mag for mod in smodel.src_groups)
             min_mag = min(mod.min_mag for mod in smodel.src_groups)
             mag_edges = mag_bin_width * numpy.arange(
@@ -239,10 +234,15 @@ producing too small PoEs.'''
                     continue
                 mon = self.monitor('disaggregation')
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(sg.trt, sm_id)
+                cmaker = ContextMaker(
+                    rlzs_by_gsim, src_filter.integration_distance)
+                imls = [disagg.make_imldict(
+                    rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
+                    curve) for curve in curves]
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
-                        (src_filter, srcs, rlzs_by_gsim, trt_names,
-                         curves, bin_edges, oq, mon))
+                        (src_filter, srcs, cmaker, imls, trt_names,
+                         bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
