@@ -74,10 +74,11 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_2(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_curves_ok([
-            'rlz-0-PGA--3.0--3.0.xml', 'rlz-0-PGA-0.0-0.0.xml',
-            'rlz-1-PGA--3.0--3.0.xml', 'rlz-1-PGA-0.0-0.0.xml',
-            'rlz-2-PGA-0.0-0.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
+        self.assert_curves_ok(
+            ['rlz-0-PGA--3.0--3.0.xml', 'rlz-0-PGA-0.0-0.0.xml',
+             'rlz-1-PGA--3.0--3.0.xml', 'rlz-1-PGA-0.0-0.0.xml',
+             'rlz-2-PGA--3.0--3.0.xml', 'rlz-2-PGA-0.0-0.0.xml',
+             'rlz-3-PGA--3.0--3.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
             case_2.__file__)
 
     @attr('qa', 'hazard', 'disagg')
@@ -85,9 +86,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_3.__file__, 'job.ini')
         self.assertEqual(str(ctx.exception), '''\
-You are trying to disaggregate for poe=0.1.
-However the source model #0, 'source_model_test_complex.xml',
-produces at most probabilities of 0.0362320992703 for rlz=#0, IMT=PGA.
+You are trying to disaggregate for poe=0.1. However the sources produce
+at most probabilities of 0.0362320992703 for rlz=#0, IMT=PGA.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.''')
 

@@ -746,7 +746,7 @@ class CompositeSourceModel(collections.Sequence):
 
     def get_sources_by_trt(self):
         """
-        Build a dictionary TRT string -> sources without duplicates
+        Build a dictionary TRT string -> sources
         """
         acc = AccumDict(accum=[])
         for sm in self.source_models:
@@ -755,6 +755,13 @@ class CompositeSourceModel(collections.Sequence):
                     src.sm_id = sm.ordinal
                     src.samples = sm.samples
                 acc[grp.trt].extend(grp)
+        return acc
+
+    def get_sources_by_trt_no_dupl(self):
+        """
+        Build a dictionary TRT string -> sources without duplicates
+        """
+        acc = self.get_sources_by_trt()
         dic = {}
         weight = 0
         for trt in acc:
