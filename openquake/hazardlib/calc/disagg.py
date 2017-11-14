@@ -43,7 +43,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
 
 
-def make_imldict(rlzs_by_gsim, imtls, iml_disagg=None, poes_disagg=(None,),
+def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
                  curves=None):
     """
     :returns: a dictionary poe, gsim, imt, rlzi -> iml
@@ -55,6 +55,8 @@ def make_imldict(rlzs_by_gsim, imtls, iml_disagg=None, poes_disagg=(None,),
         poes_disagg = [None]
         iml_disagg = {from_string(imt): iml_disagg[imt]
                       for imt, iml in iml_disagg.items()}
+    elif not curves:  # there could be no hazard for the given site
+        return {}
     imldict = {}
     for poe in poes_disagg:
         for gsim in rlzs_by_gsim:
@@ -121,7 +123,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, _pnes, trt_bins = bins_data
+    mags, dists, lons, lats, _eps, _trts = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -290,7 +292,7 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
-    imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]})
+    imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
     bdata = _collect_bins_data(
         trt_num, sources, site, cmaker, imldict, truncation_level, n_epsilons)
     if all(len(x) == 0 for x in bdata):
@@ -301,11 +303,9 @@ def disaggregation(
         return None, None
     [pnes] = bdata.eps.values()
     bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats, pnes, bdata.trts]
-    trt_bins = [trt for (num, trt) in sorted((num, trt)
-                for (trt, num) in trt_num.items())]
     bin_edges = _define_bins(
         bins, mag_bin_width, dist_bin_width, coord_bin_width,
-        truncation_level, n_epsilons) + (trt_bins,)
+        truncation_level, n_epsilons) + (sorted(trt_num),)
     # mag_edges, dist_edges, lon_edges, lat_edges, eps_edges, trt_edges
     diss_matrix = _arrange_data_in_bins(bins, bin_edges)
     return bin_edges, diss_matrix
