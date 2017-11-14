@@ -73,7 +73,7 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
-            edges = bin_edges[sid]
+            edges = bin_edges[sid] + (trt_names,)
         except KeyError:
             # bin_edges for a given site are missing if the site is far away
             continue
@@ -84,18 +84,31 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
                 trt_num, sources, site, cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
+        if len(bd.mags) == 0:  # all filtered out
+            continue
+        cache = {}  # used if iml_disagg is given
         for (poe, imt, iml, rlzi), pnes in bd.eps.items():
-            # extract the probabilities of non-exceedance for the
-            # given realization, disaggregation PoE, and IMT
-            # bins in a format handy for hazardlib
             bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
-            # call disagg._arrange_data_in_bins
+            result[sid, rlzi, poe, imt, iml, trt_names] = _disagg_result(
+                bins, edges, imt if oqparam.iml_disagg else None, cache,
+                arranging_mon)
+
+    return result
+
+
+def _disagg_result(bins, edges, imt, cache, arranging_mon):
+    if imt:
+        try:
+            result = cache[imt]
+        except KeyError:
             with arranging_mon:
-                key = (sid, rlzi, poe, imt, iml, trt_names)
-                matrix = disagg._arrange_data_in_bins(
-                    bins, edges + (trt_names,))
-                result[key] = numpy.array(
+                matrix = disagg._arrange_data_in_bins(bins, edges)
+                result = cache[imt] = numpy.array(
                     [fn(matrix) for fn in disagg.pmf_map.values()])
+    else:
+        with arranging_mon:
+            mat = disagg._arrange_data_in_bins(bins, edges)
+            result = numpy.array([fn(mat) for fn in disagg.pmf_map.values()])
     return result
 
 
