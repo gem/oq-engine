@@ -79,14 +79,20 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             # bin_edges for a given site are missing if the site is far away
             continue
 
-        # generate source, rupture, sites once per site
+        # collect bins data
         with collecting_mon:
             bd = disagg._collect_bins_data(
                 trt_num, sources, SiteCollection([site]), cmaker, quartets,
                 imls[i], oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
+            if len(bd.mags) == 0:  # all filtered out
+                continue
 
-        for (poe, imt, iml, rlzi), pnes in bd.eps.items():
+        # bd.eps has shape (U, Q, N, E)
+        # the number of quartets Q is P x M x R
+        for q, pnes in enumerate(bd.eps.transpose(1, 0, 2, 3)):
+            poe, _gsim, imt, rlzi = quartets[q]
+            iml = imls[i][q]
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
             # bins in a format handy for hazardlib

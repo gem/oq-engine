@@ -88,14 +88,14 @@ def _collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
     lons = []
     lats = []
     trts = []
-    pnes = collections.defaultdict(list)  # poe, imt, iml, rlzi -> pnes
+    pnes = []
     sitemesh = sitecol.mesh
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     for source in sources:
         tect_reg = trt_num[source.tectonic_region_type]
         try:
-            for rupture, distances, pnedict in cmaker.disaggregate(
+            for rupture, distances, pne in cmaker.disaggregate(
                     sitecol, source.iter_ruptures(), quartets, imls,
                     truncnorm, n_epsilons, mon):
 
@@ -106,8 +106,7 @@ def _collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
                 lons.append(closest_points.lons)
                 lats.append(closest_points.lats)
                 trts.append(tect_reg)
-                for k, v in pnedict.items():
-                    pnes[k].append(v)
+                pnes.append(pne)
 
         except Exception as err:
             etype, err, tb = sys.exc_info()
@@ -115,12 +114,12 @@ def _collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
             msg %= (source.source_id, err)
             raise_(etype, msg, tb)
 
-    bindata = BinData(numpy.array(mags, float),
-                      numpy.array(dists, float),
-                      numpy.array(lons, float),
-                      numpy.array(lats, float),
-                      # pnes[k] shape= (num_ruptures, num_sites, num_epsilons)
-                      {k: numpy.array(pnes[k]) for k in pnes},
+    bindata = BinData(numpy.array(mags),
+                      numpy.array(dists),
+                      numpy.array(lons),
+                      numpy.array(lats),
+                      # (num_ruptures, num_quartets, num_sites, num_epsilons)
+                      numpy.array(pnes),
                       numpy.array(trts, int))
     return bindata
 
@@ -315,8 +314,9 @@ def disaggregation(
             'No ruptures have contributed to the hazard at site %s'
             % site, RuntimeWarning)
         return None, None
-    [pnes] = bdata.eps.values()
-    bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats, pnes, bdata.trts]
+    bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats,
+            bdata.eps[:, :, 0, :],  # shape (U, Q, N, E) with N=1
+            bdata.trts]
     bin_edges = _define_bins(
         bins, mag_bin_width, dist_bin_width, coord_bin_width,
         truncation_level, n_epsilons) + (sorted(trt_num),)

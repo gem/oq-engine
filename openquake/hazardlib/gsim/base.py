@@ -275,9 +275,8 @@ class ContextMaker(object):
         :param n_epsilons: the number of bins
         :param disagg_pne: a monitor of the disaggregation time
         :yields:
-            triples (rupture, site_dist, pnedict) where pnedict is a
-            dictionary poe, imt, iml, rlzi -> pne where pne is
-            an array of length n_epsilons of probabilities of no exceedence
+            triples (rupture, site_dist, pnes) where pnes is an array
+            of probabilities of no exceedence of shape (Q, N, E)
         """
         epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
         for rupture in ruptures:
@@ -285,7 +284,7 @@ class ContextMaker(object):
                 sctx, rctx, dctx = self.make_contexts(sitecol, rupture)
             except FarAwayRupture:
                 continue
-            pnedict = {}  # poe, imt, iml, rlzi -> pne
+            pnes = []
             cache = {}  # gsim, imt, iml -> pne
             # if imldict comes from iml_disagg, it has duplicated values
             # we are using a cache to avoid duplicating computation
@@ -299,10 +298,8 @@ class ContextMaker(object):
                             iml, truncnorm, epsilons)
                         pne = rupture.get_probability_no_exceedance(poes)
                     cache[gsim, imt, iml] = pne
-                key = poe, imt, iml, rlzi
-                assert key not in pnedict, key  # sanity check
-                pnedict[key] = pne
-            yield rupture, dctx.rjb, pnedict
+                pnes.append(pne)
+            yield rupture, dctx.rjb, numpy.array(pnes)  # shape (Q, N, E)
 
 
 @functools.total_ordering
