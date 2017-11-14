@@ -41,7 +41,7 @@ GST = {'gsim_logic_tree': writetmp('''\
 </nrml>'''),
        'source': 'fake'}
 
-# hard-coded to avoid a dependency from calculators
+# hard-coded to avoid a dependency from openquake.calculators
 OqParam.calculation_mode.validator.choices = (
     'classical', 'disaggregation', 'scenario', 'scenario_damage',
     'event_based', 'classical_risk')
