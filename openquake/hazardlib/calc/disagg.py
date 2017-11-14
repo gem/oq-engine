@@ -69,10 +69,9 @@ def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
     return imldict
 
 
-def _collect_bins_data(trt_num, sources, site, cmaker, imldict,
+def _collect_bins_data(trt_num, sources, sitecol, cmaker, imldict,
                        truncation_level, n_epsilons, mon=Monitor()):
     # returns a BinData instance
-    sitecol = SiteCollection([site])
     mags = []
     dists = []
     lons = []
@@ -85,16 +84,16 @@ def _collect_bins_data(trt_num, sources, site, cmaker, imldict,
     for source in sources:
         tect_reg = trt_num[source.tectonic_region_type]
         try:
-            for rupture, [site_dist], pnedict in cmaker.disaggregate(
+            for rupture, distances, pnedict in cmaker.disaggregate(
                     sitecol, source.iter_ruptures(), imldict,
                     truncnorm, n_epsilons, mon):
 
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
-                dists.append(site_dist)
-                [closest_point] = rupture.surface.get_closest_points(sitemesh)
-                lons.append(closest_point.longitude)
-                lats.append(closest_point.latitude)
+                dists.append(distances)
+                closest_points = rupture.surface.get_closest_points(sitemesh)
+                lons.append(closest_points.lons)
+                lats.append(closest_points.lats)
                 trts.append(tect_reg)
                 for k, v in pnedict.items():
                     pnes[k].append(v)
@@ -110,7 +109,7 @@ def _collect_bins_data(trt_num, sources, site, cmaker, imldict,
                       numpy.array(lons, float),
                       numpy.array(lats, float),
                       # pnes[k] shape= (num_ruptures, num_sites, num_epsilons)
-                      {k: numpy.array(pnes[k])[:, 0, :] for k in pnes},
+                      {k: numpy.array(pnes[k]) for k in pnes},
                       numpy.array(trts, int))
     return bindata
 
@@ -296,7 +295,8 @@ def disaggregation(
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
     imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
     bdata = _collect_bins_data(
-        trt_num, sources, site, cmaker, imldict, truncation_level, n_epsilons)
+        trt_num, sources, SiteCollection([site]), cmaker, imldict,
+        truncation_level, n_epsilons)
     if all(len(x) == 0 for x in bdata):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(

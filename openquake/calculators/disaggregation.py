@@ -27,6 +27,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.baselib import parallel
@@ -81,7 +82,7 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         # generate source, rupture, sites once per site
         with collecting_mon:
             bd = disagg._collect_bins_data(
-                trt_num, sources, site, cmaker, imldict[i],
+                trt_num, sources, SiteCollection([site]), cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
         for (poe, imt, iml, rlzi), pnes in bd.eps.items():
