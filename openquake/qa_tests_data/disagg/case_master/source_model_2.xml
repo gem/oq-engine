@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+<sourceModel name="source1">
+  <simpleFaultSource id="1" name="simple fault, trunc gr mfd" tectonicRegion="Active Shallow Crust">
+    <simpleFaultGeometry>
+     
+      <gml:LineString>
+        <gml:posList>
+          -122.0000 38.0000
+          -122.1000 38.2248
+        </gml:posList>
+      </gml:LineString>
+      
+      <dip>90.0</dip>
+      <upperSeismoDepth>0.0</upperSeismoDepth>
+      <lowerSeismoDepth>12.0</lowerSeismoDepth>
+    </simpleFaultGeometry>
+    
+    <magScaleRel>WC1994</magScaleRel>
+    <ruptAspectRatio>2.0</ruptAspectRatio>
+    <truncGutenbergRichterMFD aValue="3.1292" bValue="0.9" minMag="5.0" maxMag="6.5" />
+    <rake>0.0</rake>
+
+  </simpleFaultSource>
+  
+  <characteristicFaultSource id="2" name="characteristic fault" tectonicRegion="Stable Shallow Crust">
+	<surface><simpleFaultGeometry>
+	  <gml:LineString>
+		<gml:posList>
+		  -122.4000 38.0000
+		  -122.0000 38.2248
+		  -121.7000 38.2248
+		</gml:posList>
+	  </gml:LineString>
+
+	  <dip>30.0</dip>
+	  <upperSeismoDepth>5.0</upperSeismoDepth>
+	  <lowerSeismoDepth>15.0</lowerSeismoDepth>
+	</simpleFaultGeometry></surface>
+
+	<incrementalMFD minMag="7.0" binWidth="0.1">
+	  <occurRates>0.4e-2</occurRates>
+	</incrementalMFD>
+
+	<rake>0.0</rake>
+  </characteristicFaultSource>
+</sourceModel>
+
+</nrml>

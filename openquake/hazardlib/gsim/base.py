@@ -313,8 +313,8 @@ class ContextMaker(object):
         :param n_epsilons: the number of bins
         :param disagg_pne: a monitor of the disaggregation time
         :yields:
-            triples (rupture, site_dist, iml_pne) where iml_pne is a
-            dictionary poe, gsim, imt, iml, rlzi -> pne where pne is
+            triples (rupture, site_dist, pnedict) where pnedict is a
+            dictionary poe, imt, iml, rlzi -> pne where pne is
             an array of length n_epsilons of probabilities of no exceedence
         """
         assert len(sitecol) == 1, sitecol
@@ -324,9 +324,10 @@ class ContextMaker(object):
                 sctx, rctx, dctx = self.make_contexts(sitecol, rupture)
             except FarAwayRupture:
                 continue
-
             pnedict = {}  # poe, imt, iml, rlzi -> pne
             cache = {}  # gsim, imt, iml -> pne
+            # if imldict comes from iml_disagg, it has duplicated values
+            # we are using a cache to avoid duplicating computation
             for (poe, gsim, imt, rlzi), iml in imldict.items():
                 try:
                     pne = cache[gsim, imt, iml]
@@ -336,7 +337,9 @@ class ContextMaker(object):
                             gsim, rupture, sctx, rctx, dctx, imt, iml,
                             truncnorm, epsilons)
                     cache[gsim, imt, iml] = pne
-                pnedict[poe, str(imt), iml, rlzi] = pne
+                key = poe, str(imt), iml, rlzi
+                assert key not in pnedict, key  # sanity check
+                pnedict[key] = pne
             [rjb_dist] = dctx.rjb  # 1 site => 1 distance
             yield rupture, rjb_dist, pnedict
 

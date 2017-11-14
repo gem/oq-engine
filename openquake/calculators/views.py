@@ -749,3 +749,17 @@ def view_global_poes(token, dstore):
         gsim_avg = site_avg.sum(axis=1) / poes.shape_z
         tbl.append([grp] + list(gsim_avg))
     return rst_table(tbl, header=header)
+
+
+@view.add('mean_disagg')
+def view_mean_disagg(token, dstore):
+    """
+    Display mean quantities for the disaggregation. Useful for checking
+    differences between two calculations.
+    """
+    tbl = []
+    for key, dset in dstore['disagg'].items():
+        vals = [ds.value.mean() for ds in dset.values()]
+        tbl.append([key] + vals)
+    header = ['key'] + list(dset)
+    return rst_table(sorted(tbl), header=header)
