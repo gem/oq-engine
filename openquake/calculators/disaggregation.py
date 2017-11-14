@@ -99,7 +99,8 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
             # bins in a format handy for hazardlib
-            bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
+            bins = [bd.mags, bd.dists[:, i], bd.lons[:, i], bd.lats[:, i],
+                    pnes[:, i], bd.trts]
             # call disagg._arrange_data_in_bins
             with arranging_mon:
                 key = (sid, rlzi, poe, imt, iml, trt_names)
