@@ -41,8 +41,10 @@ GST = {'gsim_logic_tree': writetmp('''\
 </nrml>'''),
        'source': 'fake'}
 
+# hard-coded to avoid a dependency from calculators
 OqParam.calculation_mode.validator.choices = (
-    'classical', 'disaggregation', 'scenario', 'event_based', 'classical_risk')
+    'classical', 'disaggregation', 'scenario', 'scenario_damage',
+    'event_based', 'classical_risk')
 
 fakeinputs = {"source": "fake"}
 
@@ -334,6 +336,17 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             oq.set_risk_imtls(rm)
         self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))
+
+    def test_gmfs_but_no_sites(self):
+        inputs = fakeinputs.copy()
+        inputs['gmfs'] = 'fake'
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='scenario_damage',
+                inputs=inputs,
+                maximum_distance='400')
+        self.assertIn('You forgot sites or sites_csv in the job.ini!',
+                      str(ctx.exception))
 
     def test_disaggregation(self):
         with self.assertRaises(ValueError) as ctx:
