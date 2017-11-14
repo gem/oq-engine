@@ -1132,5 +1132,5 @@ def get_checksum32(oqparam):
             data = open(fname, 'rb').read()
             checksum = zlib.adler32(data, checksum) & 0xffffffff
         else:
-            raise ValueError('%s is not a file' % fname)
+            raise ValueError('%s does not exist or is not a file' % fname)
     return checksum
