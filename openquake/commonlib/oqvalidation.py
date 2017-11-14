@@ -212,6 +212,10 @@ class OqParam(valid.ParamSet):
                 logging.warn(
                     'iml_disagg=%s will not be computed from poes_disagg=%s',
                     str(self.iml_disagg), self.poes_disagg)
+            for k in ('mag_bin_width', 'distance_bin_width',
+                      'coordinate_bin_width', 'num_epsilon_bins'):
+                if k not in vars(self):
+                    raise ValueError('%s must be set in the job.ini file' % k)
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':

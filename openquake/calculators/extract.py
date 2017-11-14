@@ -116,7 +116,43 @@ def extract_hazard(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
-    yield 'oqparam', dstore['oqparam']
+    yield 'oqparam', oq
+    yield 'imtls', oq.imtls
+    yield 'realizations', dstore['realizations'].value
+    yield 'checksum32', dstore['/'].attrs['checksum32']
+    nsites = len(sitecol)
+    M = len(oq.imtls)
+    P = len(oq.poes)
+    for kind, pmap in calc.PmapGetter(dstore).items(what):
+        for imt in oq.imtls:
+            key = 'hcurves/%s/%s' % (imt, kind)
+            arr = numpy.zeros((nsites, len(oq.imtls[imt])))
+            for sid in pmap:
+                arr[sid] = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+            logging.info('extracting %s', key)
+            yield key, arr
+        if oq.poes:
+            hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
+        for p, poe in enumerate(oq.poes):
+            key = 'hmaps/poe-%s/%s' % (poe, kind)
+            arr = numpy.zeros((nsites, M))
+            idx = [m * P + p for m in range(M)]
+            for sid in pmap:
+                arr[sid] = hmap[sid].array[idx, 0]
+            logging.info('extracting %s', key)
+            yield key, arr
+
+
+@extract.add('qgis-hazard')
+def extract_hazard_for_qgis(dstore, what):
+    """
+    Extracts hazard curves and possibly hazard maps and/or uniform hazard
+    spectra. Use it as /extract/qgis-hazard/rlz-0, etc
+    """
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    yield 'sitecol', sitecol
+    yield 'oqparam', oq
     yield 'realizations', dstore['realizations'].value
     yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
