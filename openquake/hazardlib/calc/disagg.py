@@ -43,33 +43,44 @@ from openquake.hazardlib.gsim.base import ContextMaker
 BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
 
 
-def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
-                 curves=None):
+def make_imls(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
+              curves=None):
     """
-    :returns: a dictionary poe, gsim, imt, rlzi -> iml
+    :returns: a list of intensity measure level, on per quartet
 
     If iml_disagg is given, poe is None and the values are all the same for a
     given imt for any gsim and rlzi.
     """
     if iml_disagg:
         poes_disagg = [None]
-        iml_disagg = {from_string(imt): iml_disagg[imt]
-                      for imt, iml in iml_disagg.items()}
     elif not curves:  # there could be no hazard for the given site
-        return {}
-    imldict = {}
+        return []
+    levels = []
     for poe in poes_disagg:
         for gsim in rlzs_by_gsim:
-            for imt_str, imls in imtls.items():
-                imt = from_string(imt_str)
+            for imt, imls in imtls.items():
                 for rlzi in rlzs_by_gsim[gsim]:
-                    imldict[poe, gsim, imt, rlzi] = numpy.interp(
-                        poe, curves[rlzi][imt_str][::-1], imls[::-1]
+                    iml = numpy.interp(
+                        poe, curves[rlzi][imt][::-1], imls[::-1]
                     ) if poe is not None else imls[0]
-    return imldict
+                    levels.append(iml)
+    return levels
 
 
-def _collect_bins_data(trt_num, sources, sitecol, cmaker, imldict,
+def make_quartets(rlzs_by_gsim, imtls, poes_disagg=()):
+    """
+    :returns: a list of quartets (poe, gsim, imt, rlzi)
+    """
+    quartets = []
+    for poe in poes_disagg or [None, ]:
+        for gsim in rlzs_by_gsim:
+            for imt in imtls:
+                for rlzi in rlzs_by_gsim[gsim]:
+                    quartets.append((poe, gsim, imt, rlzi))
+    return quartets
+
+
+def _collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
                        truncation_level, n_epsilons, mon=Monitor()):
     # returns a BinData instance
     mags = []
@@ -85,7 +96,7 @@ def _collect_bins_data(trt_num, sources, sitecol, cmaker, imldict,
         tect_reg = trt_num[source.tectonic_region_type]
         try:
             for rupture, distances, pnedict in cmaker.disaggregate(
-                    sitecol, source.iter_ruptures(), imldict,
+                    sitecol, source.iter_ruptures(), quartets, imls,
                     truncnorm, n_epsilons, mon):
 
                 # extract rupture parameters of interest
@@ -293,9 +304,10 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
-    imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
+    quartets = make_quartets(rlzs_by_gsim, {str(imt): [iml]})
+    imls = make_imls(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
     bdata = _collect_bins_data(
-        trt_num, sources, SiteCollection([site]), cmaker, imldict,
+        trt_num, sources, SiteCollection([site]), cmaker, quartets, imls,
         truncation_level, n_epsilons)
     if all(len(x) == 0 for x in bdata):
         # No ruptures have contributed to the hazard level at this site.

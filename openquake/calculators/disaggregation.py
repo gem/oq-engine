@@ -38,8 +38,8 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
-                   oqparam, monitor):
+def compute_disagg(src_filter, sources, cmaker, quartets, imls,
+                   trt_names, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -82,9 +82,10 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         # generate source, rupture, sites once per site
         with collecting_mon:
             bd = disagg._collect_bins_data(
-                trt_num, sources, SiteCollection([site]), cmaker, imldict[i],
-                oqparam.truncation_level, oqparam.num_epsilon_bins,
+                trt_num, sources, SiteCollection([site]), cmaker, quartets,
+                imls[i], oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
+
         for (poe, imt, iml, rlzi), pnes in bd.eps.items():
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
@@ -234,12 +235,14 @@ producing too small PoEs.'''
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt)
             cmaker = ContextMaker(
                 rlzs_by_gsim, src_filter.integration_distance)
-            imls = [disagg.make_imldict(
+            quartets = disagg.make_quartets(
+                rlzs_by_gsim, oq.imtls, oq.poes_disagg)
+            imls = [disagg.make_imls(
                 rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
                 curve) for curve in curves]
             for srcs in split_in_blocks(split_sources, nblocks):
                 all_args.append(
-                    (src_filter, srcs, cmaker, imls, trts,
+                    (src_filter, srcs, cmaker, quartets, imls, trts,
                      self.bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(

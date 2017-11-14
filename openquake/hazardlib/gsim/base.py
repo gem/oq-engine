@@ -262,7 +262,7 @@ class ContextMaker(object):
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
-    def disaggregate(self, sitecol, ruptures, imldict,
+    def disaggregate(self, sitecol, ruptures, quartets, imls,
                      truncnorm, n_epsilons, disagg_pne=Monitor()):
         """
         Disaggregate (separate) PoE of `imldict` in different contributions
@@ -289,16 +289,17 @@ class ContextMaker(object):
             cache = {}  # gsim, imt, iml -> pne
             # if imldict comes from iml_disagg, it has duplicated values
             # we are using a cache to avoid duplicating computation
-            for (poe, gsim, imt, rlzi), iml in imldict.items():
+            for (poe, gsim, imt, rlzi), iml in zip(quartets, imls):
                 try:
                     pne = cache[gsim, imt, iml]
                 except KeyError:
                     with disagg_pne:
                         poes = gsim.disaggregate_poe(
-                            sctx, rctx, dctx, imt, iml, truncnorm, epsilons)
+                            sctx, rctx, dctx, imt_module.from_string(imt),
+                            iml, truncnorm, epsilons)
                         pne = rupture.get_probability_no_exceedance(poes)
                     cache[gsim, imt, iml] = pne
-                key = poe, str(imt), iml, rlzi
+                key = poe, imt, iml, rlzi
                 assert key not in pnedict, key  # sanity check
                 pnedict[key] = pne
             yield rupture, dctx.rjb, pnedict
