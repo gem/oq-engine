@@ -85,7 +85,7 @@ def _collect_bins_data(trt_num, sources, site, cmaker, imldict,
     for source in sources:
         tect_reg = trt_num[source.tectonic_region_type]
         try:
-            for rupture, site_dist, pnedict in cmaker.disaggregate(
+            for rupture, [site_dist], pnedict in cmaker.disaggregate(
                     sitecol, source.iter_ruptures(), imldict,
                     truncnorm, n_epsilons, mon):
 
@@ -105,12 +105,14 @@ def _collect_bins_data(trt_num, sources, site, cmaker, imldict,
             msg %= (source.source_id, err)
             raise_(etype, msg, tb)
 
-    return BinData(numpy.array(mags, float),
-                   numpy.array(dists, float),
-                   numpy.array(lons, float),
-                   numpy.array(lats, float),
-                   {k: numpy.array(pnes[k]) for k in pnes},
-                   numpy.array(trts, int))
+    bindata = BinData(numpy.array(mags, float),
+                      numpy.array(dists, float),
+                      numpy.array(lons, float),
+                      numpy.array(lats, float),
+                      # pnes[k] shape= (num_ruptures, num_sites, num_epsilons)
+                      {k: numpy.array(pnes[k])[:, 0, :] for k in pnes},
+                      numpy.array(trts, int))
+    return bindata
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,

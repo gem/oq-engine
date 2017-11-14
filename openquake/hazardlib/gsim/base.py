@@ -268,7 +268,7 @@ class ContextMaker(object):
         Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
 
-        :param sitecol: a SiteCollection with a single site
+        :param sitecol: a SiteCollection
         :param ruptures: an iterator over ruptures
         :param imldict: a dictionary poe, gsim, imt, rlzi -> iml
         :param truncnorm: an instance of scipy.stats.truncnorm
@@ -279,7 +279,6 @@ class ContextMaker(object):
             dictionary poe, imt, iml, rlzi -> pne where pne is
             an array of length n_epsilons of probabilities of no exceedence
         """
-        assert len(sitecol) == 1, sitecol
         epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
         for rupture in ruptures:
             try:
@@ -295,15 +294,14 @@ class ContextMaker(object):
                     pne = cache[gsim, imt, iml]
                 except KeyError:
                     with disagg_pne:
-                        [poes] = gsim.disaggregate_poe(
+                        poes = gsim.disaggregate_poe(
                             sctx, rctx, dctx, imt, iml, truncnorm, epsilons)
                         pne = rupture.get_probability_no_exceedance(poes)
                     cache[gsim, imt, iml] = pne
                 key = poe, str(imt), iml, rlzi
                 assert key not in pnedict, key  # sanity check
                 pnedict[key] = pne
-            [rjb_dist] = dctx.rjb  # 1 site => 1 distance
-            yield rupture, rjb_dist, pnedict
+            yield rupture, dctx.rjb, pnedict
 
 
 @functools.total_ordering
