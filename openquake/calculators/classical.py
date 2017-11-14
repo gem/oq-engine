@@ -296,7 +296,7 @@ class PSHACalculator(base.HazardCalculator):
             tiles = [self.sitecol]
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         if oq.optimize_same_id_sources:
-            self.dic = csm.get_sources_by_trt_no_dupl()  # redefine csm.weight
+            self.dic = csm.get_sources_by_trt()  # redefine csm.weight
         if oq.split_sources is False:
             maxweight = numpy.inf  # do not split the sources
         else:

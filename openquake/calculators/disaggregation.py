@@ -106,8 +106,9 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     Classical PSHA disaggregation calculator
     """
     POE_TOO_BIG = '''\
-You are trying to disaggregate for poe=%s. However the sources produce
-at most probabilities of %s for rlz=#%d, IMT=%s.
+You are trying to disaggregate for poe=%s.
+However the source model #%d, '%s',
+produces at most probabilities of %s for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
@@ -170,32 +171,18 @@ producing too small PoEs.'''
 
         self.bin_edges = {}
         curves = [self.get_curves(sid) for sid in sitecol.sids]
+        # determine the number of effective source groups
+        sg_data = self.datastore['csm_info/sg_data']
+        num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
+        nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         all_args = []
         src_filter = SourceFilter(sitecol, oq.maximum_distance)
         R = len(self.rlzs_assoc.realizations)
-
-        # populate max_poe array
         max_poe = numpy.zeros(R, oq.imt_dt())
-        for i, sid in enumerate(self.sitecol.sids):
-            for rlzi, poes in curves[i].items():
-                for imt in oq.imtls:
-                    max_poe[rlzi][imt] = max(
-                        max_poe[rlzi][imt], poes[imt].max())
 
-        # check for too big poes_disagg
-        for poe in oq.poes_disagg:
-            for rlz in self.rlzs_assoc.realizations:
-                rlzi = rlz.ordinal
-                for imt in oq.imtls:
-                    mpoe = max_poe[rlzi][imt]
-                    if poe > mpoe:
-                        raise ValueError(self.POE_TOO_BIG % (
-                            poe, mpoe, rlzi, imt))
-
-        # read sources
-        sources_by_trt = self.csm.get_sources_by_trt()
-        trts = tuple(sorted(sources_by_trt))
-        nblocks = math.ceil(oq.concurrent_tasks / len(trts))
+        # build trt_edges
+        trts = tuple(sorted(set(sg.trt for smodel in self.csm.source_models
+                                for sg in smodel.src_groups)))
 
         # build mag_edges
         min_mag = min(sg.min_mag for smodel in self.csm.source_models
@@ -206,7 +193,7 @@ producing too small PoEs.'''
             int(numpy.floor(min_mag / mag_bin_width)),
             int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
-        # build dist_edges, lon_edges, lat_edges
+        # build dist_edges, lon_edges, lat_edges per sid
         for sid in self.sitecol.sids:
             bb = bb_dict[sid]
             if not bb:
@@ -221,26 +208,54 @@ producing too small PoEs.'''
                 *[len(edges) - 1 for edges in bs] + [len(trts)])
             logging.info('%s for sid %d', shape, sid)
 
-        # build list of arguments
-        for trt in sources_by_trt:
-            split_sources = []
-            for src in sources_by_trt[trt]:
-                for split, _sites in src_filter(
-                        sourceconverter.split_source(src), sitecol):
-                    split_sources.append(split)
+        for smodel in self.csm.source_models:
+            sm_id = smodel.ordinal
+            for i, site in enumerate(sitecol):
+                sid = sitecol.sids[i]
+                curve = curves[i]
+                # populate max_poe array
+                for rlzi, poes in curve.items():
+                    for imt in oq.imtls:
+                        max_poe[rlzi][imt] = max(
+                            max_poe[rlzi][imt], poes[imt].max())
+                if not curve:
+                    continue  # skip zero-valued hazard curves
+                bb = bb_dict[sid]
+                if not bb:
+                    logging.info(
+                        'location %s was too far, skipping disaggregation',
+                        site.location)
+                    continue
+
+            # check for too big poes_disagg
+            for poe in oq.poes_disagg:
+                for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
+                    rlzi = rlz.ordinal
+                    for imt in oq.imtls:
+                        min_poe = max_poe[rlzi][imt]
+                        if poe > min_poe:
+                            raise ValueError(self.POE_TOO_BIG % (
+                                poe, sm_id, smodel.name, min_poe, rlzi, imt))
+
+            for sg in smodel.src_groups:
+                split_sources = []
+                for src in sg:
+                    for split, _sites in src_filter(
+                            sourceconverter.split_source(src), sitecol):
+                        split_sources.append(split)
                 if not split_sources:
                     continue
-            mon = self.monitor('disaggregation')
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt)
-            cmaker = ContextMaker(
-                rlzs_by_gsim, src_filter.integration_distance)
-            imls = [disagg.make_imldict(
-                rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
-                curve) for curve in curves]
-            for srcs in split_in_blocks(split_sources, nblocks):
-                all_args.append(
-                    (src_filter, srcs, cmaker, imls, trts,
-                     self.bin_edges, oq, mon))
+                mon = self.monitor('disaggregation')
+                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(sg.trt, sm_id)
+                cmaker = ContextMaker(
+                    rlzs_by_gsim, src_filter.integration_distance)
+                imls = [disagg.make_imldict(
+                    rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
+                    curve) for curve in curves]
+                for srcs in split_in_blocks(split_sources, nblocks):
+                    all_args.append(
+                        (src_filter, srcs, cmaker, imls, trts,
+                         self.bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
@@ -254,6 +269,12 @@ producing too small PoEs.'''
         :param results:
             a dictionary of probability arrays
         """
+        # build a dictionary rlz.ordinal -> source_model.ordinal
+        sm_id = {}
+        for i, rlzs in self.rlzs_assoc.rlzs_by_smodel.items():
+            for rlz in rlzs:
+                sm_id[rlz.ordinal] = i
+
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         for key, probs in sorted(results.items()):
