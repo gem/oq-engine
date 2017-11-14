@@ -285,13 +285,20 @@ class ContextMaker(object):
                     rupture.tectonic_region_type, rupture.mag)).all()):
                 continue  # far away rupture
             pnes = []
+            cache = {}  # (gsim, imt, iml ...) -> pne
             # NB: given a rlzi there is a single gsim at fixed TRT
             for (poe, gsim, imt, rlzi), iml in zip(quartets, imls):
-                with disagg_pne:
-                    poes = gsim.disaggregate_poe(
-                        sctx, rctx, dctx, imt_module.from_string(imt),
-                        iml, truncnorm, epsilons)
-                pnes.append(rupture.get_probability_no_exceedance(poes))
+                key = (gsim, imt) + tuple(iml)
+                try:
+                    pne = cache[key]
+                except KeyError:
+                    with disagg_pne:
+                        poes = gsim.disaggregate_poe(
+                            sctx, rctx, dctx, imt_module.from_string(imt),
+                            iml, truncnorm, epsilons)
+                        pne = rupture.get_probability_no_exceedance(poes)
+                    cache[key] = pne
+                pnes.append(pne)
             yield rupture, dctx.rjb, numpy.array(pnes)  # shape (Q, N, E)
 
 

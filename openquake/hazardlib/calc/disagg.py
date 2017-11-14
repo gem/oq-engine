@@ -43,8 +43,8 @@ BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
 
 
 def _imls(curves, poe, imt, imls, rlzi):
-    if poe is None:  # scalar iml
-        return imls[0]
+    if poe is None:  # iml_disagg was set
+        return imls
     # else return interpolated intensity measure levels
     levels = [numpy.interp(poe, curve[rlzi][imt][::-1], imls[::-1])
               if curve else numpy.nan for curve in curves]
@@ -61,8 +61,6 @@ def make_imls(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
     """
     if iml_disagg:
         poes_disagg = [None]
-    elif not curves:  # there could be no hazard for the given site
-        return []
     levels = []
     for poe in poes_disagg:
         for gsim in rlzs_by_gsim:
