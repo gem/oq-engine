@@ -227,8 +227,8 @@ producing too small PoEs.'''
                 for split, _sites in src_filter(
                         sourceconverter.split_source(src), sitecol):
                     split_sources.append(split)
-                if not split_sources:
-                    continue
+            if not split_sources:
+                continue
             mon = self.monitor('disaggregation')
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt)
             cmaker = ContextMaker(
