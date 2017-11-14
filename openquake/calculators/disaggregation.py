@@ -49,8 +49,10 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
         list of hazardlib source objects
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param imldict:
-        a list of dictionaries poe, gsim, imt, rlzi -> iml
+    :param quartets:
+        a list of Q quartets (poe, gsim, imt, rlzi)
+    :param imls:
+        a list of Q arrays with N levels each
     :param dict trt_names:
         a tuple of names for the given tectonic region type
     :param bin_egdes:
@@ -65,20 +67,19 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
     """
     sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
-
-    collecting_mon = monitor('collecting bins')
     arranging_mon = monitor('arranging bins')
 
     # collect bins data
-    with collecting_mon:
+    with monitor('collecting bins'):
         bd = disagg._collect_bins_data(
-            trt_num, sources, sitecol, cmaker, quartets,
-            imls, oqparam.truncation_level, oqparam.num_epsilon_bins,
+            trt_num, sources, sitecol, cmaker, quartets, imls,
+            oqparam.truncation_level, oqparam.num_epsilon_bins,
             monitor('disaggregate_pne', measuremem=False))
+    if len(bd.mags) == 0:  # all filtered out
+        return {}
+
+    result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
     for i, site in enumerate(sitecol):
-        if len(bd.mags) == 0 or len(bd.dists[:, i]) == 0:  # all filtered out
-            continue
 
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
