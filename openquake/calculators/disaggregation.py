@@ -186,6 +186,34 @@ producing too small PoEs.'''
         src_filter = SourceFilter(sitecol, oq.maximum_distance)
         R = len(self.rlzs_assoc.realizations)
 
+        # build trt_edges
+        trts = tuple(sorted(set(sg.trt for smodel in self.csm.source_models
+                                for sg in smodel.src_groups)))
+
+        # build mag_edges
+        min_mag = min(sg.min_mag for smodel in self.csm.source_models
+                      for sg in smodel.src_groups)
+        max_mag = max(sg.max_mag for smodel in self.csm.source_models
+                      for sg in smodel.src_groups)
+        mag_edges = mag_bin_width * numpy.arange(
+            int(numpy.floor(min_mag / mag_bin_width)),
+            int(numpy.ceil(max_mag / mag_bin_width) + 1))
+
+        # build dist_edges, lon_edges, lat_edges per sid
+        for sid in self.sitecol.sids:
+            bb = bb_dict[sid]
+            if not bb:
+                logging.info('site %d was too far, skipping disaggregation',
+                             sid)
+                continue
+            dist_edges, lon_edges, lat_edges = bb.bins_edges(
+                oq.distance_bin_width, oq.coordinate_bin_width)
+            self.bin_edges[sid] = bs = (
+                mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
+            shape = disagg.BinData(
+                *[len(edges) - 1 for edges in bs] + [len(trts)])
+            logging.info('%s for sid %d', shape, sid)
+
         # populate max_poe array
         max_poe = numpy.zeros(R, oq.imt_dt())
         for i, sid in enumerate(self.sitecol.sids):
@@ -206,32 +234,7 @@ producing too small PoEs.'''
 
         # read sources
         sources_by_trt = self.csm.get_sources_by_trt()
-        trts = tuple(sorted(sources_by_trt))
         nblocks = math.ceil(oq.concurrent_tasks / len(trts))
-
-        # build mag_edges
-        min_mag = min(sg.min_mag for smodel in self.csm.source_models
-                      for sg in smodel.src_groups)
-        max_mag = max(sg.max_mag for smodel in self.csm.source_models
-                      for sg in smodel.src_groups)
-        mag_edges = mag_bin_width * numpy.arange(
-            int(numpy.floor(min_mag / mag_bin_width)),
-            int(numpy.ceil(max_mag / mag_bin_width) + 1))
-
-        # build dist_edges, lon_edges, lat_edges
-        for sid in self.sitecol.sids:
-            bb = bb_dict[sid]
-            if not bb:
-                logging.info('site %d was too far, skipping disaggregation',
-                             sid)
-                continue
-            dist_edges, lon_edges, lat_edges = bb.bins_edges(
-                oq.distance_bin_width, oq.coordinate_bin_width)
-            self.bin_edges[sid] = bs = (
-                mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-            shape = disagg.BinData(
-                *[len(edges) - 1 for edges in bs] + [len(trts)])
-            logging.info('%s for sid %d', shape, sid)
 
         # build list of arguments
         for trt in sources_by_trt:
