@@ -90,7 +90,7 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         for (poe, imt, iml, rlzi), pnes in bd.eps.items():
             bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
             result[sid, rlzi, poe, imt, iml, trt_names] = _disagg_result(
-                bins, edges, imt if oqparam.iml_disagg else None, cache,
+                bins, edges, None, cache,
                 arranging_mon)
 
     return result
