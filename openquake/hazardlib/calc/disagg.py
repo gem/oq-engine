@@ -74,7 +74,7 @@ def build_ql(rlzs_by_gsim, imtls, poes_disagg=(), curves=None):
 
 
 def collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
-                       truncation_level, n_epsilons, mon=Monitor()):
+                      truncation_level, n_epsilons, mon=Monitor()):
     mags = []
     dists = []
     lons = []
@@ -115,6 +115,27 @@ def collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
                       numpy.array(trts, int),
                       source.tectonic_region_type)
     return bindata
+
+
+def get_result(bindata, bins, imt_disagg, cache, arranging_mon):
+    """
+    Arrange the bindata in the bins and returns a dictionary of results
+    according to the pmf_map. If imt_disagg is give, use a cache.
+    """
+    if imt_disagg:
+        pnesum = bindata[4].sum()  # using the sum as cache key (collisions?)
+        try:
+            result = cache[pnesum]
+        except KeyError:
+            with arranging_mon:
+                matrix = _arrange_data_in_bins(bindata, bins)
+                result = cache[pnesum] = numpy.array(
+                    [fn(matrix) for fn in pmf_map.values()])
+    else:
+        with arranging_mon:
+            mat = _arrange_data_in_bins(bindata, bins)
+            result = numpy.array([fn(mat) for fn in pmf_map.values()])
+    return result
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,

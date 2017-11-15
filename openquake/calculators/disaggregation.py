@@ -37,23 +37,6 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def _disagg_result(bins, edges, imt_disagg, cache, arranging_mon):
-    if imt_disagg:
-        pnesum = bins[4].sum()  # using the sum as cache key
-        try:
-            result = cache[pnesum]
-        except KeyError:
-            with arranging_mon:
-                matrix = disagg._arrange_data_in_bins(bins, edges)
-                result = cache[pnesum] = numpy.array(
-                    [fn(matrix) for fn in disagg.pmf_map.values()])
-    else:
-        with arranging_mon:
-            mat = disagg._arrange_data_in_bins(bins, edges)
-            result = numpy.array([fn(mat) for fn in disagg.pmf_map.values()])
-    return result
-
-
 def compute_disagg(src_filter, sources, cmaker, quartets, imls,
                    trt_names, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -119,7 +102,7 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             bins = [bd.mags, bd.dists[:, i], bd.lons[:, i], bd.lats[:, i],
                     pnes[:, i], bd.trts]
             # call disagg._arrange_data_in_bins
-            result[sid, rlzi, poe, imt, iml, trt_names] = _disagg_result(
+            result[sid, rlzi, poe, imt, iml, trt_names] = disagg.get_result(
                 bins, edges, oqparam.iml_disagg, cache, arranging_mon)
     return result
 
