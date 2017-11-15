@@ -98,3 +98,7 @@ def collect_bins(job_ini):
     print('See hdfview %s' % dstore.hdf5path)
 
 collect_bins.arg('job_ini', 'calculation configuration file')
+
+
+if __name__ == '__main__':
+    collect_bins.callfunc()
