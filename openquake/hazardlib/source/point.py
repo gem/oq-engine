@@ -17,20 +17,12 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-
+from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
-
-KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
-DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
-
-
-def angular_distance(km, lat):
-    """Return the angular distance of two points at the given latitude"""
-    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
+from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
 
 
 @with_slots
