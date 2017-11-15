@@ -230,6 +230,11 @@ class OqParam(valid.ParamSet):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
 
+        # check for GMFs from file
+        if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
+                'sites' not in self.inputs):
+            raise ValueError('You forgot sites|sites_csv in the job .ini file!')
+
         # checks for ucerf
         if 'ucerf' in self.calculation_mode:
             if self.ses_per_logic_tree_path >= TWO16:
