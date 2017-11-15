@@ -59,6 +59,7 @@ the index can be compensed. Finally, there is a function
 `filter_sites_by_distance_to_rupture` based on the Joyner-Boore distance.
 """
 import sys
+import math
 import logging
 import collections
 from contextlib import contextmanager
@@ -71,6 +72,14 @@ except ImportError:
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
+
+KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
+DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
+
+
+def angular_distance(km, lat):
+    """Return the angular distance of two points at the given latitude"""
+    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
 @contextmanager
@@ -256,6 +265,22 @@ class IntegrationDistance(collections.Mapping):
             return sites.filter(mask), distances[mask]
         else:
             raise FarAwayRupture
+
+    def get_bounding_box(self, lon, lat, trt, mag=None):
+        """
+        Build a bounding box around the given lon, lat by computing the
+        maximum_distance at the given tectonic region type and magnitude.
+
+        :param lon: longitude
+        :param lat: latitude
+        :param trt: tectonic region type
+        :param mag: magnitude, possibly None
+        :returns: min_lon, min_lat, max_lon, max_lat
+        """
+        maxdist = self(trt, mag)
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, lat)
+        return lon - a2, lat - a1, lon + a2, lat + a1
 
     def __getitem__(self, trt):
         return self(trt)
