@@ -32,11 +32,14 @@ from openquake.hazardlib.calc.disagg import _collect_bins_data, build_ql
 
 def save_bin_data(dstore, bdata):
     trt = bdata.trt
-    dstore.extend('bindata/%s/mags' % trt, bdata.mags)
-    dstore.extend('bindata/%s/dists' % trt, bdata.dists)
-    dstore.extend('bindata/%s/lons' % trt, bdata.lons)
-    dstore.extend('bindata/%s/lats' % trt, bdata.lats)
-    dstore.extend('bindata/%s/eps' % trt, bdata.eps)
+    nbytes = 0
+    for key in ('mags', 'dists', 'lons', 'lats', 'eps'):
+        dskey = 'bindata/%s/%s' % (trt, key)
+        data = getattr(bdata, key)
+        dstore.extend(dskey, data)
+        dstore.set_nbytes(dskey)
+        nbytes += data.nbytes
+    logging.info('Saved %d bytes' % nbytes)
     return dstore
 
 
