@@ -9,8 +9,8 @@ calculation:
 
 This list in the inset above contains a set of ruptures (in blue) and their
 corresponding sets of ground motion fields (in red). Exporting the outputs
-from the ruptures will produce, for each realisation, a NRML file containing a
-collection of ruptures. Below is an example:
+from the ruptures will produce, for each realisation, an NRML file containing
+a collection of ruptures. Below is an example:
 
 \input{oqum/hazard/verbatim/output_ses}
 
@@ -27,16 +27,26 @@ rupture as well as its rupturing properties (e.g. rake, magnitude). The
 rupture ID is an integer that represents each rupture uniquely: it should
 not be confused with the event ID.
 
-Exporting the outputs from the gmfs will produce an xml file for each
-realisation containing the corresponding ground motion fields.
-Listing~\ref{lst:output_gmf_xml} is an example of a gmf collection
-nrml file containing one ground motion field:
+The outputs from the \glspl{acr:gmf} can be exported either in the xml or csv
+formats. If the \glspl{acr:gmf} are exported in the xml format, the
+\gls{acr:oqe} will produce an xml file for each realisation with the
+corresponding ground motion fields. Listing~\ref{lst:output_gmf_xml} is an
+example of a gmf collection NRML file containing one ground motion field:
 
 \begin{listing}[htbp]
   \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_gmf.xml}
   \caption{Example ground motion field collection output file comprising a single GMF}
   \label{lst:output_gmf_xml}
 \end{listing}
+
+Exporting the outputs from the \glspl{acr:gmf} in the csv format results in
+two csv files illustrated in the example files in
+Table~\ref{output:gmf_event_based} and Table~\ref{output:sitemesh}. The sites csv
+file provides the association between the site ids in the \glspl{acr:gmf} csv
+file with their latitude and longitude coordinates.
+
+\input{oqum/hazard/verbatim/output_gmf_event_based}
+
 
 The `sourcegroups` output produces a csv file listing the tectonic region
 types involved in the calculation and the effective number of ruptures
