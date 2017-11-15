@@ -178,7 +178,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
 
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
-
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params([os.path.join(basedir, job_ini)])

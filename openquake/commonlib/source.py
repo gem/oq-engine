@@ -648,7 +648,7 @@ class CompositeSourceModel(collections.Sequence):
         try:
             dupl_sources = self.check_dupl_sources()
         except AssertionError:
-            logging.warn('Found different sources with the same ID')
+            # different sources with the same ID
             self.has_dupl_sources = 0
         else:
             for srcs in dupl_sources:
