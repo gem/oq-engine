@@ -231,7 +231,7 @@ class OqParam(valid.ParamSet):
                              ' supported')
 
         # check for GMFs from file
-        if ('gmfs' in self.inputs and not self.sites and
+        if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
                 'sites' not in self.inputs):
             raise ValueError('You forgot sites|sites_csv in the job.ini!')
 
