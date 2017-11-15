@@ -39,7 +39,8 @@ from openquake.hazardlib.gsim.base import ContextMaker
 
 # a 6-uple containing float 4 arrays mags, dists, lons, lats,
 # 1 int array trts and a list of dictionaries pnes
-BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
+BinData = collections.namedtuple(
+    'BinData', 'mags dists lons lats eps trts trt')
 
 
 def _imls(curves, poe, imt, imls, rlzi):
@@ -111,7 +112,8 @@ def _collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
                       numpy.array(lats),
                       # (num_ruptures, num_quartets, num_sites, num_epsilons)
                       numpy.array(pnes),
-                      numpy.array(trts, int))
+                      numpy.array(trts, int),
+                      source.tectonic_region_type)
     return bindata
 
 

@@ -27,7 +27,6 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.baselib import parallel
@@ -217,7 +216,7 @@ producing too small PoEs.'''
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
             shape = disagg.BinData(
-                *[len(edges) - 1 for edges in bs] + [len(trts)])
+                *[len(edges) - 1 for edges in bs] + [len(trts), '*'])
             logging.info('%s for sid %d', shape, sid)
 
         for smodel in self.csm.source_models:
