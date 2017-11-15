@@ -339,7 +339,7 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()
-        inputs['gmfs'] = 'fake'
+        inputs['gmfs'] = 'fake.csv'
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='scenario_damage',
