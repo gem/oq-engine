@@ -77,7 +77,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assert_curves_ok([
             'rlz-0-PGA--3.0--3.0.xml', 'rlz-0-PGA-0.0-0.0.xml',
             'rlz-1-PGA--3.0--3.0.xml', 'rlz-1-PGA-0.0-0.0.xml',
-            'rlz-2-PGA-0.0-0.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
+            'rlz-2-PGA--3.0-0.0.xml', 'rlz-2-PGA-0.0-0.0.xml',
+            'rlz-3-PGA--3.0-0.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
             case_2.__file__)
 
     @attr('qa', 'hazard', 'disagg')

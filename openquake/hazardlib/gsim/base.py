@@ -230,7 +230,7 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def make_contexts(self, site_collection, rupture):
+    def make_contexts(self, site_collection, rupture, filter=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -257,51 +257,50 @@ class ContextMaker(object):
         """
         rctx = self.make_rupture_context(rupture)
         sites, distances = self.maximum_distance.get_closest(
-            site_collection, rupture, 'rjb')
+            site_collection, rupture, 'rjb', filter)
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
-    def disaggregate(self, sitecol, ruptures, imldict,
+    def disaggregate(self, sitecol, ruptures, quartets, imls,
                      truncnorm, n_epsilons, disagg_pne=Monitor()):
         """
         Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
 
         :param sitecol: a SiteCollection
-        :param ruptures: an iterator over ruptures
+        :param ruptures: an iterator over ruptures of the same TRT
         :param imldict: a dictionary poe, gsim, imt, rlzi -> iml
         :param truncnorm: an instance of scipy.stats.truncnorm
         :param n_epsilons: the number of bins
         :param disagg_pne: a monitor of the disaggregation time
         :yields:
-            triples (rupture, site_dist, pnedict) where pnedict is a
-            dictionary poe, imt, iml, rlzi -> pne where pne is
-            an array of length n_epsilons of probabilities of no exceedence
+            triples (rupture, site_dist, pnes) where pnes is an array
+            of probabilities of no exceedence of shape (Q, N, E)
         """
         epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
         for rupture in ruptures:
-            try:
-                sctx, rctx, dctx = self.make_contexts(sitecol, rupture)
-            except FarAwayRupture:
-                continue
-            pnedict = {}  # poe, imt, iml, rlzi -> pne
-            cache = {}  # gsim, imt, iml -> pne
-            # if imldict comes from iml_disagg, it has duplicated values
-            # we are using a cache to avoid duplicating computation
-            for (poe, gsim, imt, rlzi), iml in imldict.items():
+            sctx, rctx, dctx = self.make_contexts(sitecol, rupture, filter=0)
+            if (self.maximum_distance and (dctx.rjb > self.maximum_distance(
+                    rupture.tectonic_region_type, rupture.mag)).all()):
+                continue  # far away rupture
+            pnes = []
+            cache = {}  # (gsim, imt, iml ...) -> pne
+            # NB: given a rlzi there is a single gsim at fixed TRT, so there
+            # are P x M x R quartets
+            for (poe, gsim, imt, rlzi), iml in zip(quartets, imls):
+                key = (gsim, imt) + tuple(iml)
                 try:
-                    pne = cache[gsim, imt, iml]
+                    pne = cache[key]  # this may happen if iml_disagg is given
                 except KeyError:
                     with disagg_pne:
                         poes = gsim.disaggregate_poe(
-                            sctx, rctx, dctx, imt, iml, truncnorm, epsilons)
+                            sctx, rctx, dctx, imt_module.from_string(imt),
+                            iml, truncnorm, epsilons)
                         pne = rupture.get_probability_no_exceedance(poes)
-                    cache[gsim, imt, iml] = pne
-                key = poe, str(imt), iml, rlzi
-                assert key not in pnedict, key  # sanity check
-                pnedict[key] = pne
-            yield rupture, dctx.rjb, pnedict
+                    cache[key] = pne
+                pnes.append(pne)
+            yield rupture, dctx.rjb, numpy.array(pnes)  # shape (Q, N, E)
 
 
 @functools.total_ordering
@@ -552,12 +551,9 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             from different sigma bands in the form of a 2d numpy array of
             probabilities with shape (n_sites, n_epsilons)
         """
-        self._check_imt(imt)
-
         # compute mean and standard deviations
         mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                    [const.StdDev.TOTAL])
-
         # compute iml value with respect to standard (mean=0, std=1)
         # normal distributions
         standard_imls = (self.to_distribution_values(iml) - mean) / stddev

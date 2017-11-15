@@ -27,7 +27,6 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.baselib import parallel
@@ -38,8 +37,8 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
-                   oqparam, monitor):
+def compute_disagg(src_filter, sources, cmaker, quartets, imls,
+                   trt_names, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -49,8 +48,10 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         list of hazardlib source objects
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param imldict:
-        a list of dictionaries poe, gsim, imt, rlzi -> iml
+    :param quartets:
+        a list of Q quartets (poe, gsim, imt, rlzi)
+    :param imls:
+        a list of Q arrays with N levels each
     :param dict trt_names:
         a tuple of names for the given tectonic region type
     :param bin_egdes:
@@ -65,38 +66,44 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
     """
     sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
-
-    collecting_mon = monitor('collecting bins')
     arranging_mon = monitor('arranging bins')
 
+    # collect bins data
+    with monitor('collecting bins'):
+        bd = disagg.collect_bins_data(
+            trt_num, sources, sitecol, cmaker, quartets, imls,
+            oqparam.truncation_level, oqparam.num_epsilon_bins,
+            monitor('disaggregate_pne', measuremem=False))
+    if len(bd.mags) == 0:  # all filtered out
+        return {}
+
+    result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
     for i, site in enumerate(sitecol):
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
-            edges = bin_edges[sid]
+            edges = bin_edges[sid] + (trt_names,)
         except KeyError:
             # bin_edges for a given site are missing if the site is far away
             continue
 
-        # generate source, rupture, sites once per site
-        with collecting_mon:
-            bd = disagg._collect_bins_data(
-                trt_num, sources, SiteCollection([site]), cmaker, imldict[i],
-                oqparam.truncation_level, oqparam.num_epsilon_bins,
-                monitor('disaggregate_pne', measuremem=False))
-        for (poe, imt, iml, rlzi), pnes in bd.eps.items():
+        # bd.eps has shape (U, Q, N, E)
+        # the number of quartets Q is P x M x R
+        cache = {}  # used if iml_disagg is given
+        for q, pnes in enumerate(bd.eps.transpose(1, 0, 2, 3)):
+            poe, _gsim, imt, rlzi = quartets[q]
+            if oqparam.iml_disagg:
+                iml = oqparam.iml_disagg[imt]
+            else:
+                iml = imls[q][i]
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
             # bins in a format handy for hazardlib
-            bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
+            bins = [bd.mags, bd.dists[:, i], bd.lons[:, i], bd.lats[:, i],
+                    pnes[:, i], bd.trts]
             # call disagg._arrange_data_in_bins
-            with arranging_mon:
-                key = (sid, rlzi, poe, imt, iml, trt_names)
-                matrix = disagg._arrange_data_in_bins(
-                    bins, edges + (trt_names,))
-                result[key] = numpy.array(
-                    [fn(matrix) for fn in disagg.pmf_map.values()])
+            result[sid, rlzi, poe, imt, iml, trt_names] = disagg.get_result(
+                bins, edges, oqparam.iml_disagg, cache, arranging_mon)
     return result
 
 
@@ -204,9 +211,8 @@ producing too small PoEs.'''
                 oq.distance_bin_width, oq.coordinate_bin_width)
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-            shape = disagg.BinData(
-                *[len(edges) - 1 for edges in bs] + [len(trts)])
-            logging.info('%s for sid %d', shape, sid)
+            shape = [len(edges) - 1 for edges in bs] + [len(trts)]
+            logging.info('bins %s for sid %d', shape, sid)
 
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
@@ -246,18 +252,18 @@ producing too small PoEs.'''
                         split_sources.append(split)
                 if not split_sources:
                     continue
+
                 mon = self.monitor('disaggregation')
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(
                     sg.trt, smodel.ordinal)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
-                imls = [disagg.make_imldict(
-                    rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
-                    curve) for curve in curves]
+                quartets, levels = disagg.build_ql(
+                    rlzs_by_gsim, oq.imtls, oq.poes_disagg, curves)
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
-                        (src_filter, srcs, cmaker, imls, trts,
-                         self.bin_edges, oq, mon))
+                        (src_filter, srcs, cmaker, quartets, levels,
+                         trts, self.bin_edges, oq, mon))
 
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
