@@ -37,7 +37,6 @@ def save_bin_data(dstore, bdata):
         data = getattr(bdata, key)
         if len(data):
             dstore.extend(dskey, data)
-            dstore.set_nbytes(dskey)
     return dstore
 
 
@@ -89,8 +88,13 @@ def collect_bins(job_ini):
 
     parallel.Starmap(collect_bins_data, all_args).reduce(
         save_bin_data, dstore)
-    for key in dstore:
+    # setting nbytes
+    for trt in dstore['bindata']:
+        key = 'bindata/' + trt
+        for k in dstore[key]:
+            dstore.set_nbytes('%s/%s' % (key, k))
         dstore.set_nbytes(key)
+    dstore.set_nbytes('bindata')
     print('See hdfview %s' % dstore.hdf5path)
 
 collect_bins.arg('job_ini', 'calculation configuration file')
