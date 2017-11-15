@@ -194,6 +194,12 @@ producing too small PoEs.'''
 
         # build dist_edges, lon_edges, lat_edges per sid
         for sid in self.sitecol.sids:
+            #lon = self.sitecol.lons[sid]
+            #lat = self.sitecol.lats[sid]
+            #bb = src_filter.integration_distance.get_bounding_box(
+            #    lon, lat, 'trt', max_mag)
+            #import pdb; pdb.set_trace()
+        
             bb = bb_dict[sid]
             if not bb:
                 logging.info('site %d was too far, skipping disaggregation',
