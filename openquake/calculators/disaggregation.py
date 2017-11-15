@@ -83,7 +83,7 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
-            edges = bin_edges[sid]
+            edges = bin_edges[sid] + (trt_names,)
         except KeyError:
             # bin_edges for a given site are missing if the site is far away
             continue
@@ -104,8 +104,7 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             # call disagg._arrange_data_in_bins
             with arranging_mon:
                 key = (sid, rlzi, poe, imt, iml, trt_names)
-                matrix = disagg._arrange_data_in_bins(
-                    bins, edges + (trt_names,))
+                matrix = disagg._arrange_data_in_bins(bins, edges)
                 result[key] = numpy.array(
                     [fn(matrix) for fn in disagg.pmf_map.values()])
     return result
