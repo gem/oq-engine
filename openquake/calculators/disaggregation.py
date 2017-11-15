@@ -70,7 +70,7 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
 
     # collect bins data
     with monitor('collecting bins'):
-        bd = disagg._collect_bins_data(
+        bd = disagg.collect_bins_data(
             trt_num, sources, sitecol, cmaker, quartets, imls,
             oqparam.truncation_level, oqparam.num_epsilon_bins,
             monitor('disaggregate_pne', measuremem=False))

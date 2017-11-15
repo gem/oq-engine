@@ -27,19 +27,17 @@ from openquake.baselib.general import split_in_blocks
 from openquake.commonlib import readinput
 from openquake.hazardlib import sourceconverter, gsim
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib.calc.disagg import _collect_bins_data, build_ql
+from openquake.hazardlib.calc.disagg import collect_bins_data, build_ql
 
 
 def save_bin_data(dstore, bdata):
     trt = bdata.trt
-    nbytes = 0
     for key in ('mags', 'dists', 'lons', 'lats', 'eps'):
         dskey = 'bindata/%s/%s' % (trt, key)
         data = getattr(bdata, key)
-        dstore.extend(dskey, data)
-        dstore.set_nbytes(dskey)
-        nbytes += data.nbytes
-    logging.info('Saved %d bytes' % nbytes)
+        if len(data):
+            dstore.extend(dskey, data)
+            dstore.set_nbytes(dskey)
     return dstore
 
 
@@ -89,7 +87,7 @@ def collect_bins(job_ini):
                     (trt_num, srcs, sitecol, cmaker, quartets, levels,
                      tl, oq.num_epsilon_bins, mon))
 
-    parallel.Starmap(_collect_bins_data, all_args).reduce(
+    parallel.Starmap(collect_bins_data, all_args).reduce(
         save_bin_data, dstore)
     for key in dstore:
         dstore.set_nbytes(key)

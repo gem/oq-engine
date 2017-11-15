@@ -73,7 +73,7 @@ def build_ql(rlzs_by_gsim, imtls, poes_disagg=(), curves=None):
     return quartets, levels
 
 
-def _collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
+def collect_bins_data(trt_num, sources, sitecol, cmaker, quartets, imls,
                        truncation_level, n_epsilons, mon=Monitor()):
     mags = []
     dists = []
@@ -122,7 +122,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     """
     Define bin edges for disaggregation histograms.
 
-    Given bins data as provided by :func:`_collect_bins_data`, this function
+    Given bins data as provided by :func:`collect_bins_data`, this function
     finds edges of histograms, taking into account maximum and minimum values
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
@@ -158,7 +158,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
 
 def _arrange_data_in_bins(bins_data, bin_edges):
     """
-    Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
+    Given bins data, as it comes from :func:`collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
     mags, dists, lons, lats, pnes, trts = bins_data
@@ -297,7 +297,7 @@ def disaggregation(
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
     quartets, imls = build_ql(rlzs_by_gsim, {str(imt): [iml]})
-    bdata = _collect_bins_data(
+    bdata = collect_bins_data(
         trt_num, sources, SiteCollection([site]), cmaker, quartets, imls,
         truncation_level, n_epsilons)
     if all(len(x) == 0 for x in bdata):
