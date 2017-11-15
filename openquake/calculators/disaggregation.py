@@ -37,6 +37,23 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
+def _disagg_result(bins, edges, imt_disagg, cache, arranging_mon):
+    if imt_disagg:
+        pnesum = bins[4].sum()
+        try:
+            result = cache[pnesum]
+        except KeyError:
+            with arranging_mon:
+                matrix = disagg._arrange_data_in_bins(bins, edges)
+                result = cache[pnesum] = numpy.array(
+                    [fn(matrix) for fn in disagg.pmf_map.values()])
+    else:
+        with arranging_mon:
+            mat = disagg._arrange_data_in_bins(bins, edges)
+            result = numpy.array([fn(mat) for fn in disagg.pmf_map.values()])
+    return result
+
+
 def compute_disagg(src_filter, sources, cmaker, quartets, imls,
                    trt_names, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -79,7 +96,6 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
 
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
     for i, site in enumerate(sitecol):
-
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
@@ -90,6 +106,7 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
 
         # bd.eps has shape (U, Q, N, E)
         # the number of quartets Q is P x M x R
+        cache = {}  # used if iml_disagg is given
         for q, pnes in enumerate(bd.eps.transpose(1, 0, 2, 3)):
             poe, _gsim, imt, rlzi = quartets[q]
             if oqparam.iml_disagg:
@@ -102,11 +119,8 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             bins = [bd.mags, bd.dists[:, i], bd.lons[:, i], bd.lats[:, i],
                     pnes[:, i], bd.trts]
             # call disagg._arrange_data_in_bins
-            with arranging_mon:
-                key = (sid, rlzi, poe, imt, iml, trt_names)
-                matrix = disagg._arrange_data_in_bins(bins, edges)
-                result[key] = numpy.array(
-                    [fn(matrix) for fn in disagg.pmf_map.values()])
+            result[sid, rlzi, poe, imt, iml, trt_names] = _disagg_result(
+                bins, edges, oqparam.iml_disagg, cache, arranging_mon)
     return result
 
 
