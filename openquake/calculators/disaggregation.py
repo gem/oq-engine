@@ -65,13 +65,13 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
         (sid, rlz.id, poe, imt, iml, trt_names).
     """
     sitecol = src_filter.sitecol
-    trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
     arranging_mon = monitor('arranging bins')
+    trti = trt_names.index(sources[0].tectonic_region_type)
 
     # collect bins data
     with monitor('collecting bins'):
         bd = disagg.collect_bins_data(
-            trt_num, sources, sitecol, cmaker, quartets, imls,
+            sources, sitecol, cmaker, quartets, imls,
             oqparam.truncation_level, oqparam.num_epsilon_bins,
             monitor('disaggregate_pne', measuremem=False))
     if len(bd.mags) == 0:  # all filtered out
@@ -99,11 +99,11 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
             # bins in a format handy for hazardlib
-            bins = [bd.mags, bd.dists[:, i], bd.lons[:, i], bd.lats[:, i],
-                    pnes[:, i], bd.trts]
+            bdata = [bd.mags, bd.dists[:, i], bd.lons[:, i], bd.lats[:, i],
+                     pnes[:, i], trti]
             # call disagg._arrange_data_in_bins
             result[sid, rlzi, poe, imt, iml, trt_names] = disagg.get_result(
-                bins, edges, oqparam.iml_disagg, cache, arranging_mon)
+                bdata, edges, oqparam.iml_disagg, cache, arranging_mon)
     return result
 
 
