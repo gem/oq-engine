@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the error message if the user forgets both sites and sites.csv
+    in a calculation starting from predetermined GMFs
   * Improved the error message if the user specifies a non-existing file in
     the job.ini
   * Change the ordering of the TRT bins in disaggregation: now they are
