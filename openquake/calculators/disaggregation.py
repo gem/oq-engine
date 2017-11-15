@@ -237,6 +237,7 @@ producing too small PoEs.'''
                             raise ValueError(self.POE_TOO_BIG % (
                                 poe, sm_id, smodel.name, min_poe, rlzi, imt))
 
+        for smodel in self.csm.source_models:
             for sg in smodel.src_groups:
                 split_sources = []
                 for src in sg:
@@ -246,7 +247,8 @@ producing too small PoEs.'''
                 if not split_sources:
                     continue
                 mon = self.monitor('disaggregation')
-                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(sg.trt, sm_id)
+                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(
+                    sg.trt, smodel.ordinal)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
                 imls = [disagg.make_imldict(
@@ -269,12 +271,6 @@ producing too small PoEs.'''
         :param results:
             a dictionary of probability arrays
         """
-        # build a dictionary rlz.ordinal -> source_model.ordinal
-        sm_id = {}
-        for i, rlzs in self.rlzs_assoc.rlzs_by_smodel.items():
-            for rlz in rlzs:
-                sm_id[rlz.ordinal] = i
-
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         for key, probs in sorted(results.items()):
