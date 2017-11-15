@@ -335,8 +335,8 @@ def disaggregation(
     dists = numpy.concatenate([bd.dists for bd in bdata])
     lons = numpy.concatenate([bd.lons for bd in bdata])
     lats = numpy.concatenate([bd.lats for bd in bdata])
+    # NB: bd.eps has shape (U, Q, N, E) with N=1, eps has shape (U', Q, E)
     eps = numpy.concatenate([bd.eps[:, :, 0, :] for bd in bdata])
-    # NB: eps has shape (U, Q, N, E) with N=1
     if all(len(bd.mags) == 0 for bd in bdata):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(

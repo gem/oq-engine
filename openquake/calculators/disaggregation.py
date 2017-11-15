@@ -89,6 +89,11 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
 
         # bd.eps has shape (U, Q, N, E)
         # the number of quartets Q is P x M x R
+        # extract the probabilities of non-exceedance for the
+        # given realization, disaggregation PoE, and IMT
+        # bins in a format handy for hazardlib
+        bdata = [bd.mags, bd.dists[:, i], bd.lons[:, i], bd.lats[:, i],
+                 None, trti]
         cache = {}  # used if iml_disagg is given
         for q, pnes in enumerate(bd.eps.transpose(1, 0, 2, 3)):
             poe, _gsim, imt, rlzi = quartets[q]
@@ -96,13 +101,8 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
                 iml = oqparam.iml_disagg[imt]
             else:
                 iml = imls[q][i]
-            # extract the probabilities of non-exceedance for the
-            # given realization, disaggregation PoE, and IMT
-            # bins in a format handy for hazardlib
-            bdata = [bd.mags, bd.dists[:, i], bd.lons[:, i], bd.lats[:, i],
-                     pnes[:, i], trti]
-            # call disagg._arrange_data_in_bins
-            result[sid, rlzi, poe, imt, iml, trt_names] = disagg.get_result(
+            bdata[4] = pnes[:, i]
+            result[sid, rlzi, poe, imt, iml] = disagg.get_result(
                 bdata, edges, oqparam.iml_disagg, cache, arranging_mon)
     return result
 
@@ -126,7 +126,7 @@ producing too small PoEs.'''
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results,
-        a dictionary with key (sid, rlz.id, poe, imt, iml, trt_names)
+        a dictionary with key (sid, rlz.id, poe, imt, iml)
         and values which are probability arrays.
 
         :param acc: dictionary accumulating the results
@@ -280,13 +280,13 @@ producing too small PoEs.'''
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         for key, probs in sorted(results.items()):
-            sid, rlz_id, poe, imt, iml, trt_names = key
+            sid, rlz_id, poe, imt, iml = key
             edges = self.bin_edges[sid]
             self.save_disagg_result(
-                sid, edges, trt_names, probs, rlz_id,
+                sid, edges, probs, rlz_id,
                 self.oqparam.investigation_time, imt, iml, poe)
 
-    def save_disagg_result(self, site_id, bin_edges, trt_names, matrix,
+    def save_disagg_result(self, site_id, bin_edges, matrix,
                            rlz_id, investigation_time, imt_str, iml, poe):
         """
         Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
@@ -296,8 +296,6 @@ producing too small PoEs.'''
             id of the current site
         :param bin_edges:
             The 5-uple mag, dist, lon, lat, eps
-        :param trt_names:
-            The list of Tectonic Region Types
         :param matrix:
             A probability array
         :param rlz_id:
@@ -324,7 +322,6 @@ producing too small PoEs.'''
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
         attrs['iml'] = iml
-        attrs['trts'] = hdf5.array_of_vstr(trt_names)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
