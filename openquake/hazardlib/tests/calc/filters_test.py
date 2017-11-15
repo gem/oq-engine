@@ -18,7 +18,7 @@
 
 import unittest
 from numpy.testing import assert_almost_equal as aae
-from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.calc.filters import IntegrationDistance, MAX_DISTANCE
 
 
 class IntegrationDistanceTestCase(unittest.TestCase):
@@ -26,14 +26,14 @@ class IntegrationDistanceTestCase(unittest.TestCase):
         maxdist = IntegrationDistance({'default': [
             (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
 
-        aae(maxdist('ANY_TRT'), 400)
+        aae(maxdist('ANY_TRT'), MAX_DISTANCE)  # 2000 km
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
-        aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
+        aae(bb, [-18.2638692, -7.9864, 18.2638692, 27.9864])
 
         aae(maxdist('ANY_TRT', mag=7.1), 400)
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=7.1)
         aae(bb, [-3.6527738, 6.40272, 3.6527738, 13.59728])
 
         aae(maxdist('ANY_TRT', mag=6.9), 300)
-        bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=6.9)  # maxdist=200
+        bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT', mag=6.9)
         aae(bb, [-2.7395804, 7.30204, 2.7395804, 12.69796])
