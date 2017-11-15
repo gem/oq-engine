@@ -39,7 +39,7 @@ DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 def _disagg_result(bins, edges, imt_disagg, cache, arranging_mon):
     if imt_disagg:
-        pnesum = bins[4].sum()
+        pnesum = bins[4].sum()  # using the sum as cache key
         try:
             result = cache[pnesum]
         except KeyError:
@@ -228,9 +228,8 @@ producing too small PoEs.'''
                 oq.distance_bin_width, oq.coordinate_bin_width)
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-            shape = disagg.BinData(
-                *[len(edges) - 1 for edges in bs] + [len(trts), '*'])
-            logging.info('%s for sid %d', shape, sid)
+            shape = [len(edges) - 1 for edges in bs] + [len(trts)]
+            logging.info('bins %s for sid %d', shape, sid)
 
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
