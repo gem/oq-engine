@@ -75,6 +75,7 @@ from openquake.hazardlib.geo.utils import fix_lons_idl
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
+MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 
 
 def angular_distance(km, lat):
@@ -235,8 +236,8 @@ class IntegrationDistance(collections.Mapping):
         value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
-        elif mag is None:  # get the maximum magnitude distance
-            return value[-1][1]
+        elif mag is None:  # get the maximum distance
+            return MAX_DISTANCE
         elif not hasattr(self, 'interp'):
             self.interp = {}  # function cache
         try:
@@ -245,7 +246,7 @@ class IntegrationDistance(collections.Mapping):
             mags, dists = zip(*getdefault(self.magdist, trt))
             if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
                 mags = numpy.concatenate([mags, [11]])
-                dists = numpy.concatenate([dists, [2000]])
+                dists = numpy.concatenate([dists, [MAX_DISTANCE]])
             md = self.interp[trt] = Piecewise(mags, dists)
         return md(mag)
 
