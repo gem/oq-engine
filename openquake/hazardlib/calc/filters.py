@@ -71,7 +71,7 @@ except ImportError:
     rtree = None
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.hazardlib.geo.utils import cross_idl, fix_lons_idl
+from openquake.hazardlib.geo.utils import fix_bounding_box_idl, fix_lons_idl
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
@@ -268,19 +268,19 @@ class IntegrationDistance(collections.Mapping):
         else:
             raise FarAwayRupture
 
-    def get_bounding_box(self, lon, lat, trt, mag=None):
+    def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
         Build a bounding box around the given lon, lat by computing the
         maximum_distance at the given tectonic region type and magnitude.
 
         :param lon: longitude
         :param lat: latitude
-        :param trt: tectonic region type
+        :param trt: tectonic region type, possibly None
         :param mag: magnitude, possibly None
         :returns: min_lon, min_lat, max_lon, max_lat
         """
         maxdist = self(trt, mag)
-        a1 = maxdist * KM_TO_DEGREES
+        a1 = min(maxdist * KM_TO_DEGREES, 180)
         a2 = angular_distance(maxdist, lat)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
@@ -350,27 +350,7 @@ class SourceFilter(object):
         """
         mag = src.get_min_max_mag()[1]
         maxdist = self.integration_distance(src.tectonic_region_type, mag)
-        return self.fix_idl_bb(src.get_bounding_box(maxdist))
-
-    def fix_idl_bb(self, bb):
-        """
-        Fix a bounding box if the longitudes cross the international date line.
-
-        :param bb: min_lon, min_lat, max_lon, max_lat
-        :returns: a fixed bounding box
-        """
-        min_lon, min_lat, max_lon, max_lat = bb
-        if cross_idl(min_lon, max_lon):  # apply IDL fix
-            if min_lon < 0 and max_lon > 0:
-                return max_lon, min_lat, min_lon + 360, max_lat
-            elif min_lon < 0 and max_lon < 0:
-                return min_lon + 360, min_lat, max_lon + 360, max_lat
-            elif min_lon > 0 and max_lon > 0:
-                return min_lon, min_lat, max_lon, max_lat
-            elif min_lon > 0 and max_lon < 0:
-                return max_lon + 360, min_lat, min_lon, max_lat
-        else:
-            return min_lon, min_lat, max_lon, max_lat
+        return fix_bounding_box_idl(src.get_bounding_box(maxdist), self.idl)
 
     def get_rectangle(self, src):
         """
@@ -399,7 +379,7 @@ class SourceFilter(object):
         for site in self.sitecol:
             bb = self.integration_distance.get_bounding_box(
                 site.location.longitude, site.location.latitude, trt, mag)
-            lon1, lat1, lon2, lat2 = self.fix_idl_bb(bb)
+            lon1, lat1, lon2, lat2 = fix_bounding_box_idl(bb)
             bbs.append((lon1, lon2, lat2, lat1))
         return bbs
 
