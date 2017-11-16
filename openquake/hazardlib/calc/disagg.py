@@ -161,7 +161,7 @@ def lon_lat_bins(bb, coord_bin_width):
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    west, south, east, north = bb
+    west, lat1, east, lat2 = bb
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
     east = numpy.ceil(east / coord_bin_width) * coord_bin_width
     lon_extent = get_longitudinal_extent(west, east)
@@ -169,8 +169,8 @@ def lon_lat_bins(bb, coord_bin_width):
         west, 0, 0, east, 0, 0,
         numpy.round(lon_extent / coord_bin_width + 1))
     lat_bins = coord_bin_width * numpy.arange(
-        int(numpy.floor(south / coord_bin_width)),
-        int(numpy.ceil(north / coord_bin_width) + 1))
+        int(numpy.floor(lat1 / coord_bin_width)),
+        int(numpy.ceil(lat2 / coord_bin_width) + 1))
     return lon_bins, lat_bins
 
 
