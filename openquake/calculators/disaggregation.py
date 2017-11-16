@@ -163,9 +163,7 @@ producing too small PoEs.'''
         """
         oq = self.oqparam
         tl = self.oqparam.truncation_level
-        bb_dict = self.datastore['bb_dict']
         sitecol = self.sitecol
-        mag_bin_width = self.oqparam.mag_bin_width
         eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
 
         self.bin_edges = {}
@@ -174,7 +172,6 @@ producing too small PoEs.'''
         sg_data = self.datastore['csm_info/sg_data']
         num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
         nblocks = math.ceil(oq.concurrent_tasks / num_grps)
-        all_args = []
         src_filter = SourceFilter(sitecol, oq.maximum_distance)
         R = len(self.rlzs_assoc.realizations)
         max_poe = numpy.zeros(R, oq.imt_dt())
@@ -188,17 +185,19 @@ producing too small PoEs.'''
                       for sg in smodel.src_groups)
         max_mag = max(sg.max_mag for smodel in self.csm.source_models
                       for sg in smodel.src_groups)
-        mag_edges = mag_bin_width * numpy.arange(
-            int(numpy.floor(min_mag / mag_bin_width)),
-            int(numpy.ceil(max_mag / mag_bin_width) + 1))
+        mag_edges = oq.mag_bin_width * numpy.arange(
+            int(numpy.floor(min_mag / oq.mag_bin_width)),
+            int(numpy.ceil(max_mag / oq.mag_bin_width) + 1))
 
+        # build dist_edges
         maxdist = oq.maximum_distance('default', max_mag)
         dist_edges = oq.distance_bin_width * numpy.arange(
             0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
 
+        # build eps_edges
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
-        # build dist_edges, lon_edges, lat_edges per sid
+        # build lon_edges, lat_edges per sid
         bbs = src_filter.get_bounding_boxes(mag=max_mag)
         for sid, bb in zip(self.sitecol.sids, bbs):
             lon_edges, lat_edges = disagg.lon_lat_bins(
@@ -209,6 +208,7 @@ producing too small PoEs.'''
                 *[len(edges) - 1 for edges in bs] + [len(trts)])
             logging.info('%s for sid %d', shape, sid)
 
+        # check poes
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
             for i, site in enumerate(sitecol):
@@ -221,12 +221,6 @@ producing too small PoEs.'''
                             max_poe[rlzi][imt], poes[imt].max())
                 if not curve:
                     continue  # skip zero-valued hazard curves
-                bb = bb_dict[sid]
-                if not bb:
-                    logging.info(
-                        'location %s was too far, skipping disaggregation',
-                        site.location)
-                    continue
 
             # check for too big poes_disagg
             for poe in oq.poes_disagg:
@@ -238,6 +232,8 @@ producing too small PoEs.'''
                             raise ValueError(self.POE_TOO_BIG % (
                                 poe, sm_id, smodel.name, min_poe, rlzi, imt))
 
+        # build all_args
+        all_args = []
         for smodel in self.csm.source_models:
             for sg in smodel.src_groups:
                 split_sources = []
