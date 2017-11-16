@@ -379,7 +379,7 @@ class SourceFilter(object):
         for site in self.sitecol:
             bb = self.integration_distance.get_bounding_box(
                 site.location.longitude, site.location.latitude, trt, mag)
-            lon1, lat1, lon2, lat2 = fix_bounding_box_idl(bb)
+            lon1, lat1, lon2, lat2 = fix_bounding_box_idl(bb, self.idl)
             bbs.append((lon1, lon2, lat2, lat1))
         return bbs
 
