@@ -25,6 +25,7 @@ try:
     from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
 except ImportError:
     STANDALONE = False
+    STANDALONE_APPS = ()
 
 INSTALLED_APPS = ('openquake.server.db',)
 
