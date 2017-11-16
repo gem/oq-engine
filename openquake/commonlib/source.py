@@ -695,7 +695,6 @@ class CompositeSourceModel(collections.Sequence):
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         new.weight = weight
-        new.src_filter = src_filter
         return new
 
     @property
@@ -747,7 +746,7 @@ class CompositeSourceModel(collections.Sequence):
 
     def get_sources_by_trt(self):
         """
-        Build a dictionary TRT string -> sources without duplicates
+        Build a dictionary TRT string -> sources
         """
         acc = AccumDict(accum=[])
         for sm in self.source_models:
@@ -756,6 +755,13 @@ class CompositeSourceModel(collections.Sequence):
                     src.sm_id = sm.ordinal
                     src.samples = sm.samples
                 acc[grp.trt].extend(grp)
+        return acc
+
+    def get_sources_by_trt_no_dupl(self):
+        """
+        Build a dictionary TRT string -> sources without duplicates
+        """
+        acc = self.get_sources_by_trt()
         dic = {}
         weight = 0
         for trt in acc:
@@ -807,8 +813,7 @@ class CompositeSourceModel(collections.Sequence):
         for src in sources:
             self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
 
-    def split_sources(self, sources=None, src_filter=None, maxweight=None,
-                      concurrent_tasks=None):
+    def split_sources(self, sources, src_filter, maxweight):
         """
         Split a set of sources of the same source group; light sources
         (i.e. with weight <= maxweight) are not split.
@@ -818,12 +823,6 @@ class CompositeSourceModel(collections.Sequence):
         :param maxweight: weight used to decide if a source is light
         :yields: blocks of sources of weight around maxweight
         """
-        if sources is None:
-            sources = self.get_sources()
-        if src_filter is None:
-            src_filter = self.src_filter
-        if maxweight is None:
-            maxweight = self.get_maxweight(concurrent_tasks)
         light = [src for src in sources if src.weight <= maxweight]
         for block in block_splitter(
                 light, maxweight, weight=operator.attrgetter('weight')):
