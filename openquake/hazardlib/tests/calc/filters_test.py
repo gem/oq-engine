@@ -73,4 +73,4 @@ class SourceFilterTestCase(unittest.TestCase):
         bb1, bb2 = srcfilter.get_bounding_boxes(mag=4.5)
         # bounding boxes in the form west, east, north, south
         aae(bb1, [173.8210225, 184.1789775, 80.89932, 79.10068])
-        aae(bb2, [-184.1789775, -173.8210225, 80.89932, 79.10068])
+        aae(bb2, [175.8210225, 186.1789775, 80.89932, 79.10068])
