@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
 import operator
+import collections
 try:
     import rtree
 except:
@@ -32,6 +33,8 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.geodetic import (
     EARTH_RADIUS, geodetic_distance, min_idx_dst)
 from openquake.baselib.slots import with_slots
+
+SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 
 
 class GeographicObjects(object):
@@ -177,7 +180,7 @@ def get_spherical_bounding_box(lons, lats):
                    for lon in lons):
             raise ValueError('points collection has longitudinal extent '
                              'wider than 180 deg')
-    return west, east, north, south
+    return SphericalBB(west, east, north, south)
 
 
 @with_slots

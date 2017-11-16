@@ -71,7 +71,7 @@ except ImportError:
     rtree = None
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.hazardlib.geo.utils import fix_lons_idl
+from openquake.hazardlib.geo.utils import cross_idl, fix_lons_idl
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
@@ -350,8 +350,17 @@ class SourceFilter(object):
         """
         mag = src.get_min_max_mag()[1]
         maxdist = self.integration_distance(src.tectonic_region_type, mag)
-        min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
-        if self.idl:  # apply IDL fix
+        return self.fix_idl_bb(src.get_bounding_box(maxdist))
+
+    def fix_idl_bb(self, bb):
+        """
+        Fix a bounding box if the longitudes cross the international date line.
+
+        :param bb: min_lon, min_lat, max_lon, max_lat
+        :returns: a fixed bounding box
+        """
+        min_lon, min_lat, max_lon, max_lat = bb
+        if cross_idl(min_lon, max_lon):  # apply IDL fix
             if min_lon < 0 and max_lon > 0:
                 return max_lon, min_lat, min_lon + 360, max_lat
             elif min_lon < 0 and max_lon < 0:
@@ -379,6 +388,20 @@ class SourceFilter(object):
         source_sites = list(self([source]))
         if source_sites:
             return source_sites[0][1]
+
+    def get_bounding_boxes(self, trt=None, mag=None):
+        """
+        :param trt: a tectonic region type (used for the integration distance)
+        :param mag: a magnitude (used for the integration distance)
+        :returns: a list of spherical bounding boxes, one per site
+        """
+        bbs = []
+        for site in self.sitecol:
+            bb = self.integration_distance.get_bounding_box(
+                site.location.longitude, site.location.latitude, trt, mag)
+            lon1, lat1, lon2, lat2 = self.fix_idl_bb(bb)
+            bbs.append((lon1, lon2, lat2, lat1))
+        return bbs
 
     def __call__(self, sources, sites=None):
         if sites is None:
