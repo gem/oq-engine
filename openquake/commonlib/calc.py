@@ -123,12 +123,12 @@ class PmapGetter(object):
         assert self.sids is not None
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
         grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
+        array = self.rlzs_assoc.by_grp()
         for grp in grps:
-            array = self.rlzs_assoc.array[grp]
-            for rec in array:
-                for r in rec['rlzis']:
+            for gsim_idx, rlzis in array[grp]:
+                for r in rlzis:
                     if r == rlzi:
-                        pmap |= self._pmap_by_grp[grp].extract(rec['gsim_idx'])
+                        pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
                         break
         return pmap
 
