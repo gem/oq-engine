@@ -373,14 +373,13 @@ class SourceFilter(object):
         """
         :param trt: a tectonic region type (used for the integration distance)
         :param mag: a magnitude (used for the integration distance)
-        :returns: a list of spherical bounding boxes, one per site
+        :returns: a list of bounding boxes, one per site
         """
         bbs = []
         for site in self.sitecol:
             bb = self.integration_distance.get_bounding_box(
                 site.location.longitude, site.location.latitude, trt, mag)
-            lon1, lat1, lon2, lat2 = fix_bounding_box_idl(bb, self.idl)
-            bbs.append((lon1, lon2, lat2, lat1))
+            bbs.append(fix_bounding_box_idl(bb, self.idl))
         return bbs
 
     def __call__(self, sources, sites=None):
