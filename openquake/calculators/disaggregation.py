@@ -202,6 +202,10 @@ producing too small PoEs.'''
         for sid, bb in zip(self.sitecol.sids, bbs):
             lon_edges, lat_edges = disagg.lon_lat_bins(
                 bb, oq.coordinate_bin_width)
+            logging.info('site %d, lon = %s...%s',
+                         sid, min(lon_edges), max(lon_edges))
+            logging.info('site %d, lats = %s...%s',
+                         sid, min(lat_edges), max(lat_edges))
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
             shape = disagg.BinData(
