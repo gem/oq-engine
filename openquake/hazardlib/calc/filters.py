@@ -364,6 +364,7 @@ class SourceFilter(object):
                 yield src, sites
             elif self.use_rtree:  # Rtree filtering, used in the controller
                 box = self.get_affected_box(src)
+                import pdb; pdb.set_trace()
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(set(sids)) < len(sids):
                     # MS: sanity check against rtree bugs; what happened to me
