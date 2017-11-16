@@ -192,15 +192,17 @@ producing too small PoEs.'''
             int(numpy.floor(min_mag / mag_bin_width)),
             int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
+        maxdist = oq.maximum_distance('default', max_mag)
+        dist_edges = oq.distance_bin_width * numpy.arange(
+            0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
+
+        eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
+
         # build dist_edges, lon_edges, lat_edges per sid
-        for sid in self.sitecol.sids:
-            bb = bb_dict[sid]
-            if not bb:
-                logging.info('site %d was too far, skipping disaggregation',
-                             sid)
-                continue
-            dist_edges, lon_edges, lat_edges = bb.bins_edges(
-                oq.distance_bin_width, oq.coordinate_bin_width)
+        bbs = src_filter.get_bounding_boxes(mag=max_mag)
+        for sid, bb in zip(self.sitecol.sids, bbs):
+            lon_edges, lat_edges = disagg.lon_lat_bins(
+                bb, oq.coordinate_bin_width)
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
             shape = disagg.BinData(
