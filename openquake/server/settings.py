@@ -22,8 +22,7 @@ import getpass
 from openquake.baselib import config, datastore
 
 try:
-    from openquakeplatform.settings import STANDALONE_APPS
-    STANDALONE = True
+    from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
 except ImportError:
     STANDALONE = False
 
