@@ -61,9 +61,9 @@ class SourceFilterTestCase(unittest.TestCase):
                  z1pt0=66.7, z2pt5=88.9, backarc=False)])
         srcfilter = SourceFilter(sitecol, maxdist)
         bb1, bb2 = srcfilter.get_bounding_boxes(mag=4.5)
-        # bounding boxes in the form west, east, north, south
-        aae(bb1, (9.0429636, 10.9570364, 20.89932, 19.10068))
-        aae(bb2, (-2.1009058, -0.29909425, -2.50068, -4.29932))
+        # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
+        aae(bb1, (9.0429636, 19.10068, 10.9570364, 20.89932))
+        aae(bb2, (-2.1009057, -4.29932, -0.2990943, -2.50068))
 
     def test_international_date_line(self):
         maxdist = IntegrationDistance({'default': [
@@ -77,6 +77,6 @@ class SourceFilterTestCase(unittest.TestCase):
                  z1pt0=66.7, z2pt5=88.9, backarc=False)])
         srcfilter = SourceFilter(sitecol, maxdist)
         bb1, bb2 = srcfilter.get_bounding_boxes(mag=4.5)
-        # bounding boxes in the form west, east, north, south
-        aae(bb1, [173.8210225, 184.1789775, 80.89932, 79.10068])
-        aae(bb2, [175.8210225, 186.1789775, 80.89932, 79.10068])
+        # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
+        aae(bb1, (173.8210225, 79.10068, 184.1789775, 80.89932))
+        aae(bb2, (175.8210225, 79.10068, 186.1789775, 80.89932))
