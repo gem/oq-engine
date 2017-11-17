@@ -795,8 +795,8 @@ def maximum_distance(value):
     for trt, magdists in dic.items():
         if isinstance(magdists, list):  # could be a scalar otherwise
             magdists.sort()  # make sure the list is sorted by magnitude
-            for magdist in magdists:
-                magnitude(magdist[0])  # validate the magnitudes
+            for mag, dist in magdists:  # validate the magnitudes
+                magnitude(mag)
     return IntegrationDistance(dic)
 
 
