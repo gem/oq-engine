@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
 import operator
+import collections
 try:
     import rtree
 except:
@@ -32,6 +33,8 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.geodetic import (
     EARTH_RADIUS, geodetic_distance, min_idx_dst)
 from openquake.baselib.slots import with_slots
+
+SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 
 
 class GeographicObjects(object):
@@ -177,7 +180,7 @@ def get_spherical_bounding_box(lons, lats):
                    for lon in lons):
             raise ValueError('points collection has longitudinal extent '
                              'wider than 180 deg')
-    return west, east, north, south
+    return SphericalBB(west, east, north, south)
 
 
 @with_slots
@@ -490,3 +493,24 @@ def fix_lons_idl(lons):
         return new, True
     else:
         return lons, False
+
+
+def fix_bounding_box_idl(bb, fix_idl=False):
+    """
+    Fix a bounding box if the longitudes cross the international date line.
+
+    :param bb: min_lon, min_lat, max_lon, max_lat
+    :returns: a fixed bounding box
+    """
+    min_lon, min_lat, max_lon, max_lat = bb
+    if cross_idl(min_lon, max_lon) or fix_idl:  # apply IDL fix
+        if min_lon < 0 and max_lon > 0:
+            return max_lon, min_lat, min_lon + 360, max_lat
+        elif min_lon < 0 and max_lon < 0:
+            return min_lon + 360, min_lat, max_lon + 360, max_lat
+        elif min_lon > 0 and max_lon > 0:
+            return min_lon, min_lat, max_lon, max_lat
+        elif min_lon > 0 and max_lon < 0:
+            return max_lon + 360, min_lat, min_lon, max_lat
+    else:
+        return min_lon, min_lat, max_lon, max_lat
