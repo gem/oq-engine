@@ -101,7 +101,7 @@ def compute_disagg(src_filter, sources, cmaker, quartets, imls,
             else:
                 iml = imls[q][i]
             bdata[4] = pnes[:, i]
-            result[sid, rlzi, poe, imt, iml] = disagg.get_result(
+            result[sid, rlzi, poe, imt, iml] = disagg.arrange(
                 bdata, edges, oqparam.iml_disagg, cache, arranging_mon)
     return result
 

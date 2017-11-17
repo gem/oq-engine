@@ -118,10 +118,10 @@ def collect_bins_data(sources, sitecol, cmaker, quartets, imls,
     return bindata
 
 
-def get_result(bindata, bins, imt_disagg, cache, arranging_mon):
+def arrange(bindata, bins, imt_disagg, cache, arranging_mon):
     """
     Arrange the bindata in the bins and returns a dictionary of results
-    according to the pmf_map. If imt_disagg is give, use a cache.
+    according to the pmf_map. If `imt_disagg` is given, use a cache.
     """
     if imt_disagg:
         pnesum = bindata[4].sum()  # using the sum as cache key (collisions?)
