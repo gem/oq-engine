@@ -165,7 +165,11 @@ class RlzsAssoc(object):
                 acc[gsim_by_trt[trt]].append(rlz.ordinal)
         else:  # dictionary for the selected source model
             for rlz in self.rlzs_by_smodel[sm_id]:
-                gsim = self.gsim_by_trt[rlz.ordinal][trt]
+                gsim_by_trt = self.gsim_by_trt[rlz.ordinal]
+                try:  # if there is a single TRT
+                    [gsim] = gsim_by_trt.values()
+                except ValueError:  # there is more than 1 TRT
+                    gsim = gsim_by_trt[trt]
                 acc[gsim].append(rlz.ordinal)
         return collections.OrderedDict(
             (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
