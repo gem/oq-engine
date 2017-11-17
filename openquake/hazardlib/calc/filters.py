@@ -279,7 +279,10 @@ class IntegrationDistance(collections.Mapping):
         :param mag: magnitude, possibly None
         :returns: min_lon, min_lat, max_lon, max_lat
         """
-        maxdist = self(trt, mag)
+        if trt is None:  # take the greatest integration distance
+            maxdist = max(self(trt, mag) for trt in self.dic)
+        else:  # get the integration distance for the given TRT
+            maxdist = self(trt, mag)
         a1 = min(maxdist * KM_TO_DEGREES, 180)
         a2 = angular_distance(maxdist, lat)
         return lon - a2, lat - a1, lon + a2, lat + a1
