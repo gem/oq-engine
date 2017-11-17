@@ -21,7 +21,13 @@ from numpy.testing import assert_almost_equal as aae
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, MAX_DISTANCE, SourceFilter)
+    IntegrationDistance, MAX_DISTANCE, SourceFilter, angular_distance)
+
+
+class AngularDistanceTestCase(unittest.TestCase):
+    def test(self):
+        aae(angular_distance(km=1000, lat=80), 51.7897747)
+        aae(angular_distance(km=1000, lat=88), 257.68853)
 
 
 class IntegrationDistanceTestCase(unittest.TestCase):
