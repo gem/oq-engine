@@ -79,9 +79,10 @@ MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 
 
 def angular_distance(km, lat):
-    """Return the angular distance of two points at the given latitude"""
-    degrees = km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
-    return min(degrees, 90)
+    """
+    Return the angular distance of two points at the given latitude.
+    """
+    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
 @contextmanager
@@ -283,8 +284,8 @@ class IntegrationDistance(collections.Mapping):
             maxdist = max(self(trt, mag) for trt in self.dic)
         else:  # get the integration distance for the given TRT
             maxdist = self(trt, mag)
-        a1 = min(maxdist * KM_TO_DEGREES, 180)
-        a2 = angular_distance(maxdist, lat)
+        a1 = min(maxdist * KM_TO_DEGREES, 90)
+        a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
     def __getitem__(self, trt):
