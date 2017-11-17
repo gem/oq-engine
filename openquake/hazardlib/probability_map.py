@@ -155,10 +155,10 @@ class ProbabilityMap(dict):
     def setdefault(self, sid, value):
         """
         Works like `dict.setdefault`: if the `sid` key is missing, it fills
-        it with an array and returns it.
+        it with an array and returns the associate ProbabilityCurve
 
         :param sid: site ID
-        :param value: value used to fill the returned array
+        :param value: value used to fill the returned ProbabilityCurve
         """
         try:
             return self[sid]
