@@ -139,41 +139,24 @@ def get_result(bindata, bins, imt_disagg, cache, arranging_mon):
     return result
 
 
-def _define_bins(mags, dists, lons, lats, mag_bin_width, dist_bin_width,
-                 coord_bin_width, truncation_level, n_epsilons):
+def lon_lat_bins(bb, coord_bin_width):
     """
-    Define bin edges for disaggregation histograms.
-
-    Given bins data as provided by :func:`collect_bins_data`, this function
-    finds edges of histograms, taking into account maximum and minimum values
-    of magnitude, distance and coordinates as well as requested sizes/numbers
-    of bins.
+    Define lon, lat bin edges for disaggregation histograms.
+    :param bb: a bounding box min_lon, min_lat, max_lon, max_lat
+    :param coord_bin_width: coordinate bin width
+    :returns: two lists lon_bins, lat_bins
     """
-    mag_bins = mag_bin_width * numpy.arange(
-        int(numpy.floor(mags.min() / mag_bin_width)),
-        int(numpy.ceil(mags.max() / mag_bin_width) + 1))
-
-    dist_bins = dist_bin_width * numpy.arange(
-        int(numpy.floor(dists.min() / dist_bin_width)),
-        int(numpy.ceil(dists.max() / dist_bin_width) + 1))
-
-    west, east, north, south = get_spherical_bounding_box(lons, lats)
+    west, south, east, north = bb
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
     east = numpy.ceil(east / coord_bin_width) * coord_bin_width
     lon_extent = get_longitudinal_extent(west, east)
-
     lon_bins, _, _ = npoints_between(
         west, 0, 0, east, 0, 0,
         numpy.round(lon_extent / coord_bin_width + 1))
-
     lat_bins = coord_bin_width * numpy.arange(
         int(numpy.floor(south / coord_bin_width)),
         int(numpy.ceil(north / coord_bin_width) + 1))
-
-    eps_bins = numpy.linspace(-truncation_level, truncation_level,
-                              n_epsilons + 1)
-
-    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
+    return lon_bins, lat_bins
 
 
 def disagg_matrix(mag_bins, dist_bins, lon_bins, lat_bins, eps_bins,
@@ -335,6 +318,7 @@ def disaggregation(
     dists = numpy.concatenate([bd.dists for bd in bdata])
     lons = numpy.concatenate([bd.lons for bd in bdata])
     lats = numpy.concatenate([bd.lats for bd in bdata])
+
     # NB: bd.eps has shape (U, Q, N, E) with N=1, eps has shape (U', Q, E)
     eps = numpy.concatenate([bd.eps[:, :, 0, :] for bd in bdata])
     if all(len(bd.mags) == 0 for bd in bdata):
@@ -343,11 +327,26 @@ def disaggregation(
             'No ruptures have contributed to the hazard at site %s'
             % site, RuntimeWarning)
         return None, None
-    bin_edges = _define_bins(
-        mags, dists, lons, lats, mag_bin_width, dist_bin_width,
-        coord_bin_width, truncation_level, n_epsilons) + (sorted(trt_num),)
+
+    mag_bins = mag_bin_width * numpy.arange(
+        int(numpy.floor(mags.min() / mag_bin_width)),
+        int(numpy.ceil(mags.max() / mag_bin_width) + 1))
+
+    dist_bins = dist_bin_width * numpy.arange(
+        int(numpy.floor(dists.min() / dist_bin_width)),
+        int(numpy.ceil(dists.max() / dist_bin_width) + 1))
+
+    bb = (lons.min(), lons.min(), lats.max(), lats.max())
+    lon_bins, lat_bins = lon_lat_bins(bb, coord_bin_width)
+
+    eps_bins = numpy.linspace(-truncation_level, truncation_level,
+                              n_epsilons + 1)
+
+    bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins,
+                 sorted(trt_num))
     diss_matrix = _arrange_data_in_bins(
         [mags, dists, lons, lats, eps, range(len(trts))], bin_edges)
+
     return bin_edges, diss_matrix
 
 
