@@ -288,6 +288,10 @@ class IntegrationDistance(collections.Mapping):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
+    def __getstate__(self):
+        # otherwise is not pickleable due to .interp
+        return dict(dic=self.dic, magdist=self.magdist)
+
     def __getitem__(self, trt):
         return self(trt)
 
