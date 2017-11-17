@@ -193,6 +193,7 @@ producing too small PoEs.'''
         maxdist = oq.maximum_distance('default', max_mag)
         dist_edges = oq.distance_bin_width * numpy.arange(
             0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
+        logging.info('dist = %s...%s', min(dist_edges), max(dist_edges))
 
         # build eps_edges
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
@@ -204,7 +205,7 @@ producing too small PoEs.'''
                 bb, oq.coordinate_bin_width)
             logging.info('site %d, lon = %s...%s',
                          sid, min(lon_edges), max(lon_edges))
-            logging.info('site %d, lats = %s...%s',
+            logging.info('site %d, lat = %s...%s',
                          sid, min(lat_edges), max(lat_edges))
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
