@@ -59,6 +59,7 @@ the index can be compensed. Finally, there is a function
 `filter_sites_by_distance_to_rupture` based on the Joyner-Boore distance.
 """
 import sys
+import math
 import logging
 import collections
 from contextlib import contextmanager
@@ -70,7 +71,18 @@ except ImportError:
     rtree = None
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.hazardlib.geo.utils import fix_lons_idl
+from openquake.hazardlib.geo.utils import fix_bounding_box_idl, fix_lons_idl
+
+KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
+DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
+MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
+
+
+def angular_distance(km, lat):
+    """
+    Return the angular distance of two points at the given latitude.
+    """
+    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
 @contextmanager
@@ -226,8 +238,8 @@ class IntegrationDistance(collections.Mapping):
         value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
-        elif mag is None:  # get the maximum magnitude distance
-            return value[-1][1]
+        elif mag is None:  # get the maximum distance
+            return MAX_DISTANCE
         elif not hasattr(self, 'interp'):
             self.interp = {}  # function cache
         try:
@@ -236,7 +248,7 @@ class IntegrationDistance(collections.Mapping):
             mags, dists = zip(*getdefault(self.magdist, trt))
             if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
                 mags = numpy.concatenate([mags, [11]])
-                dists = numpy.concatenate([dists, [2000]])
+                dists = numpy.concatenate([dists, [MAX_DISTANCE]])
             md = self.interp[trt] = Piecewise(mags, dists)
         return md(mag)
 
@@ -256,6 +268,22 @@ class IntegrationDistance(collections.Mapping):
             return sites.filter(mask), distances[mask]
         else:
             raise FarAwayRupture
+
+    def get_bounding_box(self, lon, lat, trt=None, mag=None):
+        """
+        Build a bounding box around the given lon, lat by computing the
+        maximum_distance at the given tectonic region type and magnitude.
+
+        :param lon: longitude
+        :param lat: latitude
+        :param trt: tectonic region type, possibly None
+        :param mag: magnitude, possibly None
+        :returns: min_lon, min_lat, max_lon, max_lat
+        """
+        maxdist = self(trt, mag)
+        a1 = min(maxdist * KM_TO_DEGREES, 90)
+        a2 = min(angular_distance(maxdist, lat), 180)
+        return lon - a2, lat - a1, lon + a2, lat + a1
 
     def __getitem__(self, trt):
         return self(trt)
@@ -321,19 +349,9 @@ class SourceFilter(object):
         :param src: a source object
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        maxdist = self.integration_distance[src.tectonic_region_type]
-        min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
-        if self.idl:  # apply IDL fix
-            if min_lon < 0 and max_lon > 0:
-                return max_lon, min_lat, min_lon + 360, max_lat
-            elif min_lon < 0 and max_lon < 0:
-                return min_lon + 360, min_lat, max_lon + 360, max_lat
-            elif min_lon > 0 and max_lon > 0:
-                return min_lon, min_lat, max_lon, max_lat
-            elif min_lon > 0 and max_lon < 0:
-                return max_lon + 360, min_lat, min_lon, max_lat
-        else:
-            return min_lon, min_lat, max_lon, max_lat
+        mag = src.get_min_max_mag()[1]
+        maxdist = self.integration_distance(src.tectonic_region_type, mag)
+        return fix_bounding_box_idl(src.get_bounding_box(maxdist), self.idl)
 
     def get_rectangle(self, src):
         """
@@ -351,6 +369,20 @@ class SourceFilter(object):
         source_sites = list(self([source]))
         if source_sites:
             return source_sites[0][1]
+
+    def get_bounding_boxes(self, trt=None, mag=None):
+        """
+        :param trt: a tectonic region type (used for the integration distance)
+        :param mag: a magnitude (used for the integration distance)
+        :returns: a list of spherical bounding boxes, one per site
+        """
+        bbs = []
+        for site in self.sitecol:
+            bb = self.integration_distance.get_bounding_box(
+                site.location.longitude, site.location.latitude, trt, mag)
+            lon1, lat1, lon2, lat2 = fix_bounding_box_idl(bb, self.idl)
+            bbs.append((lon1, lon2, lat2, lat1))
+        return bbs
 
     def __call__(self, sources, sites=None):
         if sites is None:
