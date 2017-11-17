@@ -113,8 +113,7 @@ def _collect_bins_data(trt_num, sources, site, cmaker, imldict,
                    numpy.array(trts, int))
 
 
-def _define_bins(bins_data, mag_bin_width, dist_bin_width,
-                 coord_bin_width, truncation_level, n_epsilons):
+def lon_lat_bins(bb, coord_bin_width):
     """
     Define bin edges for disaggregation histograms.
 
@@ -123,33 +122,17 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, _eps, _trts = bins_data
-
-    mag_bins = mag_bin_width * numpy.arange(
-        int(numpy.floor(mags.min() / mag_bin_width)),
-        int(numpy.ceil(mags.max() / mag_bin_width) + 1))
-
-    dist_bins = dist_bin_width * numpy.arange(
-        int(numpy.floor(dists.min() / dist_bin_width)),
-        int(numpy.ceil(dists.max() / dist_bin_width) + 1))
-
-    west, east, north, south = get_spherical_bounding_box(lons, lats)
+    west, south, east, north = bb
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
     east = numpy.ceil(east / coord_bin_width) * coord_bin_width
     lon_extent = get_longitudinal_extent(west, east)
-
     lon_bins, _, _ = npoints_between(
         west, 0, 0, east, 0, 0,
         numpy.round(lon_extent / coord_bin_width + 1))
-
     lat_bins = coord_bin_width * numpy.arange(
         int(numpy.floor(south / coord_bin_width)),
         int(numpy.ceil(north / coord_bin_width) + 1))
-
-    eps_bins = numpy.linspace(-truncation_level, truncation_level,
-                              n_epsilons + 1)
-
-    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
+    return lon_bins, lat_bins
 
 
 def _arrange_data_in_bins(bins_data, bin_edges):
@@ -293,19 +276,33 @@ def disaggregation(
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
     imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
-    bdata = _collect_bins_data(
+    bd = _collect_bins_data(
         trt_num, sources, site, cmaker, imldict, truncation_level, n_epsilons)
-    if all(len(x) == 0 for x in bdata):
+    if all(len(x) == 0 for x in bd):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
             % site, RuntimeWarning)
         return None, None
-    [pnes] = bdata.eps.values()
-    bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats, pnes, bdata.trts]
-    bin_edges = _define_bins(
-        bins, mag_bin_width, dist_bin_width, coord_bin_width,
-        truncation_level, n_epsilons) + (sorted(trt_num),)
+    [pnes] = bd.eps.values()
+    bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
+
+    mag_bins = mag_bin_width * numpy.arange(
+        int(numpy.floor(bd.mags.min() / mag_bin_width)),
+        int(numpy.ceil(bd.mags.max() / mag_bin_width) + 1))
+
+    dist_bins = dist_bin_width * numpy.arange(
+        int(numpy.floor(bd.dists.min() / dist_bin_width)),
+        int(numpy.ceil(bd.dists.max() / dist_bin_width) + 1))
+
+    bb = (bd.lons.min(), bd.lons.min(), bd.lats.max(), bd.lats.max())
+    lon_bins, lat_bins = lon_lat_bins(bb, coord_bin_width)
+
+    eps_bins = numpy.linspace(-truncation_level, truncation_level,
+                              n_epsilons + 1)
+
+    bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins,
+                 sorted(trt_num))
     # mag_edges, dist_edges, lon_edges, lat_edges, eps_edges, trt_edges
     diss_matrix = _arrange_data_in_bins(bins, bin_edges)
     return bin_edges, diss_matrix

@@ -43,129 +43,6 @@ F64 = numpy.float64
 weight = operator.attrgetter('weight')
 
 
-class BBdict(AccumDict):
-    """
-    A serializable dictionary containing bounding box information
-    """
-    dt = numpy.dtype([('site_id', U16),
-                      ('min_dist', F64), ('max_dist', F64),
-                      ('east', F64), ('west', F64),
-                      ('south', F64), ('north', F64)])
-
-    def __toh5__(self):
-        rows = []
-        for site_id in self:
-            bb = self[site_id]
-            rows.append((site_id, bb.min_dist, bb.max_dist,
-                         bb.east, bb.west, bb.south, bb.north))
-        return numpy.array(rows, self.dt), {}
-
-    def __fromh5__(self, array, attrs):
-        for row in array:
-            site_id = row['site_id']
-            bb = BoundingBox(site_id)
-            bb.min_dist = row['min_dist']
-            bb.max_dist = row['max_dist']
-            bb.east = row['east']
-            bb.west = row['west']
-            bb.north = row['north']
-            bb.south = row['south']
-            self[site_id] = bb
-
-
-# this is needed for the disaggregation
-class BoundingBox(object):
-    """
-    A class to store the bounding box in distances, longitudes and magnitudes,
-    given a source model and a site. This is used for disaggregation
-    calculations. The goal is to determine the minimum and maximum
-    distances of the ruptures generated from the model from the site;
-    moreover the maximum and minimum longitudes and magnitudes are stored, by
-    taking in account the international date line.
-    """
-    def __init__(self, site_id):
-        self.site_id = site_id
-        self.min_dist = self.max_dist = 0
-        self.east = self.west = self.south = self.north = 0
-
-    def update(self, dists, lons, lats):
-        """
-        Compare the current bounding box with the value in the arrays
-        dists, lons, lats and enlarge it if needed.
-
-        :param dists:
-            a sequence of distances
-        :param lons:
-            a sequence of longitudes
-        :param lats:
-            a sequence of latitudes
-        """
-        if self.min_dist or self.max_dist:
-            dists = [self.min_dist, self.max_dist] + dists
-        if self.west:
-            lons = [self.west, self.east] + lons
-        if self.south:
-            lats = [self.south, self.north] + lats
-        self.min_dist, self.max_dist = min(dists), max(dists)
-        self.west, self.east, self.north, self.south = \
-            get_spherical_bounding_box(lons, lats)
-
-    def update_bb(self, bb):
-        """
-        Compare the current bounding box with the given bounding box
-        and enlarge it if needed.
-
-        :param bb:
-            an instance of :class:
-            `openquake.engine.calculators.hazard.classical.core.BoundingBox`
-        """
-        if bb:  # the given bounding box must be non-empty
-            self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
-                        [bb.south, bb.north])
-
-    def bins_edges(self, dist_bin_width, coord_bin_width):
-        """
-        Define bin edges for disaggregation histograms, from the bin data
-        collected from the ruptures.
-
-        :param dists:
-            array of distances from the ruptures
-        :param lons:
-            array of longitudes from the ruptures
-        :param lats:
-            array of latitudes from the ruptures
-        :param dist_bin_width:
-            distance_bin_width from job.ini
-        :param coord_bin_width:
-            coordinate_bin_width from job.ini
-        """
-        dist_edges = dist_bin_width * numpy.arange(
-            int(self.min_dist / dist_bin_width),
-            int(numpy.ceil(self.max_dist / dist_bin_width) + 1))
-        west = numpy.floor(self.west / coord_bin_width) * coord_bin_width
-        east = numpy.ceil(self.east / coord_bin_width) * coord_bin_width
-        lon_extent = get_longitudinal_extent(west, east)
-
-        lon_edges, _, _ = npoints_between(
-            west, 0, 0, east, 0, 0,
-            numpy.round(lon_extent / coord_bin_width) + 1)
-
-        lat_edges = coord_bin_width * numpy.arange(
-            int(numpy.floor(self.south / coord_bin_width)),
-            int(numpy.ceil(self.north / coord_bin_width) + 1))
-
-        return dist_edges, lon_edges, lat_edges
-
-    def __bool__(self):
-        """
-        True if the bounding box is non empty.
-        """
-        return bool(self.max_dist - self.min_dist or
-                    self.west - self.east or
-                    self.north - self.south)
-    __nonzero__ = __bool__
-
-
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('weight', F32)])
 
@@ -211,8 +88,6 @@ class PSHACalculator(base.HazardCalculator):
                     info.num_sites = max(info.num_sites, nsites)
                     info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
-            for bb in getattr(pmap, 'bbs', []):  # for disaggregation
-                acc.bb_dict[bb.site_id].update_bb(bb)
             if isinstance(pmap, ProbabilityMap):
                 acc[pmap.grp_id] |= pmap
             else:  # dictionary of pmaps
@@ -242,10 +117,6 @@ class PSHACalculator(base.HazardCalculator):
             zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
-        zd.bb_dict = BBdict()
-        if self.oqparam.poes_disagg or self.oqparam.iml_disagg:
-            for sid in self.sitecol.sids:
-                zd.bb_dict[sid] = BoundingBox(sid)
         return zd
 
     def execute(self):
@@ -303,6 +174,12 @@ class PSHACalculator(base.HazardCalculator):
             numheavy = len(self.csm.get_sources('heavy', maxweight))
             logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                          maxweight, numheavy, len(tiles))
+        param = dict(
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, seed=oq.ses_seed,
+            maximum_distance=oq.maximum_distance,
+            disagg=oq.poes_disagg or oq.iml_disagg,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -311,15 +188,6 @@ class PSHACalculator(base.HazardCalculator):
                     csm = self.csm.filter(src_filter)
             else:
                 src_filter = self.src_filter
-            param = dict(
-                truncation_level=oq.truncation_level,
-                imtls=oq.imtls, seed=oq.ses_seed,
-                maximum_distance=oq.maximum_distance,
-                disagg=oq.poes_disagg or oq.iml_disagg,
-                ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-            if oq.poes_disagg or oq.iml_disagg:  # only for disagg
-                param['bbs'] = [BoundingBox(sid)
-                                for sid in src_filter.sitecol.sids]
             if oq.optimize_same_id_sources:
                 iterargs = self._args_by_trt(
                     csm, src_filter, param, num_tiles, maxweight)
@@ -393,8 +261,6 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap_by_grp_id:
             a dictionary grp_id -> hazard curves
         """
-        if pmap_by_grp_id.bb_dict:
-            self.datastore['bb_dict'] = pmap_by_grp_id.bb_dict
         grp_trt = self.csm.info.grp_trt()
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
