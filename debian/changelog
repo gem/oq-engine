@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Now the distance and lon lat bins for disaggregation are built directly
+    from the integration distance
   * Used uniform bins for disaggregation (before they were potentially
     different across realizations / source models)
   * Improved the error message if the user forgets both sites and sites.csv
