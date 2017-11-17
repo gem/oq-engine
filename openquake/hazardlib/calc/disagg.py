@@ -35,7 +35,7 @@ from openquake.baselib.general import groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
-from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 
@@ -77,6 +77,14 @@ def build_ql(rlzs_by_gsim, imtls, poes_disagg=(), curves=None):
 def collect_bins_data(sources, sitecol, cmaker, quartets, imls,
                       truncation_level, n_epsilons, mon=Monitor()):
     """
+    :param sources: a list of sources with same TRT
+    :param sitecol: a SiteCollection
+    :param cmaker: a ContextMaker instance
+    :param quartets: a list of Q quartets (poe, gsim, imt, rlzi)
+    :param imls: a list of Q arrays of intensity measure levels
+    :param truncation_level: the truncation level
+    :param n_epsilons: the number of epsilons
+    :returns: a BinData instance
     """
     num_trts = len(set(src.tectonic_region_type for src in sources))
     assert num_trts == 1, num_trts
