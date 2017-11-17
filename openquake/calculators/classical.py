@@ -174,6 +174,12 @@ class PSHACalculator(base.HazardCalculator):
             numheavy = len(self.csm.get_sources('heavy', maxweight))
             logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                          maxweight, numheavy, len(tiles))
+        param = dict(
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, seed=oq.ses_seed,
+            maximum_distance=oq.maximum_distance,
+            disagg=oq.poes_disagg or oq.iml_disagg,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
@@ -182,15 +188,6 @@ class PSHACalculator(base.HazardCalculator):
                     csm = self.csm.filter(src_filter)
             else:
                 src_filter = self.src_filter
-            param = dict(
-                truncation_level=oq.truncation_level,
-                imtls=oq.imtls, seed=oq.ses_seed,
-                maximum_distance=oq.maximum_distance,
-                disagg=oq.poes_disagg or oq.iml_disagg,
-                ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-            if oq.poes_disagg or oq.iml_disagg:  # only for disagg
-                param['bbs'] = [BoundingBox(sid)
-                                for sid in src_filter.sitecol.sids]
             if oq.optimize_same_id_sources:
                 iterargs = self._args_by_trt(
                     csm, src_filter, param, num_tiles, maxweight)
