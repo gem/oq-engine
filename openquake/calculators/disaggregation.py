@@ -201,8 +201,14 @@ producing too small PoEs.'''
                 continue
             dist_edges, lon_edges, lat_edges = bb.bins_edges(
                 oq.distance_bin_width, oq.coordinate_bin_width)
+            logging.info('site %d, dist = %s...%s',
+                         sid, min(dist_edges), max(dist_edges))
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
+            logging.info('site %d, lon = %s...%s',
+                         sid, min(lon_edges), max(lon_edges))
+            logging.info('site %d, lats = %s...%s',
+                         sid, min(lat_edges), max(lat_edges))
             shape = disagg.BinData(
                 *[len(edges) - 1 for edges in bs] + [len(trts)])
             logging.info('%s for sid %d', shape, sid)
