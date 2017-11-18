@@ -25,7 +25,7 @@ import logging
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import split_in_blocks
+from openquake.baselib.general import split_in_blocks, pack
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -80,15 +80,16 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
 
         # generate source, rupture, sites once per site
         with collecting_mon:
-            bd = disagg._collect_bins_data(
+            bdata = disagg._collect_bins_data(
                 trt_num, sources, site, cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
-        for (poe, imt, iml, rlzi), pnes in bd.eps.items():
+            bd = pack(bdata, 'mags dists lons lats trti'.split())
+        for (poe, imt, iml, rlzi), pnes in bd.items():
             # extract the probabilities of non-exceedance for the
             # given realization, disaggregation PoE, and IMT
             # bins in a format handy for hazardlib
-            bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
+            bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trti]
             # call disagg._arrange_data_in_bins
             with arranging_mon:
                 key = (sid, rlzi, poe, imt, iml, trt_names)
