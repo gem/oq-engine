@@ -252,7 +252,7 @@ class IntegrationDistance(collections.Mapping):
             md = self.interp[trt] = Piecewise(mags, dists)
         return md(mag)
 
-    def get_closest(self, sites, rupture, distance_type='rrup'):
+    def get_closest(self, sites, rupture, distance_type='rrup', filter=True):
         """
         :param sites: a (Filtered)SiteColletion
         :param rupture: a rupture
@@ -261,7 +261,7 @@ class IntegrationDistance(collections.Mapping):
         :raises: a FarAwayRupture exception if the rupture is far away
         """
         distances = get_distances(rupture, sites.mesh, distance_type)
-        if not self.dic:  # for sites already filtered
+        if not filter or not self.dic:  # for sites already filtered
             return sites, distances
         mask = distances <= self(rupture.tectonic_region_type, rupture.mag)
         if mask.any():
