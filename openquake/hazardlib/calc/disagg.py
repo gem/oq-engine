@@ -110,12 +110,13 @@ def lon_lat_bins(bb, coord_bin_width):
     return lon_bins, lat_bins
 
 
-def arrange_data_in_bins(bdata, bin_edges, mon=Monitor):
+def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bin_edges: bin edges
+    :param kind: the kind of array to yield, 'matrix' or 'pmf'
     :param mon: a Monitor instance
-    :yields: triples (key, disagg_matrix, disagg_pmf) for each key in bdata
+    :yields: pairs (key, matrix|pmf) for each key in bdata
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
@@ -150,7 +151,7 @@ def arrange_data_in_bins(bdata, bin_edges, mon=Monitor):
     for k, pnes in bdata.items():
         cache_key = pnes.sum()
         try:
-            matrix, pmf = cache[cache_key]
+            array = cache[cache_key]
             cache_hit += 1
         except KeyError:
             mat = numpy.ones(shape)
@@ -159,8 +160,8 @@ def arrange_data_in_bins(bdata, bin_edges, mon=Monitor):
                 mat[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pne
             matrix = 1. - mat
             pmf = numpy.array([fn(matrix) for fn in pmf_map.values()])
-            cache[cache_key] = (matrix, pmf)
-        yield k, matrix, pmf
+            cache[cache_key] = array = matrix if kind == 'matrix' else pmf
+        yield k, array
     mon.cache_info = numpy.array([len(bdata), cache_hit])  # operations, hits
 
 
@@ -289,7 +290,7 @@ def disaggregation(
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins,
                  sorted(trt_num))
 
-    [(key, matrix, pmf)] = arrange_data_in_bins(bd, bin_edges)
+    [(key, matrix)] = arrange_data_in_bins(bd, bin_edges, 'pmf')
     return bin_edges, matrix
 
 
