@@ -84,17 +84,14 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
                 trt_num, sources, site, cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
+
+        with arranging_mon:
             bd = pack(bdata, 'mags dists lons lats trti'.split())
-        for (poe, imt, iml, rlzi), pnes in bd.items():
-            # extract the probabilities of non-exceedance for the
-            # given realization, disaggregation PoE, and IMT
-            # bins in a format handy for hazardlib
-            bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trti]
-            # call disagg._arrange_data_in_bins
-            with arranging_mon:
-                key = (sid, rlzi, poe, imt, iml, trt_names)
-                matrix = disagg._arrange_data_in_bins(bins, edges)
-                result[key] = numpy.array(
+            if not bd:
+                continue
+            for (poe, imt, iml, rlzi), matrix in disagg.arrange_data_in_bins(
+                    bd, edges):
+                result[sid, rlzi, poe, imt, iml, trt_names] = numpy.array(
                     [fn(matrix) for fn in disagg.pmf_map.values()])
     return result
 
