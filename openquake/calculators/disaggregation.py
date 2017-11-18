@@ -89,10 +89,9 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
             bd = pack(bdata, 'mags dists lons lats trti'.split())
             if not bd:
                 continue
-            for (poe, imt, iml, rlzi), matrix in disagg.arrange_data_in_bins(
-                    bd, edges):
-                result[sid, rlzi, poe, imt, iml, trt_names] = numpy.array(
-                    [fn(matrix) for fn in disagg.pmf_map.values()])
+            for (poe, imt, iml, rlzi), matrix, pmf in (
+                    disagg.arrange_data_in_bins(bd, edges)):
+                result[sid, rlzi, poe, imt, iml, trt_names] = pmf
     return result
 
 

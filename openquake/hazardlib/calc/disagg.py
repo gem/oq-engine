@@ -114,7 +114,7 @@ def arrange_data_in_bins(bdata, bin_edges):
     """
     Given bins data, as it comes from :func:`collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix for
-    each key and yields pairs (key, matrix)
+    each key and yields triples (key, matrix, pmf)
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
@@ -145,11 +145,13 @@ def arrange_data_in_bins(bdata, bin_edges):
     lats_idx[lats_idx == dim4] = dim4 - 1
 
     for k, pnes in bdata.items():
-        dmatrix = numpy.ones(shape)
+        matrix = numpy.ones(shape)
         for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in enumerate(
                 zip(mags_idx, dists_idx, lons_idx, lats_idx, bdata.trti)):
-            dmatrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pnes[i, :]
-        yield k, 1 - dmatrix
+            matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pnes[i, :]
+        matrix = 1. - matrix
+        pmf = numpy.array([fn(matrix) for fn in pmf_map.values()])
+        yield k, matrix, pmf
 
 
 def _digitize_lons(lons, lon_bins):
@@ -277,7 +279,7 @@ def disaggregation(
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins,
                  sorted(trt_num))
 
-    [(key, matrix)] = arrange_data_in_bins(bd, bin_edges)
+    [(key, matrix, pmf)] = arrange_data_in_bins(bd, bin_edges)
     return bin_edges, matrix
 
 
