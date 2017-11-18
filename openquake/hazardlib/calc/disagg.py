@@ -67,7 +67,7 @@ def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
 
 
 def collect_bins_data(trt_num, sources, site, cmaker, imldict,
-                       truncation_level, n_epsilons, mon=Monitor()):
+                      truncation_level, n_epsilons, mon=Monitor()):
     sitecol = SiteCollection([site])
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
