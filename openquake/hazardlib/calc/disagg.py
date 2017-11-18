@@ -144,13 +144,19 @@ def arrange_data_in_bins(bdata, bin_edges):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
+    cache = {}  # used if iml_disagg is given, since the pnes are repeated
     for k, pnes in bdata.items():
-        matrix = numpy.ones(shape)
-        for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in enumerate(
-                zip(mags_idx, dists_idx, lons_idx, lats_idx, bdata.trti)):
-            matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pnes[i, :]
-        matrix = 1. - matrix
-        pmf = numpy.array([fn(matrix) for fn in pmf_map.values()])
+        cache_key = pnes.sum()
+        try:
+            matrix, pmf = cache[cache_key]
+        except KeyError:
+            mat = numpy.ones(shape)
+            for i_mag, i_dist, i_lon, i_lat, i_trt, pne in zip(
+                    mags_idx, dists_idx, lons_idx, lats_idx, bdata.trti, pnes):
+                mat[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pne
+            matrix = 1. - mat
+            pmf = numpy.array([fn(matrix) for fn in pmf_map.values()])
+            cache[cache_key] = (matrix, pmf)
         yield k, matrix, pmf
 
 
