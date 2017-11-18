@@ -88,8 +88,8 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
                 continue
 
         with arranging_mon:
-            out = disagg.arrange_data_in_bins(bindata, edges, arranging_mon)
-            for (poe, imt, iml, rlzi), matrix, pmf in out:
+            for (poe, imt, iml, rlzi), pmf in disagg.arrange_data_in_bins(
+                    bindata, edges, 'pmf', arranging_mon):
                 result[sid, rlzi, poe, imt, iml, trt_names] = pmf
         result['cache_info'] = arranging_mon.cache_info
     return result
