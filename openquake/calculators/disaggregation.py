@@ -88,9 +88,10 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
                 continue
 
         with arranging_mon:
-            for (poe, imt, iml, rlzi), matrix, pmf in (
-                    disagg.arrange_data_in_bins(bindata, edges)):
+            out = disagg.arrange_data_in_bins(bindata, edges, arranging_mon)
+            for (poe, imt, iml, rlzi), matrix, pmf in out:
                 result[sid, rlzi, poe, imt, iml, trt_names] = pmf
+        result['cache_info'] = arranging_mon.cache_info
     return result
 
 
@@ -119,6 +120,8 @@ producing too small PoEs.'''
         :param acc: dictionary accumulating the results
         :param result: dictionary with the result coming from a task
         """
+        if 'cache_info' in result:
+            self.cache_info += result.pop('cache_info')
         for key, val in result.items():
             acc[key] = 1. - (1. - acc.get(key, 0)) * (1. - val)
         return acc
@@ -255,8 +258,11 @@ producing too small PoEs.'''
                         (src_filter, srcs, cmaker, imls, trts,
                          self.bin_edges, oq, mon))
 
+        self.cache_info = numpy.zeros(2)  # operations, cache_hits
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
+        ops, hits = self.cache_info
+        logging.info('Cache speedup %s', ops / (ops - hits))
         self.save_disagg_results(results)
 
     def save_disagg_results(self, results):

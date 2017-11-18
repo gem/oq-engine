@@ -110,10 +110,11 @@ def lon_lat_bins(bb, coord_bin_width):
     return lon_bins, lat_bins
 
 
-def arrange_data_in_bins(bdata, bin_edges):
+def arrange_data_in_bins(bdata, bin_edges, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bin_edges: bin edges
+    :param mon: a Monitor instance
     :yields: triples (key, disagg_matrix, disagg_pmf) for each key in bdata
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
@@ -145,10 +146,12 @@ def arrange_data_in_bins(bdata, bin_edges):
     lats_idx[lats_idx == dim4] = dim4 - 1
 
     cache = {}  # used if iml_disagg is given, since the pnes are repeated
+    cache_hit = 0
     for k, pnes in bdata.items():
         cache_key = pnes.sum()
         try:
             matrix, pmf = cache[cache_key]
+            cache_hit += 1
         except KeyError:
             mat = numpy.ones(shape)
             for i_mag, i_dist, i_lon, i_lat, i_trt, pne in zip(
@@ -158,6 +161,7 @@ def arrange_data_in_bins(bdata, bin_edges):
             pmf = numpy.array([fn(matrix) for fn in pmf_map.values()])
             cache[cache_key] = (matrix, pmf)
         yield k, matrix, pmf
+    mon.cache_info = numpy.array([len(bdata), cache_hit])  # operations, hits
 
 
 def _digitize_lons(lons, lon_bins):
