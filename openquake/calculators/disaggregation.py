@@ -78,19 +78,18 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
             # bin_edges for a given site are missing if the site is far away
             continue
 
-        # generate source, rupture, sites once per site
         with collecting_mon:
-            bdata = disagg.collect_bins_data(
+            acc = disagg.collect_bins_data(
                 trt_num, sources, site, cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
+            bindata = pack(acc, 'mags dists lons lats trti'.split())
+            if not bindata:
+                continue
 
         with arranging_mon:
-            bd = pack(bdata, 'mags dists lons lats trti'.split())
-            if not bd:
-                continue
             for (poe, imt, iml, rlzi), matrix, pmf in (
-                    disagg.arrange_data_in_bins(bd, edges)):
+                    disagg.arrange_data_in_bins(bindata, edges)):
                 result[sid, rlzi, poe, imt, iml, trt_names] = pmf
     return result
 
