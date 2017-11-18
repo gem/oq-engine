@@ -30,17 +30,14 @@ import scipy.stats
 
 from openquake.baselib.python3compat import raise_, range
 from openquake.baselib.performance import Monitor
+from openquake.baselib.general import AccumDict, pack
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
-from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
-
-# a 6-uple containing float 4 arrays mags, dists, lons, lats,
-# 1 int array trts and a list of dictionaries pnes
-BinData = collections.namedtuple('BinData', 'mags dists lons lats eps trts')
 
 
 def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
@@ -71,46 +68,24 @@ def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
 
 def _collect_bins_data(trt_num, sources, site, cmaker, imldict,
                        truncation_level, n_epsilons, mon=Monitor()):
-    # returns a BinData instance
     sitecol = SiteCollection([site])
-    mags = []
-    dists = []
-    lons = []
-    lats = []
-    trts = []
-    pnes = collections.defaultdict(list)  # poe, imt, iml, rlzi -> pnes
-    sitemesh = sitecol.mesh
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
+    acc = AccumDict(accum=[])
     for source in sources:
-        tect_reg = trt_num[source.tectonic_region_type]
         try:
-            for rupture, site_dist, pnedict in cmaker.disaggregate(
-                    sitecol, source.iter_ruptures(), imldict,
-                    truncnorm, n_epsilons, mon):
-
-                # extract rupture parameters of interest
-                mags.append(rupture.mag)
-                dists.append(site_dist)
-                [closest_point] = rupture.surface.get_closest_points(sitemesh)
-                lons.append(closest_point.longitude)
-                lats.append(closest_point.latitude)
-                trts.append(tect_reg)
-                for k, v in pnedict.items():
-                    pnes[k].append(v)
-
+            trti = trt_num[source.tectonic_region_type]
+            rupdict = cmaker.disaggregate(
+                sitecol, source.iter_ruptures(), imldict, truncnorm,
+                n_epsilons, mon)
+            acc['trti'].extend([trti] * len(rupdict['mags']))
+            acc += rupdict
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err)
             raise_(etype, msg, tb)
-
-    return BinData(numpy.array(mags, float),
-                   numpy.array(dists, float),
-                   numpy.array(lons, float),
-                   numpy.array(lats, float),
-                   {k: numpy.array(pnes[k]) for k in pnes},
-                   numpy.array(trts, int))
+    return acc
 
 
 def lon_lat_bins(bb, coord_bin_width):
@@ -276,16 +251,16 @@ def disaggregation(
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
     imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
-    bd = _collect_bins_data(
+    bdata = _collect_bins_data(
         trt_num, sources, site, cmaker, imldict, truncation_level, n_epsilons)
-    if all(len(x) == 0 for x in bd):
-        # No ruptures have contributed to the hazard level at this site.
+    bd = pack(bdata, 'mags dists lons lats trti'.split())
+    if len(bd.mags) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
             % site, RuntimeWarning)
         return None, None
-    [pnes] = bd.eps.values()
-    bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
+    [pnes] = bd.values()
+    bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trti]
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(bd.mags.min() / mag_bin_width)),
