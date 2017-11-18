@@ -80,7 +80,7 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
 
         # generate source, rupture, sites once per site
         with collecting_mon:
-            bdata = disagg._collect_bins_data(
+            bdata = disagg.collect_bins_data(
                 trt_num, sources, site, cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
