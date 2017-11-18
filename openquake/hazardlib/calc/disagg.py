@@ -110,12 +110,12 @@ def lon_lat_bins(bb, coord_bin_width):
     return lon_bins, lat_bins
 
 
-def _arrange_data_in_bins(bins_data, bin_edges):
+def arrange_data_in_bins(bdata, bin_edges):
     """
     Given bins data, as it comes from :func:`collect_bins_data`, and bin edges
-    from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
+    from :func:`_define_bins`, create a normalized 6d disaggregation matrix for
+    each key and yields pairs (key, matrix)
     """
-    mags, dists, lons, lats, pnes, trts = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
     dim1 = len(mag_bins) - 1
@@ -123,7 +123,6 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     dim3 = len(lon_bins) - 1
     dim4 = len(lat_bins) - 1
     shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1, len(trt_bins))
-    diss_matrix = numpy.ones(shape)
 
     # find bin indexes of rupture attributes; bins are assumed closed
     # on the lower bound, and open on the upper bound, that is [ )
@@ -131,10 +130,10 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     # the 'international date line' issue
     # the 'minus 1' is needed because the digitize method returns the index
     # of the upper bound of the bin
-    mags_idx = numpy.digitize(mags, mag_bins) - 1
-    dists_idx = numpy.digitize(dists, dist_bins) - 1
-    lons_idx = _digitize_lons(lons, lon_bins)
-    lats_idx = numpy.digitize(lats, lat_bins) - 1
+    mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
+    dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
+    lons_idx = _digitize_lons(bdata.lons, lon_bins)
+    lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
 
     # because of the way numpy.digitize works, values equal to the last bin
     # edge are associated to an index equal to len(bins) which is not a valid
@@ -145,11 +144,12 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
-    for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in enumerate(
-            zip(mags_idx, dists_idx, lons_idx, lats_idx, trts)):
-        diss_matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pnes[i, :]
-
-    return 1 - diss_matrix
+    for k, pnes in bdata.items():
+        dmatrix = numpy.ones(shape)
+        for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in enumerate(
+                zip(mags_idx, dists_idx, lons_idx, lats_idx, bdata.trti)):
+            dmatrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= pnes[i, :]
+        yield k, 1 - dmatrix
 
 
 def _digitize_lons(lons, lon_bins):
@@ -259,8 +259,6 @@ def disaggregation(
             'No ruptures have contributed to the hazard at site %s'
             % site, RuntimeWarning)
         return None, None
-    [pnes] = bd.values()
-    bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trti]
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(bd.mags.min() / mag_bin_width)),
@@ -278,9 +276,9 @@ def disaggregation(
 
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins,
                  sorted(trt_num))
-    # mag_edges, dist_edges, lon_edges, lat_edges, eps_edges, trt_edges
-    diss_matrix = _arrange_data_in_bins(bins, bin_edges)
-    return bin_edges, diss_matrix
+
+    [(key, matrix)] = arrange_data_in_bins(bd, bin_edges)
+    return bin_edges, matrix
 
 
 def mag_pmf(matrix):
