@@ -112,9 +112,9 @@ def lon_lat_bins(bb, coord_bin_width):
 
 def arrange_data_in_bins(bdata, bin_edges):
     """
-    Given bins data, as it comes from :func:`collect_bins_data`, and bin edges
-    from :func:`_define_bins`, create a normalized 6d disaggregation matrix for
-    each key and yields triples (key, matrix, pmf)
+    :param bdata: a dictionary of probabilities of no exceedence
+    :param bin_edges: bin edges
+    :yields: triples (key, disagg_matrix, disagg_pmf) for each key in bdata
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
