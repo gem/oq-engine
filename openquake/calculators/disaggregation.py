@@ -210,8 +210,7 @@ producing too small PoEs.'''
                          sid, min(lat_edges), max(lat_edges))
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-            shape = disagg.BinData(
-                *[len(edges) - 1 for edges in bs] + [len(trts)])
+            shape = [len(edges) - 1 for edges in bs] + [len(trts)]
             logging.info('%s for sid %d', shape, sid)
 
         # check poes
