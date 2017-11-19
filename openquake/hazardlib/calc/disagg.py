@@ -114,9 +114,9 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bin_edges: bin edges
-    :param kind: the kind of array to yield, 'matrix' or 'pmf'
+    :param kind: the kind of array to return, 'matrix' or 'pmf'
     :param mon: a Monitor instance
-    :yields: pairs (key, matrix|pmf) for each key in bdata
+    :returns: a dictionary key -> matrix|pmf for each key in bdata
     """
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
@@ -146,6 +146,7 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
+    out = {}
     cache = {}  # used if iml_disagg is given, since the pnes are repeated
     cache_hit = 0
     for k, pnes in bdata.items():
@@ -161,8 +162,9 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
             matrix = 1. - mat
             pmf = numpy.array([fn(matrix) for fn in pmf_map.values()])
             cache[cache_key] = array = matrix if kind == 'matrix' else pmf
-        yield k, array
+        out[k] = array
     mon.cache_info = numpy.array([len(bdata), cache_hit])  # operations, hits
+    return out
 
 
 def _digitize_lons(lons, lon_bins):
@@ -290,7 +292,7 @@ def disaggregation(
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins,
                  sorted(trt_num))
 
-    [(key, matrix)] = arrange_data_in_bins(bd, bin_edges, 'pmf')
+    [matrix] = arrange_data_in_bins(bd, bin_edges, 'matrix').values()
     return bin_edges, matrix
 
 
