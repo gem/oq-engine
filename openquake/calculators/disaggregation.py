@@ -60,10 +60,11 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         monitor of the currently running job
     :returns:
         a dictionary of probability arrays, with composite key
-        (sid, rlz.id, poe, imt, iml, trt_names).
+        (sid, rlz.id, poe, imt, iml, trti).
     """
     sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
+    trti = trt_num[sources[0].tectonic_region_type]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -73,7 +74,7 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
-            edges = bin_edges[sid] + (trt_names,)
+            edges = bin_edges[sid]
         except KeyError:
             # bin_edges for a given site are missing if the site is far away
             continue
@@ -88,11 +89,36 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
                 continue
 
         with arranging_mon:
-            for (poe, imt, iml, rlzi), pmf in disagg.arrange_data_in_bins(
-                    bindata, edges, 'pmf', arranging_mon).items():
-                result[sid, rlzi, poe, imt, iml, trt_names] = pmf
+            for (poe, imt, iml, rlzi), pmfs in disagg.arrange_data_in_bins(
+                    bindata, edges, 'pmfs', arranging_mon).items():
+                pmfs = numpy.array(list(fix_pmfs(pmfs, trti, len(trt_names))))
+                result[sid, rlzi, poe, imt, iml, trt_names] = pmfs
         result['cache_info'] = arranging_mon.cache_info
     return result
+
+
+# 0 Mag
+# 1 Dist
+# 2 TRT
+# 3 Mag Dist
+# 4 Mag Dist Eps
+# 5 Lon Lat
+# 6 Mag Lon Lat
+# 7 Lon Lat TRT
+def fix_pmfs(pmfs, trti, num_trts):
+    """
+    Manages disaggregation by TRT and LonLatTRT
+    """
+    for i, pmf in enumerate(pmfs):
+        if i == 2:  # disagg by TRT
+            arr = numpy.zeros(num_trts)
+            arr[trti] = pmf
+        elif i == 7:  # disagg by Lon_Lat_TRT
+            arr = numpy.zeros(pmf.shape + (num_trts,))
+            arr[:, :, trti] = pmf
+        else:  # no fix
+            arr = pmf
+        yield arr
 
 
 @base.calculators.add('disaggregation')
