@@ -24,13 +24,14 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 from __future__ import division
 import sys
 import warnings
+import operator
 import collections
 import numpy
 import scipy.stats
 
 from openquake.baselib.python3compat import raise_, range
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import AccumDict, pack
+from openquake.baselib.general import AccumDict, pack, groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -268,9 +269,12 @@ def disaggregation(
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
     imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
-    bdata = collect_bins_data(
-        trt_num, sources, site, cmaker, imldict, truncation_level, n_epsilons)
-    bd = pack(bdata, 'mags dists lons lats trti'.split())
+    by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
+    bdata = {}
+    for trt, srcs in by_trt.items():
+        bdata[trt] = collect_bins_data(
+            trt_num, srcs, site, cmaker, imldict, truncation_level, n_epsilons)
+    bd = pack(sum(bdata.values(), {}), 'mags dists lons lats trti'.split())
     if len(bd.mags) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
@@ -292,8 +296,13 @@ def disaggregation(
                               n_epsilons + 1)
 
     bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trts)
-
-    [matrix] = arrange_data_in_bins(bd, bin_edges, 'matrix').values()
+    matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
+                          len(lon_bins) - 1, len(lat_bins) - 1,
+                          len(eps_bins) - 1, len(trts)))
+    for trt in bdata:
+        bd = pack(bdata[trt], 'mags dists lons lats trti'.split())
+        [mat] = arrange_data_in_bins(bd, bin_edges, 'matrix').values()
+        matrix[..., trt_num[trt]] = mat[..., trt_num[trt]]
     return bin_edges, matrix
 
 
