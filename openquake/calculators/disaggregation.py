@@ -113,12 +113,14 @@ def fix_pmfs(pmfs, trti, num_trts):
         if i == 2:  # disagg by TRT
             arr = numpy.zeros(num_trts)
             arr[trti] = pmf
-        elif i == 7:  # disagg by Lon_Lat_TRT
-            arr = numpy.zeros(pmf.shape + (num_trts,))
-            arr[:, :, trti] = pmf
         else:  # no fix
             arr = pmf
         out.append(arr)
+    # add disagg Lon_Lat_TRT
+    lon_lat = pmfs[5]  # Lon_Lat
+    arr = numpy.zeros(lon_lat.shape + (num_trts,))
+    arr[:, :, trti] = lon_lat
+    out.append(arr)
     return numpy.array(out)
 
 
