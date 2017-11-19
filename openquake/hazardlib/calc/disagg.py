@@ -161,7 +161,8 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
                     mags_idx, dists_idx, lons_idx, lats_idx, pnes):
                 mat[i_mag, i_dist, i_lon, i_lat] *= pne
             matrix = 1. - mat
-            pmfs = [fn(matrix) for fn in pmf_map.values()]
+            funcs = list(pmf_map.values())[:-1]
+            pmfs = [fn(matrix) for fn in funcs]
             cache[cache_key] = array = matrix if kind == 'matrix' else pmfs
         out[k] = array
     mon.cache_info = numpy.array([len(bdata), cache_hit])  # operations, hits
@@ -441,9 +442,6 @@ def mag_lon_lat_pmf(matrix):
     return 1 - mag_lon_lat_pmf
 
 
-lon_lat_trt_pmf = lon_lat_pmf
-
-
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
 pmf_map = collections.OrderedDict([
@@ -454,5 +452,5 @@ pmf_map = collections.OrderedDict([
     (('Mag', 'Dist', 'Eps'), mag_dist_eps_pmf),
     (('Lon', 'Lat'), lon_lat_pmf),
     (('Mag', 'Lon', 'Lat'), mag_lon_lat_pmf),
-    (('Lon', 'Lat', 'TRT'), lon_lat_trt_pmf),
+    (('Lon', 'Lat', 'TRT'), lon_lat_pmf),
 ])
