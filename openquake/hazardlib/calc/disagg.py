@@ -118,36 +118,38 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
     :param mon: a Monitor instance
     :returns: a dictionary key -> matrix|pmf for each key in bdata
     """
-    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
+    with mon('digitize'):
+        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
 
-    dim1 = len(mag_bins) - 1
-    dim2 = len(dist_bins) - 1
-    dim3 = len(lon_bins) - 1
-    dim4 = len(lat_bins) - 1
-    shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1, len(trt_bins))
+        dim1 = len(mag_bins) - 1
+        dim2 = len(dist_bins) - 1
+        dim3 = len(lon_bins) - 1
+        dim4 = len(lat_bins) - 1
+        shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1, len(trt_bins))
 
-    # find bin indexes of rupture attributes; bins are assumed closed
-    # on the lower bound, and open on the upper bound, that is [ )
-    # longitude values need an ad-hoc method to take into account
-    # the 'international date line' issue
-    # the 'minus 1' is needed because the digitize method returns the index
-    # of the upper bound of the bin
-    mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
-    dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
-    lons_idx = _digitize_lons(bdata.lons, lon_bins)
-    lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
+        # find bin indexes of rupture attributes; bins are assumed closed
+        # on the lower bound, and open on the upper bound, that is [ )
+        # longitude values need an ad-hoc method to take into account
+        # the 'international date line' issue
+        # the 'minus 1' is needed because the digitize method returns the
+        # index of the upper bound of the bin
+        mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
+        dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
+        lons_idx = _digitize_lons(bdata.lons, lon_bins)
+        lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
 
-    # because of the way numpy.digitize works, values equal to the last bin
-    # edge are associated to an index equal to len(bins) which is not a valid
-    # index for the disaggregation matrix. Such values are assumed to fall
-    # in the last bin.
-    mags_idx[mags_idx == dim1] = dim1 - 1
-    dists_idx[dists_idx == dim2] = dim2 - 1
-    lons_idx[lons_idx == dim3] = dim3 - 1
-    lats_idx[lats_idx == dim4] = dim4 - 1
+        # because of the way numpy.digitize works, values equal to the last bin
+        # edge are associated to an index equal to len(bins) which is not a
+        # valid index for the disaggregation matrix. Such values are assumed
+        # to fall in the last bin
+        mags_idx[mags_idx == dim1] = dim1 - 1
+        dists_idx[dists_idx == dim2] = dim2 - 1
+        lons_idx[lons_idx == dim3] = dim3 - 1
+        lats_idx[lats_idx == dim4] = dim4 - 1
 
+    # aggregate probabilities
     out = {}
-    cache = {}  # used if iml_disagg is given, since the pnes are repeated
+    cache = {}
     cache_hit = 0
     for k, pnes in bdata.items():
         cache_key = pnes.sum()
@@ -289,8 +291,7 @@ def disaggregation(
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
 
-    bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins,
-                 sorted(trt_num))
+    bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trts)
 
     [matrix] = arrange_data_in_bins(bd, bin_edges, 'matrix').values()
     return bin_edges, matrix
