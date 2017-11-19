@@ -91,8 +91,7 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         with arranging_mon:
             for (poe, imt, iml, rlzi), pmfs in disagg.arrange_data_in_bins(
                     bindata, edges, 'pmfs', arranging_mon).items():
-                pmfs = numpy.array(list(fix_pmfs(pmfs, trti, len(trt_names))))
-                result[sid, rlzi, poe, imt, iml, trt_names] = pmfs
+                result[sid, rlzi, poe, imt, iml, trti] = pmfs
         result['cache_info'] = arranging_mon.cache_info
     return result
 
@@ -109,6 +108,7 @@ def fix_pmfs(pmfs, trti, num_trts):
     """
     Manages disaggregation by TRT and LonLatTRT
     """
+    out = []
     for i, pmf in enumerate(pmfs):
         if i == 2:  # disagg by TRT
             arr = numpy.zeros(num_trts)
@@ -118,7 +118,8 @@ def fix_pmfs(pmfs, trti, num_trts):
             arr[:, :, trti] = pmf
         else:  # no fix
             arr = pmf
-        yield arr
+        out.append(arr)
+    return numpy.array(out)
 
 
 @base.calculators.add('disaggregation')
@@ -140,7 +141,7 @@ producing too small PoEs.'''
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results,
-        a dictionary with key (sid, rlz.id, poe, imt, iml, trt_names)
+        a dictionary with key (sid, rlz.id, poe, imt, iml, trti)
         and values which are probability arrays.
 
         :param acc: dictionary accumulating the results
@@ -149,7 +150,10 @@ producing too small PoEs.'''
         if 'cache_info' in result:
             self.cache_info += result.pop('cache_info')
         for key, val in result.items():
-            acc[key] = 1. - (1. - acc.get(key, 0)) * (1. - val)
+            k = key[:-1] + (self.trts,)  # sid, rlzi, poe, imt, iml, trts
+            trti = key[-1]
+            pmfs = fix_pmfs(val, trti, len(self.trts))
+            acc[k] = 1. - (1. - acc.get(k, 0)) * (1. - pmfs)
         return acc
 
     def get_curves(self, sid):
@@ -203,6 +207,7 @@ producing too small PoEs.'''
         # build trt_edges
         trts = tuple(sorted(set(sg.trt for smodel in self.csm.source_models
                                 for sg in smodel.src_groups)))
+        self.trts = trts
 
         # build mag_edges
         min_mag = min(sg.min_mag for smodel in self.csm.source_models
