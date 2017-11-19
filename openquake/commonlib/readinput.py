@@ -207,7 +207,8 @@ def get_mesh(oqparam):
                 row = line.replace(',', ' ').split()
                 sid = row[0]
                 if sid != str(i):
-                    raise ValueError('Expected site_id=%d, got %s' % (i, sid))
+                    raise InvalidFile('%s: expected site_id=%d, got %s' % (
+                        oqparam.inputs['sites'], i, sid))
                 data.append(' '.join(row[1:]))
         elif oqparam.calculation_mode == 'gmf_ebrisk':
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
