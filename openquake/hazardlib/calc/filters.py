@@ -413,7 +413,7 @@ class SourceFilter(object):
                     src.nsites = len(sids)
                     yield src, FilteredSiteCollection(sids, sites.complete)
             else:  # normal filtering, used in the workers
-                _, maxmag = src.mfd.get_min_max_mag()
+                _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
                     src.tectonic_region_type, maxmag)
                 with context(src):
