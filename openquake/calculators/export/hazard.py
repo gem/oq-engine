@@ -826,6 +826,7 @@ def export_disagg_xml(ekey, dstore):
     group = dstore['disagg']
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
+    trts = dstore.get_attr('csm_info', 'trts')
     for key in group:
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
@@ -845,7 +846,7 @@ def export_disagg_xml(ekey, dstore):
             lon_bin_edges=attrs['lon_bin_edges'],
             lat_bin_edges=attrs['lat_bin_edges'],
             eps_bin_edges=attrs['eps_bin_edges'],
-            tectonic_region_types=attrs['trts'],
+            tectonic_region_types=trts,
         )
         data = [
             DisaggMatrix(poe[i], iml, dim_labels, matrix['_'.join(dim_labels)])
@@ -899,6 +900,7 @@ def export_disagg_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     group = dstore['disagg']
     fnames = []
+    trts = dstore.get_attr('csm_info', 'trts')
     for key in group:
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
@@ -920,7 +922,7 @@ def export_disagg_csv(ekey, dstore):
         metadata['Lon'] = attrs['lon_bin_edges']
         metadata['Lat'] = attrs['lat_bin_edges']
         metadata['Eps'] = attrs['eps_bin_edges']
-        metadata['TRT'] = attrs['trts']
+        metadata['TRT'] = trts
         data = {}
         for label in disagg_outputs:
             tup = tuple(label.split('_'))

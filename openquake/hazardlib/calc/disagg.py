@@ -67,7 +67,7 @@ def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
     return imldict
 
 
-def collect_bins_data(trt_num, sources, site, cmaker, imldict,
+def collect_bins_data(sources, site, cmaker, imldict,
                       truncation_level, n_epsilons, mon=Monitor()):
     sitecol = SiteCollection([site])
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
@@ -272,7 +272,7 @@ def disaggregation(
     bdata = {}
     for trt, srcs in by_trt.items():
         bdata[trt] = collect_bins_data(
-            trt_num, srcs, site, cmaker, imldict, truncation_level, n_epsilons)
+            srcs, site, cmaker, imldict, truncation_level, n_epsilons)
     bd = pack(sum(bdata.values(), {}), 'mags dists lons lats'.split())
     if len(bd.mags) == 0:
         warnings.warn(
