@@ -253,11 +253,12 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     if self.oqparam.save_ruptures:
                         self.rupser.save(ebrs, eidx=len(dset)-len(events))
 
-    def gen_args(self, monitor):
+    def gen_args(self, csm, monitor):
         """
         Used in the case of large source model logic trees.
 
         :param monitor: a :class:`openquake.baselib.performance.Monitor`
+        :param csm: a reduced CompositeSourceModel
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
@@ -275,7 +276,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
             disagg=oq.poes_disagg or oq.iml_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
 
-        csm = self.csm
         num_tasks = 0
         num_sources = 0
         for sm in csm.source_models:
@@ -293,7 +293,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         mutex_groups = list(self.csm.gen_mutex_groups())
         assert not mutex_groups, 'Mutex sources are not implemented!'
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.monitor('pmap_from_trt'))
+            allargs = self.gen_args(self.csm, self.monitor('pmap_from_trt'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
