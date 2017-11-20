@@ -442,7 +442,7 @@ def update_nbytes(dstore, key, array):
 
 
 @base.calculators.add('event_based')
-class EventBasedCalculator(ClassicalCalculator):
+class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
     the hazard curves from the ruptures, depending on the configuration
