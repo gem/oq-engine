@@ -89,11 +89,8 @@ class PSHACalculator(base.HazardCalculator):
                     info.num_sites = max(info.num_sites, nsites)
                     info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
-            if isinstance(pmap, ProbabilityMap):
-                acc[grp_id] |= pmap
-            else:  # dictionary of pmaps
-                for grp_id in pmap:
-                    acc[grp_id] |= pmap[grp_id]
+            for grp_id in pmap:
+                acc[grp_id] |= pmap[grp_id]
         return acc
 
     def count_eff_ruptures(self, result_dict, src_group_id):
