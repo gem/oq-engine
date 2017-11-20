@@ -161,10 +161,7 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        if self.is_stochastic:  # disable tiling
-            num_tiles = 1
-        else:
-            num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+        num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
