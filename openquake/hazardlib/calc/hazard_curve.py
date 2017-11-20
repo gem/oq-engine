@@ -187,7 +187,9 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
                 pcurve += poemap[sid] * weight
             calc_times.append(
                 (src.source_id, src.weight, len(s_sites), time.time() - t0))
-        acc = AccumDict({group.id: pmap * (group.grp_probability or 1)})
+        if group.grp_probability is not None:
+            pmap *= group.grp_probability
+        acc = AccumDict({group.id: pmap})
         # adding the number of contributing ruptures too
         acc.eff_ruptures = {group.id: pne_mons[0].counts}
         acc.calc_times = calc_times
