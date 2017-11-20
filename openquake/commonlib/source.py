@@ -811,30 +811,23 @@ class CompositeSourceModel(collections.Sequence):
             for grp_id in src.src_group_ids:
                 self.infos[grp_id, src.source_id] = SourceInfo(src)
 
-    def split_sources(self, sources=None, src_filter=None, maxweight=None,
-                      concurrent_tasks=None):
+    def split_sources(self, maxweight, sources=None):
         """
         Split a set of sources of the same source group; light sources
         (i.e. with weight <= maxweight) are not split.
 
         :param sources: sources of the same source group
-        :param src_filter: SourceFilter instance
-        :param maxweight: weight used to decide if a source is light
         :yields: blocks of sources of weight around maxweight
         """
         if sources is None:
             sources = self.get_sources()
-        if src_filter is None:
-            src_filter = self.src_filter
-        if maxweight is None:
-            maxweight = self.get_maxweight(concurrent_tasks)
         light = [src for src in sources if src.weight <= maxweight]
         for block in block_splitter(
                 light, maxweight, weight=operator.attrgetter('weight')):
             yield block
         heavy = [src for src in sources if src.weight > maxweight]
         for src in heavy:
-            srcs = split_filter_source(src, src_filter)
+            srcs = split_filter_source(src, self.src_filter)
             for block in block_splitter(
                     srcs, maxweight, weight=operator.attrgetter('weight')):
                 yield block
