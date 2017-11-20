@@ -153,7 +153,7 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
     The arguments are the same as in :func:`calc_hazard_curves`, except
     for ``gsims``, which is a list of GSIM instances.
 
-    :returns: a ProbabilityMap instance
+    :returns: a dictionary {grp_id: ProbabilityMap instance}
     """
     sources = group.sources
     trt = sources[0].tectonic_region_type
@@ -177,7 +177,7 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
         pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
                     for gsim in gsims]
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        pmap.calc_times = []  # pairs (src_id, delta_t)
+        calc_times = []  # pairs (src_id, delta_t)
         for src, s_sites in src_filter(srcs):
             t0 = time.time()
             poemap = poe_map(
@@ -187,13 +187,13 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
             for sid in poemap:
                 pcurve = pmap.setdefault(sid, 0)
                 pcurve += poemap[sid] * weight
-            pmap.calc_times.append(
+            calc_times.append(
                 (src.source_id, src.weight, len(s_sites), time.time() - t0))
-        # storing the number of contributing ruptures too
-        pmap.eff_ruptures = {group.id: pne_mons[0].counts}
-        if group.grp_probability is not None:
-            return pmap * group.grp_probability
-        return pmap
+        acc = AccumDict({group.id: pmap * (group.grp_probability or 1)})
+        # adding the number of contributing ruptures too
+        acc.eff_ruptures = {group.id: pne_mons[0].counts}
+        acc.calc_times = calc_times
+        return acc
 
 
 # this is used by the engine
