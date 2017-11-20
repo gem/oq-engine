@@ -143,10 +143,10 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            acc = parallel.Starmap(pmap_from_trt, iterargs).reduce(
-                self.agg_dicts, self.zerodict())
-            if mutex_groups:  # collect them too
-                acc = ires.reduce(self.agg_dicts, acc)
+            ires2 = parallel.Starmap(pmap_from_trt, iterargs).submit_all()
+        acc = ires2.reduce(self.agg_dicts, self.zerodict())
+        if mutex_groups:  # collect them too
+            acc = ires.reduce(self.agg_dicts, acc)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc
