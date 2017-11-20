@@ -94,19 +94,9 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
     return result
 
 
-# 0 Mag
-# 1 Dist
-# 2 TRT
-# 3 Mag Dist
-# 4 Mag Dist Eps
-# 5 Lon Lat
-# 6 Mag Lon Lat
-# 7 Lon Lat TRT
-def fix_pmfs(pmfs, trti, num_trts):
-    """
-    Manages disaggregation by TRT and LonLatTRT
-    """
+def _fix_pmfs(pmfs, trti, num_trts):
     out = []
+    # pmfs (Mag, Dist, TRT, Mag_Dist, Mag_Dist_Eps, Mag_Lon_Lat)
     for i, pmf in enumerate(pmfs):
         if i == 2:  # disagg by TRT
             arr = numpy.zeros(num_trts)
@@ -152,7 +142,7 @@ producing too small PoEs.'''
         for key, val in result.items():
             k = key[:-1]  # sid, rlzi, poe, imt, iml
             trti = key[-1]
-            pmfs = fix_pmfs(val, trti, len(self.trts))
+            pmfs = _fix_pmfs(val, trti, len(self.trts))
             acc[k] = 1. - (1. - acc.get(k, 0)) * (1. - pmfs)
         return acc
 
