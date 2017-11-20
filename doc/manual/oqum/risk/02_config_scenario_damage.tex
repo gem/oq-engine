@@ -240,30 +240,58 @@ will produce the following display:
 
 \paragraph{Example 3}
 
-The example shown in Listing~\ref{lst:config_scenario_damage_gmf} illustrates
+The example shown in Listing~\ref{lst:config_scenario_damage_gmf_xml} illustrates
 a scenario damage calculation which uses a file listing a precomputed set of
 \glspl{acr:gmf}. These \glspl{acr:gmf} can be computed using the
 \glsdesc{acr:oqe} or some other software. The \glspl{acr:gmf} must be provided
-in the \gls{acr:nrml} schema as presented in
-Section~\ref{subsec:output_event_based_psha}. The damage distribution is
+in either the \gls{acr:nrml} schema or the csv format as presented in
+Section~\ref{subsec:output_scenario_hazard}. The damage distribution is
 computed based on the provided \glspl{acr:gmf}.
+Listing~\ref{lst:output_gmf_scenario_xml} shows an example of a
+\glspl{acr:gmf} file in the \gls{acr:nrml} schema and
+Table~\ref{output:gmf_scenario} shows an example of a \glspl{acr:gmf} file in
+the csv format. If the \glspl{acr:gmf} file is provided in the csv format, an
+additional csv file listing the site ids must be provided using the parameter
+\Verb+sites_csv+. See Table~\ref{output:sitemesh} for an example of the sites
+csv file, which provides the association between the site ids in the
+\glspl{acr:gmf} csv file with their latitude and longitude coordinates.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_scenario_damage_gmf.ini}
-  \caption{Example configuration file for a scenario damage calculation using a precomputed set of ground motion fields (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/config_scenario_damage_gmf.ini}{Download example})}
-  \label{lst:config_scenario_damage_gmf}
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_scenario_damage_gmf_xml.ini}
+  \caption{Example configuration file for a scenario damage calculation using a precomputed set of ground motion fields (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/config_scenario_damage_gmf_xml.ini}{Download example})}
+  \label{lst:config_scenario_damage_gmf_xml}
 \end{listing}
 
 \begin{itemize}
 
   \item \Verb+gmfs_file+: a parameter used to define the path
-	  to the \glspl{acr:gmf} file in the \gls{acr:nrml} schema. This file must
+    to the \glspl{acr:gmf} file in the \gls{acr:nrml} schema. This file must
     define \glspl{acr:gmf} for all of the intensity measure types used in the
     \gls{fragilitymodel}.
 
 \end{itemize}
 
-The above calculation can be run using the command line:
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_scenario_damage_gmf_csv.ini}
+  \caption{Example configuration file for a scenario damage calculation using a precomputed set of ground motion fields (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/config_scenario_damage_gmf_csv.ini}{Download example})}
+  \label{lst:config_scenario_damage_gmf_csv}
+\end{listing}
+
+\begin{itemize}
+
+  \item \Verb+gmfs_csv+: a parameter used to define the path
+    to the \glspl{acr:gmf} file in the csv format. This file must
+    define \glspl{acr:gmf} for all of the intensity measure types used in the
+    \gls{fragilitymodel}.
+
+  \item \Verb+sites_csv+: a parameter used to define the path
+    to the sites file in the csv format. This file must
+    define site id, longitude, and latitude for all of the sites for the
+    \glspl{acr:gmf} file provided using the \Verb+gmfs_csv+ parameter.
+
+\end{itemize}
+
+The above calculation(s) can be run using the command line:
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 user@ubuntu:~\$ oq engine --run job.ini
