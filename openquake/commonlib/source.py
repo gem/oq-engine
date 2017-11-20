@@ -716,6 +716,14 @@ class CompositeSourceModel(collections.Sequence):
         return [_assert_equal_sources(srcs)
                 for srcid, srcs in sorted(dd.items()) if len(srcs) > 1]
 
+    def gen_mutex_groups(self):
+        """
+        Yield groups of mutually exclusive sources
+        """
+        for sg in self.src_groups:
+            if sg.src_interdep == 'mutex':
+                yield sg
+
     def get_sources(self, kind='all', maxweight=None):
         """
         Extract the sources contained in the source models by optionally
@@ -726,13 +734,14 @@ class CompositeSourceModel(collections.Sequence):
                 kind, maxweight)
         sources = []
         for src_group in self.src_groups:
-            for src in src_group:
-                if kind == 'all':
-                    sources.append(src)
-                elif kind == 'light' and src.weight <= maxweight:
-                    sources.append(src)
-                elif kind == 'heavy' and src.weight > maxweight:
-                    sources.append(src)
+            if src_group.src_interdep == 'indep':
+                for src in src_group:
+                    if kind == 'all':
+                        sources.append(src)
+                    elif kind == 'light' and src.weight <= maxweight:
+                        sources.append(src)
+                    elif kind == 'heavy' and src.weight > maxweight:
+                        sources.append(src)
         return sources
 
     def get_sources_by_trt(self, optimize_same_id_sources=False):
@@ -742,10 +751,11 @@ class CompositeSourceModel(collections.Sequence):
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                for src in grp:
-                    src.sm_id = sm.ordinal
-                    src.samples = sm.samples
-                acc[grp.trt].extend(grp)
+                if grp.src_interdep != 'mutex':
+                    for src in grp:
+                        src.sm_id = sm.ordinal
+                        src.samples = sm.samples
+                    acc[grp.trt].extend(grp)
         if optimize_same_id_sources is False:
             return acc
         dic = {}
@@ -775,10 +785,11 @@ class CompositeSourceModel(collections.Sequence):
         n = sum(sg.tot_ruptures() for sg in self.src_groups)
         rup_serial = numpy.arange(n, dtype=numpy.uint32)
         start = 0
-        for src in self.get_sources():
-            nr = src.num_ruptures
-            src.serial = rup_serial[start:start + nr]
-            start += nr
+        for sg in self.src_groups:
+            for src in sg:
+                nr = src.num_ruptures
+                src.serial = rup_serial[start:start + nr]
+                start += nr
 
     def get_maxweight(self, concurrent_tasks):
         """
@@ -797,7 +808,8 @@ class CompositeSourceModel(collections.Sequence):
         Populate the .infos dictionary (grp_id, src_id) -> <SourceInfo>
         """
         for src in sources:
-            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
+            for grp_id in src.src_group_ids:
+                self.infos[grp_id, src.source_id] = SourceInfo(src)
 
     def split_sources(self, sources=None, src_filter=None, maxweight=None,
                       concurrent_tasks=None):
