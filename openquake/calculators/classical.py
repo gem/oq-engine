@@ -167,8 +167,6 @@ class PSHACalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        self.sources_by_trt = self.csm.get_sources_by_trt(
-            oq.optimize_same_id_sources)
         if oq.split_sources is False:
             maxweight = numpy.inf  # do not split the sources
         else:
@@ -185,19 +183,16 @@ class PSHACalculator(base.HazardCalculator):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
                     logging.info('Instantiating src_filter for tile %d', t + 1)
-                    src_filter = SourceFilter(tile, oq.maximum_distance)
-                    csm = self.csm.filter(src_filter)
+                    csm = self.csm.filter(
+                        SourceFilter(tile, oq.maximum_distance))
             else:
-                src_filter = self.src_filter
                 csm = self.csm
             num_tasks = 0
             num_sources = 0
             if monitor.operation == 'pmap_from_grp':
-                iterargs = self._args_by_grp(
-                    csm, src_filter, param, num_tiles, maxweight)
+                iterargs = self._args_by_grp(csm, param, num_tiles, maxweight)
             else:  # pmap_from_trt
-                iterargs = self._args_by_trt(
-                    csm, src_filter, param, num_tiles, maxweight)
+                iterargs = self._args_by_trt(csm, param, num_tiles, maxweight)
             for args in iterargs:
                 num_tasks += 1
                 num_sources += len(args[0])
@@ -205,7 +200,7 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
-    def _args_by_grp(self, csm, src_filter, param, num_tiles, maxweight):
+    def _args_by_grp(self, csm, param, num_tiles, maxweight):
         for sg in csm.src_groups:
             if sg.src_interdep == 'mutex':
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
@@ -213,16 +208,16 @@ class PSHACalculator(base.HazardCalculator):
                 # sg.samples = sg.sources[0].samples
                 # FIXME: case_27 raise an error 'NonParametricSeismicSource'
                 # object has no attribute 'samples'
-                yield sg, src_filter, gsims, param
+                yield sg, csm.src_filter, gsims, param
 
-    def _args_by_trt(self, csm, src_filter, param, num_tiles, maxweight):
-        for trt, sources in self.sources_by_trt.items():
+    def _args_by_trt(self, csm, param, num_tiles, maxweight):
+        opt = self.oqparam.optimize_same_id_sources
+        for trt, sources in csm.get_sources_by_trt(opt).items():
             gsims = csm.info.gsim_lt.get_gsims(trt)
             self.csm.add_infos(sources)  # update self.csm.infos
-            for block in csm.split_sources(
-                    sources, src_filter, maxweight):
+            for block in csm.split_sources(maxweight, sources):
                 block.samples = sources[0].samples
-                yield block, src_filter, gsims, param
+                yield block, csm.src_filter, gsims, param
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source

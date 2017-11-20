@@ -262,8 +262,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         oq = self.oqparam
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        self.sources_by_trt = self.csm.get_sources_by_trt(
-            oq.optimize_same_id_sources)
         if oq.split_sources is False:
             maxweight = numpy.inf  # do not split the sources
         else:
@@ -280,15 +278,15 @@ class EventBasedRuptureCalculator(PSHACalculator):
         csm = self.csm
         num_tasks = 0
         num_sources = 0
-        for trt, sources in csm.get_sources_by_trt().items():
-            gsims = csm.info.gsim_lt.get_gsims(trt)
-            csm.add_infos(sources)
-            for block in csm.split_sources(
-                    sources, self.src_filter, maxweight):
-                block.samples = sources[0].samples
-                yield block, self.src_filter, gsims, param, monitor
-                num_tasks += 1
-                num_sources += len(block)
+        for sm in csm.source_models:
+            for sg in sm.src_groups:
+                gsims = csm.info.gsim_lt.get_gsims(sg.trt)
+                csm.add_infos(sg.sources)
+                for block in csm.split_sources(maxweight, sg.sources):
+                    block.samples = sm.samples
+                    yield block, self.src_filter, gsims, param, monitor
+                    num_tasks += 1
+                    num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def execute(self):
