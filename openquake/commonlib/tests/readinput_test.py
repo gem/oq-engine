@@ -28,7 +28,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib import general
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, InvalidFile
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation
 from openquake.qa_tests_data.classical import case_1, case_2
@@ -144,6 +144,33 @@ export_dir = %s
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
+
+    def test_wrong_sites_csv(self):
+        sites_csv = general.writetmp(
+            'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
+        source = general.writetmp("""
+[general]
+calculation_mode = classical
+[geometry]
+sites_csv = %s
+[misc]
+maximum_distance=1
+truncation_level=3
+random_seed=5
+[site_params]
+reference_vs30_type = measured
+reference_vs30_value = 600.0
+reference_depth_to_2pt5km_per_sec = 5.0
+reference_depth_to_1pt0km_per_sec = 100.0
+intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
+investigation_time = 50.
+export_dir = %s
+""" % (sites_csv, TMP))
+        oq = readinput.get_oqparam(source, hc_id=1)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_mesh(oq)
+        self.assertIn('expected site_id=0, got 1', str(ctx.exception))
+        os.unlink(sites_csv)
 
     def test_wrong_discretization(self):
         source = general.writetmp("""
