@@ -515,7 +515,13 @@ class CallableDict(collections.OrderedDict):
 class pack(dict):
     """
     Compact a dictionary of lists into a dictionary of arrays.
-    If attrs are given, consider those keys as attributes.
+    If attrs are given, consider those keys as attributes. For instance,
+
+    >>> p = pack(dict(x=[1], a=[0]), ['a'])
+    >>> p
+    {'x': array([1])}
+    >>> p.a
+    array([0])
     """
     def __init__(self, dic, attrs=()):
         for k, v in dic.items():
