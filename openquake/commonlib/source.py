@@ -752,12 +752,10 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             for grp in sm.src_groups:
                 if grp.src_interdep != 'mutex':
-                    for src in grp:
-                        src.sm_id = sm.ordinal
-                        src.samples = sm.samples
                     acc[grp.trt].extend(grp)
         if optimize_same_id_sources is False:
             return acc
+        # extract a single source from multiple sources with the same ID
         dic = {}
         weight = 0
         for trt in acc:
