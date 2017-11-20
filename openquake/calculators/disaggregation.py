@@ -25,7 +25,7 @@ import logging
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import split_in_blocks
+from openquake.baselib.general import split_in_blocks, pack
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -73,29 +73,25 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
-            edges = bin_edges[sid]
+            edges = bin_edges[sid] + (trt_names,)
         except KeyError:
             # bin_edges for a given site are missing if the site is far away
             continue
 
-        # generate source, rupture, sites once per site
         with collecting_mon:
-            bd = disagg._collect_bins_data(
+            acc = disagg.collect_bins_data(
                 trt_num, sources, site, cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
-        for (poe, imt, iml, rlzi), pnes in bd.eps.items():
-            # extract the probabilities of non-exceedance for the
-            # given realization, disaggregation PoE, and IMT
-            # bins in a format handy for hazardlib
-            bins = [bd.mags, bd.dists, bd.lons, bd.lats, pnes, bd.trts]
-            # call disagg._arrange_data_in_bins
-            with arranging_mon:
-                key = (sid, rlzi, poe, imt, iml, trt_names)
-                matrix = disagg._arrange_data_in_bins(
-                    bins, edges + (trt_names,))
-                result[key] = numpy.array(
-                    [fn(matrix) for fn in disagg.pmf_map.values()])
+            bindata = pack(acc, 'mags dists lons lats trti'.split())
+            if not bindata:
+                continue
+
+        with arranging_mon:
+            for (poe, imt, iml, rlzi), pmf in disagg.arrange_data_in_bins(
+                    bindata, edges, 'pmf', arranging_mon).items():
+                result[sid, rlzi, poe, imt, iml, trt_names] = pmf
+        result['cache_info'] = arranging_mon.cache_info
     return result
 
 
@@ -124,6 +120,8 @@ producing too small PoEs.'''
         :param acc: dictionary accumulating the results
         :param result: dictionary with the result coming from a task
         """
+        if 'cache_info' in result:
+            self.cache_info += result.pop('cache_info')
         for key, val in result.items():
             acc[key] = 1. - (1. - acc.get(key, 0)) * (1. - val)
         return acc
@@ -209,8 +207,7 @@ producing too small PoEs.'''
                          sid, min(lat_edges), max(lat_edges))
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-            shape = disagg.BinData(
-                *[len(edges) - 1 for edges in bs] + [len(trts)])
+            shape = [len(edges) - 1 for edges in bs] + [len(trts)]
             logging.info('%s for sid %d', shape, sid)
 
         # check poes
@@ -261,8 +258,11 @@ producing too small PoEs.'''
                         (src_filter, srcs, cmaker, imls, trts,
                          self.bin_edges, oq, mon))
 
+        self.cache_info = numpy.zeros(2)  # operations, cache_hits
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
+        ops, hits = self.cache_info
+        logging.info('Cache speedup %s', ops / (ops - hits))
         self.save_disagg_results(results)
 
     def save_disagg_results(self, results):
