@@ -212,7 +212,7 @@ class PSHACalculator(base.HazardCalculator):
         for sg in csm.src_groups:
             if sg.src_interdep == 'mutex':
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
-                csm.add_infos(sg.sources)
+                self.csm.add_infos(sg.sources)  # update self.csm.infos
                 # sg.samples = sg.sources[0].samples
                 # FIXME: case_27 raise an error 'NonParametricSeismicSource'
                 # object has no attribute 'samples'
@@ -221,7 +221,7 @@ class PSHACalculator(base.HazardCalculator):
     def _args_by_trt(self, csm, src_filter, param, num_tiles, maxweight):
         for trt, sources in self.sources_by_trt.items():
             gsims = csm.info.gsim_lt.get_gsims(trt)
-            csm.add_infos(sources)
+            self.csm.add_infos(sources)  # update self.csm.infos
             for block in csm.split_sources(
                     sources, src_filter, maxweight):
                 block.samples = sources[0].samples
