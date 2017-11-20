@@ -36,6 +36,8 @@ if config.dbserver.multi_user:
         job = logs.dbcmd('get_job', calc_id)
         if job:
             return datastore.read(job.ds_calc_dir + '.hdf5')
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
         return datastore.read(calc_id)
 else:  # get the datastore of the current user
     read = datastore.read
