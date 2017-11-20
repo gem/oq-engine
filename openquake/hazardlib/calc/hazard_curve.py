@@ -160,8 +160,6 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
     mutex_weight = {src.source_id: weight for src, weight in
                     zip(group.sources, group.srcs_weights)}
     maxdist = src_filter.integration_distance
-    if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
-        gsims = [gsims[trt]]
     srcs = []
     for src in sources:
         if hasattr(src, '__iter__'):  # MultiPointSource
@@ -279,9 +277,13 @@ def calc_hazard_curves(
     # This is ensuring backward compatibility i.e. processing a list of
     # sources
     if not isinstance(groups[0], SourceGroup):  # sent a list of sources
-        dic = groupby(groups, operator.attrgetter('tectonic_region_type'))
-        groups = [SourceGroup(trt, dic[trt], 'src_group', 'indep', 'indep')
-                  for trt in dic]
+        odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
+        groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
+                  for trt in odic]
+    for i, grp in enumerate(groups):
+        for src in grp:
+            if src.src_group_id is None:
+                src.src_group_id = i
     if hasattr(ss_filter, 'sitecol'):  # a filter, as it should be
         sitecol = ss_filter.sitecol
     else:  # backward compatibility, a site collection was passed
@@ -292,11 +294,15 @@ def calc_hazard_curves(
     param = dict(imtls=imtls, truncation_level=truncation_level)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
+    gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     for group in groups:
         if group.src_interdep == 'mutex':  # do not split the group
-            pmap |= pmap_from_grp(group, ss_filter, gsim_by_trt, param)
+            it = [pmap_from_grp(group, ss_filter, [gsim], param)]
         else:  # split the group and apply `pmap_from_grp` in parallel
-            pmap |= apply(
-                pmap_from_grp, (group, ss_filter, gsim_by_trt, param),
-                weight=operator.attrgetter('weight')).reduce(operator.or_)
+            it = apply(
+                pmap_from_trt, (group, ss_filter, [gsim], param),
+                weight=operator.attrgetter('weight'))
+        for res in it:
+            for grp_id in res:
+                pmap |= res[grp_id]
     return pmap.convert(imtls, len(sitecol.complete))
