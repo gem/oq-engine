@@ -642,6 +642,7 @@ class UcerfSource(object):
                     ctl.mesh_spacing, ctl.msr, ctl.aspect, ctl.tom, ctl.usd,
                     ctl.lsd, Point(locations[i, 0], locations[i, 1]),
                     ctl.npd, ctl.hdd)
+                ps.src_group_id = self.src_group_id
                 sources.append(ps)
         return sources
 
@@ -762,8 +763,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
-        self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         self.csm = get_composite_source_model(oq)
+        self.csm.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['csm_info'] = self.csm_info = self.csm.info
@@ -793,7 +794,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
                              save_ruptures=oq.save_ruptures)
-                allargs.append((srcs, self.src_filter, gsims, param, monitor))
+                allargs.append(
+                    (srcs, self.csm.src_filter, gsims, param, monitor))
         return allargs
 
 
@@ -882,7 +884,7 @@ class UCERFRiskCalculator(EbriskCalculator):
                              elt_dt=elt_dt,
                              asset_loss_table=False,
                              insured_losses=oq.insured_losses)
-                yield (ssm, self.src_filter, param,
+                yield (ssm, self.csm.src_filter, param,
                        self.riskmodel, imts, oq.truncation_level,
                        correl_model, min_iml, monitor)
 

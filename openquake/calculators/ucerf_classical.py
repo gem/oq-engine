@@ -25,7 +25,7 @@ import h5py
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc.hazard_curve import pmap_from_grp, poe_map
+from openquake.hazardlib.calc.hazard_curve import pmap_from_trt, poe_map
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import valid
@@ -74,8 +74,7 @@ SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 @util.reader
-def ucerf_classical(
-        rupset_idx, ucerf_source, src_filter, gsims, monitor):
+def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     """
     :param rupset_idx:
         indices of the rupture sets
@@ -188,7 +187,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.src_filter, gsims, param, monitor)
             bg_res = parallel.Starmap.apply(
-                pmap_from_grp, args, name='background_sources_%d' % grp_id,
+                pmap_from_trt, args, name='background_sources_%d' % grp_id,
                 concurrent_tasks=ct2).submit_all()
 
             # parallelize by rupture subsets
@@ -202,7 +201,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
             # compose probabilities from background sources
             for pmap in bg_res:
-                acc[grp_id] |= pmap
+                acc[grp_id] |= pmap[grp_id]
 
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
