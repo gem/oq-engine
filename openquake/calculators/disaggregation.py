@@ -95,8 +95,8 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
 
 
 def _fix_pmfs(pmfs, trti, num_trts):
+    # pmfs (Mag, Dist, TRT, Mag_Dist, Mag_Dist_Eps, Lon_Lat, Mag_Lon_Lat)
     out = []
-    # pmfs (Mag, Dist, TRT, Mag_Dist, Mag_Dist_Eps, Mag_Lon_Lat)
     for i, pmf in enumerate(pmfs):
         if i == 2:  # disagg by TRT
             arr = numpy.zeros(num_trts)
