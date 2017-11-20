@@ -556,7 +556,8 @@ class Starmap(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
-        acc = self.submit_all().reduce(agg, acc or AccumDict())
+        acc = AccumDict() if acc is None else acc
+        acc = self.submit_all().reduce(agg, acc)
         self.results = []
         return acc
 

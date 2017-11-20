@@ -146,7 +146,7 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons,
 
 
 # this is used by the engine
-def pmap_from_grp(sources, src_filter, gsims, param, monitor=Monitor()):
+def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -155,16 +155,10 @@ def pmap_from_grp(sources, src_filter, gsims, param, monitor=Monitor()):
 
     :returns: a ProbabilityMap instance
     """
-    if isinstance(sources, SourceGroup):
-        group = sources
-        sources = group.sources
-        trt = sources[0].tectonic_region_type
-        mutex_weight = {src.source_id: weight for src, weight in
-                        zip(group.sources, group.srcs_weights)}
-    else:  # list of sources
-        trt = sources[0].tectonic_region_type
-        group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
-    grp_id = sources[0].src_group_id
+    sources = group.sources
+    trt = sources[0].tectonic_region_type
+    mutex_weight = {src.source_id: weight for src, weight in
+                    zip(group.sources, group.srcs_weights)}
     maxdist = src_filter.integration_distance
     if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
         gsims = [gsims[trt]]
@@ -182,26 +176,21 @@ def pmap_from_grp(sources, src_filter, gsims, param, monitor=Monitor()):
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
                     for gsim in gsims]
-        src_indep = group.src_interdep == 'indep'
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
         pmap.calc_times = []  # pairs (src_id, delta_t)
-        pmap.grp_id = grp_id
         for src, s_sites in src_filter(srcs):
             t0 = time.time()
             poemap = poe_map(
                 src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons,
                 group.rup_interdep == 'indep')
-            if src_indep:  # usual composition of probabilities
-                pmap |= poemap
-            else:  # mutually exclusive probabilities
-                weight = mutex_weight[src.source_id]
-                for sid in poemap:
-                    pcurve = pmap.setdefault(sid, 0)
-                    pcurve += poemap[sid] * weight
+            weight = mutex_weight[src.source_id]
+            for sid in poemap:
+                pcurve = pmap.setdefault(sid, 0)
+                pcurve += poemap[sid] * weight
             pmap.calc_times.append(
                 (src.source_id, src.weight, len(s_sites), time.time() - t0))
         # storing the number of contributing ruptures too
-        pmap.eff_ruptures = {pmap.grp_id: pne_mons[0].counts}
+        pmap.eff_ruptures = {group.id: pne_mons[0].counts}
         if group.grp_probability is not None:
             return pmap * group.grp_probability
         return pmap

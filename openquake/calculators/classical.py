@@ -26,9 +26,6 @@ import numpy
 from openquake.baselib import parallel, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib.geo.utils import get_spherical_bounding_box
-from openquake.hazardlib.geo.utils import get_longitudinal_extent
-from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, pmap_from_trt, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
@@ -79,17 +76,21 @@ class PSHACalculator(base.HazardCalculator):
         """
         with self.monitor('aggregate curves', autoflush=True):
             # TODO: think about how to store source information for the case
-            # of optimize_same_id_sources = True
-            if not self.oqparam.optimize_same_id_sources:
+            # of multiple grp_ids
+            try:
+                [grp_id] = pmap.eff_ruptures
+            except ValueError:
+                pass
+            else:
                 for src_id, nsites, srcweight, calc_time in pmap.calc_times:
                     src_id = src_id.split(':', 1)[0]
-                    info = self.csm.infos[pmap.grp_id, src_id]
+                    info = self.csm.infos[grp_id, src_id]
                     info.calc_time += calc_time
                     info.num_sites = max(info.num_sites, nsites)
                     info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
             if isinstance(pmap, ProbabilityMap):
-                acc[pmap.grp_id] |= pmap
+                acc[grp_id] |= pmap
             else:  # dictionary of pmaps
                 for grp_id in pmap:
                     acc[grp_id] |= pmap[grp_id]
@@ -130,9 +131,13 @@ class PSHACalculator(base.HazardCalculator):
         except AttributeError:
             raise RuntimeError('No CompositeSourceModel, did you forget to '
                                'run the hazard or the --hc option?')
-        monitor = self.monitor(self.core_task.__name__)
+        mutex_groups = list(self.csm.gen_mutex_groups())
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.csm, monitor)
+            if mutex_groups:
+                # send the mutex groups first
+                ires = parallel.Starmap(pmap_from_grp, self.gen_args(
+                    self.monitor('pmap_from_grp'))).submit_all()
+            allargs = self.gen_args(self.monitor('pmap_from_trt'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
@@ -140,19 +145,18 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            func = (pmap_from_trt if self.oqparam.optimize_same_id_sources
-                    else self.core_task.__func__)
-            ires = parallel.Starmap(func, iterargs).submit_all()
-        acc = ires.reduce(self.agg_dicts, self.zerodict())
+            acc = parallel.Starmap(pmap_from_trt, iterargs).reduce(
+                self.agg_dicts, self.zerodict())
+            if mutex_groups:  # collect them too
+                acc = ires.reduce(self.agg_dicts, acc)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc
 
-    def gen_args(self, csm, monitor):
+    def gen_args(self, monitor):
         """
         Used in the case of large source model logic trees.
 
-        :param csm: a CompositeSourceModel instance
         :param monitor: a :class:`openquake.baselib.performance.Monitor`
         :yields: (sources, sites, gsims, monitor) tuples
         """
@@ -166,8 +170,8 @@ class PSHACalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        if oq.optimize_same_id_sources:
-            self.dic = csm.get_sources_by_trt(True)  # redefine csm.weight
+        self.sources_by_trt = self.csm.get_sources_by_trt(
+            oq.optimize_same_id_sources)
         if oq.split_sources is False:
             maxweight = numpy.inf  # do not split the sources
         else:
@@ -188,14 +192,15 @@ class PSHACalculator(base.HazardCalculator):
                     csm = self.csm.filter(src_filter)
             else:
                 src_filter = self.src_filter
-            if oq.optimize_same_id_sources:
-                iterargs = self._args_by_trt(
-                    csm, src_filter, param, num_tiles, maxweight)
-            else:
-                iterargs = self._args_by_grp(
-                    csm, src_filter, param, num_tiles, maxweight)
+                csm = self.csm
             num_tasks = 0
             num_sources = 0
+            if monitor.operation == 'pmap_from_grp':
+                iterargs = self._args_by_grp(
+                    csm, src_filter, param, num_tiles, maxweight)
+            else:  # pmap_from_trt
+                iterargs = self._args_by_trt(
+                    csm, src_filter, param, num_tiles, maxweight)
             for args in iterargs:
                 num_tasks += 1
                 num_sources += len(args[0])
@@ -204,31 +209,22 @@ class PSHACalculator(base.HazardCalculator):
         source.split_map.clear()
 
     def _args_by_grp(self, csm, src_filter, param, num_tiles, maxweight):
-        ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
-        for sm in csm.source_models:
-            for sg in sm.src_groups:
-                gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                if num_tiles <= 1:
-                    logging.info(
-                        'Sending source group #%d of %d (%s, %d sources)',
-                        sg.id + 1, ngroups, sg.trt, len(sg.sources))
-                self.csm.add_infos(sg.sources)
-                if sg.src_interdep == 'mutex':  # do not split the group
-                    sg.samples = sm.samples
-                    yield sg, src_filter, gsims, param
-                else:
-                    for block in self.csm.split_sources(
-                            sg.sources, src_filter, maxweight):
-                        block.samples = sm.samples
-                        yield block, src_filter, gsims, param
+        for sg in csm.src_groups:
+            if sg.src_interdep == 'mutex':
+                gsims = csm.info.gsim_lt.get_gsims(sg.trt)
+                csm.add_infos(sg.sources)
+                # sg.samples = sg.sources[0].samples
+                # FIXME: case_27 raise an error 'NonParametricSeismicSource'
+                # object has no attribute 'samples'
+                yield sg, src_filter, gsims, param
 
     def _args_by_trt(self, csm, src_filter, param, num_tiles, maxweight):
-        for trt, sources in self.dic.items():
-            gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            for block in self.csm.split_sources(
+        for trt, sources in self.sources_by_trt.items():
+            gsims = csm.info.gsim_lt.get_gsims(trt)
+            csm.add_infos(sources)
+            for block in csm.split_sources(
                     sources, src_filter, maxweight):
                 block.samples = sources[0].samples
-                param['sm_id'] = sources[0].sm_id
                 yield block, src_filter, gsims, param
 
     def store_source_info(self, infos, acc):
@@ -241,7 +237,11 @@ class PSHACalculator(base.HazardCalculator):
             array = numpy.zeros(len(rows), source.SourceInfo.dt)
             for i, row in enumerate(rows):
                 for name in array.dtype.names:
-                    array[i][name] = getattr(row, name)
+                    value = getattr(row, name)
+                    if name == 'grp_id' and isinstance(value, list):
+                        # TODO: avoid losing information in this case
+                        value = value[0]
+                    array[i][name] = value
             self.source_info = array
             infos.clear()
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
