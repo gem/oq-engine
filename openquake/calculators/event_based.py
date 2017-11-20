@@ -273,7 +273,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, seed=oq.ses_seed,
             maximum_distance=oq.maximum_distance,
-            disagg=oq.poes_disagg or oq.iml_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
 
         num_tasks = 0
