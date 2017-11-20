@@ -35,7 +35,8 @@ from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
-from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
+from openquake.calculators.classical import (
+    ClassicalCalculator, PSHACalculator, saving_sources_by_task)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -251,6 +252,62 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     dset = self.datastore.extend('events', events)
                     if self.oqparam.save_ruptures:
                         self.rupser.save(ebrs, eidx=len(dset)-len(events))
+
+    def gen_args(self, monitor):
+        """
+        Used in the case of large source model logic trees.
+
+        :param monitor: a :class:`openquake.baselib.performance.Monitor`
+        :yields: (sources, sites, gsims, monitor) tuples
+        """
+        oq = self.oqparam
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        self.sources_by_trt = self.csm.get_sources_by_trt(
+            oq.optimize_same_id_sources)
+        if oq.split_sources is False:
+            maxweight = numpy.inf  # do not split the sources
+        else:
+            numheavy = len(self.csm.get_sources('heavy', maxweight))
+            logging.info('Using maxweight=%d, numheavy=%d',
+                         maxweight, numheavy)
+        param = dict(
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, seed=oq.ses_seed,
+            maximum_distance=oq.maximum_distance,
+            disagg=oq.poes_disagg or oq.iml_disagg,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+
+        csm = self.csm
+        num_tasks = 0
+        num_sources = 0
+        for sg in csm.src_groups:
+            gsims = csm.info.gsim_lt.get_gsims(sg.trt)
+            csm.add_infos(sg.sources)
+            for block in csm.split_sources(
+                    sg.sources, self.src_filter, maxweight):
+                block.samples = sg.sources[0].samples
+                yield block, self.src_filter, gsims, param, monitor
+                num_tasks += 1
+                num_sources += len(block)
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+
+    def execute(self):
+        mutex_groups = list(self.csm.gen_mutex_groups())
+        assert not mutex_groups, 'Mutex sources are not implemented!'
+        with self.monitor('managing sources', autoflush=True):
+            allargs = self.gen_args(self.monitor('pmap_from_trt'))
+            iterargs = saving_sources_by_task(allargs, self.datastore)
+            if isinstance(allargs, list):
+                # there is a trick here: if the arguments are known
+                # (a list, not an iterator), keep them as a list
+                # then the Starmap will understand the case of a single
+                # argument tuple and it will run in core the task
+                iterargs = list(iterargs)
+            acc = parallel.Starmap(self.core_task.__func__, iterargs).reduce(
+                self.agg_dicts, self.zerodict())
+        with self.monitor('store source_info', autoflush=True):
+            self.store_source_info(self.csm.infos, acc)
+        return acc
 
     def post_execute(self, result):
         """
