@@ -512,6 +512,26 @@ class CallableDict(collections.OrderedDict):
         raise KeyError(key)
 
 
+class pack(dict):
+    """
+    Compact a dictionary of lists into a dictionary of arrays.
+    If attrs are given, consider those keys as attributes. For instance,
+
+    >>> p = pack(dict(x=[1], a=[0]), ['a'])
+    >>> p
+    {'x': array([1])}
+    >>> p.a
+    array([0])
+    """
+    def __init__(self, dic, attrs=()):
+        for k, v in dic.items():
+            arr = numpy.array(v)
+            if k in attrs:
+                setattr(self, k, arr)
+            else:
+                self[k] = arr
+
+
 class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables::
