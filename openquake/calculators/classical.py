@@ -78,7 +78,7 @@ class PSHACalculator(base.HazardCalculator):
             # TODO: think about how to store source information for the case
             # of multiple grp_ids
             try:
-                [grp_id] = pmap.eff_ruptures
+                [grp_id] = pmap
             except ValueError:
                 pass
             else:
@@ -90,7 +90,8 @@ class PSHACalculator(base.HazardCalculator):
                     info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
             for grp_id in pmap:
-                acc[grp_id] |= pmap[grp_id]
+                if pmap[grp_id]:
+                    acc[grp_id] |= pmap[grp_id]
         return acc
 
     def count_eff_ruptures(self, result_dict, src_group_id):
