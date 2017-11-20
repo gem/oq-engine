@@ -280,12 +280,12 @@ class EventBasedRuptureCalculator(PSHACalculator):
         csm = self.csm
         num_tasks = 0
         num_sources = 0
-        for sg in csm.src_groups:
-            gsims = csm.info.gsim_lt.get_gsims(sg.trt)
-            csm.add_infos(sg.sources)
+        for trt, sources in csm.get_sources_by_trt().items():
+            gsims = csm.info.gsim_lt.get_gsims(trt)
+            csm.add_infos(sources)
             for block in csm.split_sources(
-                    sg.sources, self.src_filter, maxweight):
-                block.samples = sg.sources[0].samples
+                    sources, self.src_filter, maxweight):
+                block.samples = sources[0].samples
                 yield block, self.src_filter, gsims, param, monitor
                 num_tasks += 1
                 num_sources += len(block)
