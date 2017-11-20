@@ -93,6 +93,7 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
+    grp_id = ucerf_source.src_group_id
 
     # prefilter the sites close to the rupture set
     with h5py.File(ucerf_source.control.source_file, "r") as hdf5:
@@ -108,10 +109,10 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
         s_sites = ucerf_source.get_rupture_sites(hdf5, ridx, src_filter, mag)
         if s_sites is None:  # return an empty probability map
             pm = ProbabilityMap(len(imtls.array), len(gsims))
-            pm.calc_times = []  # TODO: fix .calc_times
-            pm.eff_ruptures = {ucerf_source.src_group_id: 0}
-            pm.grp_id = ucerf_source.src_group_id
-            return pm
+            acc = AccumDict({grp_id: pm})
+            acc.calc_times = []  # TODO: fix .calc_times
+            acc.eff_ruptures = {grp_id: 0}
+            return acc
 
     # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
     ucerf_source.rupset_idx = rupset_idx
@@ -124,11 +125,11 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     pmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
                    truncation_level, ctx_mon, pne_mons)
     nsites = len(s_sites)
-    pmap.calc_times = [
+    acc = AccumDict({grp_id: pmap})
+    acc.calc_times = [
         (ucerf_source.source_id, nruptures * nsites, nsites, time.time() - t0)]
-    pmap.grp_id = ucerf_source.src_group_id
-    pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
-    return pmap
+    acc.eff_ruptures = {grp_id: ucerf_source.num_ruptures}
+    return acc
 
 
 @base.calculators.add('ucerf_psha')
