@@ -633,7 +633,7 @@ class CompositeSourceModel(collections.Sequence):
             [sm.get_skeleton() for sm in self.source_models],
             self.weight)
         # dictionary src_group_id, source_id -> SourceInfo,
-        # populated by the split_sources method
+        # populated by the split_in_blocks method
         self.infos = {}
         try:
             dupl_sources = self.check_dupl_sources()
@@ -809,7 +809,7 @@ class CompositeSourceModel(collections.Sequence):
             for grp_id in src.src_group_ids:
                 self.infos[grp_id, src.source_id] = SourceInfo(src)
 
-    def split_sources(self, maxweight, sources=None):
+    def split_in_blocks(self, maxweight, sources=None):
         """
         Split a set of sources of the same source group; light sources
         (i.e. with weight <= maxweight) are not split.
