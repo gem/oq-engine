@@ -200,7 +200,7 @@ class PSHACalculator(base.HazardCalculator):
         for trt, sources in csm.get_sources_by_trt(opt).items():
             gsims = csm.info.gsim_lt.get_gsims(trt)
             self.csm.add_infos(sources)  # update self.csm.infos
-            for block in csm.split_sources(maxweight, sources):
+            for block in csm.split_in_blocks(maxweight, sources):
                 yield block, csm.src_filter, gsims, param
 
     def post_execute(self, pmap_by_grp_id):

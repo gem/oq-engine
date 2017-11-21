@@ -281,7 +281,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                for block in csm.split_sources(maxweight, sg.sources):
+                for block in csm.split_in_blocks(maxweight, sg.sources):
                     block.samples = sm.samples
                     yield block, self.src_filter, gsims, param, monitor
                     num_tasks += 1
