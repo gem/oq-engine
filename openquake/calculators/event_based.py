@@ -36,7 +36,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.classical import (
-    ClassicalCalculator, PSHACalculator, saving_sources_by_task)
+    ClassicalCalculator, saving_sources_by_task)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -194,7 +194,7 @@ def get_events(ebruptures):
 
 
 @base.calculators.add('event_based_rupture')
-class EventBasedRuptureCalculator(PSHACalculator):
+class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """

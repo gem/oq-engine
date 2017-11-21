@@ -20,7 +20,6 @@ from __future__ import division
 import math
 import logging
 import operator
-from functools import partial
 import numpy
 
 from openquake.baselib import parallel, datastore
@@ -93,16 +92,6 @@ class PSHACalculator(base.HazardCalculator):
                 if pmap[grp_id]:
                     acc[grp_id] |= pmap[grp_id]
         return acc
-
-    def count_eff_ruptures(self, result_dict, src_group_id):
-        """
-        Returns the number of ruptures in the src_group (after filtering)
-        or 0 if the src_group has been filtered away.
-
-        :param result_dict: a dictionary with keys (grp_id, gsim)
-        :param src_group_id: the source group ID
-        """
-        return result_dict.eff_ruptures.get(src_group_id, 0)
 
     def zerodict(self):
         """
@@ -207,38 +196,12 @@ class PSHACalculator(base.HazardCalculator):
 
     def _args_by_trt(self, csm, param, num_tiles, maxweight):
         opt = self.oqparam.optimize_same_id_sources
+        # NB: csm.get_sources_by_trt discards the mutex sources
         for trt, sources in csm.get_sources_by_trt(opt).items():
             gsims = csm.info.gsim_lt.get_gsims(trt)
             self.csm.add_infos(sources)  # update self.csm.infos
             for block in csm.split_sources(maxweight, sources):
                 yield block, csm.src_filter, gsims, param
-
-    def store_source_info(self, infos, acc):
-        # save the calculation times per each source
-        if infos:
-            rows = sorted(
-                infos.values(),
-                key=operator.attrgetter('calc_time'),
-                reverse=True)
-            array = numpy.zeros(len(rows), source.SourceInfo.dt)
-            for i, row in enumerate(rows):
-                for name in array.dtype.names:
-                    value = getattr(row, name)
-                    if name == 'grp_id' and isinstance(value, list):
-                        # TODO: avoid losing information in this case
-                        value = value[0]
-                    array[i][name] = value
-            self.source_info = array
-            infos.clear()
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, acc), self.oqparam.sm_lt_path)
-        self.datastore['csm_info'] = self.csm.info
-        if 'source_info' in self.datastore:
-            # the table is missing for UCERF, we should fix that
-            self.datastore.set_attrs(
-                'source_info', nbytes=array.nbytes,
-                has_dupl_sources=self.csm.has_dupl_sources)
-        self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
         """
