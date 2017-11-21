@@ -764,7 +764,9 @@ class CompositeSourceModel(collections.Sequence):
             for grp in groupby(acc[trt], lambda x: x.source_id).values():
                 src = grp[0]
                 weight += src.weight
-                if len(grp) > 1:
+                if len(grp) > 1 and not isinstance(src.src_group_id, list):
+                    # src.src_group_id could be a list because grouped in a
+                    # previous step (this may happen in presence of tiles)
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
         self.weight = weight
