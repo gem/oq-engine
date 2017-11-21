@@ -146,28 +146,19 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons,
 
 
 # this is used by the engine
-def pmap_from_grp(sources, src_filter, gsims, param, monitor=Monitor()):
+def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
     The arguments are the same as in :func:`calc_hazard_curves`, except
     for ``gsims``, which is a list of GSIM instances.
 
-    :returns: a ProbabilityMap instance
+    :returns: a dictionary {grp_id: ProbabilityMap instance}
     """
-    if isinstance(sources, SourceGroup):
-        group = sources
-        sources = group.sources
-        trt = sources[0].tectonic_region_type
-        mutex_weight = {src.source_id: weight for src, weight in
-                        zip(group.sources, group.srcs_weights)}
-    else:  # list of sources
-        trt = sources[0].tectonic_region_type
-        group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
-    grp_id = sources[0].src_group_id
+    sources = group.sources
+    mutex_weight = {src.source_id: weight for src, weight in
+                    zip(group.sources, group.srcs_weights)}
     maxdist = src_filter.integration_distance
-    if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
-        gsims = [gsims[trt]]
     srcs = []
     for src in sources:
         if hasattr(src, '__iter__'):  # MultiPointSource
@@ -182,29 +173,26 @@ def pmap_from_grp(sources, src_filter, gsims, param, monitor=Monitor()):
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
                     for gsim in gsims]
-        src_indep = group.src_interdep == 'indep'
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        pmap.calc_times = []  # pairs (src_id, delta_t)
-        pmap.grp_id = grp_id
+        calc_times = []  # pairs (src_id, delta_t)
         for src, s_sites in src_filter(srcs):
             t0 = time.time()
             poemap = poe_map(
                 src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mons,
                 group.rup_interdep == 'indep')
-            if src_indep:  # usual composition of probabilities
-                pmap |= poemap
-            else:  # mutually exclusive probabilities
-                weight = mutex_weight[src.source_id]
-                for sid in poemap:
-                    pcurve = pmap.setdefault(sid, 0)
-                    pcurve += poemap[sid] * weight
-            pmap.calc_times.append(
+            weight = mutex_weight[src.source_id]
+            for sid in poemap:
+                pcurve = pmap.setdefault(sid, 0)
+                pcurve += poemap[sid] * weight
+            calc_times.append(
                 (src.source_id, src.weight, len(s_sites), time.time() - t0))
-        # storing the number of contributing ruptures too
-        pmap.eff_ruptures = {pmap.grp_id: pne_mons[0].counts}
         if group.grp_probability is not None:
-            return pmap * group.grp_probability
-        return pmap
+            pmap *= group.grp_probability
+        acc = AccumDict({group.id: pmap})
+        # adding the number of contributing ruptures too
+        acc.eff_ruptures = {group.id: pne_mons[0].counts}
+        acc.calc_times = calc_times
+        return acc
 
 
 # this is used by the engine
@@ -290,9 +278,13 @@ def calc_hazard_curves(
     # This is ensuring backward compatibility i.e. processing a list of
     # sources
     if not isinstance(groups[0], SourceGroup):  # sent a list of sources
-        dic = groupby(groups, operator.attrgetter('tectonic_region_type'))
-        groups = [SourceGroup(trt, dic[trt], 'src_group', 'indep', 'indep')
-                  for trt in dic]
+        odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
+        groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
+                  for trt in odic]
+    for i, grp in enumerate(groups):
+        for src in grp:
+            if src.src_group_id is None:
+                src.src_group_id = i
     if hasattr(ss_filter, 'sitecol'):  # a filter, as it should be
         sitecol = ss_filter.sitecol
     else:  # backward compatibility, a site collection was passed
@@ -303,11 +295,15 @@ def calc_hazard_curves(
     param = dict(imtls=imtls, truncation_level=truncation_level)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
+    gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     for group in groups:
         if group.src_interdep == 'mutex':  # do not split the group
-            pmap |= pmap_from_grp(group, ss_filter, gsim_by_trt, param)
+            it = [pmap_from_grp(group, ss_filter, [gsim], param)]
         else:  # split the group and apply `pmap_from_grp` in parallel
-            pmap |= apply(
-                pmap_from_grp, (group, ss_filter, gsim_by_trt, param),
-                weight=operator.attrgetter('weight')).reduce(operator.or_)
+            it = apply(
+                pmap_from_trt, (group, ss_filter, [gsim], param),
+                weight=operator.attrgetter('weight'))
+        for res in it:
+            for grp_id in res:
+                pmap |= res[grp_id]
     return pmap.convert(imtls, len(sitecol.complete))
