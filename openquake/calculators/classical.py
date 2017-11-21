@@ -64,7 +64,6 @@ class PSHACalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = pmap_from_grp
-    source_info = datastore.persistent_attribute('source_info')
 
     def agg_dicts(self, acc, pmap):
         """
