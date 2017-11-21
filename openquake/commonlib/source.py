@@ -43,6 +43,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+weight = operator.attrgetter('weight')
 
 
 class LtRealization(object):
@@ -633,7 +634,7 @@ class CompositeSourceModel(collections.Sequence):
             [sm.get_skeleton() for sm in self.source_models],
             self.weight)
         # dictionary src_group_id, source_id -> SourceInfo,
-        # populated by the split_sources method
+        # populated by the .split_in_blocks method
         self.infos = {}
         try:
             dupl_sources = self.check_dupl_sources()
@@ -716,6 +717,14 @@ class CompositeSourceModel(collections.Sequence):
         return [_assert_equal_sources(srcs)
                 for srcid, srcs in sorted(dd.items()) if len(srcs) > 1]
 
+    def gen_mutex_groups(self):
+        """
+        Yield groups of mutually exclusive sources
+        """
+        for sg in self.src_groups:
+            if sg.src_interdep == 'mutex':
+                yield sg
+
     def get_sources(self, kind='all', maxweight=None):
         """
         Extract the sources contained in the source models by optionally
@@ -726,28 +735,29 @@ class CompositeSourceModel(collections.Sequence):
                 kind, maxweight)
         sources = []
         for src_group in self.src_groups:
-            for src in src_group:
-                if kind == 'all':
-                    sources.append(src)
-                elif kind == 'light' and src.weight <= maxweight:
-                    sources.append(src)
-                elif kind == 'heavy' and src.weight > maxweight:
-                    sources.append(src)
+            if src_group.src_interdep == 'indep':
+                for src in src_group:
+                    if kind == 'all':
+                        sources.append(src)
+                    elif kind == 'light' and src.weight <= maxweight:
+                        sources.append(src)
+                    elif kind == 'heavy' and src.weight > maxweight:
+                        sources.append(src)
         return sources
 
     def get_sources_by_trt(self, optimize_same_id_sources=False):
         """
-        Build a dictionary TRT string -> sources
+        Build a dictionary TRT string -> sources. Sources of kind "mutex"
+        (if any) are silently discarded.
         """
         acc = AccumDict(accum=[])
         for sm in self.source_models:
             for grp in sm.src_groups:
-                for src in grp:
-                    src.sm_id = sm.ordinal
-                    src.samples = sm.samples
-                acc[grp.trt].extend(grp)
+                if grp.src_interdep != 'mutex':
+                    acc[grp.trt].extend(grp)
         if optimize_same_id_sources is False:
             return acc
+        # extract a single source from multiple sources with the same ID
         dic = {}
         weight = 0
         for trt in acc:
@@ -755,7 +765,9 @@ class CompositeSourceModel(collections.Sequence):
             for grp in groupby(acc[trt], lambda x: x.source_id).values():
                 src = grp[0]
                 weight += src.weight
-                if len(grp) > 1:
+                if len(grp) > 1 and not isinstance(src.src_group_id, list):
+                    # src.src_group_id could be a list because grouped in a
+                    # previous step (this may happen in presence of tiles)
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
         self.weight = weight
@@ -775,10 +787,11 @@ class CompositeSourceModel(collections.Sequence):
         n = sum(sg.tot_ruptures() for sg in self.src_groups)
         rup_serial = numpy.arange(n, dtype=numpy.uint32)
         start = 0
-        for src in self.get_sources():
-            nr = src.num_ruptures
-            src.serial = rup_serial[start:start + nr]
-            start += nr
+        for sg in self.src_groups:
+            for src in sg:
+                nr = src.num_ruptures
+                src.serial = rup_serial[start:start + nr]
+                start += nr
 
     def get_maxweight(self, concurrent_tasks):
         """
@@ -797,34 +810,29 @@ class CompositeSourceModel(collections.Sequence):
         Populate the .infos dictionary (grp_id, src_id) -> <SourceInfo>
         """
         for src in sources:
-            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
+            for grp_id in src.src_group_ids:
+                self.infos[grp_id, src.source_id] = SourceInfo(src)
 
-    def split_sources(self, sources=None, src_filter=None, maxweight=None,
-                      concurrent_tasks=None):
+    def split_in_blocks(self, maxweight, sources=None):
         """
-        Split a set of sources of the same source group; light sources
-        (i.e. with weight <= maxweight) are not split.
+        Split a set of sources in blocks of weight up to maxweight; heavy
+        sources (i.e. with weight > maxweight) are split.
 
+        :param maxweight: maximum weight of a block
         :param sources: sources of the same source group
-        :param src_filter: SourceFilter instance
-        :param maxweight: weight used to decide if a source is light
         :yields: blocks of sources of weight around maxweight
         """
         if sources is None:
             sources = self.get_sources()
-        if src_filter is None:
-            src_filter = self.src_filter
-        if maxweight is None:
-            maxweight = self.get_maxweight(concurrent_tasks)
+        sources.sort(key=weight)
         light = [src for src in sources if src.weight <= maxweight]
-        for block in block_splitter(
-                light, maxweight, weight=operator.attrgetter('weight')):
+        for block in block_splitter(light, maxweight, weight):
             yield block
         heavy = [src for src in sources if src.weight > maxweight]
         for src in heavy:
-            srcs = split_filter_source(src, src_filter)
-            for block in block_splitter(
-                    srcs, maxweight, weight=operator.attrgetter('weight')):
+            srcs = [src for src in split_source(src)
+                    if self.src_filter.get_close_sites(src) is not None]
+            for block in block_splitter(srcs, maxweight, weight):
                 yield block
 
     def __repr__(self):
@@ -852,14 +860,12 @@ class CompositeSourceModel(collections.Sequence):
 split_map = {}  # src -> split sources
 
 
-def split_filter_source(src, src_filter):
+def split_source(src):
     """
     :param src: a source to split
-    :param src_filter: a SourceFilter instance
     :returns: a list of split sources
     """
     has_serial = hasattr(src, 'serial')
-    split_sources = []
     start = 0
     try:
         splits = split_map[src]  # read from the cache
@@ -874,9 +880,7 @@ def split_filter_source(src, src_filter):
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        if src_filter.get_close_sites(split) is not None:
-            split_sources.append(split)
-    return split_sources
+        yield split
 
 
 def collect_source_model_paths(smlt):
