@@ -63,7 +63,7 @@ class PSHACalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = pmap_from_grp
+    core_task = pmap_from_trt
 
     def agg_dicts(self, acc, pmap):
         """
@@ -131,7 +131,8 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            ires2 = parallel.Starmap(pmap_from_trt, iterargs).submit_all()
+            ires2 = parallel.Starmap(
+                self.core_task.__func__, iterargs).submit_all()
         acc = ires2.reduce(self.agg_dicts, self.zerodict())
         if mutex_groups:  # collect them too
             acc = ires.reduce(self.agg_dicts, acc)
