@@ -94,6 +94,9 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
     return result
 
 
+# builds the array associated to disaggregation by TRT; for instance, if
+# the probability is 0.3 for the tectonic region index #2 and there are 4 trts,
+# converts 0.3 -> array([0, 0, 0.3, 0]); same for disaggregation by Lon_Lat_TRT
 def _fix_pmfs(pmfs, trti, num_trts):
     # pmfs (Mag, Dist, TRT, Mag_Dist, Mag_Dist_Eps, Lon_Lat, Mag_Lon_Lat)
     out = []
