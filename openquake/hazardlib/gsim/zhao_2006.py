@@ -648,7 +648,7 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
 class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
     """
     This class extends the original base class
-        :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
+    :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
     by introducing a distance filter for the near field, as implemented
     by SGS for the national PSHA model for Saudi Arabia.
     """
