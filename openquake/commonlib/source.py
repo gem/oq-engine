@@ -43,6 +43,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+weight = operator.attrgetter('weight')
 
 
 class LtRealization(object):
@@ -633,7 +634,7 @@ class CompositeSourceModel(collections.Sequence):
             [sm.get_skeleton() for sm in self.source_models],
             self.weight)
         # dictionary src_group_id, source_id -> SourceInfo,
-        # populated by the split_in_blocks method
+        # populated by the .split_in_blocks method
         self.infos = {}
         try:
             dupl_sources = self.check_dupl_sources()
@@ -811,23 +812,23 @@ class CompositeSourceModel(collections.Sequence):
 
     def split_in_blocks(self, maxweight, sources=None):
         """
-        Split a set of sources of the same source group; light sources
-        (i.e. with weight <= maxweight) are not split.
+        Split a set of sources in blocks up weight up to maxweight; heavy
+        sources (i.e. with weight > maxweight) are split.
 
+        :param maxweight: maximum weight of a block
         :param sources: sources of the same source group
         :yields: blocks of sources of weight around maxweight
         """
         if sources is None:
             sources = self.get_sources()
+        sources.sort(key=weight)
         light = [src for src in sources if src.weight <= maxweight]
-        for block in block_splitter(
-                light, maxweight, weight=operator.attrgetter('weight')):
+        for block in block_splitter(light, maxweight, weight):
             yield block
         heavy = [src for src in sources if src.weight > maxweight]
         for src in heavy:
             srcs = split_filter_source(src, self.src_filter)
-            for block in block_splitter(
-                    srcs, maxweight, weight=operator.attrgetter('weight')):
+            for block in block_splitter(srcs, maxweight, weight):
                 yield block
 
     def __repr__(self):
