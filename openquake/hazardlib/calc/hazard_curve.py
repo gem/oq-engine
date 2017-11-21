@@ -156,7 +156,6 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
     :returns: a dictionary {grp_id: ProbabilityMap instance}
     """
     sources = group.sources
-    trt = sources[0].tectonic_region_type
     mutex_weight = {src.source_id: weight for src, weight in
                     zip(group.sources, group.srcs_weights)}
     maxdist = src_filter.integration_distance
