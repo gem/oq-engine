@@ -643,3 +643,25 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
                                     num_sites=len(sites.vs30))
 
         return mean, stddevs
+
+
+class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
+    """
+    This class extends the original base class
+        :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
+    by introducing a distance filter for the near field, as implemented
+    by SGS for the national PSHA model for Saudi Arabia.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        Using a minimum distance of 5km for the calculation.
+        """
+
+        dists.rrup = np.array([d if d > 5. else 5. for d in dists.rrup])
+
+        base = super(ZhaoEtAl2006AscSGS, self)
+        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists,
+                                                  imt, stddev_types)
+
+        return mean, stddevs
