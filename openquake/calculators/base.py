@@ -621,7 +621,7 @@ class HazardCalculator(BaseCalculator):
                         # same ID sources; store only the first
                         value = value[0]
                     array[i][name] = value
-            self.source_info = array
+            self.datastore['source_info'] = array
             infos.clear()
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, acc), self.oqparam.sm_lt_path)
