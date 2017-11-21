@@ -814,7 +814,7 @@ class CompositeSourceModel(collections.Sequence):
 
     def split_in_blocks(self, maxweight, sources=None):
         """
-        Split a set of sources in blocks up weight up to maxweight; heavy
+        Split a set of sources in blocks of weight up to maxweight; heavy
         sources (i.e. with weight > maxweight) are split.
 
         :param maxweight: maximum weight of a block
