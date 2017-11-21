@@ -146,12 +146,13 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
-    # aggregate probabilities: this is slow
-    disagg_mon = mon('building disagg matrices')
+    # aggregate probabilities: this is fast
     out = {}
     cache = {}
     cache_hit = 0
     num_zeros = 0
+    funcs = list(pmf_map.values())[:-1]  # [:-1] removes Lon_Lat_TRT
+    fn_mons = [mon(fn.__name__, measuremem=False) for fn in funcs]
     for k, pnes in bdata.items():
         cache_key = pnes.sum()
         if cache_key == pnes.size:  # all pnes are 1
@@ -161,14 +162,16 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
             array = cache[cache_key]
             cache_hit += 1
         except KeyError:
-            with disagg_mon:
-                mat = numpy.ones(shape)
-                for i_mag, i_dist, i_lon, i_lat, pne in zip(
-                        mags_idx, dists_idx, lons_idx, lats_idx, pnes):
-                    mat[i_mag, i_dist, i_lon, i_lat] *= pne
-                matrix = 1. - mat
-            funcs = list(pmf_map.values())[:-1]  # [:-1] removes Lon_Lat_TRT
-            pmfs = [fn(matrix) for fn in funcs]
+            # build disaggregation matrix: this is fast
+            mat = numpy.ones(shape)
+            for i_mag, i_dist, i_lon, i_lat, pne in zip(
+                    mags_idx, dists_idx, lons_idx, lats_idx, pnes):
+                mat[i_mag, i_dist, i_lon, i_lat] *= pne
+            matrix = 1. - mat
+            pmfs = []
+            for fn, fn_mon in zip(funcs, fn_mons):  # this is ultra-slow
+                with fn_mon:
+                    pmfs.append(fn(matrix))
             cache[cache_key] = array = matrix if kind == 'matrix' else pmfs
         out[k] = array
     # operations, hits, num_zeros
@@ -355,7 +358,7 @@ def trt_pmf(matrix):
     Fold full disaggregation matrix to tectonic region type PMF.
 
     :returns:
-        1d array, a histogram representing tectonic region type PMF.
+        a scalar
     """
     nmags, ndists, nlons, nlats, neps = matrix.shape
     return 1 - numpy.prod(
