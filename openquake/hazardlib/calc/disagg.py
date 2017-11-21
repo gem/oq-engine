@@ -161,7 +161,7 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
                     mags_idx, dists_idx, lons_idx, lats_idx, pnes):
                 mat[i_mag, i_dist, i_lon, i_lat] *= pne
             matrix = 1. - mat
-            funcs = list(pmf_map.values())[:-1]
+            funcs = list(pmf_map.values())[:-1]  # [:-1] removes Lon_Lat_TRT
             pmfs = [fn(matrix) for fn in funcs]
             cache[cache_key] = array = matrix if kind == 'matrix' else pmfs
         out[k] = array
