@@ -281,11 +281,12 @@ producing too small PoEs.'''
                         (src_filter, srcs, cmaker, imls, trti,
                          self.bin_edges, oq, mon))
 
-        self.cache_info = numpy.zeros(2)  # operations, cache_hits
+        self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
-        ops, hits = self.cache_info
+        ops, hits, num_zeros = self.cache_info
         logging.info('Cache speedup %s', ops / (ops - hits))
+        logging.info('Zero probabilities: %d', num_zeros)
         self.save_disagg_results(results)
 
     def save_disagg_results(self, results):
