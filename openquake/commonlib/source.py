@@ -747,7 +747,8 @@ class CompositeSourceModel(collections.Sequence):
 
     def get_sources_by_trt(self, optimize_same_id_sources=False):
         """
-        Build a dictionary TRT string -> sources
+        Build a dictionary TRT string -> sources. Sources of kind "mutex"
+        (if any) are silently discarded.
         """
         acc = AccumDict(accum=[])
         for sm in self.source_models:
