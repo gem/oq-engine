@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the sending of the sources to the workers, especially for the
+    MultiPointSources
   * Better error message if the user sets a wrong site_id in the sites.csv file
   * Now the distance and lon lat bins for disaggregation are built directly
     from the integration distance
