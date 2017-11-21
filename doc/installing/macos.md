@@ -2,7 +2,7 @@
 
 The OpenQuake Engine is available for macOS in the form of **self-installable binary distribution**.
 
-- this distribution uses Python officially provided by Apple Python and includes its own distribution of the dependencies needed by the OpenQuake Engine
+- this distribution uses Python 3.5 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-354/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
     - pip, numpy, scipy, h5py, django, shapely, and few more
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
@@ -17,6 +17,9 @@ Requirements are:
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 - Terminal or iTerm app
+- Python 3.5 (from https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg)
+
+Before you can start you must have downloaded and installed [Python 3.5](https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg).
 
 ## Install packages from the OpenQuake website
 
@@ -37,7 +40,8 @@ Uncompressing installer for the OpenQuake Engine  100%
 Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /Users/auser/openquake: 
 Creating a new python environment in /Users/auser/openquake. Please wait.
 Installing the files in /Users/auser/openquake. Please wait.
-Do you want to make the 'oq' command available by default? [Y/n]: y
+Do you want to install the OpenQuake Tools (IPT, TaxtWeb, Taxonomy Glossary)? [y/n]: y
+Do you want to make the 'oq' command available by default? [y/n]: y
 Installation completed. To enable it run 'source /Users/auser/openquake/env.sh'
 ```
 
