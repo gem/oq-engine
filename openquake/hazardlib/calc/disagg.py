@@ -150,8 +150,12 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
     out = {}
     cache = {}
     cache_hit = 0
+    num_zeros = 0
     for k, pnes in bdata.items():
         cache_key = pnes.sum()
+        if cache_key == pnes.size:  # all pnes are 1
+            num_zeros += 1
+            continue
         try:
             array = cache[cache_key]
             cache_hit += 1
@@ -165,7 +169,8 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
             pmfs = [fn(matrix) for fn in funcs]
             cache[cache_key] = array = matrix if kind == 'matrix' else pmfs
         out[k] = array
-    mon.cache_info = numpy.array([len(bdata), cache_hit])  # operations, hits
+    # operations, hits, num_zeros
+    mon.cache_info = numpy.array([len(bdata), cache_hit, num_zeros])
     return out
 
 
