@@ -829,7 +829,8 @@ class CompositeSourceModel(collections.Sequence):
             yield block
         heavy = [src for src in sources if src.weight > maxweight]
         for src in heavy:
-            srcs = split_filter_source(src, self.src_filter)
+            srcs = [src for src in split_source(src)
+                    if self.src_filter.get_close_sites(src) is not None]
             for block in block_splitter(srcs, maxweight, weight):
                 yield block
 
@@ -858,14 +859,12 @@ class CompositeSourceModel(collections.Sequence):
 split_map = {}  # src -> split sources
 
 
-def split_filter_source(src, src_filter):
+def split_source(src):
     """
     :param src: a source to split
-    :param src_filter: a SourceFilter instance
     :returns: a list of split sources
     """
     has_serial = hasattr(src, 'serial')
-    split_sources = []
     start = 0
     try:
         splits = split_map[src]  # read from the cache
@@ -880,9 +879,7 @@ def split_filter_source(src, src_filter):
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        if src_filter.get_close_sites(split) is not None:
-            split_sources.append(split)
-    return split_sources
+        yield split
 
 
 def collect_source_model_paths(smlt):
