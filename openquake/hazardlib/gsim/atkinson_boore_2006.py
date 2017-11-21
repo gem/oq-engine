@@ -530,3 +530,25 @@ class AtkinsonBoore2006Modified2011(AtkinsonBoore2006):
         if stress_drop > cap:
             stress_drop = cap
         return log10(stress_drop / 140.0) / log10(2.0)
+
+
+class AtkinsonBoore2006SGS(AtkinsonBoore2006):
+    """
+    This class extends the original base class
+    :class:`openquake.hazardlib.gsim.atkinson_boore_2006.AtkinsonBoore2006`
+    by introducing a distance filter for the near field, as implemented
+    by SGS for the national PSHA model for Saudi Arabia.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        Using a minimum distance of 5km for the calculation.
+        """
+
+        dists.rrup = np.array([d if d > 5. else 5. for d in dists.rrup])
+
+        base = super(AtkinsonBoore2006SGS, self)
+        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists,
+                                                  imt, stddev_types)
+
+        return mean, stddevs
