@@ -675,8 +675,13 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 sources = []
                 for src, sites in src_filter(src_group.sources):
-                    sources.append(src)
-                    weight += src.weight
+                    if hasattr(src, '__iter__'):  # MultiPointSource
+                        for s, _sites in src_filter(src, sites):
+                            sources.append(s)
+                            weight += s.weight
+                    else:
+                        sources.append(src)
+                        weight += src.weight
                 sg = copy.copy(src_group)
                 sg.sources = sources
                 src_groups.append(sg)
