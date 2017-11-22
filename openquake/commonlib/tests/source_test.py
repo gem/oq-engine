@@ -754,6 +754,13 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
+
+        # check the attributes of the groups are set
+        [grp0, grp1] = csm.src_groups
+        for grp in csm.src_groups:
+            self.assertEqual(grp.src_interdep, 'indep')
+            self.assertEqual(grp.rup_interdep, 'indep')
+
         self.assertEqual(repr(csm.gsim_lt), '''\
 <GsimLogicTree
 Active Shallow Crust,b1,SadighEtAl1997(),w=0.5

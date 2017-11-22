@@ -116,7 +116,7 @@ class SourceGroup(collections.Sequence):
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
-        self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
+        self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
 
     def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
                               srcs_weights):
@@ -897,8 +897,8 @@ class SourceConverter(RuptureConverter):
                 raise ValueError('There are %d srcs_weights but %d source(s)'
                                  % (len(srcs_weights), len(node)))
         sg.name = node.attrib.get('name')
-        sg.src_interdep = node.attrib.get('src_interdep')
-        sg.rup_interdep = node.attrib.get('rup_interdep')
+        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
+        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
         sg._srcs_weights = srcs_weights
         sg.grp_probability = grp_probability
         return sg
