@@ -69,7 +69,7 @@ class PSHACalculator(base.HazardCalculator):
         """
         :returns: the number of tiles in which the SiteCollection can be split
         """
-        return math.ceil(len(self.sitecol) / self.oqparam.sites_per_tile)
+        return int(math.ceil(len(self.sitecol) / self.oqparam.sites_per_tile))
 
     def agg_dicts(self, acc, pmap):
         """
@@ -171,7 +171,8 @@ class PSHACalculator(base.HazardCalculator):
                     logging.info('Prefiltering tile %d', t + 1)
                     csm = self.csm.filter(
                         SourceFilter(tile, oq.maximum_distance))
-                    maxweight = csm.get_maxweight(oq.concurrent_tasks / 5)
+                    tasks_per_tile = math.ceil(oq.concurrent_tasks / num_tiles)
+                    maxweight = csm.get_maxweight(tasks_per_tile)
             elif t == 0:  # first and only tile
                 csm = self.csm
                 maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
