@@ -417,6 +417,9 @@ class HazardCalculator(BaseCalculator):
                 self.src_filter = SourceFilter(
                     self.sitecol, oq.maximum_distance)
                 self.csm = csm.filter(self.src_filter)
+                if self.csm.has_dupl_sources:
+                    logging.warn('Found duplicated source %s',
+                                 self.csm.has_dupl_sources)
             info = self.csm.info
             info.gsim_lt.check_imts(oq.imtls)
             info.tot_weight = self.csm.weight
