@@ -192,7 +192,7 @@ class Piecewise(object):
         self.y = numpy.array(y)
         # interpolating from x values to indices in the range [0: len(x)]
         self.piecewise = interp1d(x, range(len(x)), bounds_error=False,
-                               fill_value=(0, len(x) - 1))
+                                  fill_value=(0, len(x) - 1))
 
     def __call__(self, x):
         idx = numpy.int64(numpy.ceil(self.piecewise(x)))
