@@ -41,7 +41,8 @@ def zip(job_ini, archive_zip):
     for key in oq.inputs:
         fname = oq.inputs[key]
         if isinstance(fname, list):
-            files.extend(os.path.normpath(fname))
+            for f in fname:
+                files.append(os.path.normpath(f))
         else:
             files.append(os.path.normpath(fname))
     general.zipfiles(files, archive_zip, log=logging.info)
