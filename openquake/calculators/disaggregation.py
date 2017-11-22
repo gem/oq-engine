@@ -37,7 +37,7 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
+def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -50,8 +50,8 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param imldict:
         a list of dictionaries poe, gsim, imt, rlzi -> iml
-    :param dict trt_names:
-        a tuple of names for the given tectonic region type
+    :param dict trti:
+        tectonic region type index
     :param bin_egdes:
         a dictionary site_id -> edges
     :param oqparam:
@@ -60,11 +60,10 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         monitor of the currently running job
     :returns:
         a dictionary of probability arrays, with composite key
-        (sid, rlz.id, poe, imt, iml, trt_names).
+        (sid, rlz.id, poe, imt, iml, trti).
     """
     sitecol = src_filter.sitecol
-    trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
+    result = {}  # sid, rlz.id, poe, imt, iml -> array
 
     collecting_mon = monitor('collecting bins')
     arranging_mon = monitor('arranging bins')
@@ -73,26 +72,47 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trt_names, bin_edges,
         sid = sitecol.sids[i]
         # edges as wanted by disagg._arrange_data_in_bins
         try:
-            edges = bin_edges[sid] + (trt_names,)
+            edges = bin_edges[sid]
         except KeyError:
             # bin_edges for a given site are missing if the site is far away
             continue
 
         with collecting_mon:
             acc = disagg.collect_bins_data(
-                trt_num, sources, site, cmaker, imldict[i],
+                sources, site, cmaker, imldict[i],
                 oqparam.truncation_level, oqparam.num_epsilon_bins,
                 monitor('disaggregate_pne', measuremem=False))
-            bindata = pack(acc, 'mags dists lons lats trti'.split())
+            bindata = pack(acc, 'mags dists lons lats'.split())
             if not bindata:
                 continue
 
         with arranging_mon:
-            for (poe, imt, iml, rlzi), pmf in disagg.arrange_data_in_bins(
-                    bindata, edges, 'pmf', arranging_mon).items():
-                result[sid, rlzi, poe, imt, iml, trt_names] = pmf
+            for (poe, imt, iml, rlzi), pmfs in disagg.arrange_data_in_bins(
+                    bindata, edges, 'pmfs', arranging_mon).items():
+                result[sid, rlzi, poe, imt, iml, trti] = pmfs
         result['cache_info'] = arranging_mon.cache_info
     return result
+
+
+# builds the array associated to disaggregation by TRT; for instance, if
+# the probability is 0.3 for the tectonic region index #2 and there are 4 trts,
+# converts 0.3 -> array([0, 0, 0.3, 0]); same for disaggregation by Lon_Lat_TRT
+def _fix_pmfs(pmfs, trti, num_trts):
+    # pmfs (Mag, Dist, TRT, Mag_Dist, Mag_Dist_Eps, Lon_Lat, Mag_Lon_Lat)
+    out = []
+    for i, pmf in enumerate(pmfs):
+        if i == 2:  # disagg by TRT
+            arr = numpy.zeros(num_trts)
+            arr[trti] = pmf
+        else:  # no fix
+            arr = pmf
+        out.append(arr)
+    # add disagg Lon_Lat_TRT
+    lon_lat = pmfs[5]  # Lon_Lat
+    arr = numpy.zeros(lon_lat.shape + (num_trts,))
+    arr[:, :, trti] = lon_lat
+    out.append(arr)
+    return numpy.array(out)
 
 
 @base.calculators.add('disaggregation')
@@ -114,7 +134,7 @@ producing too small PoEs.'''
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results,
-        a dictionary with key (sid, rlz.id, poe, imt, iml, trt_names)
+        a dictionary with key (sid, rlz.id, poe, imt, iml, trti)
         and values which are probability arrays.
 
         :param acc: dictionary accumulating the results
@@ -123,7 +143,10 @@ producing too small PoEs.'''
         if 'cache_info' in result:
             self.cache_info += result.pop('cache_info')
         for key, val in result.items():
-            acc[key] = 1. - (1. - acc.get(key, 0)) * (1. - val)
+            k = key[:-1]  # sid, rlzi, poe, imt, iml
+            trti = key[-1]
+            pmfs = _fix_pmfs(val, trti, len(self.trts))
+            acc[k] = 1. - (1. - acc.get(k, 0)) * (1. - pmfs)
         return acc
 
     def get_curves(self, sid):
@@ -177,6 +200,8 @@ producing too small PoEs.'''
         # build trt_edges
         trts = tuple(sorted(set(sg.trt for smodel in self.csm.source_models
                                 for sg in smodel.src_groups)))
+        trt_num = {trt: i for i, trt in enumerate(trts)}
+        self.trts = trts
 
         # build mag_edges
         min_mag = min(sg.min_mag for smodel in self.csm.source_models
@@ -254,15 +279,17 @@ producing too small PoEs.'''
                     rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
                     curve) for curve in curves]
                 for srcs in split_in_blocks(split_sources, nblocks):
+                    trti = trt_num[srcs[0].tectonic_region_type]
                     all_args.append(
-                        (src_filter, srcs, cmaker, imls, trts,
+                        (src_filter, srcs, cmaker, imls, trti,
                          self.bin_edges, oq, mon))
 
-        self.cache_info = numpy.zeros(2)  # operations, cache_hits
+        self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
-        ops, hits = self.cache_info
+        ops, hits, num_zeros = self.cache_info
         logging.info('Cache speedup %s', ops / (ops - hits))
+        logging.info('Zero probabilities: %d', num_zeros)
         self.save_disagg_results(results)
 
     def save_disagg_results(self, results):
@@ -276,13 +303,13 @@ producing too small PoEs.'''
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         for key, probs in sorted(results.items()):
-            sid, rlz_id, poe, imt, iml, trt_names = key
+            sid, rlz_id, poe, imt, iml = key
             edges = self.bin_edges[sid]
             self.save_disagg_result(
-                sid, edges, trt_names, probs, rlz_id,
+                sid, edges, probs, rlz_id,
                 self.oqparam.investigation_time, imt, iml, poe)
 
-    def save_disagg_result(self, site_id, bin_edges, trt_names, matrix,
+    def save_disagg_result(self, site_id, bin_edges, matrix,
                            rlz_id, investigation_time, imt_str, iml, poe):
         """
         Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
@@ -292,8 +319,6 @@ producing too small PoEs.'''
             id of the current site
         :param bin_edges:
             The 5-uple mag, dist, lon, lat, eps
-        :param trt_names:
-            The list of Tectonic Region Types
         :param matrix:
             A probability array
         :param rlz_id:
@@ -320,7 +345,7 @@ producing too small PoEs.'''
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
         attrs['iml'] = iml
-        attrs['trts'] = hdf5.array_of_vstr(trt_names)
+        attrs['trts'] = hdf5.array_of_vstr(self.trts)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
