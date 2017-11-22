@@ -169,9 +169,9 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
                 mat[i_mag, i_dist, i_lon, i_lat] *= pne
             matrix = 1. - mat
             pmfs = []
-            for fn, fn_mon in zip(funcs, fn_mons):  # this is ultra-slow
-                with fn_mon:
-                    pmfs.append(fn(matrix))
+            #for fn, fn_mon in zip(funcs, fn_mons):  # this is ultra-slow
+            #    with fn_mon:
+            #        pmfs.append(fn(matrix))
             cache[cache_key] = array = matrix if kind == 'matrix' else pmfs
         out[k] = array
     # operations, hits, num_zeros
