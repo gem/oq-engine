@@ -22,7 +22,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, datastore
+from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import (
@@ -166,7 +166,7 @@ class PSHACalculator(base.HazardCalculator):
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
-                    logging.info('Instantiating src_filter for tile %d', t + 1)
+                    logging.info('Prefiltering tile %d', t + 1)
                     csm = self.csm.filter(
                         SourceFilter(tile, oq.maximum_distance))
             else:
