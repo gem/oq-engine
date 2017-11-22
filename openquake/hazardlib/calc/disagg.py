@@ -109,15 +109,14 @@ def lon_lat_bins(bb, coord_bin_width):
     return lon_bins, lat_bins
 
 
-def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
+# this is fast
+def build_disagg_matrix(bdata, bin_edges, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bin_edges: bin edges
-    :param kind: the kind of array to return, 'matrix' or 'pmfs'
     :param mon: a Monitor instance
     :returns: a dictionary key -> matrix|pmf for each key in bdata
     """
-    # NB: the digitize operation is ultrafast
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
 
     dim1 = len(mag_bins) - 1
@@ -146,34 +145,26 @@ def arrange_data_in_bins(bdata, bin_edges, kind, mon=Monitor):
     lons_idx[lons_idx == dim3] = dim3 - 1
     lats_idx[lats_idx == dim4] = dim4 - 1
 
-    # aggregate probabilities: this is fast
     out = {}
     cache = {}
     cache_hit = 0
     num_zeros = 0
-    funcs = list(pmf_map.values())[:-1]  # [:-1] removes Lon_Lat_TRT
-    fn_mons = [mon(fn.__name__, measuremem=False) for fn in funcs]
     for k, pnes in bdata.items():
         cache_key = pnes.sum()
         if cache_key == pnes.size:  # all pnes are 1
             num_zeros += 1
             continue
         try:
-            array = cache[cache_key]
+            matrix = cache[cache_key]
             cache_hit += 1
         except KeyError:
-            # build disaggregation matrix: this is fast
             mat = numpy.ones(shape)
             for i_mag, i_dist, i_lon, i_lat, pne in zip(
                     mags_idx, dists_idx, lons_idx, lats_idx, pnes):
                 mat[i_mag, i_dist, i_lon, i_lat] *= pne
             matrix = 1. - mat
-            pmfs = []
-            #for fn, fn_mon in zip(funcs, fn_mons):  # this is ultra-slow
-            #    with fn_mon:
-            #        pmfs.append(fn(matrix))
-            cache[cache_key] = array = matrix if kind == 'matrix' else pmfs
-        out[k] = array
+            cache[cache_key] = matrix
+        out[k] = matrix
     # operations, hits, num_zeros
     mon.cache_info = numpy.array([len(bdata), cache_hit, num_zeros])
     return out
@@ -310,7 +301,7 @@ def disaggregation(
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
         bd = pack(bdata[trt], 'mags dists lons lats'.split())
-        [mat] = arrange_data_in_bins(bd, bin_edges, 'matrix').values()
+        [mat] = build_disagg_matrix(bd, bin_edges).values()
         matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
