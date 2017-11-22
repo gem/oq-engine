@@ -674,16 +674,16 @@ class CompositeSourceModel(collections.Sequence):
             src_groups = []
             for src_group in sm.src_groups:
                 sources = []
-                for src, sites in src_filter(src_group.sources):
+                for src in src_group.sources:
                     if hasattr(src, '__iter__'):  # MultiPointSource
-                        for s, _sites in src_filter(src, sites):
-                            sources.append(s)
-                            weight += s.weight
+                        sources.extend(src)
                     else:
                         sources.append(src)
-                        weight += src.weight
                 sg = copy.copy(src_group)
-                sg.sources = sources
+                sg.sources = []
+                for src, sites in src_filter(sources):
+                    sg.sources.append(src)
+                    weight += src.weight
                 src_groups.append(sg)
             newsm = logictree.SourceModel(
                 sm.name, sm.weight, sm.path, src_groups,
