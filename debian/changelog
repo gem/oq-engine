@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Optimized the operation `arrange_data_in_bins` in the disaggregation
+  * Optimized the operation `build_disagg_matrix` in the disaggregation
     calculator and reduced the data transfer by the number of tectonic
     region types
   * Improved the sending of the sources to the workers, especially for the

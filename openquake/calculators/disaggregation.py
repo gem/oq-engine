@@ -34,7 +34,7 @@ from openquake.hazardlib import sourceconverter
 from openquake.commonlib import calc
 from openquake.calculators import base, classical
 
-DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
+DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
 
 
 def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
@@ -70,7 +70,6 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
 
     for i, site in enumerate(sitecol):
         sid = sitecol.sids[i]
-        # edges as wanted by disagg._arrange_data_in_bins
         try:
             edges = bin_edges[sid]
         except KeyError:
@@ -86,9 +85,9 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
             if not bindata:
                 continue
 
-        with arranging_mon:
-            for (poe, imt, iml, rlzi), matrix in disagg.arrange_data_in_bins(
-                    bindata, edges, 'matrix', arranging_mon).items():
+        with arranging_mon:  # this is fast
+            for (poe, imt, iml, rlzi), matrix in disagg.build_disagg_matrix(
+                    bindata, edges, arranging_mon).items():
                 result[sid, rlzi, poe, imt, iml, trti] = matrix
         result['cache_info'] = arranging_mon.cache_info
     return result
@@ -312,22 +311,33 @@ producing too small PoEs.'''
         :param float poe:
             Disaggregation probability of exceedance value for this result.
         """
-        fns = list(disagg.pmf_map.values())
-        with self.monitor('extracting PMFs'):
-            pmfs = [fn(matrix) for fn in fns]
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
-        mag, dist, lons, lats, eps = bin_edges
         disp_name = DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
             rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
-        self.datastore[disp_name] = dic = {
-            '_'.join(key): pmf for key, pmf in zip(disagg.pmf_map, pmfs)}
+        mon = self.monitor('extracting PMFs')
+        mag, dist, lons, lats, eps = bin_edges
+        for key, fn in disagg.pmf_map.items():
+            with mon:
+                pmf = fn(matrix)
+            dname = disp_name + '_'.join(key)
+            try:
+                self.datastore[dname]
+            except KeyError:
+                arr = numpy.zeros(pmf.shape + (len(self.trts),))
+                arr[..., trti] = pmf
+                self.datastore[dname] = arr
+            else:
+                self.datastore[dname][..., trti] = pmf
+            attrs = self.datastore.hdf5[dname].attrs
+            # sanity check: all poe_agg should be the same
+            attrs['poe_agg'] = 1. - numpy.prod(1. - pmf)
+
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
         attrs['iml'] = iml
-        attrs['trts'] = hdf5.array_of_vstr(self.trts)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
@@ -336,27 +346,3 @@ producing too small PoEs.'''
         attrs['location'] = (lon, lat)
         if poe is not None:
             attrs['poe'] = poe
-        # sanity check: all poe_agg should be the same
-        attrs['poe_agg'] = [1. - numpy.prod(1. - dic[pmf])
-                            for pmf in sorted(dic)]
-
-
-# builds the array associated to disaggregation by TRT; for instance, if
-# the probability is 0.3 for the tectonic region index #2 and there are 4 trts,
-# converts 0.3 -> array([0, 0, 0.3, 0]); same for disaggregation by Lon_Lat_TRT
-def _fix_pmfs(pmfs, trti, num_trts):
-    # pmfs (Mag, Dist, TRT, Mag_Dist, Mag_Dist_Eps, Lon_Lat, Mag_Lon_Lat)
-    out = []
-    for i, pmf in enumerate(pmfs):
-        if i == 2:  # disagg by TRT
-            arr = numpy.zeros(num_trts)
-            arr[trti] = pmf
-        else:  # no fix
-            arr = pmf
-        out.append(arr)
-    # add disagg Lon_Lat_TRT
-    lon_lat = pmfs[5]  # Lon_Lat
-    arr = numpy.zeros(lon_lat.shape + (num_trts,))
-    arr[:, :, trti] = lon_lat
-    out.append(arr)
-    return numpy.array(out)
