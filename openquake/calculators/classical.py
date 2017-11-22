@@ -22,7 +22,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, datastore
+from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import (
@@ -64,6 +64,12 @@ class PSHACalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = pmap_from_trt
+
+    def get_num_tiles(self):
+        """
+        :returns: the number of tiles in which the SiteCollection can be split
+        """
+        return math.ceil(len(self.sitecol) / self.oqparam.sites_per_tile)
 
     def agg_dicts(self, acc, pmap):
         """
@@ -148,18 +154,11 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+        num_tiles = self.get_num_tiles()
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        if oq.split_sources is False:
-            maxweight = numpy.inf  # do not split the sources
-        else:
-            numheavy = len(self.csm.get_sources('heavy', maxweight))
-            logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
-                         maxweight, numheavy, len(tiles))
         param = dict(
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, seed=oq.ses_seed,
@@ -169,11 +168,16 @@ class PSHACalculator(base.HazardCalculator):
         for t, tile in enumerate(tiles):
             if num_tiles > 1:
                 with self.monitor('prefiltering source model', autoflush=True):
-                    logging.info('Instantiating src_filter for tile %d', t + 1)
+                    logging.info('Prefiltering tile %d', t + 1)
                     csm = self.csm.filter(
                         SourceFilter(tile, oq.maximum_distance))
-            else:
+                    maxweight = csm.get_maxweight(oq.concurrent_tasks / 5)
+            elif t == 0:  # first and only tile
                 csm = self.csm
+                maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+                numheavy = len(self.csm.get_sources('heavy', maxweight))
+                logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
+                             maxweight, numheavy, len(tiles))
             num_tasks = 0
             num_sources = 0
             if monitor.operation == 'pmap_from_grp':

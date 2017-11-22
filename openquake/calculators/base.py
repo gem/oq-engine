@@ -334,6 +334,12 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    def get_num_tiles(self):
+        """
+        :returns: the number of tiles in which the SiteCollection can be split
+        """
+        return 1  # overridden in the PSHA calculator
+
     def assoc_assets_sites(self, sitecol):
         """
         :param sitecol: a sequence of sites
@@ -414,9 +420,11 @@ class HazardCalculator(BaseCalculator):
             logging.info('Prefiltering the CompositeSourceModel')
             with self.monitor('prefiltering source model',
                               autoflush=True, measuremem=True):
-                self.src_filter = SourceFilter(
-                    self.sitecol, oq.maximum_distance)
-                self.csm = csm.filter(self.src_filter)
+                if self.get_num_tiles() == 1:
+                    srcfilter = SourceFilter(self.sitecol, oq.maximum_distance)
+                else:  # do not filter
+                    srcfilter = SourceFilter(None, {})
+                self.csm = csm.filter(srcfilter)
             info = self.csm.info
             info.gsim_lt.check_imts(oq.imtls)
             info.tot_weight = self.csm.weight
