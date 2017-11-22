@@ -19,9 +19,9 @@
 from __future__ import print_function
 import sys
 import os.path
-from openquake.baselib import sap
+import logging
+from openquake.baselib import sap, general
 from openquake.commonlib import readinput
-from openquake.engine.export.core import zipfiles
 
 
 @sap.Script
@@ -35,6 +35,7 @@ def zip(job_ini, archive_zip):
         sys.exit('%s does not end with .zip' % archive_zip)
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
+    logging.basicConfig(level=logging.INFO)
     oq = readinput.get_oqparam(job_ini)
     files = []
     for key in oq.inputs:
@@ -43,8 +44,7 @@ def zip(job_ini, archive_zip):
             files.extend(fname)
         else:
             files.append(fname)
-    #prefix = os.path.commonprefix(files)
-    zipfiles(files, archive_zip, log=print)
+    general.zipfiles(files, archive_zip, log=logging.info)
 
 
 zip.arg('job_ini', 'path to a job.ini file')
