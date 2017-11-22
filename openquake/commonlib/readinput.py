@@ -131,9 +131,9 @@ def get_params(job_inis):
                 input_type, _ext = key.rsplit('_', 1)
                 path = value if os.path.isabs(value) else os.path.join(
                     base_path, value)
-                params['inputs'][input_type] = path
+                params['inputs'][input_type] = os.path.normpath(path)
             else:
-                params[key] = value
+                params[key] = os.path.normpath(value)
 
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
