@@ -191,11 +191,11 @@ class Piecewise(object):
     def __init__(self, x, y):
         self.y = numpy.array(y)
         # interpolating from x values to indices in the range [0: len(x)]
-        self.interp = interp1d(x, range(len(x)), bounds_error=False,
-                               fill_value=(0, len(x) - 1))
+        self.piecewise = interp1d(x, range(len(x)), bounds_error=False,
+                                  fill_value=(0, len(x) - 1))
 
     def __call__(self, x):
-        idx = numpy.int64(numpy.ceil(self.interp(x)))
+        idx = numpy.int64(numpy.ceil(self.piecewise(x)))
         return self.y[idx]
 
 
@@ -240,16 +240,16 @@ class IntegrationDistance(collections.Mapping):
             return value
         elif mag is None:  # get the maximum distance
             return MAX_DISTANCE
-        elif not hasattr(self, 'interp'):
-            self.interp = {}  # function cache
+        elif not hasattr(self, 'piecewise'):
+            self.piecewise = {}  # function cache
         try:
-            md = self.interp[trt]  # retrieve from the cache
+            md = self.piecewise[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
             mags, dists = zip(*getdefault(self.magdist, trt))
             if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
                 mags = numpy.concatenate([mags, [11]])
                 dists = numpy.concatenate([dists, [MAX_DISTANCE]])
-            md = self.interp[trt] = Piecewise(mags, dists)
+            md = self.piecewise[trt] = Piecewise(mags, dists)
         return md(mag)
 
     def get_closest(self, sites, rupture, distance_type='rrup'):
@@ -289,7 +289,7 @@ class IntegrationDistance(collections.Mapping):
         return lon - a2, lat - a1, lon + a2, lat + a1
 
     def __getstate__(self):
-        # otherwise is not pickleable due to .interp
+        # otherwise is not pickleable due to .piecewise
         return dict(dic=self.dic, magdist=self.magdist)
 
     def __getitem__(self, trt):
@@ -413,7 +413,9 @@ class SourceFilter(object):
                     src.nsites = len(sids)
                     yield src, FilteredSiteCollection(sids, sites.complete)
             else:  # normal filtering, used in the workers
-                maxdist = self.integration_distance(src.tectonic_region_type)
+                _, maxmag = src.get_min_max_mag()
+                maxdist = self.integration_distance(
+                    src.tectonic_region_type, maxmag)
                 with context(src):
                     s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)

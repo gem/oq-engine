@@ -94,18 +94,11 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
     return result
 
 
-# 0 Mag
-# 1 Dist
-# 2 TRT
-# 3 Mag Dist
-# 4 Mag Dist Eps
-# 5 Lon Lat
-# 6 Mag Lon Lat
-# 7 Lon Lat TRT
-def fix_pmfs(pmfs, trti, num_trts):
-    """
-    Manages disaggregation by TRT and LonLatTRT
-    """
+# builds the array associated to disaggregation by TRT; for instance, if
+# the probability is 0.3 for the tectonic region index #2 and there are 4 trts,
+# converts 0.3 -> array([0, 0, 0.3, 0]); same for disaggregation by Lon_Lat_TRT
+def _fix_pmfs(pmfs, trti, num_trts):
+    # pmfs (Mag, Dist, TRT, Mag_Dist, Mag_Dist_Eps, Lon_Lat, Mag_Lon_Lat)
     out = []
     for i, pmf in enumerate(pmfs):
         if i == 2:  # disagg by TRT
@@ -162,7 +155,7 @@ producing too small PoEs.'''
         for key, val in result.items():
             k = key[:-1]  # sid, rlzi, poe, imt, iml
             trti = key[-1]
-            pmfs = fix_pmfs(val, trti, len(self.trts))
+            pmfs = _fix_pmfs(val, trti, len(self.trts))
             acc[k] = 1. - (1. - acc.get(k, 0)) * (1. - pmfs)
         return acc
 
@@ -305,11 +298,12 @@ producing too small PoEs.'''
                         (src_filter, srcs, cmaker, imls, trti,
                          self.bin_edges, oq, mon))
 
-        self.cache_info = numpy.zeros(2)  # operations, cache_hits
+        self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
-        ops, hits = self.cache_info
+        ops, hits, num_zeros = self.cache_info
         logging.info('Cache speedup %s', ops / (ops - hits))
+        logging.info('Zero probabilities: %d', num_zeros)
         return results
 
     def post_execute(self, results):

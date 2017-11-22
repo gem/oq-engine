@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Optimized the operation `arrange_data_in_bins` in the disaggregation
+    calculator and reduced the data transfer by the number of tectonic
+    region types
+  * Improved the sending of the sources to the workers, especially for the
+    MultiPointSources
+  * Better error message if the user sets a wrong site_id in the sites.csv file
   * Now the distance and lon lat bins for disaggregation are built directly
     from the integration distance
   * Used uniform bins for disaggregation (before they were potentially
