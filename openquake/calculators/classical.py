@@ -178,7 +178,7 @@ class PSHACalculator(base.HazardCalculator):
                 maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
 
             numheavy = len(self.csm.get_sources('heavy', maxweight))
-            logging.info('Using maxweight=%d, numheavy=%d, tile=%d/%d',
+            logging.info('Using maxweight=%d, numheavy=%d, tile=%d of %d',
                          maxweight, numheavy, t + 1, len(tiles))
             num_tasks = 0
             num_sources = 0
