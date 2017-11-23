@@ -761,5 +761,5 @@ def view_mean_disagg(token, dstore):
     for key, dset in sorted(dstore['disagg'].items()):
         vals = [ds.value.mean() for k, ds in sorted(dset.items())]
         tbl.append([key] + vals)
-    header = ['key'] + list(dset)
+    header = ['key'] + sorted(dset)
     return rst_table(sorted(tbl), header=header)
