@@ -661,8 +661,6 @@ class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
         dists_mod = copy.deepcopy(dists)
         dists_mod.rrup[dists.rrup <= 5.] = 5.
 
-        mean, stddevs = super(
+        return super(
             ZhaoEtAl2006AscSGS, self).get_mean_and_stddevs(
                 sites, rup, dists_mod, imt, stddev_types)
-
-        return mean, stddevs

@@ -549,8 +549,6 @@ class AtkinsonBoore2006SGS(AtkinsonBoore2006):
         dists_mod = copy.deepcopy(dists)
         dists_mod.rrup[dists.rrup <= 5.] = 5.
 
-        mean, stddevs = super(
+        return super(
             AtkinsonBoore2006SGS, self).get_mean_and_stddevs(
                 sites, rup, dists_mod, imt, stddev_types)
-
-        return mean, stddevs
