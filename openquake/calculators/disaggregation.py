@@ -320,7 +320,7 @@ producing too small PoEs.'''
         :param bin_edges:
             The 5-uple mag, dist, lon, lat, eps
         :param matrices:
-            A dictionary trti -> disaggregation matrix
+            A dictionary (sid, rlz_id, poe, imt, iml) -> trti -> matrix
         :param rlz_id:
             ordinal of the realization to which the results belong.
         :param float investigation_time:
