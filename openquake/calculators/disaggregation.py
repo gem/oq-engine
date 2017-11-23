@@ -63,10 +63,6 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
     """
     sitecol = src_filter.sitecol
     result = {}  # sid, rlz.id, poe, imt, iml -> array
-
-    collecting_mon = monitor('collecting bins')
-    arranging_mon = monitor('arranging bins')
-
     for i, site in enumerate(sitecol):
         sid = sitecol.sids[i]
         try:
@@ -75,24 +71,25 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
             # bin_edges for a given site are missing if the site is far away
             continue
 
-        with collecting_mon:
-            acc = disagg.collect_bins_data(
-                sources, site, cmaker, imldict[i],
-                oqparam.truncation_level, oqparam.num_epsilon_bins,
-                monitor('disaggregate_pne', measuremem=False))
-            bindata = pack(acc, 'mags dists lons lats'.split())
-            if not bindata:
-                continue
+        acc = disagg.collect_bins_data(
+            sources, site, cmaker, imldict[i],
+            oqparam.truncation_level, oqparam.num_epsilon_bins,
+            monitor('disaggregate_pne', measuremem=False))
+        bindata = pack(acc, 'mags dists lons lats'.split())
+        if not bindata:
+            continue
 
-        with arranging_mon:  # this is fast
-            for (poe, imt, iml, rlzi), matrix in disagg.build_disagg_matrix(
-                    bindata, edges, arranging_mon).items():
-                result[sid, rlzi, poe, imt, iml, trti] = matrix
-        result['cache_info'] = arranging_mon.cache_info
+        for (poe, imt, iml, rlzi), matrix in disagg.build_disagg_matrix(
+                bindata, edges, monitor).items():
+            result[sid, rlzi, poe, imt, iml, trti] = matrix
+        result['cache_info'] = monitor.cache_info
     return result
 
 
 def agg_probs(*probs):
+    """
+    Aggregate probabilities withe the usual formula 1 - (1 - P1) ... (1 - Pn)
+    """
     acc = 1. - probs[0]
     for prob in probs[1:]:
         acc *= 1. - prob
