@@ -256,28 +256,21 @@ producing too small PoEs.'''
 
         # build all_args
         all_args = []
-        for smodel in self.csm.source_models:
-            for sg in smodel.src_groups:
-                split_sources = []
-                for src in sg:
-                    for split, _sites in src_filter(
-                            sourceconverter.split_source(src), sitecol):
-                        split_sources.append(split)
-                if not split_sources:
-                    continue
-                mon = self.monitor('disaggregation')
-                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(
-                    sg.trt, smodel.ordinal)
-                cmaker = ContextMaker(
-                    rlzs_by_gsim, src_filter.integration_distance)
-                imls = [disagg.make_imldict(
-                    rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
-                    curve) for curve in curves]
-                for srcs in split_in_blocks(split_sources, nblocks):
-                    trti = trt_num[srcs[0].tectonic_region_type]
-                    all_args.append(
-                        (src_filter, srcs, cmaker, imls, trti,
-                         self.bin_edges, oq, mon))
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        srcs_by_trt = self.csm.get_sources_by_trt(oq.optimize_same_id_sources)
+        mon = self.monitor('disaggregation')
+        for trt, sources in srcs_by_trt.items():
+            trti = trt_num[trt]
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt)
+            cmaker = ContextMaker(
+                rlzs_by_gsim, src_filter.integration_distance)
+            imls = [disagg.make_imldict(
+                rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
+                curve) for curve in curves]
+            for block in self.csm.split_in_blocks(maxweight, sources):
+                all_args.append(
+                    (src_filter, block, cmaker, imls, trti, self.bin_edges,
+                     oq, mon))
 
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         results = parallel.Starmap(compute_disagg, all_args).reduce(
