@@ -417,7 +417,12 @@ class HazardCalculator(BaseCalculator):
                 self.src_filter = SourceFilter(
                     self.sitecol, oq.maximum_distance)
                 self.csm = csm.filter(self.src_filter)
-            csm.info.gsim_lt.check_imts(oq.imtls)
+                if self.csm.has_dupl_sources:
+                    logging.warn('Found duplicated source %s',
+                                 self.csm.has_dupl_sources)
+            info = self.csm.info
+            info.gsim_lt.check_imts(oq.imtls)
+            info.tot_weight = self.csm.weight
             self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
         self.init()
@@ -621,7 +626,7 @@ class HazardCalculator(BaseCalculator):
                         # same ID sources; store only the first
                         value = value[0]
                     array[i][name] = value
-            self.source_info = array
+            self.datastore['source_info'] = array
             infos.clear()
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, acc), self.oqparam.sm_lt_path)
