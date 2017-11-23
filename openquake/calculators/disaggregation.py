@@ -130,15 +130,16 @@ producing too small PoEs.'''
     def execute(self):
         """Performs the disaggregation"""
         oq = self.oqparam
-        if not oq.iml_disagg:
-            # only poes_disagg are known, the IMLs are interpolated from the
-            # hazard curves, hence the need to run a PSHACalculator here
+        if oq.iml_disagg:
+            # no hazard curves are needed
+            curves = [None] * len(self.sitecol)
+        else:
+            # only the poes_disagg are known, the IMLs are interpolated from
+            # the hazard curves, hence the need to run a PSHACalculator here
             classical.PSHACalculator(oq, self.monitor('classical'),
                                      calc_id=self.datastore.calc_id).run()
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
-        else:
-            curves = [None] * len(self.sitecol)
         return self.full_disaggregation(curves)
 
     def agg_result(self, acc, result):
