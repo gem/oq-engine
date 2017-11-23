@@ -215,9 +215,13 @@ producing too small PoEs.'''
                             raise ValueError(self.POE_TOO_BIG % (
                                 poe, sm_id, smodel.name, min_poe, rlzi, imt))
 
-    def full_disaggregation(self, curves=None):
+    def full_disaggregation(self, curves):
         """
-        Run the disaggregation phase after hazard curve finalization.
+        Run the disaggregation phase.
+
+        :param curves: a list of hazard curves, one per site
+
+        The curves can be all None if iml_disagg is set in the job.ini
         """
         oq = self.oqparam
         tl = oq.truncation_level
