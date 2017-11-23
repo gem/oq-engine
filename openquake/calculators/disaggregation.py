@@ -284,7 +284,7 @@ producing too small PoEs.'''
             self.agg_result, AccumDict(accum={}))
         ops, hits, num_zeros = self.cache_info
         logging.info('Cache speedup %s', ops / (ops - hits))
-        logging.info('Zero probabilities: %d', num_zeros)
+        logging.info('Discarded zero matrices: %d', num_zeros)
         return results
 
     def post_execute(self, results):
