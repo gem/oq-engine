@@ -153,7 +153,7 @@ def build_disagg_matrix(bdata, bin_edges, mon=Monitor):
         cache_key = pnes.sum()
         if cache_key == pnes.size:  # all pnes are 1
             num_zeros += 1
-            continue
+            continue  # zero matrices are not transferred
         try:
             matrix = cache[cache_key]
             cache_hit += 1
