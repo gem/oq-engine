@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an `oq zip` command
   * Avoided running an useless classical calculation if `iml_disagg` is given
     in a disaggregation calculation
 
