@@ -294,7 +294,7 @@ class ContextMaker(object):
                     pne = cache[gsim, imt, iml]
                 except KeyError:
                     with disagg_pne:
-                        pne = gsim.disaggregate_pne(
+                        [pne] = gsim.disaggregate_pne(
                             rupture, sctx, rctx, dctx, imt, iml,
                             truncnorm, epsilons)
                     cache[gsim, imt, iml] = pne
@@ -586,7 +586,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
                     contribution_by_bands[bin:]])
                 poe_by_site.append(poe)
         poes = numpy.array(poe_by_site)  # shape (n_sites, n_epsilons)
-        return rupture.get_probability_no_exceedance(poes)[0]
+        return rupture.get_probability_no_exceedance(poes)
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
