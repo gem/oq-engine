@@ -93,8 +93,8 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
 
 
 def agg_probs(*probs):
-    acc = 1.
-    for prob in probs:
+    acc = 1. - probs[0]
+    for prob in probs[1:]:
         acc *= 1. - prob
     return 1. - acc
 
