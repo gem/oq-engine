@@ -658,10 +658,11 @@ class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
         Using a minimum distance of 5km for the calculation.
         """
 
-        dists.rrup = np.array([d if d > 5. else 5. for d in dists.rrup])
+        dists_mod = copy.deepcopy(dists)
+        dists_mod.rrup[dists.rrup <= 5.] = 5.
 
         base = super(ZhaoEtAl2006AscSGS, self)
-        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists,
+        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists_mod,
                                                   imt, stddev_types)
 
         return mean, stddevs
