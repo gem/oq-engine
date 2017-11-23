@@ -93,6 +93,8 @@ producing too small PoEs.''')
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_master(self):
+        # this tests exercise the case of a complex logic tree; it also
+        # prints the warning on poe_agg very different from the expected poe
         self.run_calc(case_master.__file__, 'job.ini')
         fname = writetmp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)

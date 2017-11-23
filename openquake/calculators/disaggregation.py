@@ -365,8 +365,13 @@ producing too small PoEs.'''
         attrs['lat_bin_edges'] = lats
         attrs['eps_bin_edges'] = eps
         attrs['location'] = (lon, lat)
-        if poe is not None:
-            attrs['poe'] = poe
         # sanity check: all poe_agg should be the same
         attrs['poe_agg'] = [1. - numpy.prod(1. - dic[pmf])
                             for pmf in sorted(dic)]
+        if poe:
+            attrs['poe'] = poe
+            poe_agg = numpy.mean(attrs['poe_agg'])
+            if abs(1 - poe_agg / poe) > .1:
+                logging.warn('poe_agg=%s is quite different from the expected'
+                             ' poe=%s; perhaps the number of intensity measure'
+                             ' levels is too small?', poe_agg, poe)
