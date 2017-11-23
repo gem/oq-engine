@@ -263,43 +263,6 @@ class ContextMaker(object):
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
-    def _disaggregate_pne(self, gsim, rupture, sctx, rctx, dctx, imt, iml,
-                          truncnorm, epsilons):
-        n_epsilons = len(epsilons) - 1
-
-        # compute mean and standard deviations
-        mean, [stddev] = gsim.get_mean_and_stddevs(
-            sctx, rctx, dctx, imt, [const.StdDev.TOTAL])
-
-        # compute iml value with respect to standard (mean=0, std=1)
-        # normal distributions
-        [lvl] = (gsim.to_distribution_values(iml) - mean) / stddev
-
-        # compute epsilon bins contributions
-        contributions = (truncnorm.cdf(epsilons[1:]) -
-                         truncnorm.cdf(epsilons[:-1]))
-
-        # take the minimum epsilon larger than lvl
-        bin = numpy.searchsorted(epsilons, lvl)
-        if bin == 0:
-            poes = contributions
-        elif bin > n_epsilons:
-            poes = numpy.zeros(n_epsilons)
-        else:
-            # for other cases (when ``lvl`` falls somewhere in the
-            # histogram):
-            poes = numpy.concatenate([
-                # take zeros for bins that are on the left hand side
-                # from the bin ``lvl`` falls into,
-                numpy.zeros(bin - 1),
-                # ... area of the portion of the bin containing ``lvl``
-                # (the portion is limited on the left hand side by
-                # ``lvl`` and on the right hand side by the bin edge),
-                [truncnorm.sf(lvl) - contributions[bin:].sum()],
-                # ... and all bins on the right go unchanged.
-                contributions[bin:]])
-        return rupture.get_probability_no_exceedance(poes)
-
     def disaggregate(self, sitecol, ruptures, imldict,
                      truncnorm, n_epsilons, disagg_pne=Monitor()):
         """
@@ -331,8 +294,8 @@ class ContextMaker(object):
                     pne = cache[gsim, imt, iml]
                 except KeyError:
                     with disagg_pne:
-                        pne = self._disaggregate_pne(
-                            gsim, rupture, sctx, rctx, dctx, imt, iml,
+                        pne = gsim.disaggregate_pne(
+                            rupture, sctx, rctx, dctx, imt, iml,
                             truncnorm, epsilons)
                     cache[gsim, imt, iml] = pne
                 acc[poe, str(imt), iml, rlzi].append(pne)
@@ -572,20 +535,11 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
-    # deprecated since it is slow and not used by the engine
-    # alternatively, it should take truncnorm in input, not truncation_level
-    @deprecated('This method will disappear soon')
-    def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
-                         truncation_level, n_epsilons):
+    def disaggregate_pne(self, rupture, sctx, rctx, dctx, imt, iml,
+                         truncnorm, epsilons):
         """
         Disaggregate (separate) PoE of ``iml`` in different contributions
-        each coming from ``n_epsilons`` distribution bins.
-
-        If ``truncation_level = 3``, ``n_epsilons = 3``, bin edges are
-        ``-3 .. -1``, ``-1 .. +1`` and ``+1 .. +3``.
-
-        :param n_epsilons:
-            Integer number of bins to split truncated Gaussian distribution to.
+        each coming from ``epsilons`` distribution bins.
 
         Other parameters are the same as for :meth:`get_poes`, with
         differences that ``iml`` is only one single intensity level
@@ -596,10 +550,6 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             from different sigma bands in the form of a 2d numpy array of
             probabilities with shape (n_sites, n_epsilons)
         """
-        if not truncation_level > 0:
-            raise ValueError('truncation level must be positive')
-        self._check_imt(imt)
-
         # compute mean and standard deviations
         mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                    [const.StdDev.TOTAL])
@@ -607,17 +557,15 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         # compute iml value with respect to standard (mean=0, std=1)
         # normal distributions
         standard_imls = (self.to_distribution_values(iml) - mean) / stddev
-        distribution = scipy.stats.truncnorm(- truncation_level,
-                                             truncation_level)
-        epsilons = numpy.linspace(- truncation_level, truncation_level,
-                                  n_epsilons + 1)
+
         # compute epsilon bins contributions
-        contribution_by_bands = (distribution.cdf(epsilons[1:]) -
-                                 distribution.cdf(epsilons[:-1]))
+        contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
+                                 truncnorm.cdf(epsilons[:-1]))
 
         # take the minimum epsilon larger than standard_iml
         bins = numpy.searchsorted(epsilons, standard_imls)
         poe_by_site = []
+        n_epsilons = len(epsilons) - 1
         for lvl, bin in zip(standard_imls, bins):  # one per site
             if bin == 0:
                 poe_by_site.append(contribution_by_bands)
@@ -633,12 +581,12 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
                     # ... area of the portion of the bin containing ``lvl``
                     # (the portion is limited on the left hand side by
                     # ``lvl`` and on the right hand side by the bin edge),
-                    [distribution.sf(lvl) - contribution_by_bands[bin:].sum()],
+                    [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
                     # ... and all bins on the right go unchanged.
                     contribution_by_bands[bin:]])
                 poe_by_site.append(poe)
-        poes = numpy.array(poe_by_site)
-        return poes  # shape (n_sites, n_epsilons)
+        poes = numpy.array(poe_by_site)  # shape (n_sites, n_epsilons)
+        return rupture.get_probability_no_exceedance(poes)[0]
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
