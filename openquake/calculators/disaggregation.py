@@ -232,8 +232,8 @@ producing too small PoEs.'''
                          sid, min(lat_edges), max(lat_edges))
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-            shape = [len(edges) - 1 for edges in bs] + [len(trts)]
-            logging.info('%s for sid %d', shape, sid)
+            self.shape = [len(edges) - 1 for edges in bs]
+            logging.info('%s for sid %d', self.shape + [len(trts)], sid)
 
         # check poes
         for smodel in self.csm.source_models:
@@ -300,6 +300,19 @@ producing too small PoEs.'''
         :param results:
             a dictionary of probability arrays
         """
+        # save bin_edges
+        dt = numpy.dtype([
+            ('sid', numpy.uint32),
+            ('mags', (float, self.shape[0] + 1)),
+            ('dists', (float, self.shape[1] + 1)),
+            ('lons', (float, self.shape[2] + 1)),
+            ('lats', (float, self.shape[3] + 1)),
+            ('eps', (float, self.shape[4] + 1)),
+        ])
+        arr = numpy.array(
+            [(sid,) + mdlle for sid, mdlle in self.bin_edges.items()], dt)
+        self.datastore['disagg-bins'] = arr
+
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         for key, probs in sorted(results.items()):
