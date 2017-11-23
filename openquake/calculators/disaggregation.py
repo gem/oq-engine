@@ -131,14 +131,14 @@ producing too small PoEs.'''
         """Performs the disaggregation"""
         oq = self.oqparam
         if not oq.iml_disagg:
-            cl = classical.ClassicalCalculator(oq, self.monitor('classical'))
+            cl = classical.PSHACalculator(oq, self.monitor('classical'),
+                                          calc_id=self.datastore.calc_id)
             cl.run(close=False)
-            self.datastore.parent = cl.datastore
             sids = self.sitecol.sids
             curves = [self.get_curves(sid) for sid in sids]
-            #self.check_poes_disagg(curves)
+            self.check_poes_disagg(curves)
         else:
-            curves = [None] * len(sids)
+            curves = [None] * len(self.sitecol)
         return self.full_disaggregation(curves)
 
     def agg_result(self, acc, result):
@@ -194,23 +194,18 @@ producing too small PoEs.'''
         the hazard curves.
         """
         oq = self.oqparam
-        max_poe = numpy.zeros(len(curves), oq.imt_dt())
 
-        # check poes
-        for smodel in self.csm.source_models:
-            sm_id = smodel.ordinal
-            for i, site in enumerate(self.sitecol):
-                curve = curves[i]
-                # populate max_poe array
-                for rlzi, poes in curve.items():
-                    for imt in oq.imtls:
-                        max_poe[rlzi][imt] = max(
-                            max_poe[rlzi][imt], poes[imt].max())
-                if not curve:
-                    continue  # skip zero-valued hazard curves
+        # populate max_poe array
+        max_poe = numpy.zeros(len(self.rlzs_assoc.realizations), oq.imt_dt())
+        for i, site in enumerate(self.sitecol):
+            for rlzi, poes in curves[i].items():
+                for imt in oq.imtls:
+                    max_poe[rlzi][imt] = max(
+                        max_poe[rlzi][imt], poes[imt].max())
 
         # check for too big poes_disagg
         for smodel in self.csm.source_models:
+            sm_id = smodel.ordinal
             for poe in oq.poes_disagg:
                 for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
                     rlzi = rlz.ordinal
