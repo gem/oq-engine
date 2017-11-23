@@ -263,12 +263,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        if oq.split_sources is False:
-            maxweight = numpy.inf  # do not split the sources
-        else:
-            numheavy = len(self.csm.get_sources('heavy', maxweight))
-            logging.info('Using maxweight=%d, numheavy=%d',
-                         maxweight, numheavy)
+        numheavy = len(self.csm.get_sources('heavy', maxweight))
+        logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
         param = dict(
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, seed=oq.ses_seed,
