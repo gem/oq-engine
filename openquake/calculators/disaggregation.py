@@ -195,18 +195,16 @@ producing too small PoEs.'''
         the hazard curves.
         """
         oq = self.oqparam
-
-        # populate max_poe array
         max_poe = numpy.zeros(len(self.rlzs_assoc.realizations), oq.imt_dt())
-        for sid, site in enumerate(self.sitecol):
-            for rlzi, poes in curves[sid].items():
-                for imt in oq.imtls:
-                    max_poe[rlzi][imt] = max(
-                        max_poe[rlzi][imt], poes[imt].max())
 
         # check for too big poes_disagg
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
+            for sid, site in enumerate(self.sitecol):
+                for rlzi, poes in curves[sid].items():
+                    for imt in oq.imtls:
+                        max_poe[rlzi][imt] = max(
+                            max_poe[rlzi][imt], poes[imt].max())
             for poe in oq.poes_disagg:
                 for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
                     rlzi = rlz.ordinal
