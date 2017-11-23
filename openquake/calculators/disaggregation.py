@@ -131,11 +131,12 @@ producing too small PoEs.'''
         """Performs the disaggregation"""
         oq = self.oqparam
         if not oq.iml_disagg:
+            # only poes_disagg are known, the IMLs are interpolated from the
+            # hazard curves, hence the need to run a PSHACalculator here
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
             cl.run(close=False)
-            sids = self.sitecol.sids
-            curves = [self.get_curves(sid) for sid in sids]
+            curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
         else:
             curves = [None] * len(self.sitecol)
@@ -197,8 +198,8 @@ producing too small PoEs.'''
 
         # populate max_poe array
         max_poe = numpy.zeros(len(self.rlzs_assoc.realizations), oq.imt_dt())
-        for i, site in enumerate(self.sitecol):
-            for rlzi, poes in curves[i].items():
+        for sid, site in enumerate(self.sitecol):
+            for rlzi, poes in curves[sid].items():
                 for imt in oq.imtls:
                     max_poe[rlzi][imt] = max(
                         max_poe[rlzi][imt], poes[imt].max())
