@@ -1,3 +1,8 @@
+  [Valerio Poggi]
+  * Implemented subclasses for ZhaoEtAl2006Asc and AtkinsonBoore2006 to account
+    for the distance filter used by SGS in their PSHA model for Saudi Arabia.
+    Distance threshold is hard coded to 5km in this implementation.
+
   [Michele Simionato]
   * Better error message if the user sets a wrong site_id in the sites.csv file
   * Now the distance and lon lat bins for disaggregation are built directly
