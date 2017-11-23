@@ -135,11 +135,12 @@ producing too small PoEs.'''
         :param acc: dictionary k -> dic accumulating the results
         :param result: dictionary with the result coming from a task
         """
-        if 'cache_info' in result:
-            self.cache_info += result.pop('cache_info')
-        for key, val in result.items():
-            k, trti = key[:-1], key[-1]
-            acc[k][trti] = 1. - (1. - acc[k].get(trti, 0)) * (1. - val)
+        with self.monitor('agg_result'):
+            if 'cache_info' in result:
+                self.cache_info += result.pop('cache_info')
+            for key, val in result.items():
+                k, trti = key[:-1], key[-1]
+                acc[k][trti] = agg_probs(acc[k].get(trti, 0), val)
         return acc
 
     def get_curves(self, sid):
@@ -253,7 +254,8 @@ producing too small PoEs.'''
             self.bin_edges[sid] = bs = (
                 mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
             self.shape = [len(edges) - 1 for edges in bs]
-            logging.info('%s for sid %d', self.shape + [len(trts)], sid)
+            logging.info('matrix shape=%s for sid %d',
+                         self.shape + [len(trts)], sid)
 
         # build all_args
         all_args = []
