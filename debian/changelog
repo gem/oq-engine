@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Optimized the operation `build_disagg_matrix` in the disaggregation
+  * Removed the flag `split_sources`
     calculator and reduced the data transfer by the number of tectonic
     region types
   * Improved the sending of the sources to the workers, especially for the
