@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Optimized the operation `build_disagg_matrix` in the disaggregation
+    in a disaggregation calculation
+  * Avoided running an useless classical calculation if `iml_disagg` is given
   * Removed the flag `split_sources`
     calculator and reduced the data transfer by the number of tectonic
     region types
