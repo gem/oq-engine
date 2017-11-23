@@ -28,6 +28,7 @@ import copy
 import math
 import socket
 import random
+import zipfile
 import operator
 import warnings
 import tempfile
@@ -911,3 +912,18 @@ def _get_free_port():
         if not socket_ready(('127.0.0.1', port)):  # no server listening
             return port  # the port is free
     raise RuntimeError('No free ports in the range 1920:2000')
+
+
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
+    """
+    Build a zip archive from the given file names.
+
+    :param fnames: list of path names
+    :param archive: path of the archive
+    """
+    prefix = len(os.path.commonprefix([os.path.dirname(f) for f in fnames]))
+    z = zipfile.ZipFile(archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True)
+    for f in fnames:
+        log('Archiving %s' % f)
+        z.write(f, f[prefix:])
+    z.close()

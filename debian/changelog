@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Optimized the disaggregation calculation by performing the PMF extraction
     only once at the end of the calculation and not in the workers
+  * Added an `oq zip` command
   * Avoided running an useless classical calculation if `iml_disagg` is given
 
   [Valerio Poggi]
