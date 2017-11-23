@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the flag `split_sources`
   * Optimized the operation `arrange_data_in_bins` in the disaggregation
     calculator and reduced the data transfer by the number of tectonic
     region types
