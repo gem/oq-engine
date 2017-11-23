@@ -19,7 +19,6 @@
 from __future__ import print_function
 import io
 import os
-import getpass
 import logging
 import numpy
 
@@ -33,11 +32,13 @@ from openquake.calculators.views import view
 from openquake.calculators.extract import extract
 
 if config.dbserver.multi_user:
-    # get the datastore of the user who ran the job
     def read(calc_id):
-        job = logs.dbcmd('get_job', calc_id, getpass.getuser())
-        datadir = os.path.dirname(job.ds_calc_dir)
-        return datastore.read(job.id, datadir=datadir)
+        job = logs.dbcmd('get_job', calc_id)
+        if job:
+            return datastore.read(job.ds_calc_dir + '.hdf5')
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
 else:  # get the datastore of the current user
     read = datastore.read
 
