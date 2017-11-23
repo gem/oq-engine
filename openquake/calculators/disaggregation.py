@@ -100,7 +100,7 @@ def agg_probs(*probs):
 
 
 @base.calculators.add('disaggregation')
-class DisaggregationCalculator(classical.ClassicalCalculator):
+class DisaggregationCalculator(base.HazardCalculator):
     """
     Classical PSHA disaggregation calculator
     """
@@ -111,9 +111,20 @@ produces at most probabilities of %s for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
-    def post_execute(self, nbytes_by_kind):
+    def execute(self):
         """Performs the disaggregation"""
-        self.full_disaggregation()
+        oq = self.oqparam
+        if oq.iml_disagg:
+            # no hazard curves are needed
+            curves = [None] * len(self.sitecol)
+        else:
+            # only the poes_disagg are known, the IMLs are interpolated from
+            # the hazard curves, hence the need to run a PSHACalculator here
+            classical.PSHACalculator(oq, self.monitor('classical'),
+                                     calc_id=self.datastore.calc_id).run()
+            curves = [self.get_curves(sid) for sid in self.sitecol.sids]
+            self.check_poes_disagg(curves)
+        return self.full_disaggregation(curves)
 
     def agg_result(self, acc, result):
         """
@@ -160,24 +171,51 @@ producing too small PoEs.'''
                 dic[rlz.ordinal] = poes
         return dic
 
-    def full_disaggregation(self):
+    def check_poes_disagg(self, curves):
         """
-        Run the disaggregation phase after hazard curve finalization.
+        Raise an error if the given poes_disagg are too small compared to
+        the hazard curves.
         """
         oq = self.oqparam
-        tl = self.oqparam.truncation_level
+
+        # populate max_poe array
+        max_poe = numpy.zeros(len(self.rlzs_assoc.realizations), oq.imt_dt())
+        for sid, site in enumerate(self.sitecol):
+            for rlzi, poes in curves[sid].items():
+                for imt in oq.imtls:
+                    max_poe[rlzi][imt] = max(
+                        max_poe[rlzi][imt], poes[imt].max())
+
+        # check for too big poes_disagg
+        for smodel in self.csm.source_models:
+            sm_id = smodel.ordinal
+            for poe in oq.poes_disagg:
+                for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
+                    rlzi = rlz.ordinal
+                    for imt in oq.imtls:
+                        min_poe = max_poe[rlzi][imt]
+                        if poe > min_poe:
+                            raise ValueError(self.POE_TOO_BIG % (
+                                poe, sm_id, smodel.name, min_poe, rlzi, imt))
+
+    def full_disaggregation(self, curves):
+        """
+        Run the disaggregation phase.
+
+        :param curves: a list of hazard curves, one per site
+
+        The curves can be all None if iml_disagg is set in the job.ini
+        """
+        oq = self.oqparam
+        tl = oq.truncation_level
         sitecol = self.sitecol
-        eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
+        eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         self.bin_edges = {}
-        curves = [self.get_curves(sid) for sid in sitecol.sids]
-        # determine the number of effective source groups
-        sg_data = self.datastore['csm_info/sg_data']
-        num_grps = sum(1 for effrup in sg_data['effrup'] if effrup > 0)
+        # determine the number of source groups
+        num_grps = sum(1 for sg in self.csm.src_groups)
         nblocks = math.ceil(oq.concurrent_tasks / num_grps)
         src_filter = SourceFilter(sitecol, oq.maximum_distance)
-        R = len(self.rlzs_assoc.realizations)
-        max_poe = numpy.zeros(R, oq.imt_dt())
 
         # build trt_edges
         trts = tuple(sorted(set(sg.trt for smodel in self.csm.source_models
@@ -217,30 +255,6 @@ producing too small PoEs.'''
             self.shape = [len(edges) - 1 for edges in bs]
             logging.info('%s for sid %d', self.shape + [len(trts)], sid)
 
-        # check poes
-        for smodel in self.csm.source_models:
-            sm_id = smodel.ordinal
-            for i, site in enumerate(sitecol):
-                sid = sitecol.sids[i]
-                curve = curves[i]
-                # populate max_poe array
-                for rlzi, poes in curve.items():
-                    for imt in oq.imtls:
-                        max_poe[rlzi][imt] = max(
-                            max_poe[rlzi][imt], poes[imt].max())
-                if not curve:
-                    continue  # skip zero-valued hazard curves
-
-            # check for too big poes_disagg
-            for poe in oq.poes_disagg:
-                for rlz in self.rlzs_assoc.rlzs_by_smodel[sm_id]:
-                    rlzi = rlz.ordinal
-                    for imt in oq.imtls:
-                        min_poe = max_poe[rlzi][imt]
-                        if poe > min_poe:
-                            raise ValueError(self.POE_TOO_BIG % (
-                                poe, sm_id, smodel.name, min_poe, rlzi, imt))
-
         # build all_args
         all_args = []
         for smodel in self.csm.source_models:
@@ -272,9 +286,9 @@ producing too small PoEs.'''
         ops, hits, num_zeros = self.cache_info
         logging.info('Cache speedup %s', ops / (ops - hits))
         logging.info('Zero probabilities: %d', num_zeros)
-        self.save_disagg_results(results)
+        return results
 
-    def save_disagg_results(self, results):
+    def post_execute(self, results):
         """
         Save all the results of the disaggregation. NB: the number of results
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
