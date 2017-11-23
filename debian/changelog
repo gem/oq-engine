@@ -1,8 +1,9 @@
   [Michele Simionato]
-  * Optimized the operation `build_disagg_matrix` in the disaggregation
-    in a disaggregation calculation
   * Avoided running an useless classical calculation if `iml_disagg` is given
+  * Added a warning if the aggregated probability of exceedence (poe_agg) in
+    a disaggregation output is very dissimilar from poes_disagg
   * Removed the flag `split_sources`
+  * Optimized the operation `arrange_data_in_bins` in the disaggregation
     calculator and reduced the data transfer by the number of tectonic
     region types
   * Improved the sending of the sources to the workers, especially for the

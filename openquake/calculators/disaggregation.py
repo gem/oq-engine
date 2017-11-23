@@ -380,5 +380,10 @@ producing too small PoEs.'''
         attrs['location'] = (lon, lat)
         # sanity check: all poe_agg should be the same
         attrs['poe_agg'] = poe_agg
-        if poe is not None:
+        if poe:
             attrs['poe'] = poe
+            poe_agg = numpy.mean(attrs['poe_agg'])
+            if abs(1 - poe_agg / poe) > .1:
+                logging.warn('poe_agg=%s is quite different from the expected'
+                             ' poe=%s; perhaps the number of intensity measure'
+                             ' levels is too small?', poe_agg, poe)
