@@ -32,6 +32,7 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 from math import log10
+import copy
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.utils import (
@@ -545,10 +546,11 @@ class AtkinsonBoore2006SGS(AtkinsonBoore2006):
         Using a minimum distance of 5km for the calculation.
         """
 
-        dists.rrup = np.array([d if d > 5. else 5. for d in dists.rrup])
+        dists_mod = copy.deepcopy(dists)
+        dists_mod.rrup[dists.rrup <= 5.] = 5.
 
         base = super(AtkinsonBoore2006SGS, self)
-        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists,
+        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists_mod,
                                                   imt, stddev_types)
 
         return mean, stddevs
