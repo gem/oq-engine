@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Avoided running an useless classical calculation if `iml_disagg` is given
+    in a disaggregation calculation
+
   [Valerio Poggi]
   * Implemented subclasses for ZhaoEtAl2006Asc and AtkinsonBoore2006 to account
     for the distance filter used by SGS in their PSHA model for Saudi Arabia.
