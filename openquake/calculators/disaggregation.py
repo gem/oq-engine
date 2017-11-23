@@ -347,13 +347,12 @@ producing too small PoEs.'''
         disp_name = DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
             rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
-        mon = self.monitor('extracting PMFs')
         mag, dist, lons, lats, eps = bin_edges
-        matrix = agg_probs(*matrices.values())
-        poe_agg = []
-        num_trts = len(self.trts)
-        for key, fn in disagg.pmf_map.items():
-            with mon:
+        with self.monitor('extracting PMFs'):
+            matrix = agg_probs(*matrices.values())
+            poe_agg = []
+            num_trts = len(self.trts)
+            for key, fn in disagg.pmf_map.items():
                 if 'TRT' in key:
                     trti = next(iter(matrices))
                     a_pmf = fn(matrices[trti])
@@ -364,9 +363,9 @@ producing too small PoEs.'''
                             pmf[..., t] = fn(matrices[t])
                 else:
                     pmf = fn(matrix)
-            dname = disp_name + '_'.join(key)
-            self.datastore[dname] = pmf
-            poe_agg.append(1. - numpy.prod(1. - pmf))
+                dname = disp_name + '_'.join(key)
+                self.datastore[dname] = pmf
+                poe_agg.append(1. - numpy.prod(1. - pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
