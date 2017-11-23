@@ -136,8 +136,10 @@ producing too small PoEs.'''
         else:
             # only the poes_disagg are known, the IMLs are interpolated from
             # the hazard curves, hence the need to run a PSHACalculator here
-            classical.PSHACalculator(oq, self.monitor('classical'),
-                                     calc_id=self.datastore.calc_id).run()
+            cl = classical.PSHACalculator(oq, self.monitor('classical'),
+                                          calc_id=self.datastore.calc_id)
+            cl.run()
+            self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
         return self.full_disaggregation(curves)
