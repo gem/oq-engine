@@ -24,8 +24,7 @@ import math
 import logging
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.baselib.general import split_in_blocks, pack
+from openquake.baselib.general import split_in_blocks, pack, AccumDict
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -93,6 +92,13 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
     return result
 
 
+def agg_probs(*probs):
+    acc = 1.
+    for prob in probs:
+        acc *= 1. - prob
+    return 1. - acc
+
+
 @base.calculators.add('disaggregation')
 class DisaggregationCalculator(classical.ClassicalCalculator):
     """
@@ -115,13 +121,14 @@ producing too small PoEs.'''
         a dictionary with key (sid, rlz.id, poe, imt, iml, trti)
         and values which are probability arrays.
 
-        :param acc: dictionary accumulating the results
+        :param acc: dictionary k -> dic accumulating the results
         :param result: dictionary with the result coming from a task
         """
         if 'cache_info' in result:
             self.cache_info += result.pop('cache_info')
         for key, val in result.items():
-            acc[key] = 1. - (1. - acc.get(key, 0)) * (1. - val)
+            k, trti = key[:-1], key[-1]
+            acc[k][trti] = 1. - (1. - acc[k].get(trti, 0)) * (1. - val)
         return acc
 
     def get_curves(self, sid):
@@ -261,7 +268,7 @@ producing too small PoEs.'''
 
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         results = parallel.Starmap(compute_disagg, all_args).reduce(
-            self.agg_result)
+            self.agg_result, AccumDict(accum={}))
         ops, hits, num_zeros = self.cache_info
         logging.info('Cache speedup %s', ops / (ops - hits))
         logging.info('Zero probabilities: %d', num_zeros)
@@ -275,7 +282,6 @@ producing too small PoEs.'''
         :param results:
             a dictionary of probability arrays
         """
-        logging.info('Extracting and saving the PMFs')
         # save bin_edges
         dt = numpy.dtype([
             ('sid', numpy.uint32),
@@ -291,14 +297,15 @@ producing too small PoEs.'''
 
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
-        for key, matrix in sorted(results.items()):
-            sid, rlz_id, poe, imt, iml, trti = key
+        logging.info('Extracting and saving the PMFs')
+        for key, matrices in sorted(results.items()):
+            sid, rlz_id, poe, imt, iml = key
             edges = self.bin_edges[sid]
             self.save_disagg_result(
-                sid, edges, matrix, rlz_id, trti,
+                sid, edges, matrices, rlz_id,
                 self.oqparam.investigation_time, imt, iml, poe)
 
-    def save_disagg_result(self, site_id, bin_edges, matrix, rlz_id, trti,
+    def save_disagg_result(self, site_id, bin_edges, matrices, rlz_id,
                            investigation_time, imt_str, iml, poe):
         """
         Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
@@ -308,12 +315,10 @@ producing too small PoEs.'''
             id of the current site
         :param bin_edges:
             The 5-uple mag, dist, lon, lat, eps
-        :param matrix:
-            A probability array
+        :param matrices:
+            A dictionary trti -> disaggregation matrix
         :param rlz_id:
             ordinal of the realization to which the results belong.
-        :param trti:
-            tectonic region type index
         :param float investigation_time:
             Investigation time (years) for the calculation.
         :param imt_str:
@@ -331,21 +336,24 @@ producing too small PoEs.'''
             rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
         mon = self.monitor('extracting PMFs')
         mag, dist, lons, lats, eps = bin_edges
+        matrix = agg_probs(*matrices.values())
+        poe_agg = []
+        num_trts = len(self.trts)
         for key, fn in disagg.pmf_map.items():
             with mon:
-                pmf = fn(matrix)
+                if 'TRT' in key:
+                    trti = next(iter(matrices))
+                    a_pmf = fn(matrices[trti])
+                    pmf = numpy.zeros(a_pmf.shape + (num_trts,))
+                    pmf[..., trti] = a_pmf
+                    for t in matrices:
+                        if t != trti:
+                            pmf[..., t] = fn(matrices[t])
+                else:
+                    pmf = fn(matrix)
             dname = disp_name + '_'.join(key)
-            try:
-                self.datastore[dname]
-            except KeyError:
-                arr = numpy.zeros(pmf.shape + (len(self.trts),))
-                arr[..., trti] = pmf
-                self.datastore[dname] = arr
-            else:
-                self.datastore[dname][..., trti] = pmf
-            attrs = self.datastore.hdf5[dname].attrs
-            # sanity check: all poe_agg should be the same
-            attrs['poe_agg'] = 1. - numpy.prod(1. - pmf)
+            self.datastore[dname] = pmf
+            poe_agg.append(1. - numpy.prod(1. - pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
@@ -357,5 +365,7 @@ producing too small PoEs.'''
         attrs['lat_bin_edges'] = lats
         attrs['eps_bin_edges'] = eps
         attrs['location'] = (lon, lat)
+        # sanity check: all poe_agg should be the same
+        attrs['poe_agg'] = poe_agg
         if poe is not None:
             attrs['poe'] = poe
