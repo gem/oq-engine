@@ -36,7 +36,7 @@ from openquake.commonlib import logictree
 
 
 MINWEIGHT = sourceconverter.MINWEIGHT
-MAXWEIGHT = 5E6  # heuristic, set by M. Simionato
+MAXWEIGHT = 4E6  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
 U16 = numpy.uint16
@@ -87,17 +87,6 @@ def capitalize(words):
     Capitalize words separated by spaces.
     """
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
-
-
-def get_id(src):
-    """
-    :param src: a source node or a hazardlib source
-    :returns: the source ID
-    """
-    try:
-        return src.source_id
-    except AttributeError:
-        return src['id']
 
 
 def _assert_equal_sources(nodes):
@@ -642,8 +631,6 @@ class CompositeSourceModel(collections.Sequence):
             # different sources with the same ID
             self.has_dupl_sources = 0
         else:
-            for srcs in dupl_sources:
-                logging.warn('Found duplicated source %s', get_id(srcs[0]))
             self.has_dupl_sources = len(dupl_sources)
 
     def get_model(self, sm_id):
@@ -674,11 +661,16 @@ class CompositeSourceModel(collections.Sequence):
             src_groups = []
             for src_group in sm.src_groups:
                 sources = []
-                for src, sites in src_filter(src_group.sources):
-                    sources.append(src)
-                    weight += src.weight
+                for src in src_group.sources:
+                    if hasattr(src, '__iter__'):  # MultiPointSource
+                        sources.extend(src)
+                    else:
+                        sources.append(src)
                 sg = copy.copy(src_group)
-                sg.sources = sources
+                sg.sources = []
+                for src, sites in src_filter(sources):
+                    sg.sources.append(src)
+                    weight += src.weight
                 src_groups.append(sg)
             newsm = logictree.SourceModel(
                 sm.name, sm.weight, sm.path, src_groups,
