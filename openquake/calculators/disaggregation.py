@@ -20,18 +20,18 @@
 Disaggregation calculator core functionality
 """
 from __future__ import division
-import math
 import logging
+import operator
 import numpy
 
-from openquake.baselib.general import split_in_blocks, pack, AccumDict
+from openquake.baselib.general import pack, AccumDict, groupby
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.baselib import parallel
-from openquake.hazardlib import sourceconverter
 from openquake.commonlib import calc
 from openquake.calculators import base, classical
+
 
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
 
@@ -206,14 +206,9 @@ producing too small PoEs.'''
         """
         oq = self.oqparam
         tl = oq.truncation_level
-        sitecol = self.sitecol
+        src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
-
         self.bin_edges = {}
-        # determine the number of source groups
-        num_grps = sum(1 for sg in self.csm.src_groups)
-        nblocks = math.ceil(oq.concurrent_tasks / num_grps)
-        src_filter = SourceFilter(sitecol, oq.maximum_distance)
 
         # build trt_edges
         trts = tuple(sorted(set(sg.trt for smodel in self.csm.source_models
@@ -256,28 +251,24 @@ producing too small PoEs.'''
 
         # build all_args
         all_args = []
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        mon = self.monitor('disaggregation')
         for smodel in self.csm.source_models:
-            for sg in smodel.src_groups:
-                split_sources = []
-                for src in sg:
-                    for split, _sites in src_filter(
-                            sourceconverter.split_source(src), sitecol):
-                        split_sources.append(split)
-                if not split_sources:
-                    continue
-                mon = self.monitor('disaggregation')
-                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(
-                    sg.trt, smodel.ordinal)
+            sm_id = smodel.ordinal
+            for trt, groups in groupby(
+                    smodel.src_groups, operator.attrgetter('trt')).items():
+                sources = sum([grp.sources for grp in groups], [])
+                trti = trt_num[trt]
+                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
                 imls = [disagg.make_imldict(
                     rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
                     curve) for curve in curves]
-                for srcs in split_in_blocks(split_sources, nblocks):
-                    trti = trt_num[srcs[0].tectonic_region_type]
+                for block in self.csm.split_in_blocks(maxweight, sources):
                     all_args.append(
-                        (src_filter, srcs, cmaker, imls, trti,
-                         self.bin_edges, oq, mon))
+                        (src_filter, block, cmaker, imls, trti, self.bin_edges,
+                         oq, mon))
 
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         results = parallel.Starmap(compute_disagg, all_args).reduce(
@@ -329,7 +320,7 @@ producing too small PoEs.'''
         :param bin_edges:
             The 5-uple mag, dist, lon, lat, eps
         :param matrices:
-            A dictionary trti -> disaggregation matrix
+            A dictionary (sid, rlz_id, poe, imt, iml) -> trti -> matrix
         :param rlz_id:
             ordinal of the realization to which the results belong.
         :param float investigation_time:
