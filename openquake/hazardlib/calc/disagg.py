@@ -70,23 +70,31 @@ def make_iml4(R, imtls, iml_disagg, poes_disagg=(None,), curves=()):
 
 def collect_bins_data(sources, sitecol, cmaker, iml4,
                       truncation_level, n_epsilons, monitor=Monitor()):
+    """
+    :param sources: a list of sources
+    :param sitecol: a SiteCollection instance
+    :param cmaker: a ContextMaker instance
+    :param iml4: an ArrayWrapper of intensities of shape (N, R, M, P)
+    :param truncation_level: the truncation level
+    :param n_epsilons: the number of epsilons
+    :param monitor: a Monitor instance
+    :returns: an accumlation dictionary key -> list of arrays
+    """
+    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
+    truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
+    epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
     mon = monitor('disaggregate_pne', measuremem=False)
-    with monitor('collect data'):
-        # NB: instantiating truncnorm is slow and calls the infamous "doccer"
-        truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
-        epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
-        acc = AccumDict(accum=[])
-        for source in sources:
-            try:
-                rupdict = cmaker.disaggregate(
-                    sitecol, source.iter_ruptures(), iml4, truncnorm,
-                    epsilons, mon)
-                acc += rupdict
-            except Exception as err:
-                etype, err, tb = sys.exc_info()
-                msg = 'An error occurred with source id=%s. Error: %s'
-                msg %= (source.source_id, err)
-                raise_(etype, msg, tb)
+    acc = AccumDict(accum=[])
+    for source in sources:
+        ruptures = source.iter_ruptures()
+        try:
+            acc += cmaker.disaggregate(
+                sitecol, ruptures, iml4, truncnorm, epsilons, mon)
+        except Exception as err:
+            etype, err, tb = sys.exc_info()
+            msg = 'An error occurred with source id=%s. Error: %s'
+            msg %= (source.source_id, err)
+            raise_(etype, msg, tb)
     return acc
 
 
