@@ -36,7 +36,7 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
 
 
-def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
+def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -47,8 +47,8 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
         list of hazardlib source objects
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param imldict:
-        a list of dictionaries poe, gsim, imt, rlzi -> iml
+    :param iml4:
+        an array of intensities of shape (N, R, M, P)
     :param dict trti:
         tectonic region type index
     :param bin_egdes:
@@ -61,22 +61,17 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
         a dictionary of probability arrays, with composite key
         (sid, rlz.id, poe, imt, iml, trti).
     """
-    sitecol = src_filter.sitecol
     result = {}  # sid, rlz.id, poe, imt, iml -> array
-    for i, site in enumerate(sitecol):
-        sid = sitecol.sids[i]
-        edges = bin_edges[sid]
-        acc = disagg.collect_bins_data(
-            sources, site, cmaker, imldict[i],
-            oqparam.truncation_level, oqparam.num_epsilon_bins,
-            monitor('disaggregate_pne', measuremem=False))
-        bindata = pack(acc, 'mags dists lons lats'.split())
-        if not bindata:
-            continue
-
-        for (poe, imt, iml, rlzi), matrix in disagg.build_disagg_matrix(
-                bindata, edges, monitor).items():
-            result[sid, rlzi, poe, imt, iml, trti] = matrix
+    acc = disagg.collect_bins_data(
+        sources, src_filter.sitecol, cmaker, iml4,
+        oqparam.truncation_level, oqparam.num_epsilon_bins,
+        monitor('disaggregate_pne', measuremem=False))
+    bindata = pack(acc, 'mags dists lons lats'.split())
+    if bindata:
+        for sid, site in enumerate(src_filter.sitecol):
+            for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
+                    bindata, bin_edges[sid], sid, monitor).items():
+                result[sid, rlzi, poe, imt, trti] = matrix
         result['cache_info'] = monitor.cache_info
     return result
 
@@ -123,7 +118,7 @@ producing too small PoEs.'''
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results,
-        a dictionary with key (sid, rlz.id, poe, imt, iml, trti)
+        a dictionary with key (sid, rlz.id, poe, imt, trti)
         and values which are probability arrays.
 
         :param acc: dictionary k -> dic accumulating the results
@@ -248,21 +243,28 @@ producing too small PoEs.'''
         all_args = []
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         mon = self.monitor('disaggregation')
+        R = len(self.rlzs_assoc.realizations)
+        iml4 = disagg.make_iml4(
+            R, oq.imtls, oq.iml_disagg, oq.poes_disagg or (None,), curves)
+        self.imldict = {}
+        for s in self.sitecol.sids:
+            for r, rlz in enumerate(self.rlzs_assoc.realizations):
+                for p, poe in enumerate(oq.poes_disagg or [None]):
+                    for m, imt in enumerate(oq.imtls):
+                        self.imldict[s, r, poe, imt] = iml4[s, r, m, p]
+
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
             for trt, groups in groupby(
                     smodel.src_groups, operator.attrgetter('trt')).items():
-                sources = sum([grp.sources for grp in groups], [])
                 trti = trt_num[trt]
+                sources = sum([grp.sources for grp in groups], [])
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
-                imls = [disagg.make_imldict(
-                    rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
-                    curve) for curve in curves]
                 for block in self.csm.split_in_blocks(maxweight, sources):
                     all_args.append(
-                        (src_filter, block, cmaker, imls, trti, self.bin_edges,
+                        (src_filter, block, cmaker, iml4, trti, self.bin_edges,
                          oq, mon))
 
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
@@ -298,14 +300,14 @@ producing too small PoEs.'''
         # is saved this method can be run sequentially on the controller node
         logging.info('Extracting and saving the PMFs')
         for key, matrices in sorted(results.items()):
-            sid, rlz_id, poe, imt, iml = key
+            sid, rlzi, poe, imt = key
             edges = self.bin_edges[sid]
             self.save_disagg_result(
-                sid, edges, matrices, rlz_id,
-                self.oqparam.investigation_time, imt, iml, poe)
+                sid, edges, matrices, rlzi,
+                self.oqparam.investigation_time, imt, poe)
 
     def save_disagg_result(self, site_id, bin_edges, matrices, rlz_id,
-                           investigation_time, imt_str, iml, poe):
+                           investigation_time, imt_str, poe):
         """
         Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
         :class:`~openquake.engine.db.models.DisaggResult`).
@@ -322,9 +324,6 @@ producing too small PoEs.'''
             Investigation time (years) for the calculation.
         :param imt_str:
             Intensity measure type string (PGA, SA, etc.)
-        :param float iml:
-            Intensity measure level interpolated (using `poe`) from the hazard
-            curve at the `site`.
         :param float poe:
             Disaggregation probability of exceedance value for this result.
         """
@@ -356,7 +355,7 @@ producing too small PoEs.'''
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
-        attrs['iml'] = iml
+        attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
