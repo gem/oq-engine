@@ -69,22 +69,24 @@ def make_iml4(R, imtls, iml_disagg, poes_disagg=(None,), curves=()):
 
 
 def collect_bins_data(sources, sitecol, cmaker, iml4,
-                      truncation_level, n_epsilons, mon=Monitor()):
-    # NB: instantiating truncnorm is slow and calls the infamous "doccer"
-    truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
-    epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
-    acc = AccumDict(accum=[])
-    for source in sources:
-        try:
-            rupdict = cmaker.disaggregate(
-                sitecol, source.iter_ruptures(), iml4, truncnorm,
-                epsilons, mon)
-            acc += rupdict
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err)
-            raise_(etype, msg, tb)
+                      truncation_level, n_epsilons, monitor=Monitor()):
+    mon = monitor('disaggregate_pne', measuremem=False)
+    with monitor('collect data'):
+        # NB: instantiating truncnorm is slow and calls the infamous "doccer"
+        truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
+        epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
+        acc = AccumDict(accum=[])
+        for source in sources:
+            try:
+                rupdict = cmaker.disaggregate(
+                    sitecol, source.iter_ruptures(), iml4, truncnorm,
+                    epsilons, mon)
+                acc += rupdict
+            except Exception as err:
+                etype, err, tb = sys.exc_info()
+                msg = 'An error occurred with source id=%s. Error: %s'
+                msg %= (source.source_id, err)
+                raise_(etype, msg, tb)
     return acc
 
 
