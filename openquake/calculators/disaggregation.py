@@ -64,8 +64,7 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
     result = {}  # sid, rlz.id, poe, imt, iml -> array
     acc = disagg.collect_bins_data(
         sources, src_filter.sitecol, cmaker, iml4,
-        oqparam.truncation_level, oqparam.num_epsilon_bins,
-        monitor('disaggregate_pne', measuremem=False))
+        oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
     bindata = pack(acc, 'mags dists lons lats'.split())
     if bindata:
         for sid, site in enumerate(src_filter.sitecol):
