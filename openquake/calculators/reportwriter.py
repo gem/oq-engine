@@ -41,11 +41,11 @@ def indent(text):
 def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     """
     Count the effective number of ruptures contained in the given sources
-    within the integration distance and return a dictionary src_group_id ->
-    num_ruptures. All sources must belong to the same tectonic region type.
+    within the integration distance and return a dictionary src_group_id -> {}.
+    All sources must belong to the same tectonic region type.
     """
-    acc = AccumDict()
-    acc.grp_id = sources[0].src_group_id
+    grp_id = sources[0].src_group_id
+    acc = AccumDict({grp_id: {}})
     acc.calc_times = []
     count = 0
     for src in sources:
@@ -55,8 +55,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
             count += src.num_ruptures
             dt = time.time() - t0
             acc.calc_times.append((src.source_id, len(sites), src.weight, dt))
-    acc.eff_ruptures = {acc.grp_id: count}
-    acc.bbs = []
+    acc.eff_ruptures = {grp_id: count}
     return acc
 
 
