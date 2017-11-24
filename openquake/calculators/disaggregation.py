@@ -65,12 +65,7 @@ def compute_disagg(src_filter, sources, cmaker, imldict, trti, bin_edges,
     result = {}  # sid, rlz.id, poe, imt, iml -> array
     for i, site in enumerate(sitecol):
         sid = sitecol.sids[i]
-        try:
-            edges = bin_edges[sid]
-        except KeyError:
-            # bin_edges for a given site are missing if the site is far away
-            continue
-
+        edges = bin_edges[sid]
         acc = disagg.collect_bins_data(
             sources, site, cmaker, imldict[i],
             oqparam.truncation_level, oqparam.num_epsilon_bins,
