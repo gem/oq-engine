@@ -289,15 +289,15 @@ class ContextMaker(object):
                 dctx.rjb.min() > self.maximum_distance(
                     rupture.tectonic_region_type, rupture.mag)):
                 continue  # rupture away from all sites
-            for r, gsim in self.gsim_by_rlzi.items():
-                for m, imt in enumerate(iml4.imts):
-                    for p, poe in enumerate(iml4.poes_disagg):
-                        with disagg_pne:
+            with disagg_pne:
+                for r, gsim in self.gsim_by_rlzi.items():
+                    for m, imt in enumerate(iml4.imts):
+                        for p, poe in enumerate(iml4.poes_disagg):
                             iml = iml4.array[:, r, m, p]
                             pne = gsim.disaggregate_pne(
                                 rupture, sctx, rctx, dctx, imt, iml,
                                 truncnorm, epsilons)
-                        acc[poe, str(imt), r].append(pne)
+                            acc[poe, str(imt), r].append(pne)
             closest_points = rupture.surface.get_closest_points(sitemesh)
             acc['mags'].append(rupture.mag)
             acc['dists'].append(dctx.rjb)
