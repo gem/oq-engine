@@ -67,9 +67,8 @@ def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
     return imldict
 
 
-def collect_bins_data(sources, site, cmaker, imldict,
+def collect_bins_data(sources, sitecol, cmaker, imldict,
                       truncation_level, n_epsilons, mon=Monitor()):
-    sitecol = SiteCollection([site])
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     acc = AccumDict(accum=[])
@@ -271,9 +270,10 @@ def disaggregation(
     imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
+    sitecol = SiteCollection([site])
     for trt, srcs in by_trt.items():
         bdata[trt] = collect_bins_data(
-            srcs, site, cmaker, imldict, truncation_level, n_epsilons)
+            srcs, sitecol, cmaker, imldict, truncation_level, n_epsilons)
     bd = pack(sum(bdata.values(), {}), 'mags dists lons lats'.split())
     if len(bd.mags) == 0:
         warnings.warn(
