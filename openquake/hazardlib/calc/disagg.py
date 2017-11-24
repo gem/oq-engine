@@ -31,6 +31,7 @@ import scipy.stats
 
 from openquake.baselib.python3compat import raise_, range
 from openquake.baselib.performance import Monitor
+from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import AccumDict, pack, groupby
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
@@ -41,42 +42,43 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
-def make_imldict(rlzs_by_gsim, imtls, iml_disagg, poes_disagg=(None,),
-                 curves=None):
+def _imls(curves, poe, imt, imls, rlzi):
+    if poe is None:  # iml_disagg was set
+        return imls
+    # else return interpolated intensity measure levels
+    levels = [numpy.interp(poe, curve[rlzi][imt][::-1], imls[::-1])
+              if curve else numpy.nan for curve in curves]
+    return numpy.array(levels)  # length N
+
+
+def make_iml4(R, imtls, iml_disagg, poes_disagg=(None,), curves=()):
     """
-    :returns: a dictionary poe, gsim, imt, rlzi -> iml
-
-    If iml_disagg is given, poe is None and the values are all the same for a
-    given imt for any gsim and rlzi.
+    :returns: an ArrayWrapper over a 4D array of shape (N, R, M, P)
     """
-    if iml_disagg:
-        poes_disagg = [None]
-        iml_disagg = {from_string(imt): iml_disagg[imt]
-                      for imt, iml in iml_disagg.items()}
-    elif not curves:  # there could be no hazard for the given site
-        return {}
-    imldict = {}
-    for poe in poes_disagg:
-        for gsim in rlzs_by_gsim:
-            for imt_str, imls in imtls.items():
-                imt = from_string(imt_str)
-                for rlzi in rlzs_by_gsim[gsim]:
-                    imldict[poe, gsim, imt, rlzi] = numpy.interp(
-                        poe, curves[rlzi][imt_str][::-1], imls[::-1]
-                    ) if poe is not None else imls[0]
-    return imldict
+    N = len(curves) or 1
+    M = len(imtls)
+    P = len(poes_disagg)
+    arr = numpy.zeros((N, R, M, P))
+    imts = [from_string(imt) for imt in imtls]
+    for m, imt in enumerate(imtls):
+        imls = imtls[imt]
+        for p, poe in enumerate(poes_disagg):
+            for r in range(R):
+                arr[:, r, m, p] = _imls(curves, poe, imt, imls, r)
+    return ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
-def collect_bins_data(sources, sitecol, cmaker, imldict,
+def collect_bins_data(sources, sitecol, cmaker, iml4,
                       truncation_level, n_epsilons, mon=Monitor()):
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
+    epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
     acc = AccumDict(accum=[])
     for source in sources:
         try:
             rupdict = cmaker.disaggregate(
-                sitecol, source.iter_ruptures(), imldict, truncnorm,
-                n_epsilons, mon)
+                sitecol, source.iter_ruptures(), iml4, truncnorm,
+                epsilons, mon)
             acc += rupdict
         except Exception as err:
             etype, err, tb = sys.exc_info()
@@ -109,10 +111,11 @@ def lon_lat_bins(bb, coord_bin_width):
 
 
 # this is fast
-def build_disagg_matrix(bdata, bin_edges, mon=Monitor):
+def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
     :param bin_edges: bin edges
+    :param sid: site index
     :param mon: a Monitor instance
     :returns: a dictionary key -> matrix|pmf for each key in bdata
     """
@@ -131,9 +134,9 @@ def build_disagg_matrix(bdata, bin_edges, mon=Monitor):
     # the 'minus 1' is needed because the digitize method returns the
     # index of the upper bound of the bin
     mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
-    dists_idx = numpy.digitize(bdata.dists, dist_bins) - 1
-    lons_idx = _digitize_lons(bdata.lons, lon_bins)
-    lats_idx = numpy.digitize(bdata.lats, lat_bins) - 1
+    dists_idx = numpy.digitize(bdata.dists[:, sid], dist_bins) - 1
+    lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins)
+    lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins) - 1
 
     # because of the way numpy.digitize works, values equal to the last bin
     # edge are associated to an index equal to len(bins) which is not a
@@ -148,7 +151,8 @@ def build_disagg_matrix(bdata, bin_edges, mon=Monitor):
     cache = {}
     cache_hit = 0
     num_zeros = 0
-    for k, pnes in bdata.items():
+    for k, allpnes in bdata.items():
+        pnes = allpnes[:, sid, :]  # shape (U, N, E)
         cache_key = pnes.sum()
         if cache_key == pnes.size:  # all pnes are 1
             num_zeros += 1
@@ -164,8 +168,12 @@ def build_disagg_matrix(bdata, bin_edges, mon=Monitor):
             matrix = 1. - mat
             cache[cache_key] = matrix
         out[k] = matrix
+
     # operations, hits, num_zeros
-    mon.cache_info = numpy.array([len(bdata), cache_hit, num_zeros])
+    if hasattr(mon, 'cache_info'):
+        mon.cache_info += numpy.array([len(bdata), cache_hit, num_zeros])
+    else:
+        mon.cache_info = numpy.array([len(bdata), cache_hit, num_zeros])
     return out
 
 
@@ -267,13 +275,13 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
-    imldict = make_imldict(rlzs_by_gsim, {str(imt): [iml]}, {str(imt): iml})
+    iml4 = make_iml4(1, {str(imt): [iml]}, {str(imt): iml})
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
     for trt, srcs in by_trt.items():
         bdata[trt] = collect_bins_data(
-            srcs, sitecol, cmaker, imldict, truncation_level, n_epsilons)
+            srcs, sitecol, cmaker, iml4, truncation_level, n_epsilons)
     bd = pack(sum(bdata.values(), {}), 'mags dists lons lats'.split())
     if len(bd.mags) == 0:
         warnings.warn(
@@ -301,7 +309,7 @@ def disaggregation(
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
         bd = pack(bdata[trt], 'mags dists lons lats'.split())
-        [mat] = build_disagg_matrix(bd, bin_edges).values()
+        [mat] = build_disagg_matrix(bd, bin_edges, sid=0).values()
         matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
