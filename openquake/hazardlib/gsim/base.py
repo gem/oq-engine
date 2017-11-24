@@ -28,8 +28,6 @@ import math
 import warnings
 import functools
 import contextlib
-
-import scipy.stats
 from scipy.special import ndtr
 import numpy
 
@@ -125,6 +123,13 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
+            # since the ContextMaker must be used on ruptures with all the
+            # same TRT, given a realization there is a single gsim
+            self.gsim_by_rlzi = {}
+            for gsim, rlzis in gsims.items():
+                for rlzi in rlzis:
+                    self.gsim_by_rlzi[rlzi] = gsim
 
     def make_distances_context(self, site_collection, rupture, dist_dict=()):
         """
@@ -262,23 +267,21 @@ class ContextMaker(object):
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
-    def disaggregate(self, sitecol, ruptures, imldict,
-                     truncnorm, n_epsilons, disagg_pne=Monitor()):
+    def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
+                     disagg_pne=Monitor()):
         """
         Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
 
-        :param sitecol: a SiteCollection with a single site
-        :param ruptures: an iterator over ruptures
-        :param imldict: a dictionary poe, gsim, imt, rlzi -> iml
+        :param sitecol: a SiteCollection
+        :param ruptures: an iterator over ruptures with the same TRT
+        :param iml4: a 4d array of IMLs of shape (N, R, M, P)
         :param truncnorm: an instance of scipy.stats.truncnorm
-        :param n_epsilons: the number of bins
+        :param epsilons: the epsilon bins
         :param disagg_pne: a monitor of the disaggregation time
         :returns: an AccumDict
         """
-        assert len(sitecol) == 1, sitecol
         sitemesh = sitecol.mesh
-        epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
         acc = AccumDict(accum=[])
         for rupture in ruptures:
             sctx, rctx, dctx = self.make_contexts(sitecol, rupture, filter=0)
@@ -286,20 +289,15 @@ class ContextMaker(object):
                 dctx.rjb.min() > self.maximum_distance(
                     rupture.tectonic_region_type, rupture.mag)):
                 continue  # rupture away from all sites
-
-            cache = {}  # gsim, imt, iml -> pne
-            # if imldict comes from iml_disagg, it has duplicated values
-            # we are using a cache to avoid duplicating computation
-            for (poe, gsim, imt, rlzi), iml in imldict.items():
-                try:
-                    pne = cache[gsim, imt, iml]
-                except KeyError:
-                    with disagg_pne:
-                        [pne] = gsim.disaggregate_pne(
-                            rupture, sctx, rctx, dctx, imt, iml,
-                            truncnorm, epsilons)
-                    cache[gsim, imt, iml] = pne
-                acc[poe, str(imt), iml, rlzi].append(pne)
+            for r, gsim in self.gsim_by_rlzi.items():
+                for m, imt in enumerate(iml4.imts):
+                    for p, poe in enumerate(iml4.poes_disagg):
+                        with disagg_pne:
+                            iml = iml4.array[:, r, m, p]
+                            pne = gsim.disaggregate_pne(
+                                rupture, sctx, rctx, dctx, imt, iml,
+                                truncnorm, epsilons)
+                        acc[poe, str(imt), r].append(pne)
             closest_points = rupture.surface.get_closest_points(sitemesh)
             acc['mags'].append(rupture.mag)
             acc['dists'].append(dctx.rjb)
