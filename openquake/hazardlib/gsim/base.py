@@ -35,9 +35,8 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, get_distances, FarAwayRupture)
-from openquake.baselib.general import DeprecationWarning, deprecated, AccumDict
+from openquake.hazardlib.calc.filters import IntegrationDistance, get_distances
+from openquake.baselib.general import DeprecationWarning, AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import with_metaclass
 
@@ -231,7 +230,7 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def make_contexts(self, site_collection, rupture):
+    def make_contexts(self, site_collection, rupture, filter=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -258,7 +257,7 @@ class ContextMaker(object):
         """
         rctx = self.make_rupture_context(rupture)
         sites, distances = self.maximum_distance.get_closest(
-            site_collection, rupture, 'rjb')
+            site_collection, rupture, 'rjb', filter)
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
@@ -282,10 +281,12 @@ class ContextMaker(object):
         epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
         acc = AccumDict(accum=[])
         for rupture in ruptures:
-            try:
-                sctx, rctx, dctx = self.make_contexts(sitecol, rupture)
-            except FarAwayRupture:
-                continue
+            sctx, rctx, dctx = self.make_contexts(sitecol, rupture, filter=0)
+            if (self.maximum_distance and
+                dctx.rjb.min() > self.maximum_distance(
+                    rupture.tectonic_region_type, rupture.mag)):
+                continue  # rupture away from all sites
+
             cache = {}  # gsim, imt, iml -> pne
             # if imldict comes from iml_disagg, it has duplicated values
             # we are using a cache to avoid duplicating computation
@@ -299,12 +300,11 @@ class ContextMaker(object):
                             truncnorm, epsilons)
                     cache[gsim, imt, iml] = pne
                 acc[poe, str(imt), iml, rlzi].append(pne)
-            [rjb_dist] = dctx.rjb  # 1 site => 1 distance
-            [closest_point] = rupture.surface.get_closest_points(sitemesh)
+            closest_points = rupture.surface.get_closest_points(sitemesh)
             acc['mags'].append(rupture.mag)
-            acc['dists'].append(rjb_dist)
-            acc['lons'].append(closest_point.longitude)
-            acc['lats'].append(closest_point.latitude)
+            acc['dists'].append(dctx.rjb)
+            acc['lons'].append(closest_points.lons)
+            acc['lats'].append(closest_points.lats)
         return acc
 
 
