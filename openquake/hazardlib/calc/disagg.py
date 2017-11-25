@@ -78,7 +78,7 @@ def collect_bins_data(sources, sitecol, cmaker, iml4,
     :param truncation_level: the truncation level
     :param n_epsilons: the number of epsilons
     :param monitor: a Monitor instance
-    :returns: an accumlation dictionary key -> list of arrays
+    :returns: a dictionary (poe, imt, rlzi) -> array
     """
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
@@ -95,7 +95,7 @@ def collect_bins_data(sources, sitecol, cmaker, iml4,
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err)
             raise_(etype, msg, tb)
-    return acc
+    return pack(acc, 'mags dists lons lats'.split())
 
 
 def lon_lat_bins(bb, coord_bin_width):
@@ -292,22 +292,28 @@ def disaggregation(
     for trt, srcs in by_trt.items():
         bdata[trt] = collect_bins_data(
             srcs, sitecol, cmaker, iml4, truncation_level, n_epsilons)
-    bd = pack(sum(bdata.values(), {}), 'mags dists lons lats'.split())
-    if len(bd.mags) == 0:
+    if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
             % site, RuntimeWarning)
         return None, None
 
+    min_mag = min(bd.mags.min() for bd in bdata.values())
+    max_mag = min(bd.mags.max() for bd in bdata.values())
     mag_bins = mag_bin_width * numpy.arange(
-        int(numpy.floor(bd.mags.min() / mag_bin_width)),
-        int(numpy.ceil(bd.mags.max() / mag_bin_width) + 1))
+        int(numpy.floor(min_mag / mag_bin_width)),
+        int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
+    min_dist = min(bd.dists.min() for bd in bdata.values())
+    max_dist = min(bd.dists.max() for bd in bdata.values())
     dist_bins = dist_bin_width * numpy.arange(
-        int(numpy.floor(bd.dists.min() / dist_bin_width)),
-        int(numpy.ceil(bd.dists.max() / dist_bin_width) + 1))
+        int(numpy.floor(min_dist / dist_bin_width)),
+        int(numpy.ceil(max_dist / dist_bin_width) + 1))
 
-    bb = (bd.lons.min(), bd.lons.min(), bd.lats.max(), bd.lats.max())
+    bb = (min(bd.lons.min() for bd in bdata.values()),
+          min(bd.lats.min() for bd in bdata.values()),
+          max(bd.lons.max() for bd in bdata.values()),
+          max(bd.lats.max() for bd in bdata.values()))
     lon_bins, lat_bins = lon_lat_bins(bb, coord_bin_width)
 
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
@@ -318,8 +324,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        bd = pack(bdata[trt], 'mags dists lons lats'.split())
-        [mat] = build_disagg_matrix(bd, bin_edges, sid=0).values()
+        [mat] = build_disagg_matrix(bdata[trt], bin_edges, sid=0).values()
         matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
