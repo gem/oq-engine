@@ -68,8 +68,8 @@ def make_iml4(R, imtls, iml_disagg, poes_disagg=(None,), curves=()):
     return ArrayWrapper(arr, dict(poes_disagg=poes_disagg, imts=imts))
 
 
-def collect_bins_data(sources, sitecol, cmaker, iml4,
-                      truncation_level, n_epsilons, monitor=Monitor()):
+def collect_bin_data(sources, sitecol, cmaker, iml4,
+                     truncation_level, n_epsilons, monitor=Monitor()):
     """
     :param sources: a list of sources
     :param sitecol: a SiteCollection instance
@@ -78,7 +78,7 @@ def collect_bins_data(sources, sitecol, cmaker, iml4,
     :param truncation_level: the truncation level
     :param n_epsilons: the number of epsilons
     :param monitor: a Monitor instance
-    :returns: a dictionary (poe, imt, rlzi) -> array
+    :returns: a dictionary (poe, imt, rlzi) -> probabilities of shape (N, E)
     """
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
@@ -102,7 +102,7 @@ def lon_lat_bins(bb, coord_bin_width):
     """
     Define bin edges for disaggregation histograms.
 
-    Given bins data as provided by :func:`collect_bins_data`, this function
+    Given bins data as provided by :func:`collect_bin_data`, this function
     finds edges of histograms, taking into account maximum and minimum values
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
@@ -290,7 +290,7 @@ def disaggregation(
     bdata = {}
     sitecol = SiteCollection([site])
     for trt, srcs in by_trt.items():
-        bdata[trt] = collect_bins_data(
+        bdata[trt] = collect_bin_data(
             srcs, sitecol, cmaker, iml4, truncation_level, n_epsilons)
     if sum(len(bd.mags) for bd in bdata.values()) == 0:
         warnings.warn(

@@ -62,13 +62,13 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
         (sid, rlz.id, poe, imt, iml, trti).
     """
     result = {}  # sid, rlz.id, poe, imt, iml -> array
-    bins_data = disagg.collect_bins_data(
+    bin_data = disagg.collect_bin_data(
         sources, src_filter.sitecol, cmaker, iml4,
         oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
-    if bins_data:
-        for sid, site in enumerate(src_filter.sitecol):
+    if bin_data:  # dictionary poe, imt, rlzi -> pne
+        for sid in src_filter.sitecol.sids:
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
-                    bins_data, bin_edges[sid], sid, monitor).items():
+                    bin_data, bin_edges[sid], sid, monitor).items():
                 result[sid, rlzi, poe, imt, trti] = matrix
         result['cache_info'] = monitor.cache_info
     return result
