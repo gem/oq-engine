@@ -24,7 +24,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.general import pack, AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -62,14 +62,13 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
         (sid, rlz.id, poe, imt, iml, trti).
     """
     result = {}  # sid, rlz.id, poe, imt, iml -> array
-    acc = disagg.collect_bins_data(
+    bins_data = disagg.collect_bins_data(
         sources, src_filter.sitecol, cmaker, iml4,
         oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
-    bindata = pack(acc, 'mags dists lons lats'.split())
-    if bindata:
+    if bins_data:
         for sid, site in enumerate(src_filter.sitecol):
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
-                    bindata, bin_edges[sid], sid, monitor).items():
+                    bins_data, bin_edges[sid], sid, monitor).items():
                 result[sid, rlzi, poe, imt, trti] = matrix
         result['cache_info'] = monitor.cache_info
     return result
