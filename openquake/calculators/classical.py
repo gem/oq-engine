@@ -61,17 +61,10 @@ def saving_sources_by_task(iterargs, dstore):
 def classical(sources, src_filter, gsims, param, monitor):
     """
     """
-    sitecol = src_filter.sitecol
-    num_tiles = math.ceil(len(sitecol) / param['sites_per_tile'])
-    acc = []
-    for tile in sitecol.split_in_tiles(num_tiles):
-        sf = SourceFilter(
-            tile, src_filter.integration_distance, use_rtree=False)
-        if getattr(sources, 'src_interdep', None) == 'mutex':
-            acc.append(pmap_from_grp(sources, sf, gsims, param, monitor))
-        else:
-            acc.append(pmap_from_trt(sources, sf, gsims, param, monitor))
-    return acc
+    if getattr(sources, 'src_interdep', None) == 'mutex':
+        return pmap_from_grp(sources, src_filter, gsims, param, monitor)
+    else:
+        return pmap_from_trt(sources, src_filter, gsims, param, monitor)
 
 
 @base.calculators.add('psha')
@@ -81,28 +74,27 @@ class PSHACalculator(base.HazardCalculator):
     """
     core_task = classical
 
-    def agg_dicts(self, acc, pmaps):
+    def agg_dicts(self, acc, pmap):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param pmap: list of dictionaries grp_id -> ProbabilityMap
+        :param pmap: dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            for pmap in pmaps:
-                acc.eff_ruptures += pmap.eff_ruptures
-                for grp_id in pmap:
-                    if pmap[grp_id]:
-                        acc[grp_id] |= pmap[grp_id]
-                for src_id, nsites, srcweight, calc_time in pmap.calc_times:
-                    src_id = src_id.split(':', 1)[0]
-                    try:
-                        info = self.csm.infos[grp_id, src_id]
-                    except KeyError:
-                        continue
-                    info.calc_time += calc_time
-                    info.num_sites = max(info.num_sites, nsites)
-                    info.num_split += 1
+            acc.eff_ruptures += pmap.eff_ruptures
+            for grp_id in pmap:
+                if pmap[grp_id]:
+                    acc[grp_id] |= pmap[grp_id]
+            for src_id, nsites, srcweight, calc_time in pmap.calc_times:
+                src_id = src_id.split(':', 1)[0]
+                try:
+                    info = self.csm.infos[grp_id, src_id]
+                except KeyError:
+                    continue
+                info.calc_time += calc_time
+                info.num_sites = max(info.num_sites, nsites)
+                info.num_split += 1
         return acc
 
     def zerodict(self):
@@ -159,37 +151,39 @@ class PSHACalculator(base.HazardCalculator):
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        maxweight = min(source.MAXWEIGHT, self.csm.weight)
         numheavy = len(self.csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                      maxweight, numheavy, len(tiles))
         param = dict(
-            sites_per_tile=oq.sites_per_tile,
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, seed=oq.ses_seed,
             maximum_distance=oq.maximum_distance,
             disagg=oq.poes_disagg or oq.iml_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
 
-        num_tasks = 0
-        num_sources = 0
-        for sg in self.csm.src_groups:
-            if sg.src_interdep == 'mutex':
-                gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                self.csm.add_infos(sg.sources)  # update self.csm.infos
-                yield sg, self.csm.src_filter, gsims, param, monitor
-                num_tasks += 1
-                num_sources += len(sg.sources)
-        opt = self.oqparam.optimize_same_id_sources
-        # NB: csm.get_sources_by_trt discards the mutex sources
-        for trt, sources in self.csm.get_sources_by_trt(opt).items():
-            gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            self.csm.add_infos(sources)  # update with unsplit sources
-            for block in self.csm.split_in_blocks(maxweight, sources):
-                yield block, self.csm.src_filter, gsims, param, monitor
-                num_tasks += 1
-                num_sources += len(block)
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+        for tile_i, tile in enumerate(tiles, 1):
+            num_tasks = 0
+            num_sources = 0
+            self.csm.src_filter = SourceFilter(tile, oq.maximum_distance)
+            for sg in self.csm.src_groups:
+                if sg.src_interdep == 'mutex':
+                    gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
+                    self.csm.add_infos(sg.sources)  # update self.csm.infos
+                    yield sg, self.csm.src_filter, gsims, param, monitor
+                    num_tasks += 1
+                    num_sources += len(sg.sources)
+            opt = self.oqparam.optimize_same_id_sources
+            # NB: csm.get_sources_by_trt discards the mutex sources
+            for trt, sources in self.csm.get_sources_by_trt(opt).items():
+                gsims = self.csm.info.gsim_lt.get_gsims(trt)
+                self.csm.add_infos(sources)  # update with unsplit sources
+                for block in self.csm.split_in_blocks(maxweight, sources):
+                    yield block, self.csm.src_filter, gsims, param, monitor
+                    num_tasks += 1
+                    num_sources += len(block)
+            logging.info('Sent %d sources in %d tasks [tile %d]',
+                         num_sources, num_tasks, tile_i)
         source.split_map.clear()
 
     def post_execute(self, pmap_by_grp_id):
