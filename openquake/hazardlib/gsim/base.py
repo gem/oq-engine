@@ -290,19 +290,19 @@ class ContextMaker(object):
                     rupture.tectonic_region_type, rupture.mag)):
                 continue  # rupture away from all sites
             cache = {}
-            with disagg_pne:
-                for r, gsim in self.gsim_by_rlzi.items():
-                    for m, imt in enumerate(iml4.imts):
-                        for p, poe in enumerate(iml4.poes_disagg):
-                            iml = tuple(iml4.array[:, r, m, p])
-                            try:
-                                pne = cache[gsim, imt, iml]
-                            except KeyError:
+            for r, gsim in self.gsim_by_rlzi.items():
+                for m, imt in enumerate(iml4.imts):
+                    for p, poe in enumerate(iml4.poes_disagg):
+                        iml = tuple(iml4.array[:, r, m, p])
+                        try:
+                            pne = cache[gsim, imt, iml]
+                        except KeyError:
+                            with disagg_pne:
                                 pne = gsim.disaggregate_pne(
                                     rupture, sctx, rctx, dctx, imt, iml,
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
-                            acc[poe, str(imt), r].append(pne)
+                        acc[poe, str(imt), r].append(pne)
             closest_points = rupture.surface.get_closest_points(sitemesh)
             acc['mags'].append(rupture.mag)
             acc['dists'].append(dctx.rjb)
