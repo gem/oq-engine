@@ -1,205 +1,100 @@
-Release notes for the OpenQuake Engine, version 2.7
+Release notes for the OpenQuake Engine, version 2.8
 ===================================================
 
-This release introduced several improvements and new features. A few
-bugs were fixed, some outputs were changed and there were
-improvements to the installers, to the Web User Interface (WebUI) and
-to the engine itself.
+This release is dedicated to the disaggregation calculator. Several
+changes and improvements were implemented and now the calculator is
+substantially faster than before.
 
 Nearly 100 pull requests were closed. For the complete list of
 changes, please see the changelog:
-https://github.com/gem/oq-engine/blob/engine-2.7/debian/changelog.
+https://github.com/gem/oq-engine/blob/engine-2.7/debian/changelog
 
-Hazard
---------
+Disaggregation
+--------------
 
-We discovered that the disaggregation calculation was not working on a
-cluster unless a `shared_dir` was specified in `openquake.cfg`. This
-has been solved. Also, the rupture filtering was not applied in the
-disaggregation phase and this has been fixed too.
+We changed the algorithm for building the disaggregation bins. The new
+algorithm is simpler and depends directly from the integration
+distance. The big advantage compared to the past algorithm is that now
+the bins are always the same across different realizations, therefore
+it will be possible in the future to implement statistical
+disaggregation outputs, like a mean disaggregation matrix.  Moreover,
+thanks to the new algorithm, performing a classical calculation when
+the flag `iml_disagg` is set in the job.ini file, has become redundant
+and so such step has been removed.  If `iml_disagg` is given, forbid
+`intensity_measure_types_and_levels Add a check for `poes_disagg` too
+big Optimized disaggregation with `iml_disagg` Now if one or more of
+the parameters 'mag_bin_width', 'distance_bin_width',
+'coordinate_bin_width', 'num_epsilon_bins' is missing in the job.ini
+file an early error is raised.
+Ordered the TRT bins lexicographically
+Made the disagg matrices 5-dimensional internally
+Removed `gsim.disaggregate_poe` 
+Added a check on poe_agg
 
-The procedure to export the hazard curves in .hdf5 format
-with the command `oq export hcurves/all` had some bugs and has been
-deprecated.  Instead, we recommend the command `oq extract
-hazard/all` which is more reliable and exports also the
-hazard maps and uniform hazard spectra.
+More on hazard
+--------------
 
-The command `oq to_shapefile` has been extended to work with source models
-in format NRML 0.5. The only missing feature is the support for
-multiPointSources.
+- Implemented piecewise magnitude-distance filtering
 
-On the hazardlib side, four new GMPEs entered:
+- Added a check for 
+`Missing source_model_logic_tree in job.ini or missing --hc option`
 
-- Bindi et al. (2017)
-- Zhao et al. (2016)
-- Derras et al. (2014)
-- Pankow and Pechmann (2004)
+- added `optimize_same_id_sources`
+- a note on disaggregation by source (PmapGetter)
+
+- oq extract hazard/rlzs
+- changed the management of the MultiPointSources
+Optimized the sending of the sources in the classical calculator
+SGS model
 
 Risk
 ----
 
-Lots of changes entered on the risk side, mostly with the intent of supporting
-the [OpenQuake QGIS plugin](https://plugins.qgis.org/plugins/svir/). 
-The idea is to remove some logic (and some outputs)
-from the engine and to have the QGIS plugin produce those outputs instead.
-This applies in particular to the aggregated outputs for the risk calculators. 
-We have deprecated them from the engine and they will be removed in future releases.
-
-We added an aggregation API which is used by the QGIS plugin to perform
-the aggregation on-the-fly. The API can also be used by third party
-applications. For people not using the QGIS plugin there is also a
-command-line interface providing the same aggregation features.
-No features are lost and actually we have more features than before,
-including rather sophisticated aggregations by tag. Such features are
-included in this release, but they are experimental for the moment and
-they will be documented in the next release.
-
-We added a node `<tagNames>...</tagNames>` in the exposure which is mandatory if
-you want to use tags for the assets (a feature introduced in the engine 2.6).
-The [Input Preparation Toolkit](https://platform.openquake.org/ipt/) 
-will soon support the generation of exposures with asset tags.
-
-We also changed the event loss table CSV exporter: now all realizations
-are exported in a single file containing an additional column which is
-the realization index. For the rest, the output is unchanged. This 
-CSV output for the aggregate event loss table has
-been deprecated, anyway, because in the future it will likely disappear
-and be replaced with an API which will support loss aggregation based on the 
-asset tags and taxonomies.
-
-The scenario_damage calculator has been optimized significantly. In
-particular, the ScenarioDamage demo is now 17 times faster than
-before in the risk part of the calculation. The trick was to vectorize
-the calculation of the damage fractions, possible now that the
-fragility functions accept arrays as inputs (an user-requested
-feature, thanks to [Hyeuk Ryu](https://github.com/dynaryu) for the 
-[suggestion](https://github.com/gem/oq-engine/issues/3113)).
-
-Another [long-standing bug](https://github.com/gem/oq-engine/issues/2299) 
-related to the classical_damage calculator 
-has now been fixed: if there are some probabilities of
-exceedence (PoEs) exactly equal to 1.0 in the hazard curves, now the
-classical_damage calculator uses a cutoff and does not fail with a
-`log(1 - PoE)` going to infinity.
-
-If a user provides an invalid vulnerability function with a probability mass
-function (PMF), now a much better error message is raised, including
-the line number where the mistake has been made.
-
-There were several bugs in the new and experimental `gmf_ebrisk` calculator:
-all the reported bugs have been fixed now. The calculator still works only
-for ground motion fields of kind scenario, but there is a plan to extend
-it so that it can use the GMFs generated by an event based calculation as
-input. This calculator will be documented in the manual for the next
-release of the engine.
-
-There was a small bug in the classical_risk calculator: while the loss curves
-where computed and exportable with `oq export`, they were not listed in the
-outputs of the engine. Now they are and you can export them with the
-`oq engine` export command. `oq export` is still needed if you want to
-export the individual realizations, since the engine only exposes the
-statistics.
-
-There has been a lot of refactoring going on with the risk
-calculators: the final goal is to make the risk calculators easy to
-use programmatically. We are still at the beginning of the road, but
-significant steps in this direction have been taken.
+Fixes to gmf_ebrisk and to the input GMFs file
+Improved the error message if the user forgets both sites and sites.csv
+Made number_of_ground_motion fields optional again in all scenario calculators
+Exposed avg_losses for classical_risk 
+Exposing `loss_curves-stats` and `loss_maps-stats` as engine outputs
+Fixed oq export loss_curves
+Improved the error message if the user specifies a non-existing file in the job.ini ('does not exist or is not a file')
+Better error message if the user sets a wrong site_id in the sites.csv file
 
 WebUI/API
 ----------
 
-The integration of the WebUI with the standalone tools has been
-improved and now they are automatically visible in the WebUI if
-installed, which is the case for the virtual machines we distribute
-and for the Windows installer, but not for the Linux packages.
-
-The WebUI now support groups of user, i.e. you can restrict the access
-as you want. The `admin` user sees a link in the WebUI from which she
-can directly configure the groups by using the Django admin interface.
-System administrators interested in using this feature should read
-https://github.com/gem/oq-engine/blob/master/doc/installing/server.md.
-By default, no authentication is enabled and everything is visible
-to everybody.
-
-The WebUI displays a message if you are running an obsolete version
-of the engine. The same message appears also in the command-line every
-time you run a calculation with an obsolete version of the engine.
-This is to encourage people to stay updated.
-
-Finally, there is a new generic extraction API which is meant for use
-with the QGIS plugin. In particular, the following sub-APIs have been
-implemented to aggregate losses, damages and curves in the scenario
-risk, damage and event based calculators respectively:
-
-```
-/v1/calc/ID/extract/agglosses/LOSS_TYPE?tagname1=tagvalue1&...
-/v1/calc/ID/extract/aggdamages/LOSS_TYPE?tagname1=tagvalue1&...
-/v1/calc/ID/extract/aggcurves/LOSS_TYPE?tagname1=tagvalue1&...
-```
-
-If no tags are given, then full aggregation on all assets is performed.
-Using directly this API is discouraged, you should use the QGIS plugin
-instead, which has a nice GUI to define the aggregation queries. The
-API return .npz files, which are a good format for Python arrays.
+Now the WebUI starts jobs in separate processes
+Rewritten the WebUI tests to use Django
 
 oq commands
 ---------------
 
-The command `oq info` now understands an `--extract` flag that lists
-all the available extraction procedures.
+`oq abort`
+`oq show` shows the other users too
+`oq zip`
 
-We added a command `oq plot_assets` to plot all the assets involved in
-a risk calculation, together with the hazard sites.
-
-The command `oq plot_sites` to plot hazard sites together with the hazard
-sources has been fixed, it had stopped working properly. Now it is automatically
-tested.
-
-The command `oq upgrade_nrml` now understands a `--multipoint` flag which
-is useful to convert a source model containing pointSources into a model
-containing multiPointSources.
-
-`oq run` was not logging properly in absence of rtree; this has been fixed.
-
-`oq reset` and `oq restore` have been made more robust against corner cases.
- 
 Infrastructure
 --------------
 
-From the IT point of view, the biggest change is the introduction of a
-new experimental distribution mechanism based on
-[ZeroMQ](http://zeromq.org/). It can be enabled by setting
-`oq_distribute=zmq` in the configuration file `openquake.cfg` or by
-setting the environment variable `OQ_DISTRIBUTE=zmq`. The new
-distribution mechanism is not ready for production yet, but it has a
-huge potential for the future. On a single machine the zmq
-distribution has the following advantages, compared to the approach we
-are using now:
+- oq dbserver stop also stops the zmq workers
+- change how the weigths are managed in sampling;
+- hugely optimized the logic tree sampling procedure (India model)
+- restrict rlzs_assoc by setting smlt_path; built it only once; 
+- improved venv/configuration
+- setproctitle in oq-dbserver
 
-1. it requires less memory (no fork)
-2. it allows to run much larger calculations (no more multiprocessing errors)
-3. it is a real queue, i.e. it manages multiple users well.
-
-On a cluster, all of the above advantages apply and in addition we can
-save huge amount of memory now used by rabbitmq. Moreover, the
-engine will become a lot more HPC-friendly once rabbitmq and celery
-are abandoned.
-
-Users interested in these kinds of features should contact us. For the
-moment, development on this front is slow since it is a low priority.
+- oq engine --run archive.zip now works;
+- Python 3 installers
 
 Deprecations
 ------------
 
-The classical_risk calculator can read the hazard curves from an XML
-file or from a CSV file in a custom format. The support for reading
-hazard curves in a CSV format has been deprecated since the format 
-may be removed (we could read from an .hdf5 file instead).
+Deprecate the .geojson exporters 
+Removed deprecated scenario_damage outputs 'dmg_by_tag', 'dmg_total',
+'losses_by_tag', 'losses_total'
 
-The following exporters have been deprecated: `hcurves-rlzs`, `agg_loss_table`,
-`losses_total`, `dmg_by_tag`, `dmg_total`, `losses_by_tag`,
-`losses_by_tag-rlzs`, `asset_loss_table`.
+losses_by_tag, losses_total in scenario_risk too and ebr too
 
+Removed obsolete parameter loss_curve_resolution 
 
 Other
 -----
