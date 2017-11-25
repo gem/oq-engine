@@ -545,8 +545,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         each coming from ``epsilons`` distribution bins.
 
         Other parameters are the same as for :meth:`get_poes`, with
-        differences that ``iml`` is only one single intensity level
-        and ``truncation_level`` is required to be positive.
+        differences that ``truncation_level`` is required to be positive.
 
         :returns:
             Contribution to probability of exceedance of ``iml`` coming
