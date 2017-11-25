@@ -61,7 +61,7 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
         a dictionary of probability arrays, with composite key
         (sid, rlz.id, poe, imt, iml, trti).
     """
-    result = {}  # sid, rlz.id, poe, imt, iml -> array
+    result = {'trti': trti, 'num_ruptures': 0}
     bin_data = disagg.collect_bin_data(
         sources, src_filter.sitecol, cmaker, iml4,
         oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
@@ -69,9 +69,10 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
         for sid in src_filter.sitecol.sids:
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
                     bin_data, bin_edges[sid], sid, monitor).items():
-                result[sid, rlzi, poe, imt, trti] = matrix
+                result[sid, rlzi, poe, imt] = matrix
         result['cache_info'] = monitor.cache_info
-    return result
+        result['num_ruptures'] = len(bin_data.mags)
+    return result  # sid, rlz.id, poe, imt, iml -> array
 
 
 def agg_probs(*probs):
@@ -122,12 +123,13 @@ producing too small PoEs.'''
         :param acc: dictionary k -> dic accumulating the results
         :param result: dictionary with the result coming from a task
         """
-        with self.monitor('agg_result'):
-            if 'cache_info' in result:
-                self.cache_info += result.pop('cache_info')
-            for key, val in result.items():
-                k, trti = key[:-1], key[-1]
-                acc[k][trti] = agg_probs(acc[k].get(trti, 0), val)
+        # this is fast
+        trti = result.pop('trti')
+        self.num_ruptures[trti] += result.pop('num_ruptures')
+        if 'cache_info' in result:
+            self.cache_info += result.pop('cache_info')
+        for key, val in result.items():
+            acc[key][trti] = agg_probs(acc[key].get(trti, 0), val)
         return acc
 
     def get_curves(self, sid):
@@ -265,6 +267,7 @@ producing too small PoEs.'''
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,
                          oq, mon))
 
+        self.num_ruptures = [0] * len(self.trts)
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
         results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result, AccumDict(accum={}))
@@ -303,6 +306,9 @@ producing too small PoEs.'''
             self.save_disagg_result(
                 sid, edges, matrices, rlzi,
                 self.oqparam.investigation_time, imt, poe)
+
+        self.datastore.set_attrs(
+            'disagg', trts=self.trts, num_ruptures=self.num_ruptures)
 
     def save_disagg_result(self, site_id, bin_edges, matrices, rlz_id,
                            investigation_time, imt_str, poe):
