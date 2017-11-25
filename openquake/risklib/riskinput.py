@@ -108,8 +108,8 @@ class CompositeRiskModel(collections.Mapping):
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
             for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
-                    zip(rmdict.items(), retrodict.items()):
-                assert taxonomy == taxonomy_  # same imt and taxonomy
+                    zip(sorted(rmdict.items()), sorted(retrodict.items())):
+                assert taxonomy == taxonomy_  # same taxonomies
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam,
                     vulnerability_functions_orig=vf_orig,
