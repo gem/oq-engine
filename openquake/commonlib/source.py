@@ -805,7 +805,7 @@ class CompositeSourceModel(collections.Sequence):
             for grp_id in src.src_group_ids:
                 self.infos[grp_id, src.source_id] = SourceInfo(src)
 
-    def split_in_blocks(self, maxweight, sources=None):
+    def split_in_blocks(self, maxweight, sources):
         """
         Split a set of sources in blocks of weight up to maxweight; heavy
         sources (i.e. with weight > maxweight) are split.
@@ -814,16 +814,16 @@ class CompositeSourceModel(collections.Sequence):
         :param sources: sources of the same source group
         :yields: blocks of sources of weight around maxweight
         """
-        if sources is None:
-            sources = self.get_sources()
+        sources = [src for src in sources
+                   if self.src_filter.get_close_sites(src) is not None]
         sources.sort(key=weight)
         light = [src for src in sources if src.weight <= maxweight]
         for block in block_splitter(light, maxweight, weight):
             yield block
         heavy = [src for src in sources if src.weight > maxweight]
         for src in heavy:
-            srcs = [src for src in split_source(src)
-                    if self.src_filter.get_close_sites(src) is not None]
+            srcs = [s for s in split_source(src)
+                    if self.src_filter.get_close_sites(s) is not None]
             for block in block_splitter(srcs, maxweight, weight):
                 yield block
 
