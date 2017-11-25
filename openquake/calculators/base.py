@@ -414,11 +414,8 @@ class HazardCalculator(BaseCalculator):
             logging.info('Prefiltering the CompositeSourceModel')
             with self.monitor('prefiltering source model',
                               autoflush=True, measuremem=True):
-                if oq.prefilter:
-                    self.src_filter = SourceFilter(
-                        self.sitecol, oq.maximum_distance)
-                else:  # disable prefiltering
-                    self.src_filter = SourceFilter(self.sitecol, {})
+                # disable prefiltering
+                self.src_filter = SourceFilter(self.sitecol, {})
                 self.csm = csm.filter(self.src_filter)
                 if self.csm.has_dupl_sources:
                     logging.warn('Found duplicated source %s',
