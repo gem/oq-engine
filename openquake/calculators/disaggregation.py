@@ -25,6 +25,7 @@ import operator
 import numpy
 
 from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -308,7 +309,7 @@ producing too small PoEs.'''
                 self.oqparam.investigation_time, imt, poe)
 
         self.datastore.set_attrs(
-            'disagg', trts=self.trts, num_ruptures=self.num_ruptures)
+            'disagg', trts=encode(self.trts), num_ruptures=self.num_ruptures)
 
     def save_disagg_result(self, site_id, bin_edges, matrices, rlz_id,
                            investigation_time, imt_str, poe):
