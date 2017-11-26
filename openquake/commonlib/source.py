@@ -657,7 +657,6 @@ class CompositeSourceModel(collections.Sequence):
         """
         source_models = []
         weight = 0
-        gsims = self.gsim_lt.values
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
@@ -671,7 +670,6 @@ class CompositeSourceModel(collections.Sequence):
                 sg.sources = []
                 for src, sites in src_filter(sources):
                     sg.sources.append(src)
-                    src.num_gsims = len(gsims[src.tectonic_region_type])
                     weight += src.weight
                 src_groups.append(sg)
             newsm = logictree.SourceModel(
