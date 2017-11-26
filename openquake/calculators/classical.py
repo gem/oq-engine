@@ -151,17 +151,11 @@ class PSHACalculator(base.HazardCalculator):
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
-        maxweight = min(source.MAXWEIGHT, self.csm.weight)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         numheavy = len(self.csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
                      maxweight, numheavy, len(tiles))
-        param = dict(
-            truncation_level=oq.truncation_level,
-            imtls=oq.imtls, seed=oq.ses_seed,
-            maximum_distance=oq.maximum_distance,
-            disagg=oq.poes_disagg or oq.iml_disagg,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-
+        param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
