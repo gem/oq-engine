@@ -40,6 +40,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
                'src_group_id', 'num_ruptures', 'seed', 'id']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     nsites = 1  # FIXME: remove this and fix all hazardlib tests
+    num_gsims = 1
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -53,7 +54,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        return self.num_ruptures * self.RUPTURE_WEIGHT * self.nsites
+        return self.num_ruptures * self.RUPTURE_WEIGHT * self.num_gsims
 
     @property
     def src_group_ids(self):
