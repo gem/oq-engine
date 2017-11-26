@@ -40,21 +40,21 @@ weight = operator.attrgetter('weight')
 
 
 source_data_dt = numpy.dtype(
-    [('taskno', U16), ('nsites', U32), ('weight', F32)])
+    [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
 
 def saving_sources_by_task(iterargs, dstore):
     """
-    Yield the iterargs again by populating 'task_info/source_ids'
+    Yield the iterargs again by populating 'task_info/source_data'
     """
     source_ids = []
     data = []
     for i, args in enumerate(iterargs, 1):
         source_ids.append(' ' .join(src.source_id for src in args[0]))
         for src in args[0]:  # collect source data
-            data.append((i, src.nsites, src.weight))
+            data.append((i, src.nsites, src.num_ruptures, src.weight))
         yield args
-    dstore['task_sources'] = numpy.array([encode(s) for s in source_ids])
+    dstore['task_sources'] = encode(source_ids)
     dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
 
 
