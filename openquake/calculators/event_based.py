@@ -262,6 +262,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
+        csm.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         maxweight = csm.get_maxweight(oq.concurrent_tasks)
         numheavy = len(csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
@@ -288,9 +289,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         mutex_groups = list(self.csm.gen_mutex_groups())
         assert not mutex_groups, 'Mutex sources are not implemented!'
         with self.monitor('managing sources', autoflush=True):
-            csm = self.csm.filter(
-                SourceFilter(self.sitecol, self.oqparam.maximum_distance))
-            allargs = self.gen_args(csm, self.monitor('pmap_from_trt'))
+            allargs = self.gen_args(self.csm, self.monitor('pmap_from_trt'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
