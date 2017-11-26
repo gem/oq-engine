@@ -36,7 +36,7 @@ from openquake.commonlib import logictree
 
 
 MINWEIGHT = sourceconverter.MINWEIGHT
-MAXWEIGHT = 4E6  # heuristic, set by M. Simionato
+MAXWEIGHT = 2E6  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
 U16 = numpy.uint16
@@ -814,12 +814,17 @@ class CompositeSourceModel(collections.Sequence):
         :param sources: sources of the same source group
         :yields: blocks of sources of weight around maxweight
         """
+        # filter all given sources
         sources = [src for src in sources
                    if self.src_filter.get_close_sites(src) is not None]
         sources.sort(key=weight)
+
+        # yield light sources in blocks
         light = [src for src in sources if src.weight <= maxweight]
         for block in block_splitter(light, maxweight, weight):
             yield block
+
+        # yield heavy sources in blocks
         heavy = [src for src in sources if src.weight > maxweight]
         for src in heavy:
             srcs = [s for s in split_source(src)
