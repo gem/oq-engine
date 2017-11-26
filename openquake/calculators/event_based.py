@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter, humansize
-from openquake.hazardlib.calc.filters import FarAwayRupture
+from openquake.hazardlib.calc.filters import FarAwayRupture, SourceFilter
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
@@ -262,8 +262,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(self.csm.get_sources('heavy', maxweight))
+        maxweight = csm.get_maxweight(oq.concurrent_tasks)
+        numheavy = len(csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
         param = dict(
             truncation_level=oq.truncation_level,
@@ -279,7 +279,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 csm.add_infos(sg.sources)
                 for block in csm.split_in_blocks(maxweight, sg.sources):
                     block.samples = sm.samples
-                    yield block, self.src_filter, gsims, param, monitor
+                    yield block, csm.src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
@@ -288,7 +288,9 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         mutex_groups = list(self.csm.gen_mutex_groups())
         assert not mutex_groups, 'Mutex sources are not implemented!'
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.csm, self.monitor('pmap_from_trt'))
+            csm = self.csm.filter(
+                SourceFilter(self.sitecol, self.oqparam.maximum_distance))
+            allargs = self.gen_args(csm, self.monitor('pmap_from_trt'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known

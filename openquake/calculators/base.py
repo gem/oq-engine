@@ -411,15 +411,11 @@ class HazardCalculator(BaseCalculator):
                     csm = dstore['composite_source_model']
             else:
                 csm = self.read_csm()
-            logging.info('Prefiltering the CompositeSourceModel')
-            with self.monitor('prefiltering source model',
-                              autoflush=True, measuremem=True):
-                # disable prefiltering
-                self.src_filter = SourceFilter(self.sitecol, {})
-                self.csm = csm.filter(self.src_filter)
-                if self.csm.has_dupl_sources:
-                    logging.warn('Found duplicated source %s',
-                                 self.csm.has_dupl_sources)
+            logging.info('Weighting the CompositeSourceModel')
+            self.csm = csm.filter(SourceFilter(self.sitecol, {}))  # no filter
+            if self.csm.has_dupl_sources:
+                logging.warn('Found duplicated source %s',
+                             self.csm.has_dupl_sources)
             info = self.csm.info
             info.gsim_lt.check_imts(oq.imtls)
             info.tot_weight = self.csm.weight
