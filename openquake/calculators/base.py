@@ -414,7 +414,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Weighting the CompositeSourceModel')
             self.csm = csm.filter(SourceFilter(self.sitecol, {}))  # no filter
             if self.csm.has_dupl_sources:
-                logging.warn('Found duplicated source %s',
+                logging.warn('Found %d duplicated sources',
                              self.csm.has_dupl_sources)
             info = self.csm.info
             info.gsim_lt.check_imts(oq.imtls)
