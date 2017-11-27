@@ -480,12 +480,6 @@ class UcerfSource(object):
         """
         return self.num_ruptures
 
-    def get_min_max_mag(self):
-        """
-        :returns: maximum and minimum magnitudes
-        """
-        return self.mags.min(), self.mags.max()
-
     def get_rupture_sites(self, ridx, src_filter, mag):
         """
         Determines if a rupture is likely to be inside the integration distance
@@ -549,21 +543,17 @@ class UcerfSource(object):
         r_sites = self.get_rupture_sites(ridx, src_filter, mag)
         if r_sites is None:
             return None
-        for trace, rup_plane in self.gen_trace_planes(ridx):
-            # Build simple fault surface
-            for jloc in range(0, rup_plane.shape[2]):
-                top_left = Point(rup_plane[0, 0, jloc],
-                                 rup_plane[0, 1, jloc],
-                                 rup_plane[0, 2, jloc])
-                top_right = Point(rup_plane[1, 0, jloc],
-                                  rup_plane[1, 1, jloc],
-                                  rup_plane[1, 2, jloc])
-                bottom_right = Point(rup_plane[2, 0, jloc],
-                                     rup_plane[2, 1, jloc],
-                                     rup_plane[2, 2, jloc])
-                bottom_left = Point(rup_plane[3, 0, jloc],
-                                    rup_plane[3, 1, jloc],
-                                    rup_plane[3, 2, jloc])
+        for trace, plane in self.gen_trace_planes(ridx):
+            # build simple fault surface
+            for jloc in range(0, plane.shape[2]):
+                top_left = Point(
+                    plane[0, 0, jloc], plane[0, 1, jloc], plane[0, 2, jloc])
+                top_right = Point(
+                    plane[1, 0, jloc], plane[1, 1, jloc], plane[1, 2, jloc])
+                bottom_right = Point(
+                    plane[2, 0, jloc], plane[2, 1, jloc], plane[2, 2, jloc])
+                bottom_left = Point(
+                    plane[3, 0, jloc], plane[3, 1, jloc], plane[3, 2, jloc])
                 try:
                     surface_set.append(
                         ImperfectPlanarSurface.from_corner_points(
