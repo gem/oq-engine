@@ -60,6 +60,17 @@ def saving_sources_by_task(iterargs, dstore):
 
 def classical(sources, src_filter, gsims, param, monitor):
     """
+    :param sources:
+        a list of independent sources or a SourceGroup with mutex sources
+    :param src_filter:
+        a SourceFilter instance
+    :param gsims:
+        a list of GSIMs
+    :param param:
+        a dictionary with parameters imtls and truncation_level
+    :param monitor:
+        a Monitor instance
+    :returns: a dictionary grp_id -> ProbabilityMap
     """
     if getattr(sources, 'src_interdep', None) == 'mutex':
         return pmap_from_grp(sources, src_filter, gsims, param, monitor)
