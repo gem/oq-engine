@@ -349,7 +349,7 @@ def sample_background_model(
     return background_ruptures, background_n_occ
 
 
-class UCERFControl(object):
+class UCERFSource(object):
     """
     :param source_file:
         Path to an existing HDF5 file containing the UCERF model
@@ -382,6 +382,8 @@ class UCERFControl(object):
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
+    tectonic_region_type = DEFAULT_TRT
+
     def __init__(
             self, source_file, id, investigation_time, start_date, min_mag,
             npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
@@ -403,6 +405,28 @@ class UCERFControl(object):
         self.mesh_spacing = mesh_spacing
         self.tectonic_region_type = trt
 
+    def new(self, grp_id, branch_id):
+        """
+        :param grp_id: ordinal of the source group
+        :param branch_name: name of the UCERF branch
+        :param branch_id: string associated to the branch
+        :returns: a new UCERFSource associated to the branch_id
+        """
+        new = copy.copy(self)
+        new.src_group_id = grp_id
+        new.source_id = branch_id
+        new.idx_set = build_idx_set(branch_id, self.start_date)
+        with h5py.File(self.source_file, "r") as hdf5:
+            # read from datasets like
+            # FM0_0/MEANFS/MEANMSR/Magnitude
+            # FM0_0/MEANFS/MEANMSR/Rates/MeanRates
+            # FM0_0/MEANFS/Rake
+            new.mags = hdf5[new.idx_set["mag"]].value
+            new.rate = hdf5[new.idx_set["rate"]].value
+            new.rake = hdf5[new.idx_set["rake"]].value
+            new.num_ruptures = len(new.mags)
+        return new
+
     def get_min_max_mag(self):
         """
         Called when updating the SourceGroup
@@ -415,41 +439,9 @@ class UCERFControl(object):
         """
         return PoissonTOM(self.inv_time)
 
-
-class UcerfSource(object):
-    """
-    Source-like class for use in UCERF calculations. It is build on top
-    of an UCERFControl object which wraps the input file in HDF5 format.
-    Each source has attributes `.source_id` (the name of the branch),
-    `.src_group_id` (the number of the group i.e. of the source model),
-    `.num_ruptures` (the number of ruptures in that branch) and `.idx_set`,
-    a dictionary of HDF5 keys determined by the `branch_id` string.
-
-    :param control: a :class:`UCERFControl` instance
-    :param grp_id: ordinal of the source group
-    :param branch_name: name of the UCERF branch
-    :param branch_id: string associated to the branch
-    """
-    tectonic_region_type = DEFAULT_TRT
-
-    def __init__(self, control, grp_id, branch_name, branch_id):
-        self.control = control
-        self.src_group_id = grp_id
-        self.source_id = branch_id
-        self.idx_set = build_idx_set(branch_id, control.start_date)
-        with h5py.File(self.control.source_file, "r") as hdf5:
-            # read from datasets like
-            # FM0_0/MEANFS/MEANMSR/Magnitude
-            # FM0_0/MEANFS/MEANMSR/Rates/MeanRates
-            # FM0_0/MEANFS/Rake
-            self.mags = hdf5[self.idx_set["mag"]].value
-            self.rate = hdf5[self.idx_set["rate"]].value
-            self.rake = hdf5[self.idx_set["rake"]].value
-            self.num_ruptures = len(self.mags)
-
     def get_ridx(self, iloc):
         """List of rupture indices for the given iloc"""
-        with h5py.File(self.control.source_file, "r") as hdf5:
+        with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["geol"] + "/RuptureIndex"][iloc]
 
     def get_centroids(self, ridx):
@@ -457,7 +449,7 @@ class UcerfSource(object):
         :returns: array of centroids for the given rupture index
         """
         centroids = []
-        with h5py.File(self.control.source_file, "r") as hdf5:
+        with h5py.File(self.source_file, "r") as hdf5:
             for idx in ridx:
                 trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
                 centroids.append(hdf5[trace + "/Centroids"].value)
@@ -467,7 +459,7 @@ class UcerfSource(object):
         """
         :yields: trace and rupture planes for the given rupture index
         """
-        with h5py.File(self.control.source_file, "r") as hdf5:
+        with h5py.File(self.source_file, "r") as hdf5:
             for idx in ridx:
                 trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
                 plane = hdf5[trace + "/RupturePlanes"][:].astype("float64")
@@ -508,21 +500,20 @@ class UcerfSource(object):
         step - this is done here rather than in the sampling of the ruptures
         themselves
         """
-        ctl = self.control
         branch_key = self.idx_set["grid_key"]
         idist = src_filter.integration_distance(DEFAULT_TRT)
         lons, lats = src_filter.sitecol.lons, src_filter.sitecol.lats
-        with h5py.File(ctl.source_file, 'r') as hdf5:
+        with h5py.File(self.source_file, 'r') as hdf5:
             bg_locations = hdf5["Grid/Locations"].value
             n_locations = bg_locations.shape[0]
             distances = min_idx_dst(lons, lats, numpy.zeros_like(lons),
                                     bg_locations[:, 0], bg_locations[:, 1],
                                     numpy.zeros(n_locations))[1]
             # Add buffer equal to half of length of median area from Mmax
-            mmax_areas = ctl.msr.get_median_area(
+            mmax_areas = self.msr.get_median_area(
                 hdf5["/".join(["Grid", branch_key, "MMax"])].value, 0.0)
             # for instance hdf5['Grid/FM0_0_MEANFS_MEANMSR/MMax']
-            mmax_lengths = numpy.sqrt(mmax_areas / ctl.aspect)
+            mmax_lengths = numpy.sqrt(mmax_areas / self.aspect)
             ok = distances <= (0.5 * mmax_lengths + idist)
             # get list of indices from array of booleans
             return numpy.where(ok)[0].tolist()
@@ -534,9 +525,8 @@ class UcerfSource(object):
         :param src_filter:
             Sites for consideration and maximum distance
         """
-        ctl = self.control
-        mesh_spacing = ctl.mesh_spacing
-        trt = ctl.tectonic_region_type
+        mesh_spacing = self.mesh_spacing
+        trt = self.tectonic_region_type
         ridx = self.get_ridx(iloc)
         mag = self.mags[iloc]
         surface_set = []
@@ -567,7 +557,7 @@ class UcerfSource(object):
             mag, self.rake[iloc], trt,
             surface_set[len(surface_set) // 2].get_middle_point(),
             MultiSurface(surface_set), CharacteristicFaultSource,
-            self.rate[iloc], ctl.tom)
+            self.rate[iloc], self.tom)
 
         return rupture
 
@@ -576,9 +566,9 @@ class UcerfSource(object):
         Generates the event set corresponding to a particular branch
         """
         # get rates from file
-        ctl = self.control
-        with h5py.File(ctl.source_file, 'r') as hdf5:
-            occurrences = ctl.tom.sample_number_of_occurrences(self.rate, seed)
+        with h5py.File(self.source_file, 'r') as hdf5:
+            occurrences = self.tom.sample_number_of_occurrences(
+                self.rate, seed)
             indices = numpy.where(occurrences)[0]
             logging.debug(
                 'Considering "%s", %d ruptures', self.source_id, len(indices))
@@ -594,9 +584,9 @@ class UcerfSource(object):
 
             # sample background sources
             background_ruptures, background_n_occ = sample_background_model(
-                hdf5, self.idx_set["grid_key"], ctl.tom, seed, background_sids,
-                ctl.min_mag, ctl.npd, ctl.hdd, ctl.usd, ctl.lsd, ctl.msr,
-                ctl.aspect, ctl.tectonic_region_type)
+                hdf5, self.idx_set["grid_key"], self.tom, seed,
+                background_sids, self.min_mag, self.npd, self.hdd, self.usd,
+                self.lsd, self.msr, self.aspect, self.tectonic_region_type)
             ruptures.extend(background_ruptures)
             rupture_occ.extend(background_n_occ)
         return ruptures, rupture_occ
@@ -622,9 +612,8 @@ class UcerfSource(object):
         :param src_filter:
             SourceFilter instance
         """
-        ctl = self.control
         background_sids = self.get_background_sids(src_filter)
-        with h5py.File(ctl.source_file, "r") as hdf5:
+        with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             mags = hdf5[grid_loc + "/Magnitude"].value
             mmax = hdf5[grid_loc + "/MMax"][background_sids]
@@ -636,17 +625,18 @@ class UcerfSource(object):
                 src_name = "|".join([self.idx_set["total_key"], str(bg_idx)])
                 # Get MFD
                 mag_idx = numpy.logical_and(
-                    mags >= ctl.min_mag, mags < mmax[i])
+                    mags >= self.min_mag, mags < mmax[i])
                 src_mags = mags[mag_idx]
                 src_rates = rates[i, :]
                 src_mfd = EvenlyDiscretizedMFD(
                     src_mags[0], src_mags[1] - src_mags[0],
                     src_rates[mag_idx].tolist())
                 ps = PointSource(
-                    src_id, src_name, ctl.tectonic_region_type, src_mfd,
-                    ctl.mesh_spacing, ctl.msr, ctl.aspect, ctl.tom, ctl.usd,
-                    ctl.lsd, Point(locations[i, 0], locations[i, 1]),
-                    ctl.npd, ctl.hdd)
+                    src_id, src_name, self.tectonic_region_type, src_mfd,
+                    self.mesh_spacing, self.msr, self.aspect, self.tom,
+                    self.usd, self.lsd,
+                    Point(locations[i, 0], locations[i, 1]),
+                    self.npd, self.hdd)
                 ps.src_group_id = self.src_group_id
                 sources.append(ps)
         return sources
@@ -747,7 +737,7 @@ def get_composite_source_model(oq):
         sg = copy.copy(src_group)
         sg.id = sm.ordinal
         sm.src_groups = [sg]
-        sg.sources = [UcerfSource(sg[0], sm.ordinal, sm.path[0], sm.name)]
+        sg.sources = [sg[0].new(sm.ordinal, sm.name)]
         source_models.append(sm)
     return source.CompositeSourceModel(gsim_lt, smlt, source_models)
 
