@@ -83,13 +83,12 @@ def collect_bin_data(sources, sitecol, cmaker, iml4,
     # NB: instantiating truncnorm is slow and calls the infamous "doccer"
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
-    mon = monitor('disaggregate_pne', measuremem=False)
     acc = AccumDict(accum=[])
     for source in sources:
         ruptures = source.iter_ruptures()
         try:
             acc += cmaker.disaggregate(
-                sitecol, ruptures, iml4, truncnorm, epsilons, mon)
+                sitecol, ruptures, iml4, truncnorm, epsilons, monitor)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
