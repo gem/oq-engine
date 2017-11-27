@@ -268,7 +268,7 @@ class ContextMaker(object):
         return (sctx, rctx, dctx)
 
     def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
-                     disagg_pne=Monitor()):
+                     monitor=Monitor()):
         """
         Disaggregate (separate) PoE of `imldict` in different contributions
         each coming from `n_epsilons` distribution bins.
@@ -278,13 +278,17 @@ class ContextMaker(object):
         :param iml4: a 4d array of IMLs of shape (N, R, M, P)
         :param truncnorm: an instance of scipy.stats.truncnorm
         :param epsilons: the epsilon bins
-        :param disagg_pne: a monitor of the disaggregation time
+        :param monitor: a Monitor instance
         :returns: an AccumDict
         """
         sitemesh = sitecol.mesh
         acc = AccumDict(accum=[])
+        ctx_mon = monitor('disagg_contexts', measuremem=False)
+        pne_mon = monitor('disaggregate_pne', measuremem=False)
         for rupture in ruptures:
-            sctx, rctx, dctx = self.make_contexts(sitecol, rupture, filter=0)
+            with ctx_mon:
+                sctx, rctx, dctx = self.make_contexts(
+                    sitecol, rupture, filter=False)
             if (self.maximum_distance and
                 dctx.rjb.min() > self.maximum_distance(
                     rupture.tectonic_region_type, rupture.mag)):
@@ -297,7 +301,7 @@ class ContextMaker(object):
                         try:
                             pne = cache[gsim, imt, iml]
                         except KeyError:
-                            with disagg_pne:
+                            with pne_mon:
                                 pne = gsim.disaggregate_pne(
                                     rupture, sctx, rctx, dctx, imt, iml,
                                     truncnorm, epsilons)
