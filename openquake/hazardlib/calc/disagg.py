@@ -299,13 +299,13 @@ def disaggregation(
         return None, None
 
     min_mag = min(bd.mags.min() for bd in bdata.values())
-    max_mag = min(bd.mags.max() for bd in bdata.values())
+    max_mag = max(bd.mags.max() for bd in bdata.values())
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(min_mag / mag_bin_width)),
         int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
     min_dist = min(bd.dists.min() for bd in bdata.values())
-    max_dist = min(bd.dists.max() for bd in bdata.values())
+    max_dist = max(bd.dists.max() for bd in bdata.values())
     dist_bins = dist_bin_width * numpy.arange(
         int(numpy.floor(min_dist / dist_bin_width)),
         int(numpy.ceil(max_dist / dist_bin_width) + 1))
