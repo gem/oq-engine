@@ -124,66 +124,67 @@ def lon_lat_bins(bb, coord_bin_width):
 def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
-    :param bin_edges: bin edges
+    :param bin_edges: bin edges for each site
     :param sid: site index
     :param mon: a Monitor instance
     :returns: a dictionary key -> matrix|pmf for each key in bdata
     """
-    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
+    with mon('build_disagg_matrix'):
+        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges[sid]
 
-    dim1 = len(mag_bins) - 1
-    dim2 = len(dist_bins) - 1
-    dim3 = len(lon_bins) - 1
-    dim4 = len(lat_bins) - 1
-    shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1)
+        dim1 = len(mag_bins) - 1
+        dim2 = len(dist_bins) - 1
+        dim3 = len(lon_bins) - 1
+        dim4 = len(lat_bins) - 1
+        shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1)
 
-    # find bin indexes of rupture attributes; bins are assumed closed
-    # on the lower bound, and open on the upper bound, that is [ )
-    # longitude values need an ad-hoc method to take into account
-    # the 'international date line' issue
-    # the 'minus 1' is needed because the digitize method returns the
-    # index of the upper bound of the bin
-    mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
-    dists_idx = numpy.digitize(bdata.dists[:, sid], dist_bins) - 1
-    lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins)
-    lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins) - 1
+        # find bin indexes of rupture attributes; bins are assumed closed
+        # on the lower bound, and open on the upper bound, that is [ )
+        # longitude values need an ad-hoc method to take into account
+        # the 'international date line' issue
+        # the 'minus 1' is needed because the digitize method returns the
+        # index of the upper bound of the bin
+        mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
+        dists_idx = numpy.digitize(bdata.dists[:, sid], dist_bins) - 1
+        lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins)
+        lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins) - 1
 
-    # because of the way numpy.digitize works, values equal to the last bin
-    # edge are associated to an index equal to len(bins) which is not a
-    # valid index for the disaggregation matrix. Such values are assumed
-    # to fall in the last bin
-    mags_idx[mags_idx == dim1] = dim1 - 1
-    dists_idx[dists_idx == dim2] = dim2 - 1
-    lons_idx[lons_idx == dim3] = dim3 - 1
-    lats_idx[lats_idx == dim4] = dim4 - 1
+        # because of the way numpy.digitize works, values equal to the last bin
+        # edge are associated to an index equal to len(bins) which is not a
+        # valid index for the disaggregation matrix. Such values are assumed
+        # to fall in the last bin
+        mags_idx[mags_idx == dim1] = dim1 - 1
+        dists_idx[dists_idx == dim2] = dim2 - 1
+        lons_idx[lons_idx == dim3] = dim3 - 1
+        lats_idx[lats_idx == dim4] = dim4 - 1
 
-    out = {}
-    cache = {}
-    cache_hit = 0
-    num_zeros = 0
-    for k, allpnes in bdata.items():
-        pnes = allpnes[:, sid, :]  # shape (U, N, E)
-        cache_key = pnes.sum()
-        if cache_key == pnes.size:  # all pnes are 1
-            num_zeros += 1
-            continue  # zero matrices are not transferred
-        try:
-            matrix = cache[cache_key]
-            cache_hit += 1
-        except KeyError:
-            mat = numpy.ones(shape)
-            for i_mag, i_dist, i_lon, i_lat, pne in zip(
-                    mags_idx, dists_idx, lons_idx, lats_idx, pnes):
-                mat[i_mag, i_dist, i_lon, i_lat] *= pne
-            matrix = 1. - mat
-            cache[cache_key] = matrix
-        out[k] = matrix
+        out = {}
+        cache = {}
+        cache_hit = 0
+        num_zeros = 0
+        for k, allpnes in bdata.items():
+            pnes = allpnes[:, sid, :]  # shape (U, N, E)
+            cache_key = pnes.sum()
+            if cache_key == pnes.size:  # all pnes are 1
+                num_zeros += 1
+                continue  # zero matrices are not transferred
+            try:
+                matrix = cache[cache_key]
+                cache_hit += 1
+            except KeyError:
+                mat = numpy.ones(shape)
+                for i_mag, i_dist, i_lon, i_lat, pne in zip(
+                        mags_idx, dists_idx, lons_idx, lats_idx, pnes):
+                    mat[i_mag, i_dist, i_lon, i_lat] *= pne
+                matrix = 1. - mat
+                cache[cache_key] = matrix
+            out[k] = matrix
 
-    # operations, hits, num_zeros
-    if hasattr(mon, 'cache_info'):
-        mon.cache_info += numpy.array([len(bdata), cache_hit, num_zeros])
-    else:
-        mon.cache_info = numpy.array([len(bdata), cache_hit, num_zeros])
+        # operations, hits, num_zeros
+        if hasattr(mon, 'cache_info'):
+            mon.cache_info += numpy.array([len(bdata), cache_hit, num_zeros])
+        else:
+            mon.cache_info = numpy.array([len(bdata), cache_hit, num_zeros])
     return out
 
 
@@ -324,7 +325,7 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        [mat] = build_disagg_matrix(bdata[trt], bin_edges, sid=0).values()
+        [mat] = build_disagg_matrix(bdata[trt], [bin_edges], sid=0).values()
         matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
