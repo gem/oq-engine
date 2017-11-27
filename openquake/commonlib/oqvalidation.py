@@ -210,9 +210,9 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile('poes_disagg or iml_disagg must be set '
                                   'in %(job_ini)s' % self.inputs)
             elif self.poes_disagg and self.iml_disagg:
-                raise ValueError(
-                    'iml_disagg and poes_disagg cannot be set '
-                    'at the same time in %(job_ini)s' % self.inputs)
+                raise InvalidFile(
+                    '%s: iml_disagg and poes_disagg cannot be set '
+                    'at the same time' % job_ini)
             for k in ('mag_bin_width', 'distance_bin_width',
                       'coordinate_bin_width', 'num_epsilon_bins'):
                 if k not in vars(self):
