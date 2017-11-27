@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * `iml_disagg` and `poes_disagg` cannot coexists in the job.ini file
   * Added a check on `conditional_loss_poes` in the event_based_risk calculator:
     now it requires `asset_loss_table` to be set
 
