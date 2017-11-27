@@ -366,6 +366,21 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn("poes_disagg or iml_disagg must be set",
                       str(ctx.exception))
 
+        with self.assertRaises(InvalidFile) as ctx:
+            OqParam(
+                calculation_mode='disaggregation',
+                inputs=fakeinputs,
+                gsim='BooreAtkinson2008',
+                reference_vs30_value='200',
+                sites='0.1 0.2',
+                poes='0.2',
+                maximum_distance='400',
+                iml_disagg="{'PGV': [0.1, 0.2, 0.3]}",
+                poes_disagg="0.1",
+                uniform_hazard_spectra='1')
+        self.assertIn("iml_disagg and poes_disagg cannot be set at the "
+                      "same time", str(ctx.exception))
+
     def test_event_based_risk(self):
         with self.assertRaises(InvalidFile) as ctx:
             OqParam(
