@@ -60,7 +60,7 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
         monitor of the currently running job
     :returns:
         a dictionary of probability arrays, with composite key
-        (sid, rlz.id, poe, imt, iml, trti).
+        (sid, rlzi, poe, imt, iml, trti).
     """
     result = {'trti': trti, 'num_ruptures': 0}
     bin_data = disagg.collect_bin_data(
@@ -69,11 +69,11 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
     if bin_data:  # dictionary poe, imt, rlzi -> pne
         for sid in src_filter.sitecol.sids:
             for (poe, imt, rlzi), matrix in disagg.build_disagg_matrix(
-                    bin_data, bin_edges[sid], sid, monitor).items():
+                    bin_data, bin_edges, sid, monitor).items():
                 result[sid, rlzi, poe, imt] = matrix
         result['cache_info'] = monitor.cache_info
         result['num_ruptures'] = len(bin_data.mags)
-    return result  # sid, rlz.id, poe, imt, iml -> array
+    return result  # sid, rlzi, poe, imt, iml -> array
 
 
 def agg_probs(*probs):
@@ -118,7 +118,7 @@ producing too small PoEs.'''
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results,
-        a dictionary with key (sid, rlz.id, poe, imt, trti)
+        a dictionary with key (sid, rlzi, poe, imt, trti)
         and values which are probability arrays.
 
         :param acc: dictionary k -> dic accumulating the results
@@ -127,8 +127,7 @@ producing too small PoEs.'''
         # this is fast
         trti = result.pop('trti')
         self.num_ruptures[trti] += result.pop('num_ruptures')
-        if 'cache_info' in result:
-            self.cache_info += result.pop('cache_info')
+        self.cache_info += result.pop('cache_info', 0)
         for key, val in result.items():
             acc[key][trti] = agg_probs(acc[key].get(trti, 0), val)
         return acc
@@ -247,9 +246,9 @@ producing too small PoEs.'''
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
             R, oq.imtls, oq.iml_disagg, oq.poes_disagg or (None,), curves)
-        self.imldict = {}
+        self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
-            for r, rlz in enumerate(self.rlzs_assoc.realizations):
+            for r in range(R):
                 for p, poe in enumerate(oq.poes_disagg or [None]):
                     for m, imt in enumerate(oq.imtls):
                         self.imldict[s, r, poe, imt] = iml4[s, r, m, p]
