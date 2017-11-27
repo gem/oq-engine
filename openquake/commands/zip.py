@@ -27,7 +27,8 @@ from openquake.commonlib import readinput
 @sap.Script
 def zip(job_ini, archive_zip):
     """
-    Show the content of a datastore (by default the last one).
+    Zip the given job.ini file into the given archive, together with all
+    related files.
     """
     if not os.path.exists(job_ini):
         sys.exit('%s does not exist' % job_ini)
@@ -37,7 +38,18 @@ def zip(job_ini, archive_zip):
         sys.exit('%s exists already' % archive_zip)
     logging.basicConfig(level=logging.INFO)
     oq = readinput.get_oqparam(job_ini)
-    files = []
+
+    # collect .hdf5 tables for the GSIMs, if any
+    gsim_lt = readinput.get_gsim_lt(oq)
+    gmpetables = set()
+    for gsims in gsim_lt.values.values():
+        for gsim in gsims:
+            table = getattr(gsim, 'GMPE_TABLE', None)
+            if table:
+                gmpetables.add(table)
+
+    # collect all other files
+    files = list(gmpetables)
     for key in oq.inputs:
         fname = oq.inputs[key]
         if isinstance(fname, list):
