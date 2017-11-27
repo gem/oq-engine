@@ -170,7 +170,8 @@ class PSHACalculator(base.HazardCalculator):
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
-            self.csm.src_filter = SourceFilter(tile, oq.maximum_distance)
+            if tile_i > 1 or not self.csm.src_filter.integration_distance:
+                self.csm.src_filter = SourceFilter(tile, oq.maximum_distance)
             for sg in self.csm.src_groups:
                 if sg.src_interdep == 'mutex':
                     gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)

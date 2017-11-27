@@ -411,8 +411,15 @@ class HazardCalculator(BaseCalculator):
                     csm = dstore['composite_source_model']
             else:
                 csm = self.read_csm()
-            logging.info('Weighting the CompositeSourceModel')
-            self.csm = csm.filter(SourceFilter(self.sitecol, {}))  # no filter
+            if len(self.sitecol) <= oq.sites_per_tile or self.is_stochastic:
+                # prefilter if single tile or calculator is stochastic
+                logging.info('Prefiltering the CompositeSourceModel')
+                sf = SourceFilter(self.sitecol, oq.maximum_distance)
+            else:
+                # prefiltering will be done later on
+                logging.info('Weighting the CompositeSourceModel')
+                sf = SourceFilter(self.sitecol, {})  # no filter
+            self.csm = csm.filter(sf)
             if self.csm.has_dupl_sources:
                 logging.warn('Found %d duplicated sources',
                              self.csm.has_dupl_sources)
