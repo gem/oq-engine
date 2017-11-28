@@ -157,6 +157,7 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
+        opt = self.oqparam.optimize_same_id_sources
         num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
@@ -174,8 +175,8 @@ class PSHACalculator(base.HazardCalculator):
             numheavy = len(csm.get_sources('heavy', maxweight))
             logging.info('Using maxweight=%d, numheavy=%d, tile=%d of %d',
                          maxweight, numheavy, tile_i, len(tiles))
-            if csm.has_dupl_sources:
-                logging.warn('Found %d duplicated sources',
+            if csm.has_dupl_sources and not opt:
+                logging.warn('Found %d duplicated sources, use oq info',
                              csm.has_dupl_sources)
             for sg in csm.src_groups:
                 if sg.src_interdep == 'mutex':
@@ -184,7 +185,6 @@ class PSHACalculator(base.HazardCalculator):
                     yield sg, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(sg.sources)
-            opt = self.oqparam.optimize_same_id_sources
             # NB: csm.get_sources_by_trt discards the mutex sources
             for trt, sources in self.csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
