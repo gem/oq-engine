@@ -408,24 +408,12 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Reusing composite source model of calc #%d',
                              oq.hazard_calculation_id)
                 with datastore.read(oq.hazard_calculation_id) as dstore:
-                    csm = dstore['composite_source_model']
+                    self.csm = dstore['composite_source_model']
             else:
-                csm = self.read_csm()
-            if len(self.sitecol) <= oq.sites_per_tile or self.is_stochastic:
-                # prefilter if single tile or calculator is stochastic
-                logging.info('Prefiltering the CompositeSourceModel')
-                sf = SourceFilter(self.sitecol, oq.maximum_distance)
-            else:
-                # prefiltering will be done later on
-                logging.info('Weighting the CompositeSourceModel')
-                sf = SourceFilter(self.sitecol, {})  # no filter
-            self.csm = csm.filter(sf)
-            if self.csm.has_dupl_sources:
-                logging.warn('Found %d duplicated sources',
-                             self.csm.has_dupl_sources)
+                self.csm = self.read_csm()
             info = self.csm.info
             info.gsim_lt.check_imts(oq.imtls)
-            info.tot_weight = self.csm.weight
+            info.tot_weight = self.csm.weight  # not correct yet
             self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
         self.init()
