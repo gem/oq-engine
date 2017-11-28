@@ -163,7 +163,10 @@ class PSHACalculator(base.HazardCalculator):
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
-        ctasks = math.ceil(oq.concurrent_tasks / num_tiles)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        numheavy = len(self.csm.get_sources('heavy', maxweight))
+        logging.info('Using maxweight=%d, numheavy=%d, tiles=%d',
+                     maxweight, numheavy, len(tiles))
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
@@ -171,10 +174,6 @@ class PSHACalculator(base.HazardCalculator):
             with self.monitor('prefiltering'):
                 src_filter = SourceFilter(tile, oq.maximum_distance)
                 csm = self.csm.filter(src_filter)
-            maxweight = csm.get_maxweight(ctasks)
-            numheavy = len(csm.get_sources('heavy', maxweight))
-            logging.info('Using maxweight=%d, numheavy=%d, tile=%d of %d',
-                         maxweight, numheavy, tile_i, len(tiles))
             if csm.has_dupl_sources and not opt:
                 logging.warn('Found %d duplicated sources, use oq info',
                              csm.has_dupl_sources)
