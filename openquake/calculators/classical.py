@@ -162,21 +162,24 @@ class PSHACalculator(base.HazardCalculator):
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(self.csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
-                     maxweight, numheavy, len(tiles))
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
-            if tile_i > 1 or not self.csm.src_filter.integration_distance:
-                self.csm.src_filter = SourceFilter(tile, oq.maximum_distance)
-            for sg in self.csm.src_groups:
+            src_filter = SourceFilter(tile, oq.maximum_distance)
+            csm = self.csm.filter(src_filter)
+            maxweight = csm.get_maxweight(oq.concurrent_tasks)
+            numheavy = len(csm.get_sources('heavy', maxweight))
+            logging.info('Using maxweight=%d, numheavy=%d, tile=%d of %d',
+                         maxweight, numheavy, tile_i, len(tiles))
+            if csm.has_dupl_sources:
+                logging.warn('Found %d duplicated sources',
+                             csm.has_dupl_sources)
+            for sg in csm.src_groups:
                 if sg.src_interdep == 'mutex':
                     gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                     self.csm.add_infos(sg.sources)  # update self.csm.infos
-                    yield sg, self.csm.src_filter, gsims, param, monitor
+                    yield sg, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(sg.sources)
             opt = self.oqparam.optimize_same_id_sources
@@ -184,13 +187,11 @@ class PSHACalculator(base.HazardCalculator):
             for trt, sources in self.csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
                 self.csm.add_infos(sources)  # update with unsplit sources
-                for block in self.csm.split_in_blocks(
-                        maxweight / len(gsims), sources):
-                    yield block, self.csm.src_filter, gsims, param, monitor
+                for block in csm.split_in_blocks(maxweight, sources):
+                    yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
-            logging.info('Sent %d sources in %d tasks [tile %d]',
-                         num_sources, num_tasks, tile_i)
+            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
 
     def post_execute(self, pmap_by_grp_id):

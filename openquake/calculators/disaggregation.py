@@ -201,20 +201,21 @@ producing too small PoEs.'''
         """
         oq = self.oqparam
         tl = oq.truncation_level
-        src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        sf = SourceFilter(self.sitecol, oq.maximum_distance, use_rtree=False)
+        csm = self.csm.filter(sf)
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
 
         # build trt_edges
-        trts = tuple(sorted(set(sg.trt for smodel in self.csm.source_models
+        trts = tuple(sorted(set(sg.trt for smodel in csm.source_models
                                 for sg in smodel.src_groups)))
         trt_num = {trt: i for i, trt in enumerate(trts)}
         self.trts = trts
 
         # build mag_edges
-        min_mag = min(sg.min_mag for smodel in self.csm.source_models
+        min_mag = min(sg.min_mag for smodel in csm.source_models
                       for sg in smodel.src_groups)
-        max_mag = max(sg.max_mag for smodel in self.csm.source_models
+        max_mag = max(sg.max_mag for smodel in csm.source_models
                       for sg in smodel.src_groups)
         mag_edges = oq.mag_bin_width * numpy.arange(
             int(numpy.floor(min_mag / oq.mag_bin_width)),
@@ -230,7 +231,7 @@ producing too small PoEs.'''
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         # build lon_edges, lat_edges per sid
-        bbs = src_filter.get_bounding_boxes(mag=max_mag)
+        bbs = sf.get_bounding_boxes(mag=max_mag)
         for sid, bb in zip(self.sitecol.sids, bbs):
             lon_edges, lat_edges = disagg.lon_lat_bins(
                 bb, oq.coordinate_bin_width)
@@ -246,23 +247,22 @@ producing too small PoEs.'''
 
         # build all_args
         all_args = []
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        maxweight = csm.get_maxweight(oq.concurrent_tasks)
         mon = self.monitor('disaggregation')
-        for smodel in self.csm.source_models:
+        for smodel in csm.source_models:
             sm_id = smodel.ordinal
             for trt, groups in groupby(
                     smodel.src_groups, operator.attrgetter('trt')).items():
                 sources = sum([grp.sources for grp in groups], [])
                 trti = trt_num[trt]
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
-                cmaker = ContextMaker(
-                    rlzs_by_gsim, src_filter.integration_distance)
+                cmaker = ContextMaker(rlzs_by_gsim, sf.integration_distance)
                 imls = [disagg.make_imldict(
                     rlzs_by_gsim, oq.imtls, oq.iml_disagg, oq.poes_disagg,
                     curve) for curve in curves]
-                for block in self.csm.split_in_blocks(maxweight, sources):
+                for block in csm.split_in_blocks(maxweight, sources):
                     all_args.append(
-                        (src_filter, block, cmaker, imls, trti, self.bin_edges,
+                        (sf, block, cmaker, imls, trti, self.bin_edges,
                          oq, mon))
 
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
