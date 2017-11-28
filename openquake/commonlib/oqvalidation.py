@@ -229,6 +229,11 @@ class OqParam(valid.ParamSet):
                 and self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
+        elif (self.calculation_mode == 'event_based_risk'
+              and self.conditional_loss_poes and not self.asset_loss_table):
+            raise ValueError(
+                'conditional_loss_poes is set, but the loss maps cannot '
+                'be generated unless you set asset_loss_table=true')
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
