@@ -172,6 +172,7 @@ class PSHACalculator(base.HazardCalculator):
             num_tasks = 0
             num_sources = 0
             with self.monitor('prefiltering'):
+                logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
                 src_filter = SourceFilter(tile, oq.maximum_distance)
                 csm = self.csm.filter(src_filter)
             if csm.has_dupl_sources and not opt:
