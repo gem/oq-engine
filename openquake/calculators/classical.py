@@ -65,6 +65,12 @@ class PSHACalculator(base.HazardCalculator):
     """
     core_task = pmap_from_trt
 
+    def get_num_tiles(self):
+        """
+        :returns: the number of tiles in which the SiteCollection can be split
+        """
+        return int(math.ceil(len(self.sitecol) / self.oqparam.sites_per_tile))
+
     def agg_dicts(self, acc, pmap):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
@@ -148,15 +154,11 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+        num_tiles = self.get_num_tiles()
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(self.csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
-                     maxweight, numheavy, len(tiles))
         param = dict(
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, seed=oq.ses_seed,
@@ -169,8 +171,14 @@ class PSHACalculator(base.HazardCalculator):
                     logging.info('Prefiltering tile %d', t + 1)
                     csm = self.csm.filter(
                         SourceFilter(tile, oq.maximum_distance))
-            else:
+                    tasks_per_tile = math.ceil(oq.concurrent_tasks / num_tiles)
+                    maxweight = csm.get_maxweight(tasks_per_tile)
+            elif t == 0:  # first and only tile
                 csm = self.csm
+                maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+
+            heavy = len(self.csm.get_sources('heavy', maxweight))
+            logging.info('Using maxweight=%d, numheavy=%d', maxweight, heavy)
             num_tasks = 0
             num_sources = 0
             if monitor.operation == 'pmap_from_grp':
