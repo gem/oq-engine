@@ -2,51 +2,54 @@ Release notes for the OpenQuake Engine, version 2.8
 ===================================================
 
 As usual, several improvements entered in the release, most notably about
-the disaggregation calculator and the classical calculator with sampling
-of the logic tree: both are now substantially faster than before.
+the disaggregation calculator and the classical calculator with sampling.
 Over 100 pull requests were closed. For the complete list of
 changes, please see the changelog:
-https://github.com/gem/oq-engine/blob/engine-2.7/debian/changelog
+https://github.com/gem/oq-engine/blob/engine-2.8/debian/changelog .
 
 Disaggregation
 --------------
 
 We changed the algorithm for building the disaggregation bins. The new
-algorithm is simpler and depends directly from the integration
+algorithm is simpler and depends directly on the integration
 distance. The big advantage compared to the past algorithm is that the
 bins are always the same across different realizations, therefore it
-will be possible in the future to implement statistical disaggregation
-outputs, like a mean disaggregation matrix.  Moreover, thanks to the
-new algorithm, performing a classical calculation when the
-`iml_disagg` is set in the job.ini file has become redundant:
-therefore, so such step has been removed. For the first time we have
-documented the `iml_disagg` in the manual, which means that the
-feature (entered experimentally a long time ago) is now official. We
-have also added more checks and validations.  In particular
+will be possible to implement statistical disaggregation
+outputs, like a mean disaggregation matrix. This is not done yet.
+
+Thanks to the
+new algorithm, performing a classical calculation when
+`iml_disagg` is set in the `job.ini` file has become redundant:
+therefore, such step has been removed. For the first time we have
+documented the `iml_disagg` configuration variable
+in the manual, which means that the
+feature (entered experimentally a long time ago) is now official.
+
+We have added more checks and validations.  In particular
 `intensity_measure_types_and_levels` cannot be set if `iml_disagg` is
 set (since it is inferred from it) and `poes_disagg` cannot be set
-together with `iml_disagg`. Moreover, if one or more of the parameters
-'mag_bin_width', 'distance_bin_width', 'coordinate_bin_width',
-'num_epsilon_bins' is missing in the job.ini file an early error is
+if `iml_disagg` is set. Moreover, if one or more of the parameters
+`mag_bin_width`, `distance_bin_width`, `coordinate_bin_width`,
+`num_epsilon_bins` is missing in the `job.ini` file an early error is
 raised. There is also an *a posteriori* check when `poes_disagg` is
 given, raising a warning if the aggregated poes are too different from
-the expected ones (this may happen due to numerical interpolation errors
-when the disaggregation intensities are extracted from the inverse hazard
-curves and the disaggregation poes).
+the expected ones (this may happen due to numerical interpolation
+errors when the disaggregation intensities are extracted from the
+inverse hazard curves).
 
-Since the bins are different than before and there ewere other changes
+Since the bins may be different than before and because of other changes
 (in particular now a disaggregation calculation may see a smaller logic
-tree than before since the reduction of the logic tree feature works better,
+tree than before since the reduction of the logic tree feature works better),
 having different disaggregation outputs than before is expected. However,
 since the internal algorithm implemented in the hazardlib library is
 exactly the same as before in comparable situations (i.e. same bins,
-same logic tree) the numbers will be identical as before.
+same logic tree) the numbers will be the same as before.
 
 Other Hazard
 --------------
 
 The progress on hazard was not limited to the disaggregation
-calculator. In particular, there was a crucuial progress on the
+calculator. In particular, there was a crucial progress on the
 classical calculator in presence of sampling: we found a performance
 issue affecting calculations with an extra large GSIM logic tree (case
 in point: the India model, with 245,760 realizations). Now the engine
@@ -55,9 +58,10 @@ is not stuck anymore while sampling the logic tree. In regular cases
 not see any performance difference, but you will still see that the
 produced numbers are different than in previous versions of the engine,
 since we changed the sampling algorithm. This is akin to a change of
-seed: the really significant quantities will not change. A lot of
-refactoring went into this work and the data transfer in the realization
-objects has been reduced.
+seed: the really significant quantities will not change.
+
+A lot of refactoring went into the logic tree code; as a consequence
+the data transfer in the realization objects has been reduced.
 
 We fixed and documented in the manual the magnitude-distance filtering
 which now has become an official feature of the engine.
@@ -81,23 +85,23 @@ For what concerns risk, we continued the work on the risk outputs initiated
 a few releases ago. In particular, we removed all the outputs that were
 deprecated in engine 2.7, since they can be generated dynamically with
 extraction commands, the REST API or via the QGIS plugin.
-Moreover some minor bugs in the outputs were fixed. In particular now 
+Moreover some bugs in the outputs were fixed. In particular now 
 the average losses for `classical_risk` are exposed to the engine
 (before they were computed but not visible from the engine database);
 same for the `loss_curves-stats` and `loss_maps-stats`. The command
 `oq export loss_curves` has been fixed.
 
-The parameter `number_of_ground_motion_fields` is optional again 
+The parameter `number_of_ground_motion_fields` is optional again in
 all calculators reading the GMFs from an external file (in engine 2.7
 it was mandatory).
 We fixed several bugs in the new and still experimental calculator
 `gmf_ebrisk`. We added more validation tests to the input GMFs file
 in .csv format, and better error messages. In particular now there are good
-messages if the user forgets both sites and sites.csv in the job.ini,
+messages if the user forgets sites and sites.csv in the job.ini,
 if the user sets a wrong site_id in the sites.csv file,
 if the user specifies a non-existing file in the job.ini, if the
 user forges the source_model_logic_tree file or if the user forgets
-the `--hc` in calculations that require it.
+the `--hc` option in calculations that require it.
 
 oq commands
 ---------------
@@ -144,7 +148,7 @@ Python 2 decommissioning
 [We completed phase 1 of our roadmap for abandoning Python 2](https://github.com/gem/oq-engine/issues/2803). In
 short, even if the engine still supports Python 2.7 and you can use
 it by installing from sources, we only provides installers with
-Python 3.5 in all supported platforms (Windows, macOS and Linux). The
+Python 3.5 for Windows, macOS and Linux. The
 official Ubuntu and Red Had packages are still using Python 2, but they
 will replaced by Python 3 in phase 2 of the roadmap. Next year the
 engine will be Python 3 only. The time to migrate is now!
