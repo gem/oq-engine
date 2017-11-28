@@ -198,6 +198,7 @@ producing too small PoEs.'''
         tl = oq.truncation_level
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm.filter(src_filter)
+        self.datastore['csm_info'] = csm.info
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
 
