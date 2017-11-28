@@ -26,8 +26,9 @@ import os
 import sys
 import mock
 import time
+import operator
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
@@ -38,24 +39,26 @@ def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
+def count_ruptures(sources, srcfilter, gsims, param, monitor):
     """
-    Count the effective number of ruptures contained in the given sources
-    within the integration distance and return a dictionary src_group_id -> {}.
+    Count the number of ruptures contained in the given sources by applying a
+    raw source filtering on the integration distance. Return a dictionary
+    src_group_id -> {}.
     All sources must belong to the same tectonic region type.
     """
-    grp_id = sources[0].src_group_id
-    acc = AccumDict({grp_id: {}})
+    dic = groupby(sources, operator.attrgetter('src_group_id'))
+    acc = AccumDict({grp_id: {} for grp_id in dic})
+    acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
     acc.calc_times = []
-    count = 0
-    for src in sources:
-        t0 = time.time()
-        sites = srcfilter.get_close_sites(src)
-        if sites is not None:
-            count += src.num_ruptures
-            dt = time.time() - t0
-            acc.calc_times.append((src.source_id, len(sites), src.weight, dt))
-    acc.eff_ruptures = {grp_id: count}
+    for grp_id in dic:
+        for src in sources:
+            t0 = time.time()
+            sites = srcfilter.get_close_sites(src)
+            if sites is not None:
+                acc.eff_ruptures[grp_id] += src.num_ruptures
+                dt = time.time() - t0
+                acc.calc_times.append(
+                    (src.source_id, len(sites), src.weight, dt))
     return acc
 
 
@@ -163,7 +166,7 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     p = mock.patch.object
-    with p(PSHACalculator, 'core_task', count_eff_ruptures):
+    with p(PSHACalculator, 'core_task', count_ruptures):
         if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
