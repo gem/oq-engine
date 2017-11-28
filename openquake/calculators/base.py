@@ -411,10 +411,7 @@ class HazardCalculator(BaseCalculator):
                     self.csm = dstore['composite_source_model']
             else:
                 self.csm = self.read_csm()
-            info = self.csm.info
-            info.gsim_lt.check_imts(oq.imtls)
-            info.tot_weight = self.csm.weight  # not correct yet
-            self.datastore['csm_info'] = self.csm.info
+            self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.rup_data = {}
         self.init()
 
