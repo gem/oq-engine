@@ -40,10 +40,9 @@ from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands.zip import zip as zip_cmd
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
-from openquake.qa_tests_data.classical import case_1, case_9
+from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data import scenario_damage
 from openquake.qa_tests_data.event_based import case_5
 from openquake.qa_tests_data.event_based_risk import case_master
 from openquake.server import manage, dbapi
@@ -296,16 +295,19 @@ class ZipTestCase(unittest.TestCase):
     Test for the command oq zip
     """
     def test_zip(self):
-        ini = os.path.join(os.path.dirname(scenario_damage.case_1.__file__),
-                           'job_risk.ini')
+        ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
         zip_cmd(ini, xzip)
         names = sorted(zipfile.ZipFile(xzip).namelist())
-        self.assertEqual(['case_1/exposure_model.xml',
-                          'case_1/fragility_discrete.xml',
-                          'case_1/job_risk.ini',
-                          'gmf_scenario.csv'], names)
+        self.assertEqual(['Wcrust_high_rhypo.hdf5',
+                          'Wcrust_low_rhypo.hdf5',
+                          'Wcrust_med_rhypo.hdf5',
+                          'job.ini',
+                          'nbc_asc_logic_tree.xml',
+                          'source_model_logic_tree.xml',
+                          'vancouver_area_source.xml',
+                          'vancouver_school_sites.csv'], names)
         shutil.rmtree(dtemp)
 
 
