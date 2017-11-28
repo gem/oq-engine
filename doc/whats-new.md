@@ -1,9 +1,9 @@
 Release notes for the OpenQuake Engine, version 2.8
 ===================================================
 
-As usual, several improvements entered in the release, most notably about
+Several improvements entered in this release, most notably about
 the disaggregation calculator and the classical calculator with sampling.
-Over 100 pull requests were closed. For the complete list of
+Over 110 issues requests were closed. For the complete list of
 changes, please see the changelog:
 https://github.com/gem/oq-engine/blob/engine-2.8/debian/changelog .
 
@@ -15,15 +15,15 @@ algorithm is simpler and depends directly on the integration
 distance. The big advantage compared to the past algorithm is that the
 bins are always the same across different realizations, therefore it
 will be possible to implement statistical disaggregation
-outputs, like a mean disaggregation matrix. This is not done yet.
+outputs, like a mean disaggregation matrix. This is not done yet, but it
+is scheduled for future releases.
 
-Thanks to the
-new algorithm, performing a classical calculation when
+Thanks to the new algorithm, performing a classical calculation when
 `iml_disagg` is set in the `job.ini` file has become redundant:
-therefore, such step has been removed. For the first time we have
-documented the `iml_disagg` configuration variable
-in the manual, which means that the
-feature (entered experimentally a long time ago) is now official.
+therefore, such step has been removed. We have
+documented the `iml_disagg` configuration variable in the manual,
+which means that the feature (entered experimentally a long time ago)
+is now official.
 
 We have added more checks and validations.  In particular
 `intensity_measure_types_and_levels` cannot be set if `iml_disagg` is
@@ -42,7 +42,7 @@ Since the bins may be different than before and because of other changes
 tree than before since the reduction of the logic tree feature works better),
 having different disaggregation outputs than before is expected. However,
 since the internal algorithm implemented in the hazardlib library is
-exactly the same as before in comparable situations (i.e. same bins,
+exactly the same as before, in comparable situations (i.e. same bins,
 same logic tree) the numbers will be the same as before.
 
 Other Hazard
@@ -93,7 +93,7 @@ same for the `loss_curves-stats` and `loss_maps-stats`. The command
 
 The parameter `number_of_ground_motion_fields` is optional again in
 all calculators reading the GMFs from an external file (in engine 2.7
-it was mandatory).
+it was mandatory in some cases).
 We fixed several bugs in the new and still experimental calculator
 `gmf_ebrisk`. We added more validation tests to the input GMFs file
 in .csv format, and better error messages. In particular now there are good
