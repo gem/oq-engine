@@ -21,6 +21,7 @@ import mock
 import unittest
 import tempfile
 from openquake.baselib.general import writetmp
+from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
 
 TMP = tempfile.gettempdir()
@@ -39,14 +40,14 @@ GST = {'gsim_logic_tree': writetmp('''\
         </logicTreeBranchingLevel>
     </logicTree>
 </nrml>'''),
-       'source': 'fake'}
+       'source': 'fake', "job_ini": "job.ini"}
 
 # hard-coded to avoid a dependency from openquake.calculators
 OqParam.calculation_mode.validator.choices = (
     'classical', 'disaggregation', 'scenario', 'scenario_damage',
     'event_based', 'event_based_risk', 'classical_risk')
 
-fakeinputs = {"source": "fake"}
+fakeinputs = {"source": "fake", "job_ini": "job.ini"}
 
 
 class OqParamTestCase(unittest.TestCase):
@@ -68,10 +69,10 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_truncation_level_disaggregation(self):
         # for disaggregation, the truncation level cannot be None
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidFile):
             OqParam(calculation_mode='disaggregation',
                     hazard_calculation_id=None, hazard_output_id=None,
-                    inputs=dict(site_model=''), maximum_distance='10',
+                    inputs=fakeinputs, maximum_distance='10',
                     sites='',
                     intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                     truncation_level=None).validate()
@@ -94,8 +95,9 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical_risk',
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance='10',
+                inputs=fakeinputs,
                 region='-78.182 15.615, -78.152 15.615, -78.152 15.565, '
-                '-78.182 15.565', sites='0.1 0.2', inputs=dict(site_model='')
+                '-78.182 15.565', sites='0.1 0.2',
             ).validate()
 
     def test_poes(self):
@@ -105,13 +107,13 @@ class OqParamTestCase(unittest.TestCase):
             OqParam(
                 calculation_mode='classical_risk',
                 hazard_calculation_id=None, hazard_output_id=None,
-                inputs=dict(site_model=''), maximum_distance='10', sites='',
+                inputs=fakeinputs, maximum_distance='10', sites='',
                 hazard_maps='true',  poes='').validate()
         with self.assertRaises(ValueError):
             OqParam(
                 calculation_mode='classical_risk',
                 hazard_calculation_id=None, hazard_output_id=None,
-                inputs=dict(site_model=''), maximum_distance='10', sites='',
+                inputs=fakeinputs, maximum_distance='10', sites='',
                 uniform_hazard_spectra='true',  poes='').validate()
 
     def test_site_model(self):
@@ -127,13 +129,13 @@ class OqParamTestCase(unittest.TestCase):
     def test_missing_maximum_distance(self):
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical_risk', inputs=dict(site_model=''),
+                calculation_mode='classical_risk', inputs=fakeinputs,
                 hazard_calculation_id=None, hazard_output_id=None,
                 sites='0.1 0.2').validate()
 
         with self.assertRaises(ValueError):
             OqParam(
-                calculation_mode='classical_risk', inputs=dict(site_model=''),
+                calculation_mode='classical_risk', inputs=fakeinputs,
                 hazard_calculation_id=None, hazard_output_id=None,
                 sites='0.1 0.2', maximum_distance='0').validate()
 
@@ -260,7 +262,7 @@ class OqParamTestCase(unittest.TestCase):
                       str(ctx.exception))
 
     def test_ambiguous_gsim(self):
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             OqParam(
                 calculation_mode='scenario', inputs=GST,
                 gsim='AbrahamsonEtAl2014',
@@ -278,6 +280,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 maximum_distance='400',
                 intensity_measure_types='PGV',
+                inputs=fakeinputs,
             ).validate()
         self.assertIn('The IMT PGV is not accepted by the GSIM ToroEtAl2002',
                       str(ctx.exception))
@@ -290,6 +293,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 maximum_distance='400',
                 intensity_measure_types='PGA',
+                inputs=fakeinputs,
             ).validate()
         self.assertIn("Please set a value for 'reference_vs30_value', this is"
                       " required by the GSIM AbrahamsonSilva1997",
@@ -340,16 +344,15 @@ class OqParamTestCase(unittest.TestCase):
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()
         inputs['gmfs'] = 'fake.csv'
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             OqParam(
                 calculation_mode='scenario_damage',
                 inputs=inputs,
                 maximum_distance='400')
-        self.assertIn('You forgot sites|sites_csv in the job .ini file!',
-                      str(ctx.exception))
+        self.assertIn('You forgot sites|sites_csv', str(ctx.exception))
 
     def test_disaggregation(self):
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             OqParam(
                 calculation_mode='disaggregation',
                 inputs=fakeinputs,
@@ -363,8 +366,23 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn("poes_disagg or iml_disagg must be set",
                       str(ctx.exception))
 
+        with self.assertRaises(InvalidFile) as ctx:
+            OqParam(
+                calculation_mode='disaggregation',
+                inputs=fakeinputs,
+                gsim='BooreAtkinson2008',
+                reference_vs30_value='200',
+                sites='0.1 0.2',
+                poes='0.2',
+                maximum_distance='400',
+                iml_disagg="{'PGV': [0.1, 0.2, 0.3]}",
+                poes_disagg="0.1",
+                uniform_hazard_spectra='1')
+        self.assertIn("iml_disagg and poes_disagg cannot be set at the "
+                      "same time", str(ctx.exception))
+
     def test_event_based_risk(self):
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             OqParam(
                 calculation_mode='event_based_risk',
                 inputs=fakeinputs,
