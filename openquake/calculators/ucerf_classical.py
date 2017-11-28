@@ -34,7 +34,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFControl, get_composite_source_model)
+    UCERFSource, get_composite_source_model)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -56,7 +56,7 @@ def convert_UCERFSource(self, node):
         start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
     else:
         start_date = None
-    return UCERFControl(
+    return UCERFSource(
         source_file,
         node["id"],
         self.tom.time_span,
@@ -94,29 +94,24 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     imtls = monitor.oqparam.imtls
     ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
     grp_id = ucerf_source.src_group_id
-
-    # prefilter the sites close to the rupture set
-    with h5py.File(ucerf_source.control.source_file, "r") as hdf5:
-        mag = hdf5[ucerf_source.idx_set["mag_idx"]][rupset_idx].max()
-        ridx = set()
-        # find the combination of rupture sections used in this model
-        rup_index_key = "/".join(
-            [ucerf_source.idx_set["geol_idx"], "RuptureIndex"])
-        # determine which of the rupture sections used in this set of indices
-        rup_index = hdf5[rup_index_key]
-        for i in rupset_idx:
-            ridx.update(rup_index[i])
-        s_sites = ucerf_source.get_rupture_sites(hdf5, ridx, src_filter, mag)
-        if s_sites is None:  # return an empty probability map
-            pm = ProbabilityMap(len(imtls.array), len(gsims))
-            acc = AccumDict({grp_id: pm})
-            acc.calc_times = []  # TODO: fix .calc_times
-            acc.eff_ruptures = {grp_id: 0}
-            return acc
-
-    # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
+    mag = ucerf_source.mags[rupset_idx].max()
+    ridx = set()
+    for idx in rupset_idx:
+        ridx.update(ucerf_source.get_ridx(idx))
     ucerf_source.rupset_idx = rupset_idx
     ucerf_source.num_ruptures = nruptures = len(rupset_idx)
+
+    # prefilter the sites close to the rupture set
+    s_sites = ucerf_source.get_rupture_sites(ridx, src_filter, mag)
+    if s_sites is None:  # return an empty probability map
+        pm = ProbabilityMap(len(imtls.array), len(gsims))
+        acc = AccumDict({grp_id: pm})
+        acc.calc_times = [(ucerf_source.source_id, nruptures,
+                           None, time.time() - t0)]
+        acc.eff_ruptures = {grp_id: 0}
+        return acc
+
+    # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     imtls = DictArray(imtls)
     ctx_mon = monitor('making contexts', measuremem=False)
