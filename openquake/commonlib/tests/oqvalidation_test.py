@@ -44,7 +44,7 @@ GST = {'gsim_logic_tree': writetmp('''\
 # hard-coded to avoid a dependency from openquake.calculators
 OqParam.calculation_mode.validator.choices = (
     'classical', 'disaggregation', 'scenario', 'scenario_damage',
-    'event_based', 'classical_risk')
+    'event_based', 'event_based_risk', 'classical_risk')
 
 fakeinputs = {"source": "fake"}
 
@@ -362,3 +362,18 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1')
         self.assertIn("poes_disagg or iml_disagg must be set",
                       str(ctx.exception))
+
+    def test_event_based_risk(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='event_based_risk',
+                inputs=fakeinputs,
+                gsim='BooreAtkinson2008',
+                reference_vs30_value='200',
+                sites='0.1 0.2',
+                poes='0.2',
+                maximum_distance='400',
+                intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
+                conditional_loss_poes='0.02')
+        self.assertIn("the loss maps cannot be generated unless you set "
+                      "asset_loss_table=true", str(ctx.exception))
