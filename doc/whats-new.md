@@ -156,6 +156,6 @@ Python 2 decommissioning
 short, even if the engine still supports Python 2.7 and you can use
 it by installing from sources, we only provides installers with
 Python 3.5 for Windows, macOS and Linux. The
-official Ubuntu and Red Had packages are still using Python 2, but they
-will replaced by Python 3 in phase 2 of the roadmap. Next year the
+official Ubuntu and Red Had packages are still using Python 2.7, but they
+will replaced by Python 3.5 in phase 2 of the roadmap. Next year the
 engine will be Python 3 only. The time to migrate is now!
