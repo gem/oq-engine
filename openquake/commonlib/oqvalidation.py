@@ -156,8 +156,9 @@ class OqParam(valid.ParamSet):
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
+        job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
-            raise ValueError('Missing calculation_mode in the .ini file!')
+            raise InvalidFile('Missing calculation_mode in %s' % job_ini)
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
@@ -167,9 +168,10 @@ class OqParam(valid.ParamSet):
         if 'iml_disagg' in names_vals:
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
-                raise ValueError(
-                    'Please remove the intensity_measure_types_and_levels: '
-                    'they will be inferred from the iml_disagg dictionary')
+                raise InvalidFile(
+                    'Please remove the intensity_measure_types_and_levels '
+                    'from %s: they will be inferred from the iml_disagg '
+                    'dictionary' % job_ini)
         elif 'intensity_measure_types_and_levels' in names_vals:
             self.hazard_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
@@ -181,8 +183,8 @@ class OqParam(valid.ParamSet):
         # check the gsim_logic_tree
         if 'gsim_logic_tree' in self.inputs:
             if self.gsim:
-                raise ValueError('If `gsim_logic_tree_file` is set, there '
-                                 'must be no `gsim` key')
+                raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
+                                  ' must be no `gsim` key' % job_ini)
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
             gsim_lt = logictree.GsimLogicTree(path, ['*'])
@@ -191,8 +193,8 @@ class OqParam(valid.ParamSet):
             branchsets = len(gsim_lt._ltnode)
             if 'scenario' in self.calculation_mode and branchsets > 1:
                 raise InvalidFile(
-                    '%s for a scenario calculation must contain a single '
-                    'branchset, found %d!' % (path, branchsets))
+                    '%s: %s for a scenario calculation must contain a single '
+                    'branchset, found %d!' % (job_ini, path, branchsets))
 
             # check the IMTs vs the GSIMs
             self._gsims_by_trt = gsim_lt.values
@@ -206,23 +208,23 @@ class OqParam(valid.ParamSet):
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and not self.iml_disagg:
-                raise ValueError('poes_disagg or iml_disagg must be set '
-                                 'in the job.ini file')
+                raise InvalidFile('poes_disagg or iml_disagg must be set '
+                                  'in %(job_ini)s' % self.inputs)
             elif self.poes_disagg and self.iml_disagg:
-                logging.warn(
-                    'iml_disagg=%s will not be computed from poes_disagg=%s',
-                    str(self.iml_disagg), self.poes_disagg)
+                raise InvalidFile(
+                    '%s: iml_disagg and poes_disagg cannot be set '
+                    'at the same time' % job_ini)
             for k in ('mag_bin_width', 'distance_bin_width',
                       'coordinate_bin_width', 'num_epsilon_bins'):
                 if k not in vars(self):
-                    raise ValueError('%s must be set in the job.ini file' % k)
+                    raise InvalidFile('%s must be set in %s' % (k, job_ini))
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
             if self.conditional_loss_poes:
-                raise ValueError('conditional_loss_poes are not defined '
-                                 'for classical_damage calculations: '
-                                 'remove them for the .ini file')
+                raise InvalidFile(
+                    '%s: conditional_loss_poes are not defined '
+                    'for classical_damage calculations' % job_ini)
 
         # checks for event_based_risk
         if (self.calculation_mode == 'event_based_risk'
@@ -231,14 +233,14 @@ class OqParam(valid.ParamSet):
                              ' supported')
         elif (self.calculation_mode == 'event_based_risk'
               and self.conditional_loss_poes and not self.asset_loss_table):
-            raise ValueError(
-                'conditional_loss_poes is set, but the loss maps cannot '
-                'be generated unless you set asset_loss_table=true')
+            raise InvalidFile(
+                '%s: conditional_loss_poes is set, but the loss maps cannot '
+                'be generated unless you set asset_loss_table=true' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
                 'sites' not in self.inputs):
-            raise ValueError('You forgot sites|sites_csv in the job .ini file!')
+            raise InvalidFile('%s: You forgot sites|sites_csv' % job_ini)
 
         # checks for ucerf
         if 'ucerf' in self.calculation_mode:
