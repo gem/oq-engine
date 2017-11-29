@@ -200,8 +200,8 @@ configuration for a maximum distance in Active Shallow Crust of 200 km, and in
 Stable Continental Crust of 150 km, is shown below:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=31,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
-maximum_distance = {'Stable Continental Crust': 150.0,
-                    'Active Shallow Crust': 200.0}
+maximum_distance = {'Active Shallow Crust': 150.0,
+                    'Stable Continental Crust': 200.0}
 \end{minted}
 
 An even more advanced approach is to use a maximum distance depending on the
@@ -210,11 +210,11 @@ the maximum distance per a discrete set of magnitudes. Here is an
 example:
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
-maximum_distance = {'Stable Continental Crust': [(8, 250), (7, 150), (5, 50)],
-                    'Active Shallow Crust': [(8, 300), (7, 200), (5, 100)]}
+maximum_distance = {'Active Shallow Crust': [(8, 250), (7, 150), (5, 50)],
+                    'Stable Continental Crust': [(8, 300), (7, 200), (5, 100)]}
 \end{minted}
 
-You should read this example as follows: for Stable Continental Crust
+You should read this example as follows: for Active Shallow Crust
 
 \begin{itemize}
 \item keep sites within 250 km from the rupture if the magnitude is <= 8
@@ -222,7 +222,7 @@ You should read this example as follows: for Stable Continental Crust
 \item keep sites within 50 km from the rupture if the magnitude is <= 5
 \end{itemize}
 
-while for Active Shallow Crust
+while for Stable Continental Crust
 
 \begin{itemize}
 \item keep sites within 300 km from the rupture if the magnitude is <= 8

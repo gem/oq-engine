@@ -393,12 +393,10 @@ class SourceFilter(object):
     def __call__(self, sources, sites=None):
         if sites is None:
             sites = self.sitecol
-        if self.sitecol is None:  # do not filter
-            for source in sources:
-                yield source, sites
-            return
         for src in sources:
             if not self.integration_distance:  # do not filter
+                if sites is not None:
+                    src.nsites = len(sites)
                 yield src, sites
             elif self.use_rtree:  # Rtree filtering, used in the controller
                 box = self.get_affected_box(src)
