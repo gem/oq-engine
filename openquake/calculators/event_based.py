@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter, humansize
-from openquake.hazardlib.calc.filters import FarAwayRupture
+from openquake.hazardlib.calc.filters import FarAwayRupture, SourceFilter
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
@@ -210,7 +210,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
         self.rupser = calc.RuptureSerializer(self.datastore)
-        self.csm_info = self.datastore['csm_info']
 
     def zerodict(self):
         """
@@ -219,7 +218,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.grp_trt = self.csm_info.grp_trt()
+        self.grp_trt = self.csm.info.grp_trt()
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -262,8 +261,9 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(self.csm.get_sources('heavy', maxweight))
+        csm = self.csm  # we may filter here in the future
+        maxweight = csm.get_maxweight(oq.concurrent_tasks)
+        numheavy = len(csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
         param = dict(
             truncation_level=oq.truncation_level,
@@ -279,7 +279,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 csm.add_infos(sg.sources)
                 for block in csm.split_in_blocks(maxweight, sg.sources):
                     block.samples = sm.samples
-                    yield block, self.src_filter, gsims, param, monitor
+                    yield block, csm.src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
