@@ -394,7 +394,9 @@ class SourceFilter(object):
         if sites is None:
             sites = self.sitecol
         for src in sources:
-            if not self.integration_distance:  # do not filter
+            if hasattr(src, 'sites'):  # already filtered
+                yield src, src.sites
+            elif not self.integration_distance:  # do not filter
                 if sites is not None:
                     src.nsites = len(sites)
                 yield src, sites
