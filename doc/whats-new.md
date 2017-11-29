@@ -3,8 +3,8 @@ Release notes for the OpenQuake Engine, version 2.8
 
 Several improvements entered in this release, most notably about
 the disaggregation calculator and the classical calculator with sampling.
-Over 110 issues requests were closed. For the complete list of
-changes, please see the changelog:
+Over 110 issues were closed. For the complete list of changes, please see
+the changelog:
 https://github.com/gem/oq-engine/blob/engine-2.8/debian/changelog .
 
 Disaggregation
@@ -56,9 +56,10 @@ in point: the India model, with 245,760 realizations). Now the engine
 is not stuck anymore while sampling the logic tree. In regular cases
 (i.e. if your model has less than 245,760 GSIM realizations) you will
 not see any performance difference, but you will still see that the
-produced numbers are different than in previous versions of the engine,
-since we changed the sampling algorithm. This is akin to a change of
-seed: the really significant quantities will not change.
+produced numbers are different than in previous versions of the
+engine, since we changed the sampling algorithm and the way the
+realization weights are managed. This is akin to a change of seed: the
+really significant quantities will not change.
 
 A lot of refactoring went into the logic tree code; as a consequence
 the data transfer in the realization objects has been reduced.
@@ -89,7 +90,8 @@ Moreover some bugs in the outputs were fixed. In particular now
 the average losses for `classical_risk` are exposed to the engine
 (before they were computed but not visible from the engine database);
 same for the `loss_curves-stats` and `loss_maps-stats`. The command
-`oq export loss_curves` has been fixed.
+`oq export loss_curves` has been fixed. A rare ordering error happening in the
+classical_bcr calculator has been fixed.
 
 The parameter `number_of_ground_motion_fields` is optional again in
 all calculators reading the GMFs from an external file (in engine 2.7
@@ -97,10 +99,11 @@ it was mandatory in some cases).
 We fixed several bugs in the new and still experimental calculator
 `gmf_ebrisk`. We added more validation tests to the input GMFs file
 in .csv format, and better error messages. In particular now there are good
-messages if the user forgets sites and sites.csv in the job.ini,
+error messages if the user forgets sites and sites.csv in the job.ini,
 if the user sets a wrong site_id in the sites.csv file,
-if the user specifies a non-existing file in the job.ini, if the
-user forges the source_model_logic_tree file or if the user forgets
+if the user specifies a non-existing file in the job.ini, if the user
+sets `conditional_loss_poes` but forget to set `asset_loss_table`,
+if the user forget the source_model_logic_tree file or if the user forgets
 the `--hc` option in calculations that require it.
 
 oq commands
@@ -141,6 +144,10 @@ from the datastore.
 We removed the deprecated risk outputs `dmg_by_tag`, `dmg_total`
 `losses_by_tag` and `losses_total`.  We removed the obsolete parameter
 `loss_curve_resolution` which has not been used for a few releases.
+
+We removed the method `gsim.disaggregate_poe`, but the main hazardlib
+disaggregation utility, `openquake.hazardlib.calc.disagg.disaggregation`
+still works as before, it is just faster.
 
 Python 2 decommissioning
 ------------------------
