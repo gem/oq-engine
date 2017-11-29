@@ -106,8 +106,8 @@ sets `conditional_loss_poes` but forget to set `asset_loss_table`,
 if the user forget the source_model_logic_tree file or if the user forgets
 the `--hc` option in calculations that require it.
 
-oq commands
----------------
+Other
+--------------
 
 There are two new `oq` command: `oq abort <calc_id>` to kill a running job
 and `oq zip <job.ini> <archive.zip>` to collect all the files relevant for
@@ -117,9 +117,6 @@ input files for help in debugging the issue.
 
 `oq dbserver stop` has been extended to stop also the zmq workers,
 if the zmq distribution is used.
-
-Other
---------------
 
 Now the WebUI starts new jobs in separate processes, thus achieving true
 parallelism: before it was possible to launch only one job at the time.
