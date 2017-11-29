@@ -56,8 +56,8 @@ class ClassicalTestCase(CalculatorTestCase):
             # make sure we saved the data transfer information in job_info
             keys = {decode(key) for key in dict(
                 self.calc.datastore['job_info'])}
-            self.assertIn('pmap_from_trt.received', keys)
-            self.assertIn('pmap_from_trt.sent', keys)
+            self.assertIn('classical.received', keys)
+            self.assertIn('classical.sent', keys)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
