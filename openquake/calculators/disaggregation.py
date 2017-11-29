@@ -196,20 +196,23 @@ producing too small PoEs.'''
         """
         oq = self.oqparam
         tl = oq.truncation_level
-        src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
+                                  use_rtree=False)
+        csm = self.csm.filter(src_filter)  # fine filtering
+        self.datastore['csm_info'] = csm.info
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
 
         # build trt_edges
-        trts = tuple(sorted(set(sg.trt for smodel in self.csm.source_models
+        trts = tuple(sorted(set(sg.trt for smodel in csm.source_models
                                 for sg in smodel.src_groups)))
         trt_num = {trt: i for i, trt in enumerate(trts)}
         self.trts = trts
 
         # build mag_edges
-        min_mag = min(sg.min_mag for smodel in self.csm.source_models
+        min_mag = min(sg.min_mag for smodel in csm.source_models
                       for sg in smodel.src_groups)
-        max_mag = max(sg.max_mag for smodel in self.csm.source_models
+        max_mag = max(sg.max_mag for smodel in csm.source_models
                       for sg in smodel.src_groups)
         mag_edges = oq.mag_bin_width * numpy.arange(
             int(numpy.floor(min_mag / oq.mag_bin_width)),
@@ -241,7 +244,7 @@ producing too small PoEs.'''
 
         # build all_args
         all_args = []
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        maxweight = csm.get_maxweight(oq.concurrent_tasks)
         mon = self.monitor('disaggregation')
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
@@ -253,7 +256,7 @@ producing too small PoEs.'''
                     for m, imt in enumerate(oq.imtls):
                         self.imldict[s, r, poe, imt] = iml4[s, r, m, p]
 
-        for smodel in self.csm.source_models:
+        for smodel in csm.source_models:
             sm_id = smodel.ordinal
             for trt, groups in groupby(
                     smodel.src_groups, operator.attrgetter('trt')).items():
@@ -262,7 +265,7 @@ producing too small PoEs.'''
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
-                for block in self.csm.split_in_blocks(maxweight, sources):
+                for block in csm.split_in_blocks(maxweight, sources):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,
                          oq, mon))

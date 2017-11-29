@@ -414,16 +414,9 @@ class HazardCalculator(BaseCalculator):
             logging.info('Prefiltering the CompositeSourceModel')
             with self.monitor('prefiltering source model',
                               autoflush=True, measuremem=True):
-                self.src_filter = SourceFilter(
-                    self.sitecol, oq.maximum_distance)
-                self.csm = csm.filter(self.src_filter)
-                if self.csm.has_dupl_sources:
-                    logging.warn('Found duplicated source %s',
-                                 self.csm.has_dupl_sources)
-            info = self.csm.info
-            info.gsim_lt.check_imts(oq.imtls)
-            info.tot_weight = self.csm.weight
-            self.datastore['csm_info'] = self.csm.info
+                src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+                self.csm = csm.filter(src_filter)
+            self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.rup_data = {}
         self.init()
 
@@ -475,6 +468,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
             self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
+        elif hasattr(self, 'csm'):
+            self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
