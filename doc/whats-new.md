@@ -20,10 +20,9 @@ is scheduled for future releases.
 
 Thanks to the new algorithm, performing a classical calculation when
 `iml_disagg` is set in the `job.ini` file has become redundant:
-therefore, such step has been removed. We have
-documented the `iml_disagg` configuration variable in the manual,
-which means that the feature (entered experimentally a long time ago)
-is now official.
+therefore, such step has been removed. The `iml_disagg` configuration
+variable is not documented in the manual, even if it entered 
+a long time ago, because it should still be considered experimental.
 
 We have added more checks and validations.  In particular
 `intensity_measure_types_and_levels` cannot be set if `iml_disagg` is
