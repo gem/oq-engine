@@ -632,7 +632,7 @@ def view_task(token, dstore):
      $ oq show task:0  # the fastest task
      $ oq show task:-1  # the slowest task
     """
-    data = dstore['task_info/pmap_from_trt'].value
+    data = dstore['task_info/classical'].value
     data.sort(order='duration')
     i = int(token.split(':')[1])
     taskno, weight, duration = data[i]
