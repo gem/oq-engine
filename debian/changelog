@@ -1,3 +1,5 @@
+python-oq-engine (2.8.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * `iml_disagg` and `poes_disagg` cannot coexist in the job.ini file
   * Added a check on `conditional_loss_poes` in the event_based_risk calculator:
@@ -76,6 +78,8 @@
   * Added a way to restrict the source logic model tree by setting a sm_lt_path
     variable in the job.ini (experimental)
   * Fixed the precedence order when reading openquake.cfd
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 29 Nov 2017 14:33:05 +0100
 
 python-oq-engine (2.7.0-0~precise01) precise; urgency=low
 
