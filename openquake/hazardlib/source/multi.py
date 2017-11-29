@@ -54,7 +54,7 @@ class MultiPointSource(ParametricSeismicSource):
 
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
-            name = '%s-%s' % (self.source_id, i)
+            name = '%s:%s' % (self.source_id, i)
             ps = PointSource(
                 name, name, self.tectonic_region_type,
                 mfd, self.rupture_mesh_spacing,
