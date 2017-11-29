@@ -40,22 +40,42 @@ weight = operator.attrgetter('weight')
 
 
 source_data_dt = numpy.dtype(
-    [('taskno', U16), ('nsites', U32), ('weight', F32)])
+    [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
 
 def saving_sources_by_task(iterargs, dstore):
     """
-    Yield the iterargs again by populating 'task_info/source_ids'
+    Yield the iterargs again by populating 'task_info/source_data'
     """
     source_ids = []
     data = []
     for i, args in enumerate(iterargs, 1):
         source_ids.append(' ' .join(src.source_id for src in args[0]))
         for src in args[0]:  # collect source data
-            data.append((i, src.nsites, src.weight))
+            data.append((i, src.nsites, src.num_ruptures, src.weight))
         yield args
-    dstore['task_sources'] = numpy.array([encode(s) for s in source_ids])
+    dstore['task_sources'] = encode(source_ids)
     dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
+
+
+def classical(sources, src_filter, gsims, param, monitor):
+    """
+    :param sources:
+        a list of independent sources or a SourceGroup with mutex sources
+    :param src_filter:
+        a SourceFilter instance
+    :param gsims:
+        a list of GSIMs
+    :param param:
+        a dictionary with parameters imtls and truncation_level
+    :param monitor:
+        a Monitor instance
+    :returns: a dictionary grp_id -> ProbabilityMap
+    """
+    if getattr(sources, 'src_interdep', None) == 'mutex':
+        return pmap_from_grp(sources, src_filter, gsims, param, monitor)
+    else:
+        return pmap_from_trt(sources, src_filter, gsims, param, monitor)
 
 
 @base.calculators.add('psha')
@@ -63,33 +83,29 @@ class PSHACalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = pmap_from_trt
+    core_task = classical
 
     def agg_dicts(self, acc, pmap):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param pmap: a pmap or a dictionary grp_id -> ProbabilityMap
+        :param pmap: dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            # TODO: think about how to store source information for the case
-            # of multiple grp_ids
-            try:
-                [grp_id] = pmap
-            except ValueError:
-                pass
-            else:
-                for src_id, nsites, srcweight, calc_time in pmap.calc_times:
-                    src_id = src_id.split(':', 1)[0]
-                    info = self.csm.infos[grp_id, src_id]
-                    info.calc_time += calc_time
-                    info.num_sites = max(info.num_sites, nsites)
-                    info.num_split += 1
             acc.eff_ruptures += pmap.eff_ruptures
             for grp_id in pmap:
                 if pmap[grp_id]:
                     acc[grp_id] |= pmap[grp_id]
+            for src_id, nsites, srcweight, calc_time in pmap.calc_times:
+                src_id = src_id.split(':', 1)[0]
+                try:
+                    info = self.csm.infos[grp_id, src_id]
+                except KeyError:
+                    continue
+                info.calc_time += calc_time
+                info.num_sites = max(info.num_sites, nsites)
+                info.num_split += 1
         return acc
 
     def zerodict(self):
@@ -117,13 +133,8 @@ class PSHACalculator(base.HazardCalculator):
         except AttributeError:
             raise RuntimeError('No CompositeSourceModel, did you forget to '
                                'run the hazard or the --hc option?')
-        mutex_groups = list(self.csm.gen_mutex_groups())
         with self.monitor('managing sources', autoflush=True):
-            if mutex_groups:
-                # send the mutex groups first
-                ires = parallel.Starmap(pmap_from_grp, self.gen_args(
-                    self.monitor('pmap_from_grp'))).submit_all()
-            allargs = self.gen_args(self.monitor('pmap_from_trt'))
+            allargs = self.gen_args(self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
@@ -131,11 +142,9 @@ class PSHACalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            ires2 = parallel.Starmap(
+            ires = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
-        acc = ires2.reduce(self.agg_dicts, self.zerodict())
-        if mutex_groups:  # collect them too
-            acc = ires.reduce(self.agg_dicts, acc)
+        acc = ires.reduce(self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc
@@ -148,6 +157,7 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
+        opt = self.oqparam.optimize_same_id_sources
         num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
@@ -155,50 +165,36 @@ class PSHACalculator(base.HazardCalculator):
             tiles = [self.sitecol]
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         numheavy = len(self.csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d, numtiles=%d',
+        logging.info('Using maxweight=%d, numheavy=%d, tiles=%d',
                      maxweight, numheavy, len(tiles))
-        param = dict(
-            truncation_level=oq.truncation_level,
-            imtls=oq.imtls, seed=oq.ses_seed,
-            maximum_distance=oq.maximum_distance,
-            disagg=oq.poes_disagg or oq.iml_disagg,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        for t, tile in enumerate(tiles):
-            if num_tiles > 1:
-                with self.monitor('prefiltering source model', autoflush=True):
-                    logging.info('Prefiltering tile %d', t + 1)
-                    csm = self.csm.filter(
-                        SourceFilter(tile, oq.maximum_distance))
-            else:
-                csm = self.csm
+        param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
+        for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
-            if monitor.operation == 'pmap_from_grp':
-                iterargs = self._args_by_grp(csm, param, num_tiles, maxweight)
-            else:  # pmap_from_trt
-                iterargs = self._args_by_trt(csm, param, num_tiles, maxweight)
-            for args in iterargs:
-                num_tasks += 1
-                num_sources += len(args[0])
-                yield args + (monitor,)
+            with self.monitor('prefiltering'):
+                logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
+                src_filter = SourceFilter(tile, oq.maximum_distance)
+                csm = self.csm.filter(src_filter)
+            if csm.has_dupl_sources and not opt:
+                logging.warn('Found %d duplicated sources, use oq info',
+                             csm.has_dupl_sources)
+            for sg in csm.src_groups:
+                if sg.src_interdep == 'mutex':
+                    gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
+                    self.csm.add_infos(sg.sources)  # update self.csm.infos
+                    yield sg, src_filter, gsims, param, monitor
+                    num_tasks += 1
+                    num_sources += len(sg.sources)
+            # NB: csm.get_sources_by_trt discards the mutex sources
+            for trt, sources in self.csm.get_sources_by_trt(opt).items():
+                gsims = self.csm.info.gsim_lt.get_gsims(trt)
+                self.csm.add_infos(sources)  # update with unsplit sources
+                for block in csm.split_in_blocks(maxweight, sources):
+                    yield block, src_filter, gsims, param, monitor
+                    num_tasks += 1
+                    num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         source.split_map.clear()
-
-    def _args_by_grp(self, csm, param, num_tiles, maxweight):
-        for sg in csm.src_groups:
-            if sg.src_interdep == 'mutex':
-                gsims = csm.info.gsim_lt.get_gsims(sg.trt)
-                self.csm.add_infos(sg.sources)  # update self.csm.infos
-                yield sg, csm.src_filter, gsims, param
-
-    def _args_by_trt(self, csm, param, num_tiles, maxweight):
-        opt = self.oqparam.optimize_same_id_sources
-        # NB: csm.get_sources_by_trt discards the mutex sources
-        for trt, sources in csm.get_sources_by_trt(opt).items():
-            gsims = csm.info.gsim_lt.get_gsims(trt)
-            self.csm.add_infos(sources)  # update self.csm.infos
-            for block in csm.split_in_blocks(maxweight, sources):
-                yield block, csm.src_filter, gsims, param
 
     def post_execute(self, pmap_by_grp_id):
         """
