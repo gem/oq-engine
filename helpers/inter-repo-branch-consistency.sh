@@ -144,3 +144,6 @@ for repo in $si_repos; do
 done
 popd >/dev/null
 echo
+
+echo "====  CHECK COMPLETED WITHOUT ERRORS  $doubleline"
+exit 0
