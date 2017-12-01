@@ -271,28 +271,28 @@ class ContextMaker(object):
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
-    def filter_ruptures(self, src, sites, mon):
+    def filter_ruptures(self, src, sites):
         """
         :param src: a source object
         :param sites: a FilteredSiteCollection
         :param mon: a Monitor instance
         :return: a list of filtered ruptures with context attributes
         """
-        with mon:
-            ruptures = []
-            weights = getattr(src, 'weights', itertools.cycle(
-                [1. / (src.num_ruptures or src.count_ruptures())]))
-            for rup, weight in zip(src.iter_ruptures(), weights):
-                rup.weight = weight
-                try:
-                    rup.sctx, rup.rctx, rup.dctx = self.make_contexts(
-                        sites, rup)
-                except FarAwayRupture:
-                    continue
-                ruptures.append(rup)
+        ruptures = []
+        weights = getattr(src, 'weights', itertools.cycle(
+            [1. / (src.num_ruptures or src.count_ruptures())]))
+        for rup, weight in zip(src.iter_ruptures(), weights):
+            rup.weight = weight
+            try:
+                rup.sctx, rup.rctx, rup.dctx = self.make_contexts(
+                    sites, rup)
+            except FarAwayRupture:
+                continue
+            ruptures.append(rup)
         return ruptures
 
-    def poe_map(self, src, sites, imtls, trunclevel, mon, rup_indep=True):
+    def poe_map(self, src, sites, imtls, trunclevel, ctx_mon, pne_mon,
+                rup_indep=True):
         """
         :param src: a source object
         :param sites: a FilteredSiteCollection
@@ -305,10 +305,11 @@ class ContextMaker(object):
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), sites.sids, initvalue=rup_indep)
         eff_ruptures = 0
-        filter_mon = mon('make_contexts')
+        with ctx_mon:
+            ruptures = self.filter_ruptures(src, sites)
         try:
-            for rup in self.filter_ruptures(src, sites, filter_mon):
-                with mon:
+            for rup in ruptures:
+                with pne_mon:
                     pnes = self._make_pnes(rup, imtls, trunclevel)
                 for sid, pne in zip(rup.sctx.sites.sids, pnes):
                     if rup_indep:
