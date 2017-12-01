@@ -25,7 +25,7 @@ import h5py
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc.hazard_curve import pmap_from_trt, poe_map
+from openquake.hazardlib.calc.hazard_curve import pmap_from_trt
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import valid
@@ -111,14 +111,13 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
         acc.eff_ruptures = {grp_id: 0}
         return acc
 
-    # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
+    # compute the ProbabilityMap
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     imtls = DictArray(imtls)
-    ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
-                for gsim in gsims]
-    pmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
-                   truncation_level, ctx_mon, pne_mons)
+    ctx_mon = monitor('make_contexts', measuremem=False)
+    poe_mon = monitor('get_poes', measuremem=False)
+    pmap = cmaker.poe_map(ucerf_source, s_sites, imtls,
+                          truncation_level, ctx_mon, poe_mon)
     nsites = len(s_sites)
     acc = AccumDict({grp_id: pmap})
     acc.calc_times = [
