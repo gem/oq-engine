@@ -641,6 +641,10 @@ class UCERFSource(object):
                 sources.append(ps)
         return sources
 
+    def filter_sites_by_distance_to_source(self, integration_distance, sites):
+        # do not filter
+        return sites
+
 
 def build_idx_set(branch_id, start_date):
     """
