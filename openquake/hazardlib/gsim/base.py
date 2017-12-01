@@ -284,8 +284,7 @@ class ContextMaker(object):
         for rup, weight in zip(src.iter_ruptures(), weights):
             rup.weight = weight
             try:
-                rup.sctx, rup.rctx, rup.dctx = self.make_contexts(
-                    sites, rup)
+                rup.sctx, rup.rctx, rup.dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             ruptures.append(rup)
@@ -303,7 +302,6 @@ class ContextMaker(object):
         sids = set()
         for rup in ruptures:
             sids.update(rup.sctx.sites.sids)
-        sids = sorted(sids)
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), sids, initvalue=rup_indep)
         for rup in ruptures:
