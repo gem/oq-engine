@@ -305,8 +305,9 @@ class ContextMaker(object):
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), sites.sids, initvalue=rup_indep)
         eff_ruptures = 0
+        filter_mon = mon('make_contexts')
         try:
-            for rup in self.filter_ruptures(src, sites, mon('make_contexts')):
+            for rup in self.filter_ruptures(src, sites, filter_mon):
                 with mon:
                     pnes = self._make_pnes(rup, imtls, trunclevel)
                 for sid, pne in zip(rup.sctx.sites.sids, pnes):
