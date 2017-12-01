@@ -95,13 +95,14 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
         imtls = param['imtls']
         trunclevel = param.get('truncation_level')
         cmaker = ContextMaker(gsims, maxdist)
-        mon = monitor('get_poes', measuremem=False)
+        ctx_mon = monitor('make_contexts', measuremem=False)
+        poe_mon = monitor('get_poes', measuremem=False)
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
         calc_times = []  # pairs (src_id, delta_t)
         for src, s_sites in src_filter(srcs):
             t0 = time.time()
             poemap = cmaker.poe_map(
-                src, s_sites, imtls, trunclevel, mon,
+                src, s_sites, imtls, trunclevel, ctx_mon, poe_mon,
                 group.rup_interdep == 'indep')
             weight = mutex_weight[src.source_id]
             for sid in poemap:
@@ -113,7 +114,7 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
             pmap *= group.grp_probability
         acc = AccumDict({group.id: pmap})
         # adding the number of contributing ruptures too
-        acc.eff_ruptures = {group.id: mon.counts}
+        acc.eff_ruptures = {group.id: ctx_mon.counts}
         acc.calc_times = calc_times
         return acc
 
@@ -142,14 +143,16 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
         imtls = param['imtls']
         trunclevel = param.get('truncation_level')
         cmaker = ContextMaker(gsims, maxdist)
-        mon = monitor('get_poes', measuremem=False)
+        ctx_mon = monitor('make_contexts', measuremem=False)
+        poe_mon = monitor('get_poes', measuremem=False)
         pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                           for grp_id in grp_ids})
         pmap.calc_times = []  # pairs (src_id, delta_t)
         pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
         for src, s_sites in src_filter(srcs):
             t0 = time.time()
-            poe = cmaker.poe_map(src, s_sites, imtls, trunclevel, mon)
+            poe = cmaker.poe_map(
+                src, s_sites, imtls, trunclevel, ctx_mon, poe_mon)
             for grp_id in src.src_group_ids:
                 pmap[grp_id] |= poe
             pmap.calc_times.append(
