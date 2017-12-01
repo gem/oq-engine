@@ -279,11 +279,10 @@ class ContextMaker(object):
         :return: a list of filtered ruptures with context attributes
         """
         ruptures = []
-        weights = getattr(src, 'weights', itertools.cycle(
-            [1. / (src.num_ruptures or src.count_ruptures())]))
+        weight = 1. / (src.num_ruptures or src.count_ruptures())
         sf = SourceFilter(sites, self.maximum_distance, use_rtree=False)
         for s, s_sites in sf(source.split_source(src)):
-            for rup, weight in zip(s.iter_ruptures(), weights):
+            for rup in s.iter_ruptures():
                 rup.weight = weight
                 try:
                     rup.sctx, rup.rctx, rup.dctx = self.make_contexts(
