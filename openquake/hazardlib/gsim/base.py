@@ -280,8 +280,14 @@ class ContextMaker(object):
         """
         ruptures = []
         weight = 1. / (src.num_ruptures or src.count_ruptures())
-        sf = SourceFilter(sites, self.maximum_distance, use_rtree=False)
-        for s, s_sites in sf(source.split_source(src)):
+        sources = source.split_source(src)
+        if len(sources) > 1:
+            sf = SourceFilter(sites, self.maximum_distance, use_rtree=False)
+        else:
+            def sf(sources):  # do nothing, source already filtered
+                for src in sources:
+                    yield src, sites
+        for s, s_sites in sf(sources):
             for rup in s.iter_ruptures():
                 rup.weight = weight
                 try:
