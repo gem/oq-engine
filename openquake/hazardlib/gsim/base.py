@@ -279,9 +279,8 @@ class ContextMaker(object):
         :return: a list of filtered ruptures with context attributes
         """
         ruptures = []
-        weights = getattr(src, 'weights', itertools.cycle(
-            [1. / (src.num_ruptures or src.count_ruptures())]))
-        for rup, weight in zip(src.iter_ruptures(), weights):
+        weight = 1. / (src.num_ruptures or src.count_ruptures())
+        for rup in src.iter_ruptures():
             rup.weight = weight
             try:
                 rup.sctx, rup.rctx, rup.dctx = self.make_contexts(sites, rup)
