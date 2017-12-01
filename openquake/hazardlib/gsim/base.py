@@ -291,39 +291,54 @@ class ContextMaker(object):
             ruptures.append(rup)
         return ruptures
 
-    def poe_map(self, src, sites, imtls, trunclevel, ctx_mon, pne_mon,
+    def make_pmap(self, ruptures, imtls, trunclevel, rup_indep):
+        """
+        :param src: a source object
+        :param ruptures: a list of "dressed" ruptures
+        :param imtls: intensity measure and levels
+        :param trunclevel: truncation level
+        :param rup_indep: True if the ruptures are independent
+        :returns: a ProbabilityMap instance
+        """
+        sids = set()
+        for rup in ruptures:
+            sids.update(rup.sctx.sites.sids)
+        sids = sorted(sids)
+        pmap = ProbabilityMap.build(
+            len(imtls.array), len(self.gsims), sids, initvalue=rup_indep)
+        for rup in ruptures:
+            pnes = self._make_pnes(rup, imtls, trunclevel)
+            for sid, pne in zip(rup.sctx.sites.sids, pnes):
+                if rup_indep:
+                    pmap[sid].array *= pne
+                else:
+                    pmap[sid].array += pne * rup.weight
+        tildemap = ~pmap
+        tildemap.eff_ruptures = len(ruptures)
+        return tildemap
+
+    def poe_map(self, src, sites, imtls, trunclevel, ctx_mon, poe_mon,
                 rup_indep=True):
         """
         :param src: a source object
         :param sites: a FilteredSiteCollection
         :param imtls: intensity measure and levels
         :param trunclevel: truncation level
-        :param mon: a Monitor instance
+        :param ctx_mon: a Monitor instance for make_context
+        :param poe_mon: a Monitor instance for get_poes
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
-        pmap = ProbabilityMap.build(
-            len(imtls.array), len(self.gsims), sites.sids, initvalue=rup_indep)
-        eff_ruptures = 0
         with ctx_mon:
             ruptures = self.filter_ruptures(src, sites)
         try:
-            for rup in ruptures:
-                with pne_mon:
-                    pnes = self._make_pnes(rup, imtls, trunclevel)
-                for sid, pne in zip(rup.sctx.sites.sids, pnes):
-                    if rup_indep:
-                        pmap[sid].array *= pne
-                    else:
-                        pmap[sid].array += pne * rup.weight
-                eff_ruptures += 1
+            with poe_mon:
+                pmap = self.make_pmap(ruptures, imtls, trunclevel, rup_indep)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = '%s (source id=%s)' % (str(err), src.source_id)
             raise_(etype, msg, tb)
-        tildemap = ~pmap
-        tildemap.eff_ruptures = eff_ruptures
-        return tildemap
+        return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, imtls, trunclevel):
