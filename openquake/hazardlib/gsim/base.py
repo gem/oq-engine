@@ -36,10 +36,10 @@ import numpy
 from openquake.baselib.general import DeprecationWarning, AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import with_metaclass, raise_
-from openquake.hazardlib import const
+from openquake.hazardlib import const, source
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, get_distances, FarAwayRupture)
+    IntegrationDistance, get_distances, FarAwayRupture, SourceFilter)
 from openquake.hazardlib.probability_map import ProbabilityMap
 
 
@@ -281,13 +281,16 @@ class ContextMaker(object):
         ruptures = []
         weights = getattr(src, 'weights', itertools.cycle(
             [1. / (src.num_ruptures or src.count_ruptures())]))
-        for rup, weight in zip(src.iter_ruptures(), weights):
-            rup.weight = weight
-            try:
-                rup.sctx, rup.rctx, rup.dctx = self.make_contexts(sites, rup)
-            except FarAwayRupture:
-                continue
-            ruptures.append(rup)
+        sf = SourceFilter(sites, self.maximum_distance, use_rtree=False)
+        for s, s_sites in sf(source.split_source(src)):
+            for rup, weight in zip(s.iter_ruptures(), weights):
+                rup.weight = weight
+                try:
+                    rup.sctx, rup.rctx, rup.dctx = self.make_contexts(
+                        s_sites, rup)
+                except FarAwayRupture:
+                    continue
+                ruptures.append(rup)
         return ruptures
 
     def make_pmap(self, ruptures, imtls, trunclevel, rup_indep):
@@ -1146,5 +1149,4 @@ class CoeffsTable(object):
         min_above = self.sa_coeffs[min_above]
         return dict(
             (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
-            for co in max_below
-        )
+            for co in max_below)
