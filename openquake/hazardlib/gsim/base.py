@@ -339,15 +339,6 @@ class ContextMaker(object):
 
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, imtls, trunclevel):
-        """
-        :param rupture: a Rupture instance
-        :param sctx: the corresponding SiteContext instance
-        :param rctx: the corresponding RuptureContext instance
-        :param dctx: the corresponding DistanceContext instance
-        :param imtls: a dictionary-like object providing the intensity levels
-        :param trunclevel: the truncation level
-        :returns: an array of shape (num_sites, num_levels, num_gsims)
-        """
         pne_array = numpy.zeros(
             (len(rupture.sctx.sites), len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
