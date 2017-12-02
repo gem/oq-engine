@@ -138,14 +138,14 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
         pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
         for src, s_sites in src_filter(srcs):  # filter now
             t0 = time.time()
-            poe = cmaker.poe_map(
+            poemap = cmaker.poe_map(
                 src, s_sites, imtls, trunclevel, ctx_mon, poe_mon)
             for grp_id in src.src_group_ids:
-                pmap[grp_id] |= poe
+                pmap[grp_id] |= poemap
             pmap.calc_times.append(
                 (src.source_id, src.weight, len(s_sites), time.time() - t0))
             # storing the number of contributing ruptures too
-            pmap.eff_ruptures += {grp_id: poe.eff_ruptures
+            pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
                                   for grp_id in src.src_group_ids}
         return pmap
 

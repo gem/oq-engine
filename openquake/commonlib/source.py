@@ -663,7 +663,7 @@ class CompositeSourceModel(collections.Sequence):
                 sources = []
                 for src in src_group.sources:
                     if hasattr(src, '__iter__'):  # MultiPointSource
-                        sources.extend(src)
+                        sources.extend(source.split_source(src))
                     else:
                         sources.append(src)
                 sg = copy.copy(src_group)
