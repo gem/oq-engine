@@ -280,22 +280,13 @@ class ContextMaker(object):
         """
         ruptures = []
         weight = 1. / (src.num_ruptures or src.count_ruptures())
-        sources = source.split_source(src)
-        if len(sources) > 1:
-            sf = SourceFilter(sites, self.maximum_distance, use_rtree=False)
-        else:
-            def sf(sources):  # do nothing, source already filtered
-                for src in sources:
-                    yield src, sites
-        for s, s_sites in sf(sources):
-            for rup in s.iter_ruptures():
-                rup.weight = weight
-                try:
-                    rup.sctx, rup.rctx, rup.dctx = self.make_contexts(
-                        s_sites, rup)
-                except FarAwayRupture:
-                    continue
-                ruptures.append(rup)
+        for rup in src.iter_ruptures():
+            rup.weight = weight
+            try:
+                rup.sctx, rup.rctx, rup.dctx = self.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            ruptures.append(rup)
         return ruptures
 
     def make_pmap(self, ruptures, imtls, trunclevel, rup_indep):
