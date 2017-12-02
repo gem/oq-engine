@@ -160,26 +160,23 @@ class PSHACalculator(base.HazardCalculator):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
         num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+        tasks_per_tile = oq.concurrent_tasks / math.sqrt(num_tiles)
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
             tiles = [self.sitecol]
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(self.csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d, tiles=%d',
-                     maxweight, numheavy, len(tiles))
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
-            if num_tiles > 1:
-                with self.monitor('prefiltering'):
-                    logging.info('Prefiltering tile %d of %d',
-                                 tile_i, len(tiles))
-                    src_filter = SourceFilter(tile, oq.maximum_distance)
-                    csm = self.csm.filter(src_filter)
-            else:  # there is a single tile and the model is already filtered
-                csm = self.csm
+            with self.monitor('prefiltering'):
+                logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
+                src_filter = SourceFilter(tile, oq.maximum_distance)
+                csm = self.csm.filter(src_filter)
+            maxweight = csm.get_maxweight(tasks_per_tile)
+            numheavy = len(csm.get_sources('heavy', maxweight))
+            logging.info('Using maxweight=%d, numheavy=%d',
+                         maxweight, numheavy)
             if csm.has_dupl_sources and not opt:
                 logging.warn('Found %d duplicated sources, use oq info',
                              csm.has_dupl_sources)
@@ -191,7 +188,7 @@ class PSHACalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(sg.sources)
             # NB: csm.get_sources_by_trt discards the mutex sources
-            for trt, sources in self.csm.get_sources_by_trt(opt).items():
+            for trt, sources in csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
                 self.csm.add_infos(sources)  # update with unsplit sources
                 for block in csm.split_in_blocks(maxweight, sources):
