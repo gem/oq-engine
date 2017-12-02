@@ -273,7 +273,7 @@ class ContextMaker(object):
 
     def filter_ruptures(self, src, sites):
         """
-        :param src: a source object
+        :param src: a source object, already filtered and split
         :param sites: a FilteredSiteCollection
         :param mon: a Monitor instance
         :return: a list of filtered ruptures with context attributes
@@ -328,6 +328,8 @@ class ContextMaker(object):
         """
         with ctx_mon:
             ruptures = self.filter_ruptures(src, sites)
+        if not ruptures:
+            return {}
         try:
             with poe_mon:
                 pmap = self.make_pmap(ruptures, imtls, trunclevel, rup_indep)
