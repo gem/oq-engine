@@ -668,7 +668,7 @@ class CompositeSourceModel(collections.Sequence):
                         sources.append(src)
                 sg = copy.copy(src_group)
                 sg.sources = []
-                for src, sites in src_filter(sources):
+                for src, _sites in src_filter(sources):
                     sg.sources.append(src)
                     weight += src.weight
                 src_groups.append(sg)
