@@ -140,8 +140,9 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
             t0 = time.time()
             poemap = cmaker.poe_map(
                 src, s_sites, imtls, trunclevel, ctx_mon, poe_mon)
-            for grp_id in src.src_group_ids:
-                pmap[grp_id] |= poemap
+            if poemap:
+                for grp_id in src.src_group_ids:
+                    pmap[grp_id] |= poemap
             pmap.calc_times.append(
                 (src.source_id, src.weight, len(s_sites), time.time() - t0))
             # storing the number of contributing ruptures too
