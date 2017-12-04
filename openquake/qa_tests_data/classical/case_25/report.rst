@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 =================================================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5517.hdf5 Fri Sep 22 11:29:27 2017
-checksum32                                           3,398,720,512           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     3,398,720,512      
+date           2017-11-08T18:06:57
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 6, num_imts = 1
 
@@ -41,11 +41,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -74,8 +74,8 @@ source_model.xml 0      Volcanic 1           440          440
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.71 KB, max_per_task 1021 B                                             
-count_eff_ruptures.sent     sources 5.96 KB, srcfilter 1.61 KB, param 1.18 KB, monitor 654 B, gsims 202 B
+count_eff_ruptures.received tot 1.73 KB, max_per_task 1.01 KB                                            
+count_eff_ruptures.sent     sources 5.98 KB, srcfilter 1.61 KB, param 1.16 KB, monitor 656 B, gsims 202 B
 hazard.input_weight         264.0                                                                        
 hazard.n_imts               1                                                                            
 hazard.n_levels             3                                                                            
@@ -111,7 +111,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 8.768E-04 0.001 0.003 2        
+count_eff_ruptures 0.002 8.881E-04 0.001 0.003 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -119,12 +119,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.012     0.0       1     
+managing sources               0.013     0.0       1     
 reading composite source model 0.009     0.0       1     
 total count_eff_ruptures       0.004     0.0       2     
 store source_info              0.004     0.0       1     
 prefiltering source model      0.001     0.0       1     
-reading site collection        2.015E-04 0.0       1     
-aggregate curves               6.127E-05 0.0       2     
-saving probability maps        2.980E-05 0.0       1     
+reading site collection        1.903E-04 0.0       1     
+aggregate curves               5.603E-05 0.0       2     
+saving probability maps        2.956E-05 0.0       1     
 ============================== ========= ========= ======

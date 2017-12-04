@@ -20,6 +20,7 @@ import time
 import unittest
 import multiprocessing
 from openquake.baselib.workerpool import WorkerMaster, _starmap, streamer
+from openquake.baselib.general import _get_free_port
 from openquake.baselib.performance import Monitor
 
 
@@ -31,10 +32,10 @@ class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.host = '127.0.0.1'
-        cls.task_in_port = '2910'
-        task_out_port = '2911'
-        cls.receiver_ports = '2912-2920'
-        ctrl_port = '2909'
+        cls.task_in_port = _get_free_port()
+        task_out_port = _get_free_port()
+        cls.receiver_ports = _get_free_port()
+        ctrl_port = _get_free_port()
         host_cores = '127.0.0.1 4'
         cls.master = WorkerMaster(cls.host, cls.task_in_port, task_out_port,
                                   ctrl_port, host_cores)

@@ -27,6 +27,8 @@ import imp
 import copy
 import math
 import socket
+import random
+import zipfile
 import operator
 import warnings
 import tempfile
@@ -511,6 +513,26 @@ class CallableDict(collections.OrderedDict):
         raise KeyError(key)
 
 
+class pack(dict):
+    """
+    Compact a dictionary of lists into a dictionary of arrays.
+    If attrs are given, consider those keys as attributes. For instance,
+
+    >>> p = pack(dict(x=[1], a=[0]), ['a'])
+    >>> p
+    {'x': array([1])}
+    >>> p.a
+    array([0])
+    """
+    def __init__(self, dic, attrs=()):
+        for k, v in dic.items():
+            arr = numpy.array(v)
+            if k in attrs:
+                setattr(self, k, arr)
+            else:
+                self[k] = arr
+
+
 class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables::
@@ -669,7 +691,8 @@ class DictArray(collections.Mapping):
     """
     def __init__(self, imtls):
         self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(imls) if hasattr(imls, '__len__') else 1)
+            [(str(imt), F64,
+              (len(imls),) if hasattr(imls, '__len__') else (1,))
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
@@ -872,3 +895,35 @@ def socket_ready(hostport):
     finally:
         sock.close()
     return False if exc else True
+
+port_candidates = list(range(1920, 2000))
+
+
+def _get_free_port():
+    # extracts a free port in the range 1920:2000 and raises a RuntimeError if
+    # there are no free ports. NB: the port is free when extracted, but another
+    # process may take it immediately, so this function is not safe against
+    # race conditions. Moreover, once a port is taken, it is taken forever and
+    # never considered free again, even if it is. These restrictions as
+    # acceptable for usage in the tests, but only in that case.
+    while port_candidates:
+        port = random.choice(port_candidates)
+        port_candidates.remove(port)
+        if not socket_ready(('127.0.0.1', port)):  # no server listening
+            return port  # the port is free
+    raise RuntimeError('No free ports in the range 1920:2000')
+
+
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
+    """
+    Build a zip archive from the given file names.
+
+    :param fnames: list of path names
+    :param archive: path of the archive
+    """
+    prefix = len(os.path.commonprefix([os.path.dirname(f) for f in fnames]))
+    z = zipfile.ZipFile(archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True)
+    for f in fnames:
+        log('Archiving %s' % f)
+        z.write(f, f[prefix:])
+    z.close()

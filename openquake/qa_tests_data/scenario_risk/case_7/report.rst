@@ -1,11 +1,11 @@
 Scenario Risk Test
 ==================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5567.hdf5 Fri Sep 22 11:30:33 2017
-checksum32                                    4,057,024,737           
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     4,057,024,737      
+date           2017-11-08T18:08:05
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 27, num_imts = 1
 
@@ -25,7 +25,7 @@ area_source_discretization      None
 ground_motion_correlation_model None           
 random_seed                     42             
 master_seed                     0              
-avg_losses                      False          
+avg_losses                      True           
 =============================== ===============
 
 Input files
@@ -41,11 +41,11 @@ structural_vulnerability `vulnerability_model_test1.xml <vulnerability_model_tes
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -78,9 +78,9 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-assoc_assets_sites      0.016     0.0       2     
-reading exposure        0.007     0.0       1     
-building riskinputs     9.639E-04 0.0       1     
-building epsilons       4.890E-04 0.0       1     
-reading site collection 3.958E-05 0.0       1     
+building riskinputs     0.119     0.0       1     
+assoc_assets_sites      0.022     0.0       2     
+reading exposure        0.010     0.0       1     
+building epsilons       6.719E-04 0.0       1     
+reading site collection 5.126E-05 0.0       1     
 ======================= ========= ========= ======

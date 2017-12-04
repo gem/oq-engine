@@ -1,11 +1,11 @@
 Scenario QA Test 3
 ==================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5562.hdf5 Fri Sep 22 11:30:32 2017
-checksum32                                           3,085,599,105           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     3,085,599,105      
+date           2017-11-08T18:08:03
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 4, num_imts = 3
 
@@ -25,7 +25,7 @@ area_source_discretization      None
 ground_motion_correlation_model None              
 random_seed                     3                 
 master_seed                     0                 
-avg_losses                      False             
+avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -41,11 +41,11 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -84,11 +84,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-saving gmfs             0.011     0.0       1     
+saving gmfs             0.032     0.0       1     
+building riskinputs     0.023     0.0       1     
 reading exposure        0.007     0.0       1     
 computing gmfs          0.006     0.0       1     
-filtering sites         0.006     0.0       1     
-building epsilons       7.160E-04 0.0       1     
-building riskinputs     3.052E-04 0.0       1     
+building epsilons       5.934E-04 0.0       1     
 reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

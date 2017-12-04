@@ -22,12 +22,10 @@ import getpass
 from openquake.baselib import config, datastore
 
 try:
-    import openquakeplatform
-    STANDALONE = True
+    from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
 except ImportError:
     STANDALONE = False
-
-DB_SECTION = config.dbserver
+    STANDALONE_APPS = ()
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -66,11 +64,11 @@ STATICFILES_DIRS = [
 
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': os.path.expanduser(DB_SECTION.get('file')),
-    'LOG': os.path.expanduser(DB_SECTION.get('log')),
+    'NAME': os.path.expanduser(config.dbserver.file),
+    'LOG': os.path.expanduser(config.dbserver.log),
     'USER': getpass.getuser(),
-    'HOST': DB_SECTION.get('host'),
-    'PORT': DB_SECTION.get('port'),
+    'HOST': config.dbserver.host,
+    'PORT': config.dbserver.port,
 }
 DATABASES = {'default': DATABASE}
 
@@ -167,16 +165,9 @@ LOGGING = {
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
-STANDALONE_APPS = ()
 if STANDALONE:
     INSTALLED_APPS += (
         'openquakeplatform',
-    )
-
-    STANDALONE_APPS += (
-        'openquakeplatform_ipt',
-        'openquakeplatform_taxtweb',
-        'openquakeplatform_taxonomy',
     )
 
     INSTALLED_APPS += STANDALONE_APPS

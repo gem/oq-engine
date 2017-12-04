@@ -1,11 +1,11 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5516.hdf5 Fri Sep 22 11:29:26 2017
-checksum32                                           17,280,623              
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     17,280,623         
+date           2017-11-08T18:06:56
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 3, num_imts = 2
 
@@ -41,13 +41,13 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============== ====== ========================================== =============== ================
-smlt_path      weight source_model_file                          gsim_logic_tree num_realizations
-============== ====== ========================================== =============== ================
-SM1            0.500  `source_model_1.xml <source_model_1.xml>`_ complex(2,2)    4/4             
-SM2_a3b1       0.250  `source_model_2.xml <source_model_2.xml>`_ complex(2,2)    2/2             
-SM2_a3pt2b0pt8 0.250  `source_model_2.xml <source_model_2.xml>`_ complex(2,2)    2/2             
-============== ====== ========================================== =============== ================
+============== ====== =============== ================
+smlt_path      weight gsim_logic_tree num_realizations
+============== ====== =============== ================
+SM1            0.500  complex(2,2)    4/4             
+SM2_a3b1       0.250  complex(2,2)    2/2             
+SM2_a3pt2b0pt8 0.250  complex(2,2)    2/2             
+============== ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -96,19 +96,19 @@ source_model_2.xml 3      Active Shallow Crust     1           240          240
 
 Informational data
 ------------------
-=========================== ============================================================================
-count_eff_ruptures.received tot 2.37 KB, max_per_task 606 B                                             
-count_eff_ruptures.sent     sources 6 KB, param 3.08 KB, srcfilter 2.89 KB, monitor 1.28 KB, gsims 730 B
-hazard.input_weight         153.0                                                                       
-hazard.n_imts               2                                                                           
-hazard.n_levels             17                                                                          
-hazard.n_realizations       12                                                                          
-hazard.n_sites              3                                                                           
-hazard.n_sources            4                                                                           
-hazard.output_weight        102.0                                                                       
-hostname                    tstation.gem.lan                                                            
-require_epsilons            False                                                                       
-=========================== ============================================================================
+=========================== ===============================================================================
+count_eff_ruptures.received tot 2.4 KB, max_per_task 615 B                                                 
+count_eff_ruptures.sent     sources 6.05 KB, param 3.03 KB, srcfilter 2.89 KB, monitor 1.28 KB, gsims 730 B
+hazard.input_weight         153.0                                                                          
+hazard.n_imts               2                                                                              
+hazard.n_levels             17                                                                             
+hazard.n_realizations       12                                                                             
+hazard.n_sites              3                                                                              
+hazard.n_sources            4                                                                              
+hazard.output_weight        102.0                                                                          
+hostname                    tstation.gem.lan                                                               
+require_epsilons            False                                                                          
+=========================== ===============================================================================
 
 Slowest sources
 ---------------
@@ -116,9 +116,9 @@ Slowest sources
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 2      1         AreaSource   240          0.002     3         1        
-3      1         AreaSource   240          8.972E-04 3         1        
-0      1         PointSource  15           1.757E-04 3         1        
-1      2         PointSource  15           1.650E-04 3         1        
+3      1         AreaSource   240          0.001     3         1        
+0      1         PointSource  15           1.764E-04 3         1        
+1      2         PointSource  15           1.156E-04 3         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -127,23 +127,18 @@ Computation times by source typology
 source_class calc_time counts
 ============ ========= ======
 AreaSource   0.003     2     
-PointSource  3.407E-04 2     
+PointSource  2.921E-04 2     
 ============ ========= ======
 
 Duplicated sources
 ------------------
-========= ========= =============
-source_id calc_time src_group_ids
-========= ========= =============
-1         0.003     0 2 3        
-========= ========= =============
-Sources with the same ID but different parameters
+There are no duplicated sources
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ========= ===== =========
 operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 7.890E-04 8.433E-04 0.003 4        
+count_eff_ruptures 0.001 8.278E-04 5.691E-04 0.002 4        
 ================== ===== ========= ========= ===== =========
 
 Slowest operations
@@ -151,12 +146,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.009     0.0       1     
-total count_eff_ruptures       0.006     0.0       4     
+reading composite source model 0.010     0.0       1     
+total count_eff_ruptures       0.005     0.0       4     
 managing sources               0.005     0.0       1     
 store source_info              0.005     0.0       1     
 prefiltering source model      0.002     0.0       1     
-aggregate curves               8.583E-05 0.0       4     
-reading site collection        4.053E-05 0.0       1     
-saving probability maps        2.909E-05 0.0       1     
+aggregate curves               8.011E-05 0.0       4     
+reading site collection        4.363E-05 0.0       1     
+saving probability maps        2.980E-05 0.0       1     
 ============================== ========= ========= ======

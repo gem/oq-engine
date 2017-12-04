@@ -20,6 +20,7 @@ import os
 import sys
 import mock
 import shutil
+import zipfile
 import tempfile
 import unittest
 
@@ -36,9 +37,10 @@ from openquake.commands.engine import run_job
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
+from openquake.commands.zip import zip as zip_cmd
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
-from openquake.qa_tests_data.classical import case_1
+from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
@@ -69,10 +71,7 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): [0]>
-=============== ======
-attribute       nbytes
-=============== ======'''
+0,AkkarBommer2010(): [0]>'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -107,6 +106,13 @@ attribute       nbytes
         with Print.patch() as p:
             info(None, None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
+
+    def test_job_ini(self):
+        path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        with Print.patch() as p:
+            info(None, None, None, None, None, None, path)
+        # this is a test with multiple same ID sources
+        self.assertIn('multiplicity', str(p))
 
     # NB: info --report is tested in the packager
 
@@ -280,8 +286,29 @@ class UpgradeNRMLTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
     </vulnerabilityModel>
 </nrml>''')
-        upgrade_nrml(tmpdir, False)
+        upgrade_nrml(tmpdir, False, False)
         shutil.rmtree(tmpdir)
+
+
+class ZipTestCase(unittest.TestCase):
+    """
+    Test for the command oq zip
+    """
+    def test_zip(self):
+        ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
+        dtemp = tempfile.mkdtemp()
+        xzip = os.path.join(dtemp, 'x.zip')
+        zip_cmd(ini, xzip)
+        names = sorted(zipfile.ZipFile(xzip).namelist())
+        self.assertEqual(['Wcrust_high_rhypo.hdf5',
+                          'Wcrust_low_rhypo.hdf5',
+                          'Wcrust_med_rhypo.hdf5',
+                          'job.ini',
+                          'nbc_asc_logic_tree.xml',
+                          'source_model_logic_tree.xml',
+                          'vancouver_area_source.xml',
+                          'vancouver_school_sites.csv'], names)
+        shutil.rmtree(dtemp)
 
 
 class SourceModelShapefileConverterTestCase(unittest.TestCase):
@@ -330,7 +357,7 @@ class DbTestCase(unittest.TestCase):
     def test_db(self):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
-                'openquake.commonlib.logs.dbcmd', manage.dbcmd):
+                'openquake.commonlib.logs.dbcmd', manage.fakedbcmd):
             db('db_version')
             try:
                 db('calc_info', (1,))

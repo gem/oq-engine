@@ -28,14 +28,15 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter, humansize
-from openquake.hazardlib.calc.filters import FarAwayRupture
+from openquake.hazardlib.calc.filters import FarAwayRupture, SourceFilter
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
-from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
+from openquake.calculators.classical import (
+    ClassicalCalculator, saving_sources_by_task)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -98,7 +99,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
             continue
         num_ruptures += src.num_ruptures
         num_occ_by_rup = sample_ruptures(
-            src, param['ses_per_logic_tree_path'], param['samples'],
+            src, param['ses_per_logic_tree_path'], sources.samples,
             param['seed'])
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
@@ -193,7 +194,7 @@ def get_events(ebruptures):
 
 
 @base.calculators.add('event_based_rupture')
-class EventBasedRuptureCalculator(PSHACalculator):
+class EventBasedRuptureCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -209,7 +210,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
         self.rupser = calc.RuptureSerializer(self.datastore)
-        self.csm_info = self.datastore['csm_info']
 
     def zerodict(self):
         """
@@ -218,7 +218,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.grp_trt = self.csm_info.grp_trt()
+        self.grp_trt = self.csm.info.grp_trt()
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -251,6 +251,56 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     dset = self.datastore.extend('events', events)
                     if self.oqparam.save_ruptures:
                         self.rupser.save(ebrs, eidx=len(dset)-len(events))
+
+    def gen_args(self, csm, monitor):
+        """
+        Used in the case of large source model logic trees.
+
+        :param monitor: a :class:`openquake.baselib.performance.Monitor`
+        :param csm: a reduced CompositeSourceModel
+        :yields: (sources, sites, gsims, monitor) tuples
+        """
+        oq = self.oqparam
+        csm = self.csm  # we may filter here in the future
+        maxweight = csm.get_maxweight(oq.concurrent_tasks)
+        numheavy = len(csm.get_sources('heavy', maxweight))
+        logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
+        param = dict(
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, seed=oq.ses_seed,
+            maximum_distance=oq.maximum_distance,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+
+        num_tasks = 0
+        num_sources = 0
+        for sm in csm.source_models:
+            for sg in sm.src_groups:
+                gsims = csm.info.gsim_lt.get_gsims(sg.trt)
+                csm.add_infos(sg.sources)
+                for block in csm.split_in_blocks(maxweight, sg.sources):
+                    block.samples = sm.samples
+                    yield block, csm.src_filter, gsims, param, monitor
+                    num_tasks += 1
+                    num_sources += len(block)
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+
+    def execute(self):
+        mutex_groups = list(self.csm.gen_mutex_groups())
+        assert not mutex_groups, 'Mutex sources are not implemented!'
+        with self.monitor('managing sources', autoflush=True):
+            allargs = self.gen_args(self.csm, self.monitor('pmap_from_trt'))
+            iterargs = saving_sources_by_task(allargs, self.datastore)
+            if isinstance(allargs, list):
+                # there is a trick here: if the arguments are known
+                # (a list, not an iterator), keep them as a list
+                # then the Starmap will understand the case of a single
+                # argument tuple and it will run in core the task
+                iterargs = list(iterargs)
+            acc = parallel.Starmap(self.core_task.__func__, iterargs).reduce(
+                self.agg_dicts, self.zerodict())
+        with self.monitor('store source_info', autoflush=True):
+            self.store_source_info(self.csm.infos, acc)
+        return acc
 
     def post_execute(self, result):
         """
@@ -387,7 +437,7 @@ def update_nbytes(dstore, key, array):
 
 
 @base.calculators.add('event_based')
-class EventBasedCalculator(ClassicalCalculator):
+class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
     the hazard curves from the ruptures, depending on the configuration
@@ -454,7 +504,7 @@ class EventBasedCalculator(ClassicalCalculator):
             ruptures = ruptures_by_grp[grp_id]
             if not ruptures:
                 continue
-            rlzs_by_gsim = self.rlzs_assoc.rlzs_by_gsim[grp_id]
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             for block in block_splitter(ruptures, oq.ruptures_per_block):
                 samples = samples_by_grp[grp_id]
                 getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,

@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+# vim: syntax=spec
+#
+# Copyright (C) 2015-2017 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 %define oqstable ##_stable_##
 %define oqrepo ##_repo_##
 %define oqversion ##_version_##
@@ -136,6 +154,7 @@ rm -rf %{buildroot}
 %doc doc/installing/*
 %doc doc/running/*
 %doc doc/upgrading/*
+%config(noreplace) %{_sysconfdir}/openquake/openquake.cfg
 %{oqprefix}/bin/oq
 %{oqprefix}/lib/python2.7/site-packages/openquake*
 %{_bindir}/oq
@@ -144,9 +163,6 @@ rm -rf %{buildroot}
 %{_datadir}/pixmaps/openquake.png
 %{_unitdir}/openquake-dbserver.service
 %{_unitdir}/openquake-webui.service
-
-%config(noreplace)
-%{_sysconfdir}/openquake/openquake.cfg
 
 %post master
 (if ! rabbitmqctl status &>/dev/null; then

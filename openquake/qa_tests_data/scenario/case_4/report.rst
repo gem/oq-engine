@@ -1,11 +1,11 @@
 Scenario QA Test, Case 1
 ========================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5481.hdf5 Fri Sep 22 11:28:56 2017
-checksum32                                    3,130,447,207           
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     3,130,447,207      
+date           2017-11-08T18:06:25
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 3, num_imts = 1
 
@@ -39,11 +39,11 @@ site_model    `site_model.xml <site_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -58,6 +58,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-reading site collection 4.616E-04 0.0       1     
+reading site collection 4.745E-04 0.0       1     
 ======================= ========= ========= ======

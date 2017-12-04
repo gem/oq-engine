@@ -28,7 +28,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib import general
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, InvalidFile
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation
 from openquake.qa_tests_data.classical import case_1, case_2
@@ -83,7 +83,7 @@ export_dir = %s
             }
 
             with mock.patch('logging.warn') as warn:
-                params = getparams(readinput.get_oqparam(job_config))
+                params = getparams(readinput.get_oqparam(job_config, hc_id=1))
                 for key in expected_params:
                     self.assertEqual(expected_params[key], params[key])
                 items = sorted(params['inputs'].items())
@@ -123,11 +123,12 @@ export_dir = %s
 
             expected_params = {
                 'export_dir': TMP,
+                'hazard_calculation_id': 1,
                 'base_path': exp_base_path,
                 'calculation_mode': 'classical',
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': {'default': 1},
+                'maximum_distance': {'default': 1.0},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -139,10 +140,37 @@ export_dir = %s
                 'risk_investigation_time': 50.0,
             }
 
-            params = getparams(readinput.get_oqparam(source))
+            params = getparams(readinput.get_oqparam(source, hc_id=1))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
+
+    def test_wrong_sites_csv(self):
+        sites_csv = general.writetmp(
+            'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
+        source = general.writetmp("""
+[general]
+calculation_mode = classical
+[geometry]
+sites_csv = %s
+[misc]
+maximum_distance=1
+truncation_level=3
+random_seed=5
+[site_params]
+reference_vs30_type = measured
+reference_vs30_value = 600.0
+reference_depth_to_2pt5km_per_sec = 5.0
+reference_depth_to_1pt0km_per_sec = 100.0
+intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
+investigation_time = 50.
+export_dir = %s
+""" % (sites_csv, TMP))
+        oq = readinput.get_oqparam(source, hc_id=1)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_mesh(oq)
+        self.assertIn('expected site_id=0, got 1', str(ctx.exception))
+        os.unlink(sites_csv)
 
     def test_wrong_discretization(self):
         source = general.writetmp("""
@@ -160,10 +188,21 @@ reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types = PGA
 investigation_time = 50.
 """)
-        oqparam = readinput.get_oqparam(source)
+        oqparam = readinput.get_oqparam(source, hc_id=1)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_site_collection(oqparam)
         self.assertIn('Could not discretize region', str(ctx.exception))
+
+    def test_invalid_magnitude_distance_filter(self):
+        source = general.writetmp("""
+[general]
+maximum_distance=[(200, 8)]
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_oqparam(source)
+        self.assertIn('magnitude 200.0 is bigger than the maximum (11): '
+                      'could not convert to maximum_distance:',
+                      str(ctx.exception))
 
 
 def sitemodel():
@@ -615,7 +654,7 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
         eids, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
         assert_allclose(eids, range(5))
         self.assertEqual(
-            writers.write_csv(StringIO(), gmfa), '''\
+            writers.write_csv(BytesIO(), gmfa), b'''\
 PGA:float32,PGV:float32
 6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01,6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01
 1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01,1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01

@@ -19,6 +19,7 @@
 import logging
 import numpy
 
+from openquake.baselib import general
 from openquake.commonlib import readinput
 from openquake.calculators import base, event_based_risk as ebr
 
@@ -45,14 +46,14 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tags())
         self.A = len(self.assetcol)
-        self.E = oq.number_of_ground_motion_fields
         self.I = oq.insured_losses + 1
+        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
+        self.E = len(eids)
         if oq.ignore_covs:
             eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
             logging.info('Building the epsilons')
             eps = self.make_eps(self.E)
-        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
         self.R = len(gmfs)
         self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = self.assetcol
@@ -64,9 +65,6 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         self.taskno = 0
         self.start = 0
-        self.datastore.create_dset('losses_by_tag-rlzs', F32,
-                                   (self.T, self.R, self.L * self.I))
-
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
@@ -76,13 +74,25 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                              readinput.stored_event_dt)
         events['eid'] = eids
         self.datastore['events'] = events
+        self.agglosses = general.AccumDict(
+            accum=numpy.zeros(self.L * self.I, F32))
+        self.vals = self.assetcol.values()
 
     def post_execute(self, result):
-        pass
+        """
+        Save the event loss table
+        """
+        alt = numpy.zeros(len(self.agglosses), self.param['elt_dt'])
+        i = 0
+        for (e, r), loss in self.agglosses.items():
+            alt[i] = (e, r, loss)
+            i += 1
+        self.datastore['agg_loss_table'] = alt
 
     def combine(self, dummy, res):
         """
         :param dummy: unused parameter
         :param res: a result dictionary
         """
-        ebr.EbriskCalculator.__dict__['save_losses'](self, res, self.taskno)
+        ebr.EbriskCalculator.__dict__['save_losses'](self, res, 0)
+        return 1

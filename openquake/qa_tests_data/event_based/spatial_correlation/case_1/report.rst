@@ -1,11 +1,11 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5548.hdf5 Fri Sep 22 11:29:57 2017
-checksum32                                           1,497,102,793           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,497,102,793      
+date           2017-11-08T18:07:28
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 2, num_imts = 1
 
@@ -40,11 +40,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -72,19 +72,19 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 
 Informational data
 ------------------
-========================= ==========================================================================
-compute_ruptures.received max_per_task 295.81 KB, tot 295.81 KB                                     
-compute_ruptures.sent     sources 1.29 KB, src_filter 712 B, param 544 B, monitor 325 B, gsims 102 B
-hazard.input_weight       0.2                                                                       
-hazard.n_imts             1                                                                         
-hazard.n_levels           1                                                                         
-hazard.n_realizations     1                                                                         
-hazard.n_sites            2                                                                         
-hazard.n_sources          1                                                                         
-hazard.output_weight      125.0                                                                     
-hostname                  tstation.gem.lan                                                          
-require_epsilons          False                                                                     
-========================= ==========================================================================
+========================= =========================================================================
+compute_ruptures.received tot 295.82 KB, max_per_task 295.82 KB                                    
+compute_ruptures.sent     sources 1.3 KB, src_filter 712 B, param 532 B, monitor 326 B, gsims 102 B
+hazard.input_weight       0.2                                                                      
+hazard.n_imts             1                                                                        
+hazard.n_levels           1                                                                        
+hazard.n_realizations     1                                                                        
+hazard.n_sites            2                                                                        
+hazard.n_sources          1                                                                        
+hazard.output_weight      125.0                                                                    
+hostname                  tstation.gem.lan                                                         
+require_epsilons          False                                                                    
+========================= =========================================================================
 
 Slowest sources
 ---------------
@@ -118,13 +118,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-setting event years            0.082     0.0       1     
-saving ruptures                0.048     0.0       1     
-total compute_ruptures         0.017     0.074     1     
-store source_info              0.004     0.0       1     
+setting event years            0.069     0.0       1     
+saving ruptures                0.039     0.0       1     
+total compute_ruptures         0.017     0.387     1     
+store source_info              0.003     0.0       1     
 managing sources               0.002     0.0       1     
-reading composite source model 0.002     0.0       1     
-prefiltering source model      6.187E-04 0.0       1     
-filtering ruptures             5.863E-04 0.0       1     
-reading site collection        4.482E-05 0.0       1     
+reading composite source model 0.001     0.0       1     
+filtering ruptures             5.877E-04 0.0       1     
+prefiltering source model      4.642E-04 0.0       1     
+reading site collection        3.552E-05 0.0       1     
 ============================== ========= ========= ======

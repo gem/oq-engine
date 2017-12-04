@@ -1,7 +1,7 @@
 openquake.commonlib package
 ===========================
 
-openquake.commonlib.calc module
+calc module
 ---------------------------------
 
 .. automodule:: openquake.commonlib.calc
@@ -9,7 +9,7 @@ openquake.commonlib.calc module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.hazard_writers module
+hazard_writers module
 -----------------------------------------
 
 .. automodule:: openquake.commonlib.hazard_writers
@@ -17,7 +17,7 @@ openquake.commonlib.hazard_writers module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.logictree module
+logictree module
 ------------------------------------
 
 .. automodule:: openquake.commonlib.logictree
@@ -25,7 +25,7 @@ openquake.commonlib.logictree module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.logs module
+logs module
 -------------------------------
 
 .. automodule:: openquake.commonlib.logs
@@ -33,7 +33,7 @@ openquake.commonlib.logs module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.oqvalidation module
+oqvalidation module
 ---------------------------------------
 
 .. automodule:: openquake.commonlib.oqvalidation
@@ -41,7 +41,7 @@ openquake.commonlib.oqvalidation module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.readinput module
+readinput module
 ------------------------------------
 
 .. automodule:: openquake.commonlib.readinput
@@ -49,23 +49,8 @@ openquake.commonlib.readinput module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.reportwriter module
------------------------------------------
 
-.. automodule:: openquake.calculators.reportwriter
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.commonlib.risk_writers module
----------------------------------------
-
-.. automodule:: openquake.commonlib.risk_writers
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.commonlib.riskmodels module
+riskmodels module
 -------------------------------------
 
 .. automodule:: openquake.commonlib.riskmodels
@@ -73,7 +58,7 @@ openquake.commonlib.riskmodels module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.source module
+source module
 ---------------------------------
 
 .. automodule:: openquake.commonlib.source
@@ -81,7 +66,7 @@ openquake.commonlib.source module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.util module
+util module
 -------------------------------
 
 .. automodule:: openquake.commonlib.util
@@ -89,7 +74,7 @@ openquake.commonlib.util module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.writers module
+writers module
 ----------------------------------
 
 .. automodule:: openquake.commonlib.writers
