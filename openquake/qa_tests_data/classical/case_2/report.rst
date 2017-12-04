@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 2
 ================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5514.hdf5 Fri Sep 22 11:29:26 2017
-checksum32                                           2,196,295,063           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     2,196,295,063      
+date           2017-11-08T18:06:56
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -40,11 +40,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -67,14 +67,14 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ============
 source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           3000         3,000       
+source_model.xml 0      Active Shallow Crust 1           3,000        3,000       
 ================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 =========================== ========================================================================
-count_eff_ruptures.received max_per_task 607 B, tot 607 B                                           
-count_eff_ruptures.sent     sources 1.15 KB, srcfilter 684 B, param 612 B, monitor 327 B, gsims 91 B
+count_eff_ruptures.received tot 616 B, max_per_task 616 B                                           
+count_eff_ruptures.sent     sources 1.16 KB, srcfilter 684 B, param 600 B, monitor 328 B, gsims 91 B
 hazard.input_weight         300.0                                                                   
 hazard.n_imts               1                                                                       
 hazard.n_levels             4                                                                       
@@ -91,7 +91,7 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  3,000        1.392E-04 1         1        
+0      1         PointSource  3,000        1.583E-04 1         1        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -99,7 +99,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  1.392E-04 1     
+PointSource  1.583E-04 1     
 ============ ========= ======
 
 Duplicated sources
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =========
 operation-duration mean      stddev min       max       num_tasks
-count_eff_ruptures 6.661E-04 NaN    6.661E-04 6.661E-04 1        
+count_eff_ruptures 7.482E-04 NaN    7.482E-04 7.482E-04 1        
 ================== ========= ====== ========= ========= =========
 
 Slowest operations
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.007     0.0       1     
-prefiltering source model      0.005     0.0       1     
-store source_info              0.003     0.0       1     
+reading composite source model 0.008     0.0       1     
+prefiltering source model      0.006     0.0       1     
+store source_info              0.004     0.0       1     
 managing sources               0.002     0.0       1     
-total count_eff_ruptures       6.661E-04 0.0       1     
-reading site collection        3.982E-05 0.0       1     
-saving probability maps        2.909E-05 0.0       1     
-aggregate curves               2.098E-05 0.0       1     
+total count_eff_ruptures       7.482E-04 0.0       1     
+reading site collection        5.269E-05 0.0       1     
+saving probability maps        3.052E-05 0.0       1     
+aggregate curves               2.170E-05 0.0       1     
 ============================== ========= ========= ======

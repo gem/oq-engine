@@ -28,13 +28,12 @@ import os
 import re
 import sys
 import copy
-import random
 import itertools
 import collections
 import operator
 from collections import namedtuple
 from decimal import Decimal
-
+import numpy
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
@@ -153,21 +152,7 @@ class ValidationError(LogicTreeError):
             self.filename, self.lineno, self.message)
 
 
-# private function used in sample
-def sample_one(branches, rnd):
-    # Draw a random number and iterate through the branches in the set
-    # (adding up their weights) until the random value falls into
-    # the interval occupied by a branch. Return the latter.
-    diceroll = rnd.random()
-    acc = 0
-    for branch in branches:
-        acc += branch.weight
-        if acc >= diceroll:
-            return branch
-    raise AssertionError('do weights really sum up to 1.0?')
-
-
-def sample(weighted_objects, num_samples, rnd):
+def sample(weighted_objects, num_samples, seed):
     """
     Take random samples of a sequence of weighted objects
 
@@ -176,16 +161,16 @@ def sample(weighted_objects, num_samples, rnd):
         The weights must sum up to 1.
     :param num_samples:
         The number of samples to return
-    :param rnd:
-        Random object. Should have method ``random()`` -- return uniformly
-        distributed random float number >= 0 and < 1.
+    :param seed:
+        A random seed
     :return:
         A subsequence of the original sequence with `num_samples` elements
     """
-    subsequence = []
-    for _ in range(num_samples):
-        subsequence.append(sample_one(weighted_objects, rnd))
-    return subsequence
+    weights = numpy.array([float(obj.weight) for obj in weighted_objects])
+    numpy.random.seed(seed)
+    idxs = numpy.random.choice(len(weights), num_samples, p=weights)
+    # NB: returning an array would break things
+    return [weighted_objects[idx] for idx in idxs]
 
 
 class Branch(object):
@@ -613,16 +598,16 @@ class SourceModelLogicTree(object):
                 rlz.value, rlz.weight / num_samples, smpath, [],
                 num_gsim_paths, i, num_samples)
 
-    def sample_path(self, rnd):
+    def sample_path(self, seed):
         """
         Return the model name and a list of branch ids.
 
-        :param int random_seed: the seed used for the sampling
+        :param seed: the seed used for the sampling
         """
         branchset = self.root_branchset
         branch_ids = []
         while branchset is not None:
-            [branch] = sample(branchset.branches, 1, rnd)
+            [branch] = sample(branchset.branches, 1, seed)
             branch_ids.append(branch.branch_id)
             branchset = branch.child_branchset
         modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
@@ -630,17 +615,15 @@ class SourceModelLogicTree(object):
 
     def __iter__(self):
         """
-        Yield Realization tuples. Notice that
-        weight is not None only when the number_of_logic_tree_samples
-        is 0. In that case a full enumeration is performed, otherwise
-        a random sampling is performed.
+        Yield Realization tuples. Notice that the weight is homogeneous when
+        sampling is enabled, since it is accounted for in the sampling
+        procedure.
         """
         if self.num_samples:
             # random sampling of the logic tree
-            rnd = random.Random(self.seed)
             weight = 1. / self.num_samples
-            for _ in range(self.num_samples):
-                name, sm_lt_path = self.sample_path(rnd)
+            for i in range(self.num_samples):
+                name, sm_lt_path = self.sample_path(self.seed + i)
                 yield Realization(name, weight, tuple(sm_lt_path), None,
                                   tuple(sm_lt_path))
         else:  # full enumeration
@@ -1299,9 +1282,7 @@ class GsimLogicTree(object):
                 [trt] = self.values
             gsims = self.values[trt]
         else:
-            gsims = set()
-            for rlz in rlzs:
-                gsims.update(rlz.value)
+            gsims = set(self.get_gsim_by_trt(rlz, trt) for rlz in rlzs)
         return sorted(gsims)
 
     def __iter__(self):

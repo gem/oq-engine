@@ -24,14 +24,12 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.general import humansize, group_array, DictArray
 from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.export import export
-from openquake.calculators.extract import convert_to_array
 from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
@@ -104,10 +102,9 @@ def export_ruptures_csv(ekey, dstore):
               ' trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
-    gsims = csm_info.get_rlzs_assoc().gsims_by_grp_id
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
-        rup_data = calc.RuptureData(trt, gsims[grp_id]).to_array(
+        rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id)).to_array(
             calc.get_ruptures(dstore, events, grp_id))
         for r in rup_data:
             rows.append(
@@ -248,7 +245,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     :param comment: comment to use as header of the exported CSV file
     """
     curves = util.compose_arrays(
-        sitemesh, convert_to_array(pmap, len(sitemesh), imtls))
+        sitemesh, calc.convert_to_array(pmap, len(sitemesh), imtls))
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -332,46 +329,6 @@ def build_hcurves(getter, imtls, monitor):
             for sid in pmap:
                 curves[idx[sid], r] = pmap[sid].convert(imtls)
     return getter.sids, curves
-
-
-@export.add(('hcurves-rlzs', 'hdf5'))
-def export_hcurves_rlzs(ekey, dstore):
-    """
-    Export all hazard curves in a single .hdf5 file. This is not
-    recommended, even if this exporter is parallel and very efficient.
-    I was able to export 6 GB of curves per minute. However for large
-    calculations it is then impossible to view the .hdf5 file with the
-    hdfviewer because you will run out of memory. Also, compression is not
-    enabled, otherwise all the time will be spent in the compression phase
-    in the controller node with the workers doing nothing.
-    The  recommended way to postprocess large computations is to instantiate
-    the PmapGetter and to work one block of sites at the time,
-    discarding what it is not needed. The exporter here is meant for
-    small/medium calculation and as an example of what you should
-    implement yourself if you need to postprocess the hazard curves.
-    """
-    oq = dstore['oqparam']
-    imtls = oq.imtls
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    sitecol = dstore['sitecol']
-    pgetter = calc.PmapGetter(dstore, rlzs_assoc)
-    N = len(sitecol)
-    R = len(rlzs_assoc.realizations)
-    fname = dstore.export_path('%s.%s' % ekey)
-    monitor = performance.Monitor(ekey[0], fname)
-    size = humansize(dstore.get_attr('poes', 'nbytes'))
-    logging.info('Reading %s of probability maps', size)
-    allargs = [(pgetter.new(tile.sids), imtls, monitor)
-               for tile in sitecol.split_in_tiles(R)]
-    with hdf5.File(fname, 'w') as f:
-        f['imtls'] = imtls
-        dset = f.create_dataset('hcurves-rlzs', (N, R), imtls.dt)
-        dset.attrs['investigation_time'] = oq.investigation_time
-        logging.info('Building the hazard curves for %d sites, %d rlzs', N, R)
-        for sids, allcurves in parallel.Starmap(build_hcurves, allargs):
-            for sid, curves in zip(sids, allcurves):
-                dset[sid] = curves
-    return [fname]
 
 
 def get_kkf(ekey):
@@ -489,6 +446,8 @@ HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 @export.add(('hcurves', 'xml'), ('hcurves', 'geojson'))
 def export_hcurves_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
+    if fmt == 'geojson':
+        logging.warn('The geojson exporters will be removed soon')
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
@@ -525,6 +484,8 @@ def export_hcurves_xml_json(ekey, dstore):
 @export.add(('hmaps', 'xml'), ('hmaps', 'geojson'))
 def export_hmaps_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
+    if fmt == 'geojson':
+        logging.warn('The geojson exporters will be removed soon')
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
@@ -635,7 +596,7 @@ def export_hmaps_np(ekey, dstore):
     dic = {}
     for kind, hcurves in calc.PmapGetter(dstore).items():
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-        dic[kind] = convert_to_array(hmap, len(mesh), pdic)
+        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
     save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30),
             investigation_time=oq.investigation_time)
     return [fname]
@@ -788,7 +749,7 @@ def export_gmf_scenario_csv(ekey, dstore):
         logging.warn('There is no rupture %d', rup_id)
         return []
     [ebr] = ruptures
-    rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[ebr.grp_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
     samples = samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     correl_model = oq.get_correl_model()
@@ -865,16 +826,16 @@ def export_disagg_xml(ekey, dstore):
     group = dstore['disagg']
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
+    trts = dstore.get_attr('csm_info', 'trts')
     for key in group:
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
-        poe = attrs['poe']
+        poe = attrs['poe_agg']
         iml = attrs['iml']
         imt, sa_period, sa_damping = from_string(attrs['imt'])
         fname = dstore.export_path(key + '.xml')
         lon, lat = attrs['location']
-        # TODO: add poe=poe below
         writer = writercls(
             fname, investigation_time=oq.investigation_time,
             imt=imt, smlt_path='_'.join(rlz.sm_lt_path),
@@ -885,10 +846,10 @@ def export_disagg_xml(ekey, dstore):
             lon_bin_edges=attrs['lon_bin_edges'],
             lat_bin_edges=attrs['lat_bin_edges'],
             eps_bin_edges=attrs['eps_bin_edges'],
-            tectonic_region_types=attrs['trts'],
+            tectonic_region_types=trts,
         )
         data = [
-            DisaggMatrix(poe, iml, dim_labels, matrix['_'.join(dim_labels)])
+            DisaggMatrix(poe[i], iml, dim_labels, matrix['_'.join(dim_labels)])
             for i, dim_labels in enumerate(disagg.pmf_map)]
         writer.serialize(data)
         fnames.append(fname)
@@ -939,6 +900,7 @@ def export_disagg_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     group = dstore['disagg']
     fnames = []
+    trts = dstore.get_attr('csm_info', 'trts')
     for key in group:
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
@@ -960,7 +922,7 @@ def export_disagg_csv(ekey, dstore):
         metadata['Lon'] = attrs['lon_bin_edges']
         metadata['Lat'] = attrs['lat_bin_edges']
         metadata['Eps'] = attrs['eps_bin_edges']
-        metadata['TRT'] = attrs['trts']
+        metadata['TRT'] = trts
         data = {}
         for label in disagg_outputs:
             tup = tuple(label.split('_'))

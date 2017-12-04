@@ -1,11 +1,11 @@
 North Africa PSHA
 =================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5536.hdf5 Fri Sep 22 11:29:45 2017
-checksum32                                           576,018,697             
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     576,018,697        
+date           2017-11-08T18:07:15
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 2, num_imts = 7
 
@@ -41,12 +41,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============================= ====== ==================================== =============== ================
-smlt_path                     weight source_model_file                    gsim_logic_tree num_realizations
-============================= ====== ==================================== =============== ================
-smoothed_model_m_m0.2_b_e0.0  0.500  `GridSources.xml <GridSources.xml>`_ simple(0,0,4)   4/4             
-smoothed_model_m_m0.2_b_m0.05 0.500  `GridSources.xml <GridSources.xml>`_ simple(0,0,4)   4/4             
-============================= ====== ==================================== =============== ================
+============================= ====== =============== ================
+smlt_path                     weight gsim_logic_tree num_realizations
+============================= ====== =============== ================
+smoothed_model_m_m0.2_b_e0.0  0.500  simple(4,0,0)   4/4             
+smoothed_model_m_m0.2_b_m0.05 0.500  simple(4,0,0)   4/4             
+============================= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -92,8 +92,8 @@ GridSources.xml 1      Tectonic_type_b 1           260          260
 Informational data
 ------------------
 =========================== =============================================================================
-count_eff_ruptures.received tot 1.19 KB, max_per_task 608 B                                              
-count_eff_ruptures.sent     param 4.06 KB, sources 3.21 KB, srcfilter 1.39 KB, gsims 664 B, monitor 654 B
+count_eff_ruptures.received tot 1.21 KB, max_per_task 617 B                                              
+count_eff_ruptures.sent     param 4.04 KB, sources 3.23 KB, srcfilter 1.39 KB, gsims 664 B, monitor 656 B
 hazard.input_weight         52.0                                                                         
 hazard.n_imts               7                                                                            
 hazard.n_levels             133                                                                          
@@ -110,8 +110,8 @@ Slowest sources
 ====== ========= ================ ============ ========= ========= =========
 grp_id source_id source_class     num_ruptures calc_time num_sites num_split
 ====== ========= ================ ============ ========= ========= =========
-0      21        MultiPointSource 260          2.172E-04 1         1        
-1      21        MultiPointSource 260          2.072E-04 1         1        
+1      21        MultiPointSource 260          3.080E-04 1         1        
+0      21        MultiPointSource 260          2.933E-04 1         1        
 ====== ========= ================ ============ ========= ========= =========
 
 Computation times by source typology
@@ -119,36 +119,31 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 4.244E-04 2     
+MultiPointSource 6.013E-04 2     
 ================ ========= ======
 
 Duplicated sources
 ------------------
-========= ========= =============
-source_id calc_time src_group_ids
-========= ========= =============
-21        4.244E-04 0 1          
-========= ========= =============
-Sources with the same ID but different parameters
+There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =========
-operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 9.543E-04 2.208E-05 9.387E-04 9.699E-04 2        
-================== ========= ========= ========= ========= =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_eff_ruptures 0.001 8.767E-06 0.001 0.001 2        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-store source_info              0.009     0.0       1     
-reading composite source model 0.008     0.0       1     
-managing sources               0.006     0.0       1     
-prefiltering source model      0.003     0.0       1     
+store source_info              0.005     0.0       1     
+reading composite source model 0.004     0.0       1     
+managing sources               0.003     0.0       1     
 total count_eff_ruptures       0.002     0.0       2     
-reading site collection        3.567E-04 0.0       1     
-aggregate curves               7.224E-05 0.0       2     
-saving probability maps        4.601E-05 0.0       1     
+prefiltering source model      0.001     0.0       1     
+reading site collection        1.667E-04 0.0       1     
+aggregate curves               3.982E-05 0.0       2     
+saving probability maps        2.861E-05 0.0       1     
 ============================== ========= ========= ======

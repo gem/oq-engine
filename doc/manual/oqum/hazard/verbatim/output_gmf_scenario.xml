@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+
+<gmfCollection gsimTreePath="BooreAtkinson2008">
+  <gmfSet stochasticEventSetId="0">
+    <gmf IMT="PGA" ruptureId="0">
+      <node gmv="6.2110670E-02" lat="3.8113000E+01" lon="-1.2257000E+02"/>
+      <node gmv="8.5740492E-02" lat="3.8113000E+01" lon="-1.2211400E+02"/>
+      <node gmv="2.2349268E-01" lat="3.7910000E+01" lon="-1.2200000E+02"/>
+      <node gmv="2.1841662E-01" lat="3.8000000E+01" lon="-1.2200000E+02"/>
+      <node gmv="1.6976549E-01" lat="3.8113000E+01" lon="-1.2200000E+02"/>
+      <node gmv="3.7024489E-01" lat="3.8225000E+01" lon="-1.2200000E+02"/>
+      <node gmv="8.2447365E-02" lat="3.8113000E+01" lon="-1.2188600E+02"/>
+    </gmf>
+
+    ...
+
+    <gmf IMT="SA" ruptureId="999" saDamping="5.0" saPeriod="1.0">
+      <node gmv="1.0806067E-01" lat="3.8113000E+01" lon="-1.2257000E+02"/>
+      <node gmv="2.0545422E-01" lat="3.8113000E+01" lon="-1.2211400E+02"/>
+      <node gmv="5.1971424E-01" lat="3.7910000E+01" lon="-1.2200000E+02"/>
+      <node gmv="6.0026973E-01" lat="3.8000000E+01" lon="-1.2200000E+02"/>
+      <node gmv="2.8479284E-01" lat="3.8113000E+01" lon="-1.2200000E+02"/>
+      <node gmv="1.0062804E+00" lat="3.8225000E+01" lon="-1.2200000E+02"/>
+      <node gmv="2.2980663E-01" lat="3.8113000E+01" lon="-1.2188600E+02"/>
+    </gmf>
+  </gmfSet>
+</gmfCollection>
+
+</nrml>

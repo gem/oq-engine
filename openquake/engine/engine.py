@@ -22,13 +22,17 @@ calculations."""
 import os
 import re
 import sys
+import json
 import signal
-import logging
 import traceback
-import requests
 import platform
-
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
 from openquake.baselib.performance import Monitor
+from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
@@ -124,16 +128,13 @@ def expose_outputs(dstore):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-rlzs' in dstore and rlzs:
+    if 'avg_losses-stats' in dstore or ('avg_losses-rlzs' in dstore and rlzs):
         dskeys.add('avg_losses-stats')
     if 'curves-stats' in dstore:
         logs.LOG.warn('loss curves are exportable with oq export')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
-        if 'loss_curves-rlzs' in dstore:
-            dskeys.add('loss_maps-rlzs')
         if 'loss_curves-stats' in dstore:
-            if len(rlzs) > 1:
-                dskeys.add('loss_maps-stats')
+            dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
         dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'realizations' in dskeys and len(rlzs) <= 1:
@@ -159,15 +160,13 @@ def raiseMasterKilled(signum, _stack):
         msg = 'The openquake master process was killed manually'
     else:
         msg = 'Received a signal %d' % signum
-
-    # FIXME this code has been temporary disabled due issues with large
-    # computations and further investigation is need; code is left as reference
-    # for pid in parallel.executor.pids:
-    #     try:
-    #         os.kill(pid, signal.SIGKILL)
-    #     except OSError: # pid not found
-    #         pass
-
+    if sys.version_info >= (3, 5, 0):
+        # Python 2 is buggy and this code would hang
+        for pid in parallel.executor.pids:  # when using futures
+            try:
+                os.kill(pid, signal.SIGKILL)  # SIGTERM is not enough :-(
+            except OSError:  # pid not found
+                pass
     raise MasterKilled(msg)
 
 
@@ -197,7 +196,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     :returns:
         a pair (job_id, oqparam)
     """
-    oq = readinput.get_oqparam(cfg_file)
+    oq = readinput.get_oqparam(cfg_file, hc_id=hazard_calculation_id)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
                         username, datastore.get_datadir(),
                         hazard_calculation_id)
@@ -222,6 +221,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     :param exports:
         A comma-separated string of export types.
     """
+    setproctitle('oq-job-%d' % job_id)
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
         if os.environ.get('OQ_DISTRIBUTE') in ('zmq', 'celery'):
@@ -300,19 +300,12 @@ def check_obsolete_version(calculation_mode='WebUI'):
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
                (__version__, calculation_mode, platform.platform())}
     try:
-        logger = logging.getLogger()  # root logger
-        level = logger.level
-        # requests.get logs at level INFO: raising the level so that
-        # the log is hidden
-        logger.setLevel(logging.WARN)
-        try:
-            json = requests.get(OQ_API + '/engine/latest', timeout=0.5,
-                                headers=headers).json()
-        finally:
-            logger.setLevel(level)  # back as it was
-        tag_name = json['tag_name']
+        req = Request(OQ_API + '/engine/latest', headers=headers)
+        # NB: a timeout < 1 does not work
+        data = urlopen(req, timeout=1).read()  # bytes
+        tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
-        latest = version_triple(json['tag_name'])
+        latest = version_triple(tag_name)
     except:  # page not available or wrong version tag
         return
     if current < latest:

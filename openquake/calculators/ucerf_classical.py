@@ -25,7 +25,7 @@ import h5py
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc.hazard_curve import pmap_from_grp, poe_map
+from openquake.hazardlib.calc.hazard_curve import pmap_from_trt, poe_map
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import valid
@@ -34,7 +34,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFControl, get_composite_source_model)
+    UCERFSource, get_composite_source_model)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -56,7 +56,7 @@ def convert_UCERFSource(self, node):
         start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
     else:
         start_date = None
-    return UCERFControl(
+    return UCERFSource(
         source_file,
         node["id"],
         self.tom.time_span,
@@ -74,8 +74,7 @@ SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 @util.reader
-def ucerf_classical(
-        rupset_idx, ucerf_source, src_filter, gsims, monitor):
+def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     """
     :param rupset_idx:
         indices of the rupture sets
@@ -94,29 +93,25 @@ def ucerf_classical(
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
-
-    # prefilter the sites close to the rupture set
-    with h5py.File(ucerf_source.control.source_file, "r") as hdf5:
-        mag = hdf5[ucerf_source.idx_set["mag_idx"]][rupset_idx].max()
-        ridx = set()
-        # find the combination of rupture sections used in this model
-        rup_index_key = "/".join(
-            [ucerf_source.idx_set["geol_idx"], "RuptureIndex"])
-        # determine which of the rupture sections used in this set of indices
-        rup_index = hdf5[rup_index_key]
-        for i in rupset_idx:
-            ridx.update(rup_index[i])
-        s_sites = ucerf_source.get_rupture_sites(hdf5, ridx, src_filter, mag)
-        if s_sites is None:  # return an empty probability map
-            pm = ProbabilityMap(len(imtls.array), len(gsims))
-            pm.calc_times = []  # TODO: fix .calc_times
-            pm.eff_ruptures = {ucerf_source.src_group_id: 0}
-            pm.grp_id = ucerf_source.src_group_id
-            return pm
-
-    # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
+    grp_id = ucerf_source.src_group_id
+    mag = ucerf_source.mags[rupset_idx].max()
+    ridx = set()
+    for idx in rupset_idx:
+        ridx.update(ucerf_source.get_ridx(idx))
     ucerf_source.rupset_idx = rupset_idx
     ucerf_source.num_ruptures = nruptures = len(rupset_idx)
+
+    # prefilter the sites close to the rupture set
+    s_sites = ucerf_source.get_rupture_sites(ridx, src_filter, mag)
+    if s_sites is None:  # return an empty probability map
+        pm = ProbabilityMap(len(imtls.array), len(gsims))
+        acc = AccumDict({grp_id: pm})
+        acc.calc_times = [(ucerf_source.source_id, nruptures,
+                           None, time.time() - t0)]
+        acc.eff_ruptures = {grp_id: 0}
+        return acc
+
+    # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     imtls = DictArray(imtls)
     ctx_mon = monitor('making contexts', measuremem=False)
@@ -125,11 +120,11 @@ def ucerf_classical(
     pmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
                    truncation_level, ctx_mon, pne_mons)
     nsites = len(s_sites)
-    pmap.calc_times = [
+    acc = AccumDict({grp_id: pmap})
+    acc.calc_times = [
         (ucerf_source.source_id, nruptures * nsites, nsites, time.time() - t0)]
-    pmap.grp_id = ucerf_source.src_group_id
-    pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
-    return pmap
+    acc.eff_ruptures = {grp_id: ucerf_source.num_ruptures}
+    return acc
 
 
 @base.calculators.add('ucerf_psha')
@@ -147,7 +142,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.csm = get_composite_source_model(self.oqparam)
-        self.gsims_by_grp = self.csm.info.get_gsims_by_grp()
+        self.gsims_by_grp = {grp.id: self.csm.info.get_gsims(grp.id)
+                             for sm in self.csm.source_models
+                             for grp in sm.src_groups}
         self.rup_data = {}
 
     def execute(self):
@@ -165,7 +162,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
-
+        param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level)
         for sm in self.csm.source_models:  # one branch at the time
             grp_id = sm.ordinal
             gsims = self.gsims_by_grp[grp_id]
@@ -184,10 +181,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             ct2 = (self.oqparam.concurrent_tasks // 2) or 1
 
             # parallelize on the background sources, small tasks
-            args = (bckgnd_sources, self.src_filter, oq.imtls,
-                    gsims, self.oqparam.truncation_level, (), monitor)
+            args = (bckgnd_sources, self.src_filter, gsims, param, monitor)
             bg_res = parallel.Starmap.apply(
-                pmap_from_grp, args, name='background_sources_%d' % grp_id,
+                pmap_from_trt, args, name='background_sources_%d' % grp_id,
                 concurrent_tasks=ct2).submit_all()
 
             # parallelize by rupture subsets
@@ -201,7 +197,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
             # compose probabilities from background sources
             for pmap in bg_res:
-                acc[grp_id] |= pmap
+                acc[grp_id] |= pmap[grp_id]
 
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)

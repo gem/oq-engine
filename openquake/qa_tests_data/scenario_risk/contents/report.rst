@@ -1,11 +1,11 @@
 Scenario QA Test for contents
 =============================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5559.hdf5 Fri Sep 22 11:30:32 2017
-checksum32                                    253,980,831             
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     253,980,831        
+date           2017-11-08T18:08:03
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 3, num_imts = 3
 
@@ -40,11 +40,11 @@ rupture_model          `fault_rupture.xml <fault_rupture.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -76,7 +76,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
-filtering sites         0.006     0.0       1     
+reading exposure        0.007     0.0       1     
 reading site collection 6.437E-06 0.0       1     
 ======================= ========= ========= ======
