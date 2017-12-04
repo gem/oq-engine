@@ -1,3 +1,9 @@
+  [Graeme Weatherill]
+  * Implements comprehensive suite of NGA East ground motion models for
+    central and eastern United States
+  * Minor modification of check_gsim functions to permit instantiated classes
+    to be passed
+
 python-oq-engine (2.8.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
@@ -107,6 +113,7 @@ python-oq-engine (2.7.0-0~precise01) precise; urgency=low
     of the damage states
   * Extended the FragilityFunctions to accept sequences/arrays of intensity
     levels, as requested by Hyeuk Ryu
+>>>>>>> master
 
   [Daniele Viganò]
   * Added support for groups in the WebUI/API server
