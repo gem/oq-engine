@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed the CSV exporter for disaggregation outputs when iml_disagg is set
+
   [Graeme Weatherill]
   * Implements comprehensive suite of NGA East ground motion models for
     central and eastern United States
