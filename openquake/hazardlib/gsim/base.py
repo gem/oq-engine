@@ -24,19 +24,23 @@ different kinds of :class:`ground shaking intensity models
 from __future__ import division
 
 import abc
+import sys
 import math
 import warnings
+import itertools
 import functools
 import contextlib
 from scipy.special import ndtr
 import numpy
 
-from openquake.hazardlib import const
-from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.calc.filters import IntegrationDistance, get_distances
 from openquake.baselib.general import DeprecationWarning, AccumDict
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib.python3compat import with_metaclass, raise_
+from openquake.hazardlib import const
+from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.calc.filters import (
+    IntegrationDistance, get_distances, FarAwayRupture)
+from openquake.hazardlib.probability_map import ProbabilityMap
 
 
 class NonInstantiableError(Exception):
@@ -266,6 +270,86 @@ class ContextMaker(object):
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
+
+    def filter_ruptures(self, src, sites):
+        """
+        :param src: a source object
+        :param sites: a FilteredSiteCollection
+        :param mon: a Monitor instance
+        :return: a list of filtered ruptures with context attributes
+        """
+        ruptures = []
+        weight = 1. / (src.num_ruptures or src.count_ruptures())
+        for rup in src.iter_ruptures():
+            rup.weight = weight
+            try:
+                rup.sctx, rup.rctx, rup.dctx = self.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            ruptures.append(rup)
+        return ruptures
+
+    def make_pmap(self, ruptures, imtls, trunclevel, rup_indep):
+        """
+        :param src: a source object
+        :param ruptures: a list of "dressed" ruptures
+        :param imtls: intensity measure and levels
+        :param trunclevel: truncation level
+        :param rup_indep: True if the ruptures are independent
+        :returns: a ProbabilityMap instance
+        """
+        sids = set()
+        for rup in ruptures:
+            sids.update(rup.sctx.sites.sids)
+        pmap = ProbabilityMap.build(
+            len(imtls.array), len(self.gsims), sids, initvalue=rup_indep)
+        for rup in ruptures:
+            pnes = self._make_pnes(rup, imtls, trunclevel)
+            for sid, pne in zip(rup.sctx.sites.sids, pnes):
+                if rup_indep:
+                    pmap[sid].array *= pne
+                else:
+                    pmap[sid].array += pne * rup.weight
+        tildemap = ~pmap
+        tildemap.eff_ruptures = len(ruptures)
+        return tildemap
+
+    def poe_map(self, src, sites, imtls, trunclevel, ctx_mon, poe_mon,
+                rup_indep=True):
+        """
+        :param src: a source object
+        :param sites: a FilteredSiteCollection
+        :param imtls: intensity measure and levels
+        :param trunclevel: truncation level
+        :param ctx_mon: a Monitor instance for make_context
+        :param poe_mon: a Monitor instance for get_poes
+        :param rup_indep: True if the ruptures are independent
+        :returns: a ProbabilityMap instance
+        """
+        with ctx_mon:
+            ruptures = self.filter_ruptures(src, sites)
+        try:
+            with poe_mon:
+                pmap = self.make_pmap(ruptures, imtls, trunclevel, rup_indep)
+        except Exception as err:
+            etype, err, tb = sys.exc_info()
+            msg = '%s (source id=%s)' % (str(err), src.source_id)
+            raise_(etype, msg, tb)
+        return pmap
+
+    # NB: it is important for this to be fast since it is inside an inner loop
+    def _make_pnes(self, rupture, imtls, trunclevel):
+        pne_array = numpy.zeros(
+            (len(rupture.sctx.sites), len(imtls.array), len(self.gsims)))
+        for i, gsim in enumerate(self.gsims):
+            pnos = []  # list of arrays nsites x nlevels
+            for imt in imtls:
+                poes = gsim.get_poes(
+                    rupture.sctx, rupture.rctx, rupture.dctx,
+                    imt_module.from_string(imt), imtls[imt], trunclevel)
+                pnos.append(rupture.get_probability_no_exceedance(poes))
+            pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
+        return pne_array
 
     def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
                      monitor=Monitor()):

@@ -922,8 +922,8 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
     :param archive: path of the archive
     """
     prefix = len(os.path.commonprefix([os.path.dirname(f) for f in fnames]))
-    z = zipfile.ZipFile(archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True)
-    for f in fnames:
-        log('Archiving %s' % f)
-        z.write(f, f[prefix:])
-    z.close()
+    with zipfile.ZipFile(
+            archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True) as z:
+        for f in fnames:
+            log('Archiving %s' % f)
+            z.write(f, f[prefix:])
