@@ -43,37 +43,6 @@ def dist_by_asset(data, multi_stat_dt):
     return out
 
 
-def dist_by_tag(data, multi_stat_dt):
-    """
-    :param data: array of shape (T, R, L, ...)
-    :param multi_stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (T, R) with records of type multi_stat_dt
-    """
-    T, R, L = data.shape[:3]
-    out = numpy.zeros((T, R), multi_stat_dt)
-    for l, lt in enumerate(multi_stat_dt.names):
-        out_lt = out[lt]
-        for t, r in itertools.product(range(T), range(R)):
-            out_lt[t, r] = scientific.mean_std(data[t, r, l])
-    return out
-
-
-def dist_total(data, multi_stat_dt):
-    """
-    :param data: array of shape (T, R, L, ...)
-    :param multi_stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (R,) with records of type multi_stat_dt
-    """
-    T, R, L = data.shape[:3]
-    total = data.sum(axis=0)
-    out = numpy.zeros(R, multi_stat_dt)
-    for l, lt in enumerate(multi_stat_dt.names):
-        out_lt = out[lt]
-        for r in range(R):
-            out_lt[r] = scientific.mean_std(total[r, l])
-    return out
-
-
 def scenario_damage(riskinput, riskmodel, param, monitor):
     """
     Core function for a damage computation.
@@ -144,11 +113,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
+        base.get_gmfs(self)
         self.param['number_of_ground_motion_fields'] = (
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        base.get_gmfs(self)
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['tags'] = self.assetcol.tags()
 
@@ -157,7 +126,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
-        tags = encode(self.param['tags'])
         dstates = self.riskmodel.damage_states
         ltypes = self.riskmodel.loss_types
         L = len(ltypes)
@@ -176,11 +144,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = dist_by_asset(
             d_asset, multi_stat_dt)
-        self.datastore['dmg_by_tag'] = dist_by_tag(
-            result['d_tag'], multi_stat_dt)
-        self.datastore.set_attrs('dmg_by_tag', tags=tags)
-        by_tag = result['d_tag'][self.assetcol.get_tax_idx()]
-        self.datastore['dmg_total'] = dist_total(by_tag, multi_stat_dt)
 
         # consequence distributions
         if result['c_asset']:
@@ -190,11 +153,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 c_asset[a, r, l] = stat
             multi_stat_dt = self.oqparam.loss_dt(stat_dt)
             self.datastore['losses_by_asset'] = c_asset
-            self.datastore['losses_by_tag'] = dist_by_tag(
-                result['c_tag'], multi_stat_dt)
-            self.datastore.set_attrs('losses_by_tag', tags=tags)
-            by_tag = result['c_tag'][self.assetcol.get_tax_idx()]
-            self.datastore['losses_total'] = dist_total(by_tag, multi_stat_dt)
 
         # save gmdata
         self.gmdata = result['gmdata']

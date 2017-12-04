@@ -8,7 +8,7 @@ Subpackages
 
     openquake.calculators.export
 
-openquake.calculators.base module
+base module
 ---------------------------------
 
 .. automodule:: openquake.calculators.base
@@ -16,7 +16,7 @@ openquake.calculators.base module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.classical module
+classical module
 --------------------------------------
 
 .. automodule:: openquake.calculators.classical
@@ -24,7 +24,7 @@ openquake.calculators.classical module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.classical_bcr module
+classical_bcr module
 ------------------------------------------
 
 .. automodule:: openquake.calculators.classical_bcr
@@ -32,7 +32,7 @@ openquake.calculators.classical_bcr module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.classical_damage module
+classical_damage module
 ---------------------------------------------
 
 .. automodule:: openquake.calculators.classical_damage
@@ -40,7 +40,7 @@ openquake.calculators.classical_damage module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.classical_risk module
+classical_risk module
 -------------------------------------------
 
 .. automodule:: openquake.calculators.classical_risk
@@ -48,7 +48,7 @@ openquake.calculators.classical_risk module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.disaggregation module
+disaggregation module
 -------------------------------------------
 
 .. automodule:: openquake.calculators.disaggregation
@@ -56,7 +56,7 @@ openquake.calculators.disaggregation module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.event_based module
+event_based module
 ----------------------------------------
 
 .. automodule:: openquake.calculators.event_based
@@ -64,7 +64,7 @@ openquake.calculators.event_based module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.event_based_risk module
+event_based_risk module
 ---------------------------------------------
 
 .. automodule:: openquake.calculators.event_based_risk
@@ -72,8 +72,15 @@ openquake.calculators.event_based_risk module
     :undoc-members:
     :show-inheritance:
 
+reportwriter module
+-----------------------------------------
 
-openquake.calculators.scenario module
+.. automodule:: openquake.calculators.reportwriter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+scenario module
 -------------------------------------
 
 .. automodule:: openquake.calculators.scenario
@@ -81,7 +88,7 @@ openquake.calculators.scenario module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.scenario_damage module
+scenario_damage module
 --------------------------------------------
 
 .. automodule:: openquake.calculators.scenario_damage
@@ -89,7 +96,7 @@ openquake.calculators.scenario_damage module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.scenario_risk module
+scenario_risk module
 ------------------------------------------
 
 .. automodule:: openquake.calculators.scenario_risk
@@ -97,7 +104,7 @@ openquake.calculators.scenario_risk module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.ucerf_event_classical module
+ucerf_event_classical module
 --------------------------------------------------
 
 .. automodule:: openquake.calculators.ucerf_classical
@@ -105,7 +112,7 @@ openquake.calculators.ucerf_event_classical module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.ucerf_event_based module
+ucerf_event_based module
 ----------------------------------------------
 
 .. automodule:: openquake.calculators.ucerf_event_based
@@ -113,7 +120,7 @@ openquake.calculators.ucerf_event_based module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.views module
+views module
 ----------------------------------
 
 .. automodule:: openquake.calculators.views

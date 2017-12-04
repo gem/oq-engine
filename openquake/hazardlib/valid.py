@@ -84,6 +84,14 @@ def gsim(value, **kwargs):
         raise ValueError('Could not instantiate %s%s' % (value, kwargs))
 
 
+def logic_tree_path(value):
+    """
+    >>> logic_tree_path('SM2_a3b1')
+    ['SM2', 'a3b1']
+    """
+    return value.split('_')
+
+
 def compose(*validators):
     """
     Implement composition of validators. For instance
@@ -249,20 +257,23 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange):
+    def __init__(self, minrange, maxrange, name=''):
         self.minrange = minrange
         self.maxrange = maxrange
+        self.name = name
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
         f = float_(value)
         if f > self.maxrange:
-            raise ValueError("'%s' is bigger than the max, '%s'" %
-                             (f, self.maxrange))
+            raise ValueError("%s %s is bigger than the maximum (%s)" %
+                             (self.name, f, self.maxrange))
         if f < self.minrange:
-            raise ValueError("'%s' is smaller than the min, '%s'" %
-                             (f, self.minrange))
+            raise ValueError("%s %s is smaller than the minimum (%s)" %
+                             (self.name, f, self.minrange))
         return f
+
+magnitude = FloatRange(0, 11, 'magnitude')
 
 
 def not_empty(value):
@@ -640,10 +651,10 @@ def check_levels(imls, imt):
     :param imt: the intensity measure type
 
     >>> check_levels([0.1, 0.2], 'PGA')  # ok
-    >>> check_levels([0.1], 'PGA')
+    >>> check_levels([], 'PGA')
     Traceback (most recent call last):
        ...
-    ValueError: Not enough imls for PGA: [0.1]
+    ValueError: No imls for PGA: []
     >>> check_levels([0.2, 0.1], 'PGA')
     Traceback (most recent call last):
        ...
@@ -653,8 +664,8 @@ def check_levels(imls, imt):
        ...
     ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
-    if len(imls) < 2:
-        raise ValueError('Not enough imls for %s: %s' % (imt, imls))
+    if len(imls) < 1:
+        raise ValueError('No imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
@@ -780,7 +791,13 @@ def maximum_distance(value):
     :returns:
         a IntegrationDistance mapping
     """
-    return IntegrationDistance(floatdict(value))
+    dic = floatdict(value)
+    for trt, magdists in dic.items():
+        if isinstance(magdists, list):  # could be a scalar otherwise
+            magdists.sort()  # make sure the list is sorted by magnitude
+            for mag, dist in magdists:  # validate the magnitudes
+                magnitude(mag)
+    return IntegrationDistance(dic)
 
 
 # ########################### SOURCES/RUPTURES ############################# #

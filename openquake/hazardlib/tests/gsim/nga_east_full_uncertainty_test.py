@@ -565,7 +565,7 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
     def check(self, gsim, filename, max_discrep_percentage):
         filename = os.path.join(self.BASE_DATA_PATH, filename)
         errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
-            gsim, open(filename), max_discrep_percentage, instantiated=True)
+            gsim, open(filename), max_discrep_percentage)
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
         d_att = self.get_context_attributes(dctx)

@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
+from __future__ import division
 import abc
 from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
@@ -54,6 +55,14 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         return self.num_ruptures * self.RUPTURE_WEIGHT * self.nsites
+
+    @property
+    def src_group_ids(self):
+        """
+        :returns: a list of source group IDs (usually of 1 element)
+        """
+        grp_id = self.src_group_id
+        return [grp_id] if isinstance(grp_id, int) else grp_id
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id

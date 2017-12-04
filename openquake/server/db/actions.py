@@ -59,15 +59,17 @@ def reset_is_running(db):
 
 def set_status(db, job_id, status):
     """
-    Set the status 'created', 'executing', 'complete', 'failed'
+    Set the status 'created', 'executing', 'complete', 'failed', 'aborted'
     consistently with `is_running`.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
     :param status: status string
     """
-    assert status in ('created', 'executing', 'complete', 'failed'), status
-    if status in ('created', 'complete', 'failed'):
+    assert status in (
+        'created', 'executing', 'complete', 'aborted', 'failed'
+    ), status
+    if status in ('created', 'complete', 'failed', 'aborted'):
         is_running = 0
     else:  # 'executing'
         is_running = 1
@@ -101,7 +103,7 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
                description=description,
                user_name=user_name,
                hazard_calculation_id=hc_id,
-               is_running=0,
+               is_running=1,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     job_id = db('INSERT INTO job (?S) VALUES (?X)',
                 job.keys(), job.values()).lastrowid
@@ -118,25 +120,37 @@ def delete_uncompleted_calculations(db, user):
     db("DELETE FROM job WHERE user_name=?x AND status != 'complete'", user)
 
 
-def get_job_id(db, job_id, username):
+def get_job(db, job_id, username=None):
     """
     If job_id is negative, return the last calculation of the current
     user, otherwise returns the job_id unchanged.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: a job ID (can be negative and can be nonexisting)
-    :param username: an user name
-    :returns: a valid job ID or None if the original job ID was invalid
+    :param username: an user name (if None, ignore it)
+    :returns: a valid job or None if the original job ID was invalid
     """
     job_id = int(job_id)
+
     if job_id > 0:
-        return job_id
-    joblist = db('SELECT id FROM job WHERE user_name=?x '
-                 'ORDER BY id DESC LIMIT ?x', username, - job_id)
+        dic = dict(id=job_id)
+        if username:
+            dic['user_name'] = username
+        try:
+            return db('SELECT * FROM job WHERE ?A', dic, one=True)
+        except NotFound:
+            return
+
+    # else negative job_id
+    if username:
+        joblist = db('SELECT * FROM job WHERE user_name=?x '
+                     'ORDER BY id DESC LIMIT ?x', username, -job_id)
+    else:
+        joblist = db('SELECT * FROM job ORDER BY id DESC LIMIT ?x', -job_id)
     if not joblist:  # no jobs
         return
     else:
-        return joblist[-1].id
+        return joblist[-1]
 
 
 def get_calc_id(db, datadir, job_id=None):
@@ -559,10 +573,12 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    # strange: understand why the filter returns two lines
+    # strange: understand why the filter returns two lines or zero lines
     log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
-             job_id)[-1]
-    response_data = log.message.splitlines()
+             job_id)
+    if not log:
+        return []
+    response_data = log[-1].message.splitlines()
     return response_data
 
 
@@ -577,20 +593,6 @@ def get_result(db, result_id):
     job = db('SELECT job.*, ds_key FROM job, output WHERE '
              'oq_job_id=job.id AND output.id=?x', result_id, one=True)
     return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
-
-
-def get_job(db, job_id, username):
-    """
-    :param db:
-        a :class:`openquake.server.dbapi.Db` instance
-    :param job_id:
-        ID of the current job
-    :param username:
-        user name
-    :returns: the full path to the datastore
-    """
-    calc_id = get_job_id(db, job_id, username) or job_id
-    return db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
 
 
 def get_results(db, job_id):

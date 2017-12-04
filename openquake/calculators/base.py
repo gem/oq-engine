@@ -25,6 +25,8 @@ import operator
 import itertools
 import traceback
 import collections
+from functools import partial
+from datetime import datetime
 import numpy
 
 from openquake.baselib import (
@@ -165,6 +167,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = engine_version
+        attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
             attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
@@ -340,7 +343,7 @@ class HazardCalculator(BaseCalculator):
         if some assets were discarded or if there were missing assets
         for some sites.
         """
-        maximum_distance = self.oqparam.asset_hazard_distance
+        asset_hazard_distance = self.oqparam.asset_hazard_distance
         siteobjects = geo.utils.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
             zip(sitecol.sids, sitecol.lons, sitecol.lats))
@@ -348,13 +351,14 @@ class HazardCalculator(BaseCalculator):
         for assets in self.assetcol.assets_by_site():
             if len(assets):
                 lon, lat = assets[0].location
-                site, _ = siteobjects.get_closest(lon, lat, maximum_distance)
-                if site:
+                site, distance = siteobjects.get_closest(lon, lat)
+                if distance <= asset_hazard_distance:
+                    # keep the assets, otherwise discard them
                     assets_by_sid += {site.sid: list(assets)}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associate any site to any assets within the '
-                'maximum distance of %s km' % maximum_distance)
+                'asset_hazard_distance of %s km' % asset_hazard_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
@@ -410,15 +414,16 @@ class HazardCalculator(BaseCalculator):
             logging.info('Prefiltering the CompositeSourceModel')
             with self.monitor('prefiltering source model',
                               autoflush=True, measuremem=True):
-                self.src_filter = SourceFilter(
-                    self.sitecol, oq.maximum_distance)
-                self.csm = csm.filter(self.src_filter)
-            csm.info.gsim_lt.check_imts(oq.imtls)
-            self.datastore['csm_info'] = self.csm.info
+                src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+                self.csm = csm.filter(src_filter)
+            self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.rup_data = {}
         self.init()
 
     def read_csm(self):
+        if 'source' not in self.oqparam.inputs:
+            raise ValueError('Missing source_model_logic_tree in %(job_ini)s '
+                             'or missing --hc option' % self.oqparam.inputs)
         with self.monitor('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
         if self.is_stochastic:
@@ -463,6 +468,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
             self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
+        elif hasattr(self, 'csm'):
+            self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
@@ -517,9 +524,7 @@ class HazardCalculator(BaseCalculator):
         if rm.damage_states:
             # best not to save them as bytes, they are used as headers
             attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)
-        self.datastore['loss_ratios'] = rm.get_loss_ratios()
         self.datastore.set_nbytes('composite_risk_model')
-        self.datastore.set_nbytes('loss_ratios')
         self.datastore.hdf5.flush()
 
     def assoc_assets(self, haz_sitecol):
@@ -591,6 +596,43 @@ class HazardCalculator(BaseCalculator):
                         'Missing consequenceFunctions for %s' %
                         ' '.join(missing))
 
+    def count_eff_ruptures(self, result_dict, src_group_id):
+        """
+        Returns the number of ruptures in the src_group (after filtering)
+        or 0 if the src_group has been filtered away.
+
+        :param result_dict: a dictionary with keys (grp_id, gsim)
+        :param src_group_id: the source group ID
+        """
+        return result_dict.eff_ruptures.get(src_group_id, 0)
+
+    def store_source_info(self, infos, acc):
+        # save the calculation times per each source
+        if infos:
+            rows = sorted(
+                infos.values(),
+                key=operator.attrgetter('calc_time'),
+                reverse=True)
+            array = numpy.zeros(len(rows), source.SourceInfo.dt)
+            for i, row in enumerate(rows):
+                for name in array.dtype.names:
+                    value = getattr(row, name)
+                    if name == 'grp_id' and isinstance(value, list):
+                        # same ID sources; store only the first
+                        value = value[0]
+                    array[i][name] = value
+            self.datastore['source_info'] = array
+            infos.clear()
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+            partial(self.count_eff_ruptures, acc), self.oqparam.sm_lt_path)
+        self.datastore['csm_info'] = self.csm.info
+        if 'source_info' in self.datastore:
+            # the table is missing for UCERF, we should fix that
+            self.datastore.set_attrs(
+                'source_info', nbytes=array.nbytes,
+                has_dupl_sources=self.csm.has_dupl_sources)
+        self.datastore.flush()
+
     def post_process(self):
         """For compatibility with the engine"""
 
@@ -601,7 +643,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-
     def make_eps(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
@@ -707,29 +748,25 @@ def get_gmfs(calculator):
     :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (R, N, E, I)
     """
     dstore = calculator.datastore
-    oq = dstore['oqparam']
-    num_assocs = dstore['csm_info'].get_num_rlzs()
-    sitecol = dstore['sitecol']
+    oq = calculator.oqparam
+    sitecol = calculator.sitecol
     if dstore.parent:
         haz_sitecol = dstore.parent['sitecol']  # S sites
     else:
         haz_sitecol = sitecol  # N sites
     N = len(haz_sitecol.complete)
     I = len(oq.imtls)
-    E = oq.number_of_ground_motion_fields
-    eids = numpy.arange(E)
-    gmfs = numpy.zeros((num_assocs, N, E, I))
-    if calculator.precalc:
-        for g, gsim in enumerate(calculator.precalc.gsims):
-            gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
-        return eids, gmfs
-
-    elif 'gmfs' in oq.inputs:  # from file
+    if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)
-        if len(eids) != E:
-            raise RuntimeError('Expected %d ground motion fields, found %d' %
-                               (E, len(eids)))
+        E = len(eids)
+        if hasattr(oq, 'number_of_ground_motion_fields'):
+            if oq.number_of_ground_motion_fields != E:
+                raise RuntimeError(
+                    'Expected %d ground motion fields, found %d' %
+                    (oq.number_of_ground_motion_fields, E))
+        else:  # set the number of GMFs from the file
+            oq.number_of_ground_motion_fields = E
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
@@ -741,6 +778,15 @@ def get_gmfs(calculator):
         events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = eids
         dstore['events'] = events
+        return eids, gmfs
+
+    elif calculator.precalc:  # from previous step
+        num_assocs = dstore['csm_info'].get_num_rlzs()
+        E = oq.number_of_ground_motion_fields
+        eids = numpy.arange(E)
+        gmfs = numpy.zeros((num_assocs, N, E, I))
+        for g, gsim in enumerate(calculator.precalc.gsims):
+            gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
         return eids, gmfs
 
 

@@ -1,11 +1,11 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5561.hdf5 Fri Sep 22 11:30:32 2017
-checksum32                                    1,923,070,683           
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     1,923,070,683      
+date           2017-11-08T18:08:03
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 1, num_imts = 1
 
@@ -39,11 +39,11 @@ rupture_model   `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    simple(2)       2/2             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  simple(2)       2/2             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,6 +59,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading site collection 3.839E-05 0.0       1     
+reading site collection 3.815E-05 0.0       1     
 ======================= ========= ========= ======
