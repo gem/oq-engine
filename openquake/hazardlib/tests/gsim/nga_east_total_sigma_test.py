@@ -34,8 +34,7 @@ class BaseNGAEastGSIMTestCase(BaseGSIMTestCase):
     def check(self, filename, max_discrep_percentage):
         filename = os.path.join(self.BASE_DATA_PATH, filename)
         errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
-            self.GSIM_CLASS, open(filename), max_discrep_percentage,
-            instantiated=True)
+            self.GSIM_CLASS, open(filename), max_discrep_percentage)
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
         d_att = self.get_context_attributes(dctx)

@@ -1,11 +1,11 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5533.hdf5 Fri Sep 22 11:29:44 2017
-checksum32                                           1,369,868,782           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,369,868,782      
+date           2017-11-08T18:07:14
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 3, num_imts = 3
 
@@ -41,11 +41,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ======================================================== =============== ================
-smlt_path weight source_model_file                                        gsim_logic_tree num_realizations
-========= ====== ======================================================== =============== ================
-b1        1.000  `vancouver_area_source.xml <vancouver_area_source.xml>`_ simple(3)       3/3             
-========= ====== ======================================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  simple(3)       3/3             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -70,14 +70,14 @@ Number of ruptures per tectonic region type
 ========================= ====== ==================== =========== ============ ============
 source_model              grp_id trt                  num_sources eff_ruptures tot_ruptures
 ========================= ====== ==================== =========== ============ ============
-vancouver_area_source.xml 0      Active Shallow Crust 1           2430         2,430       
+vancouver_area_source.xml 0      Active Shallow Crust 1           2,430        2,430       
 ========================= ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 =========================== ====================================================================================
-count_eff_ruptures.received tot 3.23 KB, max_per_task 845 B                                                     
-count_eff_ruptures.sent     gsims 624.61 KB, sources 11.27 KB, param 3.96 KB, srcfilter 2.89 KB, monitor 1.28 KB
+count_eff_ruptures.received tot 3.27 KB, max_per_task 857 B                                                     
+count_eff_ruptures.sent     gsims 624.61 KB, sources 11.31 KB, param 3.91 KB, srcfilter 2.89 KB, monitor 1.28 KB
 hazard.input_weight         729.0                                                                               
 hazard.n_imts               3                                                                                   
 hazard.n_levels             36                                                                                  
@@ -113,7 +113,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 5.467E-04 0.001 0.002 4        
+count_eff_ruptures 0.002 3.713E-04 0.001 0.002 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -122,11 +122,11 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.021     0.0       1     
-managing sources               0.017     0.0       1     
-total count_eff_ruptures       0.007     0.0       4     
+managing sources               0.018     0.0       1     
+total count_eff_ruptures       0.007     0.191     4     
 store source_info              0.004     0.0       1     
 prefiltering source model      0.001     0.0       1     
-reading site collection        1.764E-04 0.0       1     
-aggregate curves               1.116E-04 0.0       4     
-saving probability maps        2.885E-05 0.0       1     
+reading site collection        1.817E-04 0.0       1     
+aggregate curves               1.013E-04 0.0       4     
+saving probability maps        2.933E-05 0.0       1     
 ============================== ========= ========= ======

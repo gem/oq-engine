@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="test_point"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointSource
+            id="p1"
+            name="point1"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            1.3000000E+01 4.2400000E+01
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.1259700E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="4.5000000E+00"
+                >
+                    <occurRates>
+                        5.3036000E-06 4.5831000E-06 3.9346000E-06 3.3591000E-06 2.8539000E-06 2.7101000E-06 2.2839000E-06 1.9185000E-06 1.6069000E-06 1.3424000E-06 1.8266000E-07 1.5235000E-07 1.2685000E-07 1.0545000E-07 8.7566000E-08 6.3983000E-08 5.3074000E-08 4.4030000E-08 3.6543000E-08 3.0348000E-08 2.5208000E-08 7.1632000E-09 5.9143000E-09 4.8271000E-09 3.8485000E-09 2.9398000E-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="9.0000000E+01" strike="2.2300000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="-9.0000000E+01" strike="1.3300000E+02"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="0.0000000E+00" strike="1.6300000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="9.0000000E+01" strike="4.3000000E+01"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="-9.0000000E+01" strike="3.1300000E+02"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="1.8000000E+02" strike="1.0300000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="7.0900000E+00" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="p2"
+            name="point2"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            1.3300000E+01 4.2400000E+01
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.1259700E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="4.5000000E+00"
+                >
+                    <occurRates>
+                        5.3036000E-06 4.5831000E-06 3.9346000E-06 3.3591000E-06 2.8539000E-06 2.7101000E-06 2.2839000E-06 1.9185000E-06 1.6069000E-06 1.3424000E-06 1.8266000E-07 1.5235000E-07 1.2685000E-07 1.0545000E-07 8.7566000E-08 6.3983000E-08 5.3074000E-08 4.4030000E-08 3.6543000E-08 3.0348000E-08 2.5208000E-08 7.1632000E-09 5.9143000E-09 4.8271000E-09 3.8485000E-09 2.9398000E-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="9.0000000E+01" strike="2.2300000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="-9.0000000E+01" strike="1.3300000E+02"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="0.0000000E+00" strike="1.6300000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="9.0000000E+01" strike="4.3000000E+01"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="-9.0000000E+01" strike="3.1300000E+02"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="1.8000000E+02" strike="1.0300000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="7.0900000E+00" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="p3"
+            name="point3"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            1.3000000E+01 4.2300000E+01
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.1259700E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="4.5000000E+00"
+                >
+                    <occurRates>
+                        5.3036000E-06 4.5831000E-06 3.9346000E-06 3.3591000E-06 2.8539000E-06 2.7101000E-06 2.2839000E-06 1.9185000E-06 1.6069000E-06 1.3424000E-06 1.8266000E-07 1.5235000E-07 1.2685000E-07 1.0545000E-07 8.7566000E-08 6.3983000E-08 5.3074000E-08 4.4030000E-08 3.6543000E-08 3.0348000E-08 2.5208000E-08 7.1632000E-09 5.9143000E-09 4.8271000E-09 3.8485000E-09 2.9398000E-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="9.0000000E+01" strike="2.2300000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="-9.0000000E+01" strike="1.3300000E+02"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="0.0000000E+00" strike="1.6300000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="9.0000000E+01" strike="4.3000000E+01"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="-9.0000000E+01" strike="3.1300000E+02"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="1.8000000E+02" strike="1.0300000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="7.0900000E+00" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="p4"
+            name="point4"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            1.3300000E+01 4.2300000E+01
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.1259700E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="4.5000000E+00"
+                >
+                    <occurRates>
+                        5.3036000E-06 4.5831000E-06 3.9346000E-06 3.3591000E-06 2.8539000E-06 2.7101000E-06 2.2839000E-06 1.9185000E-06 1.6069000E-06 1.3424000E-06 1.8266000E-07 1.5235000E-07 1.2685000E-07 1.0545000E-07 8.7566000E-08 6.3983000E-08 5.3074000E-08 4.4030000E-08 3.6543000E-08 3.0348000E-08 2.5208000E-08 7.1632000E-09 5.9143000E-09 4.8271000E-09 3.8485000E-09 2.9398000E-09
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="9.0000000E+01" strike="2.2300000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="-9.0000000E+01" strike="1.3300000E+02"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="0.0000000E+00" strike="1.6300000E+02"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="9.0000000E+01" strike="4.3000000E+01"/>
+                    <nodalPlane dip="4.5000000E+01" probability="1.2500000E-01" rake="-9.0000000E+01" strike="3.1300000E+02"/>
+                    <nodalPlane dip="9.0000000E+01" probability="2.5000000E-01" rake="1.8000000E+02" strike="1.0300000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="7.0900000E+00" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

@@ -270,7 +270,8 @@ class VulnerabilityFunction(object):
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
-        """Compute the LREM (Loss Ratio Exceedance Matrix).
+        """
+        Compute the LREM (Loss Ratio Exceedance Matrix).
 
         :param int steps:
             Number of steps between loss ratios.
@@ -420,10 +421,12 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
-        """Compute the LREM (Loss Ratio Exceedance Matrix).
+        """
+        Compute the LREM (Loss Ratio Exceedance Matrix).
         Required for the Classical Risk and BCR Calculators.
         Currently left unimplemented as the PMF format is used only for the
-        Scenario and Event Based Risk Calculators
+        Scenario and Event Based Risk Calculators.
+
         :param int steps:
             Number of steps between loss ratios.
         """
@@ -484,10 +487,10 @@ class FragilityFunctionContinuous(object):
         self.mean = mean
         self.stddev = stddev
 
-    def __call__(self, iml):
+    def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
-        Intensity Measure Level (IML).
+        Intensity Measure Levels (IMLs).
         """
         variance = self.stddev ** 2.0
         sigma = numpy.sqrt(numpy.log(
@@ -496,7 +499,7 @@ class FragilityFunctionContinuous(object):
         mu = self.mean ** 2.0 / numpy.sqrt(
             variance + self.mean ** 2.0)
 
-        return stats.lognorm.cdf(iml, sigma, scale=mu)
+        return stats.lognorm.cdf(imls, sigma, scale=mu)
 
     def __getstate__(self):
         return dict(limit_state=self.limit_state,
@@ -520,21 +523,22 @@ class FragilityFunctionDiscrete(object):
     def interp(self):
         if self._interp is not None:
             return self._interp
-        self._interp = interpolate.interp1d(self.imls, self.poes)
+        self._interp = interpolate.interp1d(self.imls, self.poes,
+                                            bounds_error=False)
         return self._interp
 
-    def __call__(self, iml):
+    def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
-        Intensity Measure Level (IML).
+        Intensity Measure Levels (IMLs).
         """
         highest_iml = self.imls[-1]
-
-        if self.no_damage_limit and iml < self.no_damage_limit:
-            return 0.
-        # when the intensity measure level is above
-        # the range, we use the highest one
-        return self.interp(highest_iml if iml > highest_iml else iml)
+        imls = numpy.array(imls)
+        imls[imls > highest_iml] = highest_iml
+        result = self.interp(imls)
+        if self.no_damage_limit:
+            result[imls < self.no_damage_limit] = 0
+        return result
 
     # so that the curve is pickeable
     def __getstate__(self):
@@ -869,13 +873,18 @@ CurveParams = collections.namedtuple(
 # Scenario Damage
 #
 
-def scenario_damage(fragility_functions, gmv):
+def scenario_damage(fragility_functions, gmvs):
     """
-    Compute the damage state fractions for the given ground motion value.
-    Return am array of M values where M is the numbers of damage states.
+    :param fragility_functions: a list of D - 1 fragility functions
+    :param gmvs: an array of E ground motion values
+    :returns: an array of (D, E) damage fractions
     """
-    return pairwise_diff(
-        [1] + [ff(gmv) for ff in fragility_functions] + [0])
+    lst = [numpy.ones_like(gmvs)]
+    for f, ff in enumerate(fragility_functions):  # D - 1 functions
+        lst.append(ff(gmvs))
+    lst.append(numpy.zeros_like(gmvs))
+    # convert a (D + 1, E) array into a (D, E) array
+    return pairwise_diff(numpy.array(lst))
 
 #
 # Classical Damage
@@ -1206,13 +1215,13 @@ def build_loss_curve_dt(curve_resolution, insured_losses=False):
     lc_list = []
     for lt in sorted(curve_resolution):
         C = curve_resolution[lt]
-        pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+        pairs = [('losses', (F32, C)), ('poes', (F32, C))]
         lc_dt = numpy.dtype(pairs)
         lc_list.append((str(lt), lc_dt))
     if insured_losses:
         for lt in sorted(curve_resolution):
             C = curve_resolution[lt]
-            pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+            pairs = [('losses', (F32, C)), ('poes', (F32, C))]
             lc_dt = numpy.dtype(pairs)
             lc_list.append((str(lt) + '_ins', lc_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
@@ -1223,7 +1232,7 @@ def return_periods(eff_time, num_losses):
     """
     :param eff_time: ses_per_logic_tree_path * investigation_time
     :param num_losses: used to determine the minimum period
-    ;returns: an array of 32 bit periods
+    :returns: an array of 32 bit periods
 
     Here are a few examples:
 
@@ -1354,7 +1363,10 @@ class LossesByPeriodBuilder(object):
         A, P = len(asset_values), len(self.return_periods)
         array = numpy.zeros((A, P), self.loss_dt)
         for a, asset_value in enumerate(asset_values):
-            ratios = loss_ratios[a]  # shape (E, LI)
+            try:
+                ratios = loss_ratios[a]  # shape (E, LI)
+            except KeyError:  # no loss ratios > 0 for the given asset
+                continue
             for li, lt in enumerate(self.loss_dt.names):
                 aval = asset_value[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(

@@ -28,15 +28,14 @@ import math
 import warnings
 import functools
 import contextlib
-
-import scipy.stats
 from scipy.special import ndtr
 import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import IntegrationDistance, get_distances
-from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.general import DeprecationWarning, AccumDict
+from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -124,6 +123,13 @@ class ContextMaker(object):
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
+            # since the ContextMaker must be used on ruptures with all the
+            # same TRT, given a realization there is a single gsim
+            self.gsim_by_rlzi = {}
+            for gsim, rlzis in gsims.items():
+                for rlzi in rlzis:
+                    self.gsim_by_rlzi[rlzi] = gsim
 
     def make_distances_context(self, site_collection, rupture, dist_dict=()):
         """
@@ -229,7 +235,7 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def make_contexts(self, site_collection, rupture):
+    def make_contexts(self, site_collection, rupture, filter=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -256,10 +262,57 @@ class ContextMaker(object):
         """
         rctx = self.make_rupture_context(rupture)
         sites, distances = self.maximum_distance.get_closest(
-            site_collection, rupture, 'rjb')
+            site_collection, rupture, 'rjb', filter)
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
+
+    def disaggregate(self, sitecol, ruptures, iml4, truncnorm, epsilons,
+                     monitor=Monitor()):
+        """
+        Disaggregate (separate) PoE of `imldict` in different contributions
+        each coming from `n_epsilons` distribution bins.
+
+        :param sitecol: a SiteCollection
+        :param ruptures: an iterator over ruptures with the same TRT
+        :param iml4: a 4d array of IMLs of shape (N, R, M, P)
+        :param truncnorm: an instance of scipy.stats.truncnorm
+        :param epsilons: the epsilon bins
+        :param monitor: a Monitor instance
+        :returns: an AccumDict
+        """
+        sitemesh = sitecol.mesh
+        acc = AccumDict(accum=[])
+        ctx_mon = monitor('disagg_contexts', measuremem=False)
+        pne_mon = monitor('disaggregate_pne', measuremem=False)
+        for rupture in ruptures:
+            with ctx_mon:
+                sctx, rctx, dctx = self.make_contexts(
+                    sitecol, rupture, filter=False)
+            if (self.maximum_distance and
+                dctx.rjb.min() > self.maximum_distance(
+                    rupture.tectonic_region_type, rupture.mag)):
+                continue  # rupture away from all sites
+            cache = {}
+            for r, gsim in self.gsim_by_rlzi.items():
+                for m, imt in enumerate(iml4.imts):
+                    for p, poe in enumerate(iml4.poes_disagg):
+                        iml = tuple(iml4.array[:, r, m, p])
+                        try:
+                            pne = cache[gsim, imt, iml]
+                        except KeyError:
+                            with pne_mon:
+                                pne = gsim.disaggregate_pne(
+                                    rupture, sctx, rctx, dctx, imt, iml,
+                                    truncnorm, epsilons)
+                                cache[gsim, imt, iml] = pne
+                        acc[poe, str(imt), r].append(pne)
+            closest_points = rupture.surface.get_closest_points(sitemesh)
+            acc['mags'].append(rupture.mag)
+            acc['dists'].append(dctx.rjb)
+            acc['lons'].append(closest_points.lons)
+            acc['lats'].append(closest_points.lats)
+        return acc
 
 
 @functools.total_ordering
@@ -348,6 +401,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
     #      average DPP used. See:
     #:     See :meth:`~openquake.hazardlib.source.rupture.ParametricProbabilisticRupture.get_dppvalue`.
+    #: ``rvolc``
+    #:     Source to site distance passing through surface projection of volcanic zone
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
@@ -487,78 +542,57 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
-    def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
-                         truncation_level, n_epsilons):
+    def disaggregate_pne(self, rupture, sctx, rctx, dctx, imt, iml,
+                         truncnorm, epsilons):
         """
         Disaggregate (separate) PoE of ``iml`` in different contributions
-        each coming from ``n_epsilons`` distribution bins.
-
-        If ``truncation_level = 3``, ``n_epsilons = 3``, bin edges are
-        ``-3 .. -1``, ``-1 .. +1`` and ``+1 .. +3``.
-
-        :param n_epsilons:
-            Integer number of bins to split truncated Gaussian distribution to.
+        each coming from ``epsilons`` distribution bins.
 
         Other parameters are the same as for :meth:`get_poes`, with
-        differences that ``iml`` is only one single intensity level
-        and ``truncation_level`` is required to be positive.
+        differences that ``truncation_level`` is required to be positive.
 
         :returns:
             Contribution to probability of exceedance of ``iml`` coming
-            from different sigma bands in a form of 1d numpy array with
-            ``n_epsilons`` floats between 0 and 1.
+            from different sigma bands in the form of a 2d numpy array of
+            probabilities with shape (n_sites, n_epsilons)
         """
-        if not truncation_level > 0:
-            raise ValueError('truncation level must be positive')
-        self._check_imt(imt)
-
         # compute mean and standard deviations
         mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                    [const.StdDev.TOTAL])
 
         # compute iml value with respect to standard (mean=0, std=1)
         # normal distributions
-        iml = self.to_distribution_values(iml)
-        standard_imls = (iml - mean) / stddev
+        standard_imls = (self.to_distribution_values(iml) - mean) / stddev
 
-        distribution = scipy.stats.truncnorm(- truncation_level,
-                                             truncation_level)
-        epsilons = numpy.linspace(- truncation_level, truncation_level,
-                                  n_epsilons + 1)
         # compute epsilon bins contributions
-        contribution_by_bands = (distribution.cdf(epsilons[1:]) -
-                                 distribution.cdf(epsilons[:-1]))
+        contribution_by_bands = (truncnorm.cdf(epsilons[1:]) -
+                                 truncnorm.cdf(epsilons[:-1]))
 
         # take the minimum epsilon larger than standard_iml
-        iml_bin_indices = numpy.searchsorted(epsilons, standard_imls)
-
-        return numpy.array([
-            # take full disaggregated distribution for the case of
-            # ``iml <= mean - truncation_level * stddev``
-            contribution_by_bands
-            if idx == 0 else
-
-            # take zeros if ``iml >= mean + truncation_level * stddev``
-            numpy.zeros(n_epsilons)
-            if idx >= n_epsilons + 1 else
-
-            # for other cases (when ``iml`` falls somewhere in the
-            # histogram):
-            numpy.concatenate((
-                # take zeros for bins that are on the left hand side
-                # from the bin ``iml`` falls into,
-                numpy.zeros(idx - 1),
-                # ... area of the portion of the bin containing ``iml``
-                # (the portion is limited on the left hand side by
-                # ``iml`` and on the right hand side by the bin edge),
-                [distribution.sf(standard_imls[i]) -
-                 contribution_by_bands[idx:].sum()],
-                # ... and all bins on the right go unchanged.
-                contribution_by_bands[idx:]
-            ))
-
-            for i, idx in enumerate(iml_bin_indices)
-        ])
+        bins = numpy.searchsorted(epsilons, standard_imls)
+        poe_by_site = []
+        n_epsilons = len(epsilons) - 1
+        for lvl, bin in zip(standard_imls, bins):  # one per site
+            if bin == 0:
+                poe_by_site.append(contribution_by_bands)
+            elif bin > n_epsilons:
+                poe_by_site.append(numpy.zeros(n_epsilons))
+            else:
+                # for other cases (when ``lvl`` falls somewhere in the
+                # histogram):
+                poe = numpy.concatenate([
+                    # take zeros for bins that are on the left hand side
+                    # from the bin ``lvl`` falls into,
+                    numpy.zeros(bin - 1),
+                    # ... area of the portion of the bin containing ``lvl``
+                    # (the portion is limited on the left hand side by
+                    # ``lvl`` and on the right hand side by the bin edge),
+                    [truncnorm.sf(lvl) - contribution_by_bands[bin:].sum()],
+                    # ... and all bins on the right go unchanged.
+                    contribution_by_bands[bin:]])
+                poe_by_site.append(poe)
+        poes = numpy.array(poe_by_site)  # shape (n_sites, n_epsilons)
+        return rupture.get_probability_no_exceedance(poes)
 
     @abc.abstractmethod
     def to_distribution_values(self, values):
@@ -790,7 +824,7 @@ class DistancesContext(BaseContext):
     in a result context object.
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
-               'azimuth', 'hanging_wall')
+               'azimuth', 'hanging_wall', 'rvolc')
 
 
 class RuptureContext(BaseContext):

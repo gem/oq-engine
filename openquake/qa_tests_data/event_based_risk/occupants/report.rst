@@ -1,11 +1,11 @@
 event based risk
 ================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5503.hdf5 Fri Sep 22 11:29:01 2017
-checksum32                                           4,162,972,727           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     852,550,231        
+date           2017-11-08T18:06:30
+engine_version 2.8.0-gite3d0f56   
+============== ===================
 
 num_sites = 7, num_imts = 1
 
@@ -25,7 +25,7 @@ area_source_discretization      None
 ground_motion_correlation_model 'JB2009'          
 random_seed                     24                
 master_seed                     42                
-avg_losses                      False             
+avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -43,11 +43,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -76,8 +76,8 @@ source_model.xml 0      Active Shallow Crust 1           482          482
 Informational data
 ------------------
 ========================= ====================================================================================
-compute_ruptures.received tot 251.84 KB, max_per_task 31.23 KB                                                
-compute_ruptures.sent     sources 17.59 KB, src_filter 10.82 KB, param 6.97 KB, monitor 4.13 KB, gsims 1.29 KB
+compute_ruptures.received tot 252.62 KB, max_per_task 31.35 KB                                                
+compute_ruptures.sent     sources 17.75 KB, src_filter 10.82 KB, param 6.82 KB, monitor 4.14 KB, gsims 1.29 KB
 hazard.input_weight       3374.0                                                                              
 hazard.n_imts             1                                                                                   
 hazard.n_levels           1                                                                                   
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.024 0.010  0.011 0.041 13       
+compute_ruptures   0.024 0.009  0.009 0.043 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,14 +139,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.312     0.555     13    
-filtering ruptures             0.104     0.0       259   
-managing sources               0.075     0.0       1     
-saving ruptures                0.048     0.0       13    
-reading exposure               0.008     0.0       1     
+total compute_ruptures         0.316     0.707     13    
+filtering ruptures             0.110     0.0       259   
+managing sources               0.066     0.0       1     
+saving ruptures                0.050     0.0       13    
+reading exposure               0.009     0.0       1     
 reading composite source model 0.004     0.0       1     
 store source_info              0.004     0.0       1     
 setting event years            0.003     0.0       1     
 prefiltering source model      0.002     0.0       1     
-reading site collection        6.676E-06 0.0       1     
+reading site collection        7.629E-06 0.0       1     
 ============================== ========= ========= ======

@@ -7,6 +7,8 @@ xmlns:gml="http://www.opengis.net/gml"
     name="Test Source Model"
     >
         <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
         srcs_weights="1.0"
         tectonicRegion="Some TRT"
         >

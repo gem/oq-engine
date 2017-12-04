@@ -37,8 +37,7 @@ from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
 from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV, MMI, IA
 
 
-def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False,
-               instantiated=False):
+def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
 
@@ -55,15 +54,13 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False,
         and a message pointing to a line with a test that failed will show up.
         If ``False`` the GSIM is executed in a vectorized way (if possible)
         and all the tests are executed even if there are errors.
-    :param instantiated:
-        If ``True`` the gsim_cls object is an instantiated GSIM class,
-        otherwise ``False``
 
     :returns:
         A tuple of two elements: a number of errors and a string representing
         statistics about the test run.
     """
-    if instantiated:
+
+    if isinstance(gsim_cls, GroundShakingIntensityModel):
         gsim = copy.deepcopy(gsim_cls)
     else:
         gsim = gsim_cls()
@@ -118,6 +115,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False,
             )
             discrepancies.extend(discrep_percentage)
             errors += (discrep_percentage > max_discrep_percentage).sum()
+
             if errors and debug:
                 msg = 'file %r line %r imt %r: expected %s %f != %f ' \
                       '(delta %.4f%%)' % (

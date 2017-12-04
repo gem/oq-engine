@@ -26,7 +26,6 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.general import DictArray
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import calc
@@ -35,8 +34,11 @@ from openquake.commonlib import calc
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
-    extract('sitecol', dstore)
+    extract('sitecol', dstore). It is also possibly to extract the
+    attributes, for instance with extract('sitecol.attrs', dstore).
     """
+    if dspath.endswith('.attrs'):
+        return ArrayWrapper(0, dstore.get_attrs(dspath[:-6]))
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
         return ArrayWrapper(obj.value, obj.attrs)
@@ -105,32 +107,6 @@ def extract_asset_values(dstore, sid):
     return data
 
 
-def convert_to_array(pmap, nsites, imtls):
-    """
-    Convert the probability map into a composite array with header
-    of the form PGA-0.1, PGA-0.2 ...
-
-    :param pmap: probability map
-    :param nsites: total number of sites
-    :param imtls: a DictArray with IMT and levels
-    :returns: a composite array of lenght nsites
-    """
-    lst = []
-    # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
-    for imt, imls in imtls.items():
-        for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), numpy.float64))
-    curves = numpy.zeros(nsites, numpy.dtype(lst))
-    for sid, pcurve in pmap.items():
-        curve = curves[sid]
-        idx = 0
-        for imt, imls in imtls.items():
-            for iml in imls:
-                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
-                idx += 1
-    return curves
-
-
 @extract.add('hazard')
 def extract_hazard(dstore, what):
     """
@@ -140,20 +116,56 @@ def extract_hazard(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
-    yield 'oqparam', dstore['oqparam']
+    yield 'oqparam', oq
+    yield 'imtls', oq.imtls
+    yield 'realizations', dstore['realizations'].value
+    yield 'checksum32', dstore['/'].attrs['checksum32']
+    nsites = len(sitecol)
+    M = len(oq.imtls)
+    P = len(oq.poes)
+    for kind, pmap in calc.PmapGetter(dstore).items(what):
+        for imt in oq.imtls:
+            key = 'hcurves/%s/%s' % (imt, kind)
+            arr = numpy.zeros((nsites, len(oq.imtls[imt])))
+            for sid in pmap:
+                arr[sid] = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+            logging.info('extracting %s', key)
+            yield key, arr
+        if oq.poes:
+            hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
+        for p, poe in enumerate(oq.poes):
+            key = 'hmaps/poe-%s/%s' % (poe, kind)
+            arr = numpy.zeros((nsites, M))
+            idx = [m * P + p for m in range(M)]
+            for sid in pmap:
+                arr[sid] = hmap[sid].array[idx, 0]
+            logging.info('extracting %s', key)
+            yield key, arr
+
+
+@extract.add('qgis-hazard')
+def extract_hazard_for_qgis(dstore, what):
+    """
+    Extracts hazard curves and possibly hazard maps and/or uniform hazard
+    spectra. Use it as /extract/qgis-hazard/rlz-0, etc
+    """
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    yield 'sitecol', sitecol
+    yield 'oqparam', oq
     yield 'realizations', dstore['realizations'].value
     yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
     if oq.poes:
-        pdic = DictArray({imt: oq.poes for imt in oq.imtls})
+        pdic = {imt: oq.poes for imt in oq.imtls}
     for kind, hcurves in calc.PmapGetter(dstore).items(what):
         logging.info('extracting hazard/%s', kind)
-        yield 'hcurves-' + kind, convert_to_array(hcurves, N, oq.imtls)
+        yield 'hcurves-' + kind, calc.convert_to_array(hcurves, N, oq.imtls)
         if oq.poes and oq.uniform_hazard_spectra:
             yield 'uhs-' + kind, calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
         if oq.poes and oq.hazard_maps:
             hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-            yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
+            yield 'hmaps-' + kind, calc.convert_to_array(hmaps, N, pdic)
 
 
 def _agg(losses, idxs):
@@ -213,7 +225,7 @@ def extract_agglosses(dstore, loss_type, *tags):
     l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         losses = dstore['losses_by_asset'][:, :, l]['mean']
-    elif 'avg_losses-rlzs' in dstore:  # event_based_risk
+    elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)

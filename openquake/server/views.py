@@ -18,11 +18,14 @@
 
 import shutil
 import json
+import signal
 import logging
 import os
+import sys
 import inspect
-import getpass
 import tempfile
+import subprocess
+import threading
 try:
     import urllib.parse as urlparse
 except ImportError:
@@ -39,8 +42,8 @@ from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode
-from openquake.baselib.parallel import Starmap, safely_call
+from openquake.baselib.python3compat import unicode, pickle
+from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
@@ -51,7 +54,7 @@ from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
-from openquake.server import executor, utils, dbapi
+from openquake.server import utils, dbapi
 
 from django.conf import settings
 if settings.LOCKDOWN:
@@ -425,9 +428,7 @@ def run_calc(request):
 
     user = utils.get_user_data(request)
     try:
-        job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
-        # restart the process pool at the end of each job
-        fut .add_done_callback(lambda f: Starmap.restart())
+        job_id, _pid = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -441,16 +442,33 @@ def run_calc(request):
                         status=status)
 
 
-def submit_job(job_ini, user_name, hazard_job_id=None,
-               loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
+RUNCALC = '''\
+import os, sys
+from openquake.baselib.python3compat import pickle
+from openquake.engine import engine
+if __name__ == '__main__':
+    oqparam = pickle.loads(%(pik)r)
+    engine.run_calc(
+        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s)
+    os.remove(__file__)
+'''
+
+
+def submit_job(job_ini, user_name, hazard_job_id=None):
     """
     Create a job object from the given job.ini file in the job directory
-    and submit it to the job queue. Returns the job ID.
+    and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oqparam = engine.job_from_file(job_ini, user_name, hazard_job_id)
-    fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
-                          logfile, exports, hazard_job_id)
-    return job_id, fut
+    job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
+    pik = pickle.dumps(oq, protocol=0)  # human readable protocol
+    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
+    tmp_py = writetmp(code, suffix='.py')
+    # print(code, tmp_py)  # useful when debugging
+    devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
+    popen = subprocess.Popen([sys.executable, tmp_py],
+                             stdin=devnull, stdout=devnull, stderr=devnull)
+    threading.Thread(target=popen.wait).start()
+    return job_id, popen.pid
 
 
 @require_http_methods(['GET'])
@@ -592,13 +610,15 @@ def _array(v):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def extract(request, calc_id, what, attrs):
+def extract(request, calc_id, what):
     """
-    Wrapper over the `oq extract` command
+    Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
+    only calculations owned by the current user can be retrieved.
     """
-    try:
-        job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
-    except dbapi.NotFound:
+    user = utils.get_user_data(request)
+    username = user['name'] if user['acl_on'] else None
+    job = logs.dbcmd('get_job', int(calc_id), username)
+    if job is None:
         return HttpResponseNotFound()
 
     # read the data and save them on a temporary .pik file
@@ -606,17 +626,14 @@ def extract(request, calc_id, what, attrs):
         fd, fname = tempfile.mkstemp(
             prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
-        if attrs:  # extract the attributes only
-            array, attrs = None, ds.get_attrs(what)
-        else:  # extract the full HDF5 object
-            extra = ['%s=%s' % item for item in request.GET.items()]
-            obj = _extract(ds, what, *extra)
-            if inspect.isgenerator(obj):
-                array, attrs = None, {k: _array(v) for k, v in obj}
-            elif hasattr(obj, '__toh5__'):
-                array, attrs = obj.__toh5__()
-            else:  # assume obj is an array
-                array, attrs = obj, {}
+        extra = ['%s=%s' % item for item in request.GET.items()]
+        obj = _extract(ds, what, *extra)
+        if inspect.isgenerator(obj):
+            array, attrs = None, {k: _array(v) for k, v in obj}
+        elif hasattr(obj, '__toh5__'):
+            array, attrs = obj.__toh5__()
+        else:  # assume obj is an array
+            array, attrs = obj, {}
         numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
@@ -642,9 +659,10 @@ def get_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
-    try:
-        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
-    except dbapi.NotFound:
+    user = utils.get_user_data(request)
+    username = user['name'] if user['acl_on'] else None
+    job = logs.dbcmd('get_job', int(job_id), username)
+    if job is None:
         return HttpResponseNotFound()
 
     fname = job.ds_calc_dir + '.hdf5'
@@ -661,9 +679,10 @@ def get_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """
-    try:
-        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
-    except dbapi.NotFound:
+    user = utils.get_user_data(request)
+    username = user['name'] if user['acl_on'] else None
+    job = logs.dbcmd('get_job', int(job_id), username)
+    if job is None:
         return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         oq = ds['oqparam']

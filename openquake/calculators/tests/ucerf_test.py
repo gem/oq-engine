@@ -25,9 +25,9 @@ from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 
-cluster = os.environ.get(
-    'OQ_DISTRIBUTE', config.distribution.oq_distribute) != 'futures'
-NO_SHARED_DIR = cluster and not config.directory.shared_dir
+celery = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'celery'
+NO_SHARED_DIR = celery and not config.directory.shared_dir
 
 
 @decorator
@@ -131,7 +131,7 @@ class UcerfTestCase(CalculatorTestCase):
                       number_of_logic_tree_samples='2')
 
         # check the right number of events was stored
-        self.assertEqual(len(self.calc.datastore['events']), 90)
+        self.assertEqual(len(self.calc.datastore['events']), 79)
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
