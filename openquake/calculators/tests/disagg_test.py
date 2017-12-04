@@ -24,6 +24,7 @@ from openquake.baselib.general import writetmp
 from openquake.hazardlib.probability_map import combine
 from openquake.commonlib import calc
 from openquake.calculators.views import view
+from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.disagg import case_1, case_2, case_3, case_master
 
@@ -79,6 +80,10 @@ class DisaggregationTestCase(CalculatorTestCase):
             'rlz-1-PGA--3.0--3.0.xml', 'rlz-1-PGA-0.0-0.0.xml',
             'rlz-2-PGA-0.0-0.0.xml', 'rlz-3-PGA-0.0-0.0.xml'],
             case_2.__file__)
+
+        # check that the CSV exporter does not break
+        fnames = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 48)  # number of CSV files
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_3(self):
