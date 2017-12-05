@@ -28,8 +28,9 @@ from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, pmap_from_trt, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib import source
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.commonlib import source, calc
+from openquake.commonlib import calc
 from openquake.calculators import base
 
 U16 = numpy.uint16
