@@ -1,5 +1,12 @@
   [Michele Simionato]
   * In the case of a single tile the prefiltering was applied twice: fixed
+  * Fixed the CSV exporter for disaggregation outputs when iml_disagg is set
+
+  [Graeme Weatherill]
+  * Implements comprehensive suite of NGA East ground motion models for
+    central and eastern United States
+  * Minor modification of check_gsim functions to permit instantiated classes
+    to be passed
 
 python-oq-engine (2.8.0-0~precise01) precise; urgency=low
 
@@ -110,6 +117,7 @@ python-oq-engine (2.7.0-0~precise01) precise; urgency=low
     of the damage states
   * Extended the FragilityFunctions to accept sequences/arrays of intensity
     levels, as requested by Hyeuk Ryu
+>>>>>>> master
 
   [Daniele Viganò]
   * Added support for groups in the WebUI/API server

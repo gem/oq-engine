@@ -59,7 +59,11 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         A tuple of two elements: a number of errors and a string representing
         statistics about the test run.
     """
-    gsim = gsim_cls()
+
+    if isinstance(gsim_cls, GroundShakingIntensityModel):
+        gsim = copy.deepcopy(gsim_cls)
+    else:
+        gsim = gsim_cls()
 
     ctxs = []
     errors = 0
@@ -99,6 +103,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                     result = numpy.exp(mean)
             else:
                 [result] = stddevs
+
             assert (isinstance(result, numpy.ndarray) or
                     isinstance(result, numpy.float64) or
                     isinstance(result, float)), \
