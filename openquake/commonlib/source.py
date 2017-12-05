@@ -31,11 +31,11 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
     groupby, group_array, block_splitter, writetmp, AccumDict)
 from openquake.hazardlib import (
-    nrml, sourceconverter, InvalidFile, probability_map, stats)
+    nrml, source, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.commonlib import logictree
 
 
-MINWEIGHT = sourceconverter.MINWEIGHT
+MINWEIGHT = source.MINWEIGHT
 MAXWEIGHT = 4E6  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
@@ -663,12 +663,12 @@ class CompositeSourceModel(collections.Sequence):
                 sources = []
                 for src in src_group.sources:
                     if hasattr(src, '__iter__'):  # MultiPointSource
-                        sources.extend(src)
+                        sources.extend(source.split_source(src))
                     else:
                         sources.append(src)
                 sg = copy.copy(src_group)
                 sg.sources = []
-                for src, sites in src_filter(sources):
+                for src, _sites in src_filter(sources):
                     sg.sources.append(src)
                     weight += src.weight
                 src_groups.append(sg)
@@ -824,7 +824,7 @@ class CompositeSourceModel(collections.Sequence):
         # yield heavy sources in blocks
         heavy = [src for src in sources if src.weight > maxweight]
         for src in heavy:
-            srcs = [s for s in split_source(src)
+            srcs = [s for s in source.split_source(src)
                     if self.src_filter.get_close_sites(s) is not None]
             for block in block_splitter(srcs, maxweight, weight):
                 yield block
@@ -849,32 +849,6 @@ class CompositeSourceModel(collections.Sequence):
     def __len__(self):
         """Return the number of underlying source models"""
         return len(self.source_models)
-
-
-split_map = {}  # src -> split sources
-
-
-def split_source(src):
-    """
-    :param src: a source to split
-    :returns: a list of split sources
-    """
-    has_serial = hasattr(src, 'serial')
-    start = 0
-    try:
-        splits = split_map[src]  # read from the cache
-    except KeyError:  # fill the cache
-        splits = split_map[src] = list(sourceconverter.split_source(src))
-        if len(splits) > 1:
-            logging.debug(
-                'Splitting %s "%s" in %d sources', src.__class__.__name__,
-                src.source_id, len(splits))
-    for split in splits:
-        if has_serial:
-            nr = split.num_ruptures
-            split.serial = src.serial[start:start + nr]
-            start += nr
-        yield split
 
 
 def collect_source_model_paths(smlt):

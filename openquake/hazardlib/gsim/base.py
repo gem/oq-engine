@@ -27,7 +27,6 @@ import abc
 import sys
 import math
 import warnings
-import itertools
 import functools
 import contextlib
 from scipy.special import ndtr
@@ -273,9 +272,8 @@ class ContextMaker(object):
 
     def filter_ruptures(self, src, sites):
         """
-        :param src: a source object
+        :param src: a source object, already filtered and split
         :param sites: a FilteredSiteCollection
-        :param mon: a Monitor instance
         :return: a list of filtered ruptures with context attributes
         """
         ruptures = []
@@ -328,6 +326,8 @@ class ContextMaker(object):
         """
         with ctx_mon:
             ruptures = self.filter_ruptures(src, sites)
+        if not ruptures:
+            return {}
         try:
             with poe_mon:
                 pmap = self.make_pmap(ruptures, imtls, trunclevel, rup_indep)
@@ -1136,5 +1136,4 @@ class CoeffsTable(object):
         min_above = self.sa_coeffs[min_above]
         return dict(
             (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
-            for co in max_below
-        )
+            for co in max_below)
