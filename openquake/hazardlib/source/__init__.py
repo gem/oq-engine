@@ -123,7 +123,6 @@ def split_fault_source(src):
             new_src = copy.copy(src)
             new_src.source_id = '%s:%s' % (src.source_id, i)
             new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
-            new_src.num_ruptures = new_src.count_ruptures()
             i += 1
             splitlist.append(new_src)
     elif hasattr(src, 'start'):  # split by slice of ruptures
@@ -144,19 +143,13 @@ def _split_source(src):
     # helper for split_source
     if hasattr(src, '__iter__'):  # multipoint source
         for s in src:
-            s.src_group_id = src.src_group_id
-            s.num_ruptures = s.count_ruptures()
             yield s
     elif isinstance(src, AreaSource):
         for s in area_to_point_sources(src):
-            s.src_group_id = src.src_group_id
-            s.num_ruptures = s.count_ruptures()
             yield s
     elif isinstance(
             src, (SimpleFaultSource, ComplexFaultSource)):
         for s in split_fault_source(src):
-            s.src_group_id = src.src_group_id
-            s.num_ruptures = s.count_ruptures()
             yield s
     else:
         # characteristic and nonparametric sources are not split
@@ -179,6 +172,9 @@ def split_source(src):
             has_serial = hasattr(src, 'serial')
             start = 0
             for split in splits:
+                split.src_group_id = src.src_group_id
+                split.num_ruptures = split.count_ruptures()
+                split.ngsims = src.ngsims
                 if has_serial:
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
