@@ -408,14 +408,9 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Reusing composite source model of calc #%d',
                              oq.hazard_calculation_id)
                 with datastore.read(oq.hazard_calculation_id) as dstore:
-                    csm = dstore['composite_source_model']
+                    self.csm = dstore['composite_source_model']
             else:
-                csm = self.read_csm()
-            logging.info('Prefiltering the CompositeSourceModel')
-            with self.monitor('prefiltering source model',
-                              autoflush=True, measuremem=True):
-                src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-                self.csm = csm.filter(src_filter)
+                self.csm = self.read_csm()
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.rup_data = {}
         self.init()
