@@ -905,7 +905,10 @@ def export_disagg_csv(ekey, dstore):
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
-        poe = attrs['poe']
+        try:
+            poes = [attrs['poe']] * len(disagg_outputs)
+        except:  # no poes_disagg were given
+            poes = attrs['poe_agg']
         iml = attrs['iml']
         imt, sa_period, sa_damping = from_string(attrs['imt'])
         lon, lat = attrs['location']
@@ -924,7 +927,7 @@ def export_disagg_csv(ekey, dstore):
         metadata['Eps'] = attrs['eps_bin_edges']
         metadata['TRT'] = trts
         data = {}
-        for label in disagg_outputs:
+        for poe, label in zip(poes, disagg_outputs):
             tup = tuple(label.split('_'))
             fname = dstore.export_path(key + '_%s.csv' % label)
             data[tup] = poe, iml, matrix[label].value, fname

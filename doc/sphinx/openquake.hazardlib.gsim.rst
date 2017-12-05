@@ -579,6 +579,14 @@ nath_2012
     :undoc-members:
     :show-inheritance:
 
+nga_east
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nga_east
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nshmp_2014
 ------------------------------------------
 

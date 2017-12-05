@@ -27,7 +27,6 @@ import abc
 import sys
 import math
 import warnings
-import itertools
 import functools
 import contextlib
 from scipy.special import ndtr
@@ -36,10 +35,10 @@ import numpy
 from openquake.baselib.general import DeprecationWarning, AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import with_metaclass, raise_
-from openquake.hazardlib import const, source
+from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, get_distances, FarAwayRupture, SourceFilter)
+    IntegrationDistance, get_distances, FarAwayRupture)
 from openquake.hazardlib.probability_map import ProbabilityMap
 
 
@@ -275,7 +274,6 @@ class ContextMaker(object):
         """
         :param src: a source object, already filtered and split
         :param sites: a FilteredSiteCollection
-        :param mon: a Monitor instance
         :return: a list of filtered ruptures with context attributes
         """
         ruptures = []
