@@ -598,7 +598,8 @@ class NGAEastGMPE(NGAEastBaseGMPE):
         if not self.NGA_EAST_TABLE:
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
-        super(NGAEastGMPE, self).__init__(gmpe_table=self.NGA_EAST_TABLE,
+        super(NGAEastGMPE, self).__init__(
+            gmpe_table=self.NGA_EAST_TABLE,
             tau_model=tau_model, phi_model=phi_model,
             phi_s2ss_model=phi_s2ss_model, tau_quantile=tau_quantile,
             phi_ss_quantile=phi_ss_quantile,
