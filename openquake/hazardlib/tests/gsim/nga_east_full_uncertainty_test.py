@@ -556,10 +556,8 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
 
     def get_context_attributes(self, ctx):
         att = inspect.getmembers(ctx, lambda a: not inspect.isroutine(a))
-        att = [
-            k for k, v in att if not ('_abc' in k)
-            and not ((k.startswith('_') and k.endswith('_')))
-        ]
+        att = [k for k, v in att if '_abc' not in k
+               and not (k.startswith('_') and k.endswith('_'))]
         return set(att)
 
     def check(self, gsim, filename, max_discrep_percentage):
