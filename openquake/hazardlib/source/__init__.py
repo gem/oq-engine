@@ -126,6 +126,7 @@ def split_fault_source(src):
             i += 1
             splitlist.append(new_src)
     elif hasattr(src, 'start'):  # split by slice of ruptures
+        # for instance ClassicalTestCase.test_case_20
         for start, stop in _split_start_stop(src.num_ruptures, MINWEIGHT):
             new_src = copy.copy(src)
             new_src.start = start
