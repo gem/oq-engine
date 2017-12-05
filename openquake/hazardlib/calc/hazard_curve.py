@@ -54,15 +54,14 @@ efficient. Here we start a parallel computation per each realization,
 the engine manages all the realizations at once.
 """
 from __future__ import division
-import sys
 import time
 import operator
-import numpy
 
-from openquake.baselib.python3compat import raise_, zip
+from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.baselib.parallel import Sequential
+from openquake.hazardlib.source import split_source
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
@@ -80,17 +79,10 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
 
     :returns: a dictionary {grp_id: ProbabilityMap instance}
     """
-    sources = group.sources
     mutex_weight = {src.source_id: weight for src, weight in
                     zip(group.sources, group.srcs_weights)}
     maxdist = src_filter.integration_distance
-    srcs = []
-    for src in sources:
-        if hasattr(src, '__iter__'):  # MultiPointSource
-            srcs.extend(src)
-        else:
-            srcs.append(src)
-    del sources
+    srcs = sum([split_source(src) for src in group.sources], [])
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = param['imtls']
         trunclevel = param.get('truncation_level')
@@ -129,16 +121,11 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
         .eff_ruptures
     """
-    maxdist = src_filter.integration_distance
-    srcs = []
     grp_ids = set()
     for src in sources:
-        if hasattr(src, '__iter__'):  # MultiPointSource
-            srcs.extend(src)
-        else:
-            srcs.append(src)
         grp_ids.update(src.src_group_ids)
-    del sources
+    maxdist = src_filter.integration_distance
+    srcs = sum([split_source(src) for src in sources], [])  # split first
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = param['imtls']
         trunclevel = param.get('truncation_level')
@@ -149,16 +136,17 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
                           for grp_id in grp_ids})
         pmap.calc_times = []  # pairs (src_id, delta_t)
         pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
-        for src, s_sites in src_filter(srcs):
+        for src, s_sites in src_filter(srcs):  # filter now
             t0 = time.time()
-            poe = cmaker.poe_map(
+            poemap = cmaker.poe_map(
                 src, s_sites, imtls, trunclevel, ctx_mon, poe_mon)
-            for grp_id in src.src_group_ids:
-                pmap[grp_id] |= poe
+            if poemap:
+                for grp_id in src.src_group_ids:
+                    pmap[grp_id] |= poemap
             pmap.calc_times.append(
                 (src.source_id, src.weight, len(s_sites), time.time() - t0))
             # storing the number of contributing ruptures too
-            pmap.eff_ruptures += {grp_id: poe.eff_ruptures
+            pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
                                   for grp_id in src.src_group_ids}
         return pmap
 
