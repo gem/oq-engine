@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     426,920,066        
-date           2017-11-08T18:07:11
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:09:50
+engine_version 2.9.0-git96de348   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -64,49 +64,49 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Subduction Interface 15          19           19          
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Subduction Interface 19           19          
+================ ====== ==================== ============ ============
 
 Informational data
 ------------------
-=========================== =========================================================================
-count_eff_ruptures.received tot 1.06 KB, max_per_task 1.06 KB                                        
-count_eff_ruptures.sent     sources 1.08 MB, srcfilter 684 B, param 608 B, monitor 328 B, gsims 106 B
-hazard.input_weight         19.0                                                                     
-hazard.n_imts               1                                                                        
-hazard.n_levels             6                                                                        
-hazard.n_realizations       1                                                                        
-hazard.n_sites              1                                                                        
-hazard.n_sources            15                                                                       
-hazard.output_weight        6.0                                                                      
-hostname                    tstation.gem.lan                                                         
-require_epsilons            False                                                                    
-=========================== =========================================================================
+======================= =========================================================================
+count_ruptures.received max_per_task 1.04 KB, tot 1.04 KB                                        
+count_ruptures.sent     sources 1.08 MB, srcfilter 684 B, param 434 B, monitor 319 B, gsims 106 B
+hazard.input_weight     19.0                                                                     
+hazard.n_imts           1                                                                        
+hazard.n_levels         6                                                                        
+hazard.n_realizations   1                                                                        
+hazard.n_sites          1                                                                        
+hazard.n_sources        15                                                                       
+hazard.output_weight    6.0                                                                      
+hostname                tstation.gem.lan                                                         
+require_epsilons        False                                                                    
+======================= =========================================================================
 
 Slowest sources
 ---------------
-====== ========= ========================== ============ ========= ========= =========
-grp_id source_id source_class               num_ruptures calc_time num_sites num_split
-====== ========= ========================== ============ ========= ========= =========
-0      case_01   NonParametricSeismicSource 1            0.003     1         1        
-0      case_02   NonParametricSeismicSource 1            0.002     1         1        
-0      case_03   NonParametricSeismicSource 1            0.002     1         1        
-0      case_05   NonParametricSeismicSource 1            0.002     1         1        
-0      case_04   NonParametricSeismicSource 1            0.002     1         1        
-0      case_06   NonParametricSeismicSource 1            0.002     1         1        
-0      case_09   NonParametricSeismicSource 1            0.002     1         1        
-0      case_08   NonParametricSeismicSource 1            0.002     1         1        
-0      case_10   NonParametricSeismicSource 1            0.002     1         1        
-0      case_07   NonParametricSeismicSource 1            0.002     1         1        
-0      case_11   NonParametricSeismicSource 1            0.002     1         1        
-0      case_12   NonParametricSeismicSource 2            0.002     1         1        
-0      case_13   NonParametricSeismicSource 2            0.002     1         1        
-0      case_15   NonParametricSeismicSource 2            0.002     1         1        
-0      case_14   NonParametricSeismicSource 2            0.002     1         1        
-====== ========= ========================== ============ ========= ========= =========
+========= ========================== ============ ========= ========= =========
+source_id source_class               num_ruptures calc_time num_sites num_split
+========= ========================== ============ ========= ========= =========
+case_01   NonParametricSeismicSource 1            0.003     1         1        
+case_03   NonParametricSeismicSource 1            0.002     1         1        
+case_02   NonParametricSeismicSource 1            0.002     1         1        
+case_04   NonParametricSeismicSource 1            0.002     1         1        
+case_05   NonParametricSeismicSource 1            0.002     1         1        
+case_06   NonParametricSeismicSource 1            0.002     1         1        
+case_09   NonParametricSeismicSource 1            0.002     1         1        
+case_08   NonParametricSeismicSource 1            0.002     1         1        
+case_07   NonParametricSeismicSource 1            0.002     1         1        
+case_10   NonParametricSeismicSource 1            0.002     1         1        
+case_15   NonParametricSeismicSource 2            0.002     1         1        
+case_14   NonParametricSeismicSource 2            0.002     1         1        
+case_12   NonParametricSeismicSource 2            0.002     1         1        
+case_13   NonParametricSeismicSource 2            0.002     1         1        
+case_11   NonParametricSeismicSource 1            0.002     1         1        
+========= ========================== ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -124,7 +124,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.036 NaN    0.036 0.036 1        
+count_ruptures     0.037 NaN    0.037 0.037 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -132,12 +132,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.332     0.0       1     
-total count_eff_ruptures       0.036     0.0       1     
-prefiltering source model      0.018     0.0       1     
-store source_info              0.004     0.0       1     
-managing sources               0.003     0.0       1     
+reading composite source model 0.327     0.0       1     
+total count_ruptures           0.037     0.254     1     
+managing sources               0.022     0.0       1     
+store source_info              0.007     0.0       1     
+saving probability maps        5.388E-05 0.0       1     
 reading site collection        4.339E-05 0.0       1     
-aggregate curves               4.292E-05 0.0       1     
-saving probability maps        2.885E-05 0.0       1     
+aggregate curves               3.791E-05 0.0       1     
 ============================== ========= ========= ======
