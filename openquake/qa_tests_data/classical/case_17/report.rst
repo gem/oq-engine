@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 17
 
 ============== ===================
 checksum32     575,048,364        
-date           2017-12-06T11:09:30
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:56
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -103,8 +103,8 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-2         PointSource  7            1.767E-04 1         2        
-1         PointSource  39           1.280E-04 1         2        
+2         PointSource  7            2.160E-04 1         2        
+1         PointSource  39           1.509E-04 1         2        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -112,7 +112,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.047E-04 2     
+PointSource  3.669E-04 2     
 ============ ========= ======
 
 Duplicated sources
@@ -123,7 +123,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =========
 operation-duration mean      stddev min       max       num_tasks
-count_ruptures     8.035E-04 NaN    8.035E-04 8.035E-04 1        
+count_ruptures     9.527E-04 NaN    9.527E-04 9.527E-04 1        
 ================== ========= ====== ========= ========= =========
 
 Slowest operations
@@ -131,11 +131,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-store source_info              0.004     0.0       1     
+store source_info              0.003     0.0       1     
 reading composite source model 0.003     0.0       1     
-managing sources               0.003     0.0       1     
-total count_ruptures           8.035E-04 0.0       1     
-reading site collection        4.029E-05 0.0       1     
-saving probability maps        2.933E-05 0.0       1     
-aggregate curves               2.027E-05 0.0       1     
+managing sources               0.002     0.0       1     
+total count_ruptures           9.527E-04 0.0       1     
+reading site collection        3.862E-05 0.0       1     
+saving probability maps        2.599E-05 0.0       1     
+aggregate curves               1.812E-05 0.0       1     
 ============================== ========= ========= ======

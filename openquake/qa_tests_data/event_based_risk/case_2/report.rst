@@ -3,8 +3,8 @@ Event Based Risk QA Test 2
 
 ============== ===================
 checksum32     3,754,416,453      
-date           2017-12-06T11:09:02
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:29
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 3, num_imts = 3
@@ -115,9 +115,9 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         PointSource  6            0.0       1         0        
-2         PointSource  6            0.0       1         0        
 3         PointSource  6            0.0       1         0        
+2         PointSource  6            0.0       1         0        
+1         PointSource  6            0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -136,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.019 NaN    0.019 0.019 1        
+compute_ruptures   0.008 NaN    0.008 0.008 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -144,14 +144,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.033     0.0       1     
-total compute_ruptures         0.019     0.461     1     
-reading exposure               0.008     0.0       1     
-assoc_assets_sites             0.006     0.0       1     
-filtering ruptures             0.004     0.0       9     
+managing sources               0.018     0.0       1     
+total compute_ruptures         0.008     0.746     1     
+reading exposure               0.006     0.0       1     
+assoc_assets_sites             0.005     0.0       1     
 store source_info              0.003     0.0       1     
-saving ruptures                0.003     0.0       1     
-reading composite source model 0.003     0.0       1     
+saving ruptures                0.002     0.0       1     
+reading composite source model 0.002     0.0       1     
+filtering ruptures             0.002     0.0       9     
 setting event years            0.001     0.0       1     
-reading site collection        4.721E-05 0.0       1     
+reading site collection        3.576E-05 0.0       1     
 ============================== ========= ========= ======

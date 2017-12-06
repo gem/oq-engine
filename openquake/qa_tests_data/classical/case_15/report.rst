@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     17,280,623         
-date           2017-12-06T11:09:31
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:56
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 3, num_imts = 2
@@ -114,8 +114,8 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         AreaSource   240          0.005     3         5        
-2         PointSource  15           1.652E-04 3         1        
+1         AreaSource   240          0.004     3         5        
+2         PointSource  15           1.993E-04 3         1        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -123,8 +123,8 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.005     1     
-PointSource  1.652E-04 1     
+AreaSource   0.004     1     
+PointSource  1.993E-04 1     
 ============ ========= ======
 
 Duplicated sources
@@ -135,7 +135,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ========= ===== =========
 operation-duration mean  stddev min       max   num_tasks
-count_ruptures     0.003 0.002  7.811E-04 0.004 3        
+count_ruptures     0.002 0.001  8.886E-04 0.004 3        
 ================== ===== ====== ========= ===== =========
 
 Slowest operations
@@ -143,11 +143,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.012     0.0       1     
-total count_ruptures           0.008     0.0       3     
-managing sources               0.006     0.0       1     
+reading composite source model 0.010     0.0       1     
+total count_ruptures           0.006     0.0       3     
+managing sources               0.005     0.0       1     
 store source_info              0.004     0.0       1     
-aggregate curves               5.078E-05 0.0       3     
-reading site collection        4.077E-05 0.0       1     
-saving probability maps        2.956E-05 0.0       1     
+reading site collection        4.959E-05 0.0       1     
+aggregate curves               4.363E-05 0.0       3     
+saving probability maps        2.527E-05 0.0       1     
 ============================== ========= ========= ======

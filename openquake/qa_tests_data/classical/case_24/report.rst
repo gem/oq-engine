@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2017-12-06T11:09:34
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:00
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 9
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.002 NaN    0.002 0.002 1        
+count_ruptures     0.003 NaN    0.003 0.003 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,11 +118,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.027     0.0       1     
+reading composite source model 0.026     0.0       1     
 store source_info              0.003     0.0       1     
 managing sources               0.003     0.0       1     
-total count_ruptures           0.002     0.0       1     
-reading site collection        4.506E-05 0.0       1     
-saving probability maps        3.099E-05 0.0       1     
-aggregate curves               1.526E-05 0.0       1     
+total count_ruptures           0.003     0.0       1     
+reading site collection        4.530E-05 0.0       1     
+saving probability maps        3.004E-05 0.0       1     
+aggregate curves               1.597E-05 0.0       1     
 ============================== ========= ========= ======

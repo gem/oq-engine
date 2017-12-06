@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,227,047,805      
-date           2017-12-06T11:09:35
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:01
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 21, num_imts = 6
@@ -97,7 +97,7 @@ Slowest sources
 ========= ================ ============ ========= ========= =========
 source_id source_class     num_ruptures calc_time num_sites num_split
 ========= ================ ============ ========= ========= =========
-mps-0     MultiPointSource 1,104        5.422E-04 2         3        
+mps-0     MultiPointSource 1,104        5.548E-04 2         3        
 ========= ================ ============ ========= ========= =========
 
 Computation times by source typology
@@ -105,7 +105,7 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 5.422E-04 1     
+MultiPointSource 5.548E-04 1     
 ================ ========= ======
 
 Duplicated sources
@@ -128,7 +128,7 @@ managing sources               0.006     0.0       1
 reading composite source model 0.004     0.0       1     
 store source_info              0.004     0.0       1     
 total count_ruptures           0.002     0.0       1     
-reading site collection        2.553E-04 0.0       1     
-saving probability maps        2.956E-05 0.0       1     
-aggregate curves               1.907E-05 0.0       1     
+reading site collection        2.608E-04 0.0       1     
+saving probability maps        2.980E-05 0.0       1     
+aggregate curves               1.955E-05 0.0       1     
 ============================== ========= ========= ======

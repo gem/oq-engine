@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     796,188,147        
-date           2017-12-06T11:09:50
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:16
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.004 NaN    0.004 0.004 1        
+count_ruptures     0.003 NaN    0.003 0.003 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,11 +118,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.036     0.0       1     
-managing sources               0.004     0.0       1     
-total count_ruptures           0.004     0.0       1     
+reading composite source model 0.033     0.0       1     
+total count_ruptures           0.003     0.0       1     
+managing sources               0.003     0.0       1     
 store source_info              0.003     0.0       1     
-reading site collection        4.816E-05 0.0       1     
-saving probability maps        3.147E-05 0.0       1     
-aggregate curves               1.597E-05 0.0       1     
+reading site collection        4.220E-05 0.0       1     
+saving probability maps        2.551E-05 0.0       1     
+aggregate curves               1.383E-05 0.0       1     
 ============================== ========= ========= ======

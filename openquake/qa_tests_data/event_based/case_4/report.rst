@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     2,872,781,101      
-date           2017-12-06T11:10:11
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:35
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.013 NaN    0.013 0.013 1        
+compute_ruptures   0.011 NaN    0.011 0.011 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.027     0.0       1     
-total compute_ruptures         0.013     0.0       1     
+managing sources               0.023     0.0       1     
+total compute_ruptures         0.011     0.0       1     
 reading composite source model 0.004     0.0       1     
 store source_info              0.003     0.0       1     
-saving ruptures                0.003     0.0       1     
-filtering ruptures             0.002     0.0       10    
+saving ruptures                0.002     0.0       1     
+filtering ruptures             0.001     0.0       10    
 setting event years            0.001     0.0       1     
-reading site collection        3.982E-05 0.0       1     
+reading site collection        3.076E-05 0.0       1     
 ============================== ========= ========= ======
