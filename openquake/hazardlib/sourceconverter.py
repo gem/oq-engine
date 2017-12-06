@@ -62,6 +62,8 @@ class SourceGroup(collections.Sequence):
         the number of ruptures contained in the group; if -1,
         the number is unknown and has to be computed by using
         get_set_num_ruptures
+    :param tot_ruptures:
+        the potential maximum number of ruptures contained in the group
     """
     @classmethod
     def collect(cls, sources):
@@ -95,7 +97,8 @@ class SourceGroup(collections.Sequence):
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', srcs_weights=None, grp_probability=None,
-                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
+                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1,
+                 tot_ruptures=0):
         # checks
         self.trt = trt
         self._check_init_variables(sources, name, src_interdep, rup_interdep,
@@ -109,6 +112,7 @@ class SourceGroup(collections.Sequence):
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.id = id
+        self.tot_ruptures = tot_ruptures  # updated in .update(src)
         if sources:
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
@@ -129,11 +133,6 @@ class SourceGroup(collections.Sequence):
                 assert src.tectonic_region_type == self.trt, (
                     src.tectonic_region_type, self.trt)
 
-        # ask Marco: should we add a check on the srcs_weights?
-
-    def tot_ruptures(self):
-        return sum(src.num_ruptures for src in self.sources)
-
     def update(self, src):
         """
         Update the attributes sources, min_mag, max_mag
@@ -145,6 +144,7 @@ class SourceGroup(collections.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
+        self.tot_ruptures += get_set_num_ruptures(src)
         self.sources.append(src)
         min_mag, max_mag = src.get_min_max_mag()
         prev_min_mag = self.min_mag

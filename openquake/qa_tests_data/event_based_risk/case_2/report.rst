@@ -3,8 +3,8 @@ Event Based Risk QA Test 2
 
 ============== ===================
 checksum32     3,754,416,453      
-date           2017-11-08T18:06:30
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:19:29
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 3, num_imts = 3
@@ -67,17 +67,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 3           18           18          
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 18           18          
+================ ====== ==================== ============ ============
 
 Informational data
 ------------------
 ========================= =========================================================================
-compute_ruptures.received tot 8.82 KB, max_per_task 8.82 KB                                        
-compute_ruptures.sent     sources 2.15 KB, param 829 B, src_filter 740 B, monitor 326 B, gsims 98 B
+compute_ruptures.received max_per_task 8.81 KB, tot 8.81 KB                                        
+compute_ruptures.sent     sources 2.17 KB, param 818 B, src_filter 740 B, monitor 323 B, gsims 98 B
 hazard.input_weight       1.8000000000000003                                                       
 hazard.n_imts             3                                                                        
 hazard.n_levels           15                                                                       
@@ -91,7 +91,7 @@ require_epsilons          True
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-4 asset(s) x 1 realization(s) x 1 loss type(s) x 2 losses x 8 bytes x 50 tasks = 3.12 KB
+4 asset(s) x 1 realization(s) x 1 loss type(s) x 2 losses x 8 bytes x 20 tasks = 1.25 KB
 
 Exposure model
 --------------
@@ -112,13 +112,13 @@ W/1      1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ============ ============ ========= ========= =========
-grp_id source_id source_class num_ruptures calc_time num_sites num_split
-====== ========= ============ ============ ========= ========= =========
-0      2         PointSource  6            0.0       1         0        
-0      1         PointSource  6            0.0       1         0        
-0      3         PointSource  6            0.0       1         0        
-====== ========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========= =========
+source_id source_class num_ruptures calc_time num_sites num_split
+========= ============ ============ ========= ========= =========
+3         PointSource  6            0.0       1         0        
+2         PointSource  6            0.0       1         0        
+1         PointSource  6            0.0       1         0        
+========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -136,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.012 NaN    0.012 0.012 1        
+compute_ruptures   0.008 NaN    0.008 0.008 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -144,15 +144,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.012     0.824     1     
-reading exposure               0.008     0.0       1     
-assoc_assets_sites             0.006     0.0       1     
-store source_info              0.004     0.0       1     
-saving ruptures                0.003     0.0       1     
-reading composite source model 0.003     0.0       1     
-filtering ruptures             0.003     0.0       9     
-managing sources               0.002     0.0       1     
+managing sources               0.018     0.0       1     
+total compute_ruptures         0.008     0.746     1     
+reading exposure               0.006     0.0       1     
+assoc_assets_sites             0.005     0.0       1     
+store source_info              0.003     0.0       1     
+saving ruptures                0.002     0.0       1     
+reading composite source model 0.002     0.0       1     
+filtering ruptures             0.002     0.0       9     
 setting event years            0.001     0.0       1     
-prefiltering source model      7.846E-04 0.0       1     
-reading site collection        5.364E-05 0.0       1     
+reading site collection        3.576E-05 0.0       1     
 ============================== ========= ========= ======

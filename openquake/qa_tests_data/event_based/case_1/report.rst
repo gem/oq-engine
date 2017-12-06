@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     914,633,900        
-date           2017-11-08T18:08:03
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:21:21
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -64,17 +64,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           1            1           
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 1            1           
+================ ====== ==================== ============ ============
 
 Informational data
 ------------------
 ========================= =========================================================================
-compute_ruptures.received tot 34.3 KB, max_per_task 34.3 KB                                        
-compute_ruptures.sent     sources 1.31 KB, src_filter 684 B, param 594 B, monitor 326 B, gsims 91 B
+compute_ruptures.received max_per_task 34.29 KB, tot 34.29 KB                                      
+compute_ruptures.sent     sources 1.32 KB, src_filter 684 B, param 583 B, monitor 323 B, gsims 91 B
 hazard.input_weight       0.1                                                                      
 hazard.n_imts             1                                                                        
 hazard.n_levels           3                                                                        
@@ -88,11 +88,11 @@ require_epsilons          False
 
 Slowest sources
 ---------------
-====== ========= ============ ============ ========= ========= =========
-grp_id source_id source_class num_ruptures calc_time num_sites num_split
-====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  1            0.0       1         0        
-====== ========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========= =========
+source_id source_class num_ruptures calc_time num_sites num_split
+========= ============ ============ ========= ========= =========
+1         PointSource  1            0.0       1         0        
+========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.018 NaN    0.018 0.018 1        
+compute_ruptures   0.017 NaN    0.017 0.017 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,13 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.018     0.0       1     
+managing sources               0.034     0.0       1     
+total compute_ruptures         0.017     0.0       1     
 setting event years            0.010     0.0       1     
 saving ruptures                0.008     0.0       1     
-store source_info              0.003     0.0       1     
-managing sources               0.002     0.0       1     
+store source_info              0.004     0.0       1     
 reading composite source model 0.002     0.0       1     
-filtering ruptures             5.655E-04 0.0       1     
-prefiltering source model      5.500E-04 0.0       1     
-reading site collection        4.292E-05 0.0       1     
+filtering ruptures             5.698E-04 0.0       1     
+reading site collection        4.387E-05 0.0       1     
 ============================== ========= ========= ======
