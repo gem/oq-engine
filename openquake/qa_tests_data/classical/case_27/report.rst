@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     426,920,066        
-date           2017-12-06T11:09:50
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:15
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -92,20 +92,20 @@ Slowest sources
 source_id source_class               num_ruptures calc_time num_sites num_split
 ========= ========================== ============ ========= ========= =========
 case_01   NonParametricSeismicSource 1            0.003     1         1        
-case_03   NonParametricSeismicSource 1            0.002     1         1        
 case_02   NonParametricSeismicSource 1            0.002     1         1        
+case_03   NonParametricSeismicSource 1            0.002     1         1        
 case_04   NonParametricSeismicSource 1            0.002     1         1        
 case_05   NonParametricSeismicSource 1            0.002     1         1        
-case_06   NonParametricSeismicSource 1            0.002     1         1        
-case_09   NonParametricSeismicSource 1            0.002     1         1        
+case_12   NonParametricSeismicSource 2            0.002     1         1        
+case_13   NonParametricSeismicSource 2            0.002     1         1        
 case_08   NonParametricSeismicSource 1            0.002     1         1        
 case_07   NonParametricSeismicSource 1            0.002     1         1        
 case_10   NonParametricSeismicSource 1            0.002     1         1        
-case_15   NonParametricSeismicSource 2            0.002     1         1        
 case_14   NonParametricSeismicSource 2            0.002     1         1        
-case_12   NonParametricSeismicSource 2            0.002     1         1        
-case_13   NonParametricSeismicSource 2            0.002     1         1        
+case_09   NonParametricSeismicSource 1            0.002     1         1        
+case_06   NonParametricSeismicSource 1            0.002     1         1        
 case_11   NonParametricSeismicSource 1            0.002     1         1        
+case_15   NonParametricSeismicSource 2            0.002     1         1        
 ========= ========================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -113,7 +113,7 @@ Computation times by source typology
 ========================== ========= ======
 source_class               calc_time counts
 ========================== ========= ======
-NonParametricSeismicSource 0.035     15    
+NonParametricSeismicSource 0.034     15    
 ========================== ========= ======
 
 Duplicated sources
@@ -124,7 +124,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.037 NaN    0.037 0.037 1        
+count_ruptures     0.036 NaN    0.036 0.036 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -132,11 +132,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.327     0.0       1     
-total count_ruptures           0.037     0.254     1     
-managing sources               0.022     0.0       1     
-store source_info              0.007     0.0       1     
-saving probability maps        5.388E-05 0.0       1     
-reading site collection        4.339E-05 0.0       1     
-aggregate curves               3.791E-05 0.0       1     
+reading composite source model 0.293     0.0       1     
+total count_ruptures           0.036     0.199     1     
+managing sources               0.016     0.0       1     
+store source_info              0.004     0.0       1     
+reading site collection        4.196E-05 0.0       1     
+saving probability maps        3.600E-05 0.0       1     
+aggregate curves               3.028E-05 0.0       1     
 ============================== ========= ========= ======

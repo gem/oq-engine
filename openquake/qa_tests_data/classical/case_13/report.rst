@@ -3,8 +3,8 @@ Classical PSHA QA test
 
 ============== ===================
 checksum32     2,024,827,974      
-date           2017-12-06T11:09:31
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:57
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 21, num_imts = 2
@@ -88,7 +88,7 @@ bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 3,289        2,706
 Informational data
 ------------------
 ======================= ===================================================================================
-count_ruptures.received tot 28.63 KB, max_per_task 3.46 KB                                                 
+count_ruptures.received tot 28.62 KB, max_per_task 3.46 KB                                                 
 count_ruptures.sent     sources 1.34 MB, srcfilter 25.51 KB, param 13.86 KB, monitor 6.54 KB, gsims 3.67 KB
 hazard.input_weight     4686.0                                                                             
 hazard.n_imts           2                                                                                  
@@ -106,26 +106,26 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-56_0      CharacteristicFaultSource 11           0.016     19        3        
-32_1      CharacteristicFaultSource 11           0.013     12        3        
-89_1      CharacteristicFaultSource 11           0.012     16        4        
-31_1      CharacteristicFaultSource 11           0.012     12        3        
-82_1      CharacteristicFaultSource 11           0.012     9         4        
-34_0      CharacteristicFaultSource 11           0.012     17        4        
+66_1      CharacteristicFaultSource 11           0.023     11        3        
+46_1      CharacteristicFaultSource 11           0.023     11        3        
+68_0      CharacteristicFaultSource 11           0.020     17        2        
+114_0     CharacteristicFaultSource 11           0.019     11        1        
+8_1       CharacteristicFaultSource 11           0.015     11        1        
+115_1     CharacteristicFaultSource 11           0.012     14        2        
 0_0       CharacteristicFaultSource 11           0.012     8         4        
 0_1       CharacteristicFaultSource 11           0.011     8         4        
 82_0      CharacteristicFaultSource 11           0.011     9         4        
-13_0      CharacteristicFaultSource 11           0.011     7         4        
-80_0      CharacteristicFaultSource 11           0.011     9         4        
-1_0       CharacteristicFaultSource 11           0.010     9         4        
-13_1      CharacteristicFaultSource 11           0.010     7         4        
-60_0      CharacteristicFaultSource 11           0.010     7         4        
-80_1      CharacteristicFaultSource 11           0.010     9         4        
-83_1      CharacteristicFaultSource 11           0.010     10        4        
-36_0      CharacteristicFaultSource 11           0.010     14        4        
-47_0      CharacteristicFaultSource 11           0.010     7         4        
-83_0      CharacteristicFaultSource 11           0.010     10        4        
-30_0      CharacteristicFaultSource 11           0.010     9         4        
+80_1      CharacteristicFaultSource 11           0.011     9         4        
+82_1      CharacteristicFaultSource 11           0.010     9         4        
+80_0      CharacteristicFaultSource 11           0.010     9         4        
+42_0      CharacteristicFaultSource 11           0.010     18        4        
+36_0      CharacteristicFaultSource 11           0.009     14        4        
+36_1      CharacteristicFaultSource 11           0.009     14        4        
+42_1      CharacteristicFaultSource 11           0.009     18        4        
+13_0      CharacteristicFaultSource 11           0.009     7         4        
+51_0      CharacteristicFaultSource 11           0.009     14        4        
+60_0      CharacteristicFaultSource 11           0.009     7         4        
+13_1      CharacteristicFaultSource 11           0.009     7         4        
 ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -133,7 +133,7 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 1.453     246   
+CharacteristicFaultSource 1.399     246   
 ========================= ========= ======
 
 Duplicated sources
@@ -144,7 +144,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.071 0.057  0.010 0.245 21       
+count_ruptures     0.068 0.051  0.010 0.237 21       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -152,11 +152,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 1.807     0.0       1     
-total count_ruptures           1.488     0.211     21    
-managing sources               0.646     0.0       1     
+reading composite source model 1.997     0.0       1     
+total count_ruptures           1.432     0.0       21    
+managing sources               0.666     0.0       1     
 store source_info              0.010     0.0       1     
 aggregate curves               0.001     0.0       21    
-reading site collection        2.007E-04 0.0       1     
-saving probability maps        5.245E-05 0.0       1     
+reading site collection        2.408E-04 0.0       1     
+saving probability maps        5.102E-05 0.0       1     
 ============================== ========= ========= ======

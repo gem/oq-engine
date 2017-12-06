@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     949,605,442        
-date           2017-12-06T11:09:02
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:28
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 7, num_imts = 3
@@ -110,7 +110,7 @@ Slowest sources
 ========= ================= ============ ========= ========= =========
 source_id source_class      num_ruptures calc_time num_sites num_split
 ========= ================= ============ ========= ========= =========
-1         SimpleFaultSource 1,694        0.031     7         15       
+1         SimpleFaultSource 1,694        0.048     7         15       
 ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -118,7 +118,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.031     1     
+SimpleFaultSource 0.048     1     
 ================= ========= ======
 
 Duplicated sources
@@ -127,22 +127,22 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.003 8.078E-04 0.002 0.004 13       
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_ruptures     0.004 0.001  0.004 0.007 13       
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.094     0.0       1     
-total count_ruptures           0.038     0.0       13    
-reading composite source model 0.011     0.0       1     
+managing sources               0.103     0.0       1     
+total count_ruptures           0.058     0.0       13    
+reading composite source model 0.012     0.0       1     
 reading exposure               0.007     0.0       1     
-store source_info              0.004     0.0       1     
-aggregate curves               1.843E-04 0.0       13    
-saving probability maps        3.147E-05 0.0       1     
-reading site collection        7.629E-06 0.0       1     
+store source_info              0.003     0.0       1     
+aggregate curves               1.671E-04 0.0       13    
+saving probability maps        3.123E-05 0.0       1     
+reading site collection        7.153E-06 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     1,989,351,768      
-date           2017-12-06T11:10:17
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:41
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 2, num_imts = 1
@@ -91,15 +91,15 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         AreaSource   7,020        0.0       1         0        
-6         AreaSource   1,270        0.0       1         0        
-5         AreaSource   2,092        0.0       1         0        
-7         AreaSource   4,144        0.0       1         0        
 4         AreaSource   1,077        0.0       1         0        
-9         AreaSource   897          0.0       1         0        
-8         AreaSource   1,812        0.0       1         0        
-2         AreaSource   2,334        0.0       1         0        
+7         AreaSource   4,144        0.0       1         0        
 3         AreaSource   1,760        0.0       1         0        
+9         AreaSource   897          0.0       1         0        
+6         AreaSource   1,270        0.0       1         0        
+2         AreaSource   2,334        0.0       1         0        
+5         AreaSource   2,092        0.0       1         0        
+8         AreaSource   1,812        0.0       1         0        
+1         AreaSource   7,020        0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -118,7 +118,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.263 0.157  0.003 0.386 15       
+compute_ruptures   0.261 0.161  0.003 0.384 15       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -126,12 +126,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.941     0.0       15    
-reading composite source model 3.080     0.0       1     
-managing sources               1.086     0.0       1     
-saving ruptures                0.005     0.0       15    
-store source_info              0.005     0.0       1     
-setting event years            0.002     0.0       1     
-filtering ruptures             9.990E-04 0.0       3     
+total compute_ruptures         3.919     0.0       15    
+reading composite source model 3.085     0.0       1     
+managing sources               1.127     0.0       1     
+saving ruptures                0.006     0.0       15    
+store source_info              0.003     0.0       1     
+setting event years            0.001     0.0       1     
+filtering ruptures             9.227E-04 0.0       3     
 reading site collection        4.816E-05 0.0       1     
 ============================== ========= ========= ======

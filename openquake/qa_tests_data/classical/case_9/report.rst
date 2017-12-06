@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 9
 
 ============== ===================
 checksum32     1,375,199,152      
-date           2017-12-06T11:09:34
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:00
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -102,7 +102,7 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         PointSource  3,500        3.979E-04 1         2        
+1         PointSource  3,500        4.029E-04 1         2        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -110,7 +110,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.979E-04 1     
+PointSource  4.029E-04 1     
 ============ ========= ======
 
 Duplicated sources
@@ -121,7 +121,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_ruptures     8.970E-04 7.974E-05 8.407E-04 9.534E-04 2        
+count_ruptures     8.957E-04 3.979E-05 8.676E-04 9.239E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -131,9 +131,9 @@ operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.017     0.0       1     
 managing sources               0.013     0.0       1     
-store source_info              0.004     0.0       1     
+store source_info              0.003     0.0       1     
 total count_ruptures           0.002     0.0       2     
-reading site collection        4.625E-05 0.0       1     
+reading site collection        4.745E-05 0.0       1     
 aggregate curves               3.099E-05 0.0       2     
-saving probability maps        3.028E-05 0.0       1     
+saving probability maps        3.004E-05 0.0       1     
 ============================== ========= ========= ======

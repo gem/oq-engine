@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 
 ============== ===================
 checksum32     1,497,102,793      
-date           2017-12-06T11:10:11
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:35
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 2, num_imts = 1
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.012 NaN    0.012 0.012 1        
+compute_ruptures   0.017 NaN    0.017 0.017 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-setting event years            0.074     0.0       1     
-managing sources               0.069     0.0       1     
-saving ruptures                0.048     0.0       1     
-total compute_ruptures         0.012     0.0       1     
-store source_info              0.003     0.0       1     
+managing sources               0.074     0.0       1     
+setting event years            0.071     0.0       1     
+saving ruptures                0.046     0.0       1     
+total compute_ruptures         0.017     0.254     1     
+store source_info              0.004     0.0       1     
 reading composite source model 0.002     0.0       1     
-filtering ruptures             4.578E-04 0.0       1     
-reading site collection        4.721E-05 0.0       1     
+filtering ruptures             6.104E-04 0.0       1     
+reading site collection        4.601E-05 0.0       1     
 ============================== ========= ========= ======

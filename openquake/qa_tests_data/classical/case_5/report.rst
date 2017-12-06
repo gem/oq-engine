@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2017-12-06T11:09:53
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:18
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -122,7 +122,7 @@ reading composite source model 0.141     0.0       1
 total count_ruptures           0.003     0.0       1     
 managing sources               0.003     0.0       1     
 store source_info              0.003     0.0       1     
-reading site collection        3.314E-05 0.0       1     
-saving probability maps        2.480E-05 0.0       1     
-aggregate curves               1.311E-05 0.0       1     
+reading site collection        3.386E-05 0.0       1     
+saving probability maps        2.289E-05 0.0       1     
+aggregate curves               1.240E-05 0.0       1     
 ============================== ========= ========= ======

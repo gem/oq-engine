@@ -3,8 +3,8 @@ event based risk with PMF
 
 ============== ===================
 checksum32     316,426,340        
-date           2017-12-06T11:09:30
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:55
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.055 0.019  0.044 0.077 3        
+compute_ruptures   0.057 0.021  0.034 0.074 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,13 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.166     0.0       3     
-managing sources               0.148     0.0       1     
-saving ruptures                0.013     0.0       3     
+total compute_ruptures         0.172     0.0       3     
+managing sources               0.132     0.0       1     
+saving ruptures                0.007     0.0       3     
 filtering ruptures             0.007     0.0       31    
-reading exposure               0.007     0.0       1     
+reading exposure               0.006     0.0       1     
 reading composite source model 0.006     0.0       1     
-store source_info              0.005     0.0       1     
-setting event years            0.002     0.0       1     
-reading site collection        6.676E-06 0.0       1     
+store source_info              0.003     0.0       1     
+setting event years            0.001     0.0       1     
+reading site collection        6.437E-06 0.0       1     
 ============================== ========= ========= ======
