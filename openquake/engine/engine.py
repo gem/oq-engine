@@ -60,7 +60,7 @@ if parallel.oq_distribute() == 'zmq':
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
-        OqParam.concurrent_tasks.default = num_workers * 5
+        OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.info('Using %d zmq workers', num_workers)
 
 elif USE_CELERY:
@@ -75,7 +75,7 @@ elif USE_CELERY:
         if not stats:
             sys.exit("No live compute nodes, aborting calculation")
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = num_cores * 5
+        OqParam.concurrent_tasks.default = num_cores * 2
         logs.LOG.info(
             'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
 
