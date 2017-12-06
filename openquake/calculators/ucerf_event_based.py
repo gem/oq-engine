@@ -404,6 +404,13 @@ class UCERFSource(object):
         self.msr = msr
         self.mesh_spacing = mesh_spacing
         self.tectonic_region_type = trt
+        self.num_ruptures = 0  # not set yet
+
+    def count_ruptures(self):
+        """
+        The length of the rupture array if the branch_id is set, else 0
+        """
+        return len(self.mags) if hasattr(self, 'mags') else 0
 
     def new(self, grp_id, branch_id):
         """
