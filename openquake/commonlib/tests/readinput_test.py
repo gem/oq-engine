@@ -45,6 +45,28 @@ def getparams(oq):
 
 class ParseConfigTestCase(unittest.TestCase):
 
+    def test_no_absolute_path(self):
+        temp_dir = tempfile.mkdtemp()
+        site_model_input = general.writetmp(dir=temp_dir, content="foo")
+        job_config = general.writetmp(dir=temp_dir, content="""
+[general]
+calculation_mode = event_based
+[foo]
+bar = baz
+[site]
+sites = 0 0
+site_model_file = %s
+maximum_distance=1
+truncation_level=0
+random_seed=0
+intensity_measure_types = PGA
+investigation_time = 50
+export_dir = %s
+        """ % (site_model_input, TMP))
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_params([job_config])
+        self.assertIn('not a relative path', str(ctx.exception))
+
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
         site_model_input = general.writetmp(dir=temp_dir, content="foo")
