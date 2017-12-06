@@ -167,7 +167,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             gsims = self.gsims_by_grp[grp_id]
             [[ucerf_source]] = sm.src_groups
             ucerf_source.nsites = len(self.sitecol)
-            self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
+            self.csm.infos[ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
             bckgnd_sources = ucerf_source.get_background_sources(
