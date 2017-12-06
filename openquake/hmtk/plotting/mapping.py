@@ -96,7 +96,8 @@ class HMTKBaseMap(object):
     Class to plot the spatial distribution of events based in the Catalogue
     imported from openquake.hmtk.
     '''
-    def __init__(self, config, title, dpi=300, lat_lon_spacing=2.):
+    def __init__(self, config,
+                 title=None, dpi=300, ax=None, lat_lon_spacing=2.):
         """
         :param dict config:
             Configuration parameters of the algorithm, containing the
@@ -116,6 +117,7 @@ class HMTKBaseMap(object):
         self.dpi = dpi
         self.lat_lon_spacing = lat_lon_spacing
         self.fig = None
+        self.ax = ax
         self.m = None
         self._build_basemap()
 
@@ -142,13 +144,16 @@ class HMTKBaseMap(object):
             fig_aspect = PORTRAIT_ASPECT
         else:
             fig_aspect = LANDSCAPE_ASPECT
-        self.fig = plt.figure(num=None,
-                              figsize=fig_aspect,
-                              dpi=self.dpi,
-                              facecolor='w',
-                              edgecolor='k')
+
+        if self.ax is None:
+            self.fig, self.ax = plt.subplots(figsize=fig_aspect,
+                                             facecolor='w',
+                                             edgecolor='k')
+        else:
+            self.fig = self.ax.get_figure()
+
         if self.title:
-            plt.title(self.title, fontsize=16)
+            self.ax.set_title(self.title, fontsize=16)
         parallels = np.arange(-90., 90., self.lat_lon_spacing)
         meridians = np.arange(0., 360., self.lat_lon_spacing)
 
@@ -157,7 +162,7 @@ class HMTKBaseMap(object):
             llcrnrlon=lowcrnrlon, llcrnrlat=lowcrnrlat,
             urcrnrlon=uppcrnrlon, urcrnrlat=uppcrnrlat,
             projection='stere', resolution=self.config['resolution'],
-            area_thresh=1000.0, lat_0=lat0, lon_0=lon0)
+            area_thresh=1000.0, lat_0=lat0, lon_0=lon0, ax=self.ax)
         self.m.drawcountries()
         self.m.drawmapboundary()
         self.m.drawcoastlines()
@@ -229,9 +234,9 @@ class HMTKBaseMap(object):
                           catalogue.data['latitude'][idx])
             self.m.plot(x, y, sym[2], markersize=mag_size, label=leg_str)
 
-        plt.legend(bbox_to_anchor=LEGEND_OFFSET)
+        self.ax.legend(bbox_to_anchor=LEGEND_OFFSET)
         if self.title:
-            plt.title(self.title, fontsize=16)
+            self.ax.set_title(self.title, fontsize=16)
         if not overlay:
             plt.show()
 
@@ -376,15 +381,15 @@ class HMTKBaseMap(object):
         if not norm:
             norm = Normalize(vmin=np.min(data), vmax=np.max(data))
         x, y, = self.m(longitude, latitude)
-        self.m.scatter(x, y,
-                       marker=shape,
-                       s=size,
-                       c=data,
-                       norm=norm,
-                       alpha=alpha,
-                       linewidths=0.0,
-                       zorder=4)
-        self.m.colorbar()
+        mappable = self.m.scatter(x, y,
+                                  marker=shape,
+                                  s=size,
+                                  c=data,
+                                  norm=norm,
+                                  alpha=alpha,
+                                  linewidths=0.0,
+                                  zorder=4)
+        self.m.colorbar(mappable=mappable, fig=self.fig, ax=self.ax)
         if not overlay:
             plt.show()
 
@@ -454,7 +459,7 @@ class HMTKBaseMap(object):
                 size = mag * 10000
                 beach = Beach(focal_mechanism, linewidth=1, xy=(x, y),
                               width=size, zorder=size, facecolor=color)
-                plt.gca().add_collection(beach)
+                self.ax.add_collection(beach)
                 if not overlay:
                     plt.show()
         else:
@@ -465,7 +470,7 @@ class HMTKBaseMap(object):
                 size = magnitude * 10000.
                 beach = Beach(focal_mechanism, linewidth=1, xy=(x, y),
                               width=size, zorder=size, facecolor='r')
-                plt.gca().add_collection(beach)
+                self.ax.add_collection(beach)
                 if not overlay:
                     plt.show()
 
