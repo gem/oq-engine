@@ -111,6 +111,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             temporal_occurrence_model=PoissonTOM(50.))
+        point.num_ruptures = point.count_ruptures()
         return point
 
     @property
@@ -119,8 +120,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             min_mag=6.55, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                5.080653E-4,
-            ])
+                5.080653E-4])
 
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
@@ -146,6 +146,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             polygon=polygon,
             area_discretization=2,
             temporal_occurrence_model=PoissonTOM(50.))
+        area.num_ruptures = area.count_ruptures()
         return area
 
     @property
@@ -168,20 +169,19 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             lower_seismogenic_depth=20.0,
             fault_trace=geo.Line(
                 [geo.Point(-121.82290, 37.73010),
-                 geo.Point(-122.03880, 37.87710)]
-            ),
+                 geo.Point(-122.03880, 37.87710)]),
             dip=45.0,
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.),
             hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
             slip_list=numpy.array([[90, 0.7], [135, 0.3]]))
+        simple.num_ruptures = simple.count_ruptures()
         return simple
 
     @property
     def _expected_complex(self):
         tgr_mfd = mfd.TruncatedGRMFD(
-            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0
-        )
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0)
 
         edges = [
             geo.Line([
@@ -216,15 +216,14 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rupture_aspect_ratio=2.0,
             edges=edges,
             rake=30.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
+        cmplx.num_ruptures = cmplx.count_ruptures()
         return cmplx
 
     @property
     def _expected_char_simple(self):
         tgr_mfd = mfd.TruncatedGRMFD(
-            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0
-        )
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0)
 
         fault_trace = geo.Line([geo.Point(-121.82290, 37.73010),
                                 geo.Point(-122.03880, 37.87710)])
@@ -234,8 +233,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             upper_seismogenic_depth=10.0,
             lower_seismogenic_depth=20.0,
             dip=45.0,
-            mesh_spacing=self.rupture_mesh_spacing
-        )
+            mesh_spacing=self.rupture_mesh_spacing)
 
         char = source.CharacteristicFaultSource(
             source_id="5",
@@ -244,8 +242,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             mfd=tgr_mfd,
             surface=surface,
             rake=30.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
+        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
@@ -254,9 +252,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             min_mag=5.0, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                5.080653E-4,
-            ]
-        )
+                5.080653E-4])
 
         edges = [
             geo.Line([
@@ -278,11 +274,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 geo.Point(-123.829, 40.347, 0.2038490E+02),
                 geo.Point(-124.137, 41.218, 0.1741390E+02),
                 geo.Point(-124.252, 42.115, 0.1752740E+02),
-            ]),
-        ]
+            ])]
         complex_surface = geo.ComplexFaultSurface.from_fault_data(
-            edges, self.complex_fault_mesh_spacing
-        )
+            edges, self.complex_fault_mesh_spacing)
 
         char = source.CharacteristicFaultSource(
             source_id="6",
@@ -291,16 +285,14 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             mfd=incr_mfd,
             surface=complex_surface,
             rake=60.0,
-            temporal_occurrence_model=PoissonTOM(50.0),
-        )
+            temporal_occurrence_model=PoissonTOM(50.0))
+        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
     def _expected_char_multi(self):
         tgr_mfd = mfd.TruncatedGRMFD(
-            a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4, bin_width=1.0
-        )
-
+            a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4, bin_width=1.0)
         surfaces = [
             geo.PlanarSurface(
                 mesh_spacing=self.rupture_mesh_spacing,
@@ -318,9 +310,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 top_left=geo.Point(1, 1, 20),
                 top_right=geo.Point(3, 1, 20),
                 bottom_left=geo.Point(1, -1, 80),
-                bottom_right=geo.Point(3, -1, 80)
-            )
-        ]
+                bottom_right=geo.Point(3, -1, 80))]
         multi_surface = geo.MultiSurface(surfaces)
         char = source.CharacteristicFaultSource(
             source_id="7",
@@ -329,8 +319,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             mfd=tgr_mfd,
             surface=multi_surface,
             rake=90.0,
-            temporal_occurrence_model=PoissonTOM(50.0),
-        )
+            temporal_occurrence_model=PoissonTOM(50.0))
+        char.num_ruptures = char.count_ruptures()
         return char
 
     def test_point_to_hazardlib(self):
