@@ -3,8 +3,8 @@ Scenario QA Test for contents
 
 ============== ===================
 checksum32     253,980,831        
-date           2017-11-08T18:08:03
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:21:21
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 3, num_imts = 3
@@ -77,5 +77,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.007     0.0       1     
-reading site collection 6.437E-06 0.0       1     
+reading site collection 7.391E-06 0.0       1     
 ======================= ========= ========= ======
