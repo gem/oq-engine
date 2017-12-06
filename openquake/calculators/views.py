@@ -237,36 +237,25 @@ def view_csm_info(token, dstore):
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
-    header = ('source_model grp_id trt num_sources '
-              'eff_ruptures tot_ruptures'.split())
+    header = ('source_model grp_id trt eff_ruptures tot_ruptures'.split())
     num_trts = 0
-    tot_sources = 0
     eff_ruptures = 0
     tot_ruptures = 0
-    source_info = dstore['source_info'].value
     csm_info = dstore['csm_info']
-    r = groupby(source_info, operator.itemgetter('grp_id'),
-                lambda rows: sum(r['num_ruptures'] for r in rows))
-    n = groupby(source_info, operator.itemgetter('grp_id'),
-                lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
             er = src_group.eff_ruptures
             if er:
                 num_trts += 1
-                num_sources = n.get(src_group.id, 0)
-                tot_sources += num_sources
                 eff_ruptures += er
-                ruptures = r.get(src_group.id, 0)
-                tot_ruptures += ruptures
-                tbl.append((sm.name, src_group.id, trt,
-                            num_sources, er, ruptures))
+                tbl.append(
+                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
+            tot_ruptures += src_group.tot_ruptures
     rows = [('#TRT models', num_trts),
-            ('#sources', tot_sources),
             ('#eff_ruptures', eff_ruptures),
             ('#tot_ruptures', tot_ruptures),
-            ('#tot_weight', csm_info.tot_weight), ]
+            ('#tot_weight', csm_info.tot_weight)]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -604,7 +593,7 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
-        if task != 'source_data':  # this is special
+        if task not in ('task_sources', 'source_data'):  # this is special
             val = dstore['task_info/' + task]['duration']
             data.append(stats(task, val))
     if len(data) == 1:
@@ -639,7 +628,7 @@ def view_task(token, dstore):
     arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
     st = [stats('nsites', arr['nsites']),
           stats('weight', arr['weight'])]
-    sources = dstore['task_sources'][taskno - 1].split()
+    sources = dstore['task_info/task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
     res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
