@@ -3,8 +3,8 @@ Germany_SHARE Combined Model event_based
 
 ============== ===================
 checksum32     479,109,370        
-date           2017-11-08T18:07:36
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:10:21
+engine_version 2.9.0-git96de348   
 ============== ===================
 
 num_sites = 100, num_imts = 1
@@ -46,9 +46,9 @@ Composite source model
 ========= ====== ================ ================
 smlt_path weight gsim_logic_tree  num_realizations
 ========= ====== ================ ================
-b1        0.500  complex(1,5,2,4) 1/1             
-b2        0.200  complex(1,5,2,4) 20/20           
-b3        0.300  complex(1,5,2,4) 1/1             
+b1        0.500  complex(5,2,1,4) 1/1             
+b2        0.200  complex(5,2,1,4) 20/20           
+b3        0.300  complex(5,2,1,4) 1/1             
 ========= ====== ================ ================
 
 Required parameters per tectonic region type
@@ -82,74 +82,73 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============================================= ====== ==================== =========== ============ ============
-source_model                                  grp_id trt                  num_sources eff_ruptures tot_ruptures
-============================================= ====== ==================== =========== ============ ============
-source_models/as_model.xml                    1      Volcanic             2           84           84          
-source_models/fs_bg_source_model.xml          3      Active Shallow Crust 4           1,008        1,166       
-source_models/fs_bg_source_model.xml          4      Stable Shallow Crust 43          214,741      332,676     
-source_models/ss_model_final_250km_Buffer.xml 7      Volcanic             36          640          640         
-============================================= ====== ==================== =========== ============ ============
+============================================= ====== ==================== ============ ============
+source_model                                  grp_id trt                  eff_ruptures tot_ruptures
+============================================= ====== ==================== ============ ============
+source_models/as_model.xml                    1      Volcanic             84           84          
+source_models/fs_bg_source_model.xml          3      Active Shallow Crust 1,008        2,918       
+source_models/fs_bg_source_model.xml          4      Stable Shallow Crust 214,741      440,748     
+source_models/ss_model_final_250km_Buffer.xml 7      Volcanic             640          640         
+============================================= ====== ==================== ============ ============
 
 ============= =======
 #TRT models   4      
-#sources      85     
 #eff_ruptures 216,473
-#tot_ruptures 334,566
+#tot_ruptures 444,390
 #tot_weight   0      
 ============= =======
 
 Informational data
 ------------------
-========================= ===================================================================================
-compute_ruptures.received tot 111.91 KB, max_per_task 33.53 KB                                               
-compute_ruptures.sent     sources 3.12 MB, src_filter 30.48 KB, param 4.72 KB, monitor 2.87 KB, gsims 2.85 KB
-hazard.input_weight       2146182.0999999987                                                                 
-hazard.n_imts             1                                                                                  
-hazard.n_levels           1                                                                                  
-hazard.n_realizations     120                                                                                
-hazard.n_sites            100                                                                                
-hazard.n_sources          85                                                                                 
-hazard.output_weight      30.0                                                                               
-hostname                  tstation.gem.lan                                                                   
-require_epsilons          False                                                                              
-========================= ===================================================================================
+========================= ==================================================================================
+compute_ruptures.received tot 112.54 KB, max_per_task 33.53 KB                                              
+compute_ruptures.sent     sources 3.16 MB, src_filter 33.87 KB, param 5.5 KB, gsims 3.24 KB, monitor 3.15 KB
+hazard.input_weight       54739.49999999996                                                                 
+hazard.n_imts             1                                                                                 
+hazard.n_levels           1                                                                                 
+hazard.n_realizations     120                                                                               
+hazard.n_sites            100                                                                               
+hazard.n_sources          142                                                                               
+hazard.output_weight      30.0                                                                              
+hostname                  tstation.gem.lan                                                                  
+require_epsilons          False                                                                             
+========================= ==================================================================================
 
 Slowest sources
 ---------------
-====== ========= ================= ============ ========= ========= =========
-grp_id source_id source_class      num_ruptures calc_time num_sites num_split
-====== ========= ================= ============ ========= ========= =========
-4      266       AreaSource        2,268        0.0       6         0        
-3      34        SimpleFaultSource 79           0.0       6         0        
-7      330053    PointSource       28           0.0       6         0        
-7      330074    PointSource       14           0.0       6         0        
-7      330046    PointSource       20           0.0       5         0        
-7      330070    PointSource       12           0.0       10        0        
-7      330068    PointSource       18           0.0       5         0        
-7      330077    PointSource       20           0.0       5         0        
-3      30        SimpleFaultSource 158          0.0       1         0        
-7      330062    PointSource       12           0.0       10        0        
-7      330047    PointSource       26           0.0       8         0        
-3      733       AreaSource        729          0.0       5         0        
-7      330069    PointSource       12           0.0       12        0        
-1      2         AreaSource        42           0.0       8         0        
-7      330065    PointSource       14           0.0       8         0        
-4      248       AreaSource        1,236        0.0       8         0        
-4      22        SimpleFaultSource 34           0.0       1         0        
-7      330060    PointSource       16           0.0       5         0        
-4      320       AreaSource        516          0.0       8         0        
-4      333       AreaSource        1,572        0.0       7         0        
-====== ========= ================= ============ ========= ========= =========
+========= ================= ============ ========= ========= =========
+source_id source_class      num_ruptures calc_time num_sites num_split
+========= ================= ============ ========= ========= =========
+1         AreaSource        42           0.0       1         0        
+253       AreaSource        1,092        0.0       1         0        
+22        SimpleFaultSource 34           0.0       1         0        
+323895    PointSource       6            0.0       1         0        
+425       SimpleFaultSource 38           0.0       1         0        
+267       AreaSource        2,268        0.0       1         0        
+330050    PointSource       28           0.0       1         0        
+1327      SimpleFaultSource 56           0.0       1         0        
+247       AreaSource        564          0.0       1         0        
+248       AreaSource        1,236        0.0       1         0        
+111       SimpleFaultSource 32           0.0       1         0        
+256       AreaSource        11,064       0.0       1         0        
+33        SimpleFaultSource 147          0.0       1         0        
+21        SimpleFaultSource 7            0.0       1         0        
+317       AreaSource        17,964       0.0       1         0        
+420       SimpleFaultSource 38           0.0       1         0        
+282       SimpleFaultSource 23           0.0       1         0        
+333       AreaSource        1,572        0.0       1         0        
+28        SimpleFaultSource 21           0.0       1         0        
+427       SimpleFaultSource 5            0.0       1         0        
+========= ================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-AreaSource        0.0       41    
-PointSource       0.0       36    
-SimpleFaultSource 0.0       8     
+AreaSource        0.0       50    
+PointSource       0.0       51    
+SimpleFaultSource 0.0       40    
 ================= ========= ======
 
 Duplicated sources
@@ -160,7 +159,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== === =========
 operation-duration mean  stddev min   max num_tasks
-compute_ruptures   6.175 4.950  0.060 12  9        
+compute_ruptures   5.467 4.769  0.061 13  10       
 ================== ===== ====== ===== === =========
 
 Slowest operations
@@ -168,13 +167,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         55        8.738     9     
-reading composite source model 10        0.0       1     
-managing sources               6.332     0.0       1     
-prefiltering source model      0.108     0.0       1     
-store source_info              0.014     0.0       1     
-saving ruptures                0.007     0.0       9     
+total compute_ruptures         54        8.680     10    
+reading composite source model 19        0.0       1     
+managing sources               15        0.0       1     
+store source_info              0.013     0.0       1     
+saving ruptures                0.008     0.0       10    
 filtering ruptures             0.003     0.0       8     
 setting event years            0.002     0.0       1     
-reading site collection        6.483E-04 0.0       1     
+reading site collection        5.579E-04 0.0       1     
 ============================== ========= ========= ======
