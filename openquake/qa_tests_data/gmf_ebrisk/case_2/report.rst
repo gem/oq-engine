@@ -3,8 +3,8 @@ Event Based Risk from GMF
 
 ============== ===================
 checksum32     3,574,592,625      
-date           2017-11-08T18:07:21
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:20:29
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 3, num_imts = 2
@@ -77,9 +77,9 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-assoc_assets_sites      0.009     0.0       2     
+assoc_assets_sites      0.010     0.0       2     
 building riskinputs     0.009     0.0       1     
 reading exposure        0.005     0.0       1     
-building epsilons       1.683E-04 0.0       1     
-reading site collection 1.419E-04 0.0       1     
+building epsilons       1.686E-04 0.0       1     
+reading site collection 1.445E-04 0.0       1     
 ======================= ========= ========= ======

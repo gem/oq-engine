@@ -3,8 +3,8 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     3,074,586,051      
-date           2017-11-08T18:06:24
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:19:22
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 2
@@ -78,6 +78,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
-reading site collection 5.960E-06 0.0       1     
+reading exposure        0.008     0.0       1     
+reading site collection 6.199E-06 0.0       1     
 ======================= ========= ========= ======
