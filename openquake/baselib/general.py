@@ -287,7 +287,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         return
     if isinstance(a, (str, bytes, int)):
         # another shortcut
-        assert a == b
+        assert a == b, (a, b)
         return
     if hasattr(a, '_slots_'):  # record-like objects
         assert a._slots_ == b._slots_

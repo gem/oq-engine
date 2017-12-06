@@ -79,6 +79,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         groups = cls.parser.parse_groups(MIXED_SRC_MODEL)
         ([cls.point], [cls.cmplx], [cls.area, cls.simple],
          [cls.char_simple, cls.char_complex, cls.char_multi]) = groups
+
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
@@ -89,8 +90,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     @property
     def _expected_point(self):
         tgr_mfd = mfd.TruncatedGRMFD(
-            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0
-        )
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0)
 
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
@@ -110,8 +110,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             location=geo.Point(-122.0, 38.0),
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         return point
 
     @property
@@ -121,8 +120,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
                 5.080653E-4,
-            ]
-        )
+            ])
 
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
@@ -131,8 +129,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
-             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
-        )
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)])
 
         area = source.AreaSource(
             source_id="1",
@@ -148,8 +145,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             hypocenter_distribution=hd,
             polygon=polygon,
             area_discretization=2,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         return area
 
     @property
@@ -158,9 +154,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             min_mag=5.0, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                5.080653E-4,
-            ]
-        )
+                5.080653E-4])
 
         simple = source.SimpleFaultSource(
             source_id="3",
@@ -180,8 +174,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.),
             hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
-            slip_list=numpy.array([[90, 0.7], [135, 0.3]])
-        )
+            slip_list=numpy.array([[90, 0.7], [135, 0.3]]))
         return simple
 
     @property
@@ -585,8 +578,7 @@ class AreaToPointsTestCase(unittest.TestCase):
         hd = pmf.PMF([(0.5, 4.0), (0.5, 8.0)])
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
-             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
-        )
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)])
         area = source.AreaSource(
             source_id="1",
             name="source A",
@@ -601,8 +593,7 @@ class AreaToPointsTestCase(unittest.TestCase):
             hypocenter_distribution=hd,
             polygon=polygon,
             area_discretization=10,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         actual = list(source.area_to_point_sources(area))
         self.assertEqual(len(actual), 96)  # expected 96 points
         self.assertAlmostEqual(actual[0].mfd.a_val, 0.1177287669604317)
@@ -612,17 +603,14 @@ class AreaToPointsTestCase(unittest.TestCase):
             min_mag=6.55, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                5.080653E-4,
-            ]
-        )
+                5.080653E-4])
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
         npd = pmf.PMF([(0.3, np1), (0.7, np2)])
         hd = pmf.PMF([(0.5, 4.0), (0.5, 8.0)])
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
-             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
-        )
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)])
         area = source.AreaSource(
             source_id="1",
             name="source A",
