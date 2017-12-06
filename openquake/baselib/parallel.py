@@ -167,10 +167,10 @@ from openquake.baselib.general import (
 
 executor = ProcessPoolExecutor()
 executor.pids = ()  # set by wakeup_pool
-# the num_tasks_hint is chosen to be 5 times bigger than the name of
+# the num_tasks_hint is chosen to be 2 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 5
+executor.num_tasks_hint = executor._max_workers * 2
 
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
@@ -690,7 +690,7 @@ class BaseStarmap(object):
     num_tasks = Starmap.__dict__['num_tasks']
 
     @classmethod
-    def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
+    def apply(cls, func, args, concurrent_tasks=executor._max_workers * 2,
               weight=lambda item: 1, key=lambda item: 'Unspecified'):
         chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
         if concurrent_tasks == 0:

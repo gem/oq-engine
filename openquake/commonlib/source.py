@@ -36,7 +36,7 @@ from openquake.commonlib import logictree
 
 
 MINWEIGHT = source.MINWEIGHT
-MAXWEIGHT = 4E6  # heuristic, set by M. Simionato
+MAXWEIGHT = 1E7  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
 U16 = numpy.uint16
@@ -655,6 +655,7 @@ class CompositeSourceModel(collections.Sequence):
         :param sitecol: a SiteCollection instance
         :para src_filter: a SourceFilter instance
         """
+        ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
         source_models = []
         weight = 0
         for sm in self.source_models:
@@ -670,6 +671,7 @@ class CompositeSourceModel(collections.Sequence):
                 sg.sources = []
                 for src, _sites in src_filter(sources):
                     sg.sources.append(src)
+                    src.ngsims = ngsims[src.tectonic_region_type]
                     weight += src.weight
                 src_groups.append(sg)
             newsm = logictree.SourceModel(
