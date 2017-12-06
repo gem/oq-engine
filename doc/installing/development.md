@@ -18,6 +18,7 @@ This guide may work also on other Linux releases/distributions.
 
 - macOS 10.11 (El Capitan)
 - macOS 10.12 (Sierra)
+- macOS 10.13 (High Sierra)
 
 ## Prerequisites
 
@@ -65,7 +66,7 @@ xcode-select --install
 
 If Xcode is already installed on your machine, then there is no need to install the command-line tools.
 
-#### Python 
+#### Python
 
 You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg
 
@@ -108,7 +109,7 @@ mkdir src && cd src
 git clone https://github.com/gem/oq-engine.git
 ```
 
-### Install OpenQuake 
+### Install OpenQuake
 
 It's strongly recommended to install Python dependencies using our Python wheels distribution: all the external dependencies (`geos`, `proj4`, `hdf5`, `blas`, and many other) are already included as pre-compiled binaries and are tested before every release.
 
