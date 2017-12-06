@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds subclasses to declustering algorithms to opt for 2-D or 3-D distance
+  
   [Michele Simionato]
   * In the case of a single tile the prefiltering was applied twice: fixed
   * Fixed the CSV exporter for disaggregation outputs when iml_disagg is set

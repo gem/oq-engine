@@ -51,7 +51,6 @@
 Module :mod:`openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff`
 defines the Gardner and Knopoff declustering algorithm
 """
-
 import numpy as np
 
 from openquake.hmtk.seismicity.declusterer.base import (
@@ -112,6 +111,7 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                                    kind='heapsort'))
         longitude = catalogue.data['longitude'][id0]
         latitude = catalogue.data['latitude'][id0]
+        depth = catalogue.data["depth"][id0]
         sw_space = sw_space[id0]
         sw_time = sw_time[id0]
         year_dec = year_dec[id0]
@@ -130,11 +130,14 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                         dt <= sw_time[i]))
                 # Of those events inside time window,
                 # find those inside distance window
-                vsel1 = haversine(longitude[vsel],
+                repi = haversine(longitude[vsel],
                                   latitude[vsel],
                                   longitude[i],
-                                  latitude[i]) <= sw_space[i]
-                vsel[vsel] = vsel1
+                                  latitude[i]).flatten()
+                rdist = self.get_distance(longitude[vsel], latitude[vsel],
+                                          longitude[i], latitude[i],
+                                          depth[vsel], depth[i])
+                vsel[vsel] = rdist <= sw_space[i]
                 temp_vsel = np.copy(vsel)
                 temp_vsel[i] = False
                 if any(temp_vsel):
@@ -155,3 +158,30 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
         flagvector = flagvector[id1]
 
         return vcl, flagvector
+
+    @staticmethod
+    def get_distance(longitude, latitude, lon_i, lat_i, depth=None,
+                     depth_i=None):
+        """
+        Uses epicentral distance
+        """
+        return haversine(longitude, latitude, lon_i, lat_i).flatten()
+
+
+@DECLUSTERER_METHODS.add(
+    "decluster",
+    time_distance_window=TIME_DISTANCE_WINDOW_FUNCTIONS,
+    fs_time_prop=np.float)
+class GardnerKnopoffType1_3D(GardnerKnopoffType1):
+    """
+    Adaptation of the Gardner & Knopoff Type 1 algorithim taking into account
+    depth
+    """
+    @staticmethod
+    def get_distance(longitude, latitude, lon_i, lat_i, depth=None,
+                     depth_i=None):
+        """
+        Uses hypocentral distance
+        """
+        repi = haversine(longitude, latitude, lon_i, lat_i).flatten()
+        return np.sqrt(repi ** 2. + (depth - depth_i) ** 2.)
