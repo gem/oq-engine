@@ -84,7 +84,7 @@ random_seed=0
 intensity_measure_types = PGA
 investigation_time = 50
 export_dir = %s
-        """ % (site_model_input, TMP))
+        """ % (os.path.basename(site_model_input), TMP))
 
         try:
             exp_base_path = os.path.dirname(job_config)
@@ -139,7 +139,7 @@ reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
-            """ % (sites_csv, TMP))
+            """ % (os.path.basename(sites_csv), TMP))
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
 
@@ -187,7 +187,7 @@ reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
-""" % (sites_csv, TMP))
+""" % (os.path.basename(sites_csv), TMP))
         oq = readinput.get_oqparam(source, hc_id=1)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_mesh(oq)
