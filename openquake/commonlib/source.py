@@ -36,7 +36,7 @@ from openquake.commonlib import logictree
 
 
 MINWEIGHT = source.MINWEIGHT
-MAXWEIGHT = 2E4  # heuristic, set by M. Simionato
+MAXWEIGHT = 4E6  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
 U16 = numpy.uint16
