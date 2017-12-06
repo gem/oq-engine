@@ -3,8 +3,8 @@ Event Based from NonParametric source
 
 ============== ===================
 checksum32     2,117,452,566      
-date           2017-11-08T18:07:28
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:20:35
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 3, num_imts = 1
@@ -38,36 +38,11 @@ source                  `source_model.xml <source_model.xml>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
-Composite source model
-----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  trivial(1)      1/1             
-========= ====== =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== ================= =========== ======================= =================
-grp_id gsims             distances   siteparams              ruptparams       
-====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-====== ================= =========== ======================= =================
-
-Realizations per (TRT, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): [0]>
-
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.038     0.0       1     
-prefiltering source model      0.002     0.0       1     
-reading site collection        3.290E-05 0.0       1     
+reading site collection        3.314E-05 0.0       1     
 ============================== ========= ========= ======

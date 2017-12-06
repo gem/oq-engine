@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 
 ============== ===================
 checksum32     1,539,504,509      
-date           2017-11-08T18:07:27
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:20:34
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 2, num_imts = 1
@@ -64,35 +64,35 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           1            1           
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 1            1           
+================ ====== ==================== ============ ============
 
 Informational data
 ------------------
-========================= =========================================================================
-compute_ruptures.received tot 355.08 KB, max_per_task 355.08 KB                                    
-compute_ruptures.sent     sources 1.3 KB, src_filter 712 B, param 532 B, monitor 326 B, gsims 102 B
-hazard.input_weight       0.2                                                                      
-hazard.n_imts             1                                                                        
-hazard.n_levels           1                                                                        
-hazard.n_realizations     1                                                                        
-hazard.n_sites            2                                                                        
-hazard.n_sources          1                                                                        
-hazard.output_weight      150.0                                                                    
-hostname                  tstation.gem.lan                                                         
-require_epsilons          False                                                                    
-========================= =========================================================================
+========================= ==========================================================================
+compute_ruptures.received max_per_task 355.08 KB, tot 355.08 KB                                     
+compute_ruptures.sent     sources 1.31 KB, src_filter 712 B, param 558 B, monitor 323 B, gsims 102 B
+hazard.input_weight       0.1                                                                       
+hazard.n_imts             1                                                                         
+hazard.n_levels           1                                                                         
+hazard.n_realizations     1                                                                         
+hazard.n_sites            2                                                                         
+hazard.n_sources          1                                                                         
+hazard.output_weight      150.0                                                                     
+hostname                  tstation.gem.lan                                                          
+require_epsilons          False                                                                     
+========================= ==========================================================================
 
 Slowest sources
 ---------------
-====== ========= ============ ============ ========= ========= =========
-grp_id source_id source_class num_ruptures calc_time num_sites num_split
-====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  1            0.0       2         0        
-====== ========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========= =========
+source_id source_class num_ruptures calc_time num_sites num_split
+========= ============ ============ ========= ========= =========
+1         PointSource  1            0.0       1         0        
+========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.020 NaN    0.020 0.020 1        
+compute_ruptures   0.010 NaN    0.010 0.010 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,13 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-setting event years            0.099     0.0       1     
-saving ruptures                0.057     0.0       1     
-total compute_ruptures         0.020     0.289     1     
+setting event years            0.095     0.0       1     
+managing sources               0.077     0.0       1     
+saving ruptures                0.058     0.0       1     
+total compute_ruptures         0.010     0.422     1     
 store source_info              0.004     0.0       1     
-managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-filtering ruptures             6.700E-04 0.0       1     
-prefiltering source model      5.794E-04 0.0       1     
-reading site collection        4.125E-05 0.0       1     
+filtering ruptures             3.016E-04 0.0       1     
+reading site collection        4.625E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ Classical Hazard-Risk QA test 4
 
 ============== ===================
 checksum32     2,439,591,035      
-date           2017-11-08T18:06:21
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:19:17
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 6, num_imts = 1
@@ -67,27 +67,27 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 2           4,195        6,405       
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 4,195        91,021      
+================ ====== ==================== ============ ============
 
 Informational data
 ------------------
-=========================== ==================================================================================
-count_eff_ruptures.received tot 15.84 KB, max_per_task 1.58 KB                                                
-count_eff_ruptures.sent     sources 76.71 KB, srcfilter 9.66 KB, param 8.46 KB, monitor 3.84 KB, gsims 2.05 KB
-hazard.input_weight         2733.0                                                                            
-hazard.n_imts               1                                                                                 
-hazard.n_levels             19                                                                                
-hazard.n_realizations       2                                                                                 
-hazard.n_sites              6                                                                                 
-hazard.n_sources            2                                                                                 
-hazard.output_weight        114.0                                                                             
-hostname                    tstation.gem.lan                                                                  
-require_epsilons            True                                                                              
-=========================== ==================================================================================
+======================= ===================================================================================
+count_ruptures.received tot 16.62 KB, max_per_task 1.39 KB                                                 
+count_ruptures.sent     sources 80.03 KB, srcfilter 11.27 KB, param 7.49 KB, monitor 4.36 KB, gsims 2.39 KB
+hazard.input_weight     9102.1                                                                             
+hazard.n_imts           1                                                                                  
+hazard.n_levels         19                                                                                 
+hazard.n_realizations   2                                                                                  
+hazard.n_sites          6                                                                                  
+hazard.n_sources        39                                                                                 
+hazard.output_weight    114.0                                                                              
+hostname                tstation.gem.lan                                                                   
+require_epsilons        True                                                                               
+======================= ===================================================================================
 
 Exposure model
 --------------
@@ -107,19 +107,37 @@ W        1.000 0.0    1   1   5         5
 
 Slowest sources
 ---------------
-====== ========= ============ ============ ========= ========= =========
-grp_id source_id source_class num_ruptures calc_time num_sites num_split
-====== ========= ============ ============ ========= ========= =========
-0      231       AreaSource   4,185        0.032     6         279      
-0      376       AreaSource   2,220        1.080E-04 1         1        
-====== ========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========= =========
+source_id source_class num_ruptures calc_time num_sites num_split
+========= ============ ============ ========= ========= =========
+231       AreaSource   4,185        0.039     6         279      
+376       AreaSource   2,220        1.512E-04 1         1        
+257       AreaSource   2,850        0.0       1         0        
+125       AreaSource   8,274        0.0       1         0        
+28        AreaSource   2,548        0.0       1         0        
+161       AreaSource   552          0.0       1         0        
+288       AreaSource   2,430        0.0       1         0        
+298       AreaSource   2,744        0.0       1         0        
+270       AreaSource   7,837        0.0       1         0        
+20        AreaSource   1,256        0.0       1         0        
+8         AreaSource   4,832        0.0       1         0        
+95        AreaSource   1,176        0.0       1         0        
+198       AreaSource   760          0.0       1         0        
+27        AreaSource   1,482        0.0       1         0        
+395       AreaSource   2,720        0.0       1         0        
+177       AreaSource   846          0.0       1         0        
+137       AreaSource   2,072        0.0       1         0        
+135       AreaSource   3,285        0.0       1         0        
+299       AreaSource   710          0.0       1         0        
+325       AreaSource   3,934        0.0       1         0        
+========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.032     2     
+AreaSource   0.039     39    
 ============ ========= ======
 
 Duplicated sources
@@ -130,7 +148,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.004 3.591E-04 0.004 0.005 12       
+count_ruptures     0.005 8.823E-04 0.003 0.007 14       
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -138,13 +156,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 2.035     0.0       1     
-managing sources               0.155     0.0       1     
-total count_eff_ruptures       0.053     1.965     12    
-prefiltering source model      0.020     0.0       1     
-reading exposure               0.007     0.0       1     
+reading composite source model 3.861     0.0       1     
+managing sources               0.182     0.0       1     
+total count_ruptures           0.063     2.012     14    
+reading exposure               0.006     0.0       1     
 store source_info              0.003     0.0       1     
-aggregate curves               3.974E-04 0.0       12    
-saving probability maps        2.432E-05 0.0       1     
-reading site collection        6.199E-06 0.0       1     
+aggregate curves               3.948E-04 0.0       14    
+saving probability maps        2.503E-05 0.0       1     
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======

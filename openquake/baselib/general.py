@@ -287,7 +287,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         return
     if isinstance(a, (str, bytes, int)):
         # another shortcut
-        assert a == b
+        assert a == b, (a, b)
         return
     if hasattr(a, '_slots_'):  # record-like objects
         assert a._slots_ == b._slots_
@@ -297,7 +297,8 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     if hasattr(a, 'keys'):  # dict-like objects
         assert a.keys() == b.keys()
         for x in a:
-            assert_close(a[x], b[x], rtol, atol, x)
+            if x != '__geom__':
+                assert_close(a[x], b[x], rtol, atol, x)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
         assert_close(vars(a), vars(b), context=a)
