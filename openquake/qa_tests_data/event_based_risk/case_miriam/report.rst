@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     4,221,156,752      
-date           2017-12-06T11:09:25
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:51
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 281, num_imts = 1
@@ -133,8 +133,8 @@ Slowest sources
 ========= ================== ============ ========= ========= =========
 source_id source_class       num_ruptures calc_time num_sites num_split
 ========= ================== ============ ========= ========= =========
-F         ComplexFaultSource 2,558        0.0       1         0        
 D         ComplexFaultSource 3,945        0.0       1         0        
+F         ComplexFaultSource 2,558        0.0       1         0        
 ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -153,7 +153,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.922 0.434  0.562 2.030 11       
+compute_ruptures   0.917 0.432  0.605 2.023 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,14 +161,14 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         10       0.496     11    
-managing sources               3.415    0.0       1     
-filtering ruptures             0.395    0.0       489   
-reading composite source model 0.298    0.0       1     
-reading site collection        0.208    0.0       1     
-assoc_assets_sites             0.179    0.0       1     
-reading exposure               0.135    0.0       1     
-saving ruptures                0.064    0.0       11    
-store source_info              0.006    0.0       1     
+total compute_ruptures         10       0.645     11    
+managing sources               3.449    0.0       1     
+filtering ruptures             0.393    0.0       489   
+reading composite source model 0.318    0.0       1     
+reading site collection        0.234    0.0       1     
+assoc_assets_sites             0.153    0.0       1     
+reading exposure               0.098    0.0       1     
+saving ruptures                0.043    0.0       11    
+store source_info              0.007    0.0       1     
 setting event years            0.006    0.0       1     
 ============================== ======== ========= ======

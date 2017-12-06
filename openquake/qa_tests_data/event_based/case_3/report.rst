@@ -3,8 +3,8 @@ Event Based QA Test, Case 3
 
 ============== ===================
 checksum32     2,616,545,272      
-date           2017-12-06T11:10:11
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:35
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -111,7 +111,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.003 NaN    0.003 0.003 1        
+compute_ruptures   0.002 NaN    0.002 0.002 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -119,12 +119,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.015     0.0       1     
-store source_info              0.004     0.0       1     
-saving ruptures                0.003     0.0       1     
-total compute_ruptures         0.003     0.0       1     
-reading composite source model 0.002     0.0       1     
+managing sources               0.013     0.0       1     
+store source_info              0.003     0.0       1     
+total compute_ruptures         0.002     0.0       1     
+saving ruptures                0.002     0.0       1     
+reading composite source model 0.001     0.0       1     
 setting event years            0.001     0.0       1     
-filtering ruptures             5.846E-04 0.0       1     
-reading site collection        4.387E-05 0.0       1     
+filtering ruptures             5.393E-04 0.0       1     
+reading site collection        3.362E-05 0.0       1     
 ============================== ========= ========= ======

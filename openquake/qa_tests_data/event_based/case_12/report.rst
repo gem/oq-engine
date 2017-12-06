@@ -3,8 +3,8 @@ Event Based QA Test, Case 12
 
 ============== ===================
 checksum32     2,564,275,427      
-date           2017-12-06T11:10:56
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:21:20
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -101,8 +101,8 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         PointSource  1            0.0       1         0        
 2         PointSource  1            0.0       1         0        
+1         PointSource  1            0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -121,7 +121,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-compute_ruptures   0.029 3.035E-06 0.029 0.029 2        
+compute_ruptures   0.029 2.416E-04 0.029 0.029 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -129,12 +129,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.064     0.0       1     
-total compute_ruptures         0.057     0.0       2     
+managing sources               0.063     0.0       1     
+total compute_ruptures         0.058     0.0       2     
 setting event years            0.029     0.0       1     
-saving ruptures                0.022     0.0       2     
+saving ruptures                0.021     0.0       2     
 store source_info              0.004     0.0       1     
 reading composite source model 0.002     0.0       1     
 filtering ruptures             0.001     0.0       2     
-reading site collection        4.554E-05 0.0       1     
+reading site collection        4.625E-05 0.0       1     
 ============================== ========= ========= ======

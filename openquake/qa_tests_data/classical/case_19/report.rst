@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     1,220,765,868      
-date           2017-12-06T11:09:54
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:19
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 3
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ====================== ================
 smlt_path weight gsim_logic_tree        num_realizations
 ========= ====== ====================== ================
-b1        1.000  complex(5,4,1,4,0,2,0) 4/4             
+b1        1.000  complex(2,1,5,0,0,4,4) 4/4             
 ========= ====== ====================== ================
 
 Required parameters per tectonic region type
@@ -94,24 +94,24 @@ Slowest sources
 ========= ================== ============ ========= ========= =========
 source_id source_class       num_ruptures calc_time num_sites num_split
 ========= ================== ============ ========= ========= =========
-s46       AreaSource         7,770        0.066     1         370      
-s40       AreaSource         12,327       0.0       1         0        
-sh14      AreaSource         41,952       0.0       1         0        
-scr299    AreaSource         1,572        0.0       1         0        
-s34       AreaSource         12,327       0.0       1         0        
-sh6       AreaSource         12,900       0.0       1         0        
+s46       AreaSource         7,770        0.098     1         370      
 s70       AreaSource         17,871       0.0       1         0        
-s35       AreaSource         12,327       0.0       1         0        
 s13       AreaSource         12,726       0.0       1         0        
-scr301    AreaSource         17,268       0.0       1         0        
+v4        AreaSource         168          0.0       1         0        
 scr304    AreaSource         574          0.0       1         0        
 i20       ComplexFaultSource 9,241        0.0       1         0        
-v1        AreaSource         42           0.0       1         0        
+s35       AreaSource         12,327       0.0       1         0        
 scr293    AreaSource         61,740       0.0       1         0        
-i17       ComplexFaultSource 33,383       0.0       1         0        
 sh13      AreaSource         41,952       0.0       1         0        
+scr301    AreaSource         17,268       0.0       1         0        
+sh6       AreaSource         12,900       0.0       1         0        
+s40       AreaSource         12,327       0.0       1         0        
+sh14      AreaSource         41,952       0.0       1         0        
+s34       AreaSource         12,327       0.0       1         0        
+scr299    AreaSource         1,572        0.0       1         0        
+i17       ComplexFaultSource 33,383       0.0       1         0        
 s72       AreaSource         17,871       0.0       1         0        
-v4        AreaSource         168          0.0       1         0        
+v1        AreaSource         42           0.0       1         0        
 ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -119,7 +119,7 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-AreaSource         0.066     16    
+AreaSource         0.098     16    
 ComplexFaultSource 0.0       2     
 ================== ========= ======
 
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.005 0.002  0.001 0.008 17       
+count_ruptures     0.007 0.001  0.002 0.008 17       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,11 +139,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 9.909     0.0       1     
-managing sources               0.181     0.0       1     
-total count_ruptures           0.080     0.461     17    
-store source_info              0.019     0.0       1     
-aggregate curves               7.865E-04 0.0       17    
-reading site collection        8.917E-05 0.0       1     
-saving probability maps        3.076E-05 0.0       1     
+reading composite source model 9.314     0.0       1     
+managing sources               0.161     0.0       1     
+total count_ruptures           0.118     0.293     17    
+store source_info              0.014     0.0       1     
+aggregate curves               5.372E-04 0.0       17    
+reading site collection        3.386E-05 0.0       1     
+saving probability maps        2.432E-05 0.0       1     
 ============================== ========= ========= ======

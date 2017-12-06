@@ -3,8 +3,8 @@ Classical Hazard-Risk QA test 4
 
 ============== ===================
 checksum32     2,439,591,035      
-date           2017-12-06T11:08:51
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:17
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 6, num_imts = 1
@@ -76,7 +76,7 @@ source_model.xml 0      Active Shallow Crust 4,195        91,021
 Informational data
 ------------------
 ======================= ===================================================================================
-count_ruptures.received tot 16.63 KB, max_per_task 1.39 KB                                                 
+count_ruptures.received tot 16.62 KB, max_per_task 1.39 KB                                                 
 count_ruptures.sent     sources 80.03 KB, srcfilter 11.27 KB, param 7.49 KB, monitor 4.36 KB, gsims 2.39 KB
 hazard.input_weight     9102.1                                                                             
 hazard.n_imts           1                                                                                  
@@ -110,26 +110,26 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-231       AreaSource   4,185        0.035     6         279      
-376       AreaSource   2,220        1.619E-04 1         1        
-208       AreaSource   760          0.0       1         0        
-343       AreaSource   2,926        0.0       1         0        
-291       AreaSource   2,350        0.0       1         0        
-253       AreaSource   3,058        0.0       1         0        
-125       AreaSource   8,274        0.0       1         0        
-8         AreaSource   4,832        0.0       1         0        
-325       AreaSource   3,934        0.0       1         0        
-89        AreaSource   810          0.0       1         0        
-298       AreaSource   2,744        0.0       1         0        
-13        AreaSource   1,824        0.0       1         0        
+231       AreaSource   4,185        0.039     6         279      
+376       AreaSource   2,220        1.512E-04 1         1        
 257       AreaSource   2,850        0.0       1         0        
-166       AreaSource   559          0.0       1         0        
-135       AreaSource   3,285        0.0       1         0        
-132       AreaSource   4,131        0.0       1         0        
+125       AreaSource   8,274        0.0       1         0        
+28        AreaSource   2,548        0.0       1         0        
 161       AreaSource   552          0.0       1         0        
+288       AreaSource   2,430        0.0       1         0        
+298       AreaSource   2,744        0.0       1         0        
+270       AreaSource   7,837        0.0       1         0        
+20        AreaSource   1,256        0.0       1         0        
+8         AreaSource   4,832        0.0       1         0        
+95        AreaSource   1,176        0.0       1         0        
+198       AreaSource   760          0.0       1         0        
 27        AreaSource   1,482        0.0       1         0        
-127       AreaSource   2,940        0.0       1         0        
-10        AreaSource   1,920        0.0       1         0        
+395       AreaSource   2,720        0.0       1         0        
+177       AreaSource   846          0.0       1         0        
+137       AreaSource   2,072        0.0       1         0        
+135       AreaSource   3,285        0.0       1         0        
+299       AreaSource   710          0.0       1         0        
+325       AreaSource   3,934        0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -137,7 +137,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.035     39    
+AreaSource   0.039     39    
 ============ ========= ======
 
 Duplicated sources
@@ -146,22 +146,22 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.004 0.001  0.002 0.007 14       
-================== ===== ====== ===== ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_ruptures     0.005 8.823E-04 0.003 0.007 14       
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 3.903     0.0       1     
-managing sources               0.183     0.0       1     
-total count_ruptures           0.058     2.020     14    
+reading composite source model 3.861     0.0       1     
+managing sources               0.182     0.0       1     
+total count_ruptures           0.063     2.012     14    
 reading exposure               0.006     0.0       1     
-store source_info              0.006     0.0       1     
-aggregate curves               7.539E-04 0.0       14    
-saving probability maps        3.934E-05 0.0       1     
-reading site collection        6.437E-06 0.0       1     
+store source_info              0.003     0.0       1     
+aggregate curves               3.948E-04 0.0       14    
+saving probability maps        2.503E-05 0.0       1     
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======

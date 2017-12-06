@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     852,550,231        
-date           2017-12-06T11:09:03
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:29
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 7, num_imts = 1
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.019 0.010  0.010 0.036 13       
+compute_ruptures   0.025 0.009  0.010 0.041 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,13 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.249     0.676     13    
-managing sources               0.185     0.0       1     
-filtering ruptures             0.067     0.0       259   
-saving ruptures                0.045     0.0       13    
-reading exposure               0.009     0.0       1     
-reading composite source model 0.006     0.0       1     
-store source_info              0.004     0.0       1     
-setting event years            0.003     0.0       1     
-reading site collection        7.868E-06 0.0       1     
+total compute_ruptures         0.329     0.777     13    
+managing sources               0.148     0.0       1     
+filtering ruptures             0.118     0.0       259   
+saving ruptures                0.029     0.0       13    
+reading exposure               0.007     0.0       1     
+reading composite source model 0.005     0.0       1     
+store source_info              0.003     0.0       1     
+setting event years            0.002     0.0       1     
+reading site collection        6.199E-06 0.0       1     
 ============================== ========= ========= ======
