@@ -3,8 +3,8 @@ Event Based QA Test, Case 12
 
 ============== ===================
 checksum32     2,564,275,427      
-date           2017-11-08T18:08:03
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:21:20
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -66,16 +66,15 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           1            1           
-source_model.xml 1      Stable Continental   1           1            1           
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 1            1           
+source_model.xml 1      Stable Continental   1            1           
+================ ====== ==================== ============ ============
 
 ============= =
 #TRT models   2
-#sources      2
 #eff_ruptures 2
 #tot_ruptures 2
 #tot_weight   0
@@ -85,7 +84,7 @@ Informational data
 ------------------
 ========================= ==============================================================================
 compute_ruptures.received tot 112.84 KB, max_per_task 57.72 KB                                          
-compute_ruptures.sent     sources 2.61 KB, src_filter 1.34 KB, param 1.16 KB, monitor 652 B, gsims 193 B
+compute_ruptures.sent     sources 2.63 KB, src_filter 1.34 KB, param 1.14 KB, monitor 646 B, gsims 193 B
 hazard.input_weight       0.2                                                                           
 hazard.n_imts             1                                                                             
 hazard.n_levels           3                                                                             
@@ -99,12 +98,12 @@ require_epsilons          False
 
 Slowest sources
 ---------------
-====== ========= ============ ============ ========= ========= =========
-grp_id source_id source_class num_ruptures calc_time num_sites num_split
-====== ========= ============ ============ ========= ========= =========
-0      1         PointSource  1            0.0       1         0        
-1      2         PointSource  1            0.0       1         0        
-====== ========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========= =========
+source_id source_class num_ruptures calc_time num_sites num_split
+========= ============ ============ ========= ========= =========
+2         PointSource  1            0.0       1         0        
+1         PointSource  1            0.0       1         0        
+========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -120,23 +119,22 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.021 0.012  0.013 0.030 2        
-================== ===== ====== ===== ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+compute_ruptures   0.029 2.416E-04 0.029 0.029 2        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.043     0.0       2     
-setting event years            0.032     0.0       1     
-saving ruptures                0.022     0.0       2     
+managing sources               0.063     0.0       1     
+total compute_ruptures         0.058     0.0       2     
+setting event years            0.029     0.0       1     
+saving ruptures                0.021     0.0       2     
 store source_info              0.004     0.0       1     
-managing sources               0.002     0.0       1     
 reading composite source model 0.002     0.0       1     
-filtering ruptures             7.896E-04 0.0       2     
-prefiltering source model      7.195E-04 0.0       1     
-reading site collection        4.840E-05 0.0       1     
+filtering ruptures             0.001     0.0       2     
+reading site collection        4.625E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ event based risk with PMF
 
 ============== ===================
 checksum32     316,426,340        
-date           2017-11-08T18:06:56
-engine_version 2.8.0-gite3d0f56   
+date           2017-12-06T11:19:55
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -67,17 +67,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           482          482         
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 482          482         
+================ ====== ==================== ============ ============
 
 Informational data
 ------------------
 ========================= ===========================================================================
-compute_ruptures.received tot 29.15 KB, max_per_task 13.17 KB                                        
-compute_ruptures.sent     sources 7.81 KB, src_filter 2 KB, param 1.85 KB, monitor 978 B, gsims 306 B
+compute_ruptures.received tot 29.14 KB, max_per_task 13.17 KB                                        
+compute_ruptures.sent     sources 7.89 KB, src_filter 2 KB, param 1.82 KB, monitor 969 B, gsims 306 B
 hazard.input_weight       482.0                                                                      
 hazard.n_imts             1                                                                          
 hazard.n_levels           8                                                                          
@@ -91,7 +91,7 @@ require_epsilons          False
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-1 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 50 tasks = 400 B
+1 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 160 B
 
 Exposure model
 --------------
@@ -109,11 +109,11 @@ tax1     1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ================= ============ ========= ========= =========
-grp_id source_id source_class      num_ruptures calc_time num_sites num_split
-====== ========= ================= ============ ========= ========= =========
-0      1         SimpleFaultSource 482          0.0       1         0        
-====== ========= ================= ============ ========= ========= =========
+========= ================= ============ ========= ========= =========
+source_id source_class      num_ruptures calc_time num_sites num_split
+========= ================= ============ ========= ========= =========
+1         SimpleFaultSource 482          0.0       1         0        
+========= ================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.052 0.010  0.045 0.064 3        
+compute_ruptures   0.057 0.021  0.034 0.074 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,14 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.157     0.0       3     
-managing sources               0.059     0.0       1     
-saving ruptures                0.008     0.0       3     
-reading exposure               0.007     0.0       1     
+total compute_ruptures         0.172     0.0       3     
+managing sources               0.132     0.0       1     
+saving ruptures                0.007     0.0       3     
 filtering ruptures             0.007     0.0       31    
-reading composite source model 0.004     0.0       1     
-store source_info              0.004     0.0       1     
-prefiltering source model      0.002     0.0       1     
+reading exposure               0.006     0.0       1     
+reading composite source model 0.006     0.0       1     
+store source_info              0.003     0.0       1     
 setting event years            0.001     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        6.437E-06 0.0       1     
 ============================== ========= ========= ======
