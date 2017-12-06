@@ -64,12 +64,15 @@ class DuplicatedPoint(Exception):
     """
 
 
-def assert_relpath(name, check):
+def assert_relpath(name, fname):
     """
-    Make sure the given name is a relative path
+    Make sure the given name is a relative path.
+
+    :param name: a path name
+    :param fname: the file where the path is listed
     """
-    if os.path.relpath(name) != name:
-        raise ValueError('%s is not a relative path [in %s]' % (name, check))
+    if os.path.relpath(name) != os.path.normpath(name):
+        raise ValueError('%s is not a relative path [in %s]' % (name, fname))
 
 
 def collect_files(dirpath, cond=lambda fullname: True):
