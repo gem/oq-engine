@@ -133,8 +133,6 @@ class SourceGroup(collections.Sequence):
                 assert src.tectonic_region_type == self.trt, (
                     src.tectonic_region_type, self.trt)
 
-        # ask Marco: should we add a check on the srcs_weights?
-
     def update(self, src):
         """
         Update the attributes sources, min_mag, max_mag
