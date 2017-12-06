@@ -290,6 +290,7 @@ src_group_dt = numpy.dtype(
     [('grp_id', U32),
      ('trti', U16),
      ('effrup', I32),
+     ('totrup', I32),
      ('sm_id', U32)])
 
 
@@ -413,7 +414,8 @@ class CompositionInfo(object):
             for src_group in sm.src_groups:
                 # the number of effective realizations is set by get_rlzs_assoc
                 data.append((src_group.id, trti[src_group.trt],
-                             src_group.eff_ruptures, sm.ordinal))
+                             src_group.eff_ruptures, src_group.tot_ruptures,
+                             sm.ordinal))
         lst = [(sm.name, sm.weight, '_'.join(sm.path),
                 sm.num_gsim_paths, sm.samples)
                for i, sm in enumerate(self.source_models)]
@@ -454,8 +456,9 @@ class CompositionInfo(object):
             tdata = sg_data[sm_id]
             srcgroups = [
                 sourceconverter.SourceGroup(
-                    self.trts[trti], id=grp_id, eff_ruptures=effrup)
-                for grp_id, trti, effrup, sm_id in tdata if effrup]
+                    self.trts[trti], id=grp_id, eff_ruptures=effrup,
+                    tot_ruptures=totrup)
+                for grp_id, trti, effrup, totrup, sm_id in tdata if effrup]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
@@ -779,7 +782,7 @@ class CompositeSourceModel(collections.Sequence):
         Generate unique seeds for each rupture with numpy.arange.
         This should be called only in event based calculators
         """
-        n = sum(sg.tot_ruptures() for sg in self.src_groups)
+        n = sum(sg.tot_ruptures for sg in self.src_groups)
         rup_serial = numpy.arange(n, dtype=numpy.uint32)
         start = 0
         for sg in self.src_groups:
@@ -880,17 +883,15 @@ def collect_source_model_paths(smlt):
 
 class SourceInfo(object):
     dt = numpy.dtype([
-        ('grp_id', numpy.uint32),          # 0
-        ('source_id', (bytes, 100)),       # 1
-        ('source_class', (bytes, 30)),     # 2
-        ('num_ruptures', numpy.uint32),    # 3
-        ('calc_time', numpy.float32),      # 4
-        ('num_sites', numpy.uint32),       # 5
-        ('num_split',  numpy.uint32),      # 6
+        ('source_id', (bytes, 100)),       # 0
+        ('source_class', (bytes, 30)),     # 1
+        ('num_ruptures', numpy.uint32),    # 2
+        ('calc_time', numpy.float32),      # 3
+        ('num_sites', numpy.uint32),       # 4
+        ('num_split',  numpy.uint32),      # 5
     ])
 
     def __init__(self, src, calc_time=0, num_split=0):
-        self.grp_id = src.src_group_id
         self.source_id = src.source_id
         self.source_class = src.__class__.__name__
         self.num_ruptures = src.num_ruptures
