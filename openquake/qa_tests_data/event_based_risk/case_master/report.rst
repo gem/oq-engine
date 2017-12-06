@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     615,627,304        
-date           2017-12-06T11:09:24
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:19:50
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 7, num_imts = 4
@@ -141,8 +141,8 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-1         SimpleFaultSource         482          0.0       1         0        
 2         CharacteristicFaultSource 1            0.0       1         0        
+1         SimpleFaultSource         482          0.0       1         0        
 ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -162,7 +162,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.013 0.007  0.002 0.033 24       
+compute_ruptures   0.014 0.006  0.004 0.026 24       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -170,13 +170,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.323     0.320     24    
-managing sources               0.243     0.0       1     
+total compute_ruptures         0.326     0.0       24    
+managing sources               0.212     0.0       1     
 reading composite source model 0.020     0.0       1     
 reading exposure               0.008     0.0       1     
 saving ruptures                0.006     0.0       24    
 store source_info              0.004     0.0       1     
 setting event years            0.001     0.0       1     
-filtering ruptures             3.994E-04 0.0       2     
+filtering ruptures             7.486E-04 0.0       2     
 reading site collection        7.391E-06 0.0       1     
 ============================== ========= ========= ======

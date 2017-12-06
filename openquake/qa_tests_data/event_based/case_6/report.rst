@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     3,219,914,866      
-date           2017-12-06T11:10:08
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:32
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -126,7 +126,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.549 0.094  0.411 0.663 8        
+compute_ruptures   0.543 0.101  0.379 0.653 8        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -134,12 +134,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         4.392     0.395     8     
-managing sources               1.219     0.0       1     
-filtering ruptures             0.817     0.0       3,081 
-reading composite source model 0.203     0.0       1     
-saving ruptures                0.154     0.0       8     
-setting event years            0.067     0.0       1     
+total compute_ruptures         4.340     0.422     8     
+managing sources               1.249     0.0       1     
+filtering ruptures             0.764     0.0       3,081 
+saving ruptures                0.245     0.0       8     
+reading composite source model 0.211     0.0       1     
+setting event years            0.070     0.0       1     
 store source_info              0.004     0.0       1     
-reading site collection        4.697E-05 0.0       1     
+reading site collection        4.005E-05 0.0       1     
 ============================== ========= ========= ======

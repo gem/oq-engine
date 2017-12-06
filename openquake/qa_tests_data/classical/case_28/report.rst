@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     576,018,697        
-date           2017-12-06T11:09:53
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:19
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 2, num_imts = 7
@@ -109,7 +109,7 @@ Slowest sources
 ========= ================ ============ ========= ========= =========
 source_id source_class     num_ruptures calc_time num_sites num_split
 ========= ================ ============ ========= ========= =========
-21        MultiPointSource 260          0.001     1         7        
+21        MultiPointSource 260          8.550E-04 1         7        
 ========= ================ ============ ========= ========= =========
 
 Computation times by source typology
@@ -117,7 +117,7 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 0.001     1     
+MultiPointSource 8.550E-04 1     
 ================ ========= ======
 
 Duplicated sources
@@ -128,7 +128,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ========= ===== =========
 operation-duration mean  stddev    min       max   num_tasks
-count_ruptures     0.002 7.772E-04 9.606E-04 0.002 2        
+count_ruptures     0.001 4.707E-04 7.520E-04 0.001 2        
 ================== ===== ========= ========= ===== =========
 
 Slowest operations
@@ -136,11 +136,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.004     0.0       1     
+managing sources               0.005     0.0       1     
 store source_info              0.004     0.0       1     
 reading composite source model 0.003     0.0       1     
-total count_ruptures           0.003     0.0       2     
-reading site collection        1.287E-04 0.0       1     
-aggregate curves               4.172E-05 0.0       2     
+total count_ruptures           0.002     0.0       2     
+reading site collection        1.307E-04 0.0       1     
+aggregate curves               3.171E-05 0.0       2     
 saving probability maps        2.313E-05 0.0       1     
 ============================== ========= ========= ======

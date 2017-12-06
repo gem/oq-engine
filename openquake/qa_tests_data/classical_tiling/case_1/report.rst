@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,205,782,117      
-date           2017-12-06T11:11:01
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:21:26
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 6, num_imts = 3
@@ -92,7 +92,7 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         AreaSource   1,640        0.121     1         1,230    
+1         AreaSource   1,640        0.123     1         1,230    
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.121     1     
+AreaSource   0.123     1     
 ============ ========= ======
 
 Duplicated sources
@@ -111,7 +111,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.013 0.004  0.008 0.018 12       
+count_ruptures     0.013 0.003  0.009 0.017 12       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -119,11 +119,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.154     0.0       1     
-total count_ruptures           0.152     0.0       12    
-reading composite source model 0.072     0.0       1     
+total count_ruptures           0.153     0.0       12    
+managing sources               0.151     0.0       1     
+reading composite source model 0.073     0.0       1     
 store source_info              0.003     0.0       1     
 reading site collection        0.002     0.0       1     
 aggregate curves               0.001     0.0       12    
-saving probability maps        2.408E-05 0.0       1     
+saving probability maps        2.432E-05 0.0       1     
 ============================== ========= ========= ======

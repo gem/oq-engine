@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2017-12-06T11:09:53
-engine_version 2.9.0-git96de348   
+date           2017-12-06T11:20:18
+engine_version 2.9.0-gite55e76e   
 ============== ===================
 
 num_sites = 3, num_imts = 3
@@ -76,7 +76,7 @@ vancouver_area_source.xml 0      Active Shallow Crust 2,430        2,430
 Informational data
 ------------------
 ======================= ====================================================================================
-count_ruptures.received tot 9.2 KB, max_per_task 631 B                                                      
+count_ruptures.received tot 9.21 KB, max_per_task 631 B                                                     
 count_ruptures.sent     gsims 2.29 MB, sources 23.67 KB, param 12.11 KB, srcfilter 10.84 KB, monitor 4.67 KB
 hazard.input_weight     243.0                                                                               
 hazard.n_imts           3                                                                                   
@@ -94,7 +94,7 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-VICM      AreaSource   2,430        0.005     3         30       
+VICM      AreaSource   2,430        0.008     3         30       
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,7 +102,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.005     1     
+AreaSource   0.008     1     
 ============ ========= ======
 
 Duplicated sources
@@ -111,21 +111,21 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.001 1.577E-04 0.001 0.002 15       
-================== ===== ========= ===== ===== =========
+================== ===== ========= ========= ===== =========
+operation-duration mean  stddev    min       max   num_tasks
+count_ruptures     0.001 8.886E-04 9.344E-04 0.005 15       
+================== ===== ========= ========= ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.028     0.0       1     
-reading composite source model 0.026     0.0       1     
-total count_ruptures           0.020     0.191     15    
+managing sources               0.026     0.0       1     
+reading composite source model 0.025     0.0       1     
+total count_ruptures           0.022     0.188     15    
 store source_info              0.003     0.0       1     
-reading site collection        1.907E-04 0.0       1     
-aggregate curves               1.817E-04 0.0       15    
-saving probability maps        2.432E-05 0.0       1     
+aggregate curves               1.934E-04 0.0       15    
+reading site collection        1.633E-04 0.0       1     
+saving probability maps        2.384E-05 0.0       1     
 ============================== ========= ========= ======
