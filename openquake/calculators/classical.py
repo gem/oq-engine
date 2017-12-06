@@ -99,11 +99,8 @@ class PSHACalculator(base.HazardCalculator):
                 if pmap[grp_id]:
                     acc[grp_id] |= pmap[grp_id]
             for src_id, nsites, srcweight, calc_time in pmap.calc_times:
-                src_id = src_id.split(':', 1)[0]
-                try:
-                    info = self.csm.infos[grp_id, src_id]
-                except KeyError:
-                    continue
+                srcid = src_id.split(':', 1)[0]
+                info = self.csm.infos[srcid]
                 info.calc_time += calc_time
                 info.num_sites = max(info.num_sites, nsites)
                 info.num_split += 1
@@ -183,14 +180,12 @@ class PSHACalculator(base.HazardCalculator):
             for sg in csm.src_groups:
                 if sg.src_interdep == 'mutex':
                     gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                    self.csm.add_infos(sg.sources)  # update self.csm.infos
                     yield sg, csm.src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(sg.sources)
             # NB: csm.get_sources_by_trt discards the mutex sources
             for trt, sources in csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
-                self.csm.add_infos(sources)  # update with unsplit sources
                 for block in csm.split_in_blocks(maxweight, sources):
                     yield block, csm.src_filter, gsims, param, monitor
                     num_tasks += 1

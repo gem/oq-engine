@@ -661,6 +661,7 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
+                self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
                     if hasattr(src, '__iter__'):  # MultiPointSource
@@ -804,8 +805,7 @@ class CompositeSourceModel(collections.Sequence):
         Populate the .infos dictionary (grp_id, src_id) -> <SourceInfo>
         """
         for src in sources:
-            for grp_id in src.src_group_ids:
-                self.infos[grp_id, src.source_id] = SourceInfo(src)
+            self.infos[src.source_id] = SourceInfo(src)
 
     def split_in_blocks(self, maxweight, sources):
         """
