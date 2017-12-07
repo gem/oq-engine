@@ -20,7 +20,6 @@ import logging
 import numpy
 
 from openquake.baselib import general
-from openquake.commonlib import readinput
 from openquake.calculators import base, event_based_risk as ebr
 
 U16 = numpy.uint16
@@ -47,14 +46,19 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.tags())
         self.A = len(self.assetcol)
         self.I = oq.insured_losses + 1
-        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
+        fname = oq.inputs['gmfs']
+        sids = self.sitecol.complete.sids
+        if fname.endswith('.xml'):  # old approach
+            eids, gmfs = base.get_gms(oq)
+            self.R = len(gmfs)
+        else:  # import csv
+            eids, self.R = base.import_gmfs(self.datastore, fname, sids)
         self.E = len(eids)
         if oq.ignore_covs:
             eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
             logging.info('Building the epsilons')
             eps = self.make_eps(self.E)
-        self.R = len(gmfs)
         self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
@@ -69,11 +73,6 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
-
-        events = numpy.zeros(oq.number_of_ground_motion_fields,
-                             readinput.stored_event_dt)
-        events['eid'] = eids
-        self.datastore['events'] = events
         self.agglosses = general.AccumDict(
             accum=numpy.zeros(self.L * self.I, F32))
         self.vals = self.assetcol.values()
