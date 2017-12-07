@@ -225,8 +225,8 @@ class CompositeRiskModel(collections.Mapping):
         :param assetcol: not None only for event based risk
         """
         mon_context = monitor('building context')
-        mon_hazard = monitor('building hazard')
-        mon_risk = monitor('computing risk', measuremem=False)
+        self.mon_hazard = monitor('building hazard')
+        self.mon_risk = monitor('computing risk', measuremem=False)
         hazard_getter = riskinput.hazard_getter
         sids = hazard_getter.sids
         with mon_context:
@@ -245,49 +245,51 @@ class CompositeRiskModel(collections.Mapping):
         if hasattr(hazard_getter, 'rlzs_by_gsim'):
             # save memory in event based risk by working one gsim at the time
             for gsim in hazard_getter.rlzs_by_gsim:
-                with mon_hazard:
-                    hazard = hazard_getter.get_hazard(gsim)
-                with mon_risk:
-                    for out in self._gen_outputs(hazard, imti, dic):
-                        yield out
-        else:
-            with mon_hazard:
-                hazard = hazard_getter.get_hazard()
-            with mon_risk:
-                for out in self._gen_outputs(hazard, imti, dic):
+                for out in self._gen_outputs(hazard_getter, imti, dic, gsim):
                     yield out
+        else:
+            for out in self._gen_outputs(hazard_getter, imti, dic, None):
+                yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, hazard, imti, dic):
-        for taxonomy in sorted(dic):
-            riskmodel = self[taxonomy]
-            rangeM = [imti[riskmodel.risk_functions[lt].imt]
-                      for lt in self.loss_types]
-            for sid, assets, epsgetter in dic[taxonomy]:
-                try:
-                    haz_by_sid = hazard[sid]
-                except KeyError:  # no hazard for this site
-                    continue
-                for rlzi, haz in sorted(haz_by_sid.items()):
-                    if isinstance(haz, numpy.ndarray):  # gmf-based calcs
-                        data = {i: (haz['gmv'][:, i], haz['eid'])
-                                for i in rangeM}
-                    else:  # classical, haz is already a dictionary
-                        data = haz
-                    data_by_lt = [data[imti[riskmodel.risk_functions[lt].imt]]
-                                  for lt in self.loss_types]
-                    out = riskmodel.get_output(assets, data_by_lt, epsgetter)
-                    out.loss_types = self.loss_types
-                    out.assets = assets
-                    out.sid = sid
-                    out.rlzi = rlzi
+    def _gen_outputs(self, hazard_getter, imti, dic, gsim):
+        with self.mon_hazard:
+            hazard = hazard_getter.get_hazard(gsim)
+        with self.mon_risk:
+            for taxonomy in sorted(dic):
+                riskmodel = self[taxonomy]
+                rangeM = [imti[riskmodel.risk_functions[lt].imt]
+                          for lt in self.loss_types]
+                for sid, assets, epsgetter in dic[taxonomy]:
                     try:
-                        out.eids = haz['eid']
-                    except TypeError:  # classical
-                        out.eids = None
-                    yield out
+                        haz_by_sid = hazard[sid]
+                    except KeyError:  # no hazard for this site
+                        continue
+                    for rlzi, haz in sorted(haz_by_sid.items()):
+                        if isinstance(haz, numpy.ndarray):  # gmf-based calcs
+                            data = {i: (haz['gmv'][:, i], haz['eid'])
+                                    for i in rangeM}
+                        elif haz == 0:  # no hazard for this site
+                            data = {i: (numpy.zeros(hazard_getter.E), None)
+                                    for i in rangeM}
+                        else:  # classical, haz is already a dictionary
+                            data = haz
+                        data_by_lt = [
+                            data[imti[riskmodel.risk_functions[lt].imt]]
+                            for lt in self.loss_types]
+                        out = riskmodel.get_output(
+                            assets, data_by_lt, epsgetter)
+                        out.loss_types = self.loss_types
+                        out.assets = assets
+                        out.sid = sid
+                        out.rlzi = rlzi
+                        try:
+                            out.eids = haz['eid']
+                        except TypeError:  # classical
+                            out.eids = None
+                        yield out
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
@@ -367,14 +369,11 @@ class HazardGetter(object):
             for sid in self.sids:
                 self.data[sid] = data = self._getter[sid]
                 if not data:  # no GMVs, return 0, counted in no_damage
-                    self.data[sid] = {
-                        rlzi: numpy.zeros((self.E, self.I),
-                                          [('gmv', F32), ('eid', U64)])
-                        for rlzi in range(self.num_rlzs)}
+                    self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
 
-    def get_hazard(self):
+    def get_hazard(self, gsim=None):
         """
-        :param gsim: a GSIM instance
+        :param gsim: ignored
         :returns: an OrderedDict rlzi -> datadict
         """
         return self.data
