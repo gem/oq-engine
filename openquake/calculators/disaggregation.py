@@ -222,25 +222,18 @@ producing too small PoEs.'''
         maxdist = max(oq.maximum_distance(trt, max_mag) for trt in trts)
         dist_edges = oq.distance_bin_width * numpy.arange(
             0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
-        logging.info('dist = %s...%s', min(dist_edges), max(dist_edges))
 
         # build eps_edges
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
 
         # build lon_edges, lat_edges per sid
         bbs = src_filter.get_bounding_boxes(mag=max_mag)
+        lon_edges, lat_edges = {}, {}  # by sid
         for sid, bb in zip(self.sitecol.sids, bbs):
-            lon_edges, lat_edges = disagg.lon_lat_bins(
+            lon_edges[sid], lat_edges[sid] = disagg.lon_lat_bins(
                 bb, oq.coordinate_bin_width)
-            logging.info('site %d, lon = %s...%s',
-                         sid, min(lon_edges), max(lon_edges))
-            logging.info('site %d, lat = %s...%s',
-                         sid, min(lat_edges), max(lat_edges))
-            self.bin_edges[sid] = bs = (
-                mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
-            self.shape = [len(edges) - 1 for edges in bs]
-            logging.info('matrix shape=%s for sid %d',
-                         self.shape + [len(trts)], sid)
+        self.bin_edges = mag_edges, dist_edges, lon_edges, lat_edges, eps_edges
+        self.save_bin_edges()
 
         # build all_args
         all_args = []
@@ -279,6 +272,18 @@ producing too small PoEs.'''
         logging.info('Discarded zero matrices: %d', num_zeros)
         return results
 
+    def save_bin_edges(self):
+        """
+        Save disagg-bins
+        """
+        b = self.bin_edges
+        self.datastore['disagg-bins/mags'] = b[0]
+        self.datastore['disagg-bins/dists'] = b[1]
+        for sid in self.sitecol.sids:
+            self.datastore['disagg-bins/lons/sid-%d' % sid] = b[2][sid]
+            self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
+        self.datastore['disagg-bins/eps'] = b[4]
+
     def post_execute(self, results):
         """
         Save all the results of the disaggregation. NB: the number of results
@@ -287,33 +292,18 @@ producing too small PoEs.'''
         :param results:
             a dictionary of probability arrays
         """
-        # save bin_edges
-        dt = numpy.dtype([
-            ('sid', numpy.uint32),
-            ('mags', (float, self.shape[0] + 1)),
-            ('dists', (float, self.shape[1] + 1)),
-            ('lons', (float, self.shape[2] + 1)),
-            ('lats', (float, self.shape[3] + 1)),
-            ('eps', (float, self.shape[4] + 1)),
-        ])
-        arr = numpy.array(
-            [(sid,) + mdlle for sid, mdlle in self.bin_edges.items()], dt)
-        self.datastore['disagg-bins'] = arr
-
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         logging.info('Extracting and saving the PMFs')
         for key, matrices in sorted(results.items()):
             sid, rlzi, poe, imt = key
-            edges = self.bin_edges[sid]
             self.save_disagg_result(
-                sid, edges, matrices, rlzi,
-                self.oqparam.investigation_time, imt, poe)
+                sid, matrices, rlzi, self.oqparam.investigation_time, imt, poe)
 
         self.datastore.set_attrs(
             'disagg', trts=encode(self.trts), num_ruptures=self.num_ruptures)
 
-    def save_disagg_result(self, site_id, bin_edges, matrices, rlz_id,
+    def save_disagg_result(self, site_id, matrices, rlz_id,
                            investigation_time, imt_str, poe):
         """
         Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
@@ -339,7 +329,8 @@ producing too small PoEs.'''
         disp_name = DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
             rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
-        mag, dist, lons, lats, eps = bin_edges
+        mag, dist, lonsd, latsd, eps = self.bin_edges
+        lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
             matrix = agg_probs(*matrices.values())
             poe_agg = []
