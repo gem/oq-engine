@@ -19,7 +19,6 @@
 import itertools
 import numpy
 
-from openquake.baselib.python3compat import encode
 from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
 from openquake.calculators import base, event_based
@@ -113,7 +112,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        base.get_gmfs(self)
+        _eids, gmfs = base.get_gmfs(self)
+        self.R = len(gmfs)
         self.param['number_of_ground_motion_fields'] = (
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(

@@ -18,6 +18,7 @@
 from nose.plugins.attrib import attr
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3
+from openquake.qa_tests_data.event_based_risk import case_2 as ebr_2
 
 
 class GmfEbRiskTestCase(CalculatorTestCase):
@@ -50,3 +51,12 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         # avg_losses-rlzs has shape (A, R, LI)
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
         self.assertAlmostEqual(avglosses, [2257871.5])
+
+    @attr('qa', 'risk', 'gmf_ebrisk')
+    def test_ebr_2(self):
+        self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
+        alt = self.calc.datastore['agg_loss_table']
+        self.assertEqual(len(alt), 20)
+        self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
+        totloss = alt['loss'].sum()
+        self.assertAlmostEqual(totloss, 13083.9, places=1)
