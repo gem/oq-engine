@@ -259,7 +259,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
         :returns: dictionary output_key -> sorted list of exported paths
         """
-        num_rlzs = len(self.datastore['realizations'])
         exported = {}
         if isinstance(exports, tuple):
             fmts = exports
@@ -277,7 +276,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if not fmt:
                 continue
             for key in sorted(keys):  # top level keys
-                if 'rlzs' in key and num_rlzs > 1:
+                if 'rlzs' in key and self.R > 1:
                     continue  # skip individual curves
                 self._export((key, fmt), exported)
             if has_hcurves and self.oqparam.hazard_maps:
@@ -305,7 +304,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Collect the realizations and set the attributes nbytes
         """
-        if hasattr(self, 'rlzs_assoc'):
+        if 'csm_info' in self.datastore and hasattr(self, 'rlzs_assoc'):
             sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
                 self.rlzs_assoc.realizations) or collections.defaultdict(
                     lambda: 'NA')
@@ -464,6 +463,7 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         elif hasattr(self, 'csm'):
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+            self.datastore['csm_info'] = self.csm.info
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
@@ -690,7 +690,7 @@ class RiskCalculator(HazardCalculator):
                 else:  # gmf
                     getter = riskinput.GmfDataGetter(self.datastore, sids)
                 hgetter = riskinput.HazardGetter(
-                    self.datastore, kind, getter, imtls, eids)
+                    self.datastore, kind, getter, imtls, self.R, eids)
                 hgetter.init()  # read the hazard data
                 ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
@@ -782,6 +782,10 @@ def get_gmfs(calculator):
         for g, gsim in enumerate(calculator.precalc.gsims):
             gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
         return eids, gmfs
+
+    else:  # with --hc option
+        return (calculator.datastore['events'],
+                calculator.datastore['realizations'])
 
 
 def save_gmf_data(dstore, sitecol, gmfs):

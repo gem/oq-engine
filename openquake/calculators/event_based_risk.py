@@ -519,6 +519,7 @@ class EbrPostCalculator(base.RiskCalculator):
         self._monitor = calc._monitor
         self.riskmodel = calc.riskmodel
         self.loss_builder = get_loss_builder(calc.datastore)
+        self.R = calc.R
         P = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
 

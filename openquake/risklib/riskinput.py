@@ -331,14 +331,14 @@ class HazardGetter(object):
     :param eids:
         an array of event IDs (or None)
     """
-    def __init__(self, dstore, kind, getter, imtls, eids=None):
+    def __init__(self, dstore, kind, getter, imtls, num_rlzs, eids=None):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
         self.sids = getter.sids
         self._getter = getter
         self.imtls = imtls
         self.eids = eids
-        self.num_rlzs = dstore['csm_info'].get_num_rlzs()
+        self.num_rlzs = num_rlzs
         oq = dstore['oqparam']
         try:
             self.E = oq.number_of_ground_motion_fields
