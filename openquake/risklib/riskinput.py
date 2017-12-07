@@ -263,17 +263,15 @@ class CompositeRiskModel(collections.Mapping):
                 rangeM = [imti[riskmodel.risk_functions[lt].imt]
                           for lt in self.loss_types]
                 for sid, assets, epsgetter in dic[taxonomy]:
-                    try:
-                        haz_by_sid = hazard[sid]
-                    except KeyError:  # no hazard for this site
-                        continue
-                    for rlzi, haz in sorted(haz_by_sid.items()):
+                    for rlzi, haz in sorted(hazard[sid].items()):
                         if isinstance(haz, numpy.ndarray):  # gmf-based calcs
                             data = {i: (haz['gmv'][:, i], haz['eid'])
                                     for i in rangeM}
-                        elif haz == 0:  # no hazard for this site
-                            data = {i: (numpy.zeros(hazard_getter.E), None)
-                                    for i in rangeM}
+                        elif not haz:  # no hazard for this site
+                            data = {
+                                i: (numpy.zeros(hazard_getter.E),
+                                    hazard_getter.eids)
+                                for i in rangeM}
                         else:  # classical, haz is already a dictionary
                             data = haz
                         data_by_lt = [
@@ -287,8 +285,8 @@ class CompositeRiskModel(collections.Mapping):
                         out.rlzi = rlzi
                         try:
                             out.eids = haz['eid']
-                        except TypeError:  # classical
-                            out.eids = None
+                        except TypeError:  # curves or zero GMFs
+                            out.eids = hazard_getter.eids
                         yield out
 
     def __toh5__(self):
@@ -344,7 +342,10 @@ class HazardGetter(object):
         self.eids = eids
         self.num_rlzs = dstore['csm_info'].get_num_rlzs()
         oq = dstore['oqparam']
-        self.E = getattr(oq, 'number_of_ground_motion_fields', None)
+        try:
+            self.E = oq.number_of_ground_motion_fields
+        except AttributeError:
+            self.E = 0 if eids is None else len(eids)
         self.I = len(oq.imtls)
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
