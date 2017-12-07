@@ -275,10 +275,11 @@ class CompositeRiskModel(collections.Mapping):
                 for rlzi, haz in sorted(haz_by_sid.items()):
                     if isinstance(haz, numpy.ndarray):
                         # event based and scenario
-                        eids = haz['eid']
+                        #eids_ = haz['eid']
                         data = {i: (haz['gmv'][:, i], eids)
                                 for i in rangeM}
                     elif eids is not None:  # gmf_ebrisk
+                        1 / 0
                         data = {i: (haz[i], eids) for i in rangeM}
                     else:  # classical
                         data = haz
@@ -309,6 +310,7 @@ class GmfDataGetter(collections.Mapping):
     def __init__(self, dstore, sids):
         self.dstore = dstore
         self.sids = sids
+        self.E = len(dstore['events'])
 
     def __getitem__(self, sid):
         dset = self.dstore['gmf_data/data']
@@ -345,7 +347,7 @@ class HazardGetter(object):
         self.eids = eids
         self.num_rlzs = dstore['csm_info'].get_num_rlzs()
         oq = dstore['oqparam']
-        self.E = getattr(oq, 'number_of_ground_motion_fields', None)
+        self.E = getattr(oq, 'number_of_ground_motion_fields', getter.E)
         self.I = len(oq.imtls)
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
