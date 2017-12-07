@@ -100,6 +100,7 @@ producing too small PoEs.''')
     @attr('qa', 'hazard', 'disagg')
     def test_case_4(self):
         # this is case with number of lon/lat bins different for site 0/site 1
+        # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
 
     @attr('qa', 'hazard', 'disagg')
