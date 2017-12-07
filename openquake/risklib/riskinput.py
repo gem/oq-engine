@@ -306,7 +306,6 @@ class GmfDataGetter(collections.Mapping):
     def __init__(self, dstore, sids):
         self.dstore = dstore
         self.sids = sids
-        self.E = len(dstore['events'])
 
     def __getitem__(self, sid):
         dset = self.dstore['gmf_data/data']
@@ -343,7 +342,7 @@ class HazardGetter(object):
         self.eids = eids
         self.num_rlzs = dstore['csm_info'].get_num_rlzs()
         oq = dstore['oqparam']
-        self.E = getattr(oq, 'number_of_ground_motion_fields', getter.E)
+        self.E = getattr(oq, 'number_of_ground_motion_fields', None)
         self.I = len(oq.imtls)
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
