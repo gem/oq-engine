@@ -224,12 +224,10 @@ class CompositeRiskModel(collections.Mapping):
         :param monitor: a monitor object used to measure the performance
         :param assetcol: not None only for event based risk
         """
-        mon_context = monitor('building context')
-        self.mon_hazard = monitor('building hazard')
-        self.mon_risk = monitor('computing risk', measuremem=False)
+        self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
         sids = hazard_getter.sids
-        with mon_context:
+        with monitor('building context'):
             if assetcol is None:  # scenario, classical
                 assets_by_site = riskinput.assets_by_site
             else:
@@ -255,9 +253,9 @@ class CompositeRiskModel(collections.Mapping):
             riskinput.gmdata = hazard_getter.gmdata
 
     def _gen_outputs(self, hazard_getter, imti, dic, gsim):
-        with self.mon_hazard:
+        with self.monitor('building hazard'):
             hazard = hazard_getter.get_hazard(gsim)
-        with self.mon_risk:
+        with self.monitor('computing risk'):
             for taxonomy in sorted(dic):
                 riskmodel = self[taxonomy]
                 rangeM = [imti[riskmodel.risk_functions[lt].imt]
