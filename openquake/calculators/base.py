@@ -32,10 +32,9 @@ import numpy
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput, asset
-from openquake.commonlib import readinput, source, calc, riskmodels
+from openquake.commonlib import readinput, source, calc, riskmodels, writers
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
@@ -802,3 +801,36 @@ def save_gmf_data(dstore, sitecol, gmfs):
         offset += n
     dstore.save_vlen('gmf_data/indices', lst)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
+
+
+def import_gmfs(dstore, fname, sids):
+    """
+    Import in the datastore a ground motion field CSV file.
+
+    :param dstore: the datastore
+    :param fname: the CSV file
+    :param sids: the site IDs (complete)
+    :returns: event_ids, num_rlzs
+    """
+    array = writers.read_composite_array(fname)
+    num_imts = len(array.dtype.names[3:]),  # rlzi, sid, eid, gmv_PGA, ...
+    gmf_data_dt = numpy.dtype(
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, num_imts))])
+    # store the events
+    eids = numpy.unique(array['eid'])
+    eids.sort()
+    events = numpy.zeros(len(eids), readinput.stored_event_dt)
+    events['eid'] = eids
+    dstore['events'] = events
+    # store the GMFs
+    dic = general.group_array(array.view(gmf_data_dt), 'sid')
+    lst = []
+    offset = 0
+    for sid in sids:
+        n = len(dic.get(sid, []))
+        lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
+        if n:
+            offset += n
+            dstore.extend('gmf_data/data', dic[sid])
+    dstore.save_vlen('gmf_data/indices', lst)
+    return eids, array['rlzi'].max() + 1
