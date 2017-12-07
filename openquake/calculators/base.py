@@ -833,4 +833,6 @@ def import_gmfs(dstore, fname, sids):
             offset += n
             dstore.extend('gmf_data/data', dic[sid])
     dstore.save_vlen('gmf_data/indices', lst)
+    # FIXME: if there is no data for the maximum realization
+    # the inferred number of realizations will be wrong
     return eids, array['rlzi'].max() + 1
