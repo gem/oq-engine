@@ -739,7 +739,7 @@ def get_gmv_data(sids, gmfs):
 def get_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or gmf_ebrisk calculator
-    :returns: a pair (eids, gmfs) where gmfs is a matrix of shape (R, N, E, I)
+    :returns: a pair (eids, R) where R is the number of realizations
     """
     dstore = calculator.datastore
     oq = calculator.oqparam
@@ -772,7 +772,7 @@ def get_gmfs(calculator):
         events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = eids
         dstore['events'] = events
-        return eids, gmfs
+        return eids, len(gmfs)
 
     elif calculator.precalc:  # from previous step
         num_assocs = dstore['csm_info'].get_num_rlzs()
@@ -781,11 +781,11 @@ def get_gmfs(calculator):
         gmfs = numpy.zeros((num_assocs, N, E, I))
         for g, gsim in enumerate(calculator.precalc.gsims):
             gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
-        return eids, gmfs
+        return eids, len(gmfs)
 
     else:  # with --hc option
         return (calculator.datastore['events'],
-                calculator.datastore['realizations'])
+                len(calculator.datastore['realizations']))
 
 
 def save_gmf_data(dstore, sitecol, gmfs):
