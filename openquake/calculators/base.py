@@ -79,6 +79,7 @@ PRECALC_MAP = dict(
                  'event_based_risk', 'ucerf_rupture'],
     event_based_risk=['event_based', 'event_based_rupture', 'ucerf_rupture',
                       'event_based_risk'],
+    gmf_ebrisk=['event_based'],
     ucerf_classical=['ucerf_psha'],
     ucerf_hazard=['ucerf_rupture'])
 
@@ -386,6 +387,10 @@ class HazardCalculator(BaseCalculator):
         return precalc
 
     def read_previous(self, precalc_id):
+        """
+        Read the previous calculation datastore by checking the consistency
+        of the calculation_mode, then read the risk data.
+        """
         parent = datastore.read(precalc_id)
         check_precalc_consistency(
             self.oqparam.calculation_mode, parent['oqparam'].calculation_mode)
@@ -402,13 +407,7 @@ class HazardCalculator(BaseCalculator):
         self.read_risk_data()
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
-            if oq.hazard_calculation_id:  # already stored csm
-                logging.info('Reusing composite source model of calc #%d',
-                             oq.hazard_calculation_id)
-                with datastore.read(oq.hazard_calculation_id) as dstore:
-                    self.csm = dstore['composite_source_model']
-            else:
-                self.csm = self.read_csm()
+            self.csm = self.read_csm()
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.rup_data = {}
         self.init()
@@ -479,13 +478,11 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol = (
                 readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
             # NB: using hdf5.vstr would fail for large exposures;
-            # the datastore could become corrupt, and also ultra-strange
+            # the datastore could become corrupt, and also ultra-strange things
             # may happen (i.e. having the sitecol saved inside asset_refs!!)
             arefs = numpy.array(self.exposure.asset_refs)
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
-            logging.info('Read %d assets on %d sites',
-                         len(self.assetcol), len(self.sitecol))
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
