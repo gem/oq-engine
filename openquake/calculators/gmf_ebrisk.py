@@ -15,14 +15,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+import collections
 import logging
 import numpy
 
-from openquake.baselib import general
+from openquake.baselib import general, datastore
 from openquake.calculators import base, event_based_risk as ebr
 
 U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64  # higher precision to avoid task order dependency
@@ -48,8 +49,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.I = oq.insured_losses + 1
         if oq.hazard_calculation_id:  # read the GMFs from a previous calc
             assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
+            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+            eids = self.datastore['events']['eid']
             self.R = len(self.datastore['realizations'])
-            self.E = len(self.datastore['events'])
         else:  # read the GMFs from a file
             fname = oq.inputs['gmfs']
             sids = self.sitecol.complete.sids
@@ -57,7 +59,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                 eids, self.R = base.get_gmfs(self)
             else:  # import csv
                 eids, self.R = base.import_gmfs(self.datastore, fname, sids)
-            self.E = len(eids)
+        self.E = len(eids)
         if oq.ignore_covs:
             eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
@@ -80,6 +82,11 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.agglosses = general.AccumDict(
             accum=numpy.zeros(self.L * self.I, F32))
         self.vals = self.assetcol.values()
+        self.num_losses = numpy.zeros((self.A, self.R), U32)
+        if oq.asset_loss_table:
+            # save all_loss_ratios
+            self.alr_nbytes = 0
+            self.indices = collections.defaultdict(list)  # sid -> pairs
 
     def post_execute(self, result):
         """
