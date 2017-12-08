@@ -13,10 +13,10 @@ The OpenQuake Engine is available for macOS in the form of **self-installable bi
 
 Requirements are:
 
-- Mac OS X 10.10 (Yosemite) or Mac OS X 10.11 (El Capitan), macOS 10.12 (Sierra)
+- Mac OS X 10.10 (Yosemite), Mac OS X 10.11 (El Capitan), macOS 10.12 (Sierra), or macOS 10.13 (High Sierra)
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
-- Terminal or iTerm app
+- [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
 - Python 3.5 (from https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg)
 
 Before you can start you must have downloaded and installed [Python 3.5](https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg).
@@ -37,7 +37,7 @@ then follow the wizard on screen. By default the code is installed in `~/openqua
 ```bash
 Verifying archive integrity... All good.
 Uncompressing installer for the OpenQuake Engine  100%
-Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /Users/auser/openquake: 
+Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /Users/auser/openquake:
 Creating a new python environment in /Users/auser/openquake. Please wait.
 Installing the files in /Users/auser/openquake. Please wait.
 Do you want to install the OpenQuake Tools (IPT, TaxtWeb, Taxonomy Glossary)? [y/n]: y
@@ -63,7 +63,7 @@ rm -Rf ~/openquake
 If _make the 'oq' command available by default_ as been set to 'Y' (default) during the installation
 the 'oq' command will be available by default after Terminal has been restarted.
 
-To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, yum must run
+To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, you must run
 
 ```bash
 # default is ~/openquake
@@ -91,5 +91,5 @@ More information are available on [How to run the OpenQuake Engine](../running/u
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/#!forum/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake
