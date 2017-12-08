@@ -46,14 +46,18 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.tags())
         self.A = len(self.assetcol)
         self.I = oq.insured_losses + 1
-        fname = oq.inputs['gmfs']
-        sids = self.sitecol.complete.sids
-        if fname.endswith('.xml'):  # old approach
-            eids, gmfs = base.get_gms(oq)
-            self.R = len(gmfs)
-        else:  # import csv
-            eids, self.R = base.import_gmfs(self.datastore, fname, sids)
-        self.E = len(eids)
+        if oq.hazard_calculation_id:  # read the GMFs from a previous calc
+            assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
+            self.R = len(self.datastore['realizations'])
+            self.E = len(self.datastore['events'])
+        else:  # read the GMFs from a file
+            fname = oq.inputs['gmfs']
+            sids = self.sitecol.complete.sids
+            if fname.endswith('.xml'):  # old approach
+                eids, self.R = base.get_gmfs(self)
+            else:  # import csv
+                eids, self.R = base.import_gmfs(self.datastore, fname, sids)
+            self.E = len(eids)
         if oq.ignore_covs:
             eps = numpy.zeros((self.A, self.E), numpy.float32)
         else:
