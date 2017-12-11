@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check on the input files: the listed paths must be relative paths
   * Fixed a bug when storing the disagg-bins in the case the lenghts of the
     arrays are not the same for all sites
   * In the case of a single tile the prefiltering was applied twice: fixed the
