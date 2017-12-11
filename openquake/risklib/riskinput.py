@@ -608,6 +608,9 @@ class EpsilonMatrix0(object):
             self.eps = self.make_eps()
         return self.eps[item]
 
+    def __len__(self):
+        return self.num_assets
+
 
 class EpsilonMatrix1(object):
     """
@@ -641,7 +644,7 @@ def epsilon_getter(n_assets, n_events, correlation, seed, master_seed, no_eps):
     assert no_eps in (True, False), no_eps
     seeds = seed + numpy.arange(n_events)
 
-    def get_eps(start, stop):
+    def get_eps(start=0, stop=n_events):
         if no_eps:
             eps = None
         elif correlation:

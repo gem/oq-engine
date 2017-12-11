@@ -683,7 +683,7 @@ class RiskCalculator(HazardCalculator):
                 for assets in reduced_assets:
                     for ass in assets:
                         ass.tagmask = self.tagmask[ass.ordinal]
-                        if len(eps):
+                        if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
                 if kind == 'poe':  # hcurves, shape (R, N)
