@@ -372,6 +372,10 @@ class HazardGetter(object):
                 if not data:  # no GMVs, return 0, counted in no_damage
                     self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
 
+            # dictionary eid -> index
+            if self.eids is not None:
+                self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
+
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
@@ -536,10 +540,15 @@ class RiskInput(object):
         if not self.eps:
             return
         eps = self.eps[aid]
-        if isinstance(eps, numpy.ndarray):
+        if isinstance(eps, F32):  # 0.0
+            return numpy.zeros(len(eids), F32)
+        try:
+            eid2idx = self.hazard_getter.eid2idx
+        except AttributeError:  # no eid2idx
             return eps
-        # else assume it is zero
-        return numpy.zeros(len(eids), F32)
+        else:
+            idx = [eid2idx[eid] for eid in eids]
+            return eps[idx]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (

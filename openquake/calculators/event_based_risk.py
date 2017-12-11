@@ -433,12 +433,11 @@ class EbriskCalculator(base.RiskCalculator):
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
+                vs = self.vals[self.riskmodel.loss_types[l]]
                 if aids is None:  # event_based_risk
-                    vs = self.vals[self.riskmodel.loss_types[l]]
                     self.dset[:, r + offset, li] += ratios * vs
                 else:  # gmf_ebrisk, there is no offset
-                    vs = self.vals[aids][self.riskmodel.loss_types[l]]
-                    self.dset[aids, r, li] += ratios * vs
+                    self.dset[aids, r, li] += ratios * vs[aids]
         self.taskno += 1
 
     def post_execute(self, num_events):
