@@ -580,6 +580,79 @@ class RiskInputFromRuptures(object):
             self.weight)
 
 
+class EpsilonMatrix0(object):
+    """
+    Mock-up for a matrix of epsilons of size N x E,
+    used when asset_correlation=0.
+
+    :param num_assets: N assets
+    :param seeds: E seeds, set before calling numpy.random.normal
+    """
+    def __init__(self, num_assets, seeds):
+        self.num_assets = num_assets
+        self.seeds = seeds
+        self.eps = None
+
+    def make_eps(self):
+        """
+        Builds a matrix of N x E epsilons
+        """
+        eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
+        for i, seed in enumerate(self.seeds):
+            numpy.random.seed(seed)
+            eps[:, i] = numpy.random.normal(size=self.num_assets)
+        return eps
+
+    def __getitem__(self, item):
+        if self.eps is None:
+            self.eps = self.make_eps()
+        return self.eps[item]
+
+
+class EpsilonMatrix1(object):
+    """
+    Mock-up for a matrix of epsilons of size N x E,
+    used when asset_correlation=1.
+
+    :param num_events: number of events
+    :param seed: seed used to generate E epsilons
+    """
+    def __init__(self, num_events, seed):
+        self.num_events = num_events
+        self.seed = seed
+        numpy.random.seed(seed)
+        self.eps = numpy.random.normal(size=num_events)
+
+    def __getitem__(self, item):
+        # item[0] is the asset index, item[1] the event index
+        # the epsilons are equal for all assets since asset_correlation=1
+        return self.eps[item[1]]
+
+
+def epsilon_getter(n_assets, n_events, correlation, seed, master_seed, no_eps):
+    """
+    :returns: a function (start, stop) -> matrix of shape (n_assets, n_events)
+    """
+    assert n_assets > 0, n_assets
+    assert n_events > 0, n_events
+    assert correlation in (0, 1), correlation
+    assert seed >= 0, seed
+    assert master_seed >= 0, master_seed
+    assert no_eps in (True, False), no_eps
+    seeds = seed + numpy.arange(n_events)
+
+    def get_eps(start, stop):
+        if no_eps:
+            eps = None
+        elif correlation:
+            eps = EpsilonMatrix1(stop - start, master_seed)
+        else:
+            eps = EpsilonMatrix0(n_assets, seeds[start:stop])
+        return eps
+
+    return get_eps
+
+
 def make_eps(assetcol, num_samples, seed, correlation):
     """
     :param assetcol: an AssetCollection instance
