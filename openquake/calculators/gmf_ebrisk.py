@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import general, datastore
 from openquake.risklib import riskinput
-from openquake.calculators import base, event_based_risk as ebr
+from openquake.calculators import base, event_based, event_based_risk as ebr
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -59,7 +59,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             if fname.endswith('.xml'):  # old approach
                 eids, self.R = base.get_gmfs(self)
             else:  # import csv
-                eids, self.R = base.import_gmfs(self.datastore, fname, sids)
+                eids, self.R, self.gmdata = base.import_gmfs(
+                    self.datastore, fname, sids)
+                event_based.save_gmdata(self, self.R)
         self.E = len(eids)
         eps = riskinput.epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,

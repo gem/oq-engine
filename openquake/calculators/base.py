@@ -814,9 +814,9 @@ def import_gmfs(dstore, fname, sids):
     :returns: event_ids, num_rlzs
     """
     array = writers.read_composite_array(fname)
-    num_imts = len(array.dtype.names[3:]),  # rlzi, sid, eid, gmv_PGA, ...
+    n_imts = len(array.dtype.names[3:])  # rlzi, sid, eid, gmv_PGA, ...
     gmf_data_dt = numpy.dtype(
-        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, num_imts))])
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
@@ -834,6 +834,18 @@ def import_gmfs(dstore, fname, sids):
             offset += n
             dstore.extend('gmf_data/data', dic[sid])
     dstore.save_vlen('gmf_data/indices', lst)
+
     # FIXME: if there is no data for the maximum realization
     # the inferred number of realizations will be wrong
-    return eids, array['rlzi'].max() + 1
+    num_rlzs = array['rlzi'].max() + 1
+
+    # compute gmdata
+    dic = general.group_array(array.view(gmf_data_dt), 'rlzi')
+    gmdata = {r: numpy.zeros(n_imts + 2, F32) for r in range(num_rlzs)}
+    for r in dic:
+        gmv = dic[r]['gmv']
+        rec = gmdata[r]  # (imt1, ..., imtM, nevents, nbytes)
+        rec[:-2] += gmv.sum(axis=0)
+        rec[-2] += len(gmv)
+        rec[-1] += gmv.nbytes
+    return eids, num_rlzs, gmdata
