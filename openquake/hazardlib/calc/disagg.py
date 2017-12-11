@@ -123,14 +123,14 @@ def lon_lat_bins(bb, coord_bin_width):
 def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
     """
     :param bdata: a dictionary of probabilities of no exceedence
-    :param bin_edges: bin edges for each site
+    :param bin_edges: bin edges
     :param sid: site index
     :param mon: a Monitor instance
     :returns: a dictionary key -> matrix|pmf for each key in bdata
     """
     with mon('build_disagg_matrix'):
-        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges[sid]
-
+        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
+        lon_bins, lat_bins = lon_bins[sid], lat_bins[sid]
         dim1 = len(mag_bins) - 1
         dim2 = len(dist_bins) - 1
         dim3 = len(lon_bins) - 1
@@ -319,12 +319,12 @@ def disaggregation(
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
 
-    bin_edges = (mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
+    bin_edges = (mag_bins, dist_bins, [lon_bins], [lat_bins], eps_bins)
     matrix = numpy.zeros((len(mag_bins) - 1, len(dist_bins) - 1,
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        [mat] = build_disagg_matrix(bdata[trt], [bin_edges], sid=0).values()
+        [mat] = build_disagg_matrix(bdata[trt], bin_edges, sid=0).values()
         matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
