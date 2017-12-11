@@ -228,9 +228,9 @@ class CompositeRiskModel(collections.Mapping):
         hazard_getter = riskinput.hazard_getter
         sids = hazard_getter.sids
         with monitor('building context'):
-            if assetcol is None:  # scenario, classical
+            if assetcol is None:  # scenario, classical, gmf_ebrisk
                 assets_by_site = riskinput.assets_by_site
-            else:
+            else:  # event_based_risk
                 assets_by_site = assetcol.assets_by_site()
         # group the assets by taxonomy
         dic = collections.defaultdict(list)

@@ -211,7 +211,7 @@ class Asset(object):
         return self.idx < other.idx
 
     def __repr__(self):
-        return '<Asset %s>' % self.idx
+        return '<Asset #%s>' % self.ordinal
 
 
 U8 = numpy.uint8
