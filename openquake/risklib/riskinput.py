@@ -308,7 +308,7 @@ class GmfDataGetter(collections.Mapping):
     def __getitem__(self, sid):
         dset = self.dstore['gmf_data/data']
         idxs = self.dstore['gmf_data/indices'][sid]
-        if not idxs:  # site ID with no data
+        if len(idxs) == 0:  # site ID with no data
             return {}
         array = numpy.concatenate([dset[start:stop] for start, stop in idxs])
         return group_array(array, 'rlzi')
