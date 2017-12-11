@@ -67,7 +67,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             oq.ignore_covs or not self.riskmodel.covs)()
 
         self.riskinputs = self.build_riskinputs('gmf', eps, eids)
-        self.param['assetcol'] = self.assetcol
+        self.param['assetcol'] = None
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
@@ -105,5 +105,5 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         :param dummy: unused parameter
         :param res: a result dictionary
         """
-        ebr.EbriskCalculator.__dict__['save_losses'](self, res, 0)
+        ebr.EbriskCalculator.__dict__['save_losses'](self, res, offset=0)
         return 1
