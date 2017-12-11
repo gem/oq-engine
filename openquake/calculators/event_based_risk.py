@@ -411,7 +411,24 @@ class EbriskCalculator(base.RiskCalculator):
             agglt = self.datastore['agg_loss_table']
             agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
-        # build aggregate loss curves
+        self.build_agg_curves()
+        if 'all_loss_ratios' in self.datastore:
+            self.datastore.save_vlen(
+                'all_loss_ratios/indices',
+                [numpy.array(self.indices[aid], riskinput.indices_dt)
+                 for aid in range(self.A)])
+            self.datastore.set_attrs(
+                'all_loss_ratios',
+                loss_types=' '.join(self.riskmodel.loss_types))
+            dset = self.datastore['all_loss_ratios/data']
+            nbytes = dset.size * dset.dtype.itemsize
+            self.datastore.set_attrs(
+                'all_loss_ratios/data',
+                nbytes=nbytes, bytes_per_asset=nbytes / self.A)
+            EbrPostCalculator(self).run(close=False)
+
+    def build_agg_curves(self):
+        """Build aggregate loss curves"""
         self.before_export()  # set 'realizations'
         oq = self.oqparam
         b = get_loss_builder(self.datastore)
@@ -427,21 +444,6 @@ class EbriskCalculator(base.RiskCalculator):
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods,
                 stats=[encode(name) for (name, func) in stats], units=units)
-
-        if 'all_loss_ratios' in self.datastore:
-            self.datastore.save_vlen(
-                'all_loss_ratios/indices',
-                [numpy.array(self.indices[aid], riskinput.indices_dt)
-                 for aid in range(self.A)])
-            self.datastore.set_attrs(
-                'all_loss_ratios',
-                loss_types=' '.join(self.riskmodel.loss_types))
-            dset = self.datastore['all_loss_ratios/data']
-            nbytes = dset.size * dset.dtype.itemsize
-            self.datastore.set_attrs(
-                'all_loss_ratios/data',
-                nbytes=nbytes, bytes_per_asset=nbytes / self.A)
-            EbrPostCalculator(self).run(close=False)
 
 
 # ######################### EbrPostCalculator ############################## #
