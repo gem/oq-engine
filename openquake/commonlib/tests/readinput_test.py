@@ -45,7 +45,7 @@ def getparams(oq):
 
 class ParseConfigTestCase(unittest.TestCase):
 
-    def test_get_oqparam_with_files(self):
+    def test_no_absolute_path(self):
         temp_dir = tempfile.mkdtemp()
         site_model_input = general.writetmp(dir=temp_dir, content="foo")
         job_config = general.writetmp(dir=temp_dir, content="""
@@ -63,6 +63,28 @@ intensity_measure_types = PGA
 investigation_time = 50
 export_dir = %s
         """ % (site_model_input, TMP))
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_params([job_config])
+        self.assertIn('not a relative path', str(ctx.exception))
+
+    def test_get_oqparam_with_files(self):
+        temp_dir = tempfile.mkdtemp()
+        site_model_input = general.writetmp(dir=temp_dir, content="foo")
+        job_config = general.writetmp(dir=temp_dir, content="""
+[general]
+calculation_mode = event_based
+[foo]
+bar = baz
+[site]
+sites = 0 0
+site_model_file = %s
+maximum_distance=1
+truncation_level=0
+random_seed=0
+intensity_measure_types = PGA
+investigation_time = 50
+export_dir = %s
+        """ % (os.path.basename(site_model_input), TMP))
 
         try:
             exp_base_path = os.path.dirname(job_config)
@@ -117,7 +139,7 @@ reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
-            """ % (sites_csv, TMP))
+            """ % (os.path.basename(sites_csv), TMP))
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
 
@@ -165,7 +187,7 @@ reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
-""" % (sites_csv, TMP))
+""" % (os.path.basename(sites_csv), TMP))
         oq = readinput.get_oqparam(source, hc_id=1)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_mesh(oq)
