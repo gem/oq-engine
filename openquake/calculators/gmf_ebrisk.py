@@ -20,6 +20,7 @@ import logging
 import numpy
 
 from openquake.baselib import general, datastore
+from openquake.risklib import riskinput
 from openquake.calculators import base, event_based_risk as ebr
 
 U16 = numpy.uint16
@@ -60,11 +61,11 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             else:  # import csv
                 eids, self.R = base.import_gmfs(self.datastore, fname, sids)
         self.E = len(eids)
-        if oq.ignore_covs:
-            eps = numpy.zeros((self.A, self.E), numpy.float32)
-        else:
-            logging.info('Building the epsilons')
-            eps = self.make_eps(self.E)
+        eps = riskinput.epsilon_getter(
+            len(self.assetcol), self.E, oq.asset_correlation,
+            oq.random_seed, oq.master_seed,
+            oq.ignore_covs or not self.riskmodel.covs)()
+
         self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = self.assetcol
         self.param['insured_losses'] = oq.insured_losses
