@@ -18,7 +18,6 @@
 
 import shutil
 import json
-import signal
 import logging
 import os
 import sys
