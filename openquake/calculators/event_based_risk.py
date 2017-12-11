@@ -152,55 +152,6 @@ save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
 
 
-class EpsilonMatrix0(object):
-    """
-    Mock-up for a matrix of epsilons of size N x E,
-    used when asset_correlation=0.
-
-    :param num_assets: N assets
-    :param seeds: E seeds, set before calling numpy.random.normal
-    """
-    def __init__(self, num_assets, seeds):
-        self.num_assets = num_assets
-        self.seeds = seeds
-        self.eps = None
-
-    def make_eps(self):
-        """
-        Builds a matrix of N x E epsilons
-        """
-        eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
-        for i, seed in enumerate(self.seeds):
-            numpy.random.seed(seed)
-            eps[:, i] = numpy.random.normal(size=self.num_assets)
-        return eps
-
-    def __getitem__(self, item):
-        if self.eps is None:
-            self.eps = self.make_eps()
-        return self.eps[item]
-
-
-class EpsilonMatrix1(object):
-    """
-    Mock-up for a matrix of epsilons of size N x E,
-    used when asset_correlation=1.
-
-    :param num_events: number of events
-    :param seed: seed used to generate E epsilons
-    """
-    def __init__(self, num_events, seed):
-        self.num_events = num_events
-        self.seed = seed
-        numpy.random.seed(seed)
-        self.eps = numpy.random.normal(size=num_events)
-
-    def __getitem__(self, item):
-        # item[0] is the asset index, item[1] the event index
-        # the epsilons are equal for all assets since asset_correlation=1
-        return self.eps[item[1]]
-
-
 @base.calculators.add('event_based_risk')
 class EbriskCalculator(base.RiskCalculator):
     """
@@ -233,13 +184,17 @@ class EbriskCalculator(base.RiskCalculator):
         rlzs_assoc = csm_info.get_rlzs_assoc()
         num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
                          for ebr in ruptures_by_grp[grp])
-        seeds = self.oqparam.random_seed + numpy.arange(num_events)
+        get_eps = riskinput.epsilon_getter(
+            len(self.assetcol), num_events,
+            self.oqparam.asset_correlation,
+            self.oqparam.random_seed,
+            self.oqparam.master_seed,
+            self.oqparam.ignore_covs or not self.riskmodel.covs)
 
-        allargs = []
         # prepare the risk inputs
+        allargs = []
         ruptures_per_block = self.oqparam.ruptures_per_block
         start = 0
-        ignore_covs = self.oqparam.ignore_covs
         try:
             csm_info = self.csm.info
         except AttributeError:  # there is no .csm if --hc was given
@@ -250,15 +205,9 @@ class EbriskCalculator(base.RiskCalculator):
             samples = samples_by_grp[grp_id]
             for rupts in block_splitter(
                     ruptures_by_grp.get(grp_id, []), ruptures_per_block):
-                if ignore_covs or not self.riskmodel.covs:
-                    eps = None
-                elif self.oqparam.asset_correlation:
-                    eps = EpsilonMatrix1(num_events, self.oqparam.master_seed)
-                else:
-                    n_events = sum(ebr.multiplicity for ebr in rupts)
-                    eps = EpsilonMatrix0(
-                        len(self.assetcol), seeds[start: start + n_events])
-                    start += n_events
+                n_events = sum(ebr.multiplicity for ebr in rupts)
+                eps = get_eps(start, start + n_events)
+                start += n_events
                 getter = riskinput.GmfGetter(
                     rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
                     trunc_level, correl_model, samples)
