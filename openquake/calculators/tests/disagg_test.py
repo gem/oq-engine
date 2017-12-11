@@ -26,7 +26,8 @@ from openquake.commonlib import calc
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.disagg import case_1, case_2, case_3, case_master
+from openquake.qa_tests_data.disagg import (
+    case_1, case_2, case_3, case_4, case_master)
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -95,6 +96,12 @@ However the source model #0, 'source_model_test_complex.xml',
 produces at most probabilities of 0.0362320992703 for rlz=#0, IMT=PGA.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.''')
+
+    @attr('qa', 'hazard', 'disagg')
+    def test_case_4(self):
+        # this is case with number of lon/lat bins different for site 0/site 1
+        # this exercise sampling
+        self.run_calc(case_4.__file__, 'job.ini')
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_master(self):
