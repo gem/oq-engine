@@ -248,21 +248,19 @@ class CompositeRiskModel(collections.Mapping):
                 with mon_hazard:
                     hazard = hazard_getter.get_hazard(gsim)
                 with mon_risk:
-                    for out in self._gen_outputs(
-                            hazard, imti, dic, hazard_getter.eids):
+                    for out in self._gen_outputs(hazard, imti, dic):
                         yield out
         else:
             with mon_hazard:
                 hazard = hazard_getter.get_hazard()
             with mon_risk:
-                for out in self._gen_outputs(
-                        hazard, imti, dic, hazard_getter.eids):
+                for out in self._gen_outputs(hazard, imti, dic):
                     yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, hazard, imti, dic, eids):
+    def _gen_outputs(self, hazard, imti, dic):
         for taxonomy in sorted(dic):
             riskmodel = self[taxonomy]
             rangeM = [imti[riskmodel.risk_functions[lt].imt]
@@ -273,14 +271,10 @@ class CompositeRiskModel(collections.Mapping):
                 except KeyError:  # no hazard for this site
                     continue
                 for rlzi, haz in sorted(haz_by_sid.items()):
-                    if isinstance(haz, numpy.ndarray):
-                        # event based and scenario
-                        eids = haz['eid']
-                        data = {i: (haz['gmv'][:, i], eids)
+                    if isinstance(haz, numpy.ndarray):  # gmf-based calcs
+                        data = {i: (haz['gmv'][:, i], haz['eid'])
                                 for i in rangeM}
-                    elif eids is not None:  # gmf_ebrisk
-                        data = {i: (haz[i], eids) for i in rangeM}
-                    else:  # classical
+                    else:  # classical, data is already a dictionary
                         data = haz
                     data_by_lt = [data[imti[riskmodel.risk_functions[lt].imt]]
                                   for lt in self.loss_types]
@@ -289,7 +283,10 @@ class CompositeRiskModel(collections.Mapping):
                     out.assets = assets
                     out.sid = sid
                     out.rlzi = rlzi
-                    out.eids = eids
+                    try:
+                        out.eids = haz['eid']
+                    except TypeError:
+                        out.eids = None
                     yield out
 
     def __toh5__(self):
