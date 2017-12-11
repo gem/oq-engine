@@ -412,6 +412,7 @@ class EbriskCalculator(base.RiskCalculator):
             agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
         self.build_agg_curves()
+
         if 'all_loss_ratios' in self.datastore:
             self.datastore.save_vlen(
                 'all_loss_ratios/indices',
@@ -431,7 +432,11 @@ class EbriskCalculator(base.RiskCalculator):
         """Build aggregate loss curves"""
         self.before_export()  # set 'realizations'
         oq = self.oqparam
-        b = get_loss_builder(self.datastore)
+        try:
+            b = get_loss_builder(self.datastore)
+        except AssertionError as exc:
+            logging.warn(str(exc))
+            return
         alt = self.datastore['agg_loss_table']
         stats = oq.risk_stats()
         array, array_stats = b.build(alt, stats)
