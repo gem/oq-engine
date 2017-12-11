@@ -19,7 +19,11 @@
 from __future__ import print_function
 import os
 import sys
-from setproctitle import setproctitle
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
 from django.core.management import execute_from_command_line
 from openquake.server import dbserver
 from openquake.server.db import actions
