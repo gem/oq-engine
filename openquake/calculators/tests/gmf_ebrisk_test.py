@@ -39,19 +39,18 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 3)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 0.6980584)
+        aae(totloss, 1.5788584)
 
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_3(self):
-        raise unittest.SkipTest('not passing yet')
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini', exports='csv')
         alt = self.calc.datastore['agg_loss_table']
         self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
-        aae(totloss, numpy.float32([1808900.]), decimal=0)
+        aae(totloss, numpy.float32([7717694.]), decimal=0)
 
         # avg_losses-rlzs has shape (A, R, LI)
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
-        aae(avglosses, numpy.float32([2272048]), decimal=0)
+        aae(avglosses, numpy.float32([7717694.]), decimal=0)

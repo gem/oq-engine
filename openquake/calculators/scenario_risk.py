@@ -95,7 +95,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        base.get_gmfs(self)
+        _eids, self.R = base.get_gmfs(self)
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields
         logging.info('Building the epsilons')
