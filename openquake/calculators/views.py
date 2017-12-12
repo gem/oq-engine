@@ -752,3 +752,16 @@ def view_mean_disagg(token, dstore):
         tbl.append([key] + vals)
     header = ['key'] + sorted(dset)
     return rst_table(sorted(tbl), header=header)
+
+
+@view.add('elt')
+def view_elt(token, dstore):
+    """
+    Display the event loss table averaged by event
+    """
+    oq = dstore['oqparam']
+    dic = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    tbl = [oq.loss_dt().names]
+    for rlzi in sorted(dic):
+        tbl.append(dic[rlzi]['loss'].mean(axis=0))
+    return rst_table(tbl)
