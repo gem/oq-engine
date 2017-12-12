@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Now the `master_seed` controls the generation of the epsilons in all
+    situations (before in event_based_risk without `asset_correlation` it was
+    managed by `random_seed`)
   * Added a check on the input files: the listed paths must be relative paths
   * Fixed a bug when storing the disagg-bins in the case the lenghts of the
     arrays are not the same for all sites
