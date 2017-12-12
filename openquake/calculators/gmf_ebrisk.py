@@ -48,15 +48,13 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.tags())
         self.A = len(self.assetcol)
         self.I = oq.insured_losses + 1
-        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
+        eids, self.R = base.get_gmfs(self)  # shape (R, N, E, I)
         self.E = len(eids)
         eps = riskinput.epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,
             oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
-
-        self.R = len(gmfs)
         self.riskinputs = self.build_riskinputs('gmf', eps, eids)
-        self.param['assetcol'] = self.assetcol
+        self.param['assetcol'] = None
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
@@ -94,5 +92,5 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         :param dummy: unused parameter
         :param res: a result dictionary
         """
-        ebr.EbriskCalculator.__dict__['save_losses'](self, res, 0)
+        ebr.EbriskCalculator.__dict__['save_losses'](self, res, offset=0)
         return 1

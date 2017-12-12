@@ -224,15 +224,13 @@ class CompositeRiskModel(collections.Mapping):
         :param monitor: a monitor object used to measure the performance
         :param assetcol: not None only for event based risk
         """
-        mon_context = monitor('building context')
-        mon_hazard = monitor('building hazard')
-        mon_risk = monitor('computing risk', measuremem=False)
+        self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
         sids = hazard_getter.sids
-        with mon_context:
-            if assetcol is None:  # scenario, classical
+        with monitor('building context'):
+            if assetcol is None:  # scenario, classical, gmf_ebrisk
                 assets_by_site = riskinput.assets_by_site
-            else:
+            else:  # event_based_risk
                 assets_by_site = assetcol.assets_by_site()
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
@@ -245,49 +243,49 @@ class CompositeRiskModel(collections.Mapping):
         if hasattr(hazard_getter, 'rlzs_by_gsim'):
             # save memory in event based risk by working one gsim at the time
             for gsim in hazard_getter.rlzs_by_gsim:
-                with mon_hazard:
-                    hazard = hazard_getter.get_hazard(gsim)
-                with mon_risk:
-                    for out in self._gen_outputs(hazard, imti, dic):
-                        yield out
-        else:
-            with mon_hazard:
-                hazard = hazard_getter.get_hazard()
-            with mon_risk:
-                for out in self._gen_outputs(hazard, imti, dic):
+                for out in self._gen_outputs(hazard_getter, imti, dic, gsim):
                     yield out
+        else:
+            for out in self._gen_outputs(hazard_getter, imti, dic, None):
+                yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, hazard, imti, dic):
-        for taxonomy in sorted(dic):
-            riskmodel = self[taxonomy]
-            rangeM = [imti[riskmodel.risk_functions[lt].imt]
-                      for lt in self.loss_types]
-            for sid, assets, epsgetter in dic[taxonomy]:
-                try:
-                    haz_by_sid = hazard[sid]
-                except KeyError:  # no hazard for this site
-                    continue
-                for rlzi, haz in sorted(haz_by_sid.items()):
-                    if isinstance(haz, numpy.ndarray):  # gmf-based calcs
-                        data = {i: (haz['gmv'][:, i], haz['eid'])
+    def _gen_outputs(self, hazard_getter, imti, dic, gsim):
+        with self.monitor('building hazard'):
+            hazard = hazard_getter.get_hazard(gsim)
+        with self.monitor('computing risk'):
+            for taxonomy in sorted(dic):
+                riskmodel = self[taxonomy]
+                rangeM = [imti[riskmodel.risk_functions[lt].imt]
+                          for lt in self.loss_types]
+                for sid, assets, epsgetter in dic[taxonomy]:
+                    for rlzi, haz in sorted(hazard[sid].items()):
+                        if isinstance(haz, numpy.ndarray):  # gmf-based calcs
+                            data = {i: (haz['gmv'][:, i], haz['eid'])
+                                    for i in rangeM}
+                        elif not haz:  # no hazard for this site
+                            data = {
+                                i: (numpy.zeros(hazard_getter.E),
+                                    hazard_getter.eids)
                                 for i in rangeM}
-                    else:  # classical, data is already a dictionary
-                        data = haz
-                    data_by_lt = [data[imti[riskmodel.risk_functions[lt].imt]]
-                                  for lt in self.loss_types]
-                    out = riskmodel.get_output(assets, data_by_lt, epsgetter)
-                    out.loss_types = self.loss_types
-                    out.assets = assets
-                    out.sid = sid
-                    out.rlzi = rlzi
-                    try:
-                        out.eids = haz['eid']
-                    except TypeError:
-                        out.eids = None
-                    yield out
+                        else:  # classical, haz is already a dictionary
+                            data = haz
+                        data_by_lt = [
+                            data[imti[riskmodel.risk_functions[lt].imt]]
+                            for lt in self.loss_types]
+                        out = riskmodel.get_output(
+                            assets, data_by_lt, epsgetter)
+                        out.loss_types = self.loss_types
+                        out.assets = assets
+                        out.sid = sid
+                        out.rlzi = rlzi
+                        try:
+                            out.eids = haz['eid']
+                        except TypeError:  # curves or zero GMFs
+                            out.eids = hazard_getter.eids
+                        yield out
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
@@ -308,8 +306,11 @@ class GmfDataGetter(collections.Mapping):
         self.sids = sids
 
     def __getitem__(self, sid):
+        self.dstore.open()  # if not already open
         dset = self.dstore['gmf_data/data']
         idxs = self.dstore['gmf_data/indices'][sid]
+        if len(idxs) == 0:  # site ID with no data
+            return {}
         array = numpy.concatenate([dset[start:stop] for start, stop in idxs])
         return group_array(array, 'rlzi')
 
@@ -333,16 +334,19 @@ class HazardGetter(object):
     :param eids:
         an array of event IDs (or None)
     """
-    def __init__(self, dstore, kind, getter, imtls, eids=None):
+    def __init__(self, dstore, kind, getter, imtls, num_rlzs, eids=None):
         assert kind in ('poe', 'gmf'), kind
         self.kind = kind
         self.sids = getter.sids
         self._getter = getter
         self.imtls = imtls
         self.eids = eids
-        self.num_rlzs = dstore['csm_info'].get_num_rlzs()
+        self.num_rlzs = num_rlzs
         oq = dstore['oqparam']
-        self.E = getattr(oq, 'number_of_ground_motion_fields', None)
+        try:
+            self.E = oq.number_of_ground_motion_fields
+        except AttributeError:
+            self.E = 0 if eids is None else len(eids)
         self.I = len(oq.imtls)
         if kind == 'gmf':
             # now some attributes set for API compatibility with the GmfGetter
@@ -367,14 +371,15 @@ class HazardGetter(object):
             for sid in self.sids:
                 self.data[sid] = data = self._getter[sid]
                 if not data:  # no GMVs, return 0, counted in no_damage
-                    self.data[sid] = {
-                        rlzi: numpy.zeros((self.E, self.I),
-                                          [('gmv', F32), ('eid', U64)])
-                        for rlzi in range(self.num_rlzs)}
+                    self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
 
-    def get_hazard(self):
+            # dictionary eid -> index
+            if self.eids is not None:
+                self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
+
+    def get_hazard(self, gsim=None):
         """
-        :param gsim: a GSIM instance
+        :param gsim: ignored
         :returns: an OrderedDict rlzi -> datadict
         """
         return self.data
@@ -536,10 +541,15 @@ class RiskInput(object):
         if not self.eps:
             return
         eps = self.eps[aid]
-        if isinstance(eps, numpy.ndarray):
+        if isinstance(eps, F32):  # 0.0
+            return numpy.zeros(len(eids), F32)
+        try:
+            eid2idx = self.hazard_getter.eid2idx
+        except AttributeError:  # no eid2idx
             return eps
-        # else assume it is zero
-        return numpy.zeros(len(eids), F32)
+        else:
+            idx = [eid2idx[eid] for eid in eids]
+            return eps[idx]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
