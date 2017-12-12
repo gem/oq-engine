@@ -47,8 +47,8 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
     ass = result['assratios']
+    avg = result['avglosses']
     idx = dict(zip(all_eids, range(E)))
-    aids = result['aids']
     for out in outputs:
         r = out.rlzi
         for l, loss_ratios in enumerate(out):
@@ -65,9 +65,12 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
                 # average losses
                 if param['avg_losses']:
                     rat = ratios.sum(axis=0) * param['ses_ratio']
-                    ai = aid if aids is None else a
                     for i in range(I):
-                        result['avglosses'][l + L * i, r][ai] += rat[i]
+                        lba = avg[l + L * i, r]
+                        try:
+                            lba[aid] += rat[i]
+                        except KeyError:
+                            lba[aid] = rat[i]
 
                 # agglosses
                 for i in range(I):
@@ -87,7 +90,6 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
           for eid, all_losses in zip(all_eids, agg)
           for r, losses in enumerate(all_losses) if losses.sum())
     result['agglosses'] = numpy.fromiter(it, param['elt_dt'])
-
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
     if param['asset_loss_table']:
@@ -131,14 +133,15 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     aids = getattr(riskinput, 'aids', None)
-    A = len(assetcol) if aids is None else len(aids)
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     agg = numpy.zeros((E, R, L * I), F32)
     result = dict(assratios=[], lrs_idx=AccumDict(accum=[]), aids=aids)
     if param['avg_losses']:
-        # dict (l, r) -> A losses
-        result['avglosses'] = AccumDict(accum=numpy.zeros(A, F64))
+        # dict (l, r) -> loss_by_aid; loss_by_aid is a dict for gmf_ebrisk
+        # and an array of size A=len(assetcol) for event_based_risk
+        result['avglosses'] = AccumDict(accum=numpy.zeros(len(assetcol), F64)
+                                        if aids is None else {})
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
@@ -381,12 +384,12 @@ class EbriskCalculator(base.RiskCalculator):
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
+                vs = self.vals[self.riskmodel.loss_types[l]]
                 if aids is None:  # event_based_risk
-                    vs = self.vals[self.riskmodel.loss_types[l]]
                     self.dset[:, r + offset, li] += ratios * vs
                 else:  # gmf_ebrisk, there is no offset
-                    vs = self.vals[aids][self.riskmodel.loss_types[l]]
-                    self.dset[aids, r, li] += ratios * vs
+                    for aid in aids:
+                        self.dset[aid, r, li] += ratios[aid] * vs[aid]
         self.taskno += 1
 
     def post_execute(self, num_events):
@@ -409,9 +412,19 @@ class EbriskCalculator(base.RiskCalculator):
             agglt = self.datastore['agg_loss_table']
             agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
-        # build aggregate loss curves
+        self.postproc()
+
+    def postproc(self):
+        """
+        Build aggregate loss curves and run EbrPostCalculator
+        """
         self.before_export()  # set 'realizations'
         oq = self.oqparam
+        eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+        if eff_time < 2:
+            logging.warn('eff_time=%s is too small to compute agg_curves',
+                         eff_time)
+            return
         b = get_loss_builder(self.datastore)
         alt = self.datastore['agg_loss_table']
         stats = oq.risk_stats()
@@ -467,6 +480,7 @@ class EbrPostCalculator(base.RiskCalculator):
         self._monitor = calc._monitor
         self.riskmodel = calc.riskmodel
         self.loss_builder = get_loss_builder(calc.datastore)
+        self.R = calc.R
         P = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
 
