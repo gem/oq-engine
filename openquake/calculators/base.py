@@ -688,7 +688,8 @@ class RiskCalculator(HazardCalculator):
                     getter = riskinput.GmfDataGetter(self.datastore, sids)
                 hgetter = riskinput.HazardGetter(
                     self.datastore, kind, getter, imtls, self.R, eids)
-                hgetter.init()  # read the hazard data
+                if kind == 'poe':
+                    hgetter.init()  # read the hazard data
                 ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
