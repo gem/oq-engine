@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a serious bug in the gmf_ebrisk calculator: the results were in most
+    cases wrong and dependent on the number of spawned tasks
   * Now the `master_seed` controls the generation of the epsilons in all
     situations (before in event_based_risk without `asset_correlation` it was
     managed by `random_seed`)
