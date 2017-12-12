@@ -101,7 +101,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             alt[i] = (e, r, loss)
             i += 1
         self.datastore['agg_loss_table'] = alt
-        ebr.EbriskCalculator.__dict__['build_agg_curves'](self)
+        ebr.EbriskCalculator.__dict__['postproc'](self)
 
     def combine(self, dummy, res):
         """
