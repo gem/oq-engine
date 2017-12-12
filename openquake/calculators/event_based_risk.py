@@ -432,11 +432,12 @@ class EbriskCalculator(base.RiskCalculator):
         """Build aggregate loss curves"""
         self.before_export()  # set 'realizations'
         oq = self.oqparam
-        try:
-            b = get_loss_builder(self.datastore)
-        except AssertionError as exc:
-            logging.warn(str(exc))
+        eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+        if eff_time < 2:
+            logging.warn('eff_time=%s is too small to compute agg_curves',
+                         eff_time)
             return
+        b = get_loss_builder(self.datastore)
         alt = self.datastore['agg_loss_table']
         stats = oq.risk_stats()
         array, array_stats = b.build(alt, stats)
