@@ -312,6 +312,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.datastore['realizations'] = numpy.array(
                 [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
                  for r in self.rlzs_assoc.realizations], rlz_dt)
+        # do not save the 'realizations' dataset when not possible
         for key in self.datastore:
             self.datastore.set_nbytes(key)
         self.datastore.flush()
