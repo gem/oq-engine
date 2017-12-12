@@ -296,6 +296,11 @@ class OqParam(valid.ParamSet):
 
         risk_investigation_time / investigation_time / ses_per_logic_tree_path
         """
+        if (self.calculation_mode == 'gmf_ebrisk' and
+                self.ses_per_logic_tree_path != 1):
+            raise ValueError('ses_per_logic_tree_path must be set to 1 for '
+                             'gmf_ebrisk calculations\ncheck %(job_ini)s' %
+                             self.inputs)
         if self.investigation_time is None:
             raise ValueError('Missing investigation_time in the .ini file')
         return (self.risk_investigation_time or self.investigation_time) / (
