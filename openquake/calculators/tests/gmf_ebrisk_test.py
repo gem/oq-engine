@@ -15,9 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import unittest
 import numpy
 from nose.plugins.attrib import attr
+from openquake.baselib.general import writetmp
+from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3
 from openquake.qa_tests_data.event_based_risk import (
@@ -74,15 +75,21 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         # case_master calculation with an equivalent gmf_ebrisk calculation
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       ses_per_logic_tree_path='1')
-        avg0 = self.calc.datastore['avg_losses-rlzs'].value  # shape (N, R, LI)
+        calc0 = self.calc.datastore
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       ses_per_logic_tree_path='1',
                       calculation_mode='event_based')
-        hc_id = str(self.calc.datastore.calc_id)
+        calc1 = self.calc.datastore
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       calculation_mode='gmf_ebrisk',
                       ses_per_logic_tree_path='1',
-                      hazard_calculation_id=hc_id)
-        avg = self.calc.datastore['avg_losses-rlzs'].value  # shape (N, R, LI)
+                      hazard_calculation_id=str(calc1.calc_id))
+        calc2 = self.calc.datastore
+        
+        #avg = self.calc.datastore['avg_losses-rlzs'].value  # shape (N, R, LI)
         # means averaged on num_sites, num_rlzs, there is one per loss _type
-        aae(avg0.mean(axis=(0, 1)), avg.mean(axis=(0, 1)), decimal=3)
+        #aae(avg0.mean(axis=(0, 1)), avg.mean(axis=(0, 1)), decimal=3)
+        f0 = writetmp(view('mean_avg_losses', calc0))
+        self.assertEqualFiles('expected/avg_losses.txt', f0)
+        f2 = writetmp(view('mean_avg_losses', calc0))
+        self.assertEqualFiles('expected/avg_losses.txt', f2)
