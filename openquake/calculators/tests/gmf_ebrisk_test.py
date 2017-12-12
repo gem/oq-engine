@@ -63,6 +63,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_ebr_2(self):
         self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
+        fname = writetmp(view('mean_avg_losses', self.calc.datastore))
+        self.assertEqualFiles('expected/avg_losses.txt', fname)
         alt = self.calc.datastore['agg_loss_table']
         self.assertEqual(len(alt), 20)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
