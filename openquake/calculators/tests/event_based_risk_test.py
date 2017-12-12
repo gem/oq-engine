@@ -259,7 +259,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
 
-    @attr('qa', 'risk', 'case_7a')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):
         # case with  <insuranceLimit isAbsolute="false"/>
         self.run_calc(case_7a.__file__,  'job_h.ini')
