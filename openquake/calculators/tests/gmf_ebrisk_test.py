@@ -48,8 +48,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
-        aae(totloss, [1808900.])
+        aae(totloss, numpy.float32([1808900.]), decimal=0)
 
         # avg_losses-rlzs has shape (A, R, LI)
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
-        aae(avglosses, [2272048.25])
+        aae(avglosses, numpy.float32([2272048]), decimal=0)
