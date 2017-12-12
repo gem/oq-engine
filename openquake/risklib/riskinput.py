@@ -632,17 +632,16 @@ class EpsilonMatrix1(object):
         return self.eps[item[1]]
 
 
-def epsilon_getter(n_assets, n_events, correlation, seed, master_seed, no_eps):
+def epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
     """
     :returns: a function (start, stop) -> matrix of shape (n_assets, n_events)
     """
     assert n_assets > 0, n_assets
     assert n_events > 0, n_events
     assert correlation in (0, 1), correlation
-    assert seed >= 0, seed
     assert master_seed >= 0, master_seed
     assert no_eps in (True, False), no_eps
-    seeds = seed + numpy.arange(n_events)
+    seeds = master_seed + numpy.arange(n_events)
 
     def get_eps(start=0, stop=n_events):
         if no_eps:
