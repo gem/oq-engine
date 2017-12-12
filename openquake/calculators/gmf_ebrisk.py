@@ -72,8 +72,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.E = len(eids)
         eps = riskinput.epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,
-            oq.random_seed, oq.master_seed,
-            oq.ignore_covs or not self.riskmodel.covs)()
+            oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
 
         self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['assetcol'] = None
