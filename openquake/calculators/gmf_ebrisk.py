@@ -51,6 +51,12 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         if oq.hazard_calculation_id:  # read the GMFs from a previous calc
             assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+            oqp = self.datastore.parent['oqparam']
+            if oqp.ses_per_logic_tree_path != 1:
+                raise ValueError(
+                    'The parent calculation was using ses_per_logic_tree_path'
+                    '=%d != 1: you cannot use the gmf_ebrisk calculator' %
+                    oqp.ses_per_logic_tree_path)
             eids = self.datastore['events']['eid']
             self.R = len(self.datastore['realizations'])
         else:  # read the GMFs from a file
