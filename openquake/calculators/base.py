@@ -34,7 +34,7 @@ from openquake.baselib import (
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput, asset
-from openquake.commonlib import readinput, source, calc, riskmodels, writers
+from openquake.commonlib import readinput, source, calc, riskmodels
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
@@ -675,7 +675,7 @@ class RiskCalculator(HazardCalculator):
                 sids = numpy.array([sid for sid, _weight in block])
                 reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
-                reduced_eps = collections.defaultdict(F32)
+                reduced_eps = {}
                 for assets in reduced_assets:
                     for ass in assets:
                         ass.tagmask = self.tagmask[ass.ordinal]
