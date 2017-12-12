@@ -21,6 +21,7 @@ import numpy
 
 from openquake.baselib import general, datastore
 from openquake.risklib import riskinput
+from openquake.commonlib import util
 from openquake.calculators import base, event_based, event_based_risk as ebr
 
 U16 = numpy.uint16
@@ -36,7 +37,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
     """
     Run an event based risk calculation starting from precomputed GMFs
     """
-    core_task = ebr.event_based_risk
+    core_task = util.reader(ebr.event_based_risk)
     pre_calculator = None
     is_stochastic = True
 
