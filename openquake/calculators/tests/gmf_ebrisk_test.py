@@ -21,7 +21,8 @@ import numpy
 from nose.plugins.attrib import attr
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3
-from openquake.qa_tests_data.event_based_risk import case_2 as ebr_2
+from openquake.qa_tests_data.event_based_risk import (
+    case_master, case_2 as ebr_2)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -67,3 +68,18 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
         aae(totloss, numpy.float32(20211.566))
+
+    @attr('qa', 'risk', 'gmf_ebrisk')
+    def test_case_master(self):
+        self.run_calc(case_master.__file__, 'job.ini',
+                      calculation_mode='event_based')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_master.__file__, 'job.ini',
+                      calculation_mode='gmf_ebrisk',
+                      hazard_calculation_id=hc_id)
+        avg = self.calc.datastore['avg_losses-rlzs'].value  # shape (N, R, LI)
+        # means averaged on num_sites, num_rlzs
+        aae([1.6009064e+03, 1.5687819e+04, 2.8527623e+04, 3.2018129e-02,
+             3.6053455e+03, 2.2812500e+01, 2.2500000e+01, 2.2812502e+01,
+             0.0000000e+00, 6.8750000e+00],
+            avg.mean(axis=(0, 1)), decimal=3)

@@ -66,7 +66,11 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
                 if param['avg_losses']:
                     rat = ratios.sum(axis=0) * param['ses_ratio']
                     for i in range(I):
-                        avg[l + L * i, r][aid] += rat[i]
+                        lba = avg[l + L * i, r]
+                        try:
+                            lba[aid] += rat[i]
+                        except KeyError:
+                            lba[aid] = rat[i]
 
                 # agglosses
                 for i in range(I):
@@ -129,16 +133,13 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     aids = getattr(riskinput, 'aids', None)
-    if aids is not None:
-        lba = {aid: 0. for aid in aids}
-    else:
-        lba = numpy.zeros(len(assetcol), F64)
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     agg = numpy.zeros((E, R, L * I), F32)
     result = dict(assratios=[], lrs_idx=AccumDict(accum=[]), aids=aids)
     if param['avg_losses']:
         # dict (l, r) -> loss_by_aid
+        lba = numpy.zeros(len(assetcol), F64) if aids is None else {}
         result['avglosses'] = AccumDict(accum=lba)
     else:
         result['avglosses'] = {}
