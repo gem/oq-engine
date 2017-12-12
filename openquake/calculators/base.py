@@ -685,7 +685,11 @@ class RiskCalculator(HazardCalculator):
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(self.datastore, sids)
                 else:  # gmf
-                    getter = riskinput.GmfDataGetter(self.datastore, sids)
+                    if self.datastore.parent == ():
+                        dstore = self.datastore
+                    else:
+                        dstore = self.datastore.parent
+                    getter = riskinput.GmfDataGetter(dstore, sids)
                 hgetter = riskinput.HazardGetter(
                     self.datastore, kind, getter, imtls, self.R, eids)
                 if kind == 'poe':

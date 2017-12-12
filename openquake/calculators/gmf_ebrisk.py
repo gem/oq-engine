@@ -60,6 +60,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                     oqp.ses_per_logic_tree_path)
             eids = self.datastore['events']['eid']
             self.R = len(self.datastore['realizations'])
+            self.datastore.parent.close()
         else:  # read the GMFs from a file
             fname = oq.inputs['gmfs']
             sids = self.sitecol.complete.sids
@@ -108,6 +109,8 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             alt[i] = (e, r, loss)
             i += 1
         self.datastore['agg_loss_table'] = alt
+        if self.datastore.parent != ():
+            self.datastore.parent.open()
         ebr.EbriskCalculator.__dict__['postproc'](self)
 
     def combine(self, dummy, res):
