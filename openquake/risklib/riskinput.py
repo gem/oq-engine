@@ -541,8 +541,6 @@ class RiskInput(object):
         if not self.eps:
             return
         eps = self.eps[aid]
-        if isinstance(eps, F32):  # 0.0
-            return numpy.zeros(len(eids), F32)
         try:
             eid2idx = self.hazard_getter.eid2idx
         except AttributeError:  # no eid2idx
