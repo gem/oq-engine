@@ -189,7 +189,6 @@ class EbriskCalculator(base.RiskCalculator):
         get_eps = riskinput.epsilon_getter(
             len(self.assetcol), num_events,
             self.oqparam.asset_correlation,
-            self.oqparam.random_seed,
             self.oqparam.master_seed,
             self.oqparam.ignore_covs or not self.riskmodel.covs)
 
