@@ -41,7 +41,7 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
+def _aggregate(outputs, compositemodel, agg, all_eids, result, param, monitor):
     # update the result dictionary and the agg array with each output
     E = len(all_eids)
     L = len(compositemodel.lti)
@@ -87,14 +87,15 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
 
     # collect agglosses
     if param['assetcol'] is None:  # gmf_ebrisk
-        result['agglosses'] = al = {}  # (eid, rlzi) -> array of size LI
-        for eid, all_losses in zip(all_eids, agg):
-            for rlzi, losses in enumerate(all_losses):
-                if losses.sum():  # shape LI
-                    try:
-                        al[eid, rlzi] += losses
-                    except KeyError:
-                        al[eid, rlzi] = losses
+        with monitor('collecting agglosses'):
+            result['agglosses'] = al = {}  # (eid, rlzi) -> array of size LI
+            for eid, all_losses in zip(all_eids, agg):
+                for rlzi, losses in enumerate(all_losses):
+                    if losses.sum():  # shape LI
+                        try:
+                            al[eid, rlzi] += losses
+                        except KeyError:
+                            al[eid, rlzi] = losses
     else:  # event_based_risk
         it = ((eid, r, losses)
               for eid, all_losses in zip(all_eids, agg)
@@ -156,7 +157,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, agg, eids, result, param)
+    _aggregate(outputs, riskmodel, agg, eids, result, param, monitor)
 
     # store info about the GMFs
     result['gmdata'] = riskinput.gmdata
