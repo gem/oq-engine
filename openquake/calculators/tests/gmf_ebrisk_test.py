@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import unittest
+
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
@@ -27,31 +27,28 @@ from openquake.qa_tests_data.event_based_risk import (
 
 aae = numpy.testing.assert_almost_equal
 
-aae = numpy.testing.assert_almost_equal
-
 
 class GmfEbRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
+        self.run_calc(case_1.__file__, 'job_risk.ini')
         num_events = len(self.calc.datastore['agg_loss_table'])
         self.assertEqual(num_events, 10)
 
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_2(self):
         # case with 3 sites but gmvs only on 2 sites
-        self.run_calc(case_2.__file__, 'job.ini', exprrorts='csv')
+        self.run_calc(case_2.__file__, 'job.ini')
         alt = self.calc.datastore['agg_loss_table']
         self.assertEqual(len(alt), 3)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 2.2632332)
+        aae(totloss, 1.5788584)
 
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_3(self):
-        raise unittest.SkipTest('not passing yet')
         # case with 13 sites, 10 eids, and several 0 values
-        self.run_calc(case_3.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_3.__file__, 'job.ini')
         alt = self.calc.datastore['agg_loss_table']
         self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
@@ -71,7 +68,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 20)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, numpy.float32(20211.566))
+        aae(totloss, numpy.float32(20210.27))
 
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_master(self):
