@@ -403,28 +403,24 @@ class HazardCalculator(BaseCalculator):
         self.save_params(**params)
         return parent
 
-    def basic_pre_execute(self):
+    def read_inputs(self):
+        """
+        Read risk data and sources if any
+        """
         oq = self.oqparam
+        wakeup_pool()  # fork before reading the data
         self.read_risk_data()
         if 'source' in oq.inputs:
-            wakeup_pool()  # fork before reading the source model
-            self.csm = self.read_csm()
+            with self.monitor('reading composite source model', autoflush=1):
+                self.csm = readinput.get_composite_source_model(oq)
+            if self.is_stochastic:
+                # initialize the rupture serial numbers before the
+                # filtering; in this way the serials are independent
+                # from the site collection; this is ultra-fast
+                self.csm.init_serials()
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.rup_data = {}
         self.init()
-
-    def read_csm(self):
-        if 'source' not in self.oqparam.inputs:
-            raise ValueError('Missing source_model_logic_tree in %(job_ini)s '
-                             'or missing --hc option' % self.oqparam.inputs)
-        with self.monitor('reading composite source model', autoflush=True):
-                csm = readinput.get_composite_source_model(self.oqparam)
-        if self.is_stochastic:
-            # initialize the rupture serial numbers before the
-            # filtering; in this way the serials are independent
-            # from the site collection; this is ultra-fast
-            csm.init_serials()
-        return csm
 
     def pre_execute(self):
         """
@@ -446,7 +442,7 @@ class HazardCalculator(BaseCalculator):
             self.init()
         else:  # we are in a basic calculator
             self.precalc = None
-            self.basic_pre_execute()
+            self.read_inputs()
             if 'source' in self.oqparam.inputs:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
