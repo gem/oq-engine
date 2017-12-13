@@ -89,7 +89,14 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
     it = ((eid, r, losses)
           for eid, all_losses in zip(all_eids, agg)
           for r, losses in enumerate(all_losses) if losses.sum())
-    result['agglosses'] = numpy.fromiter(it, param['elt_dt'])
+    agglosses = numpy.fromiter(it, param['elt_dt'])
+    if param['assetcol'] is None:  # gmf_ebrisk
+        result['agglosses'] = {
+            er: arr['loss'].sum(axis=0)
+            for er, arr in group_array(agglosses, 'eid', 'rlzi').items()}
+    else:  # event_based_risk
+        result['agglosses'] = agglosses
+
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
     if param['asset_loss_table']:
@@ -362,8 +369,8 @@ class EbriskCalculator(base.RiskCalculator):
         lrs_idx = dic.pop('lrs_idx')
         with self.monitor('saving event loss table', autoflush=True):
             if self.oqparam.calculation_mode == 'gmf_ebrisk':
-                for er, arr in group_array(agglosses, 'eid', 'rlzi').items():
-                    self.agglosses[er] += arr['loss'].sum(axis=0)  # shape LI
+                for er, arr in agglosses.items():
+                    self.agglosses[er] += arr  # shape LI
             else:
                 agglosses['rlzi'] += offset
                 self.datastore.extend('agg_loss_table', agglosses)
