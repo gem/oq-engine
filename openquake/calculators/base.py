@@ -401,7 +401,6 @@ class HazardCalculator(BaseCalculator):
                   vars(parent['oqparam']).items()
                   if name not in vars(self.oqparam)}
         self.save_params(**params)
-        self.read_risk_data()
 
     def basic_pre_execute(self):
         oq = self.oqparam
@@ -437,8 +436,12 @@ class HazardCalculator(BaseCalculator):
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
-            self.precalc = (self.compute_previous() if precalc_id is None
-                            else self.read_previous(precalc_id))
+            if precalc_id is None:
+                self.precalc = self.compute_previous()
+            else:
+                self.read_previous(precalc_id)
+                self.read_risk_data()
+                self.precalc = None
             self.init()
         else:  # we are in a basic calculator
             self.precalc = None
