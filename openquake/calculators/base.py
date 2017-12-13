@@ -401,6 +401,7 @@ class HazardCalculator(BaseCalculator):
                   vars(parent['oqparam']).items()
                   if name not in vars(self.oqparam)}
         self.save_params(**params)
+        return parent
 
     def basic_pre_execute(self):
         oq = self.oqparam
