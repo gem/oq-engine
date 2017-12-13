@@ -138,7 +138,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     agg = numpy.zeros((E, R, L * I), F32)
     result = dict(assratios=[], lrs_idx=AccumDict(accum=[]), aids=aids)
     if param['avg_losses']:
-        # dict (l, r) -> loss_by_aid
+        # dict (l, r) -> loss_by_aid; loss_by_aid is a dict for gmf_ebrisk
+        # and an array of size A=len(assetcol) for event_based_risk
         result['avglosses'] = AccumDict(accum=numpy.zeros(len(assetcol), F64)
                                         if aids is None else {})
     else:
