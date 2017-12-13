@@ -59,7 +59,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini')
         alt = self.calc.datastore['agg_loss_table']
-        self.assertEqual(len(alt), 8)
+        self.assertEqual(len(alt), 10)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
         aae(totloss, [7717694.], decimal=0)
