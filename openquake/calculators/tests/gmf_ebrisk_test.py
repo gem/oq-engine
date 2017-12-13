@@ -28,6 +28,15 @@ from openquake.qa_tests_data.event_based_risk import (
 aae = numpy.testing.assert_almost_equal
 
 
+def check_csm_info(calc1, calc2):
+    data1 = (calc1['csm_info/sg_data'].value, calc1['csm_info/sm_data'].value)
+    data2 = (calc2['csm_info/sg_data'].value, calc2['csm_info/sm_data'].value)
+    for val1, val2 in zip(data1, data2):
+        for name in val1.dtype.names:
+            if name not in ('name', 'path'):  # avoid comparing strings
+                aae(val1[name], val2[name])
+
+
 class GmfEbRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_1(self):
@@ -74,16 +83,18 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       ses_per_logic_tree_path='1')
-        calc0 = self.calc.datastore
+        calc0 = self.calc.datastore  # event_based_risk
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       ses_per_logic_tree_path='1',
                       calculation_mode='event_based')
-        calc1 = self.calc.datastore
+        calc1 = self.calc.datastore  # event_based
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       calculation_mode='gmf_ebrisk',
                       ses_per_logic_tree_path='1',
                       hazard_calculation_id=str(calc1.calc_id))
-        calc2 = self.calc.datastore
+        calc2 = self.calc.datastore  # gmf_ebrisk
+
+        check_csm_info(calc0, calc2)
 
         # compare the average losses for an event_based_risk
         # case_master calculation with an equivalent gmf_ebrisk calculation

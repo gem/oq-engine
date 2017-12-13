@@ -436,9 +436,9 @@ class HazardCalculator(BaseCalculator):
             if precalc_id is None:
                 self.precalc = self.compute_previous()
             else:
+                self.precalc = None
                 self.read_previous(precalc_id)
                 self.read_risk_data()
-                self.precalc = None
             self.init()
         else:  # we are in a basic calculator
             self.precalc = None
