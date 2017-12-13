@@ -63,6 +63,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
             eids = parent['events']['eid']
+            self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.R = len(self.rlzs_assoc.realizations)
         else:  # read the GMFs from a file
