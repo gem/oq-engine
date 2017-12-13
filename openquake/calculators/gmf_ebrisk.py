@@ -94,7 +94,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         self.agglosses = general.AccumDict(
-            accum=numpy.zeros(self.L * self.I, F32))
+            accum=numpy.zeros((self.R, self.L * self.I), F32))
         self.vals = self.assetcol.values()
         self.num_losses = numpy.zeros((self.A, self.R), U32)
         if oq.asset_loss_table:
@@ -106,12 +106,11 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         """
         Save the event loss table
         """
-        alt = numpy.zeros(len(self.agglosses), self.param['elt_dt'])
-        i = 0
-        for (e, r), loss in self.agglosses.items():
-            alt[i] = (e, r, loss)
-            i += 1
-        self.datastore['agg_loss_table'] = alt
+        agglosses = numpy.fromiter(
+            ((e, r, loss)
+             for e, losses in self.agglosses.items()
+             for r, loss in enumerate(losses)), self.param['elt_dt'])
+        self.datastore['agg_loss_table'] = agglosses
         if self.datastore.parent != ():
             self.datastore.parent.open()
         ebr.EbriskCalculator.__dict__['postproc'](self)

@@ -760,8 +760,13 @@ def view_elt(token, dstore):
     Display the event loss table averaged by event
     """
     oq = dstore['oqparam']
+    R = len(dstore['realizations'])
     dic = group_array(dstore['agg_loss_table'].value, 'rlzi')
-    tbl = [oq.loss_dt().names]
-    for rlzi in sorted(dic):
-        tbl.append(dic[rlzi]['loss'].mean(axis=0))
-    return rst_table(tbl)
+    header = oq.loss_dt().names
+    tbl = []
+    for rlzi in range(R):
+        if rlzi in dic:
+            tbl.append(dic[rlzi]['loss'].mean(axis=0))
+        else:
+            tbl.append([0.] * len(header))
+    return rst_table(tbl, header)
