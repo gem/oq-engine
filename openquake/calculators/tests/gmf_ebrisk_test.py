@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import unittest
+
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
@@ -24,8 +24,6 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_2 as ebr_2)
-
-aae = numpy.testing.assert_almost_equal
 
 aae = numpy.testing.assert_almost_equal
 
