@@ -94,7 +94,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(calc1.calc_id))
         calc2 = self.calc.datastore  # gmf_ebrisk
 
-        check_csm_info(calc0, calc2)
+        check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
 
         # compare the average losses for an event_based_risk
         # case_master calculation with an equivalent gmf_ebrisk calculation
