@@ -61,7 +61,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            eids = parent['events']['eid']
+            self.eids = parent['events']['eid']
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.R = len(self.rlzs_assoc.realizations)
@@ -70,16 +70,16 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             fname = oq.inputs['gmfs']
             sids = self.sitecol.complete.sids
             if fname.endswith('.xml'):  # old approach
-                eids, self.R = base.get_gmfs(self)
+                self.eids, self.R = base.get_gmfs(self)
             else:  # import csv
-                eids, self.R, self.gmdata = base.import_gmfs(
+                self.eids, self.R, self.gmdata = base.import_gmfs(
                     self.datastore, fname, sids)
                 event_based.save_gmdata(self, self.R)
-        self.E = len(eids)
+        self.E = len(self.eids)
         eps = riskinput.epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,
             oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
-        self.riskinputs = self.build_riskinputs('gmf', eps, eids)
+        self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)
         self.param['assetcol'] = None
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
@@ -93,8 +93,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
-        self.agglosses = general.AccumDict(
-            accum=numpy.zeros((self.R, self.L * self.I), F32))
+        self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
         self.vals = self.assetcol.values()
         self.num_losses = numpy.zeros((self.A, self.R), U32)
         if oq.asset_loss_table:
@@ -108,7 +107,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         """
         agglosses = numpy.fromiter(
             ((e, r, loss)
-             for e, losses in self.agglosses.items()
+             for e, losses in zip(self.eids, self.agglosses)
              for r, loss in enumerate(losses)), self.param['elt_dt'])
         self.datastore['agg_loss_table'] = agglosses
         if self.datastore.parent != ():

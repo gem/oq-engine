@@ -87,14 +87,7 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param, monitor):
 
     # collect agglosses
     if param['assetcol'] is None:  # gmf_ebrisk
-        with monitor('collecting agglosses'):
-            result['agglosses'] = al = {}  # eid -> array of shape (R, LI)
-            for eid, all_losses in zip(all_eids, agg):
-                if all_losses.sum():
-                    try:
-                        al[eid] += all_losses
-                    except KeyError:
-                        al[eid] = all_losses
+        result['agglosses'] = agg
     else:  # event_based_risk
         it = ((eid, r, losses)
               for eid, all_losses in zip(all_eids, agg)
