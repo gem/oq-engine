@@ -428,7 +428,9 @@ class EbriskCalculator(base.RiskCalculator):
         b = get_loss_builder(self.datastore)
         alt = self.datastore['agg_loss_table']
         stats = oq.risk_stats()
-        array, array_stats = b.build(alt, stats)
+        logging.info('Building aggregate loss curves')
+        with self.monitor('building agg_curves', measuremem=True):
+            array, array_stats = b.build(alt, stats)
         self.datastore['agg_curves-rlzs'] = array
         units = self.assetcol.units(loss_types=array.dtype.names)
         self.datastore.set_attrs(

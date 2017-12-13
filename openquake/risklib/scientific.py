@@ -1385,7 +1385,8 @@ class LossesByPeriodBuilder(object):
         """
         P, R = len(self.return_periods), len(self.weights)
         array = numpy.zeros((P, R), self.loss_dt)
-        dic = group_array(agg_loss_table, 'rlzi')
+        # NB: using .value is essential for performance, measured 100x speedup!
+        dic = group_array(agg_loss_table.value, 'rlzi')
         for r in dic:
             num_events = self.num_events[r]
             losses = dic[r]['loss']
