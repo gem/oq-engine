@@ -312,6 +312,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.datastore['realizations'] = numpy.array(
                 [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
                  for r in self.rlzs_assoc.realizations], rlz_dt)
+        # do not save the 'realizations' dataset when not possible
         for key in self.datastore:
             self.datastore.set_nbytes(key)
         self.datastore.flush()
@@ -675,7 +676,7 @@ class RiskCalculator(HazardCalculator):
                 sids = numpy.array([sid for sid, _weight in block])
                 reduced_assets = assets_by_site[sids]
                 # dictionary of epsilons for the reduced assets
-                reduced_eps = collections.defaultdict(F32)
+                reduced_eps = {}
                 for assets in reduced_assets:
                     for ass in assets:
                         ass.tagmask = self.tagmask[ass.ordinal]
