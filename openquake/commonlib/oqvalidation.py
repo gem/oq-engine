@@ -40,8 +40,7 @@ class OqParam(valid.ParamSet):
         vs30='reference_vs30_value',
         z1pt0='reference_depth_to_1pt0km_per_sec',
         z2pt5='reference_depth_to_2pt5km_per_sec',
-        backarc='reference_backarc',
-    )
+        backarc='reference_backarc')
     asset_loss_table = valid.Param(valid.boolean, False)
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
