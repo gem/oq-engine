@@ -92,7 +92,7 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
     agglosses = numpy.fromiter(it, param['elt_dt'])
     if param['assetcol'] is None:  # gmf_ebrisk
         result['agglosses'] = {
-            er: arr['loss'].sum(axis=0)
+            er: arr['loss'].sum(axis=0)  # shape LI
             for er, arr in group_array(agglosses, 'eid', 'rlzi').items()}
     else:  # event_based_risk
         result['agglosses'] = agglosses
@@ -369,8 +369,7 @@ class EbriskCalculator(base.RiskCalculator):
         lrs_idx = dic.pop('lrs_idx')
         with self.monitor('saving event loss table', autoflush=True):
             if self.oqparam.calculation_mode == 'gmf_ebrisk':
-                for er, arr in agglosses.items():
-                    self.agglosses[er] += arr  # shape LI
+                self.agglosses += agglosses
             else:
                 agglosses['rlzi'] += offset
                 self.datastore.extend('agg_loss_table', agglosses)
