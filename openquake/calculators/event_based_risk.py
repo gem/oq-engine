@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
-    AccumDict, block_splitter, split_in_blocks, group_array)
+    AccumDict, block_splitter, split_in_blocks)
 from openquake.baselib import config
 from openquake.calculators import base, event_based
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -85,17 +85,21 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param):
                             if ratio > 0:
                                 ass.append((aid, r, eid, li, ratio))
 
-    # store agglosses
-    it = ((eid, r, losses)
-          for eid, all_losses in zip(all_eids, agg)
-          for r, losses in enumerate(all_losses) if losses.sum())
-    agglosses = numpy.fromiter(it, param['elt_dt'])
+    # collect agglosses
     if param['assetcol'] is None:  # gmf_ebrisk
-        result['agglosses'] = {
-            er: arr['loss'].sum(axis=0)  # shape LI
-            for er, arr in group_array(agglosses, 'eid', 'rlzi').items()}
+        result['agglosses'] = al = {}  # (eid, rlzi) -> array of size LI
+        for eid, all_losses in zip(all_eids, agg):
+            for rlzi, losses in enumerate(all_losses):
+                if losses.sum():  # shape LI
+                    try:
+                        al[eid, rlzi] += losses
+                    except KeyError:
+                        al[eid, rlzi] = losses
     else:  # event_based_risk
-        result['agglosses'] = agglosses
+        it = ((eid, r, losses)
+              for eid, all_losses in zip(all_eids, agg)
+              for r, losses in enumerate(all_losses) if losses.sum())
+        result['agglosses'] = numpy.fromiter(it, param['elt_dt'])
 
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
