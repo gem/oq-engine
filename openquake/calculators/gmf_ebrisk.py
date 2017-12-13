@@ -19,9 +19,8 @@ import collections
 import logging
 import numpy
 
-from openquake.baselib import general, datastore
+from openquake.baselib import general
 from openquake.risklib import riskinput
-from openquake.commonlib import util
 from openquake.calculators import base, event_based, event_based_risk as ebr
 
 U16 = numpy.uint16
@@ -37,7 +36,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
     """
     Run an event based risk calculation starting from precomputed GMFs
     """
-    core_task = util.reader(ebr.event_based_risk)
+    core_task = ebr.event_based_risk
     pre_calculator = None
     is_stochastic = True
 
@@ -51,16 +50,22 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.I = oq.insured_losses + 1
         if oq.hazard_calculation_id:  # read the GMFs from a previous calc
             assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
-            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
-            oqp = self.datastore.parent['oqparam']
+            parent = self.read_previous(oq.hazard_calculation_id)
+            oqp = parent['oqparam']
             if oqp.ses_per_logic_tree_path != 1:
                 raise ValueError(
                     'The parent calculation was using ses_per_logic_tree_path'
                     '=%d != 1: you cannot use the gmf_ebrisk calculator' %
                     oqp.ses_per_logic_tree_path)
-            eids = self.datastore['events']['eid']
-            self.R = len(self.datastore['realizations'])
-            self.datastore.parent.close()
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            eids = parent['events']['eid']
+            self.datastore['csm_info'] = parent['csm_info']
+            self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
+            self.R = len(self.rlzs_assoc.realizations)
+            parent.close()
         else:  # read the GMFs from a file
             fname = oq.inputs['gmfs']
             sids = self.sitecol.complete.sids
