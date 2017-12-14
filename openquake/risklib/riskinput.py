@@ -546,7 +546,10 @@ class RiskInput(object):
             return self.eps[aid]
         else:
             idx = [eid2idx[eid] for eid in eids]
-            return self.eps[aid, idx]
+            try:
+                return self.eps[aid, idx]
+            except TypeError:  # for gmf_ebrisk
+                return self.eps[aid][idx]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
