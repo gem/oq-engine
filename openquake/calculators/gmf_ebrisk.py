@@ -106,11 +106,11 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         """
         logging.info('Saving event loss table')
         with self.monitor('saving event loss table', measuremem=True):
+            # saving also zeros is a lot faster than adding an `if loss.sum()`
             agglosses = numpy.fromiter(
                 ((e, r, loss)
                  for e, losses in zip(self.eids, self.agglosses)
-                 for r, loss in enumerate(losses)
-                 if loss.sum()), self.param['elt_dt'])
+                 for r, loss in enumerate(losses)), self.param['elt_dt'])
             self.datastore['agg_loss_table'] = agglosses
         if self.datastore.parent != ():
             self.datastore.parent.open()
