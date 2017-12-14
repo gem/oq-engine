@@ -15,16 +15,16 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+import collections
 import logging
 import numpy
 
 from openquake.baselib import general
-from openquake.commonlib import readinput
 from openquake.risklib import riskinput
-from openquake.calculators import base, event_based_risk as ebr
+from openquake.calculators import base, event_based, event_based_risk as ebr
 
 U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64  # higher precision to avoid task order dependency
@@ -48,7 +48,32 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.tags())
         self.A = len(self.assetcol)
         self.I = oq.insured_losses + 1
-        eids, self.R = base.get_gmfs(self)  # shape (R, N, E, I)
+        if oq.hazard_calculation_id:  # read the GMFs from a previous calc
+            assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
+            parent = self.read_previous(oq.hazard_calculation_id)
+            oqp = parent['oqparam']
+            if oqp.ses_per_logic_tree_path != 1:
+                logging.warn(
+                    'The parent calculation was using ses_per_logic_tree_path'
+                    '=%d != 1', oqp.ses_per_logic_tree_path)
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            eids = parent['events']['eid']
+            self.datastore['csm_info'] = parent['csm_info']
+            self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
+            self.R = len(self.rlzs_assoc.realizations)
+        else:  # read the GMFs from a file
+            with self.monitor('reading GMFs', measuremem=True):
+                fname = oq.inputs['gmfs']
+                sids = self.sitecol.complete.sids
+                if fname.endswith('.xml'):  # old approach
+                    eids, self.R = base.get_gmfs(self)
+                else:  # import csv
+                    eids, self.R, self.gmdata = base.import_gmfs(
+                        self.datastore, fname, sids)
+                    event_based.save_gmdata(self, self.R)
         self.E = len(eids)
         eps = riskinput.epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,
@@ -67,14 +92,14 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
-
-        events = numpy.zeros(oq.number_of_ground_motion_fields,
-                             readinput.stored_event_dt)
-        events['eid'] = eids
-        self.datastore['events'] = events
         self.agglosses = general.AccumDict(
             accum=numpy.zeros(self.L * self.I, F32))
         self.vals = self.assetcol.values()
+        self.num_losses = numpy.zeros((self.A, self.R), U32)
+        if oq.asset_loss_table:
+            # save all_loss_ratios
+            self.alr_nbytes = 0
+            self.indices = collections.defaultdict(list)  # sid -> pairs
 
     def post_execute(self, result):
         """
@@ -86,6 +111,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             alt[i] = (e, r, loss)
             i += 1
         self.datastore['agg_loss_table'] = alt
+        ebr.EbriskCalculator.__dict__['postproc'](self)
 
     def combine(self, dummy, res):
         """
