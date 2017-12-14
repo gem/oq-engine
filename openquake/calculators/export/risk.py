@@ -104,7 +104,8 @@ def export_avg_losses(ekey, dstore):
                 dstore['avg_losses-rlzs'].value, stats, weights)
     else:  # rlzs
         value = dstore[dskey].value  # shape (A, R, LI)
-        tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
+        R = value.shape[1]
+        tags = ['rlz-%03d' % r for r in range(R)]
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
         array = numpy.zeros(len(values), dt)
