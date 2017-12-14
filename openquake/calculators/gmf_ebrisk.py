@@ -53,10 +53,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             parent = self.read_previous(oq.hazard_calculation_id)
             oqp = parent['oqparam']
             if oqp.ses_per_logic_tree_path != 1:
-                raise ValueError(
+                logging.warn(
                     'The parent calculation was using ses_per_logic_tree_path'
-                    '=%d != 1: you cannot use the gmf_ebrisk calculator' %
-                    oqp.ses_per_logic_tree_path)
+                    '=%d != 1', oqp.ses_per_logic_tree_path)
             if oqp.investigation_time != oq.investigation_time:
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
