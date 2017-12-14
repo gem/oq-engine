@@ -131,8 +131,6 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    with monitor('getting hazard'):
-        riskinput.hazard_getter.init()
     assetcol = param['assetcol']
     eids = riskinput.hazard_getter.eids
     E = len(eids)

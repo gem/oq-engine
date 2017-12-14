@@ -40,8 +40,6 @@ def classical_bcr(riskinput, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    with monitor('getting hazard'):
-        riskinput.hazard_getter.init()
     result = {}  # (N, R) -> data
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         assets = outputs.assets
