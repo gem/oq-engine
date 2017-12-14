@@ -110,7 +110,8 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             agglosses = numpy.fromiter(
                 ((e, r, loss)
                  for e, losses in zip(self.eids, self.agglosses)
-                 for r, loss in enumerate(losses)), self.param['elt_dt'])
+                 for r, loss in enumerate(losses)
+                 if loss.sum()), self.param['elt_dt'])
             self.datastore['agg_loss_table'] = agglosses
         if self.datastore.parent != ():
             self.datastore.parent.open()
