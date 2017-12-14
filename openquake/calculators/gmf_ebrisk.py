@@ -55,8 +55,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             if oqp.ses_per_logic_tree_path != 1:
                 logging.warn(
                     'The parent calculation was using ses_per_logic_tree_path'
-                    '=%d != 1: you cannot use the gmf_ebrisk calculator',
-                    oqp.ses_per_logic_tree_path)
+                    '=%d != 1', oqp.ses_per_logic_tree_path)
             if oqp.investigation_time != oq.investigation_time:
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
@@ -67,14 +66,15 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             self.R = len(self.rlzs_assoc.realizations)
             parent.close()
         else:  # read the GMFs from a file
-            fname = oq.inputs['gmfs']
-            sids = self.sitecol.complete.sids
-            if fname.endswith('.xml'):  # old approach
-                self.eids, self.R = base.get_gmfs(self)
-            else:  # import csv
-                self.eids, self.R, self.gmdata = base.import_gmfs(
-                    self.datastore, fname, sids)
-                event_based.save_gmdata(self, self.R)
+            with self.monitor('reading GMFs', measuremem=True):
+                fname = oq.inputs['gmfs']
+                sids = self.sitecol.complete.sids
+                if fname.endswith('.xml'):  # old approach
+                    self.eids, self.R = base.get_gmfs(self)
+                else:  # import csv
+                    self.eids, self.R, self.gmdata = base.import_gmfs(
+                        self.datastore, fname, sids)
+                    event_based.save_gmdata(self, self.R)
         self.E = len(self.eids)
         eps = riskinput.epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,
