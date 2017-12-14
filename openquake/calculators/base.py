@@ -693,8 +693,10 @@ class RiskCalculator(HazardCalculator):
                     getter = riskinput.GmfDataGetter(dstore, sids)
                 hgetter = riskinput.HazardGetter(
                     self.datastore, kind, getter, imtls, self.R, eids)
-                if (self.oqparam.hazard_calculation_id and
-                        config.directory.shared_dir):
+                read_access = (
+                    config.distribution.oq_distribute in ('no', 'futures') or
+                    config.directory.shared_dir)
+                if self.oqparam.hazard_calculation_id and read_access:
                     pass  # read the hazard data in the workers
                 else:  # read the hazard data in the controller
                     hgetter.init()
