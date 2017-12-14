@@ -508,11 +508,11 @@ class RiskInput(object):
     :param hazard_getter:
         a callable returning the hazard data for a given realization
     :param assets_by_site:
-        array of assets, one per site
+        array of assets, one per site (can be empty)
     :param eps_dict:
-        dictionary of epsilons
+        dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets_by_site, eps_dict):
+    def __init__(self, hazard_getter, assets_by_site=(), eps_dict=None):
         self.hazard_getter = hazard_getter
         self.assets_by_site = assets_by_site
         self.eps = eps_dict
