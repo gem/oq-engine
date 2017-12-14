@@ -30,7 +30,7 @@ from datetime import datetime
 import numpy
 
 from openquake.baselib import (
-    general, hdf5, datastore, __version__ as engine_version)
+    config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput, asset
@@ -693,8 +693,11 @@ class RiskCalculator(HazardCalculator):
                     getter = riskinput.GmfDataGetter(dstore, sids)
                 hgetter = riskinput.HazardGetter(
                     self.datastore, kind, getter, imtls, self.R, eids)
-                if self.oqparam.hazard_calculation_id is None:
-                    hgetter.init()  # read the hazard data in the controller
+                if (self.oqparam.hazard_calculation_id and
+                        config.directory.shared_dir):
+                    pass  # read the hazard data in the workers
+                else:  # read the hazard data in the controller
+                    hgetter.init()
                 ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)

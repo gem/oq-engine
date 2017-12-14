@@ -524,7 +524,8 @@ class RiskInput(object):
                 aids.append(asset.ordinal)
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
-        self.weight = len(self.aids)
+        self.weight = len(self.aids) or sum(
+            sr.weight for sr in hazard_getter.ebruptures)
 
     @property
     def imt_taxonomies(self):
@@ -539,52 +540,17 @@ class RiskInput(object):
         """
         if not self.eps:
             return
-        eps = self.eps[aid]
         try:
             eid2idx = self.hazard_getter.eid2idx
         except AttributeError:  # no eid2idx
-            return eps
+            return self.eps[aid]
         else:
             idx = [eid2idx[eid] for eid in eids]
-            return eps[idx]
+            return self.eps[aid, idx]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__, ', '.join(self.taxonomies), self.weight)
-
-
-class RiskInputFromRuptures(object):
-    """
-    Contains all the assets associated to the given IMT and a subsets of
-    the ruptures for a given calculation.
-
-    :param hazard_getter:
-        a callable returning the hazard data for a given realization
-    :params epsilons:
-        a matrix of epsilons (or None)
-    """
-    def __init__(self, hazard_getter, epsilons=None):
-        self.hazard_getter = hazard_getter
-        self.weight = sum(sr.weight for sr in hazard_getter.ebruptures)
-        if epsilons is not None:
-            self.eps = epsilons  # matrix N x E, events in this block
-
-    def epsilon_getter(self, aid, eids):
-        """
-        :param aid: asset ordinal
-        :param eids: E event IDs
-        :returns: an array of E epsilons
-        """
-        if not hasattr(self, 'eps'):
-            return None
-        idxs = [self.hazard_getter.eid2idx[eid] for eid in eids]
-        return self.eps[aid, idxs]
-
-    def __repr__(self):
-        return '<%s imts=%s, weight=%d>' % (
-            self.__class__.__name__,
-            list(self.hazard_getter.imtls),
-            self.weight)
 
 
 class EpsilonMatrix0(object):
