@@ -38,25 +38,25 @@ def zip(job_ini, archive_zip):
         sys.exit('%s exists already' % archive_zip)
     logging.basicConfig(level=logging.INFO)
     oq = readinput.get_oqparam(job_ini)
+    files = set()
 
     # collect .hdf5 tables for the GSIMs, if any
-    gsim_lt = readinput.get_gsim_lt(oq)
-    gmpetables = set()
-    for gsims in gsim_lt.values.values():
-        for gsim in gsims:
-            table = getattr(gsim, 'GMPE_TABLE', None)
-            if table:
-                gmpetables.add(table)
+    if 'gsim_logic_tree' in oq.inputs or oq.gsim:
+        gsim_lt = readinput.get_gsim_lt(oq)
+        for gsims in gsim_lt.values.values():
+            for gsim in gsims:
+                table = getattr(gsim, 'GMPE_TABLE', None)
+                if table:
+                    files.add(table)
 
     # collect all other files
-    files = list(gmpetables)
     for key in oq.inputs:
         fname = oq.inputs[key]
         if isinstance(fname, list):
             for f in fname:
-                files.append(os.path.normpath(f))
+                files.add(os.path.normpath(f))
         else:
-            files.append(os.path.normpath(fname))
+            files.add(os.path.normpath(fname))
     general.zipfiles(files, archive_zip, log=logging.info)
 
 

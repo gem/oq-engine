@@ -34,7 +34,7 @@ from openquake.baselib import (
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput, asset
-from openquake.commonlib import readinput, source, calc, riskmodels
+from openquake.commonlib import readinput, source, calc, riskmodels, writers
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
@@ -401,30 +401,26 @@ class HazardCalculator(BaseCalculator):
                   vars(parent['oqparam']).items()
                   if name not in vars(self.oqparam)}
         self.save_params(**params)
-        self.read_risk_data()
+        return parent
 
-    def basic_pre_execute(self):
+    def read_inputs(self):
+        """
+        Read risk data and sources if any
+        """
         oq = self.oqparam
+        wakeup_pool()  # fork before reading the data
         self.read_risk_data()
         if 'source' in oq.inputs:
-            wakeup_pool()  # fork before reading the source model
-            self.csm = self.read_csm()
+            with self.monitor('reading composite source model', autoflush=1):
+                self.csm = readinput.get_composite_source_model(oq)
+            if self.is_stochastic:
+                # initialize the rupture serial numbers before the
+                # filtering; in this way the serials are independent
+                # from the site collection; this is ultra-fast
+                self.csm.init_serials()
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.rup_data = {}
         self.init()
-
-    def read_csm(self):
-        if 'source' not in self.oqparam.inputs:
-            raise ValueError('Missing source_model_logic_tree in %(job_ini)s '
-                             'or missing --hc option' % self.oqparam.inputs)
-        with self.monitor('reading composite source model', autoflush=True):
-                csm = readinput.get_composite_source_model(self.oqparam)
-        if self.is_stochastic:
-            # initialize the rupture serial numbers before the
-            # filtering; in this way the serials are independent
-            # from the site collection; this is ultra-fast
-            csm.init_serials()
-        return csm
 
     def pre_execute(self):
         """
@@ -437,12 +433,16 @@ class HazardCalculator(BaseCalculator):
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
-            self.precalc = (self.compute_previous() if precalc_id is None
-                            else self.read_previous(precalc_id))
+            if precalc_id is None:
+                self.precalc = self.compute_previous()
+            else:
+                self.precalc = None
+                self.read_previous(precalc_id)
+                self.read_risk_data()
             self.init()
         else:  # we are in a basic calculator
             self.precalc = None
-            self.basic_pre_execute()
+            self.read_inputs()
             if 'source' in self.oqparam.inputs:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
@@ -803,3 +803,50 @@ def save_gmf_data(dstore, sitecol, gmfs):
         offset += n
     dstore.save_vlen('gmf_data/indices', lst)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
+
+
+def import_gmfs(dstore, fname, sids):
+    """
+    Import in the datastore a ground motion field CSV file.
+
+    :param dstore: the datastore
+    :param fname: the CSV file
+    :param sids: the site IDs (complete)
+    :returns: event_ids, num_rlzs
+    """
+    array = writers.read_composite_array(fname)
+    n_imts = len(array.dtype.names[3:])  # rlzi, sid, eid, gmv_PGA, ...
+    gmf_data_dt = numpy.dtype(
+        [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
+    # store the events
+    eids = numpy.unique(array['eid'])
+    eids.sort()
+    events = numpy.zeros(len(eids), readinput.stored_event_dt)
+    events['eid'] = eids
+    dstore['events'] = events
+    # store the GMFs
+    dic = general.group_array(array.view(gmf_data_dt), 'sid')
+    lst = []
+    offset = 0
+    for sid in sids:
+        n = len(dic.get(sid, []))
+        lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
+        if n:
+            offset += n
+            dstore.extend('gmf_data/data', dic[sid])
+    dstore.save_vlen('gmf_data/indices', lst)
+
+    # FIXME: if there is no data for the maximum realization
+    # the inferred number of realizations will be wrong
+    num_rlzs = array['rlzi'].max() + 1
+
+    # compute gmdata
+    dic = general.group_array(array.view(gmf_data_dt), 'rlzi')
+    gmdata = {r: numpy.zeros(n_imts + 2, F32) for r in range(num_rlzs)}
+    for r in dic:
+        gmv = dic[r]['gmv']
+        rec = gmdata[r]  # (imt1, ..., imtM, nevents, nbytes)
+        rec[:-2] += gmv.sum(axis=0)
+        rec[-2] += len(gmv)
+        rec[-1] += gmv.nbytes
+    return eids, num_rlzs, gmdata
