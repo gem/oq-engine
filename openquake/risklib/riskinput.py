@@ -226,6 +226,8 @@ class CompositeRiskModel(collections.Mapping):
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
+        with monitor('getting hazard'):
+            hazard_getter.init()
         sids = hazard_getter.sids
         if assetcol is None:  # scenario, classical, gmf_ebrisk
             assets_by_site = riskinput.assets_by_site
@@ -407,6 +409,8 @@ class GmfGetter(object):
         self.gmf_data_dt = numpy.dtype(
             [('rlzi', U16), ('sid', U32),
              ('eid', U64), ('gmv', (F32, (len(imtls),)))])
+        self.eids = numpy.concatenate(
+            [ebr.events['eid'] for ebr in ebruptures])
 
     def init(self):
         """
@@ -430,8 +434,6 @@ class GmfGetter(object):
             self.computers.append(computer)
         # dictionary rlzi -> array(imtls, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 2, F32))
-        self.eids = numpy.concatenate(
-            [ebr.events['eid'] for ebr in self.ebruptures])
         # dictionary eid -> index
         self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 

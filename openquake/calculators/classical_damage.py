@@ -38,8 +38,6 @@ def classical_damage(riskinput, riskmodel, param, monitor):
     :returns:
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
-    with monitor('getting hazard'):
-        riskinput.hazard_getter.init()
     R = riskinput.hazard_getter.num_rlzs
     result = {i: AccumDict() for i in range(R)}
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
