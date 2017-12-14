@@ -105,11 +105,13 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         """
         Save the event loss table
         """
-        agglosses = numpy.fromiter(
-            ((e, r, loss)
-             for e, losses in zip(self.eids, self.agglosses)
-             for r, loss in enumerate(losses)), self.param['elt_dt'])
-        self.datastore['agg_loss_table'] = agglosses
+        logging.info('Saving event loss table')
+        with self.monitor('saving event loss table', measuremem=True):
+            agglosses = numpy.fromiter(
+                ((e, r, loss)
+                 for e, losses in zip(self.eids, self.agglosses)
+                 for r, loss in enumerate(losses)), self.param['elt_dt'])
+            self.datastore['agg_loss_table'] = agglosses
         if self.datastore.parent != ():
             self.datastore.parent.open()
         ebr.EbriskCalculator.__dict__['postproc'](self)
