@@ -138,16 +138,16 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     E = len(eids)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
-    aids = getattr(riskinput, 'aids', None)
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     agg = numpy.zeros((E, R, L * I), F32)
-    result = dict(assratios=[], lrs_idx=AccumDict(accum=[]), aids=aids)
+    result = dict(assratios=[], lrs_idx=AccumDict(accum=[]),
+                  aids=riskinput.aids)
     if param['avg_losses']:
         # dict (l, r) -> loss_by_aid; loss_by_aid is a dict for gmf_ebrisk
         # and an array of size A=len(assetcol) for event_based_risk
         result['avglosses'] = AccumDict(accum=numpy.zeros(len(assetcol), F64)
-                                        if aids is None else {})
+                                        if assetcol is not None else {})
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
@@ -219,7 +219,7 @@ class EbriskCalculator(base.RiskCalculator):
                 getter = riskinput.GmfGetter(
                     rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
                     trunc_level, correl_model, samples)
-                ri = riskinput.RiskInputFromRuptures(getter, eps)
+                ri = riskinput.RiskInput(getter, [], eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
         self.vals = self.assetcol.values()
@@ -391,7 +391,7 @@ class EbriskCalculator(base.RiskCalculator):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                if aids is None:  # event_based_risk
+                if len(aids) == 0:  # event_based_risk
                     self.dset[:, r + offset, li] += ratios * vs
                 else:  # gmf_ebrisk, there is no offset
                     for aid in aids:
