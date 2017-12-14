@@ -45,6 +45,7 @@ from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
 from openquake.qa_tests_data.event_based_risk import case_master
+from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -308,6 +309,18 @@ class ZipTestCase(unittest.TestCase):
                           'source_model_logic_tree.xml',
                           'vancouver_area_source.xml',
                           'vancouver_school_sites.csv'], names)
+        shutil.rmtree(dtemp)
+
+    def test_zip_gmf_ebrisk(self):
+        # this is a case without gsims and with a gmf file
+        ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
+        dtemp = tempfile.mkdtemp()
+        xzip = os.path.join(dtemp, 'x.zip')
+        zip_cmd(ini, xzip)
+        names = sorted(zipfile.ZipFile(xzip).namelist())
+        self.assertEqual(['exposure_model.xml', 'gmf_scenario.csv',
+                          'job_risk.ini', 'sites.csv', 'vulnerability.xml'],
+                         names)
         shutil.rmtree(dtemp)
 
 
