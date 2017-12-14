@@ -227,12 +227,13 @@ class CompositeRiskModel(collections.Mapping):
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
         sids = hazard_getter.sids
-        with monitor('hazard_getter.init'):
-            hazard_getter.init()
-            if assetcol is None:  # scenario, classical, gmf_ebrisk
-                assets_by_site = riskinput.assets_by_site
-            else:  # event_based_risk
-                assets_by_site = assetcol.assets_by_site()
+        if not hasattr(hazard_getter, 'data'):
+            with monitor('getting hazard'):
+                hazard_getter.init()
+        if assetcol is None:  # scenario, classical, gmf_ebrisk
+            assets_by_site = riskinput.assets_by_site
+        else:  # event_based_risk
+            assets_by_site = assetcol.assets_by_site()
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
         for sid, assets in zip(sids, assets_by_site):
@@ -357,7 +358,7 @@ class HazardGetter(object):
                 accum=numpy.zeros(len(self.imtls) + 2, F32))
 
     def init(self):
-        if hasattr(self, 'data'):  # alreay initialized
+        if hasattr(self, 'data'):  # already initialized
             return
         self.data = collections.OrderedDict()
         if self.kind == 'poe':
