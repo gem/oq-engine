@@ -4,6 +4,7 @@
     based hazard calculation, both via CSV and via the --hc option
   * Fixed a performance bug in the computations of the aggregate loss curves
     by reading the full event loss table at once
+  * Fixed oq zip to work with gmf_ebrisk calculations
   * Fixed a serious bug in the gmf_ebrisk calculator: the results were in most
     cases wrong and dependent on the number of spawned tasks
   * Now the `master_seed` controls the generation of the epsilons in all
