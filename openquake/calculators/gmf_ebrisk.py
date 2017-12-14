@@ -19,7 +19,6 @@ import collections
 import logging
 import numpy
 
-from openquake.baselib import general
 from openquake.risklib import riskinput
 from openquake.calculators import base, event_based, event_based_risk as ebr
 
