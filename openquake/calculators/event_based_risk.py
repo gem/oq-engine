@@ -392,8 +392,9 @@ class EbriskCalculator(base.RiskCalculator):
                 if len(aids) == 0:  # event_based_risk
                     self.dset[:, r + offset, li] += ratios * vs
                 else:  # gmf_ebrisk, there is no offset
-                    for aid in aids:
-                        self.dset[aid, r, li] += ratios[aid] * vs[aid]
+                    self.dset[aids, r, li] += numpy.array([
+                        ratios.get(aid, 0) * vs[aid]
+                        for aid in aids])
         self.taskno += 1
 
     def post_execute(self, num_events):
