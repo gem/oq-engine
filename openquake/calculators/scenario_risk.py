@@ -52,6 +52,8 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
         R the number of realizations  and statistics is an array of shape
         (n, R, 4), with n the number of assets in the current riskinput object
     """
+    with monitor('getting hazard'):
+        riskinput.hazard_getter.init()
     E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
     R = riskinput.hazard_getter.num_rlzs
