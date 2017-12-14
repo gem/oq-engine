@@ -66,14 +66,15 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.R = len(self.rlzs_assoc.realizations)
         else:  # read the GMFs from a file
-            fname = oq.inputs['gmfs']
-            sids = self.sitecol.complete.sids
-            if fname.endswith('.xml'):  # old approach
-                eids, self.R = base.get_gmfs(self)
-            else:  # import csv
-                eids, self.R, self.gmdata = base.import_gmfs(
-                    self.datastore, fname, sids)
-                event_based.save_gmdata(self, self.R)
+            with self.monitor('reading GMFs', measuremem=True):
+                fname = oq.inputs['gmfs']
+                sids = self.sitecol.complete.sids
+                if fname.endswith('.xml'):  # old approach
+                    eids, self.R = base.get_gmfs(self)
+                else:  # import csv
+                    eids, self.R, self.gmdata = base.import_gmfs(
+                        self.datastore, fname, sids)
+                    event_based.save_gmdata(self, self.R)
         self.E = len(eids)
         eps = riskinput.epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,
