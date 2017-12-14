@@ -65,6 +65,8 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
     If there is no consequence model `c_asset` is an empty list and
     `c_tag` is a zero-valued array.
     """
+    with monitor('getting hazard'):
+        riskinput.hazard_getter.init()
     c_models = param['consequence_models']
     L = len(riskmodel.loss_types)
     R = riskinput.hazard_getter.num_rlzs
