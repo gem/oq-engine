@@ -40,8 +40,6 @@ def classical_risk(riskinput, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    with monitor('getting hazard'):
-        riskinput.hazard_getter.init()
     result = dict(loss_curves=[], stat_curves=[])
     all_outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for outputs in all_outputs:
