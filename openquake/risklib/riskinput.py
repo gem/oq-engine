@@ -428,8 +428,8 @@ class GmfGetter(object):
         sample = 0  # in case of sampling the realizations have a corresponding
         # sample number from 0 to the number of samples of the given src model
         gsims = self.rlzs_by_gsim if gsim is None else [gsim]
-        for gsim in gsims:  # OrderedDict
-            rlzs = self.rlzs_by_gsim[gsim]
+        for gs in gsims:  # OrderedDict
+            rlzs = self.rlzs_by_gsim[gs]
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sites.sids
@@ -443,7 +443,7 @@ class GmfGetter(object):
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
-                array = computer.compute(gsim, num_events).transpose(1, 0, 2)
+                array = computer.compute(gs, num_events).transpose(1, 0, 2)
                 # shape (N, I, E)
                 for i, miniml in enumerate(self.min_iml):  # gmv < minimum
                     arr = array[:, i, :]
