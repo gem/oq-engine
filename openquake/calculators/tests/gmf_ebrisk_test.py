@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+import unittest
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
@@ -81,6 +83,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_master(self):
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('macOS')
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       ses_per_logic_tree_path='1')
         calc0 = self.calc.datastore  # event_based_risk
