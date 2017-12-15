@@ -207,8 +207,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         minimum_intensity dictionary.
         """
         oq = self.oqparam
-        self.min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
+        self.min_iml = self.get_min_iml(oq)
         self.rupser = calc.RuptureSerializer(self.datastore)
 
     def zerodict(self):
@@ -493,7 +492,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         monitor = self.monitor(self.core_task.__name__)
         imts = list(oq.imtls)
-        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
+        min_iml = self.get_min_iml(oq)
         correl_model = oq.get_correl_model()
         try:
             csm_info = self.csm.info

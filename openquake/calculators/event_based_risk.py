@@ -189,31 +189,24 @@ class EbriskCalculator(base.RiskCalculator):
         csm_info = self.csm_info.get_info(sm_id)
         grp_ids = sorted(csm_info.get_sm_by_grp())
         rlzs_assoc = csm_info.get_rlzs_assoc()
-        num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
-                         for ebr in ruptures_by_grp[grp])
-        get_eps = riskinput.epsilon_getter(
-            len(self.assetcol), num_events,
-            self.oqparam.asset_correlation,
-            self.oqparam.master_seed,
-            self.oqparam.ignore_covs or not self.riskmodel.covs)
-
         # prepare the risk inputs
         allargs = []
         ruptures_per_block = self.oqparam.ruptures_per_block
-        start = 0
         try:
             csm_info = self.csm.info
         except AttributeError:  # there is no .csm if --hc was given
             csm_info = self.datastore['csm_info']
         samples_by_grp = csm_info.get_samples_by_grp()
+        num_events = 0
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
             for rupts in block_splitter(
                     ruptures_by_grp.get(grp_id, []), ruptures_per_block):
                 n_events = sum(ebr.multiplicity for ebr in rupts)
-                eps = get_eps(start, start + n_events)
-                start += n_events
+                eps = self.get_eps(self.start, self.start + n_events)
+                num_events += n_events
+                self.start += n_events
                 getter = riskinput.GmfGetter(
                     rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
                     trunc_level, correl_model, samples)
@@ -292,6 +285,14 @@ class EbriskCalculator(base.RiskCalculator):
         allres = []
         source_models = self.csm_info.source_models
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
+        num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
+                         for ebr in ruptures_by_grp[grp])
+        self.get_eps = riskinput.epsilon_getter(
+            len(self.assetcol), num_events,
+            self.oqparam.asset_correlation,
+            self.oqparam.master_seed,
+            self.oqparam.ignore_covs or not self.riskmodel.covs)
+        self.start = 0
         for i, args in enumerate(self.gen_args(ruptures_by_grp)):
             ires = self.start_tasks(*args)
             allres.append(ires)
@@ -435,7 +436,11 @@ class EbriskCalculator(base.RiskCalculator):
         stats = oq.risk_stats()
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
-            array, array_stats = b.build(alt, stats)
+            try:
+                array, array_stats = b.build(alt, stats)
+            except:  # if there are not enough events
+                logging.error('', exc_info=True)
+                return
         self.datastore['agg_curves-rlzs'] = array
         units = self.assetcol.units(loss_types=array.dtype.names)
         self.datastore.set_attrs(
