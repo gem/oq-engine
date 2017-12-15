@@ -436,7 +436,11 @@ class EbriskCalculator(base.RiskCalculator):
         stats = oq.risk_stats()
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
-            array, array_stats = b.build(alt, stats)
+            try:
+                array, array_stats = b.build(alt, stats)
+            except:  # if there are not enough events
+                logging.error('', exc_info=True)
+                return
         self.datastore['agg_curves-rlzs'] = array
         units = self.assetcol.units(loss_types=array.dtype.names)
         self.datastore.set_attrs(
