@@ -196,6 +196,7 @@ class PmapGetter(object):
 
 # ######################### hazard maps ################################### #
 
+
 # cutoff value for the poe
 EPSILON = 1E-30
 
