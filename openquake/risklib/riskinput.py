@@ -260,21 +260,17 @@ class CompositeRiskModel(collections.Mapping):
                 riskmodel = self[taxonomy]
                 imt_lt = [riskmodel.risk_functions[lt].imt
                           for lt in self.loss_types]
-                rangeM = [imti[imt] for imt in imt_lt]
                 for sid, assets, epsgetter in dic[taxonomy]:
                     for rlzi, haz in sorted(hazard[sid].items()):
                         if isinstance(haz, numpy.ndarray):  # gmf-based calcs
-                            data = {i: (haz['gmv'][:, i], haz['eid'])
-                                    for i in rangeM}
+                            data = [(haz['gmv'][:, imti[imt]], haz['eid'])
+                                    for imt in imt_lt]
                         elif not haz:  # no hazard for this site
-                            data = {
-                                i: (numpy.zeros(hazard_getter.E),
-                                    hazard_getter.eids)
-                                for i in rangeM}
+                            data = [(numpy.zeros(hazard_getter.E),
+                                     hazard_getter.eids) for imt in imt_lt]
                         else:  # classical, haz is already a dictionary
-                            data = haz
-                        data_lt = [data[imti[imt]] for imt in imt_lt]
-                        out = riskmodel.get_output(assets, data_lt, epsgetter)
+                            data = [haz[imti[imt]] for imt in imt_lt]
+                        out = riskmodel.get_output(assets, data, epsgetter)
                         out.loss_types = self.loss_types
                         out.assets = assets
                         out.sid = sid
