@@ -76,11 +76,9 @@ class RiskModel(object):
         :param epsgetter: an epsilon getter function
         :returns: an ArrayWrapper of shape (L, ...)
         """
-        lts = self.loss_types
         out = [self(lt, assets, data, epsgetter)
-               for lt, data in zip(lts, data_by_lt)]
-        return ArrayWrapper(
-            numpy.array(out), dict(loss_types=lts, assets=assets))
+               for lt, data in zip(self.loss_types, data_by_lt)]
+        return ArrayWrapper(numpy.array(out), dict(assets=assets))
 
     def __toh5__(self):
         risk_functions = {lt: func for lt, func in self.risk_functions.items()}
