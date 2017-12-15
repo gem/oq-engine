@@ -296,7 +296,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_5(self):
         # a simple test with 1 asset and two source models
-        self.run_calc(case_5.__file__, 'job.ini')
+        self.run_calc(case_5.__file__, 'job_haz.ini,job_risk.ini')
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
