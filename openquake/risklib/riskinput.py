@@ -239,27 +239,28 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy in group:
                 epsgetter = riskinput.epsilon_getter
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
-        imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
         if hasattr(hazard_getter, 'rlzs_by_gsim'):
             # save memory in event based risk by working one gsim at the time
             for gsim in hazard_getter.rlzs_by_gsim:
-                for out in self._gen_outputs(hazard_getter, imti, dic, gsim):
+                for out in self._gen_outputs(hazard_getter, dic, gsim):
                     yield out
         else:
-            for out in self._gen_outputs(hazard_getter, imti, dic, None):
+            for out in self._gen_outputs(hazard_getter, dic, None):
                 yield out
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, hazard_getter, imti, dic, gsim):
+    def _gen_outputs(self, hazard_getter, dic, gsim):
         with self.monitor('building hazard'):
             hazard = hazard_getter.get_hazard(gsim)
+        imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
         with self.monitor('computing risk'):
             for taxonomy in sorted(dic):
                 riskmodel = self[taxonomy]
-                rangeM = [imti[riskmodel.risk_functions[lt].imt]
+                imt_lt = [riskmodel.risk_functions[lt].imt
                           for lt in self.loss_types]
+                rangeM = [imti[imt] for imt in imt_lt]
                 for sid, assets, epsgetter in dic[taxonomy]:
                     for rlzi, haz in sorted(hazard[sid].items()):
                         if isinstance(haz, numpy.ndarray):  # gmf-based calcs
@@ -272,9 +273,7 @@ class CompositeRiskModel(collections.Mapping):
                                 for i in rangeM}
                         else:  # classical, haz is already a dictionary
                             data = haz
-                        data_lt = [
-                            data[imti[riskmodel.risk_functions[lt].imt]]
-                            for lt in self.loss_types]
+                        data_lt = [data[imti[imt]] for imt in imt_lt]
                         out = riskmodel.get_output(assets, data_lt, epsgetter)
                         out.loss_types = self.loss_types
                         out.assets = assets
