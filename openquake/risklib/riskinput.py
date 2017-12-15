@@ -331,11 +331,7 @@ class HazardGetter(object):
         self.imtls = imtls
         self.eids = eids
         self.num_rlzs = num_rlzs
-        oq = getter.dstore['oqparam']
-        try:
-            self.E = oq.number_of_ground_motion_fields
-        except AttributeError:
-            self.E = 0 if eids is None else len(eids)
+        self.E = 0 if eids is None else len(eids)
         if getter.__class__.__name__.startswith('Gmf'):
             # now some attributes set for API compatibility with the GmfGetter
             # number of ground motion fields
