@@ -62,7 +62,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini')
         alt = self.calc.datastore['agg_loss_table']
-        self.assertEqual(len(alt), 10)
+        self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
         aae(totloss, [7717694.], decimal=0)
@@ -97,9 +97,9 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_loss_table', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
-        #[fname] = export(('agg_loss_table', 'csv'), calc2)
-        #self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-        #                      delta=1E-5)
+        [fname] = export(('agg_loss_table', 'csv'), calc2)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
 
     # could this be replaced by case_4?
     @attr('qa', 'risk', 'gmf_ebrisk')
