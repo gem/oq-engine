@@ -721,6 +721,7 @@ class RiskCalculator(HazardCalculator):
     def combine(self, acc, res):
         return acc + res
 
+
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
@@ -791,7 +792,7 @@ def get_gmfs(calculator):
         return eids, len(gmfs)
 
     else:  # with --hc option
-        return (calculator.datastore['events'],
+        return (calculator.datastore['events']['eid'],
                 len(calculator.datastore['realizations']))
 
 
