@@ -524,16 +524,12 @@ class RiskInput(object):
         """
         if not self.eps:
             return
+        eid2idx = self.hazard_getter.eid2idx
+        idx = [eid2idx[eid] for eid in eids]
         try:
-            eid2idx = self.hazard_getter.eid2idx
-        except AttributeError:  # no eid2idx
-            return self.eps[aid]
-        else:
-            idx = [eid2idx[eid] for eid in eids]
-            try:
-                return self.eps[aid, idx]
-            except TypeError:  # for gmf_ebrisk
-                return self.eps[aid][idx]
+            return self.eps[aid, idx]
+        except TypeError:  # for gmf_ebrisk
+            return self.eps[aid][idx]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
