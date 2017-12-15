@@ -59,6 +59,10 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.minimum_intensity != oq.minimum_intensity:
+                raise ValueError(
+                    'The parent calculation was using minimum_intensity=%s'
+                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
             self.eids = parent['events']['eid']
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
@@ -109,9 +113,10 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             agglosses = numpy.fromiter(
                 ((e, r, loss)
                  for e, losses in zip(self.eids, self.agglosses)
-                 for r, loss in enumerate(losses)), self.param['elt_dt'])
+                 for r, loss in enumerate(losses) if loss.sum()),
+                self.param['elt_dt'])
             self.datastore['agg_loss_table'] = agglosses
-        ebr.EbriskCalculator.__dict__['postproc'](self)
+        #ebr.EbriskCalculator.__dict__['postproc'](self)
 
     def combine(self, dummy, res):
         """
