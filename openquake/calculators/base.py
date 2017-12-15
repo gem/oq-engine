@@ -683,16 +683,15 @@ class RiskCalculator(HazardCalculator):
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
+                if self.datastore.parent == ():
+                    dstore = self.datastore
+                else:
+                    dstore = self.datastore.parent
                 if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = calc.PmapGetter(self.datastore, sids)
+                    getter = calc.PmapGetter(dstore, sids)
                 else:  # gmf
-                    if self.datastore.parent == ():
-                        dstore = self.datastore
-                    else:
-                        dstore = self.datastore.parent
                     getter = riskinput.GmfDataGetter(dstore, sids)
-                hgetter = riskinput.HazardGetter(
-                    self.datastore, kind, getter, imtls, self.R, eids)
+                hgetter = riskinput.HazardGetter(getter, imtls, self.R, eids)
                 read_access = (
                     config.distribution.oq_distribute in ('no', 'futures') or
                     config.directory.shared_dir)

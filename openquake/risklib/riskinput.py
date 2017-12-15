@@ -316,32 +316,27 @@ class GmfDataGetter(collections.Mapping):
 
 class HazardGetter(object):
     """
-    :param dstore:
-        DataStore instance
-    :param kind:
-        kind of HazardGetter; can be 'poe' or 'gmf'
-    :param sids:
-        hazard site IDs
+    :param getter:
+        A specific getter instance
     :param imtls:
         intensity measure types and levels object
+    :param num_rlzs:
+        the total number of realizations
     :param eids:
         an array of event IDs (or None)
     """
-    def __init__(self, dstore, kind, getter, imtls, num_rlzs, eids=None):
-        assert kind in ('poe', 'gmf'), kind
-        self.kind = kind
+    def __init__(self, getter, imtls, num_rlzs, eids=None):
         self.sids = getter.sids
         self._getter = getter
         self.imtls = imtls
         self.eids = eids
         self.num_rlzs = num_rlzs
-        oq = dstore['oqparam']
+        oq = getter.dstore['oqparam']
         try:
             self.E = oq.number_of_ground_motion_fields
         except AttributeError:
             self.E = 0 if eids is None else len(eids)
-        self.I = len(oq.imtls)
-        if kind == 'gmf':
+        if getter.__class__.__name__.startswith('Gmf'):
             # now some attributes set for API compatibility with the GmfGetter
             # number of ground motion fields
             # dictionary rlzi -> array(imts, events, nbytes)
@@ -352,7 +347,7 @@ class HazardGetter(object):
         if hasattr(self, 'data'):  # already initialized
             return
         self.data = collections.OrderedDict()
-        if self.kind == 'poe':
+        if not self._getter.__class__.__name__.startswith('Gmf'):
             hcurves = self._getter.get_hcurves(self.imtls)  # shape (R, N)
             for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
                 self.data[sid] = datadict = {}
@@ -365,7 +360,6 @@ class HazardGetter(object):
                 self.data[sid] = data = self._getter[sid]
                 if not data:  # no GMVs, return 0, counted in no_damage
                     self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
-
             # dictionary eid -> index
             if self.eids is not None:
                 self.eid2idx = dict(zip(self.eids, range(len(self.eids))))

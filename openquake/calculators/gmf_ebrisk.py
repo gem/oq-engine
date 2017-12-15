@@ -63,7 +63,6 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.R = len(self.rlzs_assoc.realizations)
-            parent.close()
         else:  # read the GMFs from a file
             with self.monitor('reading GMFs', measuremem=True):
                 fname = oq.inputs['gmfs']
@@ -112,8 +111,6 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                  for e, losses in zip(self.eids, self.agglosses)
                  for r, loss in enumerate(losses)), self.param['elt_dt'])
             self.datastore['agg_loss_table'] = agglosses
-        if self.datastore.parent != ():
-            self.datastore.parent.open()
         ebr.EbriskCalculator.__dict__['postproc'](self)
 
     def combine(self, dummy, res):
