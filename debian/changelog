@@ -1,7 +1,5 @@
   [Michele Simionato]
   * Reduced the data transfer in the gmf_ebrisk calculator
-  * Changed the management of the epsilons in the gmf_ebrisk calculator to
-    be really the same as in the event_based_risk calculator
   * Now the gmf_ebrisk calculator builds the aggregate loss curves too
   * Extended the gmf_ebrisk calculator to use the GMFs produced by an event
     based hazard calculation, both via CSV and via the --hc option

@@ -116,7 +116,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                  for r, loss in enumerate(losses) if loss.sum()),
                 self.param['elt_dt'])
             self.datastore['agg_loss_table'] = agglosses
-        #ebr.EbriskCalculator.__dict__['postproc'](self)
+        ebr.EbriskCalculator.__dict__['postproc'](self)
 
     def combine(self, dummy, res):
         """
