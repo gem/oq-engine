@@ -272,11 +272,10 @@ class CompositeRiskModel(collections.Mapping):
                                 for i in rangeM}
                         else:  # classical, haz is already a dictionary
                             data = haz
-                        data_by_lt = [
+                        data_lt = [
                             data[imti[riskmodel.risk_functions[lt].imt]]
                             for lt in self.loss_types]
-                        out = riskmodel.get_output(
-                            assets, data_by_lt, epsgetter)
+                        out = riskmodel.get_output(assets, data_lt, epsgetter)
                         out.loss_types = self.loss_types
                         out.assets = assets
                         out.sid = sid
