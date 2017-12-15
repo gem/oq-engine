@@ -32,7 +32,7 @@ from openquake.calculators.tests import (
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, case_5, case_master, case_miriam,
+    case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
     occupants, case_1g, case_7a)
 
 
@@ -292,11 +292,3 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             exports='csv')
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
-
-    @attr('qa', 'risk', 'event_based_risk')
-    def test_case_5(self):
-        # a simple test with 1 asset and two source models
-        self.run_calc(case_5.__file__, 'job_haz.ini,job_risk.ini')
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)

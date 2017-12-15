@@ -20,8 +20,9 @@ import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
-from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3
+from openquake.calculators.export import export
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3, case_4
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_2 as ebr_2)
 
@@ -79,6 +80,26 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         totloss = alt['loss'].sum()
         aae(totloss, 20210.27, decimal=2)
 
+    @attr('qa', 'risk', 'gmf_ebrisk')
+    def test_case_4(self):
+        # a simple test with 1 asset and two source models
+        self.run_calc(case_4.__file__, 'job_haz.ini')
+        calc0 = self.calc.datastore  # event_based
+        self.run_calc(case_4.__file__, 'job_risk.ini',
+                      calculation_mode='event_based_risk',
+                      hazard_calculation_id=str(calc0.calc_id))
+        calc1 = self.calc.datastore  # event_based_risk
+        self.run_calc(case_4.__file__, 'job_risk.ini',
+                      hazard_calculation_id=str(calc0.calc_id))
+        calc2 = self.calc.datastore  # event_based_risk
+        [fname] = export(('agg_loss_table', 'csv'), calc1)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
+        #[fname] = export(('agg_loss_table', 'csv'), calc2)
+        #self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+        #                      delta=1E-5)
+
+    # could this be replaced by case_4?
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
