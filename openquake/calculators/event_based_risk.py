@@ -41,20 +41,47 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-def _aggregate(outputs, compositemodel, agg, all_eids, result, param, monitor):
-    # update the result dictionary and the agg array with each output
-    E = len(all_eids)
-    L = len(compositemodel.lti)
+def event_based_risk(riskinput, riskmodel, param, monitor):
+    """
+    :param riskinput:
+        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskmodel:
+        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        a dictionary of parameters
+    :param monitor:
+        :class:`openquake.baselib.performance.Monitor` instance
+    :returns:
+        a dictionary of numpy arrays of shape (L, R)
+    """
+    eids = riskinput.hazard_getter.eids
+    A = len(riskinput.aids)
+    E = len(eids)
     I = param['insured_losses'] + 1
+    L = len(riskmodel.lti)
+    R = riskinput.hazard_getter.num_rlzs
+    param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
+    agg = numpy.zeros((E, R, L * I), F32)
+    result = dict(assratios=[], lrs_idx=AccumDict(accum=[]),
+                  aids=riskinput.aids)
+    if param['avg_losses']:
+        # dict (l, r) -> loss_by_aid; loss_by_aid is a dict for gmf_ebrisk
+        # and an array of size A=len(assetcol) for event_based_risk
+        result['avglosses'] = avg = AccumDict(accum={} if riskinput.by_site
+                                              else numpy.zeros(A, F64))
+    else:
+        result['avglosses'] = avg = {}
+    outputs = riskmodel.gen_outputs(riskinput, monitor)
+
+    # update the result dictionary and the agg array with each output
     ass = result['assratios']
-    avg = result['avglosses']
-    idx = dict(zip(all_eids, range(E)))
     for out in outputs:
         r = out.rlzi
+        idx = riskinput.hazard_getter.eid2idx
         for l, loss_ratios in enumerate(out):
             if loss_ratios is None:  # for GMFs below the minimum_intensity
                 continue
-            loss_type = compositemodel.loss_types[l]
+            loss_type = riskmodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
 
             for a, asset in enumerate(out.assets):
@@ -91,7 +118,7 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param, monitor):
         result['agglosses'] = (idx, agg[idx])
     else:  # event_based_risk
         it = ((eid, r, losses)
-              for eid, all_losses in zip(all_eids, agg)
+              for eid, all_losses in zip(eids, agg)
               for r, losses in enumerate(all_losses) if losses.sum())
         result['agglosses'] = numpy.fromiter(it, param['elt_dt'])
 
@@ -117,41 +144,7 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param, monitor):
             n = n1
         result['assratios'] = numpy.array(all_ratios, param['lrs_dt'])
 
-
-def event_based_risk(riskinput, riskmodel, param, monitor):
-    """
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
-    :param riskmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param param:
-        a dictionary of parameters
-    :param monitor:
-        :class:`openquake.baselib.performance.Monitor` instance
-    :returns:
-        a dictionary of numpy arrays of shape (L, R)
-    """
-    eids = riskinput.hazard_getter.eids
-    A = len(riskinput.aids)
-    E = len(eids)
-    I = param['insured_losses'] + 1
-    L = len(riskmodel.lti)
-    R = riskinput.hazard_getter.num_rlzs
-    param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
-    agg = numpy.zeros((E, R, L * I), F32)
-    result = dict(assratios=[], lrs_idx=AccumDict(accum=[]),
-                  aids=riskinput.aids)
-    if param['avg_losses']:
-        # dict (l, r) -> loss_by_aid; loss_by_aid is a dict for gmf_ebrisk
-        # and an array of size A=len(assetcol) for event_based_risk
-        result['avglosses'] = AccumDict(accum={} if riskinput.by_site
-                                        else numpy.zeros(A, F64))
-    else:
-        result['avglosses'] = {}
-    outputs = riskmodel.gen_outputs(riskinput, monitor)
-    _aggregate(outputs, riskmodel, agg, eids, result, param, monitor)
-
-    # store info about the GMFs
+    # store info about the GMFs, must be done at the end
     result['gmdata'] = riskinput.gmdata
     return result
 

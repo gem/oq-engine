@@ -460,11 +460,11 @@ class RiskInput(object):
     :param hazard_getter:
         a callable returning the hazard data for a given realization
     :param assets_by_site:
-        array of assets, one per site (can be empty)
+        array of assets, one per site
     :param eps_dict:
         dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets_by_site=(), eps_dict=None):
+    def __init__(self, hazard_getter, assets_by_site, eps_dict=None):
         self.hazard_getter = hazard_getter
         self.assets_by_site = assets_by_site
         self.eps = eps_dict
@@ -476,9 +476,9 @@ class RiskInput(object):
                 aids.append(asset.ordinal)
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
-        self.weight = len(self.aids) or sum(
-            sr.weight for sr in hazard_getter.ebruptures)
         self.by_site = not isinstance(hazard_getter, GmfGetter)
+        self.weight = len(self.aids) if self.by_site else sum(
+            sr.weight for sr in hazard_getter.ebruptures)
 
     @property
     def imt_taxonomies(self):
