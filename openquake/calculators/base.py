@@ -645,12 +645,12 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, eps, eids=None):
+    def build_riskinputs(self, kind, eps=None, eids=None):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
         :param eps:
-            a matrix of epsilons (possibly empty)
+            a matrix of epsilons (or None)
         :param eids:
             an array of event IDs (or None)
         :returns:
