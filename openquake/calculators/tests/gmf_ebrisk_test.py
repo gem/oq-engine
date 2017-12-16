@@ -97,25 +97,22 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_loss_table', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
-        #[fname] = export(('agg_loss_table', 'csv'), calc2)
-        #self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-        #                      delta=1E-5)
+        [fname] = export(('agg_loss_table', 'csv'), calc2)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-4)
 
     # could this be replaced by case_4?
     @attr('qa', 'risk', 'gmf_ebrisk')
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('macOS')
-        self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
-                      ses_per_logic_tree_path='1')
+        self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
         calc0 = self.calc.datastore  # event_based_risk
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
-                      ses_per_logic_tree_path='1',
                       calculation_mode='event_based')
         calc1 = self.calc.datastore  # event_based
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       calculation_mode='gmf_ebrisk',
-                      ses_per_logic_tree_path='1',
                       hazard_calculation_id=str(calc1.calc_id))
         calc2 = self.calc.datastore  # gmf_ebrisk
 
