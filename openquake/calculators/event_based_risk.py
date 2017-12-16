@@ -86,7 +86,7 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param, monitor):
                                 ass.append((aid, r, eid, li, ratio))
 
     # collect agglosses
-    if param['assetcol'] is None:  # gmf_ebrisk
+    if param['gmf_ebrisk']:
         idx = agg.nonzero()  # return only the nonzero values
         result['agglosses'] = (idx, agg[idx])
     else:  # event_based_risk
@@ -144,8 +144,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     if param['avg_losses']:
         # dict (l, r) -> loss_by_aid; loss_by_aid is a dict for gmf_ebrisk
         # and an array of size A=len(assetcol) for event_based_risk
-        result['avglosses'] = AccumDict(accum=numpy.zeros(len(assetcol), F64)
-                                        if assetcol is not None else {})
+        result['avglosses'] = AccumDict(accum={} if riskinput.by_site
+                                        else numpy.zeros(len(assetcol), F64))
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
@@ -154,6 +154,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     # store info about the GMFs
     result['gmdata'] = riskinput.gmdata
     return result
+
 
 save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
@@ -241,6 +242,7 @@ class EbriskCalculator(base.RiskCalculator):
         mon = self.monitor('risk')
         for sm in csm_info.source_models:
             param = dict(
+                gmf_ebrisk=oq.calculation_mode == 'gmf_ebrisk',
                 assetcol=self.assetcol,
                 ses_ratio=oq.ses_ratio,
                 loss_dt=oq.loss_dt(), elt_dt=elt_dt,
@@ -365,14 +367,14 @@ class EbriskCalculator(base.RiskCalculator):
         assratios = dic.pop('assratios')
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
+        ebr = self.oqparam.calculation_mode == 'event_based_risk'
         with self.monitor('saving event loss table', autoflush=True):
-            if self.oqparam.calculation_mode == 'gmf_ebrisk':
-                idx, agg = agglosses
-                self.agglosses[idx] += agg
-            else:
+            if ebr:  # event_based_risk
                 agglosses['rlzi'] += offset
                 self.datastore.extend('agg_loss_table', agglosses)
-
+            else:  # gmf_ebrisk
+                idx, agg = agglosses
+                self.agglosses[idx] += agg
         if self.oqparam.asset_loss_table:
             with self.monitor('saving loss ratios', autoflush=True):
                 for (a, r), num in dic.pop('num_losses').items():
@@ -390,7 +392,7 @@ class EbriskCalculator(base.RiskCalculator):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                if len(aids) == 0:  # event_based_risk
+                if ebr:  # event_based_risk
                     self.dset[:, r + offset, li] += ratios * vs
                 else:  # gmf_ebrisk, there is no offset
                     self.dset[aids, r, li] += numpy.array([
