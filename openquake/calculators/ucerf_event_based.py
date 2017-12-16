@@ -838,7 +838,7 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     getter = riskinput.GmfGetter(
         rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
         trunc_level, correl_model, samples[grp_id])
-    ri = riskinput.RiskInput(getter)
+    ri = riskinput.RiskInput(getter, param['assetcol'].assets_by_site())
     res.append(event_based_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.hazard_getter.eids)
