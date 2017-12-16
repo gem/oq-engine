@@ -366,7 +366,8 @@ class EbriskCalculator(base.RiskCalculator):
         assratios = dic.pop('assratios')
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
-        ebr = self.oqparam.calculation_mode == 'event_based_risk'
+        ebr = self.oqparam.calculation_mode in (
+            'event_based_risk', 'ucerf_risk')
         with self.monitor('saving event loss table', autoflush=True):
             if ebr:  # event_based_risk
                 agglosses['rlzi'] += offset
