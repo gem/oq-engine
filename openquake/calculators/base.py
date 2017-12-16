@@ -645,12 +645,12 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, eps=numpy.zeros(0), eids=None):
+    def build_riskinputs(self, kind, eps=None, eids=None):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
         :param eps:
-            a matrix of epsilons (possibly empty)
+            a matrix of epsilons (or None)
         :param eids:
             an array of event IDs (or None)
         :returns:
@@ -689,17 +689,18 @@ class RiskCalculator(HazardCalculator):
                     dstore = self.datastore.parent
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(dstore, sids)
+                    getter.num_rlzs = self.R
                 else:  # gmf
-                    getter = riskinput.GmfDataGetter(dstore, sids)
-                hgetter = riskinput.HazardGetter(getter, imtls, self.R, eids)
+                    getter = riskinput.GmfDataGetter(
+                        dstore, sids, self.R, eids)
                 read_access = (
                     config.distribution.oq_distribute in ('no', 'futures') or
                     config.directory.shared_dir)
                 if self.oqparam.hazard_calculation_id and read_access:
                     pass  # read the hazard data in the workers
                 else:  # read the hazard data in the controller
-                    hgetter.init()
-                ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
+                    getter.init()
+                ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs

@@ -193,7 +193,6 @@ class GmfComputer(object):
 
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
-
         return gmf
 
 

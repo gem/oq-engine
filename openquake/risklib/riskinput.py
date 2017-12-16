@@ -31,6 +31,7 @@ from openquake.risklib import scientific, riskmodels
 class ValidationError(Exception):
     pass
 
+
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -213,8 +214,7 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def gen_outputs(self, riskinput, monitor=performance.Monitor(),
-                    assetcol=None):
+    def gen_outputs(self, riskinput, monitor=performance.Monitor()):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
@@ -222,20 +222,15 @@ class CompositeRiskModel(collections.Mapping):
 
         :param riskinput: a RiskInput instance
         :param monitor: a monitor object used to measure the performance
-        :param assetcol: not None only for event based risk
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
         with monitor('getting hazard'):
             hazard_getter.init()
         sids = hazard_getter.sids
-        if assetcol is None:  # scenario, classical, gmf_ebrisk
-            assets_by_site = riskinput.assets_by_site
-        else:  # event_based_risk
-            assets_by_site = assetcol.assets_by_site()
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
-        for sid, assets in zip(sids, assets_by_site):
+        for sid, assets in zip(sids, riskinput.assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
                 epsgetter = riskinput.epsilon_getter
@@ -294,12 +289,39 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids):
+    def __init__(self, dstore, sids, num_rlzs, eids=None):
         self.dstore = dstore
         self.sids = sids
+        self.num_rlzs = num_rlzs
+        self.eids = eids
+        self.E = 0 if eids is None else len(eids)
+
+    def init(self):
+        if hasattr(self, 'data'):  # already initialized
+            return
+        self.dstore.open()  # if not already open
+        self.data = collections.OrderedDict()
+        for sid in self.sids:
+            self.data[sid] = data = self[sid]
+            if not data:  # no GMVs, return 0, counted in no_damage
+                self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
+        # dictionary eid -> index
+        if self.eids is not None:
+            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
+        # now some attributes set for API compatibility with the GmfGetter
+        # number of ground motion fields
+        # dictionary rlzi -> array(imts, events, nbytes)
+        self.imtls = self.dstore['oqparam'].imtls
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 2, F32))
+
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: an OrderedDict rlzi -> datadict
+        """
+        return self.data
 
     def __getitem__(self, sid):
-        self.dstore.open()  # if not already open
         dset = self.dstore['gmf_data/data']
         idxs = self.dstore['gmf_data/indices'][sid]
         if len(idxs) == 0:  # site ID with no data
@@ -312,60 +334,6 @@ class GmfDataGetter(collections.Mapping):
 
     def __len__(self):
         return len(self.sids)
-
-
-class HazardGetter(object):
-    """
-    :param getter:
-        A specific getter instance
-    :param imtls:
-        intensity measure types and levels object
-    :param num_rlzs:
-        the total number of realizations
-    :param eids:
-        an array of event IDs (or None)
-    """
-    def __init__(self, getter, imtls, num_rlzs, eids=None):
-        self.sids = getter.sids
-        self._getter = getter
-        self.imtls = imtls
-        self.eids = eids
-        self.num_rlzs = num_rlzs
-        self.E = 0 if eids is None else len(eids)
-        if getter.__class__.__name__.startswith('Gmf'):
-            # now some attributes set for API compatibility with the GmfGetter
-            # number of ground motion fields
-            # dictionary rlzi -> array(imts, events, nbytes)
-            self.gmdata = AccumDict(
-                accum=numpy.zeros(len(self.imtls) + 2, F32))
-
-    def init(self):
-        if hasattr(self, 'data'):  # already initialized
-            return
-        self.data = collections.OrderedDict()
-        if not self._getter.__class__.__name__.startswith('Gmf'):
-            hcurves = self._getter.get_hcurves(self.imtls)  # shape (R, N)
-            for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
-                self.data[sid] = datadict = {}
-                for rlzi, hcurve in enumerate(hcurve_by_rlz):
-                    datadict[rlzi] = lst = [None for imt in self.imtls]
-                    for imti, imt in enumerate(self.imtls):
-                        lst[imti] = hcurve[imt]  # imls
-        else:  # gmf
-            for sid in self.sids:
-                self.data[sid] = data = self._getter[sid]
-                if not data:  # no GMVs, return 0, counted in no_damage
-                    self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
-            # dictionary eid -> index
-            if self.eids is not None:
-                self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
-
-    def get_hazard(self, gsim=None):
-        """
-        :param gsim: ignored
-        :returns: an OrderedDict rlzi -> datadict
-        """
-        return self.data
 
 
 class GmfGetter(object):
@@ -428,8 +396,8 @@ class GmfGetter(object):
         sample = 0  # in case of sampling the realizations have a corresponding
         # sample number from 0 to the number of samples of the given src model
         gsims = self.rlzs_by_gsim if gsim is None else [gsim]
-        for gsim in gsims:  # OrderedDict
-            rlzs = self.rlzs_by_gsim[gsim]
+        for gs in gsims:  # OrderedDict
+            rlzs = self.rlzs_by_gsim[gs]
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sites.sids
@@ -443,7 +411,7 @@ class GmfGetter(object):
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
-                array = computer.compute(gsim, num_events).transpose(1, 0, 2)
+                array = computer.compute(gs, num_events).transpose(1, 0, 2)
                 # shape (N, I, E)
                 for i, miniml in enumerate(self.min_iml):  # gmv < minimum
                     arr = array[:, i, :]
@@ -492,11 +460,11 @@ class RiskInput(object):
     :param hazard_getter:
         a callable returning the hazard data for a given realization
     :param assets_by_site:
-        array of assets, one per site (can be empty)
+        array of assets, one per site
     :param eps_dict:
         dictionary of epsilons (can be None)
     """
-    def __init__(self, hazard_getter, assets_by_site=(), eps_dict=None):
+    def __init__(self, hazard_getter, assets_by_site, eps_dict=None):
         self.hazard_getter = hazard_getter
         self.assets_by_site = assets_by_site
         self.eps = eps_dict
@@ -508,7 +476,8 @@ class RiskInput(object):
                 aids.append(asset.ordinal)
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
-        self.weight = len(self.aids) or sum(
+        self.by_site = not isinstance(hazard_getter, GmfGetter)
+        self.weight = len(self.aids) if self.by_site else sum(
             sr.weight for sr in hazard_getter.ebruptures)
 
     @property
@@ -524,10 +493,7 @@ class RiskInput(object):
         """
         if not self.eps:
             return
-        try:
-            eid2idx = self.hazard_getter.eid2idx
-        except AttributeError:  # no eid2idx
-            return self.eps[aid]
+        eid2idx = self.hazard_getter.eid2idx
         idx = [eid2idx[eid] for eid in eids]
         try:
             return self.eps[aid, idx]
@@ -591,7 +557,7 @@ class EpsilonMatrix1(object):
         return self.eps[item[1]]
 
 
-def epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
+def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
     """
     :returns: a function (start, stop) -> matrix of shape (n_assets, n_events)
     """
