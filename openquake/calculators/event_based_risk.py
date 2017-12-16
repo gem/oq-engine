@@ -86,7 +86,7 @@ def _aggregate(outputs, compositemodel, agg, all_eids, result, param, monitor):
                                 ass.append((aid, r, eid, li, ratio))
 
     # collect agglosses
-    if param['gmf_ebrisk']:
+    if param.get('gmf_ebrisk'):
         idx = agg.nonzero()  # return only the nonzero values
         result['agglosses'] = (idx, agg[idx])
     else:  # event_based_risk
@@ -131,8 +131,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    assetcol = param['assetcol']
     eids = riskinput.hazard_getter.eids
+    A = len(riskinput.aids)
     E = len(eids)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
@@ -145,10 +145,10 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
         # dict (l, r) -> loss_by_aid; loss_by_aid is a dict for gmf_ebrisk
         # and an array of size A=len(assetcol) for event_based_risk
         result['avglosses'] = AccumDict(accum={} if riskinput.by_site
-                                        else numpy.zeros(len(assetcol), F64))
+                                        else numpy.zeros(A, F64))
     else:
         result['avglosses'] = {}
-    outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
+    outputs = riskmodel.gen_outputs(riskinput, monitor)
     _aggregate(outputs, riskmodel, agg, eids, result, param, monitor)
 
     # store info about the GMFs
@@ -211,7 +211,7 @@ class EbriskCalculator(base.RiskCalculator):
                 getter = riskinput.GmfGetter(
                     rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
                     trunc_level, correl_model, samples)
-                ri = riskinput.RiskInput(getter, [], eps)
+                ri = riskinput.RiskInput(getter, self.assets_by_site, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
         self.vals = self.assetcol.values()
@@ -242,8 +242,6 @@ class EbriskCalculator(base.RiskCalculator):
         mon = self.monitor('risk')
         for sm in csm_info.source_models:
             param = dict(
-                gmf_ebrisk=oq.calculation_mode == 'gmf_ebrisk',
-                assetcol=self.assetcol,
                 ses_ratio=oq.ses_ratio,
                 loss_dt=oq.loss_dt(), elt_dt=elt_dt,
                 asset_loss_table=oq.asset_loss_table,
@@ -294,6 +292,7 @@ class EbriskCalculator(base.RiskCalculator):
             self.oqparam.asset_correlation,
             self.oqparam.master_seed,
             self.oqparam.ignore_covs or not self.riskmodel.covs)
+        self.assets_by_site = self.assetcol.assets_by_site()
         self.start = 0
         for i, args in enumerate(self.gen_args(ruptures_by_grp)):
             ires = self.start_tasks(*args)
