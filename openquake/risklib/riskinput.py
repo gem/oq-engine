@@ -213,8 +213,7 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def gen_outputs(self, riskinput, monitor=performance.Monitor(),
-                    assetcol=None):
+    def gen_outputs(self, riskinput, monitor=performance.Monitor()):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
@@ -222,20 +221,15 @@ class CompositeRiskModel(collections.Mapping):
 
         :param riskinput: a RiskInput instance
         :param monitor: a monitor object used to measure the performance
-        :param assetcol: not None only for event based risk
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
         with monitor('getting hazard'):
             hazard_getter.init()
         sids = hazard_getter.sids
-        if assetcol is None:  # scenario, classical, gmf_ebrisk
-            assets_by_site = riskinput.assets_by_site
-        else:  # event_based_risk
-            assets_by_site = assetcol.assets_by_site()
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
-        for sid, assets in zip(sids, assets_by_site):
+        for sid, assets in zip(sids, riskinput.assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
                 epsgetter = riskinput.epsilon_getter

@@ -83,7 +83,6 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)
         self.param['gmf_ebrisk'] = True
-        self.param['assetcol'] = None
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
