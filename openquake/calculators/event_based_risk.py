@@ -61,21 +61,16 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     L = len(riskmodel.lti)
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
+    ass = []
+    lrs_idx = AccumDict(accum=[])  # aid -> indices
     agg = numpy.zeros((E, R, L * I), F32)
-    result = dict(assratios=[], lrs_idx=AccumDict(accum=[]),
-                  aids=riskinput.aids)
-    if param['avg_losses']:
-        # dict (l, r) -> loss_by_aid; loss_by_aid is a dict for gmf_ebrisk
-        # and an array of size A=len(assetcol) for event_based_risk
-        result['avglosses'] = avg = AccumDict(accum={} if riskinput.by_site
-                                              else numpy.zeros(A, F64))
-    else:
-        result['avglosses'] = avg = {}
-    outputs = riskmodel.gen_outputs(riskinput, monitor)
+    avg = AccumDict(accum={} if riskinput.by_site or not param['avg_losses']
+                    else numpy.zeros(A, F64))
+    result = dict(assratios=ass, lrs_idx=lrs_idx,
+                  aids=riskinput.aids, avglosses=avg)
 
     # update the result dictionary and the agg array with each output
-    ass = result['assratios']
-    for out in outputs:
+    for out in riskmodel.gen_outputs(riskinput, monitor):
         r = out.rlzi
         idx = riskinput.hazard_getter.eid2idx
         for l, loss_ratios in enumerate(out):
@@ -99,15 +94,13 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                         except KeyError:
                             lba[aid] = rat[i]
 
-                # agglosses
+                # agglosses, asset_loss_table
                 for i in range(I):
+                    li = l + L * i
                     # this is the critical loop: it is import to keep it
                     # vectorized in terms of the event indices
-                    agg[indices, r, l + L * i] += losses[:, i]
-
-                if param['asset_loss_table']:
-                    for i in range(I):
-                        li = l + L * i
+                    agg[indices, r, li] += losses[:, i]
+                    if param['asset_loss_table']:
                         for eid, ratio in zip(out.eids, ratios[:, i]):
                             if ratio > 0:
                                 ass.append((aid, r, eid, li, ratio))
@@ -126,7 +119,6 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     # of dtype lrs_dt, i.e. (rlzi, ratios)
     if param['asset_loss_table']:
         data = sorted(ass)  # sort by aid, r
-        lrs_idx = result['lrs_idx']  # aid -> indices
         result['num_losses'] = num_losses = collections.Counter()  # by aid, r
         n = 0
         all_ratios = []
@@ -385,12 +377,11 @@ class EbriskCalculator(base.RiskCalculator):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                if ebr:  # event_based_risk
+                if ebr:  # event_based_risk, all assets
                     self.dset[:, r + offset, li] += ratios * vs
                 else:  # gmf_ebrisk, there is no offset
-                    self.dset[aids, r, li] += numpy.array([
-                        ratios.get(aid, 0) * vs[aid]
-                        for aid in aids])
+                    self.dset[aids, r, li] += numpy.array(
+                        [ratios.get(aid, 0) * vs[aid] for aid in aids])
         self.taskno += 1
 
     def post_execute(self, num_events):
