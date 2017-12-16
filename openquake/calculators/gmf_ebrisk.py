@@ -59,6 +59,10 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.minimum_intensity != oq.minimum_intensity:
+                raise ValueError(
+                    'The parent calculation was using minimum_intensity=%s'
+                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
             self.eids = parent['events']['eid']
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
@@ -74,11 +78,11 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                         self.datastore, fname, sids)
                     event_based.save_gmdata(self, self.R)
         self.E = len(self.eids)
-        eps = riskinput.epsilon_getter(
+        eps = riskinput.make_epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,
             oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)
-        self.param['assetcol'] = None
+        self.param['gmf_ebrisk'] = True
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
@@ -109,7 +113,8 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             agglosses = numpy.fromiter(
                 ((e, r, loss)
                  for e, losses in zip(self.eids, self.agglosses)
-                 for r, loss in enumerate(losses)), self.param['elt_dt'])
+                 for r, loss in enumerate(losses) if loss.sum()),
+                self.param['elt_dt'])
             self.datastore['agg_loss_table'] = agglosses
         ebr.EbriskCalculator.__dict__['postproc'](self)
 
