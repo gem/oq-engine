@@ -510,6 +510,7 @@ class RiskInput(object):
         self.taxonomies = sorted(taxonomies_set)
         self.weight = len(self.aids) or sum(
             sr.weight for sr in hazard_getter.ebruptures)
+        self.by_site = not isinstance(hazard_getter, GmfGetter)
 
     @property
     def imt_taxonomies(self):
