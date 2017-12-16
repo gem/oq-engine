@@ -31,6 +31,7 @@ from openquake.risklib import scientific, riskmodels
 class ValidationError(Exception):
     pass
 
+
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -288,12 +289,39 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids):
+    def __init__(self, dstore, sids, num_rlzs, eids=None):
         self.dstore = dstore
         self.sids = sids
+        self.num_rlzs = num_rlzs
+        self.eids = eids
+        self.E = 0 if eids is None else len(eids)
+
+    def init(self):
+        if hasattr(self, 'data'):  # already initialized
+            return
+        self.dstore.open()  # if not already open
+        self.data = collections.OrderedDict()
+        for sid in self.sids:
+            self.data[sid] = data = self[sid]
+            if not data:  # no GMVs, return 0, counted in no_damage
+                self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
+        # dictionary eid -> index
+        if self.eids is not None:
+            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
+        # now some attributes set for API compatibility with the GmfGetter
+        # number of ground motion fields
+        # dictionary rlzi -> array(imts, events, nbytes)
+        self.imtls = self.dstore['oqparam'].imtls
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 2, F32))
+
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: an OrderedDict rlzi -> datadict
+        """
+        return self.data
 
     def __getitem__(self, sid):
-        self.dstore.open()  # if not already open
         dset = self.dstore['gmf_data/data']
         idxs = self.dstore['gmf_data/indices'][sid]
         if len(idxs) == 0:  # site ID with no data
@@ -306,60 +334,6 @@ class GmfDataGetter(collections.Mapping):
 
     def __len__(self):
         return len(self.sids)
-
-
-class HazardGetter(object):
-    """
-    :param getter:
-        A specific getter instance
-    :param imtls:
-        intensity measure types and levels object
-    :param num_rlzs:
-        the total number of realizations
-    :param eids:
-        an array of event IDs (or None)
-    """
-    def __init__(self, getter, imtls, num_rlzs, eids=None):
-        self.sids = getter.sids
-        self._getter = getter
-        self.imtls = imtls
-        self.eids = eids
-        self.num_rlzs = num_rlzs
-        self.E = 0 if eids is None else len(eids)
-        if getter.__class__.__name__.startswith('Gmf'):
-            # now some attributes set for API compatibility with the GmfGetter
-            # number of ground motion fields
-            # dictionary rlzi -> array(imts, events, nbytes)
-            self.gmdata = AccumDict(
-                accum=numpy.zeros(len(self.imtls) + 2, F32))
-
-    def init(self):
-        if hasattr(self, 'data'):  # already initialized
-            return
-        self.data = collections.OrderedDict()
-        if not self._getter.__class__.__name__.startswith('Gmf'):
-            hcurves = self._getter.get_hcurves(self.imtls)  # shape (R, N)
-            for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
-                self.data[sid] = datadict = {}
-                for rlzi, hcurve in enumerate(hcurve_by_rlz):
-                    datadict[rlzi] = lst = [None for imt in self.imtls]
-                    for imti, imt in enumerate(self.imtls):
-                        lst[imti] = hcurve[imt]  # imls
-        else:  # gmf
-            for sid in self.sids:
-                self.data[sid] = data = self._getter[sid]
-                if not data:  # no GMVs, return 0, counted in no_damage
-                    self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
-            # dictionary eid -> index
-            if self.eids is not None:
-                self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
-
-    def get_hazard(self, gsim=None):
-        """
-        :param gsim: ignored
-        :returns: an OrderedDict rlzi -> datadict
-        """
-        return self.data
 
 
 class GmfGetter(object):
