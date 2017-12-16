@@ -287,7 +287,7 @@ class EbriskCalculator(base.RiskCalculator):
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
         num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
                          for ebr in ruptures_by_grp[grp])
-        self.get_eps = riskinput.epsilon_getter(
+        self.get_eps = riskinput.make_epsilon_getter(
             len(self.assetcol), num_events,
             self.oqparam.asset_correlation,
             self.oqparam.master_seed,
