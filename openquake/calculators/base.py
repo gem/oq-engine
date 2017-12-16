@@ -689,17 +689,18 @@ class RiskCalculator(HazardCalculator):
                     dstore = self.datastore.parent
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(dstore, sids)
+                    getter.num_rlzs = self.R
                 else:  # gmf
-                    getter = riskinput.GmfDataGetter(dstore, sids)
-                hgetter = riskinput.HazardGetter(getter, imtls, self.R, eids)
+                    getter = riskinput.GmfDataGetter(
+                        dstore, sids, self.R, eids)
                 read_access = (
                     config.distribution.oq_distribute in ('no', 'futures') or
                     config.directory.shared_dir)
                 if self.oqparam.hazard_calculation_id and read_access:
                     pass  # read the hazard data in the workers
                 else:  # read the hazard data in the controller
-                    hgetter.init()
-                ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
+                    getter.init()
+                ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
