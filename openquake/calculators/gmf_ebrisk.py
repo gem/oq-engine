@@ -78,7 +78,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
                         self.datastore, fname, sids)
                     event_based.save_gmdata(self, self.R)
         self.E = len(self.eids)
-        eps = riskinput.epsilon_getter(
+        eps = riskinput.make_epsilon_getter(
             len(self.assetcol), self.E, oq.asset_correlation,
             oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)

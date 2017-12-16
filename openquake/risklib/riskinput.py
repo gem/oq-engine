@@ -583,7 +583,7 @@ class EpsilonMatrix1(object):
         return self.eps[item[1]]
 
 
-def epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
+def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
     """
     :returns: a function (start, stop) -> matrix of shape (n_assets, n_events)
     """
