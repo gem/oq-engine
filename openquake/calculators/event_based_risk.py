@@ -532,11 +532,8 @@ class EbrPostCalculator(base.RiskCalculator):
                     'curves-stats', return_periods=builder.return_periods,
                     stats=[encode(name) for (name, func) in stats])
             mon = self.monitor('loss maps')
-            read_access = (bool(config.directory.shared_dir)
-                           if config.distribution.oq_distribute == 'celery'
-                           else True)
-            lazy = (oq.hazard_calculation_id and 'all_loss_ratios'
-                    in self.datastore.parent and read_access)
+            lazy = (self.can_read_parent() and 'all_loss_ratios'
+                    in self.datastore.parent)
             logging.info('Instantiating LossRatiosGetters')
             with self.monitor('building lrgetters', measuremem=True,
                               autoflush=True):
