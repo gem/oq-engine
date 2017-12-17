@@ -292,16 +292,23 @@ class ClassicalCalculator(PSHACalculator):
         self.datastore.flush()
 
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
-            monitor = self.monitor('build_hcurves_and_stats')
-            hstats = oq.hazard_stats()
-            allargs = (
-                (calc.PmapGetter(self.datastore, tile.sids, self.rlzs_assoc),
-                 hstats, monitor)
-                for tile in self.sitecol.split_in_tiles(oq.concurrent_tasks))
             ires = parallel.Starmap(
-                self.core_task.__func__, allargs).submit_all()
+                self.core_task.__func__, self.gen_args()
+            ).submit_all()
         nbytes = ires.reduce(self.save_hcurves)
         return nbytes
+
+    def gen_args(self):
+        """
+        :yields: pgetter, hstats, monitor
+        """
+        monitor = self.monitor('build_hcurves_and_stats')
+        hstats = self.oqparam.hazard_stats()
+        for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
+            pgetter = calc.PmapGetter(self.datastore, t.sids, self.rlzs_assoc)
+            if not self.can_read_parent():  # read now, not in the workers
+                pgetter.init()
+            yield pgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
