@@ -61,9 +61,9 @@ class InvalidCalculationID(Exception):
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
+
 rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
                       ('gsims', 'S100'), ('weight', F32)])
-
 logversion = True
 
 
@@ -334,6 +334,14 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    def can_read_parent(self):
+        """
+        :returns: True if there is a parent and can be read from the workers
+        """
+        read_access = (config.distribution.oq_distribute in ('no', 'futures')
+                       or config.directory.shared_dir)
+        return self.oqparam.hazard_calculation_id and read_access
+
     def assoc_assets_sites(self, sitecol):
         """
         :param sitecol: a sequence of sites
@@ -693,12 +701,8 @@ class RiskCalculator(HazardCalculator):
                 else:  # gmf
                     getter = riskinput.GmfDataGetter(
                         dstore, sids, self.R, eids)
-                read_access = (
-                    config.distribution.oq_distribute in ('no', 'futures') or
-                    config.directory.shared_dir)
-                if self.oqparam.hazard_calculation_id and read_access:
-                    pass  # read the hazard data in the workers
-                else:  # read the hazard data in the controller
+                if not self.can_read_parent():
+                    # read the hazard data in the controller node
                     getter.init()
                 ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
