@@ -341,8 +341,6 @@ class GmfGetter(object):
     An hazard getter with methods .gen_gmv and .get_hazard returning
     ground motion values.
     """
-    kind = 'gmf'
-
     def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imtls,
                  min_iml, truncation_level, correlation_model, samples=1):
         assert sitecol is sitecol.complete, sitecol
