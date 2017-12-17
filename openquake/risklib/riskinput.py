@@ -25,11 +25,13 @@ from openquake.baselib import hdf5, performance
 from openquake.baselib.general import (
     groupby, group_array, get_array, AccumDict)
 from openquake.hazardlib import site, calc
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.risklib import scientific, riskmodels
 
 
 class ValidationError(Exception):
     pass
+
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -425,7 +427,7 @@ class GmfGetter(object):
             sites = site.FilteredSiteCollection(
                 ebr.sids, self.sitecol.complete)
             computer = calc.gmf.GmfComputer(
-                ebr, sites, self.imtls, gsims,
+                ebr, sites, self.imtls, ContextMaker(gsims),
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
         # dictionary rlzi -> array(imtls, events, nbytes)
