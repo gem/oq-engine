@@ -350,10 +350,10 @@ class GmfComputerTestCase(unittest.TestCase):
         rupture = mock.Mock()
         sites = [mock.Mock()]
         imts = [mock.Mock()]
-        gsims = [mock.Mock()]
-        with self.assertRaises(ValueError):
-            GmfComputer(rupture, [], imts, gsims)
-        with self.assertRaises(ValueError):
-            GmfComputer(rupture, sites, [], gsims)
-        with self.assertRaises(ValueError):
-            GmfComputer(rupture, sites, imts, [])
+        cmaker = mock.Mock(gsims=[mock.Mock()])
+        with self.assertRaises(ValueError):  # no sites
+            GmfComputer(rupture, [], imts, cmaker)
+        with self.assertRaises(ValueError):  # no imts
+            GmfComputer(rupture, sites, [], cmaker)
+        with self.assertRaises(ValueError):  # no gsims
+            GmfComputer(rupture, sites, imts, mock.Mock(gsims=[]))
