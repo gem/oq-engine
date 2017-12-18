@@ -30,7 +30,7 @@ from datetime import datetime
 import numpy
 
 from openquake.baselib import (
-    general, hdf5, datastore, __version__ as engine_version)
+    config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput, asset
@@ -61,9 +61,9 @@ class InvalidCalculationID(Exception):
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
+
 rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
                       ('gsims', 'S100'), ('weight', F32)])
-
 logversion = True
 
 
@@ -334,6 +334,17 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    def get_parent(self):
+        """
+        :returns:
+            the parent datastore if it is present can be read from the workers,
+            None otherwise
+        """
+        read_access = (config.distribution.oq_distribute in ('no', 'futures')
+                       or config.directory.shared_dir)
+        if self.oqparam.hazard_calculation_id and read_access:
+            return self.datastore.parent
+
     def assoc_assets_sites(self, sitecol):
         """
         :param sitecol: a sequence of sites
@@ -645,12 +656,12 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, eps=numpy.zeros(0), eids=None):
+    def build_riskinputs(self, kind, eps=None, eids=None):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
         :param eps:
-            a matrix of epsilons (possibly empty)
+            a matrix of epsilons (or None)
         :param eids:
             an array of event IDs (or None)
         :returns:
@@ -683,14 +694,17 @@ class RiskCalculator(HazardCalculator):
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
+                dstore = self.get_parent() or self.datastore
                 if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = calc.PmapGetter(self.datastore, sids)
+                    getter = calc.PmapGetter(dstore, sids)
+                    getter.num_rlzs = self.R
                 else:  # gmf
-                    getter = riskinput.GmfDataGetter(self.datastore, sids)
-                hgetter = riskinput.HazardGetter(
-                    self.datastore, kind, getter, imtls, self.R, eids)
-                hgetter.init()  # read the hazard data
-                ri = riskinput.RiskInput(hgetter, reduced_assets, reduced_eps)
+                    getter = riskinput.GmfDataGetter(
+                        dstore, sids, self.R, eids)
+                if dstore is self.datastore:
+                    # read the hazard data in the controller node
+                    getter.init()
+                ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
@@ -711,6 +725,7 @@ class RiskCalculator(HazardCalculator):
 
     def combine(self, acc, res):
         return acc + res
+
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -782,7 +797,7 @@ def get_gmfs(calculator):
         return eids, len(gmfs)
 
     else:  # with --hc option
-        return (calculator.datastore['events'],
+        return (calculator.datastore['events']['eid'],
                 len(calculator.datastore['realizations']))
 
 
