@@ -232,8 +232,8 @@ class OqParam(valid.ParamSet):
         elif (self.calculation_mode == 'event_based_risk'
               and self.conditional_loss_poes and not self.asset_loss_table):
             raise InvalidFile(
-                '%s: conditional_loss_poes is set, but the loss maps cannot '
-                'be generated unless you set asset_loss_table=true' % job_ini)
+                '%s: asset_loss_table is not set, probably you want to remove'
+                ' conditional_loss_poes' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
