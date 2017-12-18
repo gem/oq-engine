@@ -351,9 +351,8 @@ def compute_gmfs_and_curves(getter, oq, monitor):
     :returns:
         a dictionary with keys gmfcoll and hcurves
    """
-    if not hasattr(getter, 'eid2idx'):
-        with monitor('making contexts', measuremem=True):
-            getter.init()
+    with monitor('making contexts', measuremem=True):
+        getter.init()
     hcurves = {}  # key -> poes
     if oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
