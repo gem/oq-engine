@@ -26,7 +26,6 @@ import scipy.stats
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.filters import IntegrationDistance
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -87,7 +86,6 @@ class GmfComputer(object):
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
         self.rupture = rupture
-        self.sites = sites
         self.imts = [from_string(imt) for imt in imts]
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
@@ -100,6 +98,7 @@ class GmfComputer(object):
             self.ctx = rupture.ctx
         except AttributeError:
             self.ctx = cmaker.make_contexts(sites, rupture)
+        self.sites = self.ctx[0].sites
 
     def compute(self, gsim, num_events, seed=None):
         """
