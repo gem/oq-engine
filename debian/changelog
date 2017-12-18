@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check for missing risk_investigation_time
   * Reduced the data transfer in the gmf_ebrisk calculator
   * Now the gmf_ebrisk calculator builds the aggregate loss curves too
   * Extended the gmf_ebrisk calculator to use the GMFs produced by an event
