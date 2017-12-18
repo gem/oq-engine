@@ -392,6 +392,7 @@ class ClassicalDamage(Damage):
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
+        assert risk_investigation_time, risk_investigation_time
 
     def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
@@ -439,9 +440,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     all_args = {}
     for argname in argnames:
         if argname in known_args:
-            all_args[argname] = argval = getattr(oqparam, argname)
-            if argname == 'risk_investigation_time' and argval is None:
-                raise ValueError('risk_investigation_time is None')
+            all_args[argname] = getattr(oqparam, argname)
 
     if 'hazard_imtls' in argnames:  # special case
         all_args['hazard_imtls'] = oqparam.imtls
