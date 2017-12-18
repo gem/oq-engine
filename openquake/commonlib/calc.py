@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import collections
 import warnings
 import numpy
 import h5py
@@ -93,6 +94,7 @@ class PmapGetter(object):
         self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = sids
+        self.eids = None
         self.nbytes = 0
         if sids is None:
             self.sids = dstore['sitecol'].complete.sids
@@ -113,6 +115,27 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
+
+    def init(self):
+        if hasattr(self, 'data'):  # already initialized
+            return
+        self.dstore.open()  # if not
+        self.imtls = self.dstore['oqparam'].imtls
+        self.data = collections.OrderedDict()
+        hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
+        for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
+            self.data[sid] = datadict = {}
+            for rlzi, hcurve in enumerate(hcurve_by_rlz):
+                datadict[rlzi] = lst = [None for imt in self.imtls]
+                for imti, imt in enumerate(self.imtls):
+                    lst[imti] = hcurve[imt]  # imls
+
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: an OrderedDict rlzi -> datadict
+        """
+        return self.data
 
     def get(self, rlzi, grp=None):
         """
@@ -195,6 +218,7 @@ class PmapGetter(object):
             return self.rlzs_assoc.compute_pmap_stats(dic, [stats.mean_curve])
 
 # ######################### hazard maps ################################### #
+
 
 # cutoff value for the poe
 EPSILON = 1E-30
