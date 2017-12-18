@@ -351,7 +351,7 @@ def compute_gmfs_and_curves(getter, oq, monitor):
     :returns:
         a dictionary with keys gmfcoll and hcurves
    """
-    with monitor('making contexts', measuremem=True):
+    with monitor('GmfGetter.init', measuremem=True):
         getter.init()
     hcurves = {}  # key -> poes
     if oq.hazard_curves_from_gmfs:
