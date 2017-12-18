@@ -440,8 +440,8 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     for argname in argnames:
         if argname in known_args:
             all_args[argname] = argval = getattr(oqparam, argname)
-            if argval is None:
-                raise ValueError('%s is None' % argname)
+            if argname == 'risk_investigation_time' and argval is None:
+                raise ValueError('risk_investigation_time is None')
 
     if 'hazard_imtls' in argnames:  # special case
         all_args['hazard_imtls'] = oqparam.imtls
