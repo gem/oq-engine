@@ -334,13 +334,16 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    def can_read_parent(self):
+    def get_parent(self):
         """
-        :returns: True if there is a parent and can be read from the workers
+        :returns:
+            the parent datastore if it is present can be read from the workers,
+            None otherwise
         """
         read_access = (config.distribution.oq_distribute in ('no', 'futures')
                        or config.directory.shared_dir)
-        return self.oqparam.hazard_calculation_id and read_access
+        if self.oqparam.hazard_calculation_id and read_access:
+            return self.datastore.parent
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -691,17 +694,14 @@ class RiskCalculator(HazardCalculator):
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                if self.datastore.parent == ():
-                    dstore = self.datastore
-                else:
-                    dstore = self.datastore.parent
+                dstore = self.get_parent() or self.datastore
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
                 else:  # gmf
                     getter = riskinput.GmfDataGetter(
                         dstore, sids, self.R, eids)
-                if not self.can_read_parent():
+                if dstore is self.datastore:
                     # read the hazard data in the controller node
                     getter.init()
                 ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
