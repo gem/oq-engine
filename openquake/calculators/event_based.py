@@ -153,7 +153,7 @@ def _build_eb_ruptures(
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             try:
-                r_sites, dists = idist.get_closest(s_sites, rup)
+                r_sites, dists = idist.get_closest(s_sites, rup, 'rjb')
             except FarAwayRupture:
                 # ignore ruptures which are far away
                 del num_occ_by_rup[rup]  # save memory
