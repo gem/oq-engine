@@ -96,7 +96,10 @@ class GmfComputer(object):
         # level hazardlib rupture object as a .rupture attribute
         if hasattr(rupture, 'rupture'):
             rupture = rupture.rupture
-        self.ctx = cmaker.make_contexts(sites, rupture)
+        try:
+            self.ctx = rupture.ctx
+        except AttributeError:
+            self.ctx = cmaker.make_contexts(sites, rupture)
 
     def compute(self, gsim, num_events, seed=None):
         """
