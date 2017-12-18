@@ -393,5 +393,5 @@ class OqParamTestCase(unittest.TestCase):
                 maximum_distance='400',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 conditional_loss_poes='0.02')
-        self.assertIn("the loss maps cannot be generated unless you set "
-                      "asset_loss_table=true", str(ctx.exception))
+        self.assertIn("asset_loss_table is not set, probably you want to "
+                      "remove conditional_loss_poes", str(ctx.exception))
