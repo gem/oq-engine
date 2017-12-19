@@ -46,8 +46,6 @@ F64 = numpy.float64
 
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
 
-sids_dt = h5py.special_dtype(vlen=U32)
-
 BaseRupture.init()  # initialize rupture codes
 
 # ############## utilities for the classical calculator ############### #
@@ -501,7 +499,7 @@ class RuptureSerializer(object):
     `ruptures` and `sids`.
     """
     rupture_dt = numpy.dtype([
-        ('serial', U32), ('code', U8), ('sidx', U32),
+        ('serial', U32), ('code', U8),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U16),
@@ -530,7 +528,7 @@ class RuptureSerializer(object):
             assert sz < TWO16, 'The rupture mesh spacing is too small'
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
-            tup = (ebrupture.serial, rup.code, ebrupture.sidx,
+            tup = (ebrupture.serial, rup.code,
                    ebrupture.eidx1, ebrupture.eidx2,
                    getattr(ebrupture, 'pmfx', -1),
                    rup.seed, rup.mag, rup.rake, rate, hypo,
@@ -541,8 +539,6 @@ class RuptureSerializer(object):
 
     def __init__(self, datastore):
         self.datastore = datastore
-        self.sids = {}  # dictionary sids -> sidx
-        self.data = []
         self.nbytes = 0
 
     def save(self, ebruptures, eidx=0):
@@ -553,19 +549,11 @@ class RuptureSerializer(object):
         :param eidx: the last event index saved
         """
         pmfbytes = 0
-        # set the reference to the sids (sidx) correctly
         for ebr in ebruptures:
             mul = ebr.multiplicity
             ebr.eidx1 = eidx
             ebr.eidx2 = eidx + mul
             eidx += mul
-            sids_tup = tuple(ebr.sids)
-            try:
-                ebr.sidx = self.sids[sids_tup]
-            except KeyError:
-                ebr.sidx = self.sids[sids_tup] = len(self.sids)
-                self.data.append(ebr.sids)
-
             rup = ebr.rupture
             if hasattr(rup, 'pmf'):
                 pmfs = numpy.array([(ebr.serial, rup.pmf)], self.pmfs_dt)
@@ -594,13 +582,7 @@ class RuptureSerializer(object):
         self.datastore.flush()
 
     def close(self):
-        """
-        Flush the ruptures and the site IDs on the datastore
-        """
-        self.sids.clear()
-        if self.data:
-            self.datastore.save_vlen('sids', self.data)
-            del self.data[:]
+        pass
 
 
 def get_ruptures(dstore, events, grp_id):
@@ -655,11 +637,9 @@ def _get_ruptures(dstore, events, grp_ids, rup_id):
                 m = mesh[0]
                 rupture.surface.mesh = RectangularMesh(
                     m['lon'], m['lat'], m['depth'])
-            #sids = dstore['sids'][rec['sidx']]
             evs = events[rec['eidx1']:rec['eidx2']]
             ebr = EBRupture(rupture, (), evs, grp_id, rec['serial'])
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
-            ebr.sidx = rec['sidx']
             # not implemented: rupture_slip_direction
             yield ebr
