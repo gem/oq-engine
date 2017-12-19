@@ -382,7 +382,7 @@ class GmfGetter(object):
             sites = site.FilteredSiteCollection(
                 ebr.sids, self.sitecol.complete)
             computer = calc.gmf.GmfComputer(
-                ebr, self.sitecol, self.imtls, self.cmaker,
+                ebr, sites, self.imtls, self.cmaker,
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
         # dictionary rlzi -> array(imtls, events, nbytes)
