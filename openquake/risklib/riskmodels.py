@@ -392,6 +392,7 @@ class ClassicalDamage(Damage):
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
+        assert risk_investigation_time, risk_investigation_time
 
     def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
