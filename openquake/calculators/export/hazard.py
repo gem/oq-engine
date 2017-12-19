@@ -743,6 +743,7 @@ def export_gmf_scenario_csv(ekey, dstore):
     rup_id = int(mo.group(1))
     grp_ids = sorted(int(grp[4:]) for grp in dstore['ruptures'])
     events = dstore['events']
+    calc.RuptureGetter(dstore, )
     ruptures = list(calc.get_all_ruptures(dstore, events, grp_ids, rup_id))
     if not ruptures:
         logging.warn('There is no rupture %d', rup_id)
