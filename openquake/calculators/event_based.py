@@ -22,12 +22,12 @@ import operator
 import itertools
 import logging
 import collections
-import mock
 import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, block_splitter, humansize
+from openquake.baselib.general import (
+    AccumDict, block_splitter, humansize, split_in_slices)
 from openquake.hazardlib.calc.filters import FarAwayRupture, SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -480,10 +480,14 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs_by_gsim = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
                         for grp_id in samples_by_grp}
         if self.precalc:
-            all_data = [self.precalc.result]
+            slices = [slice(None)]
         else:
-            all_data = [calc.get_ruptures_by_grp(self.datastore.parent)]
-        for ruptures_by_grp in all_data:
+            parent = self.get_parent() or self.datastore
+            U = len(parent['ruptures'])
+            slices = split_in_slices(U, oq.ruptures_per_block)
+        for slc in slices:
+            ruptures_by_grp = (self.precalc.result if self.precalc
+                               else calc.get_ruptures_by_grp(parent, slc))
             for grp_id in ruptures_by_grp:
                 ruptures = ruptures_by_grp[grp_id]
                 if not ruptures:
