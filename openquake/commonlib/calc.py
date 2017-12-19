@@ -599,11 +599,10 @@ def get_ruptures_by_grp(dstore, start=0, stop=None, rup_id=None):
             'openquake.hazardlib.geo.surface.PlanarSurface.'
             'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
         return general.groupby(
-            get_all_ruptures(dstore, start, stop),
-            operator.attrgetter('grp_id'))
+            get_ruptures(dstore, start, stop), operator.attrgetter('grp_id'))
 
 
-def get_all_ruptures(dstore, start=0, stop=None, rup_id=None):
+def get_ruptures(dstore, start=0, stop=None, rup_id=None):
     oq = dstore['oqparam']
     grp_trt = dstore['csm_info'].grp_trt()
     recs = dstore['ruptures'][start:stop]
@@ -648,21 +647,3 @@ def get_all_ruptures(dstore, start=0, stop=None, rup_id=None):
         # not implemented: rupture_slip_direction
         rupture.tectonic_region_type = grp_trt[ebr.grp_id]
         yield ebr
-
-
-class RuptureGetter(object):
-    """
-    A class to retrieve the ruptures coming from a given group of sources.
-    Iterating on a RuptureGetter yields EBRupture instances.
-    """
-    def __init__(self, dstore, start=0, stop=None):
-        self.dstore = dstore
-        self.start = start
-        self.stop = stop
-
-    def init(self):
-        self.dstore.open()  # if not open already
-        self.trt = self.dstore['csm_info'].grp_trt()[self.grp_id]
-
-    def __iter__(self):
-        return get_all_ruptures(self.dstore, self.start, self.stop)
