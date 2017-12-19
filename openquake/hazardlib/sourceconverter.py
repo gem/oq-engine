@@ -440,7 +440,7 @@ class RuptureConverter(object):
                         for eid in (~sesnode).split():
                             events.append((eid, ses, 0))
                 ebr = source.rupture.EBRupture(
-                    rup, None, numpy.array(events, event_dt), grp_id, rupid)
+                    rup, (), numpy.array(events, event_dt), rupid)
                 ebrs.append(ebr)
         return coll
 
