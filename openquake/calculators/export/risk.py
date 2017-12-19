@@ -208,6 +208,9 @@ def export_agg_losses_ebr(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    if 'ruptures' not in dstore:
+        logging.warn('There are no ruptures in the datastore')
+        return []
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     has_rup_data = 'ruptures' in dstore
