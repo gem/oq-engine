@@ -169,11 +169,10 @@ def _build_eb_ruptures(
             for _ in range(num_occ):
                 # NB: the 0 below is a placeholder; the right eid will be
                 # set a bit later, in set_eids
-                events.append((0, ses_idx, sampleid))
+                events.append((0, src.src_group_id, ses_idx, sampleid))
         if events:
             yield calc.EBRupture(
-                rup, indices, numpy.array(events, calc.event_dt),
-                src.src_group_id, serial)
+                rup, indices, numpy.array(events, calc.event_dt), serial)
 
 
 def _count(ruptures):
@@ -389,27 +388,6 @@ def compute_gmfs_and_curves(getter, oq, monitor):
                 taskno=monitor.task_no, indices=numpy.array(indices, (U32, 3)))
 
 
-def get_ruptures_by_grp(dstore):
-    """
-    Extracts the dictionary `ruptures_by_grp` from the given calculator
-    """
-    events = dstore['events']
-    n = 0
-    for grp in dstore['ruptures']:
-        n += len(dstore['ruptures/' + grp])
-    logging.info('Reading %d ruptures from the datastore', n)
-    # disable check on PlaceSurface to support UCERF ruptures
-    with mock.patch(
-            'openquake.hazardlib.geo.surface.PlanarSurface.'
-            'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
-        ruptures_by_grp = AccumDict(accum=[])
-        for grp in dstore['ruptures']:
-            grp_id = int(grp[4:])  # strip 'grp-'
-            ruptures = list(calc.get_ruptures(dstore, events, grp_id))
-            ruptures_by_grp[grp_id] = ruptures
-    return ruptures_by_grp
-
-
 def save_gmdata(calc, n_rlzs):
     """
     Save a composite array `gmdata` in the datastore.
@@ -525,8 +503,9 @@ class EventBasedCalculator(base.HazardCalculator):
             calc.check_overflow(self)
 
         with self.monitor('reading ruptures', autoflush=True):
-            ruptures_by_grp = (self.precalc.result if self.precalc
-                               else get_ruptures_by_grp(self.datastore.parent))
+            ruptures_by_grp = (
+                self.precalc.result if self.precalc
+                else calc.get_ruptures_by_grp(self.datastore.parent))
 
         self.csm_info = self.datastore['csm_info']
         self.sm_id = {tuple(sm.path): sm.ordinal
