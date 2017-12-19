@@ -112,7 +112,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         calc1 = self.calc.datastore  # event_based
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       calculation_mode='gmf_ebrisk',
-                      hazard_calculation_id=str(calc1.calc_id))
+                      hazard_calculation_id=str(calc1.calc_id),
+                      concurrent_tasks='0')  # to avoid numeric issues
         calc2 = self.calc.datastore  # gmf_ebrisk
 
         check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
