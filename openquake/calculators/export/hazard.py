@@ -72,18 +72,15 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    events = dstore['events']
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
-    ruptures = {}
-    for grp in dstore['ruptures']:
-        grp_id = int(grp[4:])  # strip grp-
-        ruptures[grp_id] = []
-        for ebr in calc.get_ruptures(dstore, events, grp_id):
-            ruptures[grp_id].append(ebr.export(mesh, sm_by_grp))
+    ruptures_by_grp = {}
+    for grp_id, ruptures in calc.get_ruptures_by_grp(dstore).items():
+        ruptures_by_grp[grp_id] = [ebr.export(mesh, sm_by_grp)
+                                   for ebr in ruptures]
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
-    writer.serialize(ruptures, oq.investigation_time)
+    writer.serialize(ruptures_by_grp, oq.investigation_time)
     return [dest]
 
 
@@ -96,16 +93,16 @@ def export_ruptures_csv(ekey, dstore):
     oq = dstore['oqparam']
     if 'scenario' in oq.calculation_mode:
         return []
-    events = dstore['events']
     dest = dstore.export_path('ruptures.csv')
     header = ('rupid multiplicity mag centroid_lon centroid_lat centroid_depth'
               ' trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
     rows = []
+    ruptures_by_grp = calc.get_ruptures_by_grp(dstore)
     for grp_id, trt in sorted(grp_trt.items()):
         rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id))
-        for r in rup_data.to_array(calc.get_ruptures(dstore, events, grp_id)):
+        for r in rup_data.to_array(ruptures_by_grp.get(grp_id, [])):
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
@@ -741,9 +738,8 @@ def export_gmf_scenario_csv(ekey, dstore):
         raise ValueError(
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     rup_id = int(mo.group(1))
-    grp_ids = sorted(int(grp[4:]) for grp in dstore['ruptures'])
     events = dstore['events']
-    ruptures = list(calc.get_all_ruptures(dstore, events, grp_ids, rup_id))
+    ruptures = list(calc.get_all_ruptures(dstore, events, rup_id=rup_id))
     if not ruptures:
         logging.warn('There is no rupture %d', rup_id)
         return []
