@@ -588,24 +588,25 @@ class RuptureSerializer(object):
         pass
 
 
-def get_ruptures_by_grp(dstore, start=0, stop=None, rup_id=None):
+def get_ruptures_by_grp(dstore, slice_=slice(None), rup_id=None):
     """
     Extracts the ruptures of the given grp_id
     """
-    n = len(dstore['ruptures'])
-    logging.info('Reading %d ruptures from the datastore', n)
+    if slice_.stop is None:
+        n = len(dstore['ruptures']) - (slice_.start or 0)
+        logging.info('Reading %d ruptures from the datastore', n)
     # disable check on PlaceSurface to support UCERF ruptures
     with mock.patch(
             'openquake.hazardlib.geo.surface.PlanarSurface.'
             'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
         return general.groupby(
-            get_ruptures(dstore, start, stop), operator.attrgetter('grp_id'))
+            get_ruptures(dstore, slice_), operator.attrgetter('grp_id'))
 
 
-def get_ruptures(dstore, start=0, stop=None, rup_id=None):
+def get_ruptures(dstore, slice_=slice(None), rup_id=None):
     oq = dstore['oqparam']
     grp_trt = dstore['csm_info'].grp_trt()
-    recs = dstore['ruptures'][start:stop]
+    recs = dstore['ruptures'][slice_]
     for rec in recs:
         if rup_id is not None and rup_id != rec['serial']:
             continue
