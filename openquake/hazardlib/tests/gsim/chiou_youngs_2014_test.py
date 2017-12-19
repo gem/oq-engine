@@ -149,7 +149,6 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
         return rupture
 
     def test_mearn_nearfault_distance_taper(self):
-
         rupture = self.make_rupture()
         site1 = Site(location=Point(27.9, 41), vs30=1200.,
                      vs30measured=True, z1pt0=2.36, z2pt5=2.)
@@ -158,13 +157,8 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
         sites = SiteCollection([site1, site2])
 
         fields = ground_motion_fields(
-            rupture=rupture,
-            sites=sites,
-            imts=[PGV()],
-            gsim=ChiouYoungs2014NearFaultEffect(),
-            truncation_level=0,
-            realizations=1
-        )
+            rupture, sites, [PGV()], ChiouYoungs2014NearFaultEffect(),
+            truncation_level=0, realizations=1)
         gmf = fields[PGV()]
         self.assertAlmostEquals(2.27328758, gmf[0], delta=1e-4)
         self.assertAlmostEquals(3.38322998, gmf[1], delta=1e-4)
