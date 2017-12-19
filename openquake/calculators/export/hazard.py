@@ -104,9 +104,8 @@ def export_ruptures_csv(ekey, dstore):
     grp_trt = csm_info.grp_trt()
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
-        rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id)).to_array(
-            calc.get_ruptures(dstore, events, grp_id))
-        for r in rup_data:
+        rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id))
+        for r in rup_data.to_array(calc.get_ruptures(dstore, events, grp_id)):
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
@@ -755,22 +754,23 @@ def export_gmf_scenario_csv(ekey, dstore):
     correl_model = oq.get_correl_model()
     sitecol = dstore['sitecol'].complete
     getter = GmfGetter(
-        rlzs_by_gsim, ruptures, sitecol, imts,
-        min_iml, oq.truncation_level, correl_model, samples)
+        rlzs_by_gsim, ruptures, sitecol, imts, min_iml,
+        oq.maximum_distance, oq.truncation_level, correl_model, samples)
     getter.init()
+    sids = getter.computers[0].sites.sids
     hazardr = getter.get_hazard()
     rlzs = rlzs_assoc.realizations
     fields = ['eid-%03d' % eid for eid in getter.eids]
     dt = numpy.dtype([(f, F32) for f in fields])
-    mesh = numpy.zeros(len(ebr.sids), [('lon', F64), ('lat', F64)])
-    mesh['lon'] = sitecol.lons[ebr.sids]
-    mesh['lat'] = sitecol.lats[ebr.sids]
+    mesh = numpy.zeros(len(sids), [('lon', F64), ('lat', F64)])
+    mesh['lon'] = sitecol.lons[sids]
+    mesh['lat'] = sitecol.lats[sids]
     writer = writers.CsvWriter(fmt='%.5f')
     for rlzi in range(len(rlzs)):
         hazard = hazardr[rlzi]
         for imti, imt in enumerate(imts):
-            gmfs = numpy.zeros(len(ebr.sids), dt)
-            for s, sid in enumerate(ebr.sids):
+            gmfs = numpy.zeros(len(sids), dt)
+            for s, sid in enumerate(sids):
                 for rec in hazard[sid]:
                     event = 'eid-%03d' % rec['eid']
                     gmfs[s][event] = rec['gmv'][imti]
