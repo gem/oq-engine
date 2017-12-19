@@ -607,12 +607,16 @@ def get_ruptures(dstore, events, grp_id):
     """
     Extracts the ruptures of the given grp_id
     """
-    return _get_ruptures(dstore, events, [grp_id], None)
+    return get_all_ruptures(dstore, events, [grp_id], None)
 
 
-def _get_ruptures(dstore, events, grp_ids, rup_id):
+def get_all_ruptures(dstore, events=None, grp_ids=None, rup_id=None):
     oq = dstore['oqparam']
     grp_trt = dstore['csm_info'].grp_trt()
+    if events is None:
+        events = dstore['events'].value
+    if grp_ids is None:
+        grp_ids = grp_trt
     for grp_id in grp_ids:
         trt = grp_trt[grp_id]
         grp = 'grp-%02d' % grp_id
