@@ -647,3 +647,63 @@ def get_all_ruptures(dstore, events=None, grp_ids=None, rup_id=None):
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
             yield ebr
+
+
+class RuptureGetter(object):
+    """
+    A class to retrieve the ruptures coming from a given group of sources.
+    Iterating on a RuptureGetter yields EBRupture instances.
+    """
+    def __init__(self, dstore, grp_id, start=0, stop=None):
+        self.dstore = dstore
+        self.grp_id = grp_id
+        self.start = start
+        self.stop = stop
+
+    def init(self):
+        self.dstore.open()  # if not open already
+        self.events = self.dstore['events'].value
+        self.trt = self.dstore['csm_info'].grp_trt()[self.grp_id]
+
+    def __iter__(self):
+        oq = self.dstore['oqparam']
+        dset = self.dstore['ruptures/grp-%02d' % self.grp_id]
+        for rec in dset[self.start: self.stop]:
+            mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+            rupture_cls, surface_cls, source_cls = BaseRupture.types[
+                rec['code']]
+            rupture = object.__new__(rupture_cls)
+            rupture.surface = object.__new__(surface_cls)
+            # MISSING: case complex_fault_mesh_spacing != rupture_mesh_spacing
+            if 'Complex' in surface_cls.__name__:
+                mesh_spacing = oq.complex_fault_mesh_spacing
+            else:
+                mesh_spacing = oq.rupture_mesh_spacing
+            rupture.source_typology = source_cls
+            rupture.mag = rec['mag']
+            rupture.rake = rec['rake']
+            rupture.seed = rec['seed']
+            rupture.hypocenter = geo.Point(*rec['hypo'])
+            rupture.occurrence_rate = rec['occurrence_rate']
+            rupture.tectonic_region_type = self.trt
+            pmfx = rec['pmfx']
+            if pmfx != -1:
+                rupture.pmf = self.dstore['pmfs/grp-%02d' % self.grp_id][pmfx]
+            if surface_cls is geo.PlanarSurface:
+                rupture.surface = geo.PlanarSurface.from_array(
+                    mesh_spacing, rec['points'])
+            elif surface_cls.__name__.endswith('MultiSurface'):
+                rupture.surface.__init__([
+                    geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
+                    for m1 in mesh])
+            else:  # fault surface, strike and dip will be computed
+                rupture.surface.strike = rupture.surface.dip = None
+                m = mesh[0]
+                rupture.surface.mesh = RectangularMesh(
+                    m['lon'], m['lat'], m['depth'])
+            evs = self.events[rec['eidx1']:rec['eidx2']]
+            ebr = EBRupture(rupture, (), evs, self.grp_id, rec['serial'])
+            ebr.eidx1 = rec['eidx1']
+            ebr.eidx2 = rec['eidx2']
+            # not implemented: rupture_slip_direction
+            yield ebr
