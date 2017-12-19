@@ -379,8 +379,8 @@ class GmfGetter(object):
         self.sids = self.sitecol.sids
         self.computers = []
         for ebr in self.ebruptures:
-            #sites = site.FilteredSiteCollection(
-            #    ebr.sids, self.sitecol.complete)
+            sites = site.FilteredSiteCollection(
+                ebr.sids, self.sitecol.complete)
             computer = calc.gmf.GmfComputer(
                 ebr, self.sitecol, self.imtls, self.cmaker,
                 self.truncation_level, self.correlation_model)
