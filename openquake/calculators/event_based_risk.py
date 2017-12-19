@@ -25,11 +25,11 @@ import numpy
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
-from openquake.baselib import config
-from openquake.calculators import base, event_based
-from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.baselib import parallel
 from openquake.risklib import riskinput
+from openquake.commonlib import calc
+from openquake.calculators import base, event_based
+from openquake.calculators.export.loss_curves import get_loss_builder
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -263,7 +263,7 @@ class EbriskCalculator(base.RiskCalculator):
         with self.monitor('reading ruptures', autoflush=True):
             ruptures_by_grp = (
                 self.precalc.result if self.precalc
-                else event_based.get_ruptures_by_grp(self.datastore.parent))
+                else calc.get_ruptures_by_grp(self.datastore.parent))
             # the ordering of the ruptures is essential for repeatibility
             for grp in ruptures_by_grp:
                 ruptures_by_grp[grp].sort(key=operator.attrgetter('serial'))
