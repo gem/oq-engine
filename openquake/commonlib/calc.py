@@ -655,9 +655,9 @@ def _get_ruptures(dstore, events, grp_ids, rup_id):
                 m = mesh[0]
                 rupture.surface.mesh = RectangularMesh(
                     m['lon'], m['lat'], m['depth'])
-            sids = dstore['sids'][rec['sidx']]
+            #sids = dstore['sids'][rec['sidx']]
             evs = events[rec['eidx1']:rec['eidx2']]
-            ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
+            ebr = EBRupture(rupture, (), evs, grp_id, rec['serial'])
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             ebr.sidx = rec['sidx']
