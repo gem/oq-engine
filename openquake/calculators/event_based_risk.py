@@ -195,7 +195,8 @@ class EbriskCalculator(base.RiskCalculator):
                 self.start += n_events
                 getter = riskinput.GmfGetter(
                     rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
-                    trunc_level, correl_model, samples)
+                    self.oqparam.maximum_distance, trunc_level, correl_model,
+                    samples)
                 ri = riskinput.RiskInput(getter, self.assets_by_site, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
