@@ -463,9 +463,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 self, res['ruptures'])
         return acc
 
-    def gen_args(self, ruptures_by_grp):
+    def gen_args(self):
         """
-        :param ruptures_by_grp: a dictionary of EBRupture objects
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
@@ -478,17 +477,24 @@ class EventBasedCalculator(base.HazardCalculator):
         except AttributeError:  # no csm
             csm_info = self.datastore['csm_info']
         samples_by_grp = csm_info.get_samples_by_grp()
-        for grp_id in ruptures_by_grp:
-            ruptures = ruptures_by_grp[grp_id]
-            if not ruptures:
-                continue
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            for block in block_splitter(ruptures, oq.ruptures_per_block):
-                samples = samples_by_grp[grp_id]
-                getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
-                                   imts, min_iml, oq.maximum_distance,
-                                   oq.truncation_level, correl_model, samples)
-                yield getter, oq, monitor
+        rlzs_by_gsim = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+                        for grp_id in samples_by_grp}
+        if self.precalc:
+            all_data = [self.precalc.result]
+        else:
+            all_data = [calc.get_ruptures_by_grp(self.datastore.parent)]
+        for ruptures_by_grp in all_data:
+            for grp_id in ruptures_by_grp:
+                ruptures = ruptures_by_grp[grp_id]
+                if not ruptures:
+                    continue
+                for block in block_splitter(ruptures, oq.ruptures_per_block):
+                    samples = samples_by_grp[grp_id]
+                    getter = GmfGetter(
+                        rlzs_by_gsim[grp_id], block, self.sitecol,
+                        imts, min_iml, oq.maximum_distance,
+                        oq.truncation_level, correl_model, samples)
+                    yield getter, oq, monitor
 
     def execute(self):
         """
@@ -502,17 +508,12 @@ class EventBasedCalculator(base.HazardCalculator):
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
 
-        with self.monitor('reading ruptures', autoflush=True):
-            ruptures_by_grp = (
-                self.precalc.result if self.precalc
-                else calc.get_ruptures_by_grp(self.datastore.parent))
-
         self.csm_info = self.datastore['csm_info']
         self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
         R = len(self.datastore['realizations'])
-        allargs = list(self.gen_args(ruptures_by_grp))
+        allargs = list(self.gen_args())
         res = parallel.Starmap(self.core_task.__func__, allargs).submit_all()
         self.gmdata = {}
         self.offset = 0
