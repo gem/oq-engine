@@ -29,6 +29,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture, SourceFilter
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
@@ -90,9 +91,10 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     grp_id = sources[0].src_group_id
     eb_ruptures = []
     calc_times = []
-    rup_mon = monitor('filtering ruptures', measuremem=False)
+    rup_mon = monitor('making contexts', measuremem=False)
     # Compute and save stochastic event sets
     num_ruptures = 0
+    cmaker = ContextMaker(gsims, src_filter.integration_distance)
     for src, s_sites in src_filter(sources):
         t0 = time.time()
         if s_sites is None:
@@ -105,8 +107,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in _build_eb_ruptures(
-                src, num_occ_by_rup, src_filter.integration_distance,
-                s_sites, param['seed'], rup_mon):
+                src, num_occ_by_rup, cmaker, s_sites, param['seed'], rup_mon):
             eb_ruptures.append(ebr)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
@@ -145,7 +146,7 @@ def sample_ruptures(src, num_ses, num_samples, seed):
 
 
 def _build_eb_ruptures(
-        src, num_occ_by_rup, idist, s_sites, random_seed, rup_mon):
+        src, num_occ_by_rup, cmaker, s_sites, random_seed, rup_mon):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
@@ -153,7 +154,8 @@ def _build_eb_ruptures(
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             try:
-                r_sites, dists = idist.get_closest(s_sites, rup)
+                rup.ctx = cmaker.make_contexts(s_sites, rup)
+                indices = rup.ctx[0].sites.indices
             except FarAwayRupture:
                 # ignore ruptures which are far away
                 del num_occ_by_rup[rup]  # save memory
@@ -170,8 +172,7 @@ def _build_eb_ruptures(
                 events.append((0, ses_idx, sampleid))
         if events:
             yield calc.EBRupture(
-                rup, r_sites.indices,
-                numpy.array(events, calc.event_dt),
+                rup, indices, numpy.array(events, calc.event_dt),
                 src.src_group_id, serial)
 
 
@@ -350,7 +351,7 @@ def compute_gmfs_and_curves(getter, oq, monitor):
     :returns:
         a dictionary with keys gmfcoll and hcurves
    """
-    with monitor('making contexts', measuremem=True):
+    with monitor('GmfGetter.init', measuremem=True):
         getter.init()
     hcurves = {}  # key -> poes
     if oq.hazard_curves_from_gmfs:
@@ -507,8 +508,8 @@ class EventBasedCalculator(base.HazardCalculator):
             for block in block_splitter(ruptures, oq.ruptures_per_block):
                 samples = samples_by_grp[grp_id]
                 getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
-                                   imts, min_iml, oq.truncation_level,
-                                   correl_model, samples)
+                                   imts, min_iml, oq.maximum_distance,
+                                   oq.truncation_level, correl_model, samples)
                 yield getter, oq, monitor
 
     def execute(self):

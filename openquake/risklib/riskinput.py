@@ -25,6 +25,7 @@ from openquake.baselib import hdf5, performance
 from openquake.baselib.general import (
     groupby, group_array, get_array, AccumDict)
 from openquake.hazardlib import site, calc
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.risklib import scientific, riskmodels
 
 
@@ -342,7 +343,8 @@ class GmfGetter(object):
     ground motion values.
     """
     def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imtls,
-                 min_iml, truncation_level, correlation_model, samples=1):
+                 min_iml, maximum_distance, truncation_level,
+                 correlation_model, samples=1):
         assert sitecol is sitecol.complete, sitecol
         self.grp_id = ebruptures[0].grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
@@ -351,6 +353,10 @@ class GmfGetter(object):
         self.sitecol = sitecol
         self.imtls = imtls
         self.min_iml = min_iml
+        self.cmaker = ContextMaker(
+            rlzs_by_gsim,
+            calc.filters.IntegrationDistance(maximum_distance)
+            if isinstance(maximum_distance, dict) else maximum_distance)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
@@ -372,12 +378,9 @@ class GmfGetter(object):
         self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
         self.sids = self.sitecol.sids
         self.computers = []
-        gsims = sorted(self.rlzs_by_gsim)
         for ebr in self.ebruptures:
-            sites = site.FilteredSiteCollection(
-                ebr.sids, self.sitecol.complete)
             computer = calc.gmf.GmfComputer(
-                ebr, sites, self.imtls, gsims,
+                ebr, self.sitecol, self.imtls, self.cmaker,
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
         # dictionary rlzi -> array(imtls, events, nbytes)
