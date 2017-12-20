@@ -98,7 +98,7 @@ class GmfComputer(object):
             self.ctx = rupture.ctx
         except AttributeError:
             self.ctx = cmaker.make_contexts(sites, rupture)
-        self.sites = self.ctx[0].sites
+        self.sids = self.ctx[0].sids
 
     def compute(self, gsim, num_events, seed=None):
         """
@@ -114,7 +114,7 @@ class GmfComputer(object):
         if seed is not None:
             numpy.random.seed(seed)
         result = numpy.zeros(
-            (len(self.imts), len(self.sites), num_events), numpy.float32)
+            (len(self.imts), len(self.sids), num_events), numpy.float32)
         for imti, imt in enumerate(self.imts):
             result[imti] = self._compute(None, gsim, num_events, imt)
         return result
@@ -161,7 +161,7 @@ class GmfComputer(object):
             mean = mean.reshape(mean.shape + (1, ))
 
             total_residual = stddev_total * distribution.rvs(
-                size=(len(self.sites), num_events))
+                size=(len(self.sids), num_events))
             gmf = gsim.to_imt_unit_values(mean + total_residual)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
@@ -172,11 +172,11 @@ class GmfComputer(object):
             mean = mean.reshape(mean.shape + (1, ))
 
             intra_residual = stddev_intra * distribution.rvs(
-                size=(len(self.sites), num_events))
+                size=(len(self.sids), num_events))
 
             if self.correlation_model is not None:
                 ir = self.correlation_model.apply_correlation(
-                    self.sites, imt, intra_residual)
+                    self.sids, imt, intra_residual)
                 # this fixes a mysterious bug: ir[row] is actually
                 # a matrix of shape (E, 1) and not a vector of size E
                 intra_residual = numpy.zeros(ir.shape)
