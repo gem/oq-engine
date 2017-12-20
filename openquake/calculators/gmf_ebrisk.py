@@ -20,6 +20,7 @@ import logging
 import numpy
 
 from openquake.risklib import riskinput
+from openquake.hazardlib import InvalidFile
 from openquake.calculators import base, event_based, event_based_risk as ebr
 
 U16 = numpy.uint16
@@ -68,6 +69,9 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.R = len(self.rlzs_assoc.realizations)
         else:  # read the GMFs from a file
+            if 'site_model' in oq.inputs:
+                raise InvalidFile('it makes no sense to define a site model in'
+                                  ' %(job_ini)s' % oq.inputs)
             with self.monitor('reading GMFs', measuremem=True):
                 fname = oq.inputs['gmfs']
                 sids = self.sitecol.complete.sids
