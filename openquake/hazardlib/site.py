@@ -115,7 +115,7 @@ def _extract(array_or_float, indices):
         return array_or_float
 
 
-@with_slots
+#@with_slots
 class SiteCollection(object):
     """
     A collection of :class:`sites <Site>`.
@@ -139,11 +139,11 @@ class SiteCollection(object):
         ('lons', numpy.float64),
         ('lats', numpy.float64),
         ('depths', numpy.float64),
-        ('_vs30', numpy.float64),
-        ('_vs30measured', numpy.bool),
-        ('_z1pt0', numpy.float64),
-        ('_z2pt5', numpy.float64),
-        ('_backarc', numpy.bool),
+        ('vs30', numpy.float64),
+        ('vs30measured', numpy.bool),
+        ('z1pt0', numpy.float64),
+        ('z2pt5', numpy.float64),
+        ('backarc', numpy.bool),
     ])
     _slots_ = dtype.names
 
@@ -171,42 +171,30 @@ class SiteCollection(object):
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
                                                        len(depths))
         self = cls.__new__(cls)
-        self.complete = self
-        self.total_sites = len(lons)
-        self.sids = numpy.arange(len(lons), dtype=numpy.uint32)
-        self.lons = numpy.array(lons)
-        self.lats = numpy.array(lats)
-        self.depths = numpy.array(depths)
-        self._vs30 = sitemodel.reference_vs30_value
-        self._vs30measured = sitemodel.reference_vs30_type == 'measured'
-        self._z1pt0 = sitemodel.reference_depth_to_1pt0km_per_sec
-        self._z2pt5 = sitemodel.reference_depth_to_2pt5km_per_sec
-        self._backarc = sitemodel.reference_backarc
+        self.array = arr = numpy.zeros(len(lons), self.dtype)
+        arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
+        arr['lons'] = numpy.array(lons)
+        arr['lats'] = numpy.array(lats)
+        arr['depths'] = numpy.array(depths)
+        arr['vs30'] = sitemodel.reference_vs30_value
+        arr['vs30measured'] = sitemodel.reference_vs30_type == 'measured'
+        arr['z1pt0'] = sitemodel.reference_depth_to_1pt0km_per_sec
+        arr['z2pt5'] = sitemodel.reference_depth_to_2pt5km_per_sec
+        arr['backarc'] = sitemodel.reference_backarc
         return self
 
     def __init__(self, sites):
-        self.complete = self
-        self.total_sites = n = len(sites)
-        self.sids = numpy.zeros(n, dtype=int)
-        self.lons = numpy.zeros(n, dtype=float)
-        self.lats = numpy.zeros(n, dtype=float)
-        self.depths = numpy.zeros(n, dtype=float)
-        self._vs30 = numpy.zeros(n, dtype=float)
-        self._vs30measured = numpy.zeros(n, dtype=bool)
-        self._z1pt0 = numpy.zeros(n, dtype=float)
-        self._z2pt5 = numpy.zeros(n, dtype=float)
-        self._backarc = numpy.zeros(n, dtype=bool)
-
-        for i in range(n):
-            self.sids[i] = i
-            self.lons[i] = sites[i].location.longitude
-            self.lats[i] = sites[i].location.latitude
-            self.depths[i] = sites[i].location.depth
-            self._vs30[i] = sites[i].vs30
-            self._vs30measured[i] = sites[i].vs30measured
-            self._z1pt0[i] = sites[i].z1pt0
-            self._z2pt5[i] = sites[i].z2pt5
-            self._backarc[i] = sites[i].backarc
+        self.array = arr = numpy.zeros(len(sites), self.dtype)
+        for i in range(len(arr)):
+            arr['sids'][i] = i
+            arr['lons'][i] = sites[i].location.longitude
+            arr['lats'][i] = sites[i].location.latitude
+            arr['depths'][i] = sites[i].location.depth
+            arr['vs30'][i] = sites[i].vs30
+            arr['vs30measured'][i] = sites[i].vs30measured
+            arr['z1pt0'][i] = sites[i].z1pt0
+            arr['z2pt5'][i] = sites[i].z2pt5
+            arr['backarc'][i] = sites[i].backarc
 
         # protect arrays from being accidentally changed. it is useful
         # because we pass these arrays directly to a GMPE through
@@ -214,23 +202,23 @@ class SiteCollection(object):
         # modify the site values, thereby corrupting site and all the
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
-        for arr in (self._vs30, self._vs30measured, self._z1pt0, self._z2pt5,
-                    self.lons, self.lats, self.depths, self._backarc,
-                    self.sids):
-            arr.flags.writeable = False
+        arr.flags.writeable = False
 
     def __toh5__(self):
-        array = numpy.zeros(self.total_sites, self.dtype)
-        for slot in self._slots_:
-            array[slot] = getattr(self, slot)
-        attrs = dict(total_sites=self.total_sites)
-        return array, attrs
+        return self.array, {}
 
     def __fromh5__(self, array, attrs):
-        for slot in self._slots_:
-            setattr(self, slot, array[slot])
+        self.array = array
         vars(self).update(attrs)
-        self.complete = self
+
+    @property
+    def complete(self):
+        return self
+
+    @property
+    def total_sites(self):
+        """Return the length of the underlying array"""
+        return len(self.array)
 
     @property
     def mesh(self):
@@ -256,17 +244,7 @@ class SiteCollection(object):
         for seq in split_in_blocks(range(len(self)), hint or 1):
             indices = numpy.array(seq, int)
             sc = SiteCollection.__new__(SiteCollection)
-            sc.complete = sc
-            sc.total_sites = len(indices)
-            sc.sids = self.sids[indices]
-            sc.lons = self.lons[indices]
-            sc.lats = self.lats[indices]
-            sc.depths = self.depths[indices]
-            sc._vs30 = _extract(self._vs30, indices)
-            sc._vs30measured = _extract(self._vs30measured, indices)
-            sc._z1pt0 = _extract(self._z1pt0, indices)
-            sc._z2pt5 = _extract(self._z2pt5, indices)
-            sc._backarc = _extract(self._backarc, indices)
+            sc.array = self.array[indices]
             tiles.append(sc)
         return tiles
 
@@ -312,6 +290,15 @@ class SiteCollection(object):
         [indices] = mask.nonzero()
         return FilteredSiteCollection(indices, self)
 
+    def __getstate__(self):
+        return dict(array=self.array)
+
+    def __getattr__(self, name):
+        if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '
+                        'depths sids'):
+            raise AttributeError(name)
+        return self.array[name]
+
     def __len__(self):
         """
         Return the number of sites in the collection.
@@ -320,18 +307,6 @@ class SiteCollection(object):
 
     def __repr__(self):
         return '<SiteCollection with %d sites>' % self.total_sites
-
-# adding a number of properties for the site model data
-for name in 'vs30 vs30measured z1pt0 z2pt5 backarc'.split():
-    def getarray(sc, name=name):  # sc is a SiteCollection
-        value = getattr(sc, '_' + name)
-        if isinstance(value, (float, bool)):
-            arr = numpy.array([value] * len(sc), dtype=type(value))
-            arr.flags.writeable = False
-            return arr
-        else:
-            return value
-    setattr(SiteCollection, name, property(getarray, doc='%s array' % name))
 
 
 @with_slots
@@ -343,8 +318,7 @@ class FilteredSiteCollection(object):
     :param indices:
         an array of indices referring to the complete site collection
     :param complete:
-        the complete site collection the filtered collection was
-        derived from
+        the site collection the filtered collection was derived from
 
     Notice that if you filter a FilteredSiteCollection `fsc`, you will
     get a different FilteredSiteCollection referring to the complete
@@ -353,11 +327,8 @@ class FilteredSiteCollection(object):
     _slots_ = 'indices complete'.split()
 
     def __init__(self, indices, complete):
-        if complete is not complete.complete:
-            raise ValueError(
-                'You should pass a full site collection, not %s' % complete)
         self.indices = indices
-        self.complete = complete
+        self.complete = complete.complete
 
     @property
     def total_sites(self):
@@ -412,19 +383,11 @@ class FilteredSiteCollection(object):
         return len(self.indices)
 
     def __toh5__(self):
-        n = len(self.complete)
-        array = numpy.zeros(n, self.complete.dtype)
-        for slot in self.complete._slots_:
-            array[slot] = getattr(self.complete, slot)
-        attrs = dict(total_sites=n, indices=self.indices)
-        return array, attrs
+        return self.complete.array, dict(indices=self.indices)
 
     def __fromh5__(self, array, attrs):
         complete = object.__new__(SiteCollection)
-        complete.complete = complete
-        complete.total_sites = attrs['total_sites']
-        for slot in complete._slots_:
-            setattr(complete, slot, array[slot])
+        complete.array = array
         self.indices = attrs['indices']
         self.complete = complete
 
@@ -439,4 +402,4 @@ class FilteredSiteCollection(object):
 
     def __repr__(self):
         return '<FilteredSiteCollection with %d of %d sites>' % (
-            len(self.indices), self.total_sites)
+            len(self.indices), len(self.complete))
