@@ -493,9 +493,10 @@ class EventBasedCalculator(base.HazardCalculator):
             return
         parent = self.get_parent() or self.datastore
         U = len(parent['ruptures'])
-        if parent is not self.datastore:  # real parent
+        logging.info('Found %d ruptures', U)
+        if parent is not self.datastore:  # accessible parent
             parent.close()
-        for slc in split_in_slices(U, oq.ruptures_per_block):
+        for slc in split_in_slices(U, oq.concurrent_tasks or 1):
             for grp_id in rlzs_by_gsim:
                 ruptures = calc.RuptureGetter(parent, slc, grp_id)
                 if parent is self.datastore:  # not accessible parent
