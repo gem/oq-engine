@@ -99,7 +99,7 @@ class PmapGetter(object):
         self.eids = None
         self.nbytes = 0
         if sids is None:
-            self.sids = dstore['sitecol'].sids
+            self.sids = dstore['sitecol'].complete.sids
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
