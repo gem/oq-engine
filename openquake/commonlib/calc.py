@@ -603,12 +603,15 @@ def get_ruptures_by_grp(dstore, slice_=slice(None), rup_id=None):
             get_ruptures(dstore, slice_), operator.attrgetter('grp_id'))
 
 
-def get_ruptures(dstore, slice_=slice(None), rup_id=None):
+def get_ruptures(dstore, slice_=slice(None), grp_id=None, rup_id=None):
     oq = dstore['oqparam']
     grp_trt = dstore['csm_info'].grp_trt()
     recs = dstore['ruptures'][slice_]
     for rec in recs:
         if rup_id is not None and rup_id != rec['serial']:
+            continue
+        evs = dstore['events'][rec['eidx1']:rec['eidx2']]
+        if grp_id is not None and grp_id != evs['grp_id'][0]:
             continue
         mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
         rupture_cls, surface_cls, source_cls = BaseRupture.types[
@@ -641,7 +644,6 @@ def get_ruptures(dstore, slice_=slice(None), rup_id=None):
             m = mesh[0]
             rupture.surface.mesh = RectangularMesh(
                 m['lon'], m['lat'], m['depth'])
-        evs = dstore['events'][rec['eidx1']:rec['eidx2']]
         ebr = EBRupture(rupture, (), evs, rec['serial'])
         ebr.eidx1 = rec['eidx1']
         ebr.eidx2 = rec['eidx2']
