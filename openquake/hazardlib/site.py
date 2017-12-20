@@ -202,7 +202,13 @@ class SiteCollection(object):
         arr.flags.writeable = False
 
     def __eq__(self, other):
-        return (self.array == other.array).all()
+        arr = self.array == other.array
+        if isinstance(arr, numpy.ndarray):
+            return arr.all()
+        return arr
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __toh5__(self):
         return self.array, {}
