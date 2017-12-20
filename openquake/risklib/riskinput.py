@@ -367,6 +367,8 @@ class GmfGetter(object):
         """
         Initialize the computers. Should be called on the workers
         """
+        if hasattr(self, 'eids'):  # init already called
+            return
         self.N = len(self.sitecol.complete)
         self.I = I = len(self.imtls)
         self.R = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
