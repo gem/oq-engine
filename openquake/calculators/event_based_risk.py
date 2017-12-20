@@ -54,6 +54,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    with monitor('GmfGetter.init'):
+        riskinput.hazard_getter.init()
     eids = riskinput.hazard_getter.eids
     A = len(riskinput.aids)
     E = len(eids)
