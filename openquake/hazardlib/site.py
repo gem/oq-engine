@@ -22,12 +22,10 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 
 from openquake.baselib.python3compat import range
-from openquake.baselib.slots import with_slots
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.mesh import Mesh
 
 
-@with_slots
 class Site(object):
     """
     Site object represents a geographical location defined by its position
@@ -115,7 +113,6 @@ def _extract(array_or_float, indices):
         return array_or_float
 
 
-#@with_slots
 class SiteCollection(object):
     """
     A collection of :class:`sites <Site>`.
@@ -145,7 +142,6 @@ class SiteCollection(object):
         ('z2pt5', numpy.float64),
         ('backarc', numpy.bool),
     ])
-    _slots_ = dtype.names
 
     @classmethod
     def from_points(cls, lons, lats, depths, sitemodel):
@@ -181,6 +177,7 @@ class SiteCollection(object):
         arr['z1pt0'] = sitemodel.reference_depth_to_1pt0km_per_sec
         arr['z2pt5'] = sitemodel.reference_depth_to_2pt5km_per_sec
         arr['backarc'] = sitemodel.reference_backarc
+        arr.flags.writeable = False
         return self
 
     def __init__(self, sites):
@@ -203,6 +200,9 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         arr.flags.writeable = False
+
+    def __eq__(self, other):
+        return (self.array == other.array).all()
 
     def __toh5__(self):
         return self.array, {}
@@ -309,7 +309,6 @@ class SiteCollection(object):
         return '<SiteCollection with %d sites>' % self.total_sites
 
 
-@with_slots
 class FilteredSiteCollection(object):
     """
     A class meant to store proper subsets of a complete collection of sites
@@ -324,8 +323,6 @@ class FilteredSiteCollection(object):
     get a different FilteredSiteCollection referring to the complete
     SiteCollection `fsc.complete`, not to the filtered collection `fsc`.
     """
-    _slots_ = 'indices complete'.split()
-
     def __init__(self, indices, complete):
         self.indices = indices
         self.complete = complete.complete
@@ -399,6 +396,13 @@ class FilteredSiteCollection(object):
                         'depths sids'):
             raise AttributeError(name)
         return getattr(self.complete, name)[self.indices]
+
+    def __eq__(self, other):
+        return (self.complete.array[self.indices] ==
+                other.complete.array[self.indices]).all()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __repr__(self):
         return '<FilteredSiteCollection with %d of %d sites>' % (
