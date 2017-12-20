@@ -517,8 +517,9 @@ class EventBasedCalculator(base.HazardCalculator):
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
         R = len(self.datastore['realizations'])
-        allargs = list(self.gen_args())
-        res = parallel.Starmap(self.core_task.__func__, allargs).submit_all()
+        res = parallel.Starmap(
+            self.core_task.__func__, self.gen_args()
+        ).submit_all()
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
