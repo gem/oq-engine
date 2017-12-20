@@ -738,7 +738,7 @@ def export_gmf_scenario_csv(ekey, dstore):
         raise ValueError(
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     rup_id = int(mo.group(1))
-    ruptures = list(calc.get_ruptures(dstore, rup_id=rup_id))
+    ruptures = list(calc.RuptureGetter(dstore, rup_id=rup_id))
     if not ruptures:
         logging.warn('There is no rupture %d', rup_id)
         return []

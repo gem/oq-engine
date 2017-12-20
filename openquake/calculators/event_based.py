@@ -480,25 +480,33 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs_by_gsim = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
                         for grp_id in samples_by_grp}
         if self.precalc:
-            slices = [slice(None)]
-        else:
-            parent = self.get_parent() or self.datastore
-            U = len(parent['ruptures'])
-            slices = split_in_slices(U, oq.ruptures_per_block)
-        for slc in slices:
-            ruptures_by_grp = (self.precalc.result if self.precalc
-                               else calc.get_ruptures_by_grp(parent, slc))
-            for grp_id in ruptures_by_grp:
-                ruptures = ruptures_by_grp[grp_id]
+            for grp_id, ruptures in self.precalc.result.items():
                 if not ruptures:
                     continue
                 for block in block_splitter(ruptures, oq.ruptures_per_block):
-                    samples = samples_by_grp[grp_id]
                     getter = GmfGetter(
                         rlzs_by_gsim[grp_id], block, self.sitecol,
                         imts, min_iml, oq.maximum_distance,
-                        oq.truncation_level, correl_model, samples)
+                        oq.truncation_level, correl_model,
+                        samples_by_grp[grp_id])
                     yield getter, oq, monitor
+            return
+        parent = self.get_parent() or self.datastore
+        U = len(parent['ruptures'])
+        if parent is not self.datastore:  # real parent
+            parent.close()
+        for slc in split_in_slices(U, oq.ruptures_per_block):
+            for grp_id in rlzs_by_gsim:
+                ruptures = calc.RuptureGetter(parent, slc, grp_id)
+                if parent is self.datastore:  # not accessible parent
+                    ruptures = list(ruptures)
+                    if not ruptures:
+                        continue
+                getter = GmfGetter(
+                    rlzs_by_gsim[grp_id], ruptures, self.sitecol,
+                    imts, min_iml, oq.maximum_distance, oq.truncation_level,
+                    correl_model, samples_by_grp[grp_id])
+                yield getter, oq, monitor
 
     def execute(self):
         """
@@ -517,13 +525,12 @@ class EventBasedCalculator(base.HazardCalculator):
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
         R = len(self.datastore['realizations'])
-        res = parallel.Starmap(
-            self.core_task.__func__, self.gen_args()
-        ).submit_all()
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
-        acc = res.reduce(self.combine_pmaps_and_save_gmfs, {
+        acc = parallel.Starmap(
+            self.core_task.__func__, self.gen_args()
+        ).reduce(self.combine_pmaps_and_save_gmfs, {
             r: ProbabilityMap(L) for r in range(R)})
         save_gmdata(self, R)
         if self.indices:
@@ -553,7 +560,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
         elif oq.hazard_curves_from_gmfs:
-            rlzs = self.datastore['realizations'].value
+            rlzs = self.rlzs_assoc.realizations
             # save individual curves
             for i in sorted(result):
                 key = 'hcurves/rlz-%03d' % i
@@ -565,7 +572,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations
             # involves a "small" number of sites (<= 65,536)
-            weights = [rlz['weight'] for rlz in rlzs]
+            weights = [rlz.weight for rlz in rlzs]
             hstats = self.oqparam.hazard_stats()
             if len(hstats) and len(rlzs) > 1:
                 for kind, stat in hstats:

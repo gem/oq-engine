@@ -362,8 +362,6 @@ class GmfGetter(object):
         self.gmf_data_dt = numpy.dtype(
             [('rlzi', U16), ('sid', U32),
              ('eid', U64), ('gmv', (F32, (len(imtls),)))])
-        self.eids = numpy.concatenate(
-            [ebr.events['eid'] for ebr in ebruptures])
 
     def init(self):
         """
@@ -377,11 +375,14 @@ class GmfGetter(object):
         self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
         self.sids = self.sitecol.sids
         self.computers = []
+        eids = []
         for ebr in self.ebruptures:
             computer = calc.gmf.GmfComputer(
                 ebr, self.sitecol, self.imtls, self.cmaker,
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
+            eids.append(ebr.events['eid'])
+        self.eids = numpy.concatenate(eids) if eids else []
         # dictionary rlzi -> array(imtls, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 2, F32))
         # dictionary eid -> index
