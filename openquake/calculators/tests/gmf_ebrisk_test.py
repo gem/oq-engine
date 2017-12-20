@@ -92,6 +92,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
         self.run_calc(case_4.__file__, 'job_risk.ini',
+                      concurrent_tasks='0',  # avoid numeric issues
                       hazard_calculation_id=str(calc0.calc_id))
         calc2 = self.calc.datastore  # event_based_risk
         [fname] = export(('agg_loss_table', 'csv'), calc1)
