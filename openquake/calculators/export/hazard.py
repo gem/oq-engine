@@ -50,7 +50,7 @@ savez = numpy.savez_compressed
 
 
 def get_mesh(sitecol, complete=True):
-    sc = sitecol.complete if complete else sitecol
+    sc = getattr(sitecol, 'complete', sitecol) if complete else sitecol
     if sc.at_sea_level():
         mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
         mesh['lon'] = sc.lons
