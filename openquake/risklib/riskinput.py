@@ -346,7 +346,6 @@ class GmfGetter(object):
                  min_iml, maximum_distance, truncation_level,
                  correlation_model, samples=1):
         assert sitecol is sitecol.complete, sitecol
-        self.grp_id = ebruptures[0].grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
