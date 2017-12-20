@@ -428,20 +428,15 @@ class FilteredSiteCollection(object):
         self.indices = attrs['indices']
         self.complete = complete
 
+    def __getstate__(self):
+        return dict(indices=self.indices, complete=self.complete)
+
+    def __getattr__(self, name):
+        if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '
+                        'depths sids'):
+            raise AttributeError(name)
+        return getattr(self.complete, name)[self.indices]
+
     def __repr__(self):
         return '<FilteredSiteCollection with %d of %d sites>' % (
             len(self.indices), self.total_sites)
-
-
-def _extract_site_param(fsc, name):
-    # extract the site parameter 'name' from the filtered site collection
-    return getattr(fsc.complete, name)[fsc.indices]
-
-
-# attach a number of properties filtering the arrays
-for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats depths \
-sids'.split():
-    prop = property(
-        lambda fsc, name=name: _extract_site_param(fsc, name),
-        doc='Extract %s array from FilteredSiteCollection' % name)
-    setattr(FilteredSiteCollection, name, prop)
