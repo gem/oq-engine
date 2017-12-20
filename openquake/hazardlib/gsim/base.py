@@ -891,6 +891,9 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
+    # _slots_ is used in some hazardlib tests, but not in the engine
+    _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
+               'lons', 'lats')
 
 
 class DistancesContext(BaseContext):
