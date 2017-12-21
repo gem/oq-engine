@@ -354,8 +354,6 @@ def compute_gmfs_and_curves(getters, oq, monitor):
     for getter in getters:
         with monitor('GmfGetter.init', measuremem=True):
             getter.init()
-        if not getter.computers:  # no ruptures for this getter
-            continue
         hcurves = {}  # key -> poes
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
@@ -391,7 +389,8 @@ def compute_gmfs_and_curves(getters, oq, monitor):
         res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
                    taskno=monitor.task_no,
                    indices=numpy.array(indices, (U32, 3)))
-        results.append(res)
+        if len(getter.gmdata):
+            results.append(res)
     return results
 
 
