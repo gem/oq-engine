@@ -489,17 +489,16 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs_by_gsim = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
                         for grp_id in samples_by_grp}
         if self.precalc:
-            getters = []
             for grp_id, ruptures in self.precalc.result.items():
                 if not ruptures:
                     continue
                 for block in block_splitter(ruptures, oq.ruptures_per_block):
-                    getters.append(GmfGetter(
+                    getter = GmfGetter(
                         rlzs_by_gsim[grp_id], block, self.sitecol,
                         imts, min_iml, oq.maximum_distance,
                         oq.truncation_level, correl_model,
-                        samples_by_grp[grp_id]))
-            yield getters, oq, monitor
+                        samples_by_grp[grp_id])
+                    yield [getter], oq, monitor
             return
         parent = self.get_parent() or self.datastore
         U = len(parent['ruptures'])
