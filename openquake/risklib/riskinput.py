@@ -300,6 +300,7 @@ class GmfDataGetter(collections.Mapping):
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
+        self.dstore.open()  # if closed
         self.data = collections.OrderedDict()
         for sid in self.sids:
             self.data[sid] = data = self[sid]
