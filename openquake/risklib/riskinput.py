@@ -300,7 +300,6 @@ class GmfDataGetter(collections.Mapping):
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
-        self.dstore.open()  # if not already open
         self.data = collections.OrderedDict()
         for sid in self.sids:
             self.data[sid] = data = self[sid]
@@ -658,7 +657,6 @@ class LossRatiosGetter(object):
         """
         if getattr(self, 'data', None) is not None:
             return self.data
-        self.dstore.open()  # if closed
         data = self.dstore['all_loss_ratios/data']
         loss_ratio_data = []
         for aid, idxs in zip(self.aids, self.indices):
