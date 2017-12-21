@@ -337,8 +337,8 @@ class HazardCalculator(BaseCalculator):
     def can_read_parent(self):
         """
         :returns:
-            the parent datastore if it is present, it is closed and it can be
-            read from the workers, None otherwise
+            the parent datastore if it is present and can be read from the
+            workers, None otherwise
         """
         read_access = (
             config.distribution.oq_distribute in ('no', 'futures') or
