@@ -323,7 +323,6 @@ class GmfDataGetter(collections.Mapping):
         return self.data
 
     def __getitem__(self, sid):
-        self.dstore.open()  # if needed
         dset = self.dstore['gmf_data/data']
         idxs = self.dstore['gmf_data/indices'][sid]
         if len(idxs) == 0:  # site ID with no data

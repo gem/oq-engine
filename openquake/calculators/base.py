@@ -702,9 +702,9 @@ class RiskCalculator(HazardCalculator):
                 else:  # gmf
                     getter = riskinput.GmfDataGetter(
                         dstore, sids, self.R, eids)
-                if dstore is self.datastore:
-                    # read the hazard data in the controller node
-                    getter.init()
+                # if dstore is self.datastore:
+                # read the hazard data in the controller node
+                getter.init()  # READING ALWAYS UNTIL I DISCOVER THE BUG!
                 ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
