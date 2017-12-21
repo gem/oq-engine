@@ -29,6 +29,7 @@
   * Fixed the CSV exporter for disaggregation outputs when iml_disagg is set
 
   [Graeme Weatherill]
+  * Fixed ASK14 GMPE behaviour to remove ValueError
   * Implements comprehensive suite of NGA East ground motion models for
     central and eastern United States
   * Minor modification of check_gsim functions to permit instantiated classes
