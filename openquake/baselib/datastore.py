@@ -185,8 +185,6 @@ class DataStore(collections.MutableMapping):
         if self.hdf5 is None:  # not already open
             mode = self.mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
             self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
-            if self.parent != () and self.parent.hdf5 is None:
-                self.parent.open()
 
     @property
     def export_dir(self):
