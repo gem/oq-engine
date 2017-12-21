@@ -109,7 +109,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
         calc0 = self.calc.datastore  # event_based_risk
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
-                      calculation_mode='event_based')
+                      calculation_mode='event_based',
+                      concurrent_tasks='0')
         calc1 = self.calc.datastore  # event_based
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       calculation_mode='gmf_ebrisk',
@@ -123,6 +124,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         # case_master calculation with an equivalent gmf_ebrisk calculation
         f0 = writetmp(view('mean_avg_losses', calc0))
         self.assertEqualFiles('expected/avg_losses.txt', f0, delta=1E-5)
+
+        # the two-lines below may break on Jenkins
         f2 = writetmp(view('mean_avg_losses', calc2))
         self.assertEqualFiles('expected/avg_losses.txt', f2, delta=1E-4)
 

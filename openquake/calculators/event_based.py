@@ -339,53 +339,59 @@ def set_random_years(dstore, investigation_time):
 # ######################## GMF calculator ############################ #
 
 
-def compute_gmfs_and_curves(getter, oq, monitor):
+def compute_gmfs_and_curves(getters, oq, monitor):
     """
-    :param getter:
-        a GmfGetter instance
+    :param getters:
+        a list of GmfGetter instances
     :param oq:
         an OqParam instance
     :param monitor:
         a Monitor instance
     :returns:
-        a dictionary with keys gmfcoll and hcurves
-   """
-    with monitor('GmfGetter.init', measuremem=True):
-        getter.init()
-    hcurves = {}  # key -> poes
-    if oq.hazard_curves_from_gmfs:
-        hc_mon = monitor('building hazard curves', measuremem=False)
-        duration = oq.investigation_time * oq.ses_per_logic_tree_path
-        with monitor('building hazard', measuremem=True):
-            gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
-            hazard = getter.get_hazard(data=gmfdata)
-        for sid, hazardr in zip(getter.sids, hazard):
-            for rlzi, array in hazardr.items():
-                if len(array) == 0:  # no data
-                    continue
-                with hc_mon:
-                    gmvs = array['gmv']
-                    for imti, imt in enumerate(getter.imtls):
-                        poes = calc._gmvs_to_haz_curve(
-                            gmvs[:, imti], oq.imtls[imt],
-                            oq.investigation_time, duration)
-                        hcurves[rsi2str(rlzi, sid, imt)] = poes
-    else:  # fast lane
-        with monitor('building hazard', measuremem=True):
-            gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
-    indices = []
-    if oq.ground_motion_fields:
-        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
-        start = stop = 0
-        for sid, rows in itertools.groupby(gmfdata['sid']):
-            for row in rows:
-                stop += 1
-            indices.append((sid, start, stop))
-            start = stop
-    else:
-        gmfdata = None
-    return dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
-                taskno=monitor.task_no, indices=numpy.array(indices, (U32, 3)))
+        a list of dictionaries with keys gmfcoll and hcurves
+    """
+    results = []
+    for getter in getters:
+        with monitor('GmfGetter.init', measuremem=True):
+            getter.init()
+        hcurves = {}  # key -> poes
+        if oq.hazard_curves_from_gmfs:
+            hc_mon = monitor('building hazard curves', measuremem=False)
+            duration = oq.investigation_time * oq.ses_per_logic_tree_path
+            with monitor('building hazard', measuremem=True):
+                gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+                hazard = getter.get_hazard(data=gmfdata)
+            for sid, hazardr in zip(getter.sids, hazard):
+                for rlzi, array in hazardr.items():
+                    if len(array) == 0:  # no data
+                        continue
+                    with hc_mon:
+                        gmvs = array['gmv']
+                        for imti, imt in enumerate(getter.imtls):
+                            poes = calc._gmvs_to_haz_curve(
+                                gmvs[:, imti], oq.imtls[imt],
+                                oq.investigation_time, duration)
+                            hcurves[rsi2str(rlzi, sid, imt)] = poes
+        else:  # fast lane
+            with monitor('building hazard', measuremem=True):
+                gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+        indices = []
+        if oq.ground_motion_fields:
+            gmfdata.sort(order=('sid', 'rlzi', 'eid'))
+            start = stop = 0
+            for sid, rows in itertools.groupby(gmfdata['sid']):
+                for row in rows:
+                    stop += 1
+                indices.append((sid, start, stop))
+                start = stop
+        else:
+            gmfdata = None
+        res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
+                   taskno=monitor.task_no,
+                   indices=numpy.array(indices, (U32, 3)))
+        if len(getter.gmdata):
+            results.append(res)
+    return results
 
 
 def save_gmdata(calc, n_rlzs):
@@ -425,42 +431,44 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs_and_curves
     is_stochastic = True
 
-    def combine_pmaps_and_save_gmfs(self, acc, res):
+    def combine_pmaps_and_save_gmfs(self, acc, results):
         """
         Combine the hazard curves (if any) and save the gmfs (if any)
         sequentially; notice that the gmfs may come from
         different tasks in any order.
 
         :param acc: an accumulator for the hazard curves
-        :param res: a dictionary rlzi, imt -> [gmf_array, curves_by_imt]
+        :param results: dictionaries rlzi, imt -> [gmf_array, curves_by_imt]
         :returns: a new accumulator
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        self.gmdata += res['gmdata']
-        data = res['gmfdata']
-        if data is not None:
-            with sav_mon:
-                hdf5.extend3(self.datastore.hdf5path, 'gmf_data/data', data)
-                # it is important to save the number of bytes while the
-                # computation is going, to see the progress
-                update_nbytes(self.datastore, 'gmf_data/data', data)
-                for sid, start, stop in res['indices']:
-                    self.indices[sid].append(
-                        (start + self.offset, stop + self.offset))
-                self.offset += len(data)
-        slicedic = self.oqparam.imtls.slicedic
-        with agg_mon:
-            for key, poes in res['hcurves'].items():
-                rlzi, sid, imt = str2rsi(key)
-                array = acc[rlzi].setdefault(sid, 0).array[slicedic[imt], 0]
-                array[:] = 1. - (1. - array) * (1. - poes)
-        sav_mon.flush()
-        agg_mon.flush()
-        self.datastore.flush()
-        if 'ruptures' in res:
-            vars(EventBasedRuptureCalculator)['save_ruptures'](
-                self, res['ruptures'])
+        hdf5path = self.datastore.hdf5path
+        for res in results:
+            self.gmdata += res['gmdata']
+            data = res['gmfdata']
+            if data is not None:
+                with sav_mon:
+                    hdf5.extend3(hdf5path, 'gmf_data/data', data)
+                    # it is important to save the number of bytes while the
+                    # computation is going, to see the progress
+                    update_nbytes(self.datastore, 'gmf_data/data', data)
+                    for sid, start, stop in res['indices']:
+                        self.indices[sid].append(
+                            (start + self.offset, stop + self.offset))
+                    self.offset += len(data)
+            slicedic = self.oqparam.imtls.slicedic
+            with agg_mon:
+                for key, poes in res['hcurves'].items():
+                    r, sid, imt = str2rsi(key)
+                    array = acc[r].setdefault(sid, 0).array[slicedic[imt], 0]
+                    array[:] = 1. - (1. - array) * (1. - poes)
+            sav_mon.flush()
+            agg_mon.flush()
+            self.datastore.flush()
+            if 'ruptures' in res:
+                vars(EventBasedRuptureCalculator)['save_ruptures'](
+                    self, res['ruptures'])
         return acc
 
     def gen_args(self):
@@ -489,25 +497,26 @@ class EventBasedCalculator(base.HazardCalculator):
                         imts, min_iml, oq.maximum_distance,
                         oq.truncation_level, correl_model,
                         samples_by_grp[grp_id])
-                    yield getter, oq, monitor
+                    yield [getter], oq, monitor
             return
-        parent = self.get_parent() or self.datastore
+        parent = self.can_read_parent() or self.datastore
         U = len(parent['ruptures'])
         logging.info('Found %d ruptures', U)
         if parent is not self.datastore:  # accessible parent
             parent.close()
         for slc in split_in_slices(U, oq.concurrent_tasks or 1):
+            getters = []
             for grp_id in rlzs_by_gsim:
                 ruptures = calc.RuptureGetter(parent, slc, grp_id)
                 if parent is self.datastore:  # not accessible parent
                     ruptures = list(ruptures)
                     if not ruptures:
                         continue
-                getter = GmfGetter(
+                getters.append(GmfGetter(
                     rlzs_by_gsim[grp_id], ruptures, self.sitecol,
                     imts, min_iml, oq.maximum_distance, oq.truncation_level,
-                    correl_model, samples_by_grp[grp_id])
-                yield getter, oq, monitor
+                    correl_model, samples_by_grp[grp_id]))
+            yield getters, oq, monitor
 
     def execute(self):
         """

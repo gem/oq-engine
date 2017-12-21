@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5, performance
 from openquake.baselib.general import (
     groupby, group_array, get_array, AccumDict)
-from openquake.hazardlib import site, calc
+from openquake.hazardlib import calc
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.risklib import scientific, riskmodels
 
