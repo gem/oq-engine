@@ -499,7 +499,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         samples_by_grp[grp_id])
                     yield [getter], oq, monitor
             return
-        parent = self.get_parent() or self.datastore
+        parent = self.can_read_parent() or self.datastore
         U = len(parent['ruptures'])
         logging.info('Found %d ruptures', U)
         if parent is not self.datastore:  # accessible parent
