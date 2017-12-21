@@ -334,14 +334,15 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    def get_parent(self):
+    def can_read_parent(self):
         """
         :returns:
-            the parent datastore if it is present can be read from the workers,
-            None otherwise
+            the parent datastore if it is present and can be read from the
+            workers, None otherwise
         """
-        read_access = (config.distribution.oq_distribute in ('no', 'futures')
-                       or config.directory.shared_dir)
+        read_access = (
+            config.distribution.oq_distribute in ('no', 'futures') or
+            config.directory.shared_dir)
         if self.oqparam.hazard_calculation_id and read_access:
             return self.datastore.parent
 
@@ -694,7 +695,7 @@ class RiskCalculator(HazardCalculator):
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                dstore = self.get_parent() or self.datastore
+                dstore = self.can_read_parent() or self.datastore
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
