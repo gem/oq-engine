@@ -125,7 +125,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         f0 = writetmp(view('mean_avg_losses', calc0))
         self.assertEqualFiles('expected/avg_losses.txt', f0, delta=1E-5)
 
-        # the two-lines below breaks systematically on Jenkins
+        # the two-lines below break systematically on Jenkins
         f2 = writetmp(view('mean_avg_losses', calc2))
         self.assertEqualFiles('expected/avg_losses.txt', f2, delta=1E-4)
 
