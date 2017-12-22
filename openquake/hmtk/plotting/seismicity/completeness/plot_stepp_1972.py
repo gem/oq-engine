@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -37,15 +37,13 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-#!/usr/bin/env python
 
 '''
 Module :mod: 'openquake.hmtk.plotting.seismicity.completeness.plot_stepp_1971'
@@ -53,17 +51,17 @@ creates plot to illustrate outcome of Stepp (1972) method for completeness
 analysis
 '''
 import os.path
+import itertools
+
 import numpy as np
 import matplotlib.pyplot as plt
 
-valid_markers = ['*', '+', '1', '2', '3', '4', '8', '<', '>', 'D', 'H', '^',
-                 '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
-
-DEFAULT_SIZE = (8., 6.)
-DEFAULT_OFFSET = (1.3, 1.0)
+# markers which can be filled or empty
+VALID_MARKERS = ['s', 'o', '^', 'D', 'p', 'h', '8',
+                 '*', 'd', 'v', '<', '>', 'H']
 
 
-def create_stepp_plot(model, filename, filetype='png', filedpi=300):
+def create_stepp_plot(model, filename=None, filetype='png', dpi=300, ax=None):
     '''
     Creates the classic Stepp (1972) plots for a completed Stepp analysis,
     and exports the figure to a file.
@@ -75,58 +73,63 @@ def create_stepp_plot(model, filename, filetype='png', filedpi=300):
         Name of output file
     :param string filetype:
         Type of file (from list supported by matplotlib)
-    :param int filedpi:
+    :param int dpi:
         Resolution (dots per inch) of output file
     '''
-    plt.figure(figsize=DEFAULT_SIZE)
-    if os.path.exists(filename):
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+
+    if filename and os.path.exists(filename):
         raise IOError('File already exists!')
 
-    legend_list = [(str(model.magnitude_bin[iloc] + 0.01) + ' - ' +
-                   str(model.magnitude_bin[iloc + 1])) for iloc in range(0,
-                   len(model.magnitude_bin) - 1)]
+    # get colours from current axes: thus user can set up before calling
+    prop_cycler = ax._get_lines.prop_cycler
+    prop_cyclers = itertools.tee(itertools.cycle(prop_cycler), 3)
+    marker_cyclers = itertools.tee(itertools.cycle(VALID_MARKERS), 3)
 
-    rgb_list = []
-    marker_vals = []
-    # Get marker from valid list
-    while len(valid_markers) < len(model.magnitude_bin):
-        valid_markers.append(valid_markers)
+    # plot observed Sigma lambda
+    for i, (min_mag, max_mag) in enumerate(zip(model.magnitude_bin[:-1],
+                                               model.magnitude_bin[1:])):
+        label = '(%g, %g]: %d' % (min_mag, max_mag,
+                                  model.completeness_table[i, 0])
+        colour = next(prop_cyclers[0])['color']
+        ax.loglog(model.time_values, model.sigma[:, i],
+                  linestyle='none',
+                  marker=next(marker_cyclers[0]),
+                  markersize=3,
+                  markerfacecolor=colour,
+                  markeredgecolor=colour,
+                  label=label)
 
-    marker_sampler = np.arange(0, len(valid_markers), 1)
-    np.random.shuffle(marker_sampler)
-    # Get colour for each bin
-    for value in range(0, len(model.magnitude_bin) - 1):
-        rgb_samp = np.random.uniform(0., 1., 3)
-        rgb_list.append((rgb_samp[0], rgb_samp[1], rgb_samp[2]))
-        marker_vals.append(valid_markers[marker_sampler[value]])
-    # Plot observed Sigma lambda
-    for iloc in range(0, len(model.magnitude_bin) - 1):
-        plt.loglog(model.time_values,
-                   model.sigma[:, iloc],
-                   linestyle='None',
-                   marker=marker_vals[iloc],
-                   color=rgb_list[iloc])
+    # plot expected Poisson rate
+    for i in range(0, len(model.magnitude_bin) - 1):
+        ax.loglog(model.time_values, model.model_line[:, i],
+                  color=next(prop_cyclers[1])['color'],
+                  linewidth=0.5)
 
-    lgd = plt.legend(legend_list, bbox_to_anchor=DEFAULT_OFFSET)
-    plt.grid(True)
-    # Plot expected Poisson rate
-    for iloc in range(0, len(model.magnitude_bin) - 1):
-        plt.loglog(model.time_values,
-                   model.model_line[:, iloc],
-                   linestyle='-',
-                   marker='None',
-                   color=rgb_list[iloc])
-        plt.xlim(model.time_values[0] / 2., 2. * model.time_values[-1])
-        xmarker = model.end_year - model.completeness_table[iloc, 0]
-        id0 = model.model_line[:, iloc] > 0.
+    # mark breaks from expected rate
+    for i in range(0, len(model.magnitude_bin) - 1):
+        colour = next(prop_cyclers[2])['color']
+        if np.any(np.isnan(model.model_line[:, i])):
+            continue
+        xmarker = model.end_year - model.completeness_table[i, 0]
+        knee = model.model_line[:, i] > 0.
         ymarker = 10.0 ** np.interp(np.log10(xmarker),
-                                    np.log10(model.time_values[id0]),
-                                    np.log10(model.model_line[id0, iloc]))
-        plt.loglog(xmarker, ymarker, 'ks')
-    plt.xlabel('Time (years)', fontsize=15)
-    plt.ylabel("$\\sigma_{\\lambda} = \\sqrt{\\lambda} / \\sqrt{T}$",
-               fontsize=15)
-    # Save figure to file
-    plt.tight_layout()
-    plt.savefig(filename, dpi=filedpi, format=filetype,
-                bbox_extra_artists=(lgd,), bbox_inches="tight")
+                                    np.log10(model.time_values[knee]),
+                                    np.log10(model.model_line[knee, i]))
+        ax.loglog(xmarker, ymarker,
+                  marker=next(marker_cyclers[2]),
+                  markerfacecolor='white',
+                  markeredgecolor=colour)
+
+    ax.legend(loc='center left',
+              bbox_to_anchor=(1, 0.5), frameon=False, fontsize='small')
+    ax.set_xlabel('Time (years)')
+    ax.set_ylabel("$\\sigma_{\\lambda} = \\sqrt{\\lambda} / \\sqrt{T}$")
+    ax.autoscale(enable=True, axis='both', tight=True)
+
+    # save figure to file
+    if filename is not None:
+        fig.savefig(filename, dpi=dpi, format=filetype)
