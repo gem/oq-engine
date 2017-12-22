@@ -1,3 +1,6 @@
+  [Nick Ackerley]
+  * Some improvements to the plotting routines of the HMTK
+
   [Michele Simionato]
   * Changed `oq run job_h.ini,job_r.ini` to disable concurrency in the second
     run, as a workaround on reading the parent datastore from workers
