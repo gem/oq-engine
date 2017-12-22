@@ -344,6 +344,7 @@ class HazardCalculator(BaseCalculator):
             config.distribution.oq_distribute in ('no', 'futures') or
             config.directory.shared_dir)
         if self.oqparam.hazard_calculation_id and read_access:
+            self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
     def assoc_assets_sites(self, sitecol):
@@ -702,9 +703,9 @@ class RiskCalculator(HazardCalculator):
                 else:  # gmf
                     getter = riskinput.GmfDataGetter(
                         dstore, sids, self.R, eids)
-                # if dstore is self.datastore:
-                # read the hazard data in the controller node
-                getter.init()  # READING ALWAYS UNTIL I DISCOVER THE BUG!
+                if dstore is self.datastore:
+                    # read the hazard data in the controller node
+                    getter.init()
                 ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
