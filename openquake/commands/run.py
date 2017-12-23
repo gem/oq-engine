@@ -82,9 +82,7 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq)
     with rcalc._monitor:
-        # the distribution must be disabled in the second calculation to avoid
-        # HDF5 issue when reading data from the workers in the same process
-        rcalc.run(concurrent_tasks=0, pdb=pdb, exports=exports,
+        rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
                   hazard_calculation_id=hc_id, **params)
     return rcalc
 
@@ -149,6 +147,7 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
         print(get_pstats(pstat, slowest))
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params)
+
 
 run.arg('job_ini', 'calculation configuration file '
         '(or files, comma-separated)')
