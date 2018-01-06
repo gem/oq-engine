@@ -134,8 +134,8 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             self.assertEqual(arr.dtype, float)
         for arr in (cll.vs30measured, cll.backarc):
             self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.flags.writeable, False)
             self.assertEqual(arr.dtype, bool)
+        self.assertEqual(cll.array.flags.writeable, False)
         self.assertEqual(len(cll), 2)
 
         # test split_in_tiles
@@ -262,11 +262,6 @@ class SiteCollectionIterTestCase(unittest.TestCase):
         # test equality of site collections
         sc = SiteCollection([exp_s1, exp_s2])
         self.assertEqual(cll, sc)
-
-        # test nonequality of site collections
-        # (see https://github.com/gem/oq-hazardlib/pull/403)
-        sc._vs30 = numpy.array([numpy.nan, numpy.nan])
-        self.assertNotEqual(cll, sc)
 
 
 class SitePickleTestCase(unittest.TestCase):

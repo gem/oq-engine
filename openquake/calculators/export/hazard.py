@@ -752,7 +752,7 @@ def export_gmf_scenario_csv(ekey, dstore):
         rlzs_by_gsim, ruptures, sitecol, imts, min_iml,
         oq.maximum_distance, oq.truncation_level, correl_model, samples)
     getter.init()
-    sids = getter.computers[0].sites.sids
+    sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
     rlzs = rlzs_assoc.realizations
     fields = ['eid-%03d' % eid for eid in getter.eids]
