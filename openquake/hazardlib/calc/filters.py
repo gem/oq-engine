@@ -411,7 +411,7 @@ class SourceFilter(object):
                     raise ValueError('sids=%s' % sids)
                 if len(sids):
                     src.nsites = len(sids)
-                    yield src, FilteredSiteCollection(sids, sites.complete)
+                    yield src, FilteredSiteCollection(sids, sites)
             else:  # normal filtering, used in the workers
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
