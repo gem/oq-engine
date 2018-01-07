@@ -285,8 +285,7 @@ class SiteCollection(object):
 
     def filter(self, mask):
         """
-        Create a FilteredSiteCollection with only a subset of sites
-        from this one.
+        Create a SiteCollection with only a subset of sites.
 
         :param mask:
             Numpy array of boolean values of the same length as the site

@@ -273,7 +273,7 @@ class ContextMaker(object):
     def filter_ruptures(self, src, sites):
         """
         :param src: a source object, already filtered and split
-        :param sites: a FilteredSiteCollection
+        :param sites: a filtered SiteCollection
         :return: a list of filtered ruptures with context attributes
         """
         ruptures = []
@@ -316,7 +316,7 @@ class ContextMaker(object):
                 rup_indep=True):
         """
         :param src: a source object
-        :param sites: a FilteredSiteCollection
+        :param sites: a filtered SiteCollection
         :param imtls: intensity measure and levels
         :param trunclevel: truncation level
         :param ctx_mon: a Monitor instance for make_context
