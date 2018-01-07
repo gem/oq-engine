@@ -262,14 +262,9 @@ class SiteCollection(object):
         Iterate through all :class:`sites <Site>` in the collection, yielding
         one at a time.
         """
-        if isinstance(self.vs30, float):  # from points
-            for i, location in enumerate(self.mesh):
-                yield Site(location, self._vs30, self._vs30measured,
-                           self._z1pt0, self._z2pt5, self._backarc)
-        else:  # from sites
-            for i, location in enumerate(self.mesh):
-                yield Site(location, self.vs30[i], self.vs30measured[i],
-                           self.z1pt0[i], self.z2pt5[i], self.backarc[i])
+        for i, location in enumerate(self.mesh):
+            yield Site(location, self.vs30[i], self.vs30measured[i],
+                       self.z1pt0[i], self.z2pt5[i], self.backarc[i])
 
     def filter(self, mask):
         """
