@@ -23,8 +23,7 @@ from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import Polygon, Point, RectangularMesh
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.site import \
-    Site, SiteCollection, FilteredSiteCollection
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.tom import PoissonTOM
 
 
@@ -97,9 +96,7 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
 
     def test_source_filter_zero_integration_distance(self):
         filtered = self.source.filter_sites_by_distance_to_source(
-            integration_distance=0, sites=self.sitecol
-        )
-        self.assertIsInstance(filtered, FilteredSiteCollection)
+            integration_distance=0, sites=self.sitecol)
         self.assertEqual(len(filtered), 5)
         numpy.testing.assert_array_equal(filtered.indices, [0, 5, 6, 7, 8])
         numpy.testing.assert_array_equal(filtered.vs30, [0.1, 5, 6, 7, 8])
@@ -108,8 +105,7 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
 
     def test_source_filter_half_km_integration_distance(self):
         filtered = self.source.filter_sites_by_distance_to_source(
-            integration_distance=0.5, sites=self.sitecol
-        )
+            integration_distance=0.5, sites=self.sitecol)
         numpy.testing.assert_array_equal(filtered.indices,
                                          [0, 1, 2, 3, 4, 5, 6, 7, 8])
 
