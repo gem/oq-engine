@@ -67,7 +67,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check extraction
         sitecol = extract(self.calc.datastore, 'sitecol')
-        self.assertEqual(repr(sitecol), '<SiteCollection with 1 sites>')
+        self.assertEqual(repr(sitecol), '<SiteCollection with 1/1 sites>')
 
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
