@@ -91,6 +91,7 @@ class PmapGetter(object):
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
     def __init__(self, dstore, sids=None, rlzs_assoc=None):
+        dstore.open()  # if not
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
