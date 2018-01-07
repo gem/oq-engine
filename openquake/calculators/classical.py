@@ -304,9 +304,12 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
+        parent = self.can_read_parent()
+        if parent is None:
+            parent = self.datastore
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pgetter = calc.PmapGetter(self.datastore, t.sids, self.rlzs_assoc)
-            if not self.can_read_parent():  # read now, not in the workers
+            pgetter = calc.PmapGetter(parent, t.sids, self.rlzs_assoc)
+            if parent is None:  # read now, not in the workers
                 pgetter.init()
             yield pgetter, hstats, monitor
 
