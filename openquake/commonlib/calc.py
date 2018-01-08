@@ -101,8 +101,12 @@ class PmapGetter(object):
         self.nbytes = 0
         if sids is None:
             self.sids = dstore['sitecol'].complete.sids
+
+    def init(self):
+        if hasattr(self, 'data'):  # already initialized
+            return
+        self.dstore.open()  # if not
         # populate _pmap_by_grp
-        # this cannot be done on the workers, it would take too much memory
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
             # build probability maps restricted to the given sids
@@ -120,10 +124,6 @@ class PmapGetter(object):
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
 
-    def init(self):
-        if hasattr(self, 'data'):  # already initialized
-            return
-        self.dstore.open()  # if not
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
         hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
