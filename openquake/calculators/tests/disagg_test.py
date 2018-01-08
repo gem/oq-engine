@@ -63,6 +63,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # disaggregation by source group
         pgetter = calc.PmapGetter(self.calc.datastore)
+        pgetter.init()
         pmaps = []
         for grp in sorted(pgetter.dstore['poes']):
             pmaps.append(pgetter.get_mean(grp))
