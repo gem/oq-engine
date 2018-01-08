@@ -103,6 +103,11 @@ class PmapGetter(object):
             self.sids = dstore['sitecol'].complete.sids
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
+
+    def init(self):
+        if hasattr(self, 'data'):  # already initialized
+            return
+        self.dstore.open()  # if not
         if 'poes' in self.dstore:
             # build probability maps restricted to the given sids
             for grp, dset in self.dstore['poes'].items():
@@ -118,11 +123,6 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
-
-    def init(self):
-        if hasattr(self, 'data'):  # already initialized
-            return
-        self.dstore.open()  # if not
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
         hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
@@ -185,6 +185,7 @@ class PmapGetter(object):
             the kind of PoEs to extract; if not given, returns the realization
             if there is only one or the statistics otherwise.
         """
+        self.init()  # if not already initialized
         num_rlzs = len(self.weights)
         if not kind:  # use default
             if 'hcurves' in self.dstore:
