@@ -345,7 +345,7 @@ class GmfGetter(object):
     def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imtls,
                  min_iml, maximum_distance, truncation_level,
                  correlation_model, samples=1):
-        #assert sitecol is sitecol.complete, sitecol
+        assert sitecol is sitecol.complete, sitecol
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
