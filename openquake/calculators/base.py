@@ -492,7 +492,7 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol = (
                 readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
             logging.info('Read %d assets on %d sites',
-                         len(self.sitecol), len(self.assetcol))
+                         len(self.assetcol), len(self.sitecol))
             # NB: using hdf5.vstr would fail for large exposures;
             # the datastore could become corrupt, and also ultra-strange things
             # may happen (i.e. having the sitecol saved inside asset_refs!!)
