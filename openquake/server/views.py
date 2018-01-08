@@ -720,13 +720,13 @@ def on_same_fs(request):
         data = open(filename, 'rb').read(32)
         checksum = zlib.adler32(data, checksum) & 0xffffffff
         if checksum == int(checksum_in):
-            return HttpResponse(content='Same filesystem',
-                                content_type='text/plain', status=200)
+            return HttpResponse(content=json.dumps({'success': True}),
+                                content_type=JSON, status=200)
     except:
         pass
 
-    return HttpResponse(content='Different filesystem',
-                        content_type='text/plain', status=403)
+    return HttpResponse(content=json.dumps({'success': False}),
+                        content_type=JSON, status=200)
 
 
 @require_http_methods(['GET'])
