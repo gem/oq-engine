@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fixed some bugs when generating the hazard curves with the `--hc` option
+  * Reduced the data transfer when computing the hazard curves in postprocessing
 
   [Nick Ackerley]
   * Some improvements to the plotting routines of the HMTK
