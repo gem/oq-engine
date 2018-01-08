@@ -710,7 +710,7 @@ def on_same_fs(request):
 
     :param request:
         `django.http.HttpRequest` object, containing mandatory parameters
-        username and password required.
+        filename and checksum.
     """
     filename = request.POST['filename']
     checksum_in = request.POST['checksum']
