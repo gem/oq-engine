@@ -705,7 +705,7 @@ class RiskCalculator(HazardCalculator):
                         dstore, sids, self.R, eids)
                 if dstore is self.datastore:
                     # read the hazard data in the controller node
-                    logging.info('Reading GMFs')
+                    logging.info('Reading hazard')
                     getter.init()
                 ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
