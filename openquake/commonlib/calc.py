@@ -123,6 +123,7 @@ class PmapGetter(object):
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
+        self.dstore.open()  # if not
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
         hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
