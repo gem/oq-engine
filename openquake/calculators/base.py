@@ -491,6 +491,8 @@ class HazardCalculator(BaseCalculator):
             self.exposure = readinput.get_exposure(self.oqparam)
             self.sitecol, self.assetcol = (
                 readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
+            logging.info('Read %d assets on %d sites',
+                         len(self.sitecol), len(self.assetcol))
             # NB: using hdf5.vstr would fail for large exposures;
             # the datastore could become corrupt, and also ultra-strange things
             # may happen (i.e. having the sitecol saved inside asset_refs!!)
@@ -685,6 +687,7 @@ class RiskCalculator(HazardCalculator):
                 for sid, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
+            dstore = self.can_read_parent()
             for block in blocks:
                 sids = numpy.array([sid for sid, _weight in block])
                 reduced_assets = assets_by_site[sids]
@@ -696,7 +699,8 @@ class RiskCalculator(HazardCalculator):
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                dstore = self.can_read_parent() or self.datastore
+                if dstore is None:
+                    dstore = self.datastore
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
