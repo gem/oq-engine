@@ -21,8 +21,7 @@ import tempfile
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.hazardlib.site import \
-    Site, SiteCollection, FilteredSiteCollection
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 
 assert_eq = numpy.testing.assert_equal
@@ -164,7 +163,6 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
     def test_filter(self):
         col = SiteCollection(self.SITES)
         filtered = col.filter(numpy.array([True, False, True, False]))
-        self.assertIsInstance(filtered, FilteredSiteCollection)
         arreq = numpy.testing.assert_array_equal
         arreq(filtered.vs30, [1.2, 2])
         arreq(filtered.vs30measured, [True, True])
@@ -176,7 +174,6 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered.sids, [0, 2])
 
         filtered = col.filter(numpy.array([False, True, True, True]))
-        self.assertIsInstance(filtered, FilteredSiteCollection)
         arreq(filtered.vs30, [55.4, 2, 4])
         arreq(filtered.vs30measured, [False, True, False])
         arreq(filtered.z1pt0, [6, 9, 22])

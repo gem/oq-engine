@@ -206,7 +206,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('sitecol', self.calc_id)
-        self.assertEqual(str(p), '<SiteCollection with 1 sites>')
+        self.assertEqual(str(p), '<SiteCollection with 1/1 sites>')
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)

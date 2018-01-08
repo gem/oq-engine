@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Reduced the data transfer when computing the hazard curves in postprocessing
+  * Removed the FilteredSiteCollection class
 
   [Nick Ackerley]
   * Some improvements to the plotting routines of the HMTK
