@@ -126,7 +126,10 @@ class PmapGetter(object):
 
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
-        hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
+        try:
+            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
+        except IndexError:  # no data
+            return
         for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
             self.data[sid] = datadict = {}
             for rlzi, hcurve in enumerate(hcurve_by_rlz):
