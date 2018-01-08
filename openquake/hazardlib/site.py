@@ -219,8 +219,7 @@ class SiteCollection(object):
         arr.flags.writeable = False
 
     def __eq__(self, other):
-        a = self.array
-        arr = a == other.array
+        arr = self.array == other.array
         if isinstance(arr, numpy.ndarray):
             return arr.all()
         return arr
