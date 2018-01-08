@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Removed the FilteredCollection class
+  * Removed the FilteredSiteCollection class
 
   [Nick Ackerley]
   * Some improvements to the plotting routines of the HMTK
