@@ -239,9 +239,11 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     used to specify the kind of output.
     """
     with monitor('combine pmaps'):
-        pmaps = pgetter.get_pmaps(pgetter.sids)
-    if sum(len(pmap) for pmap in pmaps) == 0:  # no data
-        return {}
+        pgetter.init()  # if not already initialized
+        try:
+            pmaps = pgetter.get_pmaps(pgetter.sids)
+        except IndexError:  # no data
+            return {}
     pmap_by_kind = {}
     for kind, stat in hstats:
         with monitor('compute ' + kind):
