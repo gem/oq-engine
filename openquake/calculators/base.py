@@ -785,8 +785,9 @@ def get_gmfs(calculator):
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
         R, N, E, I = gmfs.shape
-        save_gmf_data(dstore, haz_sitecol,
-                      gmfs[:, haz_sitecol.indices])
+        idx = (slice(None) if haz_sitecol.indices is None
+               else haz_sitecol.indices)
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx])
 
         # store the events, useful when read the GMFs from a file
         events = numpy.zeros(E, readinput.stored_event_dt)
