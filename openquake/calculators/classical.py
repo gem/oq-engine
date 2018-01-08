@@ -314,7 +314,7 @@ class ClassicalCalculator(PSHACalculator):
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
             pgetter = calc.PmapGetter(parent, t.sids, self.rlzs_assoc)
             if parent is self.datastore:  # read now, not in the workers
-                logging.info('Reading PoEs')
+                logging.info('Reading PoEs on %d sites', len(t))
                 pgetter.init()
             yield pgetter, hstats, monitor
 
