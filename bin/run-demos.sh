@@ -19,7 +19,7 @@ done
 
 # test generation of statistical hazard curves from previous calculation;
 # -2 is LogicTreeCase3ClassicalPSHA
-oq engine --run hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -2
+oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -2
 
 # do something with the generated data
 oq extract -1 hazard/rlzs
