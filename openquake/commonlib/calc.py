@@ -91,6 +91,7 @@ class PmapGetter(object):
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
     def __init__(self, dstore, sids=None, rlzs_assoc=None):
+        dstore.open()  # if not
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
@@ -100,6 +101,11 @@ class PmapGetter(object):
         self.nbytes = 0
         if sids is None:
             self.sids = dstore['sitecol'].complete.sids
+
+    def init(self):
+        if hasattr(self, 'data'):  # already initialized
+            return
+        self.dstore.open()  # if not
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
@@ -118,13 +124,12 @@ class PmapGetter(object):
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
 
-    def init(self):
-        if hasattr(self, 'data'):  # already initialized
-            return
-        self.dstore.open()  # if not
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
-        hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
+        try:
+            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
+        except IndexError:  # no data
+            return
         for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
             self.data[sid] = datadict = {}
             for rlzi, hcurve in enumerate(hcurve_by_rlz):
@@ -184,6 +189,7 @@ class PmapGetter(object):
             the kind of PoEs to extract; if not given, returns the realization
             if there is only one or the statistics otherwise.
         """
+        self.init()  # if not already initialized
         num_rlzs = len(self.weights)
         if not kind:  # use default
             if 'hcurves' in self.dstore:
