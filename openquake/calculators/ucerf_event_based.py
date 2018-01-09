@@ -712,7 +712,8 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         r_sites, rrup = idist.get_closest(sitecol, rup)
                     except FarAwayRupture:
                         continue
-                    indices = r_sites.indices
+                    indices = (numpy.arange(len(r_sites)) if r_sites.indices
+                               is None else r_sites.indices)
                     events = []
                     for _ in range(n_occ):
                         events.append((0, src.src_group_id, ses_idx, sample))

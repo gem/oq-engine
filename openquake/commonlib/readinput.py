@@ -363,7 +363,7 @@ def get_rupture_sitecol(oqparam, sitecol):
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
-        a pair (EBRupture, FilteredSiteCollection)
+        a pair (EBRupture, SiteCollection)
     """
     rup_model = oqparam.inputs['rupture_model']
     [rup_node] = nrml.read(rup_model)
