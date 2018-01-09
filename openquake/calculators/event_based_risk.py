@@ -41,7 +41,7 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-def build_rup_loss_table(dstore):
+def build_rup_loss_table(dstore, alt):
     """
     Save the total losses by rupture.
     """
@@ -50,7 +50,7 @@ def build_rup_loss_table(dstore):
     events = dstore['events']
     rup_by_eid = dict(zip(events['eid'], events['rup_id']))
     losses_by_rup = {}
-    for rec in dstore['agg_loss_table'].value:  # .value is essential for speed
+    for rec in alt:
         rupid = rup_by_eid[rec['eid']]
         if rupid in losses_by_rup:
             losses_by_rup[rupid] += rec['loss']
@@ -453,14 +453,16 @@ class EbriskCalculator(base.RiskCalculator):
                          eff_time)
             return
         b = get_loss_builder(dstore)
-        alt = self.datastore['agg_loss_table']
-        logging.info('Building rup_loss_table')
-        with self.monitor('building rup_loss_table', measuremem=True):
-            dstore['rup_loss_table'] = build_rup_loss_table(dstore)
+        alt = dstore['agg_loss_table']
+        if 'ruptures' in dstore:
+            logging.info('Building rup_loss_table')
+            with self.monitor('building rup_loss_table', measuremem=True):
+                dstore['rup_loss_table'] = build_rup_loss_table(
+                    dstore, alt.value)
         stats = oq.risk_stats()
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
-            array, array_stats = b.build(alt, stats)
+            array, array_stats = b.build(alt.value, stats)
         self.datastore['agg_curves-rlzs'] = array
         units = self.assetcol.units(loss_types=array.dtype.names)
         self.datastore.set_attrs(
