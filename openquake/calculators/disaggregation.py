@@ -362,12 +362,13 @@ producing too small PoEs.'''
             poe_agg = []
             num_trts = len(self.trts)
             for key, fn in disagg.pmf_map.items():
-                if 'TRT' in key:
-                    if key == ('TRT',):
-                        pmf = numpy.zeros(num_trts)
-                    else:  # LonLatTRT
-                        pmf = numpy.zeros(
-                            (len(lons) - 1, len(lats) - 1, num_trts))
+                if key == ('TRT',):
+                    pmf = numpy.zeros(num_trts)
+                    for t in matrices:
+                        pmf[..., t] = fn(matrices[t])
+                elif key[-1] == 'TRT':  # LonLatTRT
+                    pmf = numpy.zeros(
+                        (len(lons) - 1, len(lats) - 1, num_trts))
                     for t in matrices:
                         pmf[..., t] = fn(matrices[t])
                 else:
