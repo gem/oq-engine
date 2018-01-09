@@ -50,12 +50,13 @@ def build_rup_loss_table(dstore):
     events = dstore['events']
     rup_by_eid = dict(zip(events['eid'], events['rup_id']))
     losses_by_rup = {}
-    for rec in dstore['agg_loss_table']:
+    for rec in dstore['agg_loss_table'].value:  # .value is essential for speed
         rupid = rup_by_eid[rec['eid']]
         if rupid in losses_by_rup:
             losses_by_rup[rupid] += rec['loss']
         else:
             losses_by_rup[rupid] = rec['loss']
+    print('built losses_by_rup')
     assert losses_by_rup, 'Empty agg_loss_table'
     dtlist = [('ridx', numpy.uint32)] + oq.loss_dt_list()
     serials = dstore['ruptures']['serial']
@@ -68,7 +69,7 @@ def build_rup_loss_table(dstore):
                 row[lt] = losses_by_rup[serial][l]
         except KeyError:
             pass
-    dstore['rup_loss_table'] = tbl
+    return tbl
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -443,6 +444,7 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Build aggregate loss curves and run EbrPostCalculator
         """
+        dstore = self.datastore
         self.before_export()  # set 'realizations'
         oq = self.oqparam
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -450,11 +452,11 @@ class EbriskCalculator(base.RiskCalculator):
             logging.warn('eff_time=%s is too small to compute agg_curves',
                          eff_time)
             return
-        b = get_loss_builder(self.datastore)
+        b = get_loss_builder(dstore)
         alt = self.datastore['agg_loss_table']
         logging.info('Building rup_loss_table')
         with self.monitor('building rup_loss_table', measuremem=True):
-            build_rup_loss_table(self.datastore)
+            dstore['rup_loss_table'] = build_rup_loss_table(dstore)
         stats = oq.risk_stats()
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
