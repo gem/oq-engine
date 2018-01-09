@@ -346,7 +346,7 @@ def mag_pmf(matrix):
     mag_pmf = numpy.zeros(nmags)
     for i in range(nmags):
         mag_pmf[i] = numpy.prod(
-            [1. - matrix[i][j][k][l][m]
+            [1. - matrix[i, j, k, l, m]
              for j in range(ndists)
              for k in range(nlons)
              for l in range(nlats)
@@ -365,7 +365,7 @@ def dist_pmf(matrix):
     dist_pmf = numpy.zeros(ndists)
     for j in range(ndists):
         dist_pmf[j] = numpy.prod(
-            [1. - matrix[i][j][k][l][m]
+            [1. - matrix[i, j, k, l, m]
              for i in range(nmags)
              for k in range(nlons)
              for l in range(nlats)
@@ -373,21 +373,28 @@ def dist_pmf(matrix):
     return 1. - dist_pmf
 
 
-def trt_pmf(matrix):
+def trt_pmf(matrices, num_trts):
     """
     Fold full disaggregation matrix to tectonic region type PMF.
 
+    :param matrices:
+        a dictionary trti -> disaggregation matrix
+    :param num_trts:
+        total number of tectonic region types
     :returns:
-        a scalar
+        an array of T probabilities one per each tectonic region type
     """
-    nmags, ndists, nlons, nlats, neps = matrix.shape
-    return 1. - numpy.prod(
-        [1. - matrix[i][j][k][l][m]
-         for i in range(nmags)
-         for j in range(ndists)
-         for k in range(nlons)
-         for l in range(nlats)
-         for m in range(neps)])
+    pmf = numpy.zeros(num_trts)
+    for t in matrices:
+        nmags, ndists, nlons, nlats, neps = matrices[t].shape
+        pmf[t] = 1. - numpy.prod(
+            [1. - matrices[t][i, j, k, l, m]
+             for i in range(nmags)
+             for j in range(ndists)
+             for k in range(nlons)
+             for l in range(nlats)
+             for m in range(neps)])
+    return pmf
 
 
 def mag_dist_pmf(matrix):
@@ -402,8 +409,8 @@ def mag_dist_pmf(matrix):
     mag_dist_pmf = numpy.zeros((nmags, ndists))
     for i in range(nmags):
         for j in range(ndists):
-            mag_dist_pmf[i][j] = numpy.prod(
-                [1. - matrix[i][j][k][l][m]
+            mag_dist_pmf[i, j] = numpy.prod(
+                [1. - matrix[i, j, k, l, m]
                  for k in range(nlons)
                  for l in range(nlats)
                  for m in range(neps)])
@@ -424,8 +431,8 @@ def mag_dist_eps_pmf(matrix):
     for i in range(nmags):
         for j in range(ndists):
             for m in range(neps):
-                mag_dist_eps_pmf[i][j][m] = numpy.prod(
-                    [1. - matrix[i][j][k][l][m]
+                mag_dist_eps_pmf[i, j, m] = numpy.prod(
+                    [1. - matrix[i, j, k, l, m]
                      for k in range(nlons)
                      for l in range(nlats)])
     return 1. - mag_dist_eps_pmf
@@ -443,12 +450,31 @@ def lon_lat_pmf(matrix):
     lon_lat_pmf = numpy.zeros((nlons, nlats))
     for k in range(nlons):
         for l in range(nlats):
-            lon_lat_pmf[k][l] = numpy.prod(
-                [1. - matrix[i][j][k][l][m]
+            lon_lat_pmf[k, l] = numpy.prod(
+                [1. - matrix[i, j, k, l, m]
                  for i in range(nmags)
                  for j in range(ndists)
                  for m in range(neps)])
     return 1. - lon_lat_pmf
+
+
+def lon_lat_trt_pmf(matrices, num_trts):
+    """
+    Fold full disaggregation matrices to lon / lat / TRT PMF.
+
+    :param matrices:
+        a dictionary trti -> disaggregation matrix
+    :param num_trts:
+        total number of tectonic region types
+    :returns:
+        3d array. First dimension represents longitude histogram bins,
+        second one latitude histogram bins, third one trt histogram bins.
+    """
+    trti = next(iter(matrices))
+    pmf = numpy.zeros(matrices[trti].shape[2:4] + (num_trts,))
+    for t in matrices:
+        pmf[..., t] = lon_lat_pmf(matrices[t])
+    return pmf
 
 
 def mag_lon_lat_pmf(matrix):
@@ -465,8 +491,8 @@ def mag_lon_lat_pmf(matrix):
     for i in range(nmags):
         for k in range(nlons):
             for l in range(nlats):
-                mag_lon_lat_pmf[i][k][l] = numpy.prod(
-                    [1. - matrix[i][j][k][l][m]
+                mag_lon_lat_pmf[i, k, l] = numpy.prod(
+                    [1. - matrix[i, j, k, l, m]
                      for j in range(ndists)
                      for m in range(neps)])
     return 1. - mag_lon_lat_pmf
@@ -482,5 +508,5 @@ pmf_map = collections.OrderedDict([
     (('Mag', 'Dist', 'Eps'), mag_dist_eps_pmf),
     (('Lon', 'Lat'), lon_lat_pmf),
     (('Mag', 'Lon', 'Lat'), mag_lon_lat_pmf),
-    (('Lon', 'Lat', 'TRT'), lon_lat_pmf),
+    (('Lon', 'Lat', 'TRT'), lon_lat_trt_pmf),
 ])
