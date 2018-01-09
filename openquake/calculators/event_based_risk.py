@@ -41,6 +41,36 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
+def build_rup_loss_table(dstore):
+    """
+    Save the total losses by rupture.
+    """
+    oq = dstore['oqparam']
+    loss_dt = oq.loss_dt()
+    events = dstore['events']
+    rup_by_eid = dict(zip(events['eid'], events['rup_id']))
+    losses_by_rup = {}
+    for rec in dstore['agg_loss_table']:
+        rupid = rup_by_eid[rec['eid']]
+        if rupid in losses_by_rup:
+            losses_by_rup[rupid] += rec['loss']
+        else:
+            losses_by_rup[rupid] = rec['loss']
+    assert losses_by_rup, 'Empty agg_loss_table'
+    dtlist = [('ridx', numpy.uint32)] + oq.loss_dt_list()
+    serials = dstore['ruptures']['serial']
+    tbl = numpy.zeros(len(serials), dtlist)
+    for i, serial in enumerate(serials):
+        row = tbl[i]
+        row['ridx'] = i
+        try:
+            for l, lt in enumerate(loss_dt.names):
+                row[lt] = losses_by_rup[serial][l]
+        except KeyError:
+            pass
+    dstore['rup_loss_table'] = tbl
+
+
 def event_based_risk(riskinput, riskmodel, param, monitor):
     """
     :param riskinput:
@@ -422,6 +452,9 @@ class EbriskCalculator(base.RiskCalculator):
             return
         b = get_loss_builder(self.datastore)
         alt = self.datastore['agg_loss_table']
+        logging.info('Building rup_loss_table')
+        with self.monitor('building rup_loss_table', measuremem=True):
+            build_rup_loss_table(self.datastore)
         stats = oq.risk_stats()
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):

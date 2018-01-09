@@ -605,8 +605,8 @@ def get_ruptures_by_grp(dstore, slice_=slice(None), rup_id=None):
     with mock.patch(
             'openquake.hazardlib.geo.surface.PlanarSurface.'
             'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
-        return general.groupby(
-            RuptureGetter(dstore, slice_), operator.attrgetter('grp_id'))
+        rgetter = RuptureGetter(dstore, slice_, rup_id=rup_id)
+        return general.groupby(rgetter, operator.attrgetter('grp_id'))
 
 
 class RuptureGetter(object):
