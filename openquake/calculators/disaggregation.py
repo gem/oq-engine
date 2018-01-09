@@ -308,11 +308,11 @@ producing too small PoEs.'''
         for (sid, rlzi, poe, imt), matrices in results.items():
             for trti in matrices:
                 dic[sid, poe, imt][rlzi, trti] = matrices[trti]
-        res = {}  # sid, stat, poe, imt -> {trti: disagg_matrix}
+        res = {}  # sid, stat, poe, imt -> disagg_matrix
         for (sid, poe, imt), array in dic.items():
             for stat, func in hstats:
                 matrix = compute_stats(array, [func], weights)[0]
-                res[sid, stat, poe, imt] = dict(enumerate(matrix))
+                res[sid, stat, poe, imt] = matrix
         return res
 
     def post_execute(self, results):
@@ -337,35 +337,20 @@ producing too small PoEs.'''
             'disagg', trts=encode(self.trts), num_ruptures=self.num_ruptures)
 
     def save_disagg_result(self, dskey, results):
-        for key, matrices in sorted(results.items()):
-            sid, rlz, poe, imt = key
-            self._save_disagg_result(
-                dskey, sid, _to_matrix(matrices, len(self.trts)),
-                rlz, self.oqparam.investigation_time, imt, poe)
-
-    def _save_disagg_result(self, dskey, site_id, matrices, rlz_id,
-                            investigation_time, imt_str, poe):
         """
-        Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
-        :class:`~openquake.engine.db.models.DisaggResult`).
+        Save the computed PMFs in the datastore
 
         :param dskey:
             dataset key; can be 'disagg' or 'disagg-stats'
-        :param site_id:
-            id of the current site
-        :param bin_edges:
-            The 5-uple mag, dist, lon, lat, eps
-        :param matrices:
-            A disagg_matrix with T submatrices
-        :param rlz_id:
-            ordinal of the realization to which the results belong.
-        :param float investigation_time:
-            Investigation time (years) for the calculation.
-        :param imt_str:
-            Intensity measure type string (PGA, SA, etc.)
-        :param float poe:
-            Disaggregation probability of exceedance value for this result.
+        :param results:
+            a dictionary sid, rlz, poe, imt -> 6D disagg_matrix
         """
+        for (sid, rlz, poe, imt), matrix in sorted(results.items()):
+            if isinstance(matrix, dict):  # convert to matrix
+                matrix = _to_matrix(matrix, len(self.trts))
+            self._save_result(dskey, sid, rlz, poe, imt, matrix)
+
+    def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix):
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
@@ -374,13 +359,10 @@ producing too small PoEs.'''
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
-            matrix = agg_probs(*matrices)
             poe_agg = []
+            aggmatrix = agg_probs(*matrix)
             for key, fn in disagg.pmf_map.items():
-                if key[-1] == 'TRT':
-                    pmf = fn(matrices)
-                else:
-                    pmf = fn(matrix)
+                pmf = fn(matrix if key[-1] == 'TRT' else aggmatrix)
                 self.datastore[disp_name + '_'.join(key)] = pmf
                 poe_agg.append(1. - numpy.prod(1. - pmf))
 
