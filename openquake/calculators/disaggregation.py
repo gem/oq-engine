@@ -35,7 +35,7 @@ from openquake.commonlib import calc
 from openquake.calculators import base, classical
 
 
-DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
+DISAGG_RES_FMT = '%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
 
 
 def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
@@ -299,11 +299,11 @@ producing too small PoEs.'''
         for (sid, rlzi, poe, imt), matrices in results.items():
             for trti in matrices:
                 dic[sid, poe, imt][rlzi, trti] = matrices[trti]
-        res = {}  # sid, stat, poe, imt
+        res = {}  # sid, stat, poe, imt -> {trti: disagg_matrix}
         for (sid, poe, imt), array in dic.items():
             for stat, func in hstats:
-                res[sid, stat, poe, imt] = compute_stats(
-                    array, [func], weights)[0]
+                matrix = compute_stats(array, [func], weights)[0]
+                res[sid, stat, poe, imt] = dict(enumerate(matrix))
         return res
 
     def post_execute(self, results):
@@ -314,33 +314,40 @@ producing too small PoEs.'''
         :param results:
             a dictionary of probability arrays
         """
-        hstats = self.oqparam.hazard_stats()
-        if len(self.rlzs_assoc.realizations) > 1 and hstats:
-            dic = self.build_stats(results, hstats)
-
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         logging.info('Extracting and saving the PMFs')
-        for key, matrices in sorted(results.items()):
-            sid, rlzi, poe, imt = key
-            self.save_disagg_result(
-                sid, matrices, rlzi, self.oqparam.investigation_time, imt, poe)
+        self.save_disagg_result('disagg', results)
+
+        hstats = self.oqparam.hazard_stats()
+        if len(self.rlzs_assoc.realizations) > 1 and hstats:
+            res = self.build_stats(results, hstats)
+            self.save_disagg_result('disagg-stats', res)
 
         self.datastore.set_attrs(
             'disagg', trts=encode(self.trts), num_ruptures=self.num_ruptures)
 
-    def save_disagg_result(self, site_id, matrices, rlz_id,
-                           investigation_time, imt_str, poe):
+    def save_disagg_result(self, dskey, results):
+        for key, matrices in sorted(results.items()):
+            sid, rlz, poe, imt = key
+            self._save_disagg_result(
+                dskey, sid, matrices, rlz, self.oqparam.investigation_time,
+                imt, poe)
+
+    def _save_disagg_result(self, dskey, site_id, matrices, rlz_id,
+                            investigation_time, imt_str, poe):
         """
         Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
         :class:`~openquake.engine.db.models.DisaggResult`).
 
+        :param dskey:
+            dataset key; can be 'disagg' or 'disagg-stats'
         :param site_id:
             id of the current site
         :param bin_edges:
             The 5-uple mag, dist, lon, lat, eps
         :param matrices:
-            A dictionary trti -> matrix
+            A dictionary trti -> disagg_matrix
         :param rlz_id:
             ordinal of the realization to which the results belong.
         :param float investigation_time:
@@ -352,7 +359,7 @@ producing too small PoEs.'''
         """
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
-        disp_name = DISAGG_RES_FMT % dict(
+        disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
             rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
         mag, dist, lonsd, latsd, eps = self.bin_edges
@@ -362,25 +369,20 @@ producing too small PoEs.'''
             poe_agg = []
             num_trts = len(self.trts)
             for key, fn in disagg.pmf_map.items():
-                if key == ('TRT',):
-                    pmf = numpy.zeros(num_trts)
-                    for t in matrices:
-                        pmf[..., t] = fn(matrices[t])
-                elif key[-1] == 'TRT':  # LonLatTRT
-                    pmf = numpy.zeros(
-                        (len(lons) - 1, len(lats) - 1, num_trts))
-                    for t in matrices:
-                        pmf[..., t] = fn(matrices[t])
+                if key[-1] == 'TRT':
+                    pmf = fn(matrices, num_trts)
                 else:
                     pmf = fn(matrix)
-                dname = disp_name + '_'.join(key)
-                self.datastore[dname] = pmf
+                self.datastore[disp_name + '_'.join(key)] = pmf
                 poe_agg.append(1. - numpy.prod(1. - pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
-        attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
+        try:
+            attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
+        except KeyError:  # when saving the stats
+            pass
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
