@@ -344,6 +344,7 @@ class HazardCalculator(BaseCalculator):
             config.distribution.oq_distribute in ('no', 'futures') or
             config.directory.shared_dir)
         if self.oqparam.hazard_calculation_id and read_access:
+            self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
     def assoc_assets_sites(self, sitecol):
@@ -490,6 +491,8 @@ class HazardCalculator(BaseCalculator):
             self.exposure = readinput.get_exposure(self.oqparam)
             self.sitecol, self.assetcol = (
                 readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
+            logging.info('Read %d assets on %d sites',
+                         len(self.assetcol), len(self.sitecol))
             # NB: using hdf5.vstr would fail for large exposures;
             # the datastore could become corrupt, and also ultra-strange things
             # may happen (i.e. having the sitecol saved inside asset_refs!!)
@@ -684,6 +687,7 @@ class RiskCalculator(HazardCalculator):
                 for sid, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
+            dstore = self.can_read_parent()
             for block in blocks:
                 sids = numpy.array([sid for sid, _weight in block])
                 reduced_assets = assets_by_site[sids]
@@ -695,16 +699,18 @@ class RiskCalculator(HazardCalculator):
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                dstore = self.can_read_parent() or self.datastore
+                if dstore is None:
+                    dstore = self.datastore
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
                 else:  # gmf
                     getter = riskinput.GmfDataGetter(
                         dstore, sids, self.R, eids)
-                # if dstore is self.datastore:
-                # read the hazard data in the controller node
-                getter.init()  # READING ALWAYS UNTIL I DISCOVER THE BUG!
+                if dstore is self.datastore:
+                    # read the hazard data in the controller node
+                    logging.info('Reading hazard')
+                    getter.init()
                 ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
@@ -779,8 +785,9 @@ def get_gmfs(calculator):
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
         calculator.assoc_assets(haz_sitecol)
         R, N, E, I = gmfs.shape
-        save_gmf_data(dstore, haz_sitecol,
-                      gmfs[:, haz_sitecol.indices])
+        idx = (slice(None) if haz_sitecol.indices is None
+               else haz_sitecol.indices)
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx])
 
         # store the events, useful when read the GMFs from a file
         events = numpy.zeros(E, readinput.stored_event_dt)

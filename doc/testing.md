@@ -22,6 +22,7 @@ $ nosetests -v -a '!slow' openquake.hazardlib
 $ nosetests -v -a '!slow' openquake.hazardlib
 
 # Engine server
+$ oq dbserver start &
 $ nosetests -v -a '!slow' openquake.server
 ```
 
