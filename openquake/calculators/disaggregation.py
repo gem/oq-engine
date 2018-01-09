@@ -363,13 +363,13 @@ producing too small PoEs.'''
             num_trts = len(self.trts)
             for key, fn in disagg.pmf_map.items():
                 if 'TRT' in key:
-                    trti = next(iter(matrices))
-                    a_pmf = fn(matrices[trti])
-                    pmf = numpy.zeros(a_pmf.shape + (num_trts,))
-                    pmf[..., trti] = a_pmf
+                    if key == ('TRT',):
+                        pmf = numpy.zeros(num_trts)
+                    else:  # LonLatTRT
+                        pmf = numpy.zeros(
+                            (len(lons) - 1, len(lats) - 1, num_trts))
                     for t in matrices:
-                        if t != trti:
-                            pmf[..., t] = fn(matrices[t])
+                        pmf[..., t] = fn(matrices[t])
                 else:
                     pmf = fn(matrix)
                 dname = disp_name + '_'.join(key)
