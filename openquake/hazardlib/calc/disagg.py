@@ -373,22 +373,20 @@ def dist_pmf(matrix):
     return 1. - dist_pmf
 
 
-def trt_pmf(matrices, num_trts):
+def trt_pmf(matrices):
     """
     Fold full disaggregation matrix to tectonic region type PMF.
 
     :param matrices:
         a dictionary trti -> disaggregation matrix
-    :param num_trts:
-        total number of tectonic region types
     :returns:
         an array of T probabilities one per each tectonic region type
     """
-    pmf = numpy.zeros(num_trts)
-    for t in matrices:
-        nmags, ndists, nlons, nlats, neps = matrices[t].shape
+    ntrts, nmags, ndists, nlons, nlats, neps = matrices.shape
+    pmf = numpy.zeros(ntrts)
+    for t in range(ntrts):
         pmf[t] = 1. - numpy.prod(
-            [1. - matrices[t][i, j, k, l, m]
+            [1. - matrices[t, i, j, k, l, m]
              for i in range(nmags)
              for j in range(ndists)
              for k in range(nlons)
@@ -458,23 +456,18 @@ def lon_lat_pmf(matrix):
     return 1. - lon_lat_pmf
 
 
-def lon_lat_trt_pmf(matrices, num_trts):
+def lon_lat_trt_pmf(matrices):
     """
     Fold full disaggregation matrices to lon / lat / TRT PMF.
 
     :param matrices:
-        a dictionary trti -> disaggregation matrix
-    :param num_trts:
-        total number of tectonic region types
+        a matrix with T submatrices
     :returns:
         3d array. First dimension represents longitude histogram bins,
         second one latitude histogram bins, third one trt histogram bins.
     """
-    trti = next(iter(matrices))
-    pmf = numpy.zeros(matrices[trti].shape[2:4] + (num_trts,))
-    for t in matrices:
-        pmf[..., t] = lon_lat_pmf(matrices[t])
-    return pmf
+    res = numpy.array([lon_lat_pmf(mat) for mat in matrices])
+    return res.transpose(1, 2, 0)
 
 
 def mag_lon_lat_pmf(matrix):
