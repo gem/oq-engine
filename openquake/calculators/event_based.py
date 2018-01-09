@@ -155,7 +155,7 @@ def _build_eb_ruptures(
         with rup_mon:
             try:
                 rup.ctx = cmaker.make_contexts(s_sites, rup)
-                indices = rup.ctx[0].sites.indices
+                indices = rup.ctx[0].sids
             except FarAwayRupture:
                 # ignore ruptures which are far away
                 del num_occ_by_rup[rup]  # save memory

@@ -70,7 +70,7 @@ try:
 except ImportError:
     rtree = None
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.geo.utils import fix_bounding_box_idl, fix_lons_idl
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
@@ -411,7 +411,7 @@ class SourceFilter(object):
                     raise ValueError('sids=%s' % sids)
                 if len(sids):
                     src.nsites = len(sids)
-                    yield src, FilteredSiteCollection(sids, sites.complete)
+                    yield src, SiteCollection.filtered(sids, sites)
             else:  # normal filtering, used in the workers
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
@@ -426,5 +426,6 @@ class SourceFilter(object):
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
                     sitecol=self.sitecol, use_rtree=False)
+
 
 source_site_noop_filter = SourceFilter(None, {})

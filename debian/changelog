@@ -2,12 +2,14 @@
   * Implemented an API `/v1/on_same_fs` to check filesystem accessibility
     between engine and a client application.
 
+  [Michele Simionato]
+  * Reduced the data transfer when computing the hazard curves in postprocessing
+  * Removed the FilteredSiteCollection class
+
   [Nick Ackerley]
   * Some improvements to the plotting routines of the HMTK
 
   [Michele Simionato]
-  * Changed `oq run job_h.ini,job_r.ini` to disable concurrency in the second
-    run, as a workaround on reading the parent datastore from workers
   * Removed the ability to run `oq engine --run job_h.ini,job_r.ini`
   * Forbidden the site model in gmf_ebrisk calculations
   * When the option `--hc` is given the ruptures can now be read directly

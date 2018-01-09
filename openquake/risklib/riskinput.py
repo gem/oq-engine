@@ -403,7 +403,7 @@ class GmfGetter(object):
             rlzs = self.rlzs_by_gsim[gs]
             for computer in self.computers:
                 rup = computer.rupture
-                sids = computer.sites.sids
+                sids = computer.sids
                 if self.samples > 1:
                     # events of the current slice of realizations
                     all_eids = [get_array(rup.events, sample=s)['eid']
