@@ -1,3 +1,7 @@
+  [Matteo Nastasi]
+  * Implemented an API `/v1/on_same_fs` to check filesystem accessibility
+    between engine and a client application.
+
   [Michele Simionato]
   * Reduced the data transfer when computing the hazard curves in postprocessing
   * Removed the FilteredSiteCollection class
