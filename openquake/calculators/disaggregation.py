@@ -321,7 +321,7 @@ producing too small PoEs.'''
         """
         N = len(self.sitecol)
         R = len(self.rlzs_assoc.realizations)
-        P = len(self.oqparam.iml_disagg or (None,))
+        P = len(self.oqparam.poes_disagg or (None,))
         M = len(self.oqparam.imtls)
         return (N, R, P, M)
 
