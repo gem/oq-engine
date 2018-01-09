@@ -722,7 +722,7 @@ def on_same_fs(request):
         if checksum == int(checksum_in):
             return HttpResponse(content=json.dumps({'success': True}),
                                 content_type=JSON, status=200)
-    except:
+    except IOError:
         pass
 
     return HttpResponse(content=json.dumps({'success': False}),
