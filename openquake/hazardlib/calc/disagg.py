@@ -119,6 +119,17 @@ def lon_lat_bins(bb, coord_bin_width):
     return lon_bins, lat_bins
 
 
+def get_shape(bin_edges, sid):
+    """
+    :returns:
+        the shape of the disaggregation matrix for the given site, of form
+        (#mags-1, #dists-1, #lons-1, #lats-1, #eps-1)
+    """
+    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
+    return (len(mag_bins) - 1, len(dist_bins) - 1,
+            len(lon_bins[sid]) - 1, len(lat_bins[sid]) - 1, len(eps_bins) - 1)
+
+
 # this is fast
 def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
     """
@@ -130,12 +141,7 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
     """
     with mon('build_disagg_matrix'):
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
-        lon_bins, lat_bins = lon_bins[sid], lat_bins[sid]
-        dim1 = len(mag_bins) - 1
-        dim2 = len(dist_bins) - 1
-        dim3 = len(lon_bins) - 1
-        dim4 = len(lat_bins) - 1
-        shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1)
+        dim1, dim2, dim3, dim4, dim5 = shape = get_shape(bin_edges, sid)
 
         # find bin indexes of rupture attributes; bins are assumed closed
         # on the lower bound, and open on the upper bound, that is [ )
@@ -145,8 +151,8 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
         # index of the upper bound of the bin
         mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
         dists_idx = numpy.digitize(bdata.dists[:, sid], dist_bins) - 1
-        lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins)
-        lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins) - 1
+        lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins[sid])
+        lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins[sid]) - 1
 
         # because of the way numpy.digitize works, values equal to the last bin
         # edge are associated to an index equal to len(bins) which is not a

@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
+from openquake.hazardlib.stats import compute_stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -285,6 +286,26 @@ producing too small PoEs.'''
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
 
+    def build_stats(self, results, hstats):
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        R = len(weights)
+        T = len(self.trts)
+        dic = {}  # sid, poe, imt -> disagg_matrix
+        for sid in self.sitecol.sids:
+            shape = disagg.get_shape(self.bin_edges, sid)
+            for poe in self.oqparam.poes_disagg or (None,):
+                for imt in self.oqparam.imtls:
+                    dic[sid, poe, imt] = numpy.zeros((R, T) + shape)
+        for (sid, rlzi, poe, imt), matrices in results.items():
+            for trti in matrices:
+                dic[sid, poe, imt][rlzi, trti] = matrices[trti]
+        res = {}  # sid, stat, poe, imt
+        for (sid, poe, imt), array in dic.items():
+            for stat, func in hstats:
+                res[sid, stat, poe, imt] = compute_stats(
+                    array, [func], weights)[0]
+        return res
+
     def post_execute(self, results):
         """
         Save all the results of the disaggregation. NB: the number of results
@@ -293,6 +314,10 @@ producing too small PoEs.'''
         :param results:
             a dictionary of probability arrays
         """
+        hstats = self.oqparam.hazard_stats()
+        if len(self.rlzs_assoc.realizations) > 1 and hstats:
+            dic = self.build_stats(results, hstats)
+
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         logging.info('Extracting and saving the PMFs')
@@ -315,7 +340,7 @@ producing too small PoEs.'''
         :param bin_edges:
             The 5-uple mag, dist, lon, lat, eps
         :param matrices:
-            A dictionary (sid, rlz_id, poe, imt, iml) -> trti -> matrix
+            A dictionary trti -> matrix
         :param rlz_id:
             ordinal of the realization to which the results belong.
         :param float investigation_time:
