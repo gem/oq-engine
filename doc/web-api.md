@@ -221,7 +221,7 @@ a JSON object, containing:
 
 #### POST /v1/on_same_fs
 
-Check if a given filename exists and if first 32 bytes of its content  has the same checksum passed as argument of POST.
+Check if a given filename exists and if the first 32 bytes of its content have the same checksum passed as argument of POST.
 
 Parameters:
 
