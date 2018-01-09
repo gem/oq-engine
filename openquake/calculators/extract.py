@@ -268,36 +268,3 @@ def extract_aggcurves(dstore, loss_type, *tags):
     curves = _filter_agg(dstore['assetcol'], losses, tags)
     vars(curves).update(dstore.get_attrs('curves-stats'))
     return curves
-
-
-@extract.add('rlt')
-def extract_rupture_loss_table(dstore, loss_type):
-    """
-    Get the total losses by rupture ordered by the given loss_type. Use it as
-    extract(dstore, 'rlt/structural') etc
-    """
-    oq = dstore['oqparam']
-    loss_dt = oq.loss_dt()
-    events = dstore['events']
-    rup_by_eid = dict(zip(events['eid'], events['rup_id']))
-    losses_by_rup = {}
-    for rec in dstore['agg_loss_table']:
-        rupid = rup_by_eid[rec['eid']]
-        if rupid in losses_by_rup:
-            losses_by_rup[rupid] += rec['loss']
-        else:
-            losses_by_rup[rupid] = rec['loss']
-    assert losses_by_rup, 'Empty agg_loss_table'
-    rupids = dstore['ruptures']['serial']
-    dtlist = [('rupid', numpy.uint32)] + oq.loss_dt_list()
-    tbl = numpy.zeros(len(rupids), dtlist)
-    for i, rupid in enumerate(rupids):
-        row = tbl[i]
-        row['rupid'] = rupid
-        try:
-            for l, lt in enumerate(loss_dt.names):
-                row[lt] = losses_by_rup[rupid][l]
-        except KeyError:
-            pass
-    tbl.sort(order=loss_type)
-    return tbl[::-1]
