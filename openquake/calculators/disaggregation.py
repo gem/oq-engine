@@ -315,6 +315,16 @@ producing too small PoEs.'''
                 res[sid, stat, poe, imt] = matrix
         return res
 
+    def get_NRPM(self):
+        """
+        :returns: (num_sites, num_rlzs, num_poes, num_imts)
+        """
+        N = len(self.sitecol)
+        R = len(self.rlzs_assoc.realizations)
+        P = len(self.oqparam.iml_disagg or (None,))
+        M = len(self.oqparam.imtls)
+        return (N, R, P, M)
+
     def post_execute(self, results):
         """
         Save all the results of the disaggregation. NB: the number of results
@@ -325,13 +335,16 @@ producing too small PoEs.'''
         """
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
-        logging.info('Extracting and saving the PMFs')
+        shp = self.get_NRPM()
+        logging.info('Extracting and saving the PMFs for %d outputs '
+                     '(N=%s, R=%d, P=%d, M=%d)', numpy.prod(shp), *shp)
         self.save_disagg_result('disagg', results)
 
         hstats = self.oqparam.hazard_stats()
         if len(self.rlzs_assoc.realizations) > 1 and hstats:
-            res = self.build_stats(results, hstats)
-            self.save_disagg_result('disagg-stats', res)
+            with self.monitor('computing and saving stats', measuremem=True):
+                res = self.build_stats(results, hstats)
+                self.save_disagg_result('disagg-stats', res)
 
         self.datastore.set_attrs(
             'disagg', trts=encode(self.trts), num_ruptures=self.num_ruptures)
