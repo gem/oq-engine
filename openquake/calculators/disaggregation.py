@@ -38,6 +38,15 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = '%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
 
 
+def _to_matrix(matrices, num_trts):
+    # convert a dict trti -> matrix into a single matrix of shape (T, ...)
+    trti = next(iter(matrices))
+    mat = numpy.zeros((num_trts,) + matrices[trti].shape)
+    for trti in matrices:
+        mat[trti] = matrices[trti]
+    return mat
+
+
 def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
                    oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -331,8 +340,8 @@ producing too small PoEs.'''
         for key, matrices in sorted(results.items()):
             sid, rlz, poe, imt = key
             self._save_disagg_result(
-                dskey, sid, matrices, rlz, self.oqparam.investigation_time,
-                imt, poe)
+                dskey, sid, _to_matrix(matrices, len(self.trts)),
+                rlz, self.oqparam.investigation_time, imt, poe)
 
     def _save_disagg_result(self, dskey, site_id, matrices, rlz_id,
                             investigation_time, imt_str, poe):
@@ -347,7 +356,7 @@ producing too small PoEs.'''
         :param bin_edges:
             The 5-uple mag, dist, lon, lat, eps
         :param matrices:
-            A dictionary trti -> disagg_matrix
+            A disagg_matrix with T submatrices
         :param rlz_id:
             ordinal of the realization to which the results belong.
         :param float investigation_time:
@@ -365,12 +374,11 @@ producing too small PoEs.'''
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
-            matrix = agg_probs(*matrices.values())
+            matrix = agg_probs(*matrices)
             poe_agg = []
-            num_trts = len(self.trts)
             for key, fn in disagg.pmf_map.items():
                 if key[-1] == 'TRT':
-                    pmf = fn(matrices, num_trts)
+                    pmf = fn(matrices)
                 else:
                     pmf = fn(matrix)
                 self.datastore[disp_name + '_'.join(key)] = pmf
