@@ -378,7 +378,7 @@ def trt_pmf(matrices):
     Fold full disaggregation matrix to tectonic region type PMF.
 
     :param matrices:
-        a dictionary trti -> disaggregation matrix
+        a matrix with T submatrices
     :returns:
         an array of T probabilities one per each tectonic region type
     """
