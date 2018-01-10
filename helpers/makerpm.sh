@@ -74,20 +74,20 @@ VER=$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\
 TIME=$(date +"%s")
 echo "$LIB - $BRANCH - $SHA - $VER"
 
-sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
+sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python3-${REPO}.spec.inc > build-rpm/SPECS/python3-${REPO}.spec
 
 if [ "$STABLE" == "1" ]; then
     git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
-    sed -i "s/##_release_##/${PKG}/g" build-rpm/SPECS/python-${REPO}.spec
-    OUT=python-${REPO}-${VER}-${PKG}.src.rpm
+    sed -i "s/##_release_##/${PKG}/g" build-rpm/SPECS/python3-${REPO}.spec
+    OUT=python3-${REPO}-${VER}-${PKG}.src.rpm
 else
     git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
-    sed -i "s/##_release_##/git${SHA}/g" build-rpm/SPECS/python-${REPO}.spec
-    OUT=python-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm
+    sed -i "s/##_release_##/git${SHA}/g" build-rpm/SPECS/python3-${REPO}.spec
+    OUT=python3-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm
 fi
 cp debian/patches/openquake.cfg.patch build-rpm/SOURCES
 
-mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
+mock -r openquake --buildsrpm --spec build-rpm/SPECS/python3-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
 if [ "$BUILD" == "1" ]; then
     mock -r openquake build-rpm/SRPMS/${OUT} --resultdir=build-rpm/RPMS $EXTRA
 fi
