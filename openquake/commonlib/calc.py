@@ -594,7 +594,7 @@ class RuptureSerializer(object):
         pass
 
 
-def get_ruptures_by_grp(dstore, slice_=slice(None), rup_id=None):
+def get_ruptures_by_grp(dstore, slice_=slice(None)):
     """
     Extracts the ruptures of the given grp_id
     """
@@ -605,7 +605,7 @@ def get_ruptures_by_grp(dstore, slice_=slice(None), rup_id=None):
     with mock.patch(
             'openquake.hazardlib.geo.surface.PlanarSurface.'
             'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
-        rgetter = RuptureGetter(dstore, slice_, rup_id=rup_id)
+        rgetter = RuptureGetter(dstore, slice_)
         return general.groupby(rgetter, operator.attrgetter('grp_id'))
 
 
@@ -618,11 +618,10 @@ class RuptureGetter(object):
     :param grp_id: the group ID of the ruptures (default: all)
     :param rup_id: a specific rupture (default: all)
     """
-    def __init__(self, dstore, slice_=slice(None), grp_id=None, rup_id=None):
+    def __init__(self, dstore, slice_=slice(None), grp_id=None):
         self.dstore = dstore
         self.slice = slice_
         self.grp_id = grp_id
-        self.rup_id = rup_id
 
     def __iter__(self):
         self.dstore.open()  # if needed
@@ -630,8 +629,6 @@ class RuptureGetter(object):
         grp_trt = self.dstore['csm_info'].grp_trt()
         recs = self.dstore['ruptures'][self.slice]
         for rec in recs:
-            if self.rup_id is not None and self.rup_id != rec['serial']:
-                continue
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
             grp_id = evs['grp_id'][0]
             if self.grp_id is not None and self.grp_id != grp_id:
