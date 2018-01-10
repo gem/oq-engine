@@ -50,7 +50,7 @@ Patch1: openquake.cfg.patch
 Requires(pre): shadow-utils
 
 Requires: oq-python3 python3-oq-libs >= 1.5.0
-Requires: sudo systemd python
+Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
 
@@ -95,7 +95,7 @@ Copyright (C) 2010-2018 GEM Foundation
 %patch1 -p1
 
 %build
-python setup.py build
+/opt/openquake/bin/python3 setup.py build
 
 %check
 #nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.engine
@@ -160,7 +160,7 @@ rm -rf %{buildroot}
 %doc doc/upgrading/*
 %config(noreplace) %{_sysconfdir}/openquake/openquake.cfg
 %{oqprefix}/bin/oq
-%{oqprefix}/lib/python2.7/site-packages/openquake*
+%{oqprefix}/lib/python3*/site-packages/openquake*
 %{_bindir}/oq
 %{_datadir}/openquake/engine
 %{_datadir}/applications/oq-engine-webui.desktop
