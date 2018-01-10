@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: syntax=spec
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@
 %define oqrepo ##_repo_##
 %define oqversion ##_version_##
 %define oqrelease ##_release_##
-%define oqname python-%{oqrepo}
+%define oqname python3-%{oqrepo}
 %define oqtimestamp ##_timestamp_##
 %define oqprefix /opt/openquake
 %define oquser openquake
@@ -49,19 +49,19 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: python-oq-libs >= 1.5.0
+Requires: oq-python3 python3-oq-libs >= 1.5.0
 Requires: sudo systemd python
 
-BuildRequires: systemd python-setuptools zip
+BuildRequires: oq-python3 systemd zip
 
 Obsoletes: python-oq-risklib python-oq-hazardlib
-Provides: python-oq-risklib python-oq-hazardlib
+Provides: python-oq-risklib python-oq-hazardlib python-oq-engine
 
 %description
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2017 GEM Foundation
+Copyright (C) 2010-2018 GEM Foundation
 
 %package master
 Summary: OpenQuake Engine multi-node cluster support (master node)
@@ -74,7 +74,7 @@ OpenQuake Engine multi-node cluster support (master node)
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2017 GEM Foundation
+Copyright (C) 2010-2018 GEM Foundation
 
 %package worker
 Summary: OpenQuake Engine multi-node cluster support (worker node)
@@ -87,7 +87,7 @@ OpenQuake Engine multi-node cluster support (worker node)
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2017 GEM Foundation
+Copyright (C) 2010-2018 GEM Foundation
 
 %prep
 %setup -n %{oqformat}
@@ -110,7 +110,9 @@ getent passwd %{oquser} >/dev/null || \
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
 install -p -m 755 -d %{buildroot}%{oqprefix}/bin
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
+/opt/openquake/bin/python3 setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
+# FIXME To be removed after python3 switch is completed
+sed -i "s|/usr/bin/env python|/opt/openquake/bin/python3|" %{buildroot}%{oqprefix}/bin/oq
 ln -sf %{oqprefix}/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_localstatedir}/lib/openquake
@@ -129,6 +131,8 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 # Make a zipped copy of each demo
 helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
+# FIXME To be removed after python3 switch is completed
+sed -i "s|/usr/bin/env python|/opt/openquake/bin/python3|" %{buildroot}/%{_datadir}/openquake/engine/utils/celery-status
 
 %post
 %systemd_post openquake-dbserver.service
