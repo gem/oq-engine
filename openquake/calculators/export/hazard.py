@@ -844,7 +844,7 @@ def export_disagg_xml(ekey, dstore):
             tectonic_region_types=trts,
         )
         data = []
-        for poe, k in zip(poe_agg, disagg.pmf_map):
+        for poe, k in zip(poe_agg, oq.disagg_outputs or disagg.pmf_map):
             dim_labels = tuple(k.split('_'))
             data.append(DisaggMatrix(poe, iml, dim_labels, matrix[k]))
 
