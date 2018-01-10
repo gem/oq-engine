@@ -296,6 +296,10 @@ producing too small PoEs.'''
         self.datastore['disagg-bins/eps'] = b[4]
 
     def build_stats(self, results, hstats):
+        """
+        :param results: dict key -> 6D disagg_matrix
+        :param hstats: (statname, statfunc) pairs
+        """
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         R = len(weights)
         T = len(self.trts)
@@ -305,9 +309,8 @@ producing too small PoEs.'''
             for poe in self.oqparam.poes_disagg or (None,):
                 for imt in self.oqparam.imtls:
                     dic[sid, poe, imt] = numpy.zeros((R, T) + shape)
-        for (sid, rlzi, poe, imt), matrices in results.items():
-            for trti in matrices:
-                dic[sid, poe, imt][rlzi, trti] = matrices[trti]
+        for (sid, rlzi, poe, imt), matrix in results.items():
+            dic[sid, poe, imt][rlzi] = matrix
         res = {}  # sid, stat, poe, imt -> disagg_matrix
         for (sid, poe, imt), array in dic.items():
             for stat, func in hstats:
@@ -333,6 +336,8 @@ producing too small PoEs.'''
         :param results:
             a dictionary of probability arrays
         """
+        T = len(self.trts)
+        results = {k: _to_matrix(v, T) for k, v in results.items()}
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
         shp = self.get_NRPM()
@@ -359,8 +364,6 @@ producing too small PoEs.'''
             a dictionary sid, rlz, poe, imt -> 6D disagg_matrix
         """
         for (sid, rlz, poe, imt), matrix in sorted(results.items()):
-            if isinstance(matrix, dict):  # convert to matrix
-                matrix = _to_matrix(matrix, len(self.trts))
             self._save_result(dskey, sid, rlz, poe, imt, matrix)
 
     def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix):
