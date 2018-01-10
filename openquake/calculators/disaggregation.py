@@ -339,8 +339,8 @@ producing too small PoEs.'''
         T = len(self.trts)
         # build a dictionary (sid, rlzi, poe, imt) -> 6D matrix
         results = {k: _to_matrix(v, T) for k, v in results.items()}
-        # since an extremely small subset of the full disaggregation matrix
-        # is saved this method can be run sequentially on the controller node
+
+        # get the number of outputs
         shp = self.get_NRPM()
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, R=%d, P=%d, M=%d)', numpy.prod(shp), *shp)
@@ -368,6 +368,7 @@ producing too small PoEs.'''
             self._save_result(dskey, sid, rlz, poe, imt, matrix)
 
     def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix):
+        disagg_outputs = self.oqparam.disagg_outputs
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
