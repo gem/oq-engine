@@ -87,6 +87,10 @@ class DisaggregationTestCase(CalculatorTestCase):
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 48)  # number of CSV files
 
+        # check stats
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 1 poe x 1 imt
+
     @attr('qa', 'hazard', 'disagg')
     def test_case_3(self):
         with self.assertRaises(ValueError) as ctx:
@@ -104,6 +108,10 @@ producing too small PoEs.''')
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
 
+        # check stats
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
+
     @attr('qa', 'hazard', 'disagg')
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree; it also
@@ -112,3 +120,7 @@ producing too small PoEs.''')
         fname = writetmp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
+
+        # check stats
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt

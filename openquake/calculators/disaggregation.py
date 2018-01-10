@@ -334,9 +334,10 @@ producing too small PoEs.'''
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
         :param results:
-            a dictionary of probability arrays
+            a dictionary (sid, rlzi, poe, imt) -> trti -> disagg matrix
         """
         T = len(self.trts)
+        # build a dictionary (sid, rlzi, poe, imt) -> 6D matrix
         results = {k: _to_matrix(v, T) for k, v in results.items()}
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
