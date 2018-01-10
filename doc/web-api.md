@@ -219,6 +219,22 @@ a JSON object, containing:
     * error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
 
 
+#### POST /v1/on_same_fs
+
+Check if a given filename exists and if the first 32 bytes of its content have the same checksum passed as argument of POST.
+
+Parameters:
+
+    * filename: filename (with path) of file to be checked
+    * checksum: expected checksum of first 32 bytes of the file
+
+Response:
+
+a JSON object, containing:
+
+    * success: a boolean indicating that filename is accessible by engine server and that calculated checksum matches passed parameter
+
+
 #### POST /accounts/ajax_login/
 
 Attempt to login, given the parameters `username` and `password`
