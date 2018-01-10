@@ -52,7 +52,7 @@ Requires(pre): shadow-utils
 Requires: oq-python3 python3-oq-libs >= 1.5.0
 Requires: sudo systemd python
 
-BuildRequires: oq-python3 systemd zip
+BuildRequires: oq-python3 sed systemd zip
 
 Obsoletes: python-oq-risklib python-oq-hazardlib
 Provides: python-oq-risklib python-oq-hazardlib python-oq-engine
