@@ -609,6 +609,20 @@ def get_ruptures_by_grp(dstore, slice_=slice(None)):
         return general.groupby(rgetter, operator.attrgetter('grp_id'))
 
 
+def get_maxloss_rupture(dstore, loss_type):
+    """
+    :param dstore: a DataStore instance
+    :param loss_type: a loss type string
+    :returns:
+        EBRupture instance corresponding to the maximum loss for the
+        given loss type
+    """
+    lti = dstore['oqparam'].lti[loss_type]
+    ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
+    [ebr] = RuptureGetter(dstore, slice(ridx, ridx + 1))
+    return ebr
+
+
 class RuptureGetter(object):
     """
     Iterable over ruptures.
