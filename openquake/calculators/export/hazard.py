@@ -25,7 +25,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import humansize, group_array, DictArray
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, nrml
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
@@ -72,16 +72,33 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures_by_grp = {}
     for grp_id, ruptures in calc.get_ruptures_by_grp(dstore).items():
-        ruptures_by_grp[grp_id] = [ebr.export(mesh, sm_by_grp)
-                                   for ebr in ruptures]
+        ruptures_by_grp[grp_id] = [ebr.export(mesh) for ebr in ruptures]
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
     return [dest]
+
+
+@export.add(('rup_loss_table', 'xml'))
+def export_maxloss_ruptures(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    fnames = []
+    for loss_type in oq.loss_dt().names:
+        ebr = calc.get_maxloss_rupture(dstore, loss_type)
+        root = hazard_writers.rupture_to_element(ebr.export(mesh))
+        dest = dstore.export_path('rupture-%s.xml' % loss_type)
+        with open(dest, 'wb') as fh:
+            nrml.write(list(root), fh)
+        fnames.append(dest)
+    return fnames
 
 
 @export.add(('ruptures', 'csv'))
