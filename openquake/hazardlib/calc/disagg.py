@@ -494,12 +494,12 @@ def mag_lon_lat_pmf(matrix):
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
 pmf_map = collections.OrderedDict([
-    (('Mag', ), mag_pmf),
-    (('Dist', ), dist_pmf),
-    (('TRT', ), trt_pmf),
-    (('Mag', 'Dist'), mag_dist_pmf),
-    (('Mag', 'Dist', 'Eps'), mag_dist_eps_pmf),
-    (('Lon', 'Lat'), lon_lat_pmf),
-    (('Mag', 'Lon', 'Lat'), mag_lon_lat_pmf),
-    (('Lon', 'Lat', 'TRT'), lon_lat_trt_pmf),
+    ('Mag', mag_pmf),
+    ('Dist', dist_pmf),
+    ('TRT', trt_pmf),
+    ('Mag_Dist', mag_dist_pmf),
+    ('Mag_Dist_Eps', mag_dist_eps_pmf),
+    ('Lon_Lat', lon_lat_pmf),
+    ('Mag_Lon_Lat', mag_lon_lat_pmf),
+    ('Lon_Lat_TRT', lon_lat_trt_pmf),
 ])
