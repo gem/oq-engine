@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <singlePlaneRupture
+    id="14"
+    multiplicity="2"
+    >
+        <stochasticEventSets>
+            <SES
+            id="2"
+            >
+                60129542144
+            </SES>
+            <SES
+            id="16"
+            >
+                60129542145
+            </SES>
+        </stochasticEventSets>
+        <magnitude>
+            5.55
+        </magnitude>
+        <strike>
+            44.9771842957
+        </strike>
+        <dip>
+            30.0010590828
+        </dip>
+        <rake>
+            90.0
+        </rake>
+        <hypocenter depth="8.0000000E+00" lat="2.7901501E+01" lon="8.5747704E+01"/>
+        <planarSurface>
+            <topLeft depth="6.91758346558" lat="27.8927669525" lon="85.7108459473"/>
+            <topRight depth="6.91758346558" lat="27.9340724945" lon="85.7575759888"/>
+            <bottomLeft depth="9.08241653442" lat="27.868927002" lon="85.7378311157"/>
+            <bottomRight depth="9.08241653442" lat="27.9102230072" lon="85.7845611572"/>
+        </planarSurface>
+    </singlePlaneRupture>
+</nrml>
