@@ -380,8 +380,8 @@ producing too small PoEs.'''
             poe_agg = []
             aggmatrix = agg_probs(*matrix)
             for key, fn in disagg.pmf_map.items():
-                pmf = fn(matrix if key[-1] == 'TRT' else aggmatrix)
-                self.datastore[disp_name + '_'.join(key)] = pmf
+                pmf = fn(matrix if key.endswith('TRT') else aggmatrix)
+                self.datastore[disp_name + key] = pmf
                 poe_agg.append(1. - numpy.prod(1. - pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
