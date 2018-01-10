@@ -57,12 +57,10 @@ def build_rup_loss_table(dstore):
         else:
             losses_by_rup[rupid] = rec['loss']
     assert losses_by_rup, 'Empty agg_loss_table'
-    dtlist = [('ridx', numpy.uint32)] + oq.loss_dt_list()
     serials = dstore['ruptures']['serial']
-    tbl = numpy.zeros(len(serials), dtlist)
+    tbl = numpy.zeros(len(serials), oq.loss_dt())
     for i, serial in enumerate(serials):
         row = tbl[i]
-        row['ridx'] = i
         try:
             for l, lt in enumerate(loss_dt.names):
                 row[lt] = losses_by_rup[serial][l]
@@ -455,7 +453,9 @@ class EbriskCalculator(base.RiskCalculator):
         if 'ruptures' in dstore:
             logging.info('Building rup_loss_table')
             with self.monitor('building rup_loss_table', measuremem=True):
-                dstore['rup_loss_table'] = build_rup_loss_table(dstore)
+                dstore['rup_loss_table'] = rlt = build_rup_loss_table(dstore)
+                ridx = [rlt[lt].argmax() for lt in oq.loss_dt().names]
+                dstore.set_attrs('rup_loss_table', ridx=ridx)
         stats = oq.risk_stats()
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
