@@ -845,9 +845,7 @@ def export_disagg_xml(ekey, dstore):
         )
         data = []
         for poe, k in zip(poe_agg, oq.disagg_outputs or disagg.pmf_map):
-            dim_labels = tuple(k.split('_'))
-            data.append(DisaggMatrix(poe, iml, dim_labels, matrix[k]))
-
+            data.append(DisaggMatrix(poe, iml, k.split('_'), matrix[k]))
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
