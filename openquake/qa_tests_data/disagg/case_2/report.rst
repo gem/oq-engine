@@ -3,8 +3,8 @@ QA test for disaggregation case_2
 
 ============== ===================
 checksum32     542,802,391        
-date           2018-01-11T04:56:55
-engine_version 2.9.0-git3c583c4   
+date           2018-01-11T06:30:55
+engine_version 2.9.0-git1ab8653   
 ============== ===================
 
 num_sites = 2, num_imts = 1
@@ -44,8 +44,8 @@ Composite source model
 ============== ====== =============== ================
 smlt_path      weight gsim_logic_tree num_realizations
 ============== ====== =============== ================
-source_model_1 0.500  simple(1,2)     2/2             
-source_model_2 0.500  simple(1,2)     2/2             
+source_model_1 0.500  simple(2,1)     2/2             
+source_model_2 0.500  simple(2,1)     2/2             
 ============== ====== =============== ================
 
 Required parameters per tectonic region type
@@ -75,6 +75,6 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.127     0.0       1     
-reading site collection        3.843E-04 0.0       1     
+reading composite source model 0.122     0.0       1     
+reading site collection        3.545E-04 0.0       1     
 ============================== ========= ========= ======
