@@ -334,7 +334,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = len(dstore['csm_info'].rlzs)
+    R = dstore['csm_info'].get_num_rlzs()
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
     I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
@@ -378,7 +378,7 @@ def view_portfolio_loss(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    R = len(dstore['csm_info'].rlzs)
+    R = dstore['csm_info'].get_num_rlzs()
     by_rlzi = group_array(dstore['agg_loss_table'].value, 'rlzi')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]

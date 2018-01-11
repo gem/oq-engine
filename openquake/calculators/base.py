@@ -789,7 +789,7 @@ def get_gmfs(calculator):
 
     else:  # with --hc option
         return (calculator.datastore['events']['eid'],
-                len(calculator.datastore['csm_info'].rlzs))
+                calculator.datastore['csm_info'].get_num_rlzs())
 
 
 def save_gmf_data(dstore, sitecol, gmfs):
