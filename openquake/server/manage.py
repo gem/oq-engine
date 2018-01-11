@@ -19,12 +19,15 @@
 from __future__ import print_function
 import os
 import sys
+import signal
+import psutil
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         "Do nothing"
 from django.core.management import execute_from_command_line
+from openquake.baselib import config
 from openquake.server import dbserver
 from openquake.server.db import actions
 from openquake.commonlib import logs
@@ -58,4 +61,16 @@ if __name__ == "__main__":
         logs.dbcmd('reset_is_running')  # reset the flag is_running
 
     setproctitle('oq-webui')
-    execute_from_command_line(sys.argv)
+    try:
+        execute_from_command_line(sys.argv)
+    finally:
+        # do not kill anything in multiuser mode
+        if not config.dbserver.multi_user:
+            # kill all oq- processes spawned by the WebUI user
+            # SIGTERM is not enough and would leave defunct processes
+            for p in psutil.process_iter():
+                pname = p.name()
+                if pname == 'oq-worker':
+                    os.kill(p.pid, signal.SIGKILL)
+                elif pname.startswith('oq-job-'):
+                    os.kill(p.pid, signal.SIGKILL)
