@@ -185,7 +185,7 @@ class ContextMaker(object):
 
         """
         sctx = SitesContext()
-        sctx.sites = site_collection
+        sctx.sids = site_collection.sids
         for param in self.REQUIRES_SITES_PARAMETERS:
             try:
                 value = getattr(site_collection, param)
@@ -273,7 +273,7 @@ class ContextMaker(object):
     def filter_ruptures(self, src, sites):
         """
         :param src: a source object, already filtered and split
-        :param sites: a FilteredSiteCollection
+        :param sites: a filtered SiteCollection
         :return: a list of filtered ruptures with context attributes
         """
         ruptures = []
@@ -298,12 +298,12 @@ class ContextMaker(object):
         """
         sids = set()
         for rup in ruptures:
-            sids.update(rup.sctx.sites.sids)
+            sids.update(rup.sctx.sids)
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), sids, initvalue=rup_indep)
         for rup in ruptures:
             pnes = self._make_pnes(rup, imtls, trunclevel)
-            for sid, pne in zip(rup.sctx.sites.sids, pnes):
+            for sid, pne in zip(rup.sctx.sids, pnes):
                 if rup_indep:
                     pmap[sid].array *= pne
                 else:
@@ -316,7 +316,7 @@ class ContextMaker(object):
                 rup_indep=True):
         """
         :param src: a source object
-        :param sites: a FilteredSiteCollection
+        :param sites: a filtered SiteCollection
         :param imtls: intensity measure and levels
         :param trunclevel: truncation level
         :param ctx_mon: a Monitor instance for make_context
@@ -340,7 +340,7 @@ class ContextMaker(object):
     # NB: it is important for this to be fast since it is inside an inner loop
     def _make_pnes(self, rupture, imtls, trunclevel):
         pne_array = numpy.zeros(
-            (len(rupture.sctx.sites), len(imtls.array), len(self.gsims)))
+            (len(rupture.sctx.sids), len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
             pnos = []  # list of arrays nsites x nlevels
             for imt in imtls:
@@ -891,6 +891,7 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
+    # _slots_ is used in hazardlib check_gsim, but not in the engine
     _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
                'lons', 'lats')
 

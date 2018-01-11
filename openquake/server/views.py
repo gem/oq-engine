@@ -25,6 +25,7 @@ import inspect
 import tempfile
 import subprocess
 import threading
+import zlib
 try:
     import urllib.parse as urlparse
 except ImportError:
@@ -698,6 +699,34 @@ def web_engine(request, **kwargs):
 def web_engine_get_outputs(request, calc_id, **kwargs):
     return render(request, "engine/get_outputs.html",
                   dict([('calc_id', calc_id)]))
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def on_same_fs(request):
+    """
+    Accept a POST request to check access to a FS available by a client.
+
+    :param request:
+        `django.http.HttpRequest` object, containing mandatory parameters
+        filename and checksum.
+    """
+    filename = request.POST['filename']
+    checksum_in = request.POST['checksum']
+
+    checksum = 0
+    try:
+        data = open(filename, 'rb').read(32)
+        checksum = zlib.adler32(data, checksum) & 0xffffffff
+        if checksum == int(checksum_in):
+            return HttpResponse(content=json.dumps({'success': True}),
+                                content_type=JSON, status=200)
+    except (IOError, ValueError):
+        pass
+
+    return HttpResponse(content=json.dumps({'success': False}),
+                        content_type=JSON, status=200)
 
 
 @require_http_methods(['GET'])
