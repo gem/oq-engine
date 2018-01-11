@@ -44,6 +44,15 @@ U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 weight = operator.attrgetter('weight')
+rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
+                      ('gsims', 'S100'), ('weight', F32)])
+
+
+def gsim_names(rlz):
+    """
+    Names of the underlying GSIMs separated by spaces
+    """
+    return ' '.join(str(v) for v in rlz.gsim_rlz.value)
 
 
 class LtRealization(object):
@@ -489,6 +498,18 @@ class CompositionInfo(object):
             return source_model.samples
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
+
+    @property
+    def rlzs(self):
+        """
+        :returns: an array of realizations
+        """
+        realizations = self.get_rlzs_assoc().realizations
+        sm_by_rlz = self.get_sm_by_rlz(
+            realizations) or collections.defaultdict(lambda: 'NA')
+        return numpy.array(
+            [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
+             for r in realizations], rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
         """
