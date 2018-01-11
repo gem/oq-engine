@@ -17,12 +17,16 @@ for ini in $(find $1 -name job.ini | sort); do
     oq engine --run $ini
 done
 
-# do something with the generated data; -2 is LogicTreeCase3ClassicalPSHA
-oq extract -2 hazard/rlzs
+# test generation of statistical hazard curves from previous calculation;
+# -6 is LogicTreeCase3ClassicalPSHA
+oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -6
+
+# do something with the generated data
+oq extract -1 hazard/rlzs
 oq engine --lhc
-MPLBACKEND=Agg oq plot -2
-MPLBACKEND=Agg oq plot_uhs -2
-MPLBACKEND=Agg oq plot_sites -2
+MPLBACKEND=Agg oq plot -1
+MPLBACKEND=Agg oq plot_uhs -1
+MPLBACKEND=Agg oq plot_sites -1
 
 # fake a wrong calculation still in executing status (AreaSource)
 oq db set_status 26 executing
