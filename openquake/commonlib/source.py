@@ -405,11 +405,17 @@ class CompositionInfo(object):
         # with this CompositionInfo instances will be unpickled correctly
         return self.seed, self.num_samples, self.source_models
 
-    def __toh5__(self):
+    def trt2i(self):
+        """
+        :returns: trt -> trti
+        """
         trts = sorted(set(src_group.trt for sm in self.source_models
                           for src_group in sm.src_groups))
-        trti = {trt: i for i, trt in enumerate(trts)}
+        return {trt: i for i, trt in enumerate(trts)}
+
+    def __toh5__(self):
         data = []
+        trti = self.trt2i()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 # the number of effective realizations is set by get_rlzs_assoc
@@ -423,7 +429,7 @@ class CompositionInfo(object):
             sg_data=numpy.array(data, src_group_dt),
             sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=hdf5.array_of_vstr(trts),
+                     trts=hdf5.array_of_vstr(sorted(trti)),
                      gsim_lt_xml=str(self.gsim_lt),
                      gsim_fname=self.gsim_lt.fname,
                      tot_weight=self.tot_weight))
