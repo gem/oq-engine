@@ -484,12 +484,17 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    def get_rlzs_assoc(self, count_ruptures=None,
-                       sm_lt_path=None, trts=None):
+    def update_eff_ruptures(self, count_ruptures):
         """
         :param count_ruptures: function src_group_id -> num_ruptures
+        """
+        for smodel in self.source_models:
+            for sg in smodel.src_groups:
+                sg.eff_ruptures = count_ruptures(sg.id)
+
+    def get_rlzs_assoc(self, sm_lt_path=None, trts=None):
+        """
         :param sm_lt_path: logic tree path tuple used to select a source model
-        :param gsim_lt_path: gsim logic tree path tuple
         :param trts: tectonic region types to accept
         """
         assoc = RlzsAssoc(self)
@@ -503,8 +508,6 @@ class CompositionInfo(object):
             # collect the effective tectonic region types and ruptures
             trts_ = set()
             for sg in smodel.src_groups:
-                if count_ruptures:
-                    sg.eff_ruptures = count_ruptures(sg.id)
                 if sg.eff_ruptures:
                     if (trts and sg.trt in trts) or not trts:
                         trts_.add(sg.trt)
@@ -514,7 +517,7 @@ class CompositionInfo(object):
                 before = self.gsim_lt.get_num_paths()
                 gsim_lt = self.gsim_lt.reduce(trts_)
                 after = gsim_lt.get_num_paths()
-                if count_ruptures and before > after:
+                if before > after:
                     logging.warn('Reducing the logic tree of %s from %d to %d '
                                  'realizations', smodel.name, before, after)
                 gsim_rlzs = list(gsim_lt)
