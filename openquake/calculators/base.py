@@ -294,11 +294,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     def before_export(self):
         """
-        Collect the realizations and set the attributes nbytes
+        Set the attributes nbytes
         """
-        if 'csm_info' in self.datastore and hasattr(self, 'rlzs_assoc'):
-            self.datastore['realizations'] = self.datastore['csm_info'].rlzs
-        # do not save the 'realizations' dataset when not possible
         for key in self.datastore:
             self.datastore.set_nbytes(key)
         self.datastore.flush()
@@ -792,7 +789,7 @@ def get_gmfs(calculator):
 
     else:  # with --hc option
         return (calculator.datastore['events']['eid'],
-                len(calculator.datastore['realizations']))
+                len(calculator.datastore['csm_info'].rlzs))
 
 
 def save_gmf_data(dstore, sitecol, gmfs):

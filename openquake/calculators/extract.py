@@ -118,7 +118,7 @@ def extract_hazard(dstore, what):
     yield 'sitecol', sitecol
     yield 'oqparam', oq
     yield 'imtls', oq.imtls
-    yield 'realizations', dstore['realizations'].value
+    yield 'realizations', dstore['csm_info'].rlzs
     yield 'checksum32', dstore['/'].attrs['checksum32']
     nsites = len(sitecol)
     M = len(oq.imtls)
@@ -153,7 +153,7 @@ def extract_hazard_for_qgis(dstore, what):
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
     yield 'oqparam', oq
-    yield 'realizations', dstore['realizations'].value
+    yield 'realizations', dstore['csm_info'].rlzs
     yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
     if oq.poes:
