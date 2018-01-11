@@ -110,6 +110,7 @@ producing too small PoEs.'''
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
             cl.run()
+            self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
@@ -200,7 +201,6 @@ producing too small PoEs.'''
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
                                   use_rtree=False)
         csm = self.csm.filter(src_filter)  # fine filtering
-        self.datastore['csm_info'] = csm.info
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
 
