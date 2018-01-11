@@ -110,10 +110,8 @@ def expose_outputs(dstore):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    try:
-        rlzs = list(dstore['realizations'])
-    except KeyError:
-        rlzs = []
+    rlzs = dstore['csm_info'].rlzs
+    dskeys.add('realizations')
     # expose gmf_data only if < 10 MB
     if oq.ground_motion_fields and calcmode == 'event_based':
         nbytes = dstore['gmf_data'].attrs['nbytes']
@@ -137,8 +135,6 @@ def expose_outputs(dstore):
             dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
         dskeys.remove('all_loss_ratios')  # export only specific IDs
-    if 'realizations' in dskeys and len(rlzs) <= 1:
-        dskeys.remove('realizations')  # do not export a single realization
     if 'ruptures' in dskeys and 'scenario' in calcmode:
         exportable.remove('ruptures')  # do not export, as requested by Vitor
     logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
