@@ -376,6 +376,7 @@ def export_hcurves_csv(ekey, dstore):
                     ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
     return sorted(fnames)
 
+
 UHS = collections.namedtuple('UHS', 'imls location')
 
 
@@ -933,7 +934,7 @@ def export_disagg_csv(ekey, dstore):
 
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
-    rlzs = dstore[ekey[0]]
+    rlzs = dstore['csm_info'].realizations
     data = [['ordinal', 'uid', 'model', 'gsim', 'weight']]
     for i, rlz in enumerate(rlzs):
         data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
