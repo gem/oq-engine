@@ -306,6 +306,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Collect the realizations and set the attributes nbytes
         """
         if 'csm_info' in self.datastore and hasattr(self, 'rlzs_assoc'):
+            # sanity check on eff_ruptures
+            for sm in self.datastore['csm_info'].source_models:
+                for sg in sm.src_groups:
+                    if sg.eff_ruptures == -1:
+                        logging.warn('eff_ruptures not set in %s', sg)
+
+            # save realizations
             sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
                 self.rlzs_assoc.realizations) or collections.defaultdict(
                     lambda: 'NA')
