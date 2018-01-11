@@ -111,7 +111,8 @@ def expose_outputs(dstore):
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
     rlzs = dstore['csm_info'].rlzs
-    dskeys.add('realizations')
+    if len(rlzs) > 1:
+        dskeys.add('realizations')
     # expose gmf_data only if < 10 MB
     if oq.ground_motion_fields and calcmode == 'event_based':
         nbytes = dstore['gmf_data'].attrs['nbytes']
@@ -126,7 +127,8 @@ def expose_outputs(dstore):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-stats' in dstore or ('avg_losses-rlzs' in dstore and rlzs):
+    if 'avg_losses-stats' in dstore or (
+            'avg_losses-rlzs' in dstore and len(rlzs)):
         dskeys.add('avg_losses-stats')
     if 'curves-stats' in dstore:
         logs.LOG.warn('loss curves are exportable with oq export')
