@@ -155,7 +155,7 @@ def _build_eb_ruptures(
         with rup_mon:
             try:
                 rup.ctx = cmaker.make_contexts(s_sites, rup)
-                indices = rup.ctx[0].sites.indices
+                indices = rup.ctx[0].sids
             except FarAwayRupture:
                 # ignore ruptures which are far away
                 del num_occ_by_rup[rup]  # save memory
@@ -534,7 +534,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
-        R = len(self.datastore['realizations'])
+        R = self.datastore['csm_info'].get_num_rlzs()
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
