@@ -934,9 +934,8 @@ def export_disagg_csv(ekey, dstore):
 
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
-    rlzs = dstore['csm_info'].realizations
     data = [['ordinal', 'uid', 'model', 'gsim', 'weight']]
-    for i, rlz in enumerate(rlzs):
+    for i, rlz in enumerate(dstore['csm_info'].rlzs):
         data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
     writers.write_csv(path, data, fmt='%s')
