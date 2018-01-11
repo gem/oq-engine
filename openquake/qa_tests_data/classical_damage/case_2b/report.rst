@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     4,062,010,034      
-date           2017-12-06T11:19:24
-engine_version 2.9.0-gite55e76e   
+date           2018-01-11T04:29:23
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -76,7 +76,7 @@ Informational data
 ------------------
 ======================= ================================================================================
 count_ruptures.received tot 5.91 KB, max_per_task 712 B                                                 
-count_ruptures.sent     sources 11.26 KB, srcfilter 6.68 KB, param 6.05 KB, monitor 3.12 KB, gsims 910 B
+count_ruptures.sent     sources 11.26 KB, srcfilter 7.05 KB, param 6.05 KB, monitor 3.12 KB, gsims 910 B
 hazard.input_weight     1694.0                                                                          
 hazard.n_imts           1                                                                               
 hazard.n_levels         28                                                                              
@@ -134,12 +134,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.085     0.0       1     
-total count_ruptures           0.049     0.0       10    
+managing sources               0.084     0.0       1     
+total count_ruptures           0.048     0.0       10    
 reading composite source model 0.009     0.0       1     
-store source_info              0.005     0.0       1     
 reading exposure               0.005     0.0       1     
-aggregate curves               2.127E-04 0.0       10    
-saving probability maps        4.387E-05 0.0       1     
+store source_info              0.003     0.0       1     
+aggregate curves               1.323E-04 0.0       10    
+saving probability maps        2.480E-05 0.0       1     
 reading site collection        4.768E-06 0.0       1     
 ============================== ========= ========= ======
