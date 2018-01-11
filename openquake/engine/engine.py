@@ -110,10 +110,8 @@ def expose_outputs(dstore):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    try:
-        rlzs = dstore['csm_info'].rlzs
-    except KeyError:
-        rlzs = []
+    rlzs = dstore['csm_info'].rlzs
+    dskeys.add('realizations')
     # expose gmf_data only if < 10 MB
     if oq.ground_motion_fields and calcmode == 'event_based':
         nbytes = dstore['gmf_data'].attrs['nbytes']
