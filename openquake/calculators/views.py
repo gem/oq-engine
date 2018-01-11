@@ -334,7 +334,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = len(dstore['realizations'])
+    R = dstore['csm_info'].get_num_rlzs()
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
     I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
@@ -378,7 +378,7 @@ def view_portfolio_loss(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    R = len(dstore['realizations'])
+    R = dstore['csm_info'].get_num_rlzs()
     by_rlzi = group_array(dstore['agg_loss_table'].value, 'rlzi')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
@@ -415,7 +415,7 @@ def sum_table(records):
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
     dt = dstore['oqparam'].loss_dt()
-    weights = dstore['realizations']['weight']
+    weights = dstore['csm_info'].rlzs['weight']
     array = dstore['avg_losses-rlzs'].value  # shape (N, R)
     if len(weights) == 1:  # one realization
         mean = array[:, 0]
@@ -760,7 +760,7 @@ def view_elt(token, dstore):
     Display the event loss table averaged by event
     """
     oq = dstore['oqparam']
-    R = len(dstore['realizations'])
+    R = len(dstore['csm_info'].rlzs)
     dic = group_array(dstore['agg_loss_table'].value, 'rlzi')
     header = oq.loss_dt().names
     tbl = []
