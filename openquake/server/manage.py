@@ -66,6 +66,6 @@ if __name__ == "__main__":
         for p in psutil.process_iter():
             pname = p.name()
             if pname == 'oq-worker':
-                os.kill(p.pid, signal.SIGTERM)
+                os.kill(p.pid, signal.SIGKILL)
             elif pname.startswith('oq-job-'):
-                os.kill(p.pid, signal.SIGTERM)
+                os.kill(p.pid, signal.SIGKILL)
