@@ -296,7 +296,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Set the attributes nbytes
         """
-        # sanity check that eff_ruptures has been set
+        # sanity check that eff_ruptures have been set, i.e. are not -1
         csm_info = self.datastore['csm_info']
         for sm in csm_info.source_models:
             for sg in sm.src_groups:
