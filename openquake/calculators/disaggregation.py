@@ -270,9 +270,7 @@ producing too small PoEs.'''
             self.agg_result, AccumDict(accum={}))
 
         # set eff_ruptures
-        trts = sorted(set(src_group.trt for sm in csm.source_models
-                          for src_group in sm.src_groups))
-        trti = {trt: i for i, trt in enumerate(trts)}
+        trti = csm.info.trt2i()
         for smodel in csm.info.source_models:
             for sg in smodel.src_groups:
                 sg.eff_ruptures = self.num_ruptures[trti[sg.trt]]
