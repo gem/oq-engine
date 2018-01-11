@@ -19,6 +19,8 @@
 from __future__ import print_function
 import os
 import sys
+import signal
+import psutil
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -58,4 +60,9 @@ if __name__ == "__main__":
         logs.dbcmd('reset_is_running')  # reset the flag is_running
 
     setproctitle('oq-webui')
-    execute_from_command_line(sys.argv)
+    try:
+        execute_from_command_line(sys.argv)
+    finally:
+        for p in psutil.process_iter():
+            if p.name().startswith('oq-'):
+                os.kill(p.pid, signal.SIGKILL)
