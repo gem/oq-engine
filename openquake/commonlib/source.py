@@ -513,11 +513,13 @@ class CompositionInfo(object):
 
     def update_eff_ruptures(self, count_ruptures):
         """
-        :param count_ruptures: function src_group_id -> num_ruptures
+        :param count_ruptures: function or dict src_group_id -> num_ruptures
         """
         for smodel in self.source_models:
             for sg in smodel.src_groups:
-                sg.eff_ruptures = count_ruptures(sg.id)
+                sg.eff_ruptures = (count_ruptures(sg.id)
+                                   if callable(count_ruptures)
+                                   else count_ruptures[sg.id])
 
     def get_rlzs_assoc(self, sm_lt_path=None, trts=None):
         """
