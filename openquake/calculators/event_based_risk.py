@@ -325,6 +325,8 @@ class EbriskCalculator(base.RiskCalculator):
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
+            if hasattr(res, 'eff_ruptures'):  # for UCERF
+                self.eff_ruptures += res.eff_ruptures
             if hasattr(res, 'ruptures_by_grp'):  # for UCERF
                 save_ruptures(self, res.ruptures_by_grp)
             elif hasattr(res, 'events_by_grp'):  # for UCERF
