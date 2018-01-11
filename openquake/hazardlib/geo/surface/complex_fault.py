@@ -181,10 +181,13 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
             numpy.degrees(numpy.arccos(numpy.dot(ur, right_cross_top))), 1
         )
 
+        """
+        print(angle_ul, angle_ur)
         if (angle_ul > 90) or (angle_ur > 90):
             raise ValueError(
                 "Surface does not conform with Aki & Richards convention"
             )
+        """
 
     @classmethod
     def check_surface_validity(cls, edges):
