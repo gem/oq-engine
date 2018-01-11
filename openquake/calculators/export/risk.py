@@ -95,7 +95,7 @@ def export_avg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     name, kind = dskey.split('-')
     if kind == 'stats':
-        weights = dstore['realizations']['weight']
+        weights = dstore['csm_info'].rlzs['weight']
         tags, stats = zip(*oq.risk_stats())
         if dskey in dstore:  # precomputed
             value = dstore[dskey].value
@@ -270,7 +270,7 @@ def export_loss_curves(ekey, dstore):
 # this is used by classical_risk and event_based_risk
 @export.add(('loss_curves-stats', 'csv'))
 def export_loss_curves_stats(ekey, dstore):
-    num_rlzs = len(dstore['realizations'])
+    num_rlzs = len(dstore['csm_info'].rlzs)
     kind = 'stats' if num_rlzs > 1 else 'rlzs'
     return export_loss_curves(('loss_curves/' + kind, 'csv'), dstore)
 
@@ -299,7 +299,7 @@ def export_loss_maps_npz(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
     assets = get_assets(dstore)
     value = get_loss_maps(dstore, kind)
-    R = len(dstore['realizations'])
+    R = len(dstore['csm_info'].rlzs)
     if kind == 'rlzs':
         tags = ['rlz-%03d' % r for r in range(R)]
     else:
