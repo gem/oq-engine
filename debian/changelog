@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Killing the WebUI kills all the `oq-` jobs spawned by the WebUI user
   * Turned the 'realizations' output into a dynamic output
 
   [Matteo Nastasi]
