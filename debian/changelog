@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Turned the 'realizations' output into a dynamic output
+
   [Matteo Nastasi]
   * Implemented an API `/v1/on_same_fs` to check filesystem accessibility
     between engine and a client application.

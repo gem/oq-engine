@@ -269,7 +269,7 @@ class ClassicalCalculator(PSHACalculator):
         if 'poes' not in self.datastore:  # for short report
             return
         oq = self.oqparam
-        num_rlzs = len(self.datastore['realizations'])
+        num_rlzs = self.datastore['csm_info'].get_num_rlzs()
         if num_rlzs == 1:  # no stats to compute
             return {}
         elif not oq.hazard_stats():

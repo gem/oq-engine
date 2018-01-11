@@ -214,7 +214,7 @@ class EventBasedTestCase(CalculatorTestCase):
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
 
-        [fname] = out['realizations', 'csv']
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # test for the mean gmv
