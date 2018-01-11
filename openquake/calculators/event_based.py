@@ -534,7 +534,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
-        R = len(self.datastore['realizations'])
+        R = len(self.datastore['csm_info'].rlzs)
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
