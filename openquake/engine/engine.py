@@ -126,7 +126,8 @@ def expose_outputs(dstore):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-stats' in dstore or ('avg_losses-rlzs' in dstore and rlzs):
+    if 'avg_losses-stats' in dstore or (
+            'avg_losses-rlzs' in dstore and len(rlzs)):
         dskeys.add('avg_losses-stats')
     if 'curves-stats' in dstore:
         logs.LOG.warn('loss curves are exportable with oq export')
