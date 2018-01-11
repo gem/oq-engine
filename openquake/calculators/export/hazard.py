@@ -376,6 +376,7 @@ def export_hcurves_csv(ekey, dstore):
                     ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
     return sorted(fnames)
 
+
 UHS = collections.namedtuple('UHS', 'imls location')
 
 
@@ -752,7 +753,7 @@ def export_gmf_scenario_csv(ekey, dstore):
         rlzs_by_gsim, ruptures, sitecol, imts, min_iml,
         oq.maximum_distance, oq.truncation_level, correl_model, samples)
     getter.init()
-    sids = getter.computers[0].sites.sids
+    sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
     rlzs = rlzs_assoc.realizations
     fields = ['eid-%03d' % eid for eid in getter.eids]
@@ -933,9 +934,8 @@ def export_disagg_csv(ekey, dstore):
 
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
-    rlzs = dstore[ekey[0]]
     data = [['ordinal', 'uid', 'model', 'gsim', 'weight']]
-    for i, rlz in enumerate(rlzs):
+    for i, rlz in enumerate(dstore['csm_info'].rlzs):
         data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
     writers.write_csv(path, data, fmt='%s')

@@ -239,9 +239,13 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     used to specify the kind of output.
     """
     with monitor('combine pmaps'):
-        pmaps = pgetter.get_pmaps(pgetter.sids)
-    if sum(len(pmap) for pmap in pmaps) == 0:  # no data
-        return {}
+        pgetter.init()  # if not already initialized
+        try:
+            pmaps = pgetter.get_pmaps(pgetter.sids)
+        except IndexError:  # no data
+            return {}
+        if sum(len(pmap) for pmap in pmaps) == 0:  # no data
+            return {}
     pmap_by_kind = {}
     for kind, stat in hstats:
         with monitor('compute ' + kind):
@@ -265,7 +269,7 @@ class ClassicalCalculator(PSHACalculator):
         if 'poes' not in self.datastore:  # for short report
             return
         oq = self.oqparam
-        num_rlzs = len(self.datastore['realizations'])
+        num_rlzs = self.datastore['csm_info'].get_num_rlzs()
         if num_rlzs == 1:  # no stats to compute
             return {}
         elif not oq.hazard_stats():
@@ -304,9 +308,13 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
+        parent = self.can_read_parent()
+        if parent is None:
+            parent = self.datastore
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pgetter = calc.PmapGetter(self.datastore, t.sids, self.rlzs_assoc)
-            if not self.can_read_parent():  # read now, not in the workers
+            pgetter = calc.PmapGetter(parent, t.sids, self.rlzs_assoc)
+            if parent is self.datastore:  # read now, not in the workers
+                logging.info('Reading PoEs on %d sites', len(t))
                 pgetter.init()
             yield pgetter, hstats, monitor
 

@@ -61,6 +61,7 @@ def plot_uhs(calc_id, sites='0'):
     # read the hazard data
     dstore = datastore.read(calc_id)
     getter = calc.PmapGetter(dstore)
+    getter.init()
     oq = dstore['oqparam']
     indices = list(map(int, sites.split(',')))
     n_sites = len(dstore['sitecol'])
