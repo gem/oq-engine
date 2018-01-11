@@ -29,6 +29,10 @@ import json
 import time
 import unittest
 import numpy
+import zlib
+import tempfile
+import string
+import random
 from django.test import Client
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
@@ -282,3 +286,35 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.content,
                          b'Please provide the "xml_text" parameter')
+
+    def test_check_fs_access(self):
+        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
+            filename = f.name
+            content = bytes(''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(32)),
+                            'utf-8')
+            f.write(content)
+            checksum = str(zlib.adler32(content, 0) & 0xffffffff)
+
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum})
+
+            self.assertEqual(resp.status_code, 200)
+            resp_text_dict = json.loads(resp.content.decode('utf8'))
+            self.assertTrue(resp_text_dict['success'])
+
+    def test_check_fs_access_fail(self):
+        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
+            filename = f.name
+            content = bytes(''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(32)),
+                            'utf-8')
+            f.write(content)
+            checksum = 'impossible'
+
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum})
+
+            self.assertEqual(resp.status_code, 200)
+            resp_text_dict = json.loads(resp.content.decode('utf8'))
+            self.assertFalse(resp_text_dict['success'])

@@ -166,7 +166,8 @@ class SiteCollection(object):
             depths = numpy.zeros(len(lons))
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
                                                        len(depths))
-        self = cls.__new__(cls)
+        self = object.__new__(cls)
+        self.indices = None
         self.array = arr = numpy.zeros(len(lons), self.dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
         arr['lons'] = numpy.array(lons)
@@ -180,7 +181,23 @@ class SiteCollection(object):
         arr.flags.writeable = False
         return self
 
+    @classmethod
+    def filtered(cls, indices, array):
+        """
+        :returns: a filtered SiteCollection instance
+        """
+        self = object.__new__(cls)
+        self.indices = indices
+        self.array = array
+        return self
+
     def __init__(self, sites):
+        """
+        Build a complete SiteCollection from a list of Site objects
+        """
+        self.indices = None
+        if hasattr(sites, 'sids'):
+            numpy.testing.assert_equal(sites.sids, numpy.arange(len(sites)))
         self.array = arr = numpy.zeros(len(sites), self.dtype)
         for i in range(len(arr)):
             arr['sids'][i] = i
@@ -202,10 +219,7 @@ class SiteCollection(object):
         arr.flags.writeable = False
 
     def __eq__(self, other):
-        if hasattr(other, 'array'):
-            arr = self.array == other.array
-        else:
-            arr = self.array == other.complete.array
+        arr = self.array == other.array
         if isinstance(arr, numpy.ndarray):
             return arr.all()
         return arr
@@ -214,20 +228,12 @@ class SiteCollection(object):
         return not self.__eq__(other)
 
     def __toh5__(self):
-        return self.array, {}
+        return (self.array,
+                dict(indices=self.indices) if self.indices is not None else {})
 
     def __fromh5__(self, array, attrs):
+        self.indices = attrs.get('indices')
         self.array = array
-        vars(self).update(attrs)
-
-    @property
-    def complete(self):
-        return self
-
-    @property
-    def total_sites(self):
-        """Return the length of the underlying array"""
-        return len(self.array)
 
     @property
     def mesh(self):
@@ -235,9 +241,14 @@ class SiteCollection(object):
         return Mesh(self.lons, self.lats, self.depths)
 
     @property
-    def indices(self):
-        """The full set of indices from 0 to total_sites - 1"""
-        return numpy.arange(0, self.total_sites)
+    def complete(self):
+        """Return a complete SiteCollection object"""
+        if self.indices is None:
+            return self
+        new = object.__new__(self.__class__)
+        new.indices = None
+        new.array = self.array
+        return new
 
     def at_sea_level(self):
         """True if all depths are zero"""
@@ -251,129 +262,11 @@ class SiteCollection(object):
         """
         tiles = []
         for seq in split_in_blocks(range(len(self)), hint or 1):
-            indices = numpy.array(seq, int)
             sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.array[indices]
+            sc.indices = None
+            sc.array = self.array[numpy.array(seq, int)]
             tiles.append(sc)
         return tiles
-
-    def __iter__(self):
-        """
-        Iterate through all :class:`sites <Site>` in the collection, yielding
-        one at a time.
-        """
-        if isinstance(self.vs30, float):  # from points
-            for i, location in enumerate(self.mesh):
-                yield Site(location, self._vs30, self._vs30measured,
-                           self._z1pt0, self._z2pt5, self._backarc)
-        else:  # from sites
-            for i, location in enumerate(self.mesh):
-                yield Site(location, self.vs30[i], self.vs30measured[i],
-                           self.z1pt0[i], self.z2pt5[i], self.backarc[i])
-
-    def filter(self, mask):
-        """
-        Create a FilteredSiteCollection with only a subset of sites
-        from this one.
-
-        :param mask:
-            Numpy array of boolean values of the same length as this sites
-            collection. ``True`` values should indicate that site with that
-            index should be included into the filtered collection.
-        :returns:
-            A new :class:`FilteredSiteCollection` instance, unless all the
-            values in ``mask`` are ``True``, in which case this site collection
-            is returned, or if all the values in ``mask`` are ``False``,
-            in which case method returns ``None``. New collection has data
-            of only those sites that were marked for inclusion in mask.
-        """
-        assert len(mask) == len(self), (len(mask), len(self))
-        if mask.all():
-            # all sites satisfy the filter, return
-            # this collection unchanged
-            return self
-        if not mask.any():
-            # no sites pass the filter, return None
-            return None
-        # extract indices of Trues from the mask
-        [indices] = mask.nonzero()
-        return FilteredSiteCollection(indices, self)
-
-    def __getstate__(self):
-        return dict(array=self.array)
-
-    def __getattr__(self, name):
-        if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '
-                        'depths sids'):
-            raise AttributeError(name)
-        return self.array[name]
-
-    def __len__(self):
-        """
-        Return the number of sites in the collection.
-        """
-        return self.total_sites
-
-    def __repr__(self):
-        return '<SiteCollection with %d sites>' % self.total_sites
-
-
-class FilteredSiteCollection(object):
-    """
-    A class meant to store proper subsets of a complete collection of sites
-    in a memory-efficient way.
-
-    :param indices:
-        an array of indices referring to the complete site collection
-    :param complete:
-        the site collection the filtered collection was derived from
-
-    Notice that if you filter a FilteredSiteCollection `fsc`, you will
-    get a different FilteredSiteCollection referring to the complete
-    SiteCollection `fsc.complete`, not to the filtered collection `fsc`.
-    """
-    def __init__(self, indices, complete):
-        self.indices = indices
-        self.complete = complete.complete
-
-    @property
-    def total_sites(self):
-        """The total number of the original sites, without filtering"""
-        return self.complete.total_sites
-
-    @property
-    def mesh(self):
-        """Return a mesh with the given lons, lats, and depths"""
-        return Mesh(self.lons, self.lats, self.depths)
-
-    def at_sea_level(self):
-        """True if all depths are zero"""
-        return (self.depths == 0).all()
-
-    def filter(self, mask):
-        """
-        Create a FilteredSiteCollection with only a subset of sites
-        from this one.
-
-        :param mask:
-            Numpy array of boolean values of the same length as this
-            filtered sites collection. ``True`` values should indicate
-            that site with that index should be included into the
-            filtered collection.
-        :returns:
-            A new :class:`FilteredSiteCollection` instance, unless all the
-            values in ``mask`` are ``True``, in which case this site collection
-            is returned, or if all the values in ``mask`` are ``False``,
-            in which case method returns ``None``. New collection has data
-            of only those sites that were marked for inclusion in mask.
-        """
-        assert len(mask) == len(self), (len(mask), len(self))
-        if mask.all():
-            return self
-        elif not mask.any():
-            return None
-        indices = self.indices.take(mask.nonzero()[0])
-        return FilteredSiteCollection(indices, self.complete)
 
     def __iter__(self):
         """
@@ -384,35 +277,56 @@ class FilteredSiteCollection(object):
             yield Site(location, self.vs30[i], self.vs30measured[i],
                        self.z1pt0[i], self.z2pt5[i], self.backarc[i])
 
-    def __len__(self):
-        """Return the number of filtered sites"""
-        return len(self.indices)
+    def filter(self, mask):
+        """
+        Create a SiteCollection with only a subset of sites.
 
-    def __toh5__(self):
-        return self.complete.array, dict(indices=self.indices)
-
-    def __fromh5__(self, array, attrs):
-        complete = object.__new__(SiteCollection)
-        complete.array = array
-        self.indices = attrs['indices']
-        self.complete = complete
+        :param mask:
+            Numpy array of boolean values of the same length as the site
+            collection. ``True`` values should indicate that site with that
+            index should be included into the filtered collection.
+        :returns:
+            A new :class:`SiteCollection` instance, unless all the
+            values in ``mask`` are ``True``, in which case this site collection
+            is returned, or if all the values in ``mask`` are ``False``,
+            in which case method returns ``None``. New collection has data
+            of only those sites that were marked for inclusion in the mask.
+        """
+        assert len(mask) == len(self), (len(mask), len(self))
+        if mask.all():
+            # all sites satisfy the filter, return
+            # this collection unchanged
+            return self
+        if not mask.any():
+            # no sites pass the filter, return None
+            return None
+        # extract indices of Trues from the mask
+        if self.indices is None:
+            indices = mask.nonzero()[0]
+        else:
+            indices = self.indices.take(mask.nonzero()[0])
+        return SiteCollection.filtered(indices, self.array)
 
     def __getstate__(self):
-        return dict(indices=self.indices, complete=self.complete)
+        return dict(array=self.array, indices=self.indices)
 
     def __getattr__(self, name):
         if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '
                         'depths sids'):
             raise AttributeError(name)
-        return getattr(self.complete, name)[self.indices]
+        if self.indices is None:
+            idx = slice(None)
+        else:
+            idx = self.indices
+        return self.array[idx][name]
 
-    def __eq__(self, other):
-        return (self.complete.array[self.indices] ==
-                other.complete.array[self.indices]).all()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+    def __len__(self):
+        """
+        Return the number of sites in the collection.
+        """
+        return (len(self.indices) if self.indices is not None
+                else len(self.array))
 
     def __repr__(self):
-        return '<FilteredSiteCollection with %d of %d sites>' % (
-            len(self.indices), len(self.complete))
+        total_sites = len(self.array)
+        return '<SiteCollection with %d/%d sites>' % (len(self), total_sites)
