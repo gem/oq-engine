@@ -54,9 +54,12 @@ import unittest
 import os
 import numpy as np
 
-from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import GardnerKnopoffType1
-from openquake.hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
+from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import \
+    GardnerKnopoffType1
+from openquake.hmtk.seismicity.declusterer.distance_time_windows import \
+    GardnerKnopoffWindow
 from openquake.hmtk.parsers.catalogue import CsvCatalogueParser
+
 
 class GardnerKnopoffType1TestCase(unittest.TestCase):
     """
@@ -75,9 +78,7 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         self.cat = parser.read_file()
 
     def test_dec_gardner_knopoff(self):
-        """
-        Testing the Gardner and Knopoff algorithm
-        """
+        # Testing the Gardner and Knopoff algorithm
         config = {'time_distance_window': GardnerKnopoffWindow(),
                   'fs_time_prop': 1.0}
         # Instantiate the declusterer and process the sample catalogue
@@ -85,4 +86,4 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         vcl, flagvector = dec.decluster(self.cat, config)
         print('vcl:', vcl)
         print('flagvector:', flagvector, self.cat.data['flag'])
-        self.assertTrue(np.allclose(flagvector, self.cat.data['flag']))
+        np.testing.assert_allclose(flagvector, self.cat.data['flag'])
