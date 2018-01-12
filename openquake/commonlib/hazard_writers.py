@@ -845,6 +845,6 @@ class UHSXMLWriter(BaseCurveWriter):
                 gml_pos = et.SubElement(gml_point, '{%s}pos' % gml_ns)
                 gml_pos.text = '%s %s' % (uhs.location.x, uhs.location.y)
                 imls_elem = et.SubElement(uhs_elem, 'IMLs')
-                imls_elem.text = ' '.join([str(x) for x in uhs.imls])
+                imls_elem.text = ' '.join(['%10.7E' % x for x in uhs.imls])
 
             nrml.write(list(root), fh)
