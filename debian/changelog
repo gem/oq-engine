@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a /v1/:calc_id/abort route to the engine server
   * Stored a rupture loss table in event based risk calculations
   * Made sure that the number of effective ruptures is stored in csm_info
   * Fixed the HMTK tests to work with numpy from 1.11 to 1.14
