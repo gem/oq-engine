@@ -3,8 +3,8 @@ classical damage
 
 ============== ===================
 checksum32     1,277,613,563      
-date           2017-12-06T11:19:26
-engine_version 2.9.0-gite55e76e   
+date           2018-01-11T04:29:25
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 7, num_imts = 3
@@ -100,7 +100,7 @@ Informational data
 ------------------
 ======================= ====================================================================================
 count_ruptures.received tot 13.57 KB, max_per_task 682 B                                                    
-count_ruptures.sent     sources 35.64 KB, param 26.44 KB, srcfilter 19.14 KB, monitor 7.17 KB, gsims 4.02 KB
+count_ruptures.sent     sources 35.64 KB, param 26.44 KB, srcfilter 23.56 KB, monitor 7.17 KB, gsims 4.02 KB
 hazard.input_weight     969.0                                                                               
 hazard.n_imts           3                                                                                   
 hazard.n_levels         79                                                                                  
@@ -134,7 +134,7 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-1         SimpleFaultSource         482          0.084     7         30       
+1         SimpleFaultSource         482          0.081     7         30       
 2         CharacteristicFaultSource 1            0.012     7         4        
 ========= ========================= ============ ========= ========= =========
 
@@ -144,7 +144,7 @@ Computation times by source typology
 source_class              calc_time counts
 ========================= ========= ======
 CharacteristicFaultSource 0.012     1     
-SimpleFaultSource         0.084     1     
+SimpleFaultSource         0.081     1     
 ========================= ========= ======
 
 Duplicated sources
@@ -163,12 +163,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.151     0.0       1     
-total count_ruptures           0.111     0.0       23    
+managing sources               0.164     0.0       1     
+total count_ruptures           0.107     0.0       23    
 reading composite source model 0.022     0.0       1     
 reading exposure               0.009     0.0       1     
 store source_info              0.004     0.0       1     
-aggregate curves               3.109E-04 0.0       23    
+aggregate curves               3.262E-04 0.0       23    
 saving probability maps        3.219E-05 0.0       1     
-reading site collection        7.153E-06 0.0       1     
+reading site collection        6.914E-06 0.0       1     
 ============================== ========= ========= ======
