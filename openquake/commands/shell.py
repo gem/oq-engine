@@ -34,7 +34,7 @@ class OQ(object):
 
 
 @sap.Script
-def python():
+def shell():
     """
     Start an embedded (i)python instance with a global oq object
     """
