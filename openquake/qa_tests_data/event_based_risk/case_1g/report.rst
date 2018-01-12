@@ -3,8 +3,8 @@ event based risk with PMF
 
 ============== ===================
 checksum32     316,426,340        
-date           2017-12-06T11:19:55
-engine_version 2.9.0-gite55e76e   
+date           2018-01-11T04:29:54
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -75,19 +75,19 @@ source_model.xml 0      Active Shallow Crust 482          482
 
 Informational data
 ------------------
-========================= ===========================================================================
-compute_ruptures.received tot 29.14 KB, max_per_task 13.17 KB                                        
-compute_ruptures.sent     sources 7.89 KB, src_filter 2 KB, param 1.82 KB, monitor 969 B, gsims 306 B
-hazard.input_weight       482.0                                                                      
-hazard.n_imts             1                                                                          
-hazard.n_levels           8                                                                          
-hazard.n_realizations     1                                                                          
-hazard.n_sites            1                                                                          
-hazard.n_sources          1                                                                          
-hazard.output_weight      8.0                                                                        
-hostname                  tstation.gem.lan                                                           
-require_epsilons          False                                                                      
-========================= ===========================================================================
+========================= ==============================================================================
+compute_ruptures.received tot 33.64 KB, max_per_task 15.66 KB                                           
+compute_ruptures.sent     sources 7.89 KB, src_filter 2.12 KB, param 1.82 KB, monitor 969 B, gsims 306 B
+hazard.input_weight       482.0                                                                         
+hazard.n_imts             1                                                                             
+hazard.n_levels           8                                                                             
+hazard.n_realizations     1                                                                             
+hazard.n_sites            1                                                                             
+hazard.n_sources          1                                                                             
+hazard.output_weight      8.0                                                                           
+hostname                  tstation.gem.lan                                                              
+require_epsilons          False                                                                         
+========================= ==============================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.057 0.021  0.034 0.074 3        
+compute_ruptures   0.078 0.017  0.059 0.089 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,13 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.172     0.0       3     
-managing sources               0.132     0.0       1     
-saving ruptures                0.007     0.0       3     
-filtering ruptures             0.007     0.0       31    
+total compute_ruptures         0.235     0.250     3     
+managing sources               0.174     0.0       1     
+making contexts                0.072     0.0       31    
+saving ruptures                0.014     0.0       3     
 reading exposure               0.006     0.0       1     
 reading composite source model 0.006     0.0       1     
-store source_info              0.003     0.0       1     
-setting event years            0.001     0.0       1     
-reading site collection        6.437E-06 0.0       1     
+store source_info              0.006     0.0       1     
+setting event years            0.003     0.0       1     
+reading site collection        6.199E-06 0.0       1     
 ============================== ========= ========= ======
