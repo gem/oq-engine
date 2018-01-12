@@ -38,7 +38,7 @@ def dist_by_asset(data, multi_stat_dt):
     for l, lt in enumerate(multi_stat_dt.names):
         out_lt = out[lt]
         for n, r in itertools.product(range(N), range(R)):
-            out_lt[n, r] = data[n, r, l]
+            out_lt[n, r] = tuple(data[n, r, l])  # (mean, stddev)
     return out
 
 

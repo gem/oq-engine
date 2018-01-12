@@ -15,23 +15,23 @@ xmlns:gml="http://www.opengis.net/gml"
             </SES>
         </stochasticEventSets>
         <magnitude>
-            5.85
+            5.8499999e+00
         </magnitude>
         <strike>
-            44.9731330872
+            4.4973133e+01
         </strike>
         <dip>
-            30.0030343566
+            3.0003034e+01
         </dip>
         <rake>
-            90.0
+            9.0000000e+01
         </rake>
         <hypocenter depth="8.0000000E+00" lat="2.7901501E+01" lon="8.5747704E+01"/>
         <planarSurface>
-            <topLeft depth="6.48157119751" lat="27.8892478943" lon="85.6960067749"/>
-            <topRight depth="6.48157119751" lat="27.9471912384" lon="85.7615585327"/>
-            <bottomLeft depth="9.51842880249" lat="27.8558063507" lon="85.7338485718"/>
-            <bottomRight depth="9.51842880249" lat="27.913734436" lon="85.799407959"/>
+            <topLeft depth="6.4815712" lat="27.8892479" lon="85.6960068"/>
+            <topRight depth="6.4815712" lat="27.9471912" lon="85.7615585"/>
+            <bottomLeft depth="9.5184288" lat="27.8558064" lon="85.7338486"/>
+            <bottomRight depth="9.5184288" lat="27.9137344" lon="85.7994080"/>
         </planarSurface>
     </singlePlaneRupture>
 </nrml>
