@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Stored a rupture loss table in event based risk calculations
+  * Made sure that the number of effective ruptures is stored in csm_info
   * Fixed the HMTK tests to work with numpy from 1.11 to 1.14
   * Added a command `oq shell` to open an embedded (I)Python shell
   * Turned the 'realizations' output into a dynamic output
