@@ -630,7 +630,6 @@ class RuptureGetter(object):
     :param dstore: a DataStore instance
     :param slice_: a slice of ruptures (default: all)
     :param grp_id: the group ID of the ruptures (default: all)
-    :param rup_id: a specific rupture (default: all)
     """
     def __init__(self, dstore, slice_=slice(None), grp_id=None):
         self.dstore = dstore
