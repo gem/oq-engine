@@ -551,46 +551,6 @@ _pkgtest_innervm_run () {
 
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # use celery to run the demos
-        # wait for celeryd startup time
-        ssh $lxc_ip "
-export GEM_SET_DEBUG=$GEM_SET_DEBUG
-if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
-    export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
-    set -x
-fi
-set -e
-export PYTHONPATH=\"$OPT_LIBS_PATH\"
-# FIXME: the big sleep below is a temporary workaround to avoid races.
-#        No better solution because we will abandon supervisord at all early
-sleep 30
-sudo supervisorctl status
-sudo supervisorctl start openquake-celery
-celery_wait() {
-    local cw_nloop=\"\$1\" cw_ret cw_i
-
-    if [ ! -f $celery_bin ]; then
-        echo \"ERROR: no Celery available\"
-        return 1
-    fi
-
-    for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\"
-        if echo \"\$cw_ret\" | grep -iq '^error:'; then
-            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
-                return 1
-            fi
-        else
-            return 0
-        fi
-        sleep 1
-    done
-
-    return 1
-}
-
-celery_wait $GEM_MAXLOOP"
-
         # run one risk demo (event based risk)
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
@@ -634,6 +594,39 @@ celery_wait $GEM_MAXLOOP"
         oq purge -1; oq reset --yes
 
         sudo apt-get install python-oq-engine-master python-oq-engine-worker
+
+export PYTHONPATH=\"$OPT_LIBS_PATH\"
+# FIXME: the big sleep below is a temporary workaround to avoid races.
+#        No better solution because we will abandon supervisord at all early
+celery_wait() {
+    local cw_nloop=\"\$1\" cw_ret cw_i
+
+    if [ ! -f $celery_bin ]; then
+        echo \"ERROR: no Celery available\"
+        return 1
+    fi
+
+    for cw_i in \$(seq 1 \$cw_nloop); do
+        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\"
+        if echo \"\$cw_ret\" | grep -iq '^error:'; then
+            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
+                return 1
+            fi
+        else
+            return 0
+        fi
+        sleep 1
+    done
+
+    return 1
+}
+
+sleep 30
+sudo supervisorctl status
+sudo supervisorctl start openquake-celery
+
+celery_wait $GEM_MAXLOOP
+
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
         oq purge -1; oq reset --yes"
         scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
