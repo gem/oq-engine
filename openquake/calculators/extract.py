@@ -77,6 +77,15 @@ class Extract(collections.OrderedDict):
 extract = Extract()
 
 
+# used by the QGIS plugin
+@extract.add('realizations')
+def extract_realizations(dstore, dummy):
+    """
+    Extract an array of realizations. Use it as /extract/realizations
+    """
+    return dstore['csm_info'].rlzs
+
+
 @extract.add('asset_values', cache=True)
 def extract_asset_values(dstore, sid):
     """
