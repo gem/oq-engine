@@ -32,16 +32,16 @@ xmlns:gml="http://www.opengis.net/gml"
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
-                    5.8
+                    5.8000002e+00
                 </magnitude>
                 <strike>
-                    0.0
+                    0.0000000e+00
                 </strike>
                 <dip>
-                    90.0
+                    9.0000000e+01
                 </dip>
                 <rake>
-                    0.0
+                    0.0000000e+00
                 </rake>
                 <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
@@ -73,16 +73,16 @@ xmlns:gml="http://www.opengis.net/gml"
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
-                    6.05
+                    6.0500002e+00
                 </magnitude>
                 <strike>
-                    0.0
+                    0.0000000e+00
                 </strike>
                 <dip>
-                    90.0
+                    9.0000000e+01
                 </dip>
                 <rake>
-                    0.0
+                    0.0000000e+00
                 </rake>
                 <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
@@ -109,16 +109,16 @@ xmlns:gml="http://www.opengis.net/gml"
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
-                    6.3
+                    6.3000002e+00
                 </magnitude>
                 <strike>
-                    0.0
+                    0.0000000e+00
                 </strike>
                 <dip>
-                    90.0
+                    9.0000000e+01
                 </dip>
                 <rake>
-                    0.0
+                    0.0000000e+00
                 </rake>
                 <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
