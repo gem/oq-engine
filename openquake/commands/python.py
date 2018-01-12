@@ -15,11 +15,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import sys
 from openquake.baselib import sap
 
 
-class _OQ(object):
+class OQ(object):
+    """
+    Singleton object with convenience methods which are aliases over common
+    engine functions useful for work in the interactive interpreter.
+    """
     def __init__(self):
         from openquake.baselib.datastore import read
         from openquake.commonlib import readinput
@@ -30,11 +33,13 @@ class _OQ(object):
 @sap.Script
 def python():
     """
-    Start an embedded ipython instance if possible
+    Start an embedded (i)python instance with a global oq object
     """
+    oq = OQ()  # noqa
     try:
         import IPython
+        IPython.embed(banner1='IPython shell with a global oq object')
     except ImportError:
-        sys.exit('IPython is not available')
-    oq = _OQ()  # noqa
-    IPython.embed(banner1='IPython shell with a global oq object')
+        import code
+        code.interact(banner='Python shell with a global oq object',
+                      local=dict(oq=oq))

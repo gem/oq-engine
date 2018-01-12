@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added a command `oq python` embedding IPython if available
+  * Added a command `oq python` embedding (I)Python
   * Turned the 'realizations' output into a dynamic output
 
   [Matteo Nastasi]
