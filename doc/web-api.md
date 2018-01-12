@@ -38,6 +38,18 @@ Response:
       "url": "http://localhost:8800/v1/calc/3"}]
 
 
+#### GET /v1/calc/:calc_id/abort
+
+Abort the given `calc_id` by sending to the corresponding job a SIGTERM.
+
+Parameters: None
+
+Response:
+
+    "Already terminated" if the job was already terminated
+    "No permission" if the user is not in the group with kill permission
+    "Killing oq-job-<id>" if a SIGTERM was sent to the job process
+
 #### GET /v1/calc/:calc_id/status
 
 Return the calculation status (the same content of `/v1/calc/list`) for the given `calc_id`.
