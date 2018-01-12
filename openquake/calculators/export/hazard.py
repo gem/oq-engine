@@ -938,7 +938,7 @@ def export_realizations(ekey, dstore):
     for i, rlz in enumerate(dstore['csm_info'].rlzs):
         data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, fmt='%s')
+    writers.write_csv(path, data, fmt='%.7e')
     return [path]
 
 
