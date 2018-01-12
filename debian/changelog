@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a command `oq python` embedding IPython if available
   * Turned the 'realizations' output into a dynamic output
 
   [Matteo Nastasi]
