@@ -25,11 +25,12 @@ from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode, encode
 from openquake.baselib.general import (
     group_array, split_in_blocks, deprecated as depr)
+from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
-from openquake.calculators.export.hazard import savez
-from openquake.commonlib import writers, calc
+from openquake.calculators.export.hazard import savez, get_mesh
+from openquake.commonlib import writers, calc, hazard_writers
 from openquake.commonlib.util import (
     get_assets, compose_arrays, reader)
 
@@ -198,6 +199,25 @@ def export_all_losses_npz(ekey, dstore):
     fname = dstore.build_fname('all_losses', 'rlzs', 'npz')
     savez(fname, **dic)
     return [fname]
+
+
+@export.add(('rup_loss_table', 'xml'))
+def export_maxloss_ruptures(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    fnames = []
+    for loss_type in oq.loss_dt().names:
+        ebr = calc.get_maxloss_rupture(dstore, loss_type)
+        root = hazard_writers.rupture_to_element(ebr.export(mesh))
+        dest = dstore.export_path('rupture-%s.xml' % loss_type)
+        with open(dest, 'wb') as fh:
+            nrml.write(list(root), fh)
+        fnames.append(dest)
+    return fnames
 
 
 # this is used by event_based_risk
