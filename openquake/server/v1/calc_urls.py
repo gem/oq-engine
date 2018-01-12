@@ -24,6 +24,7 @@ from openquake.server import views
 urlpatterns = [
     url(r'^list$', views.calc),
     url(r'^(\d+)$', views.calc_info),
+    url(r'^(\d+)/abort$', views.calc_abort),
     url(r'^(\d+)/datastore$', views.get_datastore),
     url(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
     url(r'^(\d+)/oqparam$', views.get_oqparam),
