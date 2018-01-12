@@ -1083,7 +1083,8 @@ EOF
         # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
         if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" ]; then
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "master" ]; then
-                cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+                cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
+                   ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
                     ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 PKG_COMMIT="$(git rev-parse HEAD | cut -c 1-7)"
@@ -1093,7 +1094,8 @@ EOF
             fi
         fi
 
-        cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+        cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
+           ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
             ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
             ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources* ${GEM_BUILD_ROOT}/Release* "${repo_tmpdir}"
         if [ "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.${commit}" ]; then
@@ -1359,7 +1361,13 @@ GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
 mksafedir "$GEM_BUILD_PKG"
 GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
 mksafedir "$GEM_BUILD_EXTR"
-cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb  $GEM_BUILD_PKG
+cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
+    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
-dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .
-dpkg -e $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb
+for pkg in python-oq-engine python-oq-engine-master python-oq-engine-worker; do
+    mksafedir "$pkg"
+    cd "$pkg"
+    dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .
+    dpkg -e $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb
+    cd -
+done
