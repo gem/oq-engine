@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * RPM packages moved to Python 3.5
+
   [Michele Simionato]
   * Turned the 'realizations' output into a dynamic output
 
