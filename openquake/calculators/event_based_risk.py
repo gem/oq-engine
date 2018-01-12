@@ -41,6 +41,34 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
+def build_rup_loss_table(dstore):
+    """
+    Save the total losses by rupture.
+    """
+    oq = dstore['oqparam']
+    loss_dt = oq.loss_dt()
+    events = dstore['events']
+    rup_by_eid = dict(zip(events['eid'], events['rup_id']))
+    losses_by_rup = {}
+    for rec in dstore['agg_loss_table'].value:  # .value is essential for speed
+        rupid = rup_by_eid[rec['eid']]
+        if rupid in losses_by_rup:
+            losses_by_rup[rupid] += rec['loss']
+        else:
+            losses_by_rup[rupid] = rec['loss']
+    assert losses_by_rup, 'Empty agg_loss_table'
+    serials = dstore['ruptures']['serial']
+    tbl = numpy.zeros(len(serials), oq.loss_dt())
+    for i, serial in enumerate(serials):
+        row = tbl[i]
+        try:
+            for l, lt in enumerate(loss_dt.names):
+                row[lt] = losses_by_rup[serial][l]
+        except KeyError:
+            pass
+    return tbl
+
+
 def event_based_risk(riskinput, riskmodel, param, monitor):
     """
     :param riskinput:
@@ -415,6 +443,7 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Build aggregate loss curves and run EbrPostCalculator
         """
+        dstore = self.datastore
         self.before_export()  # set 'realizations'
         oq = self.oqparam
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -422,12 +451,17 @@ class EbriskCalculator(base.RiskCalculator):
             logging.warn('eff_time=%s is too small to compute agg_curves',
                          eff_time)
             return
-        b = get_loss_builder(self.datastore)
-        alt = self.datastore['agg_loss_table']
+        b = get_loss_builder(dstore)
+        if 'ruptures' in dstore:
+            logging.info('Building rup_loss_table')
+            with self.monitor('building rup_loss_table', measuremem=True):
+                dstore['rup_loss_table'] = rlt = build_rup_loss_table(dstore)
+                ridx = [rlt[lt].argmax() for lt in oq.loss_dt().names]
+                dstore.set_attrs('rup_loss_table', ridx=ridx)
         stats = oq.risk_stats()
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
-            array, array_stats = b.build(alt, stats)
+            array, array_stats = b.build(dstore['agg_loss_table'].value, stats)
         self.datastore['agg_curves-rlzs'] = array
         units = self.assetcol.units(loss_types=array.dtype.names)
         self.datastore.set_attrs(

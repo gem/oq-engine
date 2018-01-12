@@ -115,6 +115,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
+        # test the rup_loss_table exporter
+        fnames = export(('rup_loss_table', 'xml'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname)
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
         # vulnerability function with PMF
