@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     615,627,304        
-date           2017-12-06T11:19:50
-engine_version 2.9.0-gite55e76e   
+checksum32     920,563,383        
+date           2018-01-11T04:29:49
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 7, num_imts = 4
@@ -102,8 +102,8 @@ source_model_2.xml 3      Stable Shallow Crust 1            1
 Informational data
 ------------------
 ========================= =====================================================================================
-compute_ruptures.received tot 19.84 KB, max_per_task 2.35 KB                                                   
-compute_ruptures.sent     sources 43.88 KB, param 26.77 KB, src_filter 19.97 KB, monitor 7.57 KB, gsims 4.19 KB
+compute_ruptures.received tot 21.51 KB, max_per_task 3.22 KB                                                   
+compute_ruptures.sent     sources 43.88 KB, param 26.77 KB, src_filter 24.59 KB, monitor 7.57 KB, gsims 4.19 KB
 hazard.input_weight       969.0                                                                                
 hazard.n_imts             4                                                                                    
 hazard.n_levels           46                                                                                   
@@ -141,8 +141,8 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-2         CharacteristicFaultSource 1            0.0       1         0        
 1         SimpleFaultSource         482          0.0       1         0        
+2         CharacteristicFaultSource 1            0.0       1         0        
 ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -162,7 +162,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.014 0.006  0.004 0.026 24       
+compute_ruptures   0.015 0.007  0.003 0.032 24       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -170,13 +170,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.326     0.0       24    
-managing sources               0.212     0.0       1     
-reading composite source model 0.020     0.0       1     
+total compute_ruptures         0.352     0.027     24    
+managing sources               0.246     0.0       1     
+reading composite source model 0.017     0.0       1     
 reading exposure               0.008     0.0       1     
-saving ruptures                0.006     0.0       24    
-store source_info              0.004     0.0       1     
-setting event years            0.001     0.0       1     
-filtering ruptures             7.486E-04 0.0       2     
-reading site collection        7.391E-06 0.0       1     
+making contexts                0.007     0.0       2     
+saving ruptures                0.007     0.0       24    
+store source_info              0.005     0.0       1     
+setting event years            0.002     0.0       1     
+reading site collection        5.722E-06 0.0       1     
 ============================== ========= ========= ======
