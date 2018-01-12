@@ -139,6 +139,8 @@ def expose_outputs(dstore):
         dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'ruptures' in dskeys and 'scenario' in calcmode:
         exportable.remove('ruptures')  # do not export, as requested by Vitor
+    if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
+        dskeys.remove('rup_loss_table')
     logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
 
 
