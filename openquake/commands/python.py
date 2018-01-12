@@ -20,14 +20,17 @@ from openquake.baselib import sap
 
 class OQ(object):
     """
-    Singleton object with convenience methods which are aliases over common
-    engine functions useful for work in the interactive interpreter.
+    Singleton object with convenience functions which are aliases over
+    engine utilities for work in the interactive interpreter.
     """
     def __init__(self):
         from openquake.baselib.datastore import read
         from openquake.commonlib import readinput
         self.read = read
         self.get_oqparam = readinput.get_oqparam
+        self.get_site_collection = readinput.get_site_collection
+        self.get_exposure = readinput.get_exposure
+        # TODO: more utilities when be added when deemed useful
 
 
 @sap.Script
