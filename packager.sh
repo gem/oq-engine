@@ -508,7 +508,8 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $lxc_ip mkdir -p "repo/${GEM_DEB_PACKAGE}"
-    scp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+    scp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
+        ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
         ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
         ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources*  ${GEM_BUILD_ROOT}/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
@@ -611,7 +612,7 @@ celery_wait $GEM_MAXLOOP"
 
         /usr/share/openquake/engine/utils/celery-status 
         cd /usr/share/openquake/engine/demos
-        OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
+        OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
         
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
@@ -630,6 +631,10 @@ celery_wait $GEM_MAXLOOP"
         oq engine --show-log -1
         oq engine --delete-calculation 1 --yes
         oq engine --dc 1 --yes
+        oq purge -1; oq reset --yes
+
+        sudo apt-get install python-oq-engine-master python-oq-engine-worker
+        OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
         oq purge -1; oq reset --yes"
         scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
@@ -1003,7 +1008,7 @@ pkgtest_run () {
     #
     #  run build of package
     if [ -d ${GEM_BUILD_ROOT} ]; then
-        if [ ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ]; then
+        if [ ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb -o ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb -o  ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb]; then
             echo "'${GEM_BUILD_ROOT}' directory already exists but .deb file package was not found"
             return 1
         fi
