@@ -436,10 +436,9 @@ def rupture_to_element(rup, parent):
                         ('bottomRight', bottom_right)):
 
                     corner_elem = et.SubElement(ps_elem, el_name)
-                    corner_elem.set('lon', str(corner[0]))
-                    corner_elem.set('lat', str(corner[1]))
-                    corner_elem.set('depth', str(corner[2]))
-
+                    corner_elem.set('lon', '%.7f' % corner[0])
+                    corner_elem.set('lat', '%.7f' % corner[1])
+                    corner_elem.set('depth', '%.7f' % corner[2])
         else:
             # rupture is from a point or area source
             # the rupture geometry is represented by four 3D
@@ -458,9 +457,9 @@ def rupture_to_element(rup, parent):
                     ('bottomRight', rup.bottom_right_corner)):
 
                 corner_elem = et.SubElement(ps_elem, el_name)
-                corner_elem.set('lon', str(corner[0]))
-                corner_elem.set('lat', str(corner[1]))
-                corner_elem.set('depth', str(corner[2]))
+                corner_elem.set('lon', '%.7f' % corner[0])
+                corner_elem.set('lat', '%.7f' % corner[1])
+                corner_elem.set('depth', '%.7f' % corner[2])
     return rup_elem
 
 
