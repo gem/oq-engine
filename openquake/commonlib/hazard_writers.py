@@ -363,15 +363,17 @@ def sub_elems(elem, rup, *names):
         et.SubElement(elem, name).text = str(getattr(rup, name))
 
 
-def rupture_to_element(rup, parent):
+def rupture_to_element(rup, parent=None):
     """
     Convert a rupture object into an Element object.
 
     :param rup:
         must have attributes .rupid, .events_by_ses and .seed
     :param parent:
-         parent of the returned element
+         parent of the returned element, or None
     """
+    if parent is None:
+        parent = et.Element('root')
     rup_elem = et.SubElement(parent, rup.typology)
     elem = et.SubElement(rup_elem, 'stochasticEventSets')
     for ses in rup.events_by_ses:
@@ -461,7 +463,7 @@ def rupture_to_element(rup, parent):
                 corner_elem.set('lon', str(corner[0]))
                 corner_elem.set('lat', str(corner[1]))
                 corner_elem.set('depth', str(corner[2]))
-    return rup_elem
+    return parent
 
 
 class SESXMLWriter(object):

@@ -599,7 +599,7 @@ class EBRupture(object):
         """
         return len(self.events)
 
-    def export(self, mesh, sm_by_grp):
+    def export(self, mesh):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
