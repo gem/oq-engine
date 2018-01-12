@@ -38,7 +38,7 @@ Response:
       "url": "http://localhost:8800/v1/calc/3"}]
 
 
-#### GET /v1/calc/:calc_id/abort
+#### POST /v1/calc/:calc_id/abort
 
 Abort the given `calc_id` by sending to the corresponding job a SIGTERM.
 
