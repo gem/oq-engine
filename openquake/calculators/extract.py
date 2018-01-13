@@ -77,6 +77,15 @@ class Extract(collections.OrderedDict):
 extract = Extract()
 
 
+# used by the QGIS plugin
+@extract.add('realizations')
+def extract_realizations(dstore, dummy):
+    """
+    Extract an array of realizations. Use it as /extract/realizations
+    """
+    return dstore['csm_info'].rlzs
+
+
 @extract.add('asset_values', cache=True)
 def extract_asset_values(dstore, sid):
     """
@@ -118,7 +127,7 @@ def extract_hazard(dstore, what):
     yield 'sitecol', sitecol
     yield 'oqparam', oq
     yield 'imtls', oq.imtls
-    yield 'realizations', dstore['realizations'].value
+    yield 'realizations', dstore['csm_info'].rlzs
     yield 'checksum32', dstore['/'].attrs['checksum32']
     nsites = len(sitecol)
     M = len(oq.imtls)
@@ -153,7 +162,7 @@ def extract_hazard_for_qgis(dstore, what):
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
     yield 'oqparam', oq
-    yield 'realizations', dstore['realizations'].value
+    yield 'realizations', dstore['csm_info'].rlzs
     yield 'checksum32', dstore['/'].attrs['checksum32']
     N = len(sitecol)
     if oq.poes:

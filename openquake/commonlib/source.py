@@ -44,6 +44,15 @@ U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 weight = operator.attrgetter('weight')
+rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
+                      ('gsims', 'S100'), ('weight', F32)])
+
+
+def gsim_names(rlz):
+    """
+    Names of the underlying GSIMs separated by spaces
+    """
+    return ' '.join(str(v) for v in rlz.gsim_rlz.value)
 
 
 class LtRealization(object):
@@ -405,11 +414,17 @@ class CompositionInfo(object):
         # with this CompositionInfo instances will be unpickled correctly
         return self.seed, self.num_samples, self.source_models
 
-    def __toh5__(self):
+    def trt2i(self):
+        """
+        :returns: trt -> trti
+        """
         trts = sorted(set(src_group.trt for sm in self.source_models
                           for src_group in sm.src_groups))
-        trti = {trt: i for i, trt in enumerate(trts)}
+        return {trt: i for i, trt in enumerate(trts)}
+
+    def __toh5__(self):
         data = []
+        trti = self.trt2i()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 # the number of effective realizations is set by get_rlzs_assoc
@@ -423,7 +438,7 @@ class CompositionInfo(object):
             sg_data=numpy.array(data, src_group_dt),
             sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=hdf5.array_of_vstr(trts),
+                     trts=hdf5.array_of_vstr(sorted(trti)),
                      gsim_lt_xml=str(self.gsim_lt),
                      gsim_fname=self.gsim_lt.fname,
                      tot_weight=self.tot_weight))
@@ -484,12 +499,31 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    def get_rlzs_assoc(self, count_ruptures=None,
-                       sm_lt_path=None, trts=None):
+    @property
+    def rlzs(self):
         """
-        :param count_ruptures: function src_group_id -> num_ruptures
+        :returns: an array of realizations
+        """
+        realizations = self.get_rlzs_assoc().realizations
+        sm_by_rlz = self.get_sm_by_rlz(
+            realizations) or collections.defaultdict(lambda: 'NA')
+        return numpy.array(
+            [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
+             for r in realizations], rlz_dt)
+
+    def update_eff_ruptures(self, count_ruptures):
+        """
+        :param count_ruptures: function or dict src_group_id -> num_ruptures
+        """
+        for smodel in self.source_models:
+            for sg in smodel.src_groups:
+                sg.eff_ruptures = (count_ruptures(sg.id)
+                                   if callable(count_ruptures)
+                                   else count_ruptures[sg.id])
+
+    def get_rlzs_assoc(self, sm_lt_path=None, trts=None):
+        """
         :param sm_lt_path: logic tree path tuple used to select a source model
-        :param gsim_lt_path: gsim logic tree path tuple
         :param trts: tectonic region types to accept
         """
         assoc = RlzsAssoc(self)
@@ -503,8 +537,6 @@ class CompositionInfo(object):
             # collect the effective tectonic region types and ruptures
             trts_ = set()
             for sg in smodel.src_groups:
-                if count_ruptures:
-                    sg.eff_ruptures = count_ruptures(sg.id)
                 if sg.eff_ruptures:
                     if (trts and sg.trt in trts) or not trts:
                         trts_.add(sg.trt)
@@ -514,7 +546,7 @@ class CompositionInfo(object):
                 before = self.gsim_lt.get_num_paths()
                 gsim_lt = self.gsim_lt.reduce(trts_)
                 after = gsim_lt.get_num_paths()
-                if count_ruptures and before > after:
+                if before > after:
                     logging.warn('Reducing the logic tree of %s from %d to %d '
                                  'realizations', smodel.name, before, after)
                 gsim_rlzs = list(gsim_lt)

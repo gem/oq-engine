@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     4,221,156,752      
-date           2017-12-06T11:19:51
-engine_version 2.9.0-gite55e76e   
+date           2018-01-11T04:29:49
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 281, num_imts = 1
@@ -85,19 +85,19 @@ source_model.xml 1      Subduction Interface 3,945        3,945
 
 Informational data
 ------------------
-========================= ======================================================================================
-compute_ruptures.received tot 313.22 KB, max_per_task 77 KB                                                     
-compute_ruptures.sent     src_filter 571.66 KB, sources 43.01 KB, param 10.36 KB, monitor 3.47 KB, gsims 1.12 KB
-hazard.input_weight       26012.0                                                                               
-hazard.n_imts             1                                                                                     
-hazard.n_levels           50                                                                                    
-hazard.n_realizations     1                                                                                     
-hazard.n_sites            281                                                                                   
-hazard.n_sources          2                                                                                     
-hazard.output_weight      14050.0                                                                               
-hostname                  tstation.gem.lan                                                                      
-require_epsilons          True                                                                                  
-========================= ======================================================================================
+========================= ====================================================================================
+compute_ruptures.received tot 3.42 MB, max_per_task 1.19 MB                                                   
+compute_ruptures.sent     src_filter 1.05 MB, sources 43.01 KB, param 10.36 KB, monitor 3.47 KB, gsims 1.12 KB
+hazard.input_weight       26012.0                                                                             
+hazard.n_imts             1                                                                                   
+hazard.n_levels           50                                                                                  
+hazard.n_realizations     1                                                                                   
+hazard.n_sites            281                                                                                 
+hazard.n_sources          2                                                                                   
+hazard.output_weight      14050.0                                                                             
+hostname                  tstation.gem.lan                                                                    
+require_epsilons          True                                                                                
+========================= ====================================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -133,8 +133,8 @@ Slowest sources
 ========= ================== ============ ========= ========= =========
 source_id source_class       num_ruptures calc_time num_sites num_split
 ========= ================== ============ ========= ========= =========
-D         ComplexFaultSource 3,945        0.0       1         0        
 F         ComplexFaultSource 2,558        0.0       1         0        
+D         ComplexFaultSource 3,945        0.0       1         0        
 ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -153,7 +153,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.917 0.432  0.605 2.023 11       
+compute_ruptures   0.960 0.435  0.621 2.083 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,14 +161,14 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         10       0.645     11    
-managing sources               3.449    0.0       1     
-filtering ruptures             0.393    0.0       489   
-reading composite source model 0.318    0.0       1     
-reading site collection        0.234    0.0       1     
-assoc_assets_sites             0.153    0.0       1     
-reading exposure               0.098    0.0       1     
-saving ruptures                0.043    0.0       11    
-store source_info              0.007    0.0       1     
-setting event years            0.006    0.0       1     
+total compute_ruptures         10       4.059     11    
+managing sources               3.455    0.0       1     
+making contexts                0.723    0.0       489   
+reading composite source model 0.303    0.0       1     
+reading site collection        0.209    0.0       1     
+assoc_assets_sites             0.182    0.0       1     
+reading exposure               0.099    0.0       1     
+saving ruptures                0.052    0.0       11    
+store source_info              0.005    0.0       1     
+setting event years            0.005    0.0       1     
 ============================== ======== ========= ======
