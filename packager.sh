@@ -570,7 +570,6 @@ _pkgtest_innervm_run () {
             set -x
         fi
 
-        /usr/share/openquake/engine/utils/celery-status 
         cd /usr/share/openquake/engine/demos
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
         
@@ -627,6 +626,7 @@ sudo supervisorctl start openquake-celery
 
 celery_wait $GEM_MAXLOOP
 
+        /usr/share/openquake/engine/utils/celery-status
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
         oq purge -1; oq reset --yes"
         scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
