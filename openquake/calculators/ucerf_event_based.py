@@ -846,6 +846,7 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
     res.events_by_grp = ruptures_by_grp.events_by_grp
+    res.eff_ruptures = ruptures_by_grp.eff_ruptures
     return res
 
 
@@ -898,5 +899,8 @@ class UCERFRiskCalculator(EbriskCalculator):
         self.grp_trt = self.csm_info.grp_trt()
         res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
         self.vals = self.assetcol.values()
+        self.eff_ruptures = AccumDict(accum=0)
         num_events = self.save_results(res, num_rlzs)
+        self.csm.info.update_eff_ruptures(self.eff_ruptures)
+        self.datastore['csm_info'] = self.csm.info
         return num_events
