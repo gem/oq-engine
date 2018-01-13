@@ -605,7 +605,6 @@ sleep 30
 sudo supervisorctl status
 sudo supervisorctl start openquake-celery
 
-sleep 400000 || true
 celery_wait $GEM_MAXLOOP
 
         /usr/share/openquake/engine/utils/celery-status
