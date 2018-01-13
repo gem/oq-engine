@@ -572,7 +572,7 @@ _pkgtest_innervm_run () {
 
         cd /usr/share/openquake/engine/demos
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
-        
+
         sudo apt-get install python-oq-engine-master python-oq-engine-worker
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
@@ -587,7 +587,7 @@ celery_wait() {
     fi
 
     for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\"
+        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\" || true
         if echo \"\$cw_ret\" | grep -iq '^error:'; then
             if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
                 return 1
