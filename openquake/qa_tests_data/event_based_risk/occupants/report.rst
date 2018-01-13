@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     852,550,231        
-date           2017-12-06T11:19:29
-engine_version 2.9.0-gite55e76e   
+date           2018-01-11T04:29:27
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 7, num_imts = 1
@@ -76,8 +76,8 @@ source_model.xml 0      Active Shallow Crust 482          482
 Informational data
 ------------------
 ========================= ===================================================================================
-compute_ruptures.received tot 252.58 KB, max_per_task 31.34 KB                                               
-compute_ruptures.sent     sources 17.89 KB, src_filter 10.82 KB, param 7.15 KB, monitor 4.1 KB, gsims 1.29 KB
+compute_ruptures.received tot 306.57 KB, max_per_task 39.34 KB                                               
+compute_ruptures.sent     sources 17.89 KB, src_filter 13.32 KB, param 7.15 KB, monitor 4.1 KB, gsims 1.29 KB
 hazard.input_weight       482.0                                                                              
 hazard.n_imts             1                                                                                  
 hazard.n_levels           1                                                                                  
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.025 0.009  0.010 0.041 13       
+compute_ruptures   0.072 0.024  0.039 0.121 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,13 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.329     0.777     13    
-managing sources               0.148     0.0       1     
-filtering ruptures             0.118     0.0       259   
-saving ruptures                0.029     0.0       13    
-reading exposure               0.007     0.0       1     
-reading composite source model 0.005     0.0       1     
+total compute_ruptures         0.942     1.000     13    
+making contexts                0.724     0.0       259   
+managing sources               0.218     0.0       1     
+saving ruptures                0.034     0.0       13    
+reading exposure               0.009     0.0       1     
+reading composite source model 0.007     0.0       1     
 store source_info              0.003     0.0       1     
 setting event years            0.002     0.0       1     
-reading site collection        6.199E-06 0.0       1     
+reading site collection        6.437E-06 0.0       1     
 ============================== ========= ========= ======
