@@ -72,12 +72,10 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures_by_grp = {}
     for grp_id, ruptures in calc.get_ruptures_by_grp(dstore).items():
-        ruptures_by_grp[grp_id] = [ebr.export(mesh, sm_by_grp)
-                                   for ebr in ruptures]
+        ruptures_by_grp[grp_id] = [ebr.export(mesh) for ebr in ruptures]
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
@@ -375,6 +373,7 @@ def export_hcurves_csv(ekey, dstore):
                 export_hcurves_by_imt_csv(
                     ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
     return sorted(fnames)
+
 
 UHS = collections.namedtuple('UHS', 'imls location')
 
@@ -732,16 +731,15 @@ def export_gmf_scenario_csv(ekey, dstore):
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
     samples = csm_info.get_samples_by_grp()
+    num_ruptures = len(dstore['ruptures'])
     imts = list(oq.imtls)
     mo = re.match('rup-(\d+)$', what[1])
     if mo is None:
         raise ValueError(
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
-    rup_id = int(mo.group(1))
-    ruptures = list(calc.RuptureGetter(dstore, rup_id=rup_id))
-    if not ruptures:
-        logging.warn('There is no rupture %d', rup_id)
-        return []
+    ridx = int(mo.group(1))
+    assert 0 <= ridx < num_ruptures, ridx
+    ruptures = list(calc.RuptureGetter(dstore, slice(ridx, ridx + 1)))
     [ebr] = ruptures
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
     samples = samples[ebr.grp_id]
@@ -770,7 +768,7 @@ def export_gmf_scenario_csv(ekey, dstore):
                     event = 'eid-%03d' % rec['eid']
                     gmfs[s][event] = rec['gmv'][imti]
             dest = dstore.build_fname(
-                'gmf', 'rup-%s-rlz-%s-%s' % (rup_id, rlzi, imt), 'csv')
+                'gmf', 'rup-%s-rlz-%s-%s' % (ebr.serial, rlzi, imt), 'csv')
             data = util.compose_arrays(mesh, gmfs)
             writer.save(data, dest)
     return writer.getsaved()
@@ -861,7 +859,7 @@ def save_disagg_to_csv(metadata, matrices):
         '%s=%s' % (key, value) for key, value in metadata.items()
         if value is not None and key not in skip_keys)
     for disag_tup, (poe, iml, matrix, fname) in matrices.items():
-        header = '%s,poe=%s,iml=%s\n' % (base_header, poe, iml)
+        header = '%s,poe=%s,iml=%.7e\n' % (base_header, poe, iml)
 
         if disag_tup == ('Mag', 'Lon', 'Lat'):
             matrix = numpy.swapaxes(matrix, 0, 1)
@@ -939,12 +937,11 @@ def export_disagg_csv(ekey, dstore):
 
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
-    rlzs = dstore[ekey[0]]
     data = [['ordinal', 'uid', 'model', 'gsim', 'weight']]
-    for i, rlz in enumerate(rlzs):
+    for i, rlz in enumerate(dstore['csm_info'].rlzs):
         data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, fmt='%s')
+    writers.write_csv(path, data, fmt='%.7e')
     return [path]
 
 
