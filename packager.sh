@@ -573,25 +573,6 @@ _pkgtest_innervm_run () {
         cd /usr/share/openquake/engine/demos
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
         
-        # Try to export a set of results AFTER the calculation
-        # automatically creates a directory called out
-        echo \"Exporting output #1\"
-        oq engine --eo 1 /tmp/output
-        echo \"Exporting calculation #2\"
-        oq engine --eos 2 /tmp/out/eos_2
-
-        oq info --report risk
-        echo 'Listing hazard calculations'
-        oq engine --lhc
-        echo 'Listing risk calculations'
-        oq engine --lrc"
-
-        ssh $lxc_ip "oq engine --make-html-report today
-        oq engine --show-log -1
-        oq engine --delete-calculation 1 --yes
-        oq engine --dc 1 --yes
-        oq purge -1; oq reset --yes
-
         sudo apt-get install python-oq-engine-master python-oq-engine-worker
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
@@ -628,6 +609,24 @@ celery_wait $GEM_MAXLOOP
 
         /usr/share/openquake/engine/utils/celery-status
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
+
+        # Try to export a set of results AFTER the calculation
+        # automatically creates a directory called out
+        echo \"Exporting output #1\"
+        oq engine --eo 1 /tmp/output
+        echo \"Exporting calculation #2\"
+        oq engine --eos 2 /tmp/out/eos_2
+
+        oq info --report risk
+        echo 'Listing hazard calculations'
+        oq engine --lhc
+        echo 'Listing risk calculations'
+        oq engine --lrc"
+
+        ssh $lxc_ip "oq engine --make-html-report today
+        oq engine --show-log -1
+        oq engine --delete-calculation 1 --yes
+        oq engine --dc 1 --yes
         oq purge -1; oq reset --yes"
         scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
