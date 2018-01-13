@@ -252,7 +252,7 @@ producing too small PoEs.'''
         mon = self.monitor('disaggregation')
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
-            R, oq.imtls, oq.iml_disagg, oq.poes_disagg or (None,), curves)
+            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             for r in range(R):

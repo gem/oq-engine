@@ -51,10 +51,12 @@ def _imls(curves, poe, imt, imls, rlzi):
     return numpy.array(levels)  # length N
 
 
-def make_iml4(R, imtls, iml_disagg, poes_disagg=(None,), curves=()):
+def make_iml4(R, iml_disagg, imtls=None, poes_disagg=(None,), curves=()):
     """
     :returns: an ArrayWrapper over a 4D array of shape (N, R, M, P)
     """
+    if imtls is None:
+        imtls = {imt: [iml] for imt, iml in iml_disagg.items()}
     N = len(curves) or 1
     M = len(imtls)
     P = len(poes_disagg)
@@ -291,7 +293,7 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
-    iml4 = make_iml4(1, {str(imt): [iml]}, {str(imt): iml})
+    iml4 = make_iml4(1, {str(imt): iml})
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
     sitecol = SiteCollection([site])
@@ -330,8 +332,10 @@ def disaggregation(
                           len(lon_bins) - 1, len(lat_bins) - 1,
                           len(eps_bins) - 1, len(trts)))
     for trt in bdata:
-        [mat] = build_disagg_matrix(bdata[trt], bin_edges, sid=0).values()
-        matrix[..., trt_num[trt]] = mat
+        dic = build_disagg_matrix(bdata[trt], bin_edges, sid=0)
+        if dic:  # (poe, imt, rlzi) -> matrix
+            [mat] = dic.values()
+            matrix[..., trt_num[trt]] = mat
     return bin_edges + (trts,), matrix
 
 
