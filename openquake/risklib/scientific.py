@@ -815,8 +815,8 @@ class LogNormalDistribution(Distribution):
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
     def sample(self, means, _covs, stddevs, _idxs=None):
-        alpha = self._alpha(means, stddevs)
-        beta = self._beta(means, stddevs)
+        alpha = self._alpha(means, means * _covs)
+        beta = self._beta(means, means * _covs)
         return numpy.random.beta(alpha, beta, size=None)
 
     def survival(self, loss_ratio, mean, stddev):
