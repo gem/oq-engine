@@ -1,4 +1,4 @@
-# smlt_path=b1,gsimlt_path=b1,imt=SA,investigation_time=50.0,lon=10.1,lat=40.1,poe=0.1,iml=0.327983600317
+# smlt_path=b1,gsimlt_path=b1,imt=SA,investigation_time=50.0,lon=10.1,lat=40.1,poe=0.1,iml=3.2798360e-01
 Mag,poe
 5.50000E+00,5.40333E-02
 6.50000E+00,3.05411E-02

@@ -605,13 +605,13 @@ class UHSXMLWriterTestCase(unittest.TestCase):
       <gml:Point>
         <gml:pos>0.0 0.0</gml:pos>
       </gml:Point>
-      <IMLs>0.3 0.5 0.2 0.1</IMLs>
+      <IMLs>3.0000000E-01 5.0000000E-01 2.0000000E-01 1.0000000E-01</IMLs>
     </uhs>
     <uhs>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
       </gml:Point>
-      <IMLs>0.4 0.6 0.3 0.05</IMLs>
+      <IMLs>4.0000000E-01 6.0000000E-01 3.0000000E-01 5.0000000E-02</IMLs>
     </uhs>
   </uniformHazardSpectra>
 </nrml>
@@ -625,13 +625,13 @@ class UHSXMLWriterTestCase(unittest.TestCase):
       <gml:Point>
         <gml:pos>0.0 0.0</gml:pos>
       </gml:Point>
-      <IMLs>0.3 0.5 0.2 0.1</IMLs>
+      <IMLs>3.0000000E-01 5.0000000E-01 2.0000000E-01 1.0000000E-01</IMLs>
     </uhs>
     <uhs>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
       </gml:Point>
-      <IMLs>0.4 0.6 0.3 0.05</IMLs>
+      <IMLs>4.0000000E-01 6.0000000E-01 3.0000000E-01 5.0000000E-02</IMLs>
     </uhs>
   </uniformHazardSpectra>
 </nrml>
@@ -645,13 +645,13 @@ class UHSXMLWriterTestCase(unittest.TestCase):
       <gml:Point>
         <gml:pos>0.0 0.0</gml:pos>
       </gml:Point>
-      <IMLs>0.3 0.5 0.2 0.1</IMLs>
+      <IMLs>3.0000000E-01 5.0000000E-01 2.0000000E-01 1.0000000E-01</IMLs>
     </uhs>
     <uhs>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
       </gml:Point>
-      <IMLs>0.4 0.6 0.3 0.05</IMLs>
+      <IMLs>4.0000000E-01 6.0000000E-01 3.0000000E-01 5.0000000E-02</IMLs>
     </uhs>
   </uniformHazardSpectra>
 </nrml>
@@ -712,9 +712,7 @@ class UHSXMLWriterTestCase(unittest.TestCase):
 
     def test_serialize(self):
         writer = writers.UHSXMLWriter(path, **self.metadata)
-
         writer.serialize(self.data)
-
         utils.assert_xml_equal(self.expected_xml, path)
 
     def test_serialize_mean(self):

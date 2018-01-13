@@ -62,8 +62,6 @@ class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
 
-rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
-                      ('gsims', 'S100'), ('weight', F32)])
 logversion = True
 
 
@@ -95,13 +93,6 @@ def set_array(longarray, shortarray):
     """
     longarray[:len(shortarray)] = shortarray
     longarray[len(shortarray):] = numpy.nan
-
-
-def gsim_names(rlz):
-    """
-    Names of the underlying GSIMs separated by spaces
-    """
-    return ' '.join(str(v) for v in rlz.gsim_rlz.value)
 
 
 def check_precalc_consistency(calc_mode, precalc_mode):
@@ -303,16 +294,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     def before_export(self):
         """
-        Collect the realizations and set the attributes nbytes
+        Set the attributes nbytes
         """
-        if 'csm_info' in self.datastore and hasattr(self, 'rlzs_assoc'):
-            sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
-                self.rlzs_assoc.realizations) or collections.defaultdict(
-                    lambda: 'NA')
-            self.datastore['realizations'] = numpy.array(
-                [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
-                 for r in self.rlzs_assoc.realizations], rlz_dt)
-        # do not save the 'realizations' dataset when not possible
+        # sanity check that eff_ruptures have been set, i.e. are not -1
+        csm_info = self.datastore['csm_info']
+        for sm in csm_info.source_models:
+            for sg in sm.src_groups:
+                assert sg.eff_ruptures != -1, sg
+
         for key in self.datastore:
             self.datastore.set_nbytes(key)
         self.datastore.flush()
@@ -630,8 +619,9 @@ class HazardCalculator(BaseCalculator):
                     array[i][name] = value
             self.datastore['source_info'] = array
             infos.clear()
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, acc), self.oqparam.sm_lt_path)
+        self.csm.info.update_eff_ruptures(
+            partial(self.count_eff_ruptures, acc))
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         self.datastore['csm_info'] = self.csm.info
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that
@@ -806,7 +796,7 @@ def get_gmfs(calculator):
 
     else:  # with --hc option
         return (calculator.datastore['events']['eid'],
-                len(calculator.datastore['realizations']))
+                calculator.datastore['csm_info'].get_num_rlzs())
 
 
 def save_gmf_data(dstore, sitecol, gmfs):
