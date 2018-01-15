@@ -342,25 +342,27 @@ def calc_abort(request, calc_id):
     Abort the given calculation, it is it running
     """
     job = logs.dbcmd('get_job', calc_id)
+    message = '%s already terminated' % job
     if job is None or job.status not in ('executing', 'running'):
-        return HttpResponse(
-            content='Already terminated', content_type='text/plain')
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
 
     user = utils.get_user_data(request)
     info = logs.dbcmd('calc_info', calc_id)
     allowed_users = user['group_members'] or [user['name']]
+    message = 'No permission to abort %s' % info
     if user['acl_on'] and info['user_name'] not in allowed_users:
-        return HttpResponse(content='No permission', content_type='text/plain',
-                            status=401)
+        return HttpResponse(content=json.dumps(message), content_type=JSON,
+                            status=403)
 
     name = 'oq-job-%d' % job.id
     for p in psutil.process_iter():
         if p.name() == name:
             os.kill(p.pid, signal.SIGTERM)
             logs.dbcmd('set_status', job.id, 'aborted')
-            return HttpResponse(content='Killing %s' % name, content_type=JSON)
-    return HttpResponse(
-        content='Already terminated', content_type='text/plain')
+            message = 'Killing %s' % name
+            return HttpResponse(content=json.dumps(name), content_type=JSON)
+
+    return HttpResponse(content=json.dumps(message), content_type=JSON)
 
 
 @csrf_exempt
