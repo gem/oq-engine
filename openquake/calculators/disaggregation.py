@@ -399,7 +399,7 @@ producing too small PoEs.'''
         try:
             attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
         except KeyError:  # when saving the stats
-            pass
+            attrs['iml'] = self.oqparam.iml_disagg.get(imt_str, -1)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
