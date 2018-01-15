@@ -32,23 +32,23 @@ xmlns:gml="http://www.opengis.net/gml"
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
-                    5.8
+                    5.8000002e+00
                 </magnitude>
                 <strike>
-                    0.0
+                    0.0000000e+00
                 </strike>
                 <dip>
-                    90.0
+                    9.0000000e+01
                 </dip>
                 <rake>
-                    0.0
+                    0.0000000e+00
                 </rake>
                 <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
-                    <topLeft depth="17.2283592224" lat="-0.0357178263366" lon="0.0"/>
-                    <topRight depth="17.2283592224" lat="0.0357178263366" lon="0.0"/>
-                    <bottomLeft depth="25.1716403961" lat="-0.0357178263366" lon="0.0"/>
-                    <bottomRight depth="25.1716403961" lat="0.0357178263366" lon="0.0"/>
+                    <topLeft depth="17.2283592" lat="-0.0357178" lon="0.0000000"/>
+                    <topRight depth="17.2283592" lat="0.0357178" lon="0.0000000"/>
+                    <bottomLeft depth="25.1716404" lat="-0.0357178" lon="0.0000000"/>
+                    <bottomRight depth="25.1716404" lat="0.0357178" lon="0.0000000"/>
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
@@ -73,23 +73,23 @@ xmlns:gml="http://www.opengis.net/gml"
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
-                    6.05
+                    6.0500002e+00
                 </magnitude>
                 <strike>
-                    0.0
+                    0.0000000e+00
                 </strike>
                 <dip>
-                    90.0
+                    9.0000000e+01
                 </dip>
                 <rake>
-                    0.0
+                    0.0000000e+00
                 </rake>
                 <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
-                    <topLeft depth="16.0539970398" lat="-0.0462791137397" lon="0.0"/>
-                    <topRight depth="16.0539970398" lat="0.0462791137397" lon="0.0"/>
-                    <bottomLeft depth="26.3460025787" lat="-0.0462791137397" lon="0.0"/>
-                    <bottomRight depth="26.3460025787" lat="0.0462791137397" lon="0.0"/>
+                    <topLeft depth="16.0539970" lat="-0.0462791" lon="0.0000000"/>
+                    <topRight depth="16.0539970" lat="0.0462791" lon="0.0000000"/>
+                    <bottomLeft depth="26.3460026" lat="-0.0462791" lon="0.0000000"/>
+                    <bottomRight depth="26.3460026" lat="0.0462791" lon="0.0000000"/>
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
@@ -109,23 +109,23 @@ xmlns:gml="http://www.opengis.net/gml"
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
-                    6.3
+                    6.3000002e+00
                 </magnitude>
                 <strike>
-                    0.0
+                    0.0000000e+00
                 </strike>
                 <dip>
-                    90.0
+                    9.0000000e+01
                 </dip>
                 <rake>
-                    0.0
+                    0.0000000e+00
                 </rake>
                 <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
                 <planarSurface>
-                    <topLeft depth="14.5323925018" lat="-0.0599632300436" lon="0.0"/>
-                    <topRight depth="14.5323925018" lat="0.0599632300436" lon="0.0"/>
-                    <bottomLeft depth="27.8676071167" lat="-0.0599632300436" lon="0.0"/>
-                    <bottomRight depth="27.8676071167" lat="0.0599632300436" lon="0.0"/>
+                    <topLeft depth="14.5323925" lat="-0.0599632" lon="0.0000000"/>
+                    <topRight depth="14.5323925" lat="0.0599632" lon="0.0000000"/>
+                    <bottomLeft depth="27.8676071" lat="-0.0599632" lon="0.0000000"/>
+                    <bottomRight depth="27.8676071" lat="0.0599632" lon="0.0000000"/>
                 </planarSurface>
             </singlePlaneRupture>
         </ruptureGroup>
