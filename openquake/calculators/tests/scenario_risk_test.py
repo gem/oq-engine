@@ -154,12 +154,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1h(self):
+        # this is a case with 2 assets spawning 2 tasks
         out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv')
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
-        # with a single task instead of 2
-        out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv')
+        # with a single task
+        out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv',
+                            concurrent_tasks='0')
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
