@@ -199,12 +199,12 @@
                                         }
                                     },
                                     success: function(data, textStatus, jqXHR) {
-                                        err = data.error;
-                                        if(!err) {
-                                            err = "has been removed.";
+                                        if(data.error) {
+                                            diaerror.show(false, "Error", data.error);
+                                        } else {
+                                            diaerror.show(false, "Calculation removed", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been removed." );
+                                            view.calculations.remove([view.calculations.get(calc_id)]);
                                         }
-                                        diaerror.show(false, "Calculation removed", "The calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
-                                        view.calculations.remove([view.calculations.get(calc_id)]);
                                     }});
             },
 
@@ -229,12 +229,12 @@
                                         }
                                     },
                                     success: function(data, textStatus, jqXHR) {
-                                        err = data.error;
-                                        if(!err) {
-                                            err = "has been aborted.";
+                                        if(data.error) {
+                                            diaerror.show(false, "Error", data.error );
+                                        } else {
+                                            diaerror.show(false, "Calculation aborted", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been aborted." );
+                                            calculations.fetch({reset: true})
                                         }
-                                        diaerror.show(false, "Calculation aborted", "The calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
-                                        view.calculations.remove([view.calculations.get(calc_id)]);
                                     }});
             },
 

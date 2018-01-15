@@ -56,3 +56,8 @@ if settings.LOCKDOWN:
         url(r'^accounts/ajax_login/$', views.ajax_login),
         url(r'^accounts/ajax_logout/$', views.ajax_logout),
     ]
+
+# To enable gunicorn debug without Nginx (to serve static files)
+# uncomment the following lines
+# from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+# urlpatterns += staticfiles_urlpatterns()
