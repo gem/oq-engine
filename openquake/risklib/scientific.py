@@ -170,7 +170,7 @@ class VulnerabilityFunction(object):
         if epsilons is None:
             return means
         self.set_distribution(epsilons)
-        return self.distribution.sample(means, covs, None, idxs)
+        return self.distribution.sample(means, covs, means * covs, idxs)
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
