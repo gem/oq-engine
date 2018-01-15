@@ -202,10 +202,11 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_abort(self):
-        raise unittest.SkipTest('abort does not work with zmq')
         job_id = self.postzip('archive_ok.zip')
         time.sleep(1)  # give time
-        abort(job_id)
+        url = '/v1/calc/%s/abort' % job_id
+        resp = self.c.post(url)
+        print(resp.content.decode('utf8'))
         self.wait()
 
     def test_err_1(self):
