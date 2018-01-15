@@ -25,6 +25,7 @@ import inspect
 import tempfile
 import subprocess
 import threading
+import signal
 import zlib
 try:
     import urllib.parse as urlparse
@@ -97,6 +98,11 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
+
+# dictionary job_id -> pid, needed for the abort functionality
+# we cannot rely on psutil to retrieve tha association from the
+# process name, since it does not work properly on windows
+job2pid = {}
 
 
 # Credit for this decorator to https://gist.github.com/aschem/1308865.
@@ -335,6 +341,36 @@ def calc(request, id=None):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
+def calc_abort(request, calc_id):
+    """
+    Abort the given calculation, it is it running
+    """
+    job = logs.dbcmd('get_job', calc_id)
+    message = '%s already terminated' % job
+    if job is None or job.status not in ('executing', 'running'):
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    user = utils.get_user_data(request)
+    info = logs.dbcmd('calc_info', calc_id)
+    allowed_users = user['group_members'] or [user['name']]
+    message = 'No permission to abort %s' % info
+    if user['acl_on'] and info['user_name'] not in allowed_users:
+        return HttpResponse(content=json.dumps(message), content_type=JSON,
+                            status=403)
+
+    if job.id in job2pid:
+        name = 'oq-job-%d' % job.id
+        os.kill(job2pid[job.id], signal.SIGTERM)
+        logs.dbcmd('set_status', job.id, 'aborted')
+        message = 'Killing %s' % name
+        return HttpResponse(content=json.dumps(name), content_type=JSON)
+
+    return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
 def calc_remove(request, calc_id):
     """
     Remove the calculation id
@@ -468,6 +504,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     threading.Thread(target=popen.wait).start()
+    job2pid[job_id] = popen.pid
     return job_id, popen.pid
 
 
