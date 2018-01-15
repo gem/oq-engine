@@ -237,7 +237,20 @@ def get_outputs(db, job_id):
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
 
-DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset')
+DISPLAY_NAME = {
+    'gmf_data': 'Ground Motion Fields',
+    'damages_by_asset': 'Average Asset Damages',
+    'damages_by_event': 'Aggregate Event Damages',
+    'losses_by_asset': 'Average Asset Losses',
+    'losses_by_event': 'Aggregate Event Losses',
+    'damages': 'Asset Damage Distribution',
+    'avg_losses': 'Average Asset Losses',
+    'loss_curves': 'Asset Loss Curves',
+    'loss_maps': 'Asset Loss Maps',
+    'agg_curves': 'Aggregate Loss Curves',
+    'agg_loss_table': 'Aggregate Loss Table',
+    'agglosses-rlzs': 'Aggregate Asset Losses',
+}
 
 
 def create_outputs(db, job_id, dskeys):
