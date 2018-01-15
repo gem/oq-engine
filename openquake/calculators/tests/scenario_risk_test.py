@@ -19,11 +19,11 @@
 from nose.plugins.attrib import attr
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
-    case_1, case_2, case_2d, case_1g, case_3, case_4, case_5,
+    case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, occupants, case_master)
 
 from openquake.baselib.general import writetmp
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -151,6 +151,19 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                             exports='csv')
         [fname] = out['agglosses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_1h(self):
+        # this is a case with 2 assets spawning 2 tasks
+        out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv')
+        [fname] = out['losses_by_asset', 'csv']
+        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+
+        # with a single task
+        out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv',
+                            concurrent_tasks='0')
+        [fname] = out['losses_by_asset', 'csv']
+        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
