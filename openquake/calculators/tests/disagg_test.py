@@ -127,4 +127,5 @@ producing too small PoEs.''')
 
         # check stats
         fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
+        self.assertEqual(len(fnames), 192)  # 2 sid x 8 keys x 2 poe x 2 imt
+        # = 64 x 3 for mean, quantile-0.15, quantile-0.85
