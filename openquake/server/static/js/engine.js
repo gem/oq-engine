@@ -234,7 +234,7 @@
                                             err = "has been aborted.";
                                         }
                                         diaerror.show(false, "Calculation aborted", "The calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
-                                        view.calculations.remove([view.calculations.get(calc_id)]);
+                                        calculations.fetch({reset: true})
                                     }});
             },
 
