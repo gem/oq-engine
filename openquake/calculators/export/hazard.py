@@ -859,7 +859,7 @@ def save_disagg_to_csv(metadata, matrices):
         '%s=%s' % (key, value) for key, value in metadata.items()
         if value is not None and key not in skip_keys)
     for disag_tup, (poe, iml, matrix, fname) in matrices.items():
-        header = '%s,poe=%s,iml=%s\n' % (base_header, poe, iml)
+        header = '%s,poe=%s,iml=%.7e\n' % (base_header, poe, iml)
 
         if disag_tup == ('Mag', 'Lon', 'Lat'):
             matrix = numpy.swapaxes(matrix, 0, 1)
@@ -941,7 +941,7 @@ def export_realizations(ekey, dstore):
     for i, rlz in enumerate(dstore['csm_info'].rlzs):
         data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, fmt='%s')
+    writers.write_csv(path, data, fmt='%.7e')
     return [path]
 
 

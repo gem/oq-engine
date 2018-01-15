@@ -104,7 +104,7 @@ class DisaggregationCalculator(base.HazardCalculator):
     POE_TOO_BIG = '''\
 You are trying to disaggregate for poe=%s.
 However the source model #%d, '%s',
-produces at most probabilities of %s for rlz=#%d, IMT=%s.
+produces at most probabilities of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
