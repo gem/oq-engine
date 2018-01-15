@@ -897,13 +897,11 @@ def export_disagg_csv(ekey, dstore):
     for key in group:
         matrix = dstore[ekey[0] + '/' + key]
         attrs = group[key].attrs
+        iml = attrs['iml']
         try:
             rlz = rlzs[attrs['rlzi']]
         except TypeError:  # for stats
             rlz = attrs['rlzi']
-            iml = '?'
-        else:
-            iml = attrs['iml']
         try:
             poes = [attrs['poe']] * len(disagg_outputs)
         except:  # no poes_disagg were given
