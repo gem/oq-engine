@@ -346,7 +346,7 @@ def calc_abort(request, calc_id):
     Abort the given calculation, it is it running
     """
     job = logs.dbcmd('get_job', calc_id)
-    message = 'Job %s is not running' % job.id
+    message = {'error': 'Job %s is not running' % job.id}
     if job is None or job.status not in ('executing', 'running'):
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
@@ -354,8 +354,8 @@ def calc_abort(request, calc_id):
     info = logs.dbcmd('calc_info', calc_id)
     allowed_users = user['group_members'] or [user['name']]
     if user['acl_on'] and info['user_name'] not in allowed_users:
-        message = ('User %s has No permission to abort job %s' %
-                   (info['user_name'], job.id))
+        message = {'error': ('User %s has no permission to abort job %s' %
+                             (info['user_name'], job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
                             status=403)
 
@@ -363,10 +363,10 @@ def calc_abort(request, calc_id):
         name = 'oq-job-%d' % job.id
         os.kill(job2pid[job.id], signal.SIGTERM)
         logs.dbcmd('set_status', job.id, 'aborted')
-        message = 'Killing job %s' % name
+        message = {'success': 'Job %s killed' % name}
         return HttpResponse(content=json.dumps(name), content_type=JSON)
 
-    message = 'PIDs for job %s not found' % job.id
+    message = {'error': 'PIDs for job %s not found' % job.id}
     return HttpResponse(content=json.dumps(message), content_type=JSON)
 
 
