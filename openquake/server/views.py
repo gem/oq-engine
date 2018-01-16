@@ -99,11 +99,6 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
 
-# dictionary job_id -> pid, needed for the abort functionality
-# we cannot rely on psutil to retrieve tha association from the
-# process name, since it does not work properly on windows
-job2pid = {}
-
 
 # Credit for this decorator to https://gist.github.com/aschem/1308865.
 def cross_domain_ajax(func):
@@ -307,7 +302,8 @@ def calc_info(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc(request, id=None):
+def calc_list(request, id=None):
+    # view associated to the endpoints /v1/calc/list and /v1/calc/:id/status
     """
     Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
@@ -346,25 +342,27 @@ def calc_abort(request, calc_id):
     Abort the given calculation, it is it running
     """
     job = logs.dbcmd('get_job', calc_id)
-    message = '%s already terminated' % job
+    message = {'error': 'Job %s is not running' % job.id}
     if job is None or job.status not in ('executing', 'running'):
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
     user = utils.get_user_data(request)
     info = logs.dbcmd('calc_info', calc_id)
     allowed_users = user['group_members'] or [user['name']]
-    message = 'No permission to abort %s' % info
     if user['acl_on'] and info['user_name'] not in allowed_users:
+        message = {'error': ('User %s has no permission to abort job %s' %
+                             (info['user_name'], job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
                             status=403)
 
-    if job.id in job2pid:
-        name = 'oq-job-%d' % job.id
-        os.kill(job2pid[job.id], signal.SIGTERM)
+    if job.pid:  # is a spawned job
+        os.kill(job.pid, signal.SIGTERM)
+        logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
         logs.dbcmd('set_status', job.id, 'aborted')
-        message = 'Killing %s' % name
-        return HttpResponse(content=json.dumps(name), content_type=JSON)
+        message = {'success': 'Killing job %d' % job.id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
 
+    message = {'error': 'PID for job %s not found' % job.id}
     return HttpResponse(content=json.dumps(message), content_type=JSON)
 
 
@@ -464,7 +462,7 @@ def run_calc(request):
 
     user = utils.get_user_data(request)
     try:
-        job_id, _pid = submit_job(einfo[0], user['name'], hazard_job_id)
+        job_id, pid = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -472,7 +470,7 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(job_id=job_id, status='created')
+        response_data = dict(job_id=job_id, status='created', pid=pid)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
@@ -504,7 +502,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     threading.Thread(target=popen.wait).start()
-    job2pid[job_id] = popen.pid
+    logs.dbcmd('update_job', job_id, {'pid': popen.pid})
     return job_id, popen.pid
 
 
