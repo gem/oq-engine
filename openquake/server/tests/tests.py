@@ -38,7 +38,6 @@ from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
-from openquake.commands.abort import abort
 
 
 class EngineServerTestCase(unittest.TestCase):
