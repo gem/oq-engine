@@ -3,8 +3,8 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     3,074,586,051      
-date           2017-12-06T11:19:22
-engine_version 2.9.0-gite55e76e   
+date           2018-01-11T04:29:22
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 1, num_imts = 2
