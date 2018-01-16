@@ -170,7 +170,7 @@ class VulnerabilityFunction(object):
         if epsilons is None:
             return means
         self.set_distribution(epsilons)
-        return self.distribution.sample(means, covs, None, idxs)
+        return self.distribution.sample(means, covs, means * covs, idxs)
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
@@ -841,7 +841,7 @@ class DiscreteDistribution(Distribution):
         ret = []
         r = numpy.arange(len(loss_ratios))
         for i in range(probs.shape[1]):
-            random.seed(self.seed)
+            random.seed(self.seed + i)
             # the seed is set inside the loop to avoid block-size dependency
             pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
             ret.append(loss_ratios[pmf])
@@ -1376,10 +1376,10 @@ class LossesByPeriodBuilder(object):
                     self.num_events[rlzi], self.eff_time)
         return array
 
-    def build(self, agg_loss_table, stats=()):
+    def build(self, agg_loss_table_array, stats=()):
         """
-        :param agg_loss_table:
-            the aggregate loss table
+        :param agg_loss_table_array:
+            the aggregate loss table as an array
         :param stats:
             list of pairs [(statname, statfunc), ...]
         :returns:
@@ -1387,8 +1387,7 @@ class LossesByPeriodBuilder(object):
         """
         P, R = len(self.return_periods), len(self.weights)
         array = numpy.zeros((P, R), self.loss_dt)
-        # NB: using .value is essential for performance, measured 100x speedup!
-        dic = group_array(agg_loss_table.value, 'rlzi')
+        dic = group_array(agg_loss_table_array, 'rlzi')
         for r in dic:
             num_events = self.num_events[r]
             losses = dic[r]['loss']

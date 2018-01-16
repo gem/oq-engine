@@ -38,6 +38,19 @@ Response:
       "url": "http://localhost:8800/v1/calc/3"}]
 
 
+#### POST /v1/calc/:calc_id/abort
+
+Abort the given `calc_id` by sending to the corresponding job a SIGTERM.
+
+Parameters: None
+
+Response:
+
+    {'error': 'Job <id> is not running'}
+    {'error': 'User <user> has no permission to kill job <id>'}
+    {'error': 'PID for job <id> not found in the database'}
+    {'success': 'Killing job <id>'}
+
 #### GET /v1/calc/:calc_id/status
 
 Return the calculation status (the same content of `/v1/calc/list`) for the given `calc_id`.
