@@ -20,7 +20,7 @@ from __future__ import division
 import operator
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid
 
@@ -236,24 +236,23 @@ aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 class AssetCollection(object):
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
-    def __init__(self, assets_by_site, assets_by_tag, cost_calculator,
+    def __init__(self, assets_by_site, tagnames, cost_calculator,
                  time_event, time_events=''):
         self.cc = cost_calculator
         self.time_event = time_event
         self.time_events = time_events
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_collection(assets_by_site, time_event)
-        dic = dict(zip(self.array['idx'], range(len(self.array))))
-        self.tagnames = assets_by_tag.tagnames
-        self.aids_by_tag = {}
-        for tag, idxs in assets_by_tag.items():
-            aids = []
-            for idx in idxs:
-                try:
-                    aids.append(dic[idx])
-                except KeyError:  # discarded by assoc_assets_sites
-                    continue
-            self.aids_by_tag[tag] = set(aids)
+        ordinal = dict(zip(self.array['idx'], range(len(self.array))))
+        self.tagnames = tagnames
+        self.aids_by_tag = general.AccumDict(accum=set())
+        for assets in assets_by_site:
+            for ass in assets:
+                for tagname, tagvalue in zip(tagnames, ass.tagvalues):
+                    tag = '%s=%s' % (tagname, tagvalue)
+                    self.aids_by_tag[tag].add(ordinal[ass.idx])
+                self.aids_by_tag['taxonomy=%s' % ass.taxonomy].add(
+                    ordinal[ass.idx])
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
