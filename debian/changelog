@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Added a /v1/:calc_id/abort route to the engine server and Abort buttons
+    to the WebUI
+  * Fixed the seeds properly in the case of vulnerability functions with PMFs:
+    now even if the ground motion fields are all equal, the risk numbers
+    will be different since there is a different seed per each field
+  * Stored a rupture loss table in event based risk calculations
+  * Made sure that the number of effective ruptures is stored in csm_info
   * Fixed the HMTK tests to work with numpy from 1.11 to 1.14
   * Added a command `oq shell` to open an embedded (I)Python shell
   * Turned the 'realizations' output into a dynamic output

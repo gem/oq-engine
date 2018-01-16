@@ -3,8 +3,8 @@ Classical PSHA - Loss fractions QA test
 
 ============== ===================
 checksum32     2,143,483,537      
-date           2017-12-06T11:19:15
-engine_version 2.9.0-gite55e76e   
+date           2018-01-11T04:29:15
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 12, num_imts = 1
@@ -77,7 +77,7 @@ Informational data
 ------------------
 ======================= ================================================================================
 count_ruptures.received tot 7.23 KB, max_per_task 1.36 KB                                               
-count_ruptures.sent     sources 32.69 KB, srcfilter 5.81 KB, param 3.21 KB, monitor 1.87 KB, gsims 588 B
+count_ruptures.sent     sources 32.69 KB, srcfilter 7.73 KB, param 3.21 KB, monitor 1.87 KB, gsims 588 B
 hazard.input_weight     3383.1000000000004                                                              
 hazard.n_imts           1                                                                               
 hazard.n_levels         19                                                                              
@@ -112,21 +112,21 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-232       AreaSource   1,612        0.018     6         124      
+232       AreaSource   1,612        0.017     6         124      
 225       AreaSource   520          0.003     1         1        
-306       AreaSource   1,768        0.0       1         0        
-101       AreaSource   559          0.0       1         0        
-59        AreaSource   750          0.0       1         0        
-57        AreaSource   840          0.0       1         0        
+359       AreaSource   2,314        0.0       1         0        
+137       AreaSource   2,072        0.0       1         0        
 8         AreaSource   4,832        0.0       1         0        
+135       AreaSource   3,285        0.0       1         0        
+306       AreaSource   1,768        0.0       1         0        
+57        AreaSource   840          0.0       1         0        
+101       AreaSource   559          0.0       1         0        
 42        AreaSource   1,755        0.0       1         0        
 27        AreaSource   1,482        0.0       1         0        
-125       AreaSource   8,274        0.0       1         0        
-137       AreaSource   2,072        0.0       1         0        
-359       AreaSource   2,314        0.0       1         0        
-135       AreaSource   3,285        0.0       1         0        
-253       AreaSource   3,058        0.0       1         0        
+59        AreaSource   750          0.0       1         0        
 299       AreaSource   710          0.0       1         0        
+253       AreaSource   3,058        0.0       1         0        
+125       AreaSource   8,274        0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -143,22 +143,22 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.005 3.152E-04 0.005 0.006 6        
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_ruptures     0.005 0.001  0.003 0.007 6        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 1.921     0.0       1     
-managing sources               0.058     0.0       1     
-total count_ruptures           0.033     4.148     6     
-reading exposure               0.007     0.0       1     
+reading composite source model 1.883     0.0       1     
+managing sources               0.057     0.0       1     
+total count_ruptures           0.031     4.129     6     
+reading exposure               0.018     0.0       1     
 store source_info              0.003     0.0       1     
-aggregate curves               1.860E-04 0.0       6     
-saving probability maps        2.456E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+aggregate curves               1.719E-04 0.0       6     
+reading site collection        7.486E-05 0.0       1     
+saving probability maps        2.432E-05 0.0       1     
 ============================== ========= ========= ======
