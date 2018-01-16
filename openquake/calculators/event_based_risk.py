@@ -567,8 +567,8 @@ class EbrPostCalculator(base.RiskCalculator):
                     'curves-stats', return_periods=builder.return_periods,
                     stats=[encode(name) for (name, func) in stats])
             mon = self.monitor('loss maps')
-            lazy = (self.can_read_parent() and 'all_loss_ratios'
-                    in self.datastore.parent)
+            lazy = ('all_loss_ratios' in self.datastore.parent
+                    and self.can_read_parent())
             logging.info('Instantiating LossRatiosGetters')
             with self.monitor('building lrgetters', measuremem=True,
                               autoflush=True):
