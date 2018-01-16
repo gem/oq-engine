@@ -499,11 +499,9 @@ class EventBasedCalculator(base.HazardCalculator):
                         samples_by_grp[grp_id])
                     yield [getter], oq, monitor
             return
-        parent = self.can_read_parent() or self.datastore
-        U = len(parent['ruptures'])
+        U = len(self.datastore['ruptures'])
         logging.info('Found %d ruptures', U)
-        if parent is not self.datastore:  # accessible parent
-            parent.close()
+        parent = self.can_read_parent() or self.datastore
         for slc in split_in_slices(U, oq.concurrent_tasks or 1):
             getters = []
             for grp_id in rlzs_by_gsim:
@@ -588,6 +586,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 for kind, stat in hstats:
                     pmap = compute_pmap_stats(result.values(), [stat], weights)
                     self.datastore['hcurves/' + kind] = pmap
+        if self.datastore.parent:
+            self.datastore.parent.open()
         if 'gmf_data' in self.datastore:
             self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
