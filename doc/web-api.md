@@ -46,9 +46,10 @@ Parameters: None
 
 Response:
 
-    "Already terminated" if the job was already terminated
-    "No permission" if the user is not in the group with kill permission
-    "Killing oq-job-<id>" if a SIGTERM was sent to the job process
+    {'error': 'Job <id> is not running'}
+    {'error': 'User <user> has no permission to kill job <id>'}
+    {'error': 'PID for job <id> not found in the database'}
+    {'success': 'Killing job <id>'}
 
 #### GET /v1/calc/:calc_id/status
 
