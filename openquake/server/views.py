@@ -355,14 +355,13 @@ def calc_abort(request, calc_id):
                             status=403)
 
     if job.pid:  # is a spawned job
-        name = 'oq-job-%d' % job.id
         os.kill(job.pid, signal.SIGTERM)
         logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
         logs.dbcmd('set_status', job.id, 'aborted')
-        message = {'success': '%s killed' % name}
+        message = {'success': 'Killing job %d' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    message = {'error': 'PIDs for job %s not found' % job.id}
+    message = {'error': 'PID for job %s not found' % job.id}
     return HttpResponse(content=json.dumps(message), content_type=JSON)
 
 
