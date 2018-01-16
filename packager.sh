@@ -708,7 +708,7 @@ deps_list() {
     done
     IFS="$old_ifs"
 
-    echo "$out_list" | sed "s/ $GEM_DEB_PACKAGE / /g;s/^$GEM_DEB_PACKAGE //g;s/ $GEM_DEB_PACKAGE\$//g"
+    echo "$out_list" | sed "s/\b$GEM_DEB_PACKAGE\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g"
 
     return 0
 }
