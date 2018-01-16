@@ -677,7 +677,7 @@ class RiskCalculator(HazardCalculator):
                 for sid, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
-            dstore = self.can_read_parent()
+            dstore = self.can_read_parent() or self.datastore
             for block in blocks:
                 sids = numpy.array([sid for sid, _weight in block])
                 reduced_assets = assets_by_site[sids]
@@ -689,8 +689,6 @@ class RiskCalculator(HazardCalculator):
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                if dstore is None:
-                    dstore = self.datastore
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
