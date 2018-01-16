@@ -319,12 +319,14 @@ def calc_list(request, id=None):
                            allowed_users, user['acl_on'], id)
 
     response_data = []
-    for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
+    for (hc_id, owner, status, calculation_mode, is_running,
+         started_via, desc) in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
-                 is_running=bool(is_running), description=desc, url=url))
+                 is_running=bool(is_running), started_via=started_via,
+                 description=desc, url=url))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -493,7 +495,8 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
+    job_id, oq = engine.job_from_file(job_ini, user_name, 'webui',
+                                      hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
     tmp_py = writetmp(code, suffix='.py')
