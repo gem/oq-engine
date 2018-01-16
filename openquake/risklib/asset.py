@@ -124,7 +124,8 @@ class Asset(object):
                  insurance_limits=None,
                  retrofitteds=None,
                  calc=costcalculator,
-                 ordinal=None):
+                 ordinal=None,
+                 tagvalues=()):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -161,6 +162,7 @@ class Asset(object):
         self.calc = calc
         self.ordinal = ordinal
         self._cost = {}  # cache for the costs
+        self.tagvalues = tagvalues
 
     def value(self, loss_type, time_event=None):
         """
