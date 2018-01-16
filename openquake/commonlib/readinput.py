@@ -665,14 +665,12 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.units[name] = ct['unit']
     assets = []
     asset_refs = []
-    assets_by_tag = AccumDict(accum=[])
-    assets_by_tag.tagnames = ~tagNames
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, assets, asset_refs, cc, assets_by_tag)
+        area.attrib, assets, asset_refs, cc, ~tagNames)
     return exp, exposure.assets
 
 
@@ -739,14 +737,13 @@ def get_exposure(oqparam):
                 out_of_region += 1
                 continue
             tagnode = getattr(asset_node, 'tags', None)
-            assets_by_tag = exposure.assets_by_tag
             tagvalues = []
             if tagnode is not None:
                 # fill missing tagvalues with "?" and raise an error for
                 # unknown tagnames
                 with context(fname, tagnode):
                     dic = tagnode.attrib.copy()
-                    for tagname in assets_by_tag.tagnames:
+                    for tagname in exposure.tagnames:
                         try:
                             tagvalue = dic.pop(tagname)
                         except KeyError:
@@ -755,14 +752,11 @@ def get_exposure(oqparam):
                             if tagvalue in '?*':
                                 raise ValueError(
                                     'Invalid tagvalue="%s"' % tagvalue)
-                        tag = '%s=%s' % (tagname, tagvalue)
-                        assets_by_tag[tag].append(idx)
                         tagvalues.append(tagvalue)
                     if dic:
                         raise ValueError(
                             'Unknown tagname %s or <tagNames> not '
                             'specified in the exposure' % ', '.join(dic))
-            exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
             costs = asset_node.costs
         except AttributeError:
@@ -828,7 +822,7 @@ Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
                  'area', 'assets', 'asset_refs', 'cost_calculator',
-                 'assets_by_tag'])
+                 'tagnames'])
 
 
 def get_sitecol_assetcol(oqparam, exposure):
@@ -847,7 +841,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = asset.AssetCollection(
-        assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
+        assets_by_site, exposure.tagnames, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
     return sitecol, assetcol
