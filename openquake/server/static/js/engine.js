@@ -137,8 +137,9 @@
 
             events: {
                 "click .btn-show-remove": "remove_calculation",
-                "click .btn-danger": "show_modal_confirm_remove_calculation",
-                "click .btn-hide-remove": "hide_modal_confirm_remove_calculation",
+                "click .btn-show-abort": "abort_calculation",
+                "click .btn-danger": "show_modal_confirm",
+                "click .btn-hide-no": "hide_modal_confirm",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -155,7 +156,7 @@
                 this.can_be_rendered = true;
             },
 
-            show_modal_confirm_remove_calculation: function(e) {
+            show_modal_confirm: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 
@@ -166,7 +167,7 @@
                 })();
             },
 
-            hide_modal_confirm_remove_calculation: function(e) {
+            hide_modal_confirm: function(e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 
@@ -176,7 +177,6 @@
                     setTimer();
                 })();
             },
-
 
             remove_calculation: function(e) {
                 e.preventDefault();
@@ -199,15 +199,44 @@
                                         }
                                     },
                                     success: function(data, textStatus, jqXHR) {
-                                        err = data.error;
-                                        if(!err) {
-                                            err = "has been removed.";
+                                        if(data.error) {
+                                            diaerror.show(false, "Error", data.error);
+                                        } else {
+                                            diaerror.show(false, "Calculation removed", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been removed." );
+                                            view.calculations.remove([view.calculations.get(calc_id)]);
                                         }
-                                        diaerror.show(false, "Calculation removed", "The calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
-                                        view.calculations.remove([view.calculations.get(calc_id)]);
                                     }});
             },
- 
+
+            abort_calculation: function(e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                var calc_desc = $(e.target).attr('data-calc-desc');
+                var view = this;
+                diaerror.show(false, "Aborting calculation " + calc_id, "...");
+
+                var hide_or_back = (function(e) {
+                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                    setTimer();
+                })();
+
+                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/abort",
+                                    type: "POST",
+                                    error: function (jqXHR, textStatus, errorThrown) {
+                                        if (jqXHR.status == 403) {
+                                            diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
+                                        }
+                                    },
+                                    success: function(data, textStatus, jqXHR) {
+                                        if(data.error) {
+                                            diaerror.show(false, "Error", data.error );
+                                        } else {
+                                            diaerror.show(false, "Calculation aborted", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been aborted." );
+                                            calculations.fetch({reset: true})
+                                        }
+                                    }});
+            },
 
             show_traceback: function(e) {
                 e.preventDefault();
