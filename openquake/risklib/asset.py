@@ -358,7 +358,9 @@ class AssetCollection(object):
             deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
             insurance_limits={lt[self.I:]: a[lt] for lt in self.i_lim},
             retrofitteds={lt[self.R:]: a[lt] for lt in self.retro},
-            calc=self.cc, ordinal=aid)
+            calc=self.cc,
+            ordinal=aid,
+            tagvalues=())
 
     def __len__(self):
         return len(self.array)
