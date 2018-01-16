@@ -500,7 +500,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               ' ORDER BY id DESC LIMIT %d'
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
-             job.is_running, job.description) for job in jobs]
+             job.is_running, job.description, job.pid) for job in jobs]
 
 
 def update_job(db, job_id, dic):

@@ -33,6 +33,7 @@ except ImportError:
     import urlparse
 import re
 import numpy
+import psutil
 
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -318,12 +319,18 @@ def calc(request, id=None):
                            allowed_users, user['acl_on'], id)
 
     response_data = []
-    for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
+    for hc_id, owner, status, calculation_mode, is_running, desc, pid \
+            in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
+        abortable = False
+        if bool(is_running):
+            if psutil.Process(pid).username() == owner:
+                abortable = True
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
-                 is_running=bool(is_running), description=desc, url=url))
+                 is_running=bool(is_running), description=desc, url=url,
+                 abortable=abortable))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
