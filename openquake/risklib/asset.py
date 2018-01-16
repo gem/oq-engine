@@ -347,6 +347,12 @@ class AssetCollection(object):
                   if lt != 'occupants'}
         if 'occupants' in self.array.dtype.names:
             values['occupants_' + str(self.time_event)] = a['occupants']
+        dic = {}
+        for tag, aids in self.aids_by_tag.items():
+            if aid in aids:
+                tagname, tagvalue = tag.split('=')
+                dic[tagname] = tagvalue
+        tagvalues = [dic.get(tagname, '?') for tagname in self.tagnames]
         return Asset(
             a['idx'],
             self.taxonomies[aid],
@@ -360,7 +366,7 @@ class AssetCollection(object):
             retrofitteds={lt[self.R:]: a[lt] for lt in self.retro},
             calc=self.cc,
             ordinal=aid,
-            tagvalues=())
+            tagvalues=tagvalues)
 
     def __len__(self):
         return len(self.array)
