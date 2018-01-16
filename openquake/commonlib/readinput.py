@@ -710,6 +710,7 @@ def get_exposure(oqparam):
         deductibles = {}
         insurance_limits = {}
         retrofitteds = {}
+        tagvalues = []
         with context(fname, asset_node):
             asset_id = asset_node['id'].encode('utf8')
             if asset_id in asset_refs:
@@ -737,7 +738,6 @@ def get_exposure(oqparam):
                 out_of_region += 1
                 continue
             tagnode = getattr(asset_node, 'tags', None)
-            tagvalues = []
             if tagnode is not None:
                 # fill missing tagvalues with "?" and raise an error for
                 # unknown tagnames
@@ -803,7 +803,7 @@ def get_exposure(oqparam):
         area = float(asset_node.attrib.get('area', 1))
         ass = asset.Asset(idx, taxonomy, number, location, values, area,
                           deductibles, insurance_limits, retrofitteds,
-                          exposure.cost_calculator, tagvalues)
+                          exposure.cost_calculator, tagvalues=tagvalues)
         exposure.assets.append(ass)
     if region:
         logging.info('Read %d assets within the region_constraint '
