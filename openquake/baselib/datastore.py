@@ -445,7 +445,7 @@ class DataStore(collections.MutableMapping):
 
     def __len__(self):
         if self.hdf5 is None:  # closed
-            return 0
+            return 1
         return sum(1 for f in self.hdf5)
 
     def __hash__(self):
