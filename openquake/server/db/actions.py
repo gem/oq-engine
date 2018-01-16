@@ -516,18 +516,18 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
              job.is_running, job.description) for job in jobs]
 
 
-def set_relevant(db, job_id, flag):
+def update_job(db, job_id, dic):
     """
-    Set the `relevant` field of the given calculation record.
+    Update the given calculation record.
 
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         a job ID
-    :param flag:
-        flag for the field job.relevant
+    :param dic:
+        a dictionary of valid field/values for the job table
     """
-    db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
+    db('UPDATE job SET ?D WHERE id=?x', dic, job_id)
 
 
 def update_parent_child(db, parent_child):
