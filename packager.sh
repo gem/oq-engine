@@ -573,7 +573,7 @@ _pkgtest_innervm_run () {
         cd /usr/share/openquake/engine/demos
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
 
-        sudo apt-get install python-oq-engine-master python-oq-engine-worker
+        sudo apt-get install -y python-oq-engine-master python-oq-engine-worker
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 # FIXME: the big sleep below is a temporary workaround to avoid races.
