@@ -181,7 +181,8 @@ except ValueError:
     pass
 
 
-def job_from_file(cfg_file, username, hazard_calculation_id=None):
+def job_from_file(cfg_file, username, started_via='cli',
+                  hazard_calculation_id=None):
     """
     Create a full job profile from a job config file.
 
@@ -198,7 +199,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     oq = readinput.get_oqparam(cfg_file, hc_id=hazard_calculation_id)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.get_datadir(),
+                        username, datastore.get_datadir(), started_via,
                         hazard_calculation_id)
     return job_id, oq
 

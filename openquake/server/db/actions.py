@@ -78,7 +78,8 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
+def create_job(db, calc_mode, description, user_name, datadir,
+               started_via='cli', hc_id=None):
     """
     Create job for the given user, return it.
 
@@ -88,6 +89,8 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
         Calculation mode, such as classical, event_based, etc
     :param user_name:
         User who owns/started this job.
+    :param started_via:
+        What has been used to start this job ('cli', 'webui').
     :param datadir:
         Data directory of the user who owns/started this job.
     :param description:
@@ -102,6 +105,7 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
                calculation_mode=calc_mode,
                description=description,
                user_name=user_name,
+               started_via=started_via,
                hazard_calculation_id=hc_id,
                is_running=1,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
@@ -500,7 +504,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               ' ORDER BY id DESC LIMIT %d'
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
-             job.is_running, job.description) for job in jobs]
+             job.is_running, job.started_via, job.description) for job in jobs]
 
 
 def update_job(db, job_id, dic):
