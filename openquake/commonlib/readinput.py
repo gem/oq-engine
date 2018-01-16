@@ -740,6 +740,7 @@ def get_exposure(oqparam):
                 continue
             tagnode = getattr(asset_node, 'tags', None)
             assets_by_tag = exposure.assets_by_tag
+            tagvalues = []
             if tagnode is not None:
                 # fill missing tagvalues with "?" and raise an error for
                 # unknown tagnames
@@ -756,6 +757,7 @@ def get_exposure(oqparam):
                                     'Invalid tagvalue="%s"' % tagvalue)
                         tag = '%s=%s' % (tagname, tagvalue)
                         assets_by_tag[tag].append(idx)
+                        tagvalues.append(tagvalue)
                     if dic:
                         raise ValueError(
                             'Unknown tagname %s or <tagNames> not '
@@ -807,7 +809,7 @@ def get_exposure(oqparam):
         area = float(asset_node.attrib.get('area', 1))
         ass = asset.Asset(idx, taxonomy, number, location, values, area,
                           deductibles, insurance_limits, retrofitteds,
-                          exposure.cost_calculator)
+                          exposure.cost_calculator, tagvalues)
         exposure.assets.append(ass)
     if region:
         logging.info('Read %d assets within the region_constraint '
