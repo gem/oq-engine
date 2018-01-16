@@ -324,6 +324,8 @@ def calc(request, id=None):
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url))
+    if not response_data:
+        return HttpResponseNotFound()
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
