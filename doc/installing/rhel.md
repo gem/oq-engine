@@ -9,10 +9,6 @@ The OpenQuake Engine is available in the form of *rpm* binary packages for the f
 
 The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
 
-### External dependencies
-
-Installation on these distribution requires the [EPEL](https://fedoraproject.org/wiki/EPEL) repository to be configured on the target system
-
 ```bash
 sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 ```
@@ -29,6 +25,7 @@ Then to install the OpenQuake Engine and its libraries run
 ```bash
 sudo yum install python-oq-engine
 ```
+
 ### Upgrade from a previous release
 
 As soon as a new version of the OpenQuake Engine and libraries are released you can upgrade it using `yum` or a graphical package manager:
@@ -42,7 +39,6 @@ If a full upgrade is performed on the system, the OpenQuake software is upgraded
 ```bash
 sudo yum upgrade
 ```
-
 
 ## Configure the system services
 
@@ -98,8 +94,6 @@ sudo systemctl start openquake-dbserver.service
 ```
 
 To remove **all** the data produced by the OpenQuake Engine (including datastores) you must also remove `~/oqdata` in each users' home. The `reset-db` bash script is provided, as a reference, in `/usr/share/openquake/engine/utils`.
-
-
 
 If the packages have been already uninstalled, it's safe to remove `/var/lib/openquake`.
 
