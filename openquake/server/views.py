@@ -324,7 +324,7 @@ def calc_list(request, id=None):
             in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
-        if bool(is_running):
+        if is_running:
             try:
                 if psutil.Process(pid).username() == owner:
                     abortable = True
