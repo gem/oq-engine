@@ -12,8 +12,10 @@
   * Turned the 'realizations' output into a dynamic output
 
   [Matteo Nastasi]
+  * Split package from python-oq-engine to python-oq-engine,
+    python-oq-engine-master and python-oq-engine-worker
   * Implemented an API `/v1/on_same_fs` to check filesystem accessibility
-    between engine and a client application.
+    between engine and a client application
 
   [Michele Simionato]
   * Reduced the data transfer when computing the hazard curves in postprocessing
