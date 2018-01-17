@@ -508,7 +508,8 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $lxc_ip mkdir -p "repo/${GEM_DEB_PACKAGE}"
-    scp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+    scp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
+        ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
         ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
         ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources*  ${GEM_BUILD_ROOT}/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
@@ -550,46 +551,6 @@ _pkgtest_innervm_run () {
 
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # use celery to run the demos
-        # wait for celeryd startup time
-        ssh $lxc_ip "
-export GEM_SET_DEBUG=$GEM_SET_DEBUG
-if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
-    export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
-    set -x
-fi
-set -e
-export PYTHONPATH=\"$OPT_LIBS_PATH\"
-# FIXME: the big sleep below is a temporary workaround to avoid races.
-#        No better solution because we will abandon supervisord at all early
-sleep 30
-sudo supervisorctl status
-sudo supervisorctl start openquake-celery
-celery_wait() {
-    local cw_nloop=\"\$1\" cw_ret cw_i
-
-    if [ ! -f $celery_bin ]; then
-        echo \"ERROR: no Celery available\"
-        return 1
-    fi
-
-    for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\"
-        if echo \"\$cw_ret\" | grep -iq '^error:'; then
-            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
-                return 1
-            fi
-        else
-            return 0
-        fi
-        sleep 1
-    done
-
-    return 1
-}
-
-celery_wait $GEM_MAXLOOP"
-
         # run one risk demo (event based risk)
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
@@ -609,10 +570,46 @@ celery_wait $GEM_MAXLOOP"
             set -x
         fi
 
-        /usr/share/openquake/engine/utils/celery-status 
         cd /usr/share/openquake/engine/demos
+        OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
+
+        sudo apt-get install -y python-oq-engine-master python-oq-engine-worker
+
+export PYTHONPATH=\"$OPT_LIBS_PATH\"
+# FIXME: the big sleep below is a temporary workaround to avoid races.
+#        No better solution because we will abandon supervisord at all early
+celery_wait() {
+    local cw_nloop=\"\$1\" cw_ret cw_i
+
+    if [ ! -f $celery_bin ]; then
+        echo \"ERROR: no Celery available\"
+        return 1
+    fi
+
+    for cw_i in \$(seq 1 \$cw_nloop); do
+        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\" || true
+        if echo \"\$cw_ret\" | grep -iq '^error:'; then
+            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
+                return 1
+            fi
+        else
+            return 0
+        fi
+        sleep 1
+    done
+
+    return 1
+}
+
+sleep 30
+sudo supervisorctl status
+sudo supervisorctl start openquake-celery
+
+celery_wait $GEM_MAXLOOP
+
+        /usr/share/openquake/engine/utils/celery-status
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
-        
+
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
         echo \"Exporting output #1\"
@@ -711,7 +708,7 @@ deps_list() {
     done
     IFS="$old_ifs"
 
-    echo "$out_list"
+    echo "$out_list" | sed "s/\b$GEM_DEB_PACKAGE\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g"
 
     return 0
 }
@@ -1003,7 +1000,7 @@ pkgtest_run () {
     #
     #  run build of package
     if [ -d ${GEM_BUILD_ROOT} ]; then
-        if [ ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ]; then
+        if [ ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb -o ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb -o  ! -f ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb]; then
             echo "'${GEM_BUILD_ROOT}' directory already exists but .deb file package was not found"
             return 1
         fi
@@ -1083,7 +1080,8 @@ EOF
         # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
         if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" ]; then
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "master" ]; then
-                cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+                cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
+                   ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
                     ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 PKG_COMMIT="$(git rev-parse HEAD | cut -c 1-7)"
@@ -1093,7 +1091,8 @@ EOF
             fi
         fi
 
-        cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+        cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
+           ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
             ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
             ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources* ${GEM_BUILD_ROOT}/Release* "${repo_tmpdir}"
         if [ "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.${commit}" ]; then
@@ -1359,7 +1358,13 @@ GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
 mksafedir "$GEM_BUILD_PKG"
 GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
 mksafedir "$GEM_BUILD_EXTR"
-cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb  $GEM_BUILD_PKG
+cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
+    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
-dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .
-dpkg -e $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb
+for pkg in python-oq-engine python-oq-engine-master python-oq-engine-worker; do
+    mksafedir "$pkg"
+    cd "$pkg"
+    dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .
+    dpkg -e $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb
+    cd -
+done
