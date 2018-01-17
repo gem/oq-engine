@@ -178,10 +178,10 @@ class EngineServerTestCase(unittest.TestCase):
         job_id = self.postzip('classical.zip')
         self.wait()
 
-        # check that we get the expected outputs
+        # check that we get the expected 5 outputs
+        # fullreport, hcurves, hmaps, realizations, sourcegroups
         results = self.get('%s/results' % job_id)
-        self.assertEqual(['fullreport', 'hcurves', 'hmaps', 'realizations',
-                          'sourcegroups'], [r['name'] for r in results])
+        self.assertEqual(len(results), 5)
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
