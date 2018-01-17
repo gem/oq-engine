@@ -27,6 +27,9 @@ To start a calculation, having the input zip file, select the `Run a Calculation
 
 ![WebUI start a calculation](../img/webui-run.gif)
 
+Each running calculation can be stopped with the `Abort` button; this  will interrupt the calculation immediately and revoke any pending task for that specific job.
+Note: only a calculation started from the WebUI can be stopped via the `Abort` button; to stop a calculation started by the command line interface the `oq abort` command must be used instead.
+
 ### Watch the console log
 
 It is possible to watch the log from a running calculation
