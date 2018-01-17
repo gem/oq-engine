@@ -4,11 +4,11 @@ The OpenQuake Engine **nightly builds** are available in the form of *deb* binar
 - **Ubuntu 16.04** LTS (Xenial)
 - **Ubuntu 14.04** LTS (Trusty) 
 
-Packages *may* work on Ubuntu derivatives (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See the [FAQ](../faq.md#unsupported-operating-systems)
+Packages *may* work on Ubuntu derivatives (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See the **[FAQ](../faq.md#unsupported-operating-systems)**.
 
 The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
 
-## Install packages from the OpenQuake knightly repository
+## Install packages from the OpenQuake nightly repository
 
 The following commands add the nightly builds package repository:
 ```bash

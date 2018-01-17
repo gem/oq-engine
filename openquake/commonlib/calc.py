@@ -594,7 +594,7 @@ class RuptureSerializer(object):
         pass
 
 
-def get_ruptures_by_grp(dstore, slice_=slice(None), rup_id=None):
+def get_ruptures_by_grp(dstore, slice_=slice(None)):
     """
     Extracts the ruptures of the given grp_id
     """
@@ -605,8 +605,22 @@ def get_ruptures_by_grp(dstore, slice_=slice(None), rup_id=None):
     with mock.patch(
             'openquake.hazardlib.geo.surface.PlanarSurface.'
             'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
-        return general.groupby(
-            RuptureGetter(dstore, slice_), operator.attrgetter('grp_id'))
+        rgetter = RuptureGetter(dstore, slice_)
+        return general.groupby(rgetter, operator.attrgetter('grp_id'))
+
+
+def get_maxloss_rupture(dstore, loss_type):
+    """
+    :param dstore: a DataStore instance
+    :param loss_type: a loss type string
+    :returns:
+        EBRupture instance corresponding to the maximum loss for the
+        given loss type
+    """
+    lti = dstore['oqparam'].lti[loss_type]
+    ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
+    [ebr] = RuptureGetter(dstore, slice(ridx, ridx + 1))
+    return ebr
 
 
 class RuptureGetter(object):
@@ -616,13 +630,11 @@ class RuptureGetter(object):
     :param dstore: a DataStore instance
     :param slice_: a slice of ruptures (default: all)
     :param grp_id: the group ID of the ruptures (default: all)
-    :param rup_id: a specific rupture (default: all)
     """
-    def __init__(self, dstore, slice_=slice(None), grp_id=None, rup_id=None):
+    def __init__(self, dstore, slice_=slice(None), grp_id=None):
         self.dstore = dstore
         self.slice = slice_
         self.grp_id = grp_id
-        self.rup_id = rup_id
 
     def __iter__(self):
         self.dstore.open()  # if needed
@@ -630,8 +642,6 @@ class RuptureGetter(object):
         grp_trt = self.dstore['csm_info'].grp_trt()
         recs = self.dstore['ruptures'][self.slice]
         for rec in recs:
-            if self.rup_id is not None and self.rup_id != rec['serial']:
-                continue
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
             grp_id = evs['grp_id'][0]
             if self.grp_id is not None and self.grp_id != grp_id:

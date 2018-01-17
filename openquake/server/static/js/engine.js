@@ -15,10 +15,10 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
 
-(function($, Backbone, _) {
+(function ($, Backbone, _) {
     var calculation_table;
 
-    var progressHandlingFunction = function(progress) {
+    var progressHandlingFunction = function (progress) {
         var percent = progress.loaded / progress.total * 100;
         $('.bar').css('width', percent + '%');
         if (percent == 100) {
@@ -36,7 +36,7 @@
                   {
                       var pleaseWaitDiv = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 0%;"></div></div></div></div>');
                       return {
-                          show: function(msg, progress) {
+                          show: function (msg, progress) {
                               $('h1', pleaseWaitDiv).text(msg);
                               if (progress) {
                                   progressHandlingFunction({loaded: 0, total: 1});
@@ -69,13 +69,13 @@
                   </div>\
                 </div>\
 </div>');
-                      errorDiv.bind('hide', function() { calculation_table.hide_log(); });
+                      errorDiv.bind('hide', function () { calculation_table.hide_log(); });
                       return {
-                          getdiv: function() {
+                          getdiv: function () {
                               return errorDiv;
                           },
 
-                          show: function(is_large, title, msg) {
+                          show: function (is_large, title, msg) {
                               if (title != null) {
                                   $('.modal-title', errorDiv).html(title);
                               }
@@ -91,14 +91,14 @@
                               errorDiv.modal('show');
                           },
 
-                          append: function(title, msg) {
+                          append: function (title, msg) {
                               if (title != null) {
                                   $('.modal-title', errorDiv).html(title);
                               }
                               $( msg ).appendTo( $('.modal-body-pre', errorDiv) );
                           },
 
-                          scroll_to_bottom: function(ctx) {
+                          scroll_to_bottom: function (ctx) {
                               ctx.scrollTop(ctx[0].scrollHeight);
                           },
 
@@ -120,7 +120,7 @@
             logLines: 0,
             logTimeout: null,
 
-            initialize: function(options) {
+            initialize: function (options) {
 
                 /* whatever happens to any calculation, re-render the table */
                 _.bindAll(this, 'render');
@@ -137,8 +137,9 @@
 
             events: {
                 "click .btn-show-remove": "remove_calculation",
-                "click .btn-danger": "show_modal_confirm_remove_calculation",
-                "click .btn-hide-remove": "hide_modal_confirm_remove_calculation",
+                "click .btn-show-abort": "abort_calculation",
+                "click .btn-danger": "show_modal_confirm",
+                "click .btn-hide-no": "hide_modal_confirm",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -146,46 +147,45 @@
             },
 
             /* When an input dialog is opened, it is very important to not re-render the table */
-            on_run_risk_clicked: function(e) {
+            on_run_risk_clicked: function (e) {
                 /* if a file input dialog has been opened do not refresh the calc table */
                 this.can_be_rendered = false;
             },
 
-            on_run_risk_queued: function(e) {
+            on_run_risk_queued: function (e) {
                 this.can_be_rendered = true;
             },
 
-            show_modal_confirm_remove_calculation: function(e) {
+            show_modal_confirm: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 
-                var show_or_back = (function(e) {
+                var show_or_back = (function (e) {
                     this.conf_show = $('#confirmDialog' + calc_id).show();
                     this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
                     closeTimer();
                 })();
             },
 
-            hide_modal_confirm_remove_calculation: function(e) {
+            hide_modal_confirm: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 
-                var hide_or_back = (function(e) {
+                var hide_or_back = (function (e) {
                     this.conf_hide = $('#confirmDialog' + calc_id).hide();
                     this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
                     setTimer();
                 })();
             },
 
-
-            remove_calculation: function(e) {
+            remove_calculation: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var calc_desc = $(e.target).attr('data-calc-desc');
                 var view = this;
                 diaerror.show(false, "Removing calculation " + calc_id, "...");
 
-                var hide_or_back = (function(e) {
+                var hide_or_back = (function (e) {
                     this.conf_hide = $('#confirmDialog' + calc_id).hide();
                     this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
                     setTimer();
@@ -198,18 +198,47 @@
                                             diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
                                         }
                                     },
-                                    success: function(data, textStatus, jqXHR) {
-                                        err = data.error;
-                                        if(!err) {
-                                            err = "has been removed.";
+                                    success: function (data, textStatus, jqXHR) {
+                                        if(data.error) {
+                                            diaerror.show(false, "Error", data.error);
+                                        } else {
+                                            diaerror.show(false, "Calculation removed", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been removed." );
+                                            view.calculations.remove([view.calculations.get(calc_id)]);
                                         }
-                                        diaerror.show(false, "Calculation removed", "The calculation:<br><b>(" + calc_id + ") " + calc_desc + "</b> " + err );
-                                        view.calculations.remove([view.calculations.get(calc_id)]);
                                     }});
             },
- 
 
-            show_traceback: function(e) {
+            abort_calculation: function (e) {
+                e.preventDefault();
+                var calc_id = $(e.target).attr('data-calc-id');
+                var calc_desc = $(e.target).attr('data-calc-desc');
+                var view = this;
+                diaerror.show(false, "Aborting calculation " + calc_id, "...");
+
+                var hide_or_back = (function (e) {
+                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
+                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
+                    setTimer();
+                })();
+
+                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/abort",
+                                    type: "POST",
+                                    error: function (jqXHR, textStatus, errorThrown) {
+                                        if (jqXHR.status == 403) {
+                                            diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
+                                        }
+                                    },
+                                    success: function (data, textStatus, jqXHR) {
+                                        if(data.error) {
+                                            diaerror.show(false, "Error", data.error );
+                                        } else {
+                                            diaerror.show(false, "Calculation aborted", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been aborted." );
+                                            calculations.fetch({reset: true})
+                                        }
+                                    }});
+            },
+
+            show_traceback: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/traceback",
@@ -241,7 +270,7 @@
                                     }});
             },
 
-            _show_log_priv: function(is_new, calc_id, is_running, from) {
+            _show_log_priv: function (is_new, calc_id, is_running, from) {
                 var was_running = is_running;
 
                 // TO CHECK hide_log method enable console.log and take a look
@@ -342,7 +371,7 @@
                                       }});
             },
 
-            show_log: function(e) {
+            show_log: function (e) {
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var is_running = ($(e.target).attr('is-running') == "true");
@@ -358,7 +387,7 @@
                 this._show_log_priv(true, calc_id, is_running, "0");
             },
 
-            hide_log: function(e) {
+            hide_log: function (e) {
                 if (this.logTimeout != null) {
                     window.clearTimeout(this.logTimeout);
                     this.logTimeout = null;
@@ -370,7 +399,7 @@
                 $('#diaerror_scroll_enabled_box').hide();
             },
 
-            render: function() {
+            render: function () {
                 if (!this.can_be_rendered) {
                     return;
                 };
@@ -396,7 +425,7 @@
     var refresh_calcs;
 
     function setTimer() {
-        refresh_calcs = setInterval(function() { calculations.fetch({reset: true}) }, 3000);
+        refresh_calcs = setInterval(function () { calculations.fetch({reset: true}) }, 3000);
     }
 
     function closeTimer() {
@@ -405,13 +434,13 @@
 
     /* classic event management */
     $(document).ready(
-        function() {
+        function () {
             calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
             setTimer();
 
             ajax = $.ajax({url: gem_oq_server_url + "/engine_latest_version",
-                           async: true}).done(function(data) {
+                           async: true}).done(function (data) {
                                                  /* None is returned in case of an error,
                                                     but we don't care about errors here */
                                                  if(data && data != 'None') {
@@ -422,26 +451,26 @@
             /* XXX. Reset the input file value to ensure the change event
                will be always triggered */
             $(document).on("click", 'input[name=archive]',
-                           function(e) { this.value = null; });
+                           function (e) { this.value = null; });
             $(document).on("change", 'input[name=archive]',
-                           function(e) {
+                           function (e) {
                                dialog.show('Uploading calculation', true);
                                var input = $(e.target);
                                var form = input.parents('form')[0];
 
                                $(form).ajaxSubmit(
                                    {
-                                    xhr: function() {  // custom xhr to add progress bar management
+                                    xhr: function () {  // custom xhr to add progress bar management
                                         var myXhr = $.ajaxSettings.xhr();
                                         if(myXhr.upload){ // if upload property exists
                                             myXhr.upload.addEventListener('progress', progressHandlingFunction, false);
                                         }
                                         return myXhr;
                                     },
-                                    success: function(data) {
+                                    success: function (data) {
                                         calculations.add(new Calculation(data), {at: 0});
                                     },
-                                    error: function(xhr) {
+                                    error: function (xhr) {
                                         dialog.hide();
                                         var s, out, data = $.parseJSON(xhr.responseText);
                                         var out = "";
@@ -457,7 +486,7 @@
                            });
 
             $(document).on('hidden.bs.modal', 'div[id^=traceback-]',
-                           function(e) {
+                           function (e) {
                                setTimer();
                            });
 
