@@ -1,0 +1,69 @@
+#!/user/bin/env python
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2018, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import csv
+from openquake.baselib import sap
+from openquake.hazardlib import nrml
+from openquake.commonlib import readinput
+
+
+@sap.Script
+def expo2csv(job_ini):
+    oq = readinput.get_oqparam(job_ini)
+    exposure = readinput.get_exposure(oq)
+    rows = []
+    header = ['asset_ref', 'number', 'area', 'taxonomy', 'lon', 'lat']
+    for costname in exposure.cost_types['name']:
+        if costname != 'occupants':
+            header.append(costname)
+            header.append(costname + '-deductible')
+            header.append(costname + '-insured_limit')
+    header.extend(exposure.time_events)
+    header.extend(exposure.tagnames)
+    for asset, asset_ref in zip(exposure.assets, exposure.asset_refs):
+        row = [asset_ref.decode('utf8'), asset.number, asset.area,
+               asset.taxonomy, asset.location[0], asset.location[1]]
+        for costname in exposure.cost_types['name']:
+            if costname != 'occupants':
+                row.append(asset.values[costname])
+                row.append(asset.deductibles[costname])
+                row.append(asset.insurance_limits[costname])
+        for time_event in exposure.time_events:
+            row.append(asset.value(time_event))
+        for tagname, tagvalue in zip(exposure.tagnames, asset.tagvalues):
+            row.append(tagvalue)
+        rows.append(row)
+    csvname = oq.inputs['exposure'].replace('.xml', '.csv')
+    with open(csvname, 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for row in rows:
+            writer.writerow(row)
+
+    head = nrml.read(oq.inputs['exposure'], stop='assets')
+    xmlname = oq.inputs['exposure'].replace('.xml', '-header.xml')
+    head[0].assets['file'] = os.path.basename(csvname)
+    with open(xmlname, 'wb') as f:
+        nrml.write(head, f)
+expo2csv.arg('job_ini', 'path to the job.ini file')
+
+
+if __name__ == '__main__':
+    expo2csv.callfunc()

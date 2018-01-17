@@ -470,7 +470,7 @@ class AssetCollection(object):
                         except ValueError:  # no - in field
                             name, lt = 'value', field
                         # the line below retrieve one of `deductibles`,
-                        # `insured_limits` or `retrofitteds` ("s" suffix)
+                        # `insurance_limits` or `retrofitteds` ("s" suffix)
                         value = getattr(asset, name + 's')[lt]
                     record[field] = value
         return assetcol
