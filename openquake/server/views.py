@@ -326,7 +326,8 @@ def calc_list(request, id=None):
         abortable = False
         if is_running:
             try:
-                if psutil.Process(pid).username() == owner:
+                if (psutil.Process(pid).username() ==
+                        psutil.Process(os.getpid()).username()):
                     abortable = True
             except psutil.NoSuchProcess:
                 pass
