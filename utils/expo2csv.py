@@ -68,7 +68,7 @@ def expo2csv(job_ini):
         head = nrml.read(oq.inputs['exposure'], stop='assets')
         xmlname = oq.inputs['exposure'].replace('.xml', '-header.xml')
         print('Saving %s' % xmlname)
-        head[0].assets['file'] = os.path.basename(csvname)
+        head[0].assets.text = os.path.basename(csvname)
         with open(xmlname, 'wb') as f:
             nrml.write(head, f)
     print(mon)
