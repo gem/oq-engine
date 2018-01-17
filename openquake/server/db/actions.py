@@ -243,7 +243,7 @@ DISPLAY_NAME = {
     'damages_by_event': 'Aggregate Event Damages',
     'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
-    'damages': 'Asset Damage Distribution',
+    'damages-rlzs': 'Asset Damage Distribution',
     'avg_losses': 'Average Asset Losses',
     'loss_curves': 'Asset Loss Curves',
     'loss_maps': 'Asset Loss Maps',
