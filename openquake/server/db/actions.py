@@ -21,7 +21,8 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import datastore
+from openquake.baselib import datastore, general
+from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
@@ -237,7 +238,38 @@ def get_outputs(db, job_id):
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
 
-DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset')
+DISPLAY_NAME = {
+    'gmf_data': 'Ground Motion Fields',
+    'dmg_by_asset': 'Average Asset Damages',
+    #'damages_by_asset': 'Average Asset Damages',
+    #'damages_by_event': 'Aggregate Event Damages',
+    'losses_by_asset': 'Average Asset Losses',
+    'losses_by_event': 'Aggregate Event Losses',
+    'damages-rlzs': 'Asset Damage Distribution',
+    'avg_losses-rlzs': 'Average Asset Losses',
+    'avg_losses-stats': 'Average Asset Losses Statistics',
+    'loss_curves': 'Asset Loss Curves',
+    'loss_curves-stats': 'Asset Loss Curves Statistics',
+    'loss_maps-rlzs': 'Asset Loss Maps',
+    'loss_maps-rlzs': 'Asset Loss Maps Statistics',
+    'agg_curves-rlzs': 'Aggregate Loss Curves',
+    'agg_loss_table': 'Aggregate Loss Table',
+    'agglosses-rlzs': 'Aggregate Asset Losses',
+    'bcr-rlzs': 'Benefit Cost Ratios',
+    'sourcegroups': 'Seismic Source Groups',
+    'ruptures': 'Earthquake Ruptures',
+    'hcurves': 'Hazard Curves',
+    'hmaps': 'Hazard Maps',
+    'uhs': 'Uniform Hazard Spectra',
+    'disagg': 'Disaggregation Outputs',
+    'realizations': 'Realizations',
+    'fullreport': 'Full Report',
+}
+
+# sanity check, all display name keys must be exportable
+dic = general.groupby(export, operator.itemgetter(0))
+for key in DISPLAY_NAME:
+    assert key in dic, key
 
 
 def create_outputs(db, job_id, dskeys):
