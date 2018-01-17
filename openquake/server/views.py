@@ -324,8 +324,11 @@ def calc(request, id=None):
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if bool(is_running):
-            if psutil.Process(pid).username() == owner:
-                abortable = True
+            try:
+                if psutil.Process(pid).username() == owner:
+                    abortable = True
+            except psutil.NoSuchProcess:
+                pass
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
