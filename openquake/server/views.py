@@ -25,6 +25,7 @@ import inspect
 import tempfile
 import subprocess
 import threading
+import signal
 import zlib
 try:
     import urllib.parse as urlparse
@@ -32,6 +33,7 @@ except ImportError:
     import urlparse
 import re
 import numpy
+import psutil
 
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -301,7 +303,8 @@ def calc_info(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc(request, id=None):
+def calc_list(request, id=None):
+    # view associated to the endpoints /v1/calc/list and /v1/calc/:id/status
     """
     Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
@@ -317,12 +320,22 @@ def calc(request, id=None):
                            allowed_users, user['acl_on'], id)
 
     response_data = []
-    for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
+    for hc_id, owner, status, calculation_mode, is_running, desc, pid \
+            in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
+        abortable = False
+        if is_running:
+            try:
+                if (psutil.Process(pid).username() ==
+                        psutil.Process(os.getpid()).username()):
+                    abortable = True
+            except psutil.NoSuchProcess:
+                pass
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
-                 is_running=bool(is_running), description=desc, url=url))
+                 is_running=bool(is_running), description=desc, url=url,
+                 abortable=abortable))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -330,6 +343,42 @@ def calc(request, id=None):
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_abort(request, calc_id):
+    """
+    Abort the given calculation, it is it running
+    """
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        message = {'error': 'Unknown job %s' % calc_id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    if job.status not in ('executing', 'running'):
+        message = {'error': 'Job %s is not running' % job.id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    user = utils.get_user_data(request)
+    info = logs.dbcmd('calc_info', calc_id)
+    allowed_users = user['group_members'] or [user['name']]
+    if user['acl_on'] and info['user_name'] not in allowed_users:
+        message = {'error': ('User %s has no permission to abort job %s' %
+                             (info['user_name'], job.id))}
+        return HttpResponse(content=json.dumps(message), content_type=JSON,
+                            status=403)
+
+    if job.pid:  # is a spawned job
+        os.kill(job.pid, signal.SIGTERM)
+        logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
+        logs.dbcmd('set_status', job.id, 'aborted')
+        message = {'success': 'Killing job %d' % job.id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    message = {'error': 'PID for job %s not found' % job.id}
+    return HttpResponse(content=json.dumps(message), content_type=JSON)
 
 
 @csrf_exempt
@@ -428,7 +477,7 @@ def run_calc(request):
 
     user = utils.get_user_data(request)
     try:
-        job_id, _pid = submit_job(einfo[0], user['name'], hazard_job_id)
+        job_id, pid = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -436,7 +485,7 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(job_id=job_id, status='created')
+        response_data = dict(job_id=job_id, status='created', pid=pid)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
@@ -468,6 +517,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     threading.Thread(target=popen.wait).start()
+    logs.dbcmd('update_job', job_id, {'pid': popen.pid})
     return job_id, popen.pid
 
 
