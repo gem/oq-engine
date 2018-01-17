@@ -26,6 +26,9 @@ from openquake.commonlib import readinput
 
 @sap.Script
 def expo2csv(job_ini):
+    """
+    Convert an exposure in XML format into CSV format
+    """
     oq = readinput.get_oqparam(job_ini)
     exposure = readinput.get_exposure(oq)
     rows = []
@@ -50,15 +53,20 @@ def expo2csv(job_ini):
         for tagname, tagvalue in zip(exposure.tagnames, asset.tagvalues):
             row.append(tagvalue)
         rows.append(row)
+
+    # save exposure data as csv
     csvname = oq.inputs['exposure'].replace('.xml', '.csv')
+    print('Saving %s' % csvname)
     with open(csvname, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         for row in rows:
             writer.writerow(row)
 
+    # save exposure header as xml
     head = nrml.read(oq.inputs['exposure'], stop='assets')
     xmlname = oq.inputs['exposure'].replace('.xml', '-header.xml')
+    print('Saving %s' % xmlname)
     head[0].assets['file'] = os.path.basename(csvname)
     with open(xmlname, 'wb') as f:
         nrml.write(head, f)
