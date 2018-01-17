@@ -296,6 +296,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Set the attributes nbytes
         """
+        # sanity check that eff_ruptures have been set, i.e. are not -1
+        csm_info = self.datastore['csm_info']
+        for sm in csm_info.source_models:
+            for sg in sm.src_groups:
+                assert sg.eff_ruptures != -1, sg
+
         for key in self.datastore:
             self.datastore.set_nbytes(key)
         self.datastore.flush()
@@ -613,8 +619,9 @@ class HazardCalculator(BaseCalculator):
                     array[i][name] = value
             self.datastore['source_info'] = array
             infos.clear()
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, acc), self.oqparam.sm_lt_path)
+        self.csm.info.update_eff_ruptures(
+            partial(self.count_eff_ruptures, acc))
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         self.datastore['csm_info'] = self.csm.info
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that
@@ -670,7 +677,7 @@ class RiskCalculator(HazardCalculator):
                 for sid, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
-            dstore = self.can_read_parent()
+            dstore = self.can_read_parent() or self.datastore
             for block in blocks:
                 sids = numpy.array([sid for sid, _weight in block])
                 reduced_assets = assets_by_site[sids]
@@ -682,8 +689,6 @@ class RiskCalculator(HazardCalculator):
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                if dstore is None:
-                    dstore = self.datastore
                 if kind == 'poe':  # hcurves, shape (R, N)
                     getter = calc.PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
