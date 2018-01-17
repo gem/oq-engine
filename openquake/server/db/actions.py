@@ -21,7 +21,8 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import datastore
+from openquake.baselib import datastore, general
+from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
@@ -245,10 +246,10 @@ DISPLAY_NAME = {
     'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
     'damages-rlzs': 'Asset Damage Distribution',
-    'avg_losses': 'Average Asset Losses',
+    'avg_losses-rlzs': 'Average Asset Losses',
     'loss_curves': 'Asset Loss Curves',
-    'loss_maps': 'Asset Loss Maps',
-    'agg_curves': 'Aggregate Loss Curves',
+    'loss_maps-rlzs': 'Asset Loss Maps',
+    'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_loss_table': 'Aggregate Loss Table',
     'agglosses-rlzs': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
@@ -258,10 +259,14 @@ DISPLAY_NAME = {
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
-    'disagg-stats': 'Disaggregation Statistical Outputs',
     'realizations': 'Realizations',
     'fullreport': 'Full Report',
 }
+
+# sanity check, all display name keys must be exportable
+dic = general.groupby(export, operator.itemgetter(0))
+for key in DISPLAY_NAME:
+    assert key in dic, key
 
 
 def create_outputs(db, job_id, dskeys):
