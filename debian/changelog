@@ -2,11 +2,23 @@
   * RPM packages moved to Python 3.5
 
   [Michele Simionato]
+  * Improved the display names for the risk outputs
+  * Added a /v1/:calc_id/abort route to the engine server and Abort buttons
+    to the WebUI
+  * Fixed the seeds properly in the case of vulnerability functions with PMFs:
+    now even if the ground motion fields are all equal, the risk numbers
+    will be different since there is a different seed per each field
+  * Stored a rupture loss table in event based risk calculations
+  * Made sure that the number of effective ruptures is stored in csm_info
+  * Fixed the HMTK tests to work with numpy from 1.11 to 1.14
+  * Added a command `oq shell` to open an embedded (I)Python shell
   * Turned the 'realizations' output into a dynamic output
 
   [Matteo Nastasi]
+  * Split package from python-oq-engine to python-oq-engine,
+    python-oq-engine-master and python-oq-engine-worker
   * Implemented an API `/v1/on_same_fs` to check filesystem accessibility
-    between engine and a client application.
+    between engine and a client application
 
   [Michele Simionato]
   * Reduced the data transfer when computing the hazard curves in postprocessing

@@ -1,4 +1,4 @@
-# smlt_path=b1,gsimlt_path=b1,imt=PGA,investigation_time=50.0,lon=10.1,lat=40.1,poe=0.02,iml=0.547689595695
+# smlt_path=b1,gsimlt_path=b1,imt=PGA,investigation_time=50.0,lon=10.1,lat=40.1,poe=0.02,iml=5.4768960e-01
 Mag,Dist,poe
 5.50000E+00,1.25000E+01,8.95763E-03
 5.50000E+00,3.75000E+01,0.00000E+00
