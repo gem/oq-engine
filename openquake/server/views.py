@@ -352,8 +352,12 @@ def calc_abort(request, calc_id):
     Abort the given calculation, it is it running
     """
     job = logs.dbcmd('get_job', calc_id)
-    message = {'error': 'Job %s is not running' % job.id}
-    if job is None or job.status not in ('executing', 'running'):
+    if job is None:
+        message = {'error': 'Unknown job %s' % calc_id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    if job.status not in ('executing', 'running'):
+        message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
     user = utils.get_user_data(request)
