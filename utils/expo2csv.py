@@ -46,8 +46,8 @@ def expo2csv(job_ini):
         for costname in exposure.cost_types['name']:
             if costname != 'occupants':
                 row.append(asset.values[costname])
-                row.append(asset.deductibles[costname])
-                row.append(asset.insurance_limits[costname])
+                row.append(asset.deductibles.get(costname, '?'))
+                row.append(asset.insurance_limits.get(costname, '?'))
         for time_event in exposure.time_events:
             row.append(asset.value(time_event))
         for tagname, tagvalue in zip(exposure.tagnames, asset.tagvalues):
