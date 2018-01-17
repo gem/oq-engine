@@ -239,8 +239,9 @@ def get_outputs(db, job_id):
 
 DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
-    'damages_by_asset': 'Average Asset Damages',
-    'damages_by_event': 'Aggregate Event Damages',
+    'dmg_by_asset': 'Average Asset Damages',
+    #'damages_by_asset': 'Average Asset Damages',
+    #'damages_by_event': 'Aggregate Event Damages',
     'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
     'damages-rlzs': 'Asset Damage Distribution',
@@ -256,8 +257,10 @@ DISPLAY_NAME = {
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
-    'disagg': 'Disaggregation',
+    'disagg': 'Disaggregation Outputs',
+    'disagg-stats': 'Disaggregation Statistical Outputs',
     'realizations': 'Realizations',
+    'fullreport': 'Full Report',
 }
 
 
