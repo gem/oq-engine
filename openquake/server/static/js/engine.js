@@ -26,13 +26,13 @@
         }
     };
 
-    var htmlEscape = function (record) {
+    var htmlEscape = function(record) {
         // record[3] is the log message
         record[3] = record[3].replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         return record
     };
  
-    var dialog = (function ()
+    var dialog = (function()
                   {
                       var pleaseWaitDiv = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 0%;"></div></div></div></div>');
                       return {
@@ -45,13 +45,13 @@
                               }
                               pleaseWaitDiv.modal('show');
                           },
-                          hide: function () {
+                          hide: function() {
                               pleaseWaitDiv.modal('hide');
                           }
                       };
                   })();
 
-    var diaerror = (function ()
+    var diaerror = (function()
                   {
                       var errorDiv = $('<div id="errorDialog" class="modal hide" data-keyboard="true" tabindex="-1">\
                 <div class="modal-dialog">\
@@ -102,7 +102,7 @@
                               ctx.scrollTop(ctx[0].scrollHeight);
                           },
 
-                          hide: function () {
+                          hide: function() {
                               errorDiv.modal('hide');
                           }
                       };
@@ -193,7 +193,7 @@
                 
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/remove",
                                     type: "POST",
-                                    error: function (jqXHR, textStatus, errorThrown) {
+                                    error: function(jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 403) {
                                             diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
                                         }
@@ -223,7 +223,7 @@
 
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/abort",
                                     type: "POST",
-                                    error: function (jqXHR, textStatus, errorThrown) {
+                                    error: function(jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 403) {
                                             diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
                                         }
@@ -242,7 +242,7 @@
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/traceback",
-                                    error: function (jqXHR, textStatus, errorThrown) {
+                                    error: function(jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 404) {
                                             diaerror.show(false, "Calculation " + calc_id + " not found.");
                                         }
@@ -251,7 +251,7 @@
                                         }
                                         // alert("Error: " + textStatus);
                                     },
-                                    success: function (data, textStatus, jqXHR) {
+                                    success: function(data, textStatus, jqXHR) {
                                         if (data.length == 0) {
                                             diaerror.show(true, "Traceback not found for calculation " + calc_id, []);
                                         }
@@ -288,7 +288,7 @@
                 var obj = this;
 
                 this.logXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/log/" + from + ":",
-                                      error: function (jqXHR, textStatus, errorThrown) {
+                                      error: function(jqXHR, textStatus, errorThrown) {
                                           if (jqXHR.status == 404) {
                                               diaerror.show(true, "Log of calculation " + calc_id + " not found.");
                                           }
@@ -297,7 +297,7 @@
                                           }
                                           obj.logIsNew = false;
                                       },
-                                      success: function (data, textStatus, jqXHR) {
+                                      success: function(data, textStatus, jqXHR) {
                                           var delay = 250;
 
                                           if (is_new) {
@@ -313,7 +313,7 @@
                                                       delay = 1000;
 
                                                       ajax = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/status",
-                                                                     async: false}).done(function (data) { status = data.is_running; });
+                                                                     async: false}).done(function(data) { status = data.is_running; });
                                                       if (status !== true) {
                                                           is_running = false;
                                                       }
