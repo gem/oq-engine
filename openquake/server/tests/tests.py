@@ -201,13 +201,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_abort(self):
-        raise unittest.SkipTest('abort is tricky')
-        job_id = self.postzip('archive_ok.zip')
-        time.sleep(1)  # give time
-        url = '/v1/calc/%s/abort' % job_id
-        resp = self.c.post(url)
+        resp = self.c.post('/v1/calc/0/abort')  # 0 is a non-existing job
         print(resp.content.decode('utf8'))
-        self.wait()
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
