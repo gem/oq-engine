@@ -303,7 +303,8 @@ def calc_info(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc(request, id=None):
+def calc_list(request, id=None):
+    # view associated to the endpoints /v1/calc/list and /v1/calc/:id/status
     """
     Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
