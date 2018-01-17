@@ -19,7 +19,7 @@
 
 import os
 import csv
-from openquake.baselib import sap
+from openquake.baselib import sap, performance
 from openquake.hazardlib import nrml
 from openquake.commonlib import readinput
 
@@ -54,22 +54,25 @@ def expo2csv(job_ini):
             row.append(tagvalue)
         rows.append(row)
 
-    # save exposure data as csv
-    csvname = oq.inputs['exposure'].replace('.xml', '.csv')
-    print('Saving %s' % csvname)
-    with open(csvname, 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        for row in rows:
-            writer.writerow(row)
+    with performance.Monitor('expo2csv') as mon:
+        # save exposure data as csv
+        csvname = oq.inputs['exposure'].replace('.xml', '.csv')
+        print('Saving %s' % csvname)
+        with open(csvname, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(header)
+            for row in rows:
+                writer.writerow(row)
 
-    # save exposure header as xml
-    head = nrml.read(oq.inputs['exposure'], stop='assets')
-    xmlname = oq.inputs['exposure'].replace('.xml', '-header.xml')
-    print('Saving %s' % xmlname)
-    head[0].assets['file'] = os.path.basename(csvname)
-    with open(xmlname, 'wb') as f:
-        nrml.write(head, f)
+        # save exposure header as xml
+        head = nrml.read(oq.inputs['exposure'], stop='assets')
+        xmlname = oq.inputs['exposure'].replace('.xml', '-header.xml')
+        print('Saving %s' % xmlname)
+        head[0].assets['file'] = os.path.basename(csvname)
+        with open(xmlname, 'wb') as f:
+            nrml.write(head, f)
+    print(mon)
+
 expo2csv.arg('job_ini', 'path to the job.ini file')
 
 
