@@ -635,16 +635,22 @@ class RuptureGetter(object):
         self.dstore = dstore
         self.slice = slice(None) if slice_ is None else slice_
         self.grp_id = grp_id
+        if grp_id is not None and slice_ is None:
+            arr = self.dstore['ruptures']['grp_id']
+            self.slice_, = numpy.where(arr == self.grp_id)
+
+    def split(self, block_size):
+        """
+        Yield RuptureGetters containing at max block_size ruptures
+        """
+        for block in general.block_splitter(self.splice_, block_size):
+            yield self.__class__(self.dstore, block, self.grp_id)
 
     def __iter__(self):
         self.dstore.open()  # if needed
         oq = self.dstore['oqparam']
         grp_trt = self.dstore['csm_info'].grp_trt()
-        if self.grp_id is not None:
-            arr = self.dstore['ruptures'].value
-            ruptures = arr[arr['grp_id'] == self.grp_id][self.slice]
-        else:
-            ruptures = self.dstore['ruptures'][self.slice]
+        ruptures = self.dstore['ruptures'][self.slice]
         for rec in ruptures:
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
             grp_id = evs['grp_id'][0]
