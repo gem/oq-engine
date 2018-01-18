@@ -669,7 +669,6 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
         assets_by_site = self.assetcol.assets_by_site()
-        self.tagmask = self.assetcol.tagmask()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             sid_weight_pairs = [
@@ -685,7 +684,6 @@ class RiskCalculator(HazardCalculator):
                 reduced_eps = {}
                 for assets in reduced_assets:
                     for ass in assets:
-                        ass.tagmask = self.tagmask[ass.ordinal]
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
