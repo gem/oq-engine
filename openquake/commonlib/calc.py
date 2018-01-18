@@ -631,9 +631,9 @@ class RuptureGetter(object):
     :param slice_: a slice of ruptures (default: all)
     :param grp_id: the group ID of the ruptures (default: all)
     """
-    def __init__(self, dstore, slice_=slice(None), grp_id=None):
+    def __init__(self, dstore, slice_=None, grp_id=None):
         self.dstore = dstore
-        self.slice = slice_
+        self.slice = slice(None) if slice_ is None else slice_
         self.grp_id = grp_id
 
     def __iter__(self):
