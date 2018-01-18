@@ -641,7 +641,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-
+    tagnames = ~tagNames
+    
     # read the cost types and make some check
     cost_types = []
     for ct in conversions.costTypes:
@@ -656,8 +657,9 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True)
     deductible_is_absolute = deductible.attrib.get('isAbsolute', True)
     time_events = set()
+    tagi = {name: i for i, name in enumerate(tagnames)}
     cc = asset.CostCalculator(
-        {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute)
+        {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute, tagi)
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
@@ -670,7 +672,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, assets, asset_refs, cc, ~tagNames)
+        area.attrib, assets, asset_refs, cc, tagnames)
     return exp, exposure.assets
 
 
