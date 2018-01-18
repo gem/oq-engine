@@ -640,8 +640,12 @@ class RuptureGetter(object):
         self.dstore.open()  # if needed
         oq = self.dstore['oqparam']
         grp_trt = self.dstore['csm_info'].grp_trt()
-        recs = self.dstore['ruptures'][self.slice]
-        for rec in recs:
+        if self.grp_id is not None:
+            arr = self.dstore['ruptures'].value
+            ruptures = arr[arr['grp_id'] == self.grp_id][self.slice]
+        else:
+            ruptures = self.dstore['ruptures'][self.slice]
+        for rec in ruptures:
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
             grp_id = evs['grp_id'][0]
             if self.grp_id is not None and self.grp_id != grp_id:
