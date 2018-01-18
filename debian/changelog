@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Exported the parameter ses_per_logic_tree_path in the ruptures.csv file
   * Improved the display names for the risk outputs
   * Added a /v1/:calc_id/abort route to the engine server and Abort buttons
     to the WebUI
