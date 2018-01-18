@@ -637,7 +637,7 @@ class RuptureGetter(object):
         self.grp_id = grp_id
         if grp_id is not None and slice_ is None:
             arr = self.dstore['ruptures']['grp_id']
-            self.slice_, = numpy.where(arr == self.grp_id)
+            self.slice = arr == self.grp_id
 
     def split(self, block_size):
         """
