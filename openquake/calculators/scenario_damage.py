@@ -122,7 +122,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         tagidx = {t: i for i, t in enumerate(tags)}
         for asset in self.assetcol:
             asset.tagmask = numpy.array([False] * len(tags))
-            for tag, aids in self.aids_by_tag.items():
+            for tag, aids in self.assetcol.aids_by_tag.items():
                 if asset.ordinal in aids:
                     asset.tagmask[tagidx[tag]] = True
 
