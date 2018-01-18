@@ -33,6 +33,7 @@ except ImportError:
     import urlparse
 import re
 import numpy
+import psutil
 
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -319,12 +320,22 @@ def calc_list(request, id=None):
                            allowed_users, user['acl_on'], id)
 
     response_data = []
-    for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
+    for hc_id, owner, status, calculation_mode, is_running, desc, pid \
+            in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
+        abortable = False
+        if is_running:
+            try:
+                if (psutil.Process(pid).username() ==
+                        psutil.Process(os.getpid()).username()):
+                    abortable = True
+            except psutil.NoSuchProcess:
+                pass
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
-                 is_running=bool(is_running), description=desc, url=url))
+                 is_running=bool(is_running), description=desc, url=url,
+                 abortable=abortable))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -342,8 +353,12 @@ def calc_abort(request, calc_id):
     Abort the given calculation, it is it running
     """
     job = logs.dbcmd('get_job', calc_id)
-    message = {'error': 'Job %s is not running' % job.id}
-    if job is None or job.status not in ('executing', 'running'):
+    if job is None:
+        message = {'error': 'Unknown job %s' % calc_id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    if job.status not in ('executing', 'running'):
+        message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
     user = utils.get_user_data(request)
