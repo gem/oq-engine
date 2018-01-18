@@ -253,6 +253,7 @@ DISPLAY_NAME = {
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-rlzs': 'Asset Loss Maps Statistics',
     'agg_curves-rlzs': 'Aggregate Loss Curves',
+    'agg_curves-stats': 'Aggregate Loss Curves Statistics',
     'agg_loss_table': 'Aggregate Loss Table',
     'agglosses-rlzs': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
