@@ -57,19 +57,21 @@ import numpy as np
 from math import log
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hmtk.faults.mfd.anderson_luco_arbitrary import (Type1RecurrenceModel,
-    Type2RecurrenceModel, Type3RecurrenceModel, AndersonLucoArbitrary)
+                                                               Type2RecurrenceModel, Type3RecurrenceModel, AndersonLucoArbitrary)
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 AL83_FIG2_MODEL = np.genfromtxt(os.path.join(BASE_DATA_PATH,
-        'anderson_luco_arbitrary_results.dat'))
+                                             'anderson_luco_arbitrary_results.dat'))
 AL83_INC_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH,
-        'anderson_luco_arbitrary_incremental.dat'))
+                                           'anderson_luco_arbitrary_incremental.dat'))
+
 
 class TestType1Recurrence(unittest.TestCase):
     '''
     Tests the Recurrence function of the Anderson & Luco (1983) arbitrary
     type 1 model
     '''
+
     def setUp(self):
         '''
 
@@ -93,9 +95,8 @@ class TestType1Recurrence(unittest.TestCase):
         expected_results = AL83_FIG2_MODEL[:, 1]
         for iloc, mag in enumerate(self.magnitudes):
             self.assertAlmostEqual(expected_results[iloc],
-                self.model.cumulative_value(moment_slip, self.mmax, mag,
-                self.bbar, self.dbar), 7)
-
+                                   self.model.cumulative_value(moment_slip, self.mmax, mag,
+                                                               self.bbar, self.dbar), 7)
 
 
 class TestType2Recurrence(unittest.TestCase):
@@ -103,6 +104,7 @@ class TestType2Recurrence(unittest.TestCase):
     Tests the Recurrence function of the Anderson & Luco (1983) arbitrary
     type 2 model
     '''
+
     def setUp(self):
         '''
 
@@ -126,8 +128,8 @@ class TestType2Recurrence(unittest.TestCase):
         expected_results = AL83_FIG2_MODEL[:, 2]
         for iloc, mag in enumerate(self.magnitudes):
             self.assertAlmostEqual(expected_results[iloc],
-                self.model.cumulative_value(moment_slip, self.mmax, mag,
-                self.bbar, self.dbar), 7)
+                                   self.model.cumulative_value(moment_slip, self.mmax, mag,
+                                                               self.bbar, self.dbar), 7)
 
 
 class TestType3Recurrence(unittest.TestCase):
@@ -135,6 +137,7 @@ class TestType3Recurrence(unittest.TestCase):
     Tests the Recurrence function of the Anderson & Luco (1983) arbitrary
     type 3 model
     '''
+
     def setUp(self):
         '''
 
@@ -158,8 +161,8 @@ class TestType3Recurrence(unittest.TestCase):
         expected_results = AL83_FIG2_MODEL[:, 3]
         for iloc, mag in enumerate(self.magnitudes):
             self.assertAlmostEqual(expected_results[iloc],
-                self.model.cumulative_value(moment_slip, self.mmax, mag,
-                self.bbar, self.dbar), 7)
+                                   self.model.cumulative_value(moment_slip, self.mmax, mag,
+                                                               self.bbar, self.dbar), 7)
 
 
 class TestAndersonLucoArbitrary(unittest.TestCase):
@@ -167,17 +170,17 @@ class TestAndersonLucoArbitrary(unittest.TestCase):
     Tests the Anderson & Luco Arbitrary models
     :class openquake.hmtk.faults.mfd.anderson_luco_arbitrary.AndersonLucoArbitrary
     '''
+
     def setUp(self):
         self.model = AndersonLucoArbitrary()
         self.config = {'Model_Type': 'First',
-                      'MFD_spacing': 0.1,
-                      'Model_Weight': 1.0,
-                      'Minimum_Magnitude': 5.0,
-                      'Maximum_Magnitude': None,
-                      'b_value': [1.0, 0.1]}
+                       'MFD_spacing': 0.1,
+                       'Model_Weight': 1.0,
+                       'Minimum_Magnitude': 5.0,
+                       'Maximum_Magnitude': None,
+                       'b_value': [1.0, 0.1]}
 
         self.msr = WC1994()
-
 
     def test_case_setup(self):
         '''
@@ -235,11 +238,11 @@ class TestAndersonLucoArbitrary(unittest.TestCase):
             self.model = AndersonLucoArbitrary()
 
             self.config = {'Model_Type': model_type,
-                          'MFD_spacing': 0.1,
-                          'Model_Weight': 1.0,
-                          'Minimum_Magnitude': 5.0,
-                          'Maximum_Magnitude': None,
-                          'b_value': [1.0, 0.1]}
+                           'MFD_spacing': 0.1,
+                           'Model_Weight': 1.0,
+                           'Minimum_Magnitude': 5.0,
+                           'Maximum_Magnitude': None,
+                           'b_value': [1.0, 0.1]}
             self.model.setUp(self.config)
             self.model.get_mmax(self.config, self.msr, 0., 30000.)
             test_output = self.model.get_mfd(20., 30000.)

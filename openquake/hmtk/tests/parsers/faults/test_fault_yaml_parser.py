@@ -54,7 +54,7 @@ import unittest
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hmtk.faults.fault_geometries import (SimpleFaultGeometry,
-                                          ComplexFaultGeometry)
+                                                    ComplexFaultGeometry)
 from openquake.hmtk.parsers.faults.fault_yaml_parser import (
     weight_list_to_tuple,
     parse_tect_region_dict_to_tuples,
@@ -76,6 +76,7 @@ class TestYamlParserPeripherals(unittest.TestCase):
     '''
     Class to test all the peripherical functions to the Yaml parser
     '''
+
     def setUp(self):
         self.data = None
 
@@ -118,9 +119,9 @@ class TestYamlParserPeripherals(unittest.TestCase):
                            'Magnitude_Scaling_Relation': [(WC1994(), 1.0)]}
         output = parse_tect_region_dict_to_tuples([self.data])
         self.assertAlmostEqual(expected_output['Shear_Modulus'][0][0],
-                                output[0]['Shear_Modulus'][0][0])
+                               output[0]['Shear_Modulus'][0][0])
         self.assertAlmostEqual(expected_output['Shear_Modulus'][0][1],
-                                output[0]['Shear_Modulus'][0][1])
+                               output[0]['Shear_Modulus'][0][1])
         self.assertAlmostEqual(
             expected_output['Displacement_Length_Ratio'][0][0],
             output[0]['Displacement_Length_Ratio'][0][0])
@@ -159,6 +160,7 @@ class TestFaultYamlParser(unittest.TestCase):
     '''
     Main test class of the Fault Yaml Parser function
     '''
+
     def setUp(self):
         self.parser = None
         self.fault_geometry = None
