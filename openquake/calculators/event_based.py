@@ -175,10 +175,6 @@ def _build_eb_ruptures(
                 rup, indices, numpy.array(events, calc.event_dt), serial)
 
 
-def _count(ruptures):
-    return sum(ebr.multiplicity for ebr in ruptures)
-
-
 def get_events(ebruptures):
     """
     Extract an array of dtype stored_event_dt from a list of EBRuptures
@@ -306,8 +302,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Save the SES collection
         """
         self.rupser.close()
-        num_events = sum(_count(ruptures) for ruptures in result.values())
-        num_ruptures = sum(len(ruptures) for ruptures in result.values())
+        n_events = set_counts(self.datastore, 'events')
+        n_ruptures = set_counts(self.datastore, 'ruptures')
+        num_events = sum(n_events.values())
+        num_ruptures = sum(n_ruptures.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
@@ -319,6 +317,19 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             numpy.random.seed(self.oqparam.ses_seed)
             set_random_years(self.datastore,
                              int(self.oqparam.investigation_time))
+
+
+def set_counts(dstore, dsetname):
+    """
+    :param dstore: a DataStore instance
+    :dsetname: name of dataset with a field `grp_id`
+    :returns: a dictionary grp_id > counts
+    """
+    groups = dstore[dsetname]['grp_id']
+    unique, counts = numpy.unique(groups, return_counts=True)
+    dic = dict(zip(unique, counts))
+    dstore.set_attrs(dsetname, by_grp=sorted(dic.items()))
+    return dic
 
 
 def set_random_years(dstore, investigation_time):
