@@ -35,7 +35,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
     UCERFSource, get_composite_source_model)
-# FIXME: the counting of effective ruptures has to be revised completely
+# FIXME: the counting of effective ruptures has to be revised
 
 
 def convert_UCERFSource(self, node):
