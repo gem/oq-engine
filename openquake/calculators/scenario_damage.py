@@ -81,7 +81,7 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
             for a, fraction in enumerate(damages):
                 asset = outputs.assets[a]
                 damages = fraction * asset.number
-                t = asset.tagmask
+                t = asset.tagmask(param['tags'])
                 result['d_tag'][t, r, l] += damages  # shape (E, D)
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
@@ -118,13 +118,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
         self.riskinputs = self.build_riskinputs('gmf', eids=eids)
-        self.param['tags'] = tags = self.assetcol.tags()
-        tagidx = {t: i for i, t in enumerate(tags)}
-        for asset in self.assetcol:
-            asset.tagmask = numpy.array([False] * len(tags))
-            for tag, aids in self.assetcol.aids_by_tag.items():
-                if asset.ordinal in aids:
-                    asset.tagmask[tagidx[tag]] = True
+        self.param['tags'] = self.assetcol.tags()
 
     def post_execute(self, result):
         """
