@@ -68,7 +68,7 @@ def create_stepp_plot(model, filename=None, filetype='png', dpi=300, ax=None):
 
     :param model:
         Completed Stepp (1972) analysis as instance of :class:
-        'openquake.hmtk.seismicity.completeness.comp_stepp_1971.Stepp1971'
+        `openquake.hmtk.seismicity.completeness.comp_stepp_1971.Stepp1971`
     :param string filename:
         Name of output file
     :param string filetype:
