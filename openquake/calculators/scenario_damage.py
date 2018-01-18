@@ -118,7 +118,13 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
         self.riskinputs = self.build_riskinputs('gmf', eids=eids)
-        self.param['tags'] = self.assetcol.tags()
+        self.param['tags'] = tags = self.assetcol.tags()
+        tagidx = {t: i for i, t in enumerate(tags)}
+        for asset in self.assetcol:
+            asset.tagmask = numpy.array([False] * len(tags))
+            for tag, aids in self.assetcol.aids_by_tag.items():
+                if asset.ordinal in aids:
+                    asset.tagmask[tagidx[tag]] = True
 
     def post_execute(self, result):
         """

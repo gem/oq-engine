@@ -116,7 +116,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         loss_dt = self.oqparam.loss_dt()
         I = self.oqparam.insured_losses + 1
         with self.monitor('saving outputs', autoflush=True):
-            A, T = self.tagmask.shape
+            A = len(self.assetcol)
 
             # agg losses
             res = result['agg']

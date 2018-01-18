@@ -319,17 +319,6 @@ class AssetCollection(object):
                 vals[i][lt] = asset.value(lt, self.time_event)
         return vals
 
-    def tagmask(self):
-        """
-        :returns: array of booleans of shape (A, T)
-        """
-        tags = self.tags()
-        tagidx = {t: i for i, t in enumerate(tags)}
-        mask = numpy.zeros((len(self), len(tags)), bool)
-        for tag, aids in self.aids_by_tag.items():
-            mask[sorted(aids), tagidx[tag]] = True
-        return mask
-
     def get_tax_idx(self):
         """
         :returns: list of tag indices corresponding to taxonomies
