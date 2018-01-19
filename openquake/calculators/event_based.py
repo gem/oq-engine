@@ -302,20 +302,18 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Save the SES collection
         """
         self.rupser.close()
-        n_events = set_counts(self.datastore, 'events')
-        n_ruptures = set_counts(self.datastore, 'ruptures')
-        num_events = sum(n_events.values())
-        num_ruptures = sum(n_ruptures.values())
+        num_events = sum(set_counts(self.datastore, 'events').values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
                 'small or the maximum_distance is too small')
+        num_ruptures = sum(len(ruptures) for ruptures in result.values())
         logging.info('Setting %d event years on %d ruptures',
                      num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             numpy.random.seed(self.oqparam.ses_seed)
-            set_random_years(self.datastore,
+            set_random_years(self.datastore, 'events',
                              int(self.oqparam.investigation_time))
 
 
@@ -332,19 +330,19 @@ def set_counts(dstore, dsetname):
     return dic
 
 
-def set_random_years(dstore, investigation_time):
+def set_random_years(dstore, name, investigation_time):
     """
     Sort the `events` array and attach year labels sensitive to the
     SES ordinal and the investigation time.
     """
-    events = dstore['events'].value
+    events = dstore[name].value
     eids = numpy.sort(events['eid'])
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(eids, years))
     for event in events:
         idx = event['ses'] - 1  # starts from 0
         event['year'] = idx * investigation_time + year_of[event['eid']]
-    dstore['events'] = events
+    dstore[name] = events
 
 
 # ######################## GMF calculator ############################ #
