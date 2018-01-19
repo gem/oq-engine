@@ -332,13 +332,12 @@ def set_counts(dstore, dsetname):
 
 def set_random_years(dstore, name, investigation_time):
     """
-    Sort the `events` array and attach year labels sensitive to the
+    Set on the `events` dataset year labels sensitive to the
     SES ordinal and the investigation time.
     """
     events = dstore[name].value
-    eids = numpy.sort(events['eid'])
     years = numpy.random.choice(investigation_time, len(events)) + 1
-    year_of = dict(zip(eids, years))
+    year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
     for event in events:
         idx = event['ses'] - 1  # starts from 0
         event['year'] = idx * investigation_time + year_of[event['eid']]
