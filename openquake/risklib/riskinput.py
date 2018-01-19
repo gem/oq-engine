@@ -480,8 +480,8 @@ class RiskInput(object):
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.by_site = not isinstance(hazard_getter, GmfGetter)
-        self.weight = len(self.aids) if self.by_site else sum(
-            sr.weight for sr in hazard_getter.ebruptures)
+        self.weight = len(self.aids) if self.by_site else len(
+            hazard_getter.ebruptures)
 
     @property
     def imt_taxonomies(self):
