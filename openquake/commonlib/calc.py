@@ -651,13 +651,15 @@ class RuptureGetter(object):
         Yield RuptureGetters containing at max block_size ruptures and with
         an attribute .n_events counting the total number of events
         """
+        getters = []
         indices, = self.mask.nonzero()
         for block in general.block_splitter(indices, block_size):
             idxs = list(block)  # not numpy.int_(block)!
             rgetter = self.__class__(self.dstore, idxs, self.grp_id)
             rup = self.dstore['ruptures'][idxs]
             rgetter.n_events = (rup['eidx2'] - rup['eidx1']).sum()
-            yield rgetter
+            getters.append(rgetter)
+        return getters
 
     def __iter__(self):
         self.dstore.open()  # if needed
@@ -717,7 +719,8 @@ class RuptureGetter(object):
                 return len(self.dstore['ruptures'])
             else:
                 return self.mask.stop - self.mask.start
-        elif self.mask.dtype is numpy.dtype(bool):  # is boolean mask
-            return self.mask.sum()
-        else:  # is an array of indices
+        elif isinstance(self.mask, list):
+            # NB: h5py wants lists, not arrays of indices
             return len(self.mask)
+        else:  # is a boolean mask
+            return self.mask.sum()
