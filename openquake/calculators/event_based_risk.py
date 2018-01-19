@@ -216,15 +216,17 @@ class EbriskCalculator(base.RiskCalculator):
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
-            if self.ruptures_by_grp is not None:
-                ruptures = self.ruptures_by_grp.get(grp_id, [])
-            else:
-                ruptures = sorted(
-                    calc.RuptureGetter(self.datastore, grp_id=grp_id),
-                    key=operator.attrgetter('serial'))
+            ruptures = self.ruptures_by_grp.get(grp_id, [])
             num_ruptures[grp_id] = len(ruptures)
-            for rupts in block_splitter(ruptures, ruptures_per_block):
-                n_events = sum(ebr.multiplicity for ebr in rupts)
+            if hasattr(ruptures, 'split'):  # RuptureGetter
+                blocks = ruptures.split(ruptures_per_block)
+            else:
+                blocks = block_splitter(ruptures, ruptures_per_block)
+            for rupts in blocks:
+                if hasattr(rupts, 'n_events'):
+                    n_events = rupts.n_events
+                else:
+                    n_events = sum(ebr.multiplicity for ebr in rupts)
                 eps = self.get_eps(self.start, self.start + n_events)
                 num_events += n_events
                 self.start += n_events
@@ -301,7 +303,8 @@ class EbriskCalculator(base.RiskCalculator):
                 self.ruptures_by_grp[grp].sort(
                     key=operator.attrgetter('serial'))
         else:
-            self.ruptures_by_grp = None
+            self.ruptures_by_grp = calc.RuptureGetter.from_(
+                self.datastore.parent)
         num_rlzs = 0
         allres = []
         source_models = self.csm_info.source_models
