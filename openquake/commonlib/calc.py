@@ -632,7 +632,7 @@ class RuptureGetter(object):
     :param grp_id: the group ID of the ruptures (default: all)
     """
     @classmethod
-    def from_array(cls, dstore):
+    def from_(cls, dstore):
         """
         :returns: a dictionary grp_id -> RuptureGetter instance
         """
@@ -648,18 +648,24 @@ class RuptureGetter(object):
 
     def split(self, block_size):
         """
-        Yield RuptureGetters containing at max block_size ruptures
+        Yield RuptureGetters containing at max block_size ruptures and with
+        an attribute .n_events counting the total number of events
         """
-        for block in general.block_splitter(self.splice_, block_size):
-            yield self.__class__(self.dstore, block, self.grp_id)
+        for block in general.block_splitter(self.mask, block_size):
+            mask = numpy.bool_(block)
+            rgetter = self.__class__(self.dstore, mask, self.grp_id)
+            rup = self.dstore['ruptures'][mask]
+            rgetter.n_events = (rup['eidx2'] - rup['eidx1']).sum()
+            yield rgetter
 
     def __iter__(self):
         self.dstore.open()  # if needed
         oq = self.dstore['oqparam']
         grp_trt = self.dstore['csm_info'].grp_trt()
         ruptures = self.dstore['ruptures'][self.mask]
-        ruptures.sort(order='serial')
-        for rec in ruptures:
+        # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
+        # <ufunc 'greater'> returned a result with an error set
+        for rec in numpy.sort(ruptures, order='serial'):
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
@@ -700,3 +706,12 @@ class RuptureGetter(object):
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
             yield ebr
+
+    def __len__(self):
+        if hasattr(self.mask, 'start'):  # is a slice
+            if self.mask.start is None and self.mask.stop is None:
+                return len(self.dstore['ruptures'])
+            else:
+                return self.mask.stop - self.mask.start
+        else:  # is an array of booleans
+            return self.mask.sum()
