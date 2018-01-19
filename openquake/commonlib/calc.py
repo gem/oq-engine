@@ -631,13 +631,20 @@ class RuptureGetter(object):
     :param slice_: a slice of ruptures (default: all)
     :param grp_id: the group ID of the ruptures (default: all)
     """
-    def __init__(self, dstore, slice_=None, grp_id=None):
+    @classmethod
+    def from_array(cls, dstore):
+        """
+        :returns: a dictionary grp_id -> RuptureGetter instance
+        """
+        array = dstore['ruptures'].value
+        grp_ids = numpy.unique(array['grp_id'])
+        return {grp_id: cls(dstore, array['grp_id'] == grp_id)
+                for grp_id in grp_ids}
+
+    def __init__(self, dstore, mask=None, grp_id=None):
         self.dstore = dstore
-        self.slice = slice(None) if slice_ is None else slice_
+        self.mask = slice(None) if mask is None else mask
         self.grp_id = grp_id
-        if grp_id is not None and slice_ is None:
-            arr = self.dstore['ruptures']['grp_id']
-            self.slice = arr == self.grp_id
 
     def split(self, block_size):
         """
@@ -650,11 +657,11 @@ class RuptureGetter(object):
         self.dstore.open()  # if needed
         oq = self.dstore['oqparam']
         grp_trt = self.dstore['csm_info'].grp_trt()
-        ruptures = self.dstore['ruptures'][self.slice]
+        ruptures = self.dstore['ruptures'][self.mask]
+        ruptures.sort(order='serial')
         for rec in ruptures:
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
-            grp_id = evs['grp_id'][0]
-            if self.grp_id is not None and self.grp_id != grp_id:
+            if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
             mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
             rupture_cls, surface_cls, source_cls = BaseRupture.types[
@@ -672,7 +679,7 @@ class RuptureGetter(object):
             rupture.seed = rec['seed']
             rupture.hypocenter = geo.Point(*rec['hypo'])
             rupture.occurrence_rate = rec['occurrence_rate']
-            rupture.tectonic_region_type = grp_trt[grp_id]
+            rupture.tectonic_region_type = grp_trt[rec['grp_id']]
             pmfx = rec['pmfx']
             if pmfx != -1:
                 rupture.pmf = self.dstore['pmfs'][pmfx]
