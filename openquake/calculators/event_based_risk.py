@@ -214,7 +214,6 @@ class EbriskCalculator(base.RiskCalculator):
         num_events = 0
         num_ruptures = {}
         for grp_id in grp_ids:
-            logging.info('Reading ruptures for group %d', grp_id)
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
             ruptures = self.ruptures_by_grp.get(grp_id, [])
@@ -236,10 +235,13 @@ class EbriskCalculator(base.RiskCalculator):
                     self.oqparam.maximum_distance, trunc_level, correl_model,
                     samples)
                 ri = riskinput.RiskInput(getter, self.assets_by_site, eps)
+                if hasattr(rupts, 'n_events'):  # reading from dastore, slow
+                    logging.info('Building %s', ri)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
         self.vals = self.assetcol.values()
         taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
+        self.datastore.parent.close()
         ires = parallel.Starmap(
             event_based_risk, allargs, name=taskname).submit_all()
         ires.num_ruptures = num_ruptures
