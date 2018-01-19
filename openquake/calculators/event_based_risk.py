@@ -214,6 +214,7 @@ class EbriskCalculator(base.RiskCalculator):
         num_events = 0
         num_ruptures = {}
         for grp_id in grp_ids:
+            logging.info('Reading ruptures for group %d', grp_id)
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
             ruptures = self.ruptures_by_grp.get(grp_id, [])

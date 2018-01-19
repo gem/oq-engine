@@ -666,7 +666,10 @@ class RuptureGetter(object):
         ruptures = self.dstore['ruptures'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
         # <ufunc 'greater'> returned a result with an error set
-        for rec in numpy.sort(ruptures, order='serial'):
+        # this is way I am sorting in a less elegant way
+        data = sorted((ser, idx) for idx, ser in enumerate(ruptures['serial']))
+        for serial, ridx in data:
+            rec = ruptures[ridx]
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
@@ -702,7 +705,7 @@ class RuptureGetter(object):
                 m = mesh[0]
                 rupture.surface.mesh = RectangularMesh(
                     m['lon'], m['lat'], m['depth'])
-            ebr = EBRupture(rupture, (), evs, rec['serial'])
+            ebr = EBRupture(rupture, (), evs, serial)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
