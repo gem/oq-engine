@@ -651,10 +651,11 @@ class RuptureGetter(object):
         Yield RuptureGetters containing at max block_size ruptures and with
         an attribute .n_events counting the total number of events
         """
-        for block in general.block_splitter(self.mask, block_size):
-            mask = numpy.bool_(block)
-            rgetter = self.__class__(self.dstore, mask, self.grp_id)
-            rup = self.dstore['ruptures'][mask]
+        indices, = self.mask.nonzero()
+        for block in general.block_splitter(indices, block_size):
+            idxs = list(block)  # not numpy.int_(block)!
+            rgetter = self.__class__(self.dstore, idxs, self.grp_id)
+            rup = self.dstore['ruptures'][idxs]
             rgetter.n_events = (rup['eidx2'] - rup['eidx1']).sum()
             yield rgetter
 
@@ -713,5 +714,7 @@ class RuptureGetter(object):
                 return len(self.dstore['ruptures'])
             else:
                 return self.mask.stop - self.mask.start
-        else:  # is an array of booleans
+        elif self.mask.dtype is numpy.dtype(bool):  # is boolean mask
             return self.mask.sum()
+        else:  # is an array of indices
+            return len(self.mask)
