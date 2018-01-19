@@ -296,6 +296,7 @@ class EbriskCalculator(base.RiskCalculator):
                          'calculation_mode = event_based')
 
         if 'all_loss_ratios' in self.datastore:
+            # event based risk calculation already done, postprocess
             EbrPostCalculator(self).run(close=False)
             return
 
@@ -306,7 +307,7 @@ class EbriskCalculator(base.RiskCalculator):
             for grp in self.ruptures_by_grp:
                 self.ruptures_by_grp[grp].sort(
                     key=operator.attrgetter('serial'))
-        else:
+        else:  # there is a parent calculation
             self.ruptures_by_grp = calc.RuptureGetter.from_(
                 self.datastore.parent)
         num_rlzs = 0
@@ -373,6 +374,7 @@ class EbriskCalculator(base.RiskCalculator):
                     events = res.events_by_grp[grp_id]
                     self.datastore.extend('events', events)
             num_events[res.sm_id] += res.num_events
+        self.datastore.open()  # if it was closed
         if 'all_loss_ratios' in self.datastore:
             self.datastore['all_loss_ratios/num_losses'] = self.num_losses
             self.datastore.set_attrs(
