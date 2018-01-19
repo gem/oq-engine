@@ -219,10 +219,10 @@ class EbriskCalculator(base.RiskCalculator):
             ruptures = self.ruptures_by_grp.get(grp_id, [])
             num_ruptures[grp_id] = len(ruptures)
             if hasattr(ruptures, 'split'):  # RuptureGetter
-                logging.info('Reading ruptures, group #%d', grp_id)
+                logging.info('Reading ruptures group #%d', grp_id)
                 with self.monitor('reading ruptures', measuremem=True):
                     blocks = ruptures.split(ruptures_per_block)
-            else:
+            else:  # a simple list of ruptures
                 blocks = block_splitter(ruptures, ruptures_per_block)
             for rupts in blocks:
                 if hasattr(rupts, 'n_events'):
@@ -241,7 +241,7 @@ class EbriskCalculator(base.RiskCalculator):
 
         self.vals = self.assetcol.values()
         taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
-        if self.datastore.parent:
+        if self.datastore.parent:  # avoid hdf5 fork issues
             self.datastore.parent.close()
         ires = parallel.Starmap(
             event_based_risk, allargs, name=taskname).submit_all()
@@ -374,7 +374,6 @@ class EbriskCalculator(base.RiskCalculator):
                     events = res.events_by_grp[grp_id]
                     self.datastore.extend('events', events)
             num_events[res.sm_id] += res.num_events
-        self.datastore.open()  # if it was closed
         if 'all_loss_ratios' in self.datastore:
             self.datastore['all_loss_ratios/num_losses'] = self.num_losses
             self.datastore.set_attrs(

@@ -175,7 +175,7 @@ class DataStore(collections.MutableMapping):
         self.hdf5path = self.calc_dir + '.hdf5'
         if mode == 'r' and not os.path.exists(self.hdf5path):
             raise IOError('File not found: %s' % self.hdf5path)
-        self.hdf5 = ()  # so that in self.hdf5 is valid
+        self.hdf5 = ()  # so that `key in self.hdf5` is valid
         self.open()
 
     def open(self):
