@@ -638,7 +638,7 @@ class RuptureGetter(object):
         """
         array = dstore['ruptures'].value
         grp_ids = numpy.unique(array['grp_id'])
-        return {grp_id: cls(dstore, array['grp_id'] == grp_id)
+        return {grp_id: cls(dstore, array['grp_id'] == grp_id, grp_id)
                 for grp_id in grp_ids}
 
     def __init__(self, dstore, mask=None, grp_id=None):
@@ -648,8 +648,14 @@ class RuptureGetter(object):
 
     def split(self, block_size):
         """
-        Yield RuptureGetters containing at max block_size ruptures and with
-        an attribute .n_events counting the total number of events
+        Split a RuptureGetter in multiple getters, each one containing a block
+        of ruptures.
+
+        :param block_size:
+            maximum length of the rupture blocks
+        :returns:
+            `RuptureGetters` containing `block_size` ruptures and with
+            an attribute `.n_events` counting the total number of events
         """
         getters = []
         indices, = self.mask.nonzero()
@@ -668,7 +674,7 @@ class RuptureGetter(object):
         ruptures = self.dstore['ruptures'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
         # <ufunc 'greater'> returned a result with an error set
-        # this is way I am sorting in a less elegant way
+        # this is way I am sorting with Python and not with numpy below
         data = sorted((ser, idx) for idx, ser in enumerate(ruptures['serial']))
         for serial, ridx in data:
             rec = ruptures[ridx]
