@@ -200,8 +200,9 @@ class EbriskCalculator(base.RiskCalculator):
         :param monitor: a Monitor instance
         :returns: an IterResult instance
         """
-        csm_info = self.csm_info.get_info(sm_id)
-        rlzs_assoc = csm_info.get_rlzs_assoc()
+        sm_info = self.csm_info.get_info(sm_id)
+        grp_ids = sorted(sm_info.get_sm_by_grp())
+        rlzs_assoc = sm_info.get_rlzs_assoc()
         # prepare the risk inputs
         allargs = []
         ruptures_per_block = self.oqparam.ruptures_per_block
@@ -212,7 +213,7 @@ class EbriskCalculator(base.RiskCalculator):
         samples_by_grp = csm_info.get_samples_by_grp()
         num_events = 0
         num_ruptures = {}
-        for grp_id in sorted(csm_info.get_sm_by_grp()):
+        for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
             if self.ruptures_by_grp is not None:
