@@ -685,12 +685,13 @@ def get_cost_calculator(oqparam):
                          stop='assets')[0].cost_calculator
 
 
-def _add_asset(idx, asset_id, asset_node, exposure, param):
+def _add_asset(idx, asset_node, exposure, param):
     values = {}
     deductibles = {}
     insurance_limits = {}
     retrofitteds = {}
     tagvalues = []
+    asset_id = asset_node['id'].encode('utf8')
     with context(param['fname'], asset_node):
         exposure.asset_refs.append(asset_id)
         taxonomy = asset_node['taxonomy']
@@ -803,19 +804,19 @@ def get_exposure(oqparam):
         param['region'] = None
     param['all_cost_types'] = set(oqparam.all_cost_types)
     param['fname'] = oqparam.inputs['exposure']
-    exposure, assets_node = _get_exposure(
-        param['fname'], param['all_cost_types'])
     param['relevant_cost_types'] = param['all_cost_types'] - set(['occupants'])
     param['ignore_missing_costs'] = set(oqparam.ignore_missing_costs)
+    exposure, assets_node = _get_exposure(
+        param['fname'], param['all_cost_types'])
 
     # populate exposure
     asset_refs = set()
     for idx, asset_node in enumerate(assets_node):
-        asset_id = asset_node['id'].encode('utf8')
+        asset_id = asset_node['id']
         if asset_id in asset_refs:
             raise read_nrml.DuplicatedID(asset_id)
         asset_refs.add(asset_id)
-        _add_asset(idx, asset_id, asset_node, exposure, param)
+        _add_asset(idx, asset_node, exposure, param)
 
     if param['region']:
         logging.info('Read %d assets within the region_constraint '
