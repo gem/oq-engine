@@ -517,7 +517,8 @@ def stats(name, array, *extras):
     :param name: a descriptive string
     :returns: (name, mean, std, min, max, len)
     """
-    return (name, numpy.mean(array), numpy.std(array, ddof=1),
+    std = numpy.nan if len(array) == 1 else numpy.std(array, ddof=1)
+    return (name, numpy.mean(array), std,
             numpy.min(array), numpy.max(array), len(array)) + extras
 
 

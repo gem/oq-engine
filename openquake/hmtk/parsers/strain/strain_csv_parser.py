@@ -73,6 +73,7 @@ class ReadStrainCsv(object):
         Container for the strain data as instance of :class:
         `openquake.hmtk.strain.geodetic_strain.GeodeticStrain`
     '''
+
     def __init__(self, strain_file):
         '''
         '''
@@ -104,7 +105,7 @@ class ReadStrainCsv(object):
         datafile = open(self.filename, 'rU')
         reader = csv.DictReader(datafile)
         self.strain.data = OrderedDict([(name, [])
-                                       for name in reader.fieldnames])
+                                        for name in reader.fieldnames])
         for row in reader:
             for name in row.keys():
                 if 'region' in name.lower():
@@ -152,6 +153,7 @@ class WriteStrainCsv(object):
     :param str filename:
         Name of output file for writing
     '''
+
     def __init__(self, filename):
         '''
         '''

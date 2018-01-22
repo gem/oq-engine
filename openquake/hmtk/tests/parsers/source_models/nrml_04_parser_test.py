@@ -65,10 +65,11 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
     Tests the NRML parser for the case in which a full and validated NRML
     source model is input
     """
+
     def setUp(self):
         self.nrml_file = os.path.join(BASE_PATH,
                                       "mixed_source_model_nrml4_2.xml")
-    
+
     def test_execution_full(self):
         """
         Tests the execution of the reader for the full model
@@ -84,7 +85,7 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self._check_point_source(model.sources[2])
         self._check_simple_fault_source(model.sources[3])
         self._check_complex_fault_source(model.sources[4])
-    
+
     def _check_area_source(self, source):
         self.assertTrue(isinstance(source, mtkAreaSource))
         self.assertEqual(source.id, "1")
@@ -106,7 +107,7 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
                 self.assertAlmostEqual(npd.strike, 90.0)
                 self.assertAlmostEqual(npd.dip, 45.0)
                 self.assertAlmostEqual(npd.rake, 90.0)
-            
+
         for iloc, (prob, hdd) in enumerate(source.hypo_depth_dist.data):
             if iloc == 0:
                 self.assertAlmostEqual(prob, 0.5)
@@ -141,7 +142,7 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
                 self.assertAlmostEqual(npd.strike, 90.0)
                 self.assertAlmostEqual(npd.dip, 45.0)
                 self.assertAlmostEqual(npd.rake, 90.0)
-            
+
         for iloc, (prob, hdd) in enumerate(source.hypo_depth_dist.data):
             if iloc == 0:
                 self.assertAlmostEqual(prob, 0.5)
@@ -149,7 +150,7 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
             else:
                 self.assertAlmostEqual(prob, 0.5)
                 self.assertAlmostEqual(hdd, 8.0)
-    
+
     def _check_simple_fault_source(self, source):
         self.assertTrue(isinstance(source, mtkSimpleFaultSource))
         self.assertEqual(source.id, "4")
@@ -166,7 +167,7 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self.assertEqual(
             str(source.fault_trace.points[1]),
             "<Latitude=37.877100, Longitude=-122.038800, Depth=0.0000>")
-    
+
     def _check_complex_fault_source(self, source):
         self.assertTrue(isinstance(source, mtkComplexFaultSource))
         self.assertEqual(source.id, "5")
@@ -183,6 +184,7 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
     Tests the NRML parser for the case in which a full and validated NRML
     source model is input
     """
+
     def setUp(self):
         self.nrml_file = os.path.join(BASE_PATH,
                                       "mixed_source_model_nrml4_2_minimum.xml")
@@ -208,8 +210,8 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertEqual(source.id, "1")
         self.assertEqual(source.name, "Quito")
         self.assertEqual(source.geometry.wkt,
-            'POLYGON((-122.5 38.0, -122.0 38.5, -121.5 38.0, '
-            '-122.0 37.5, -122.5 38.0))')
+                         'POLYGON((-122.5 38.0, -122.0 38.5, -121.5 38.0, '
+                         '-122.0 37.5, -122.5 38.0))')
         self.assertAlmostEqual(source.upper_depth, 0.0)
         self.assertAlmostEqual(source.lower_depth, 10.0)
         self.assertFalse(source.rupt_aspect_ratio)
@@ -217,7 +219,7 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertFalse(source.mfd)
         self.assertFalse(source.nodal_plane_dist)
         self.assertFalse(source.hypo_depth_dist)
-        
+
     def _check_point_source(self, source):
         self.assertTrue(isinstance(source, mtkPointSource))
         self.assertEqual(source.id, "2")
@@ -258,4 +260,3 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertFalse(source.rupt_aspect_ratio)
         self.assertFalse(source.mag_scale_rel)
         self.assertFalse(source.mfd)
-

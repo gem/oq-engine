@@ -78,6 +78,7 @@ class TestPointSource(unittest.TestCase):
     '''
     Tester class for openquake.hmtk.sources.point_source.mtkAreaSource
     '''
+
     def setUp(self):
         warnings.simplefilter("ignore")  # Suppress warnings during test
         self.catalogue = Catalogue()
