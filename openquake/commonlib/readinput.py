@@ -785,6 +785,21 @@ def _add_asset(idx, asset_node, exposure, param):
     exposure.assets.append(ass)
 
 
+def readcsv(text, dirname):
+    fnames = [os.path.join(dirname, f) for f in text.split()]
+    header = None
+    for fname in fnames:
+        with open(fname) as f:
+            newheader = csv.reader(f).next()
+            if header and newheader != header:
+                raise InvalidFile('Unexpected header in %s' % fname)
+            header = newheader
+    for fname in fnames:
+        with open(fname) as f:
+            for row in csv.reader(f):
+                yield row
+
+
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
@@ -808,10 +823,12 @@ def get_exposure(oqparam):
     param['ignore_missing_costs'] = set(oqparam.ignore_missing_costs)
     exposure, assets_node = _get_exposure(
         param['fname'], param['all_cost_types'])
+    iterasset = assets_node if assets_node else readcsv(
+        ~assets_node, os.path.dirname(param['fname']))
 
     # populate exposure
     asset_refs = set()
-    for idx, asset_node in enumerate(assets_node):
+    for idx, asset_node in enumerate(iterasset):
         asset_id = asset_node['id']
         if asset_id in asset_refs:
             raise read_nrml.DuplicatedID(asset_id)

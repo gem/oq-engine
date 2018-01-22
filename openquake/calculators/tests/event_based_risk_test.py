@@ -26,6 +26,7 @@ from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
 from openquake.baselib.python3compat import decode
 from openquake.baselib.parallel import Sequential
+from openquake.commonlib import readinput
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
@@ -83,6 +84,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in all_csv:
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_case_1_csv(self):
+        oq = readinput.get_oqparam('job_expo_csv.ini', case_1)
+        expo = readinput.get_exposure(oq)
+        self.assertEqual(len(expo.assets), 5)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
