@@ -880,10 +880,12 @@ class UCERFRiskCalculator(EbriskCalculator):
                               ('loss', (F32, (self.L, self.I)))])
         monitor = self.monitor('compute_losses')
         for sm in self.csm.source_models:
+            if sm.samples > 1:
+                logging.warn('Sampling in ucerf_risk is untested')
             ssm = self.csm.get_model(sm.ordinal)
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx)],
-                             samples=1, assetcol=self.assetcol,
+                             samples=sm.samples, assetcol=self.assetcol,
                              save_ruptures=False,
                              ses_ratio=oq.ses_ratio,
                              avg_losses=oq.avg_losses,
