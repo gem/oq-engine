@@ -107,8 +107,9 @@ def export_ruptures_csv(ekey, dstore):
                  trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
     rows.sort()  # by rupture serial
-    writers.write_csv(dest, rows, header=header, sep='\t',
-                      comment='investigation_time=%s' % oq.investigation_time)
+    comment = 'investigation_time=%s, ses_per_logic_tree_path=%s' % (
+        oq.investigation_time, oq.ses_per_logic_tree_path)
+    writers.write_csv(dest, rows, header=header, sep='\t', comment=comment)
     return [dest]
 
 

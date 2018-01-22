@@ -481,6 +481,7 @@ class CharacteristicSource(SeismicSource):
         A :class:`SimpleFaultGeometry`, :class:`ComplexFaultGeometry`, or a
         list of :class:`PlanarSurface` objects.
     """
+
     def __init__(self, id=None, name=None, trt=None, mfd=None, rake=None,
                  surface=None):
         super(CharacteristicSource, self).__init__(id=id, name=name, trt=trt)
@@ -499,6 +500,7 @@ class PlanarSurface(object):
         Corner points of the planar surface, represented by :class:`Point`
         objects.
     """
+
     def __init__(self, strike=None, dip=None, top_left=None, top_right=None,
                  bottom_left=None, bottom_right=None):
         self.strike = strike

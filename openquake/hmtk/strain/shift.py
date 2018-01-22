@@ -208,6 +208,7 @@ class Shift(object):
     :param np.ndarray base_rates:
         Minimum (background) rates for each corresponding target magnitude
     '''
+
     def __init__(self, minimum_magnitude, base_params=None,
                  region_parameter_file=None):
         '''

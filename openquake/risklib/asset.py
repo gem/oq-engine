@@ -42,7 +42,7 @@ class CostCalculator(object):
     The same "formula" applies to retrofitting cost.
     """
     def __init__(self, cost_types, area_types, units,
-                 deduct_abs=True, limit_abs=True):
+                 deduct_abs=True, limit_abs=True, tagi=None):
         if set(cost_types) != set(area_types):
             raise ValueError('cost_types has keys %s, area_types has keys %s'
                              % (sorted(cost_types), sorted(area_types)))
@@ -55,6 +55,7 @@ class CostCalculator(object):
         self.units = units
         self.deduct_abs = deduct_abs
         self.limit_abs = limit_abs
+        self.tagi = tagi
 
     def __call__(self, loss_type, values, area, number):
         cost = values.get(loss_type)
@@ -177,6 +178,14 @@ class Asset(object):
             self._cost[loss_type] = val
         return val
 
+    def tagvalue(self, tagname):
+        """
+        :returns: the tagvalue associated to the given tagname
+        """
+        if tagname == 'taxonomy':
+            return self.taxonomy
+        return self.tagvalues[self.calc.tagi[tagname]]
+
     def deductible(self, loss_type):
         """
         :returns: the deductible fraction of the asset cost for `loss_type`
@@ -209,6 +218,16 @@ class Asset(object):
         return self.calc(loss_type, self.retrofitteds,
                          self.area, self.number)
 
+    def tagmask(self, tags):
+        """
+        :returns: a boolean array with True where the assets has tags
+        """
+        mask = numpy.zeros(len(tags), bool)
+        for t, tag in enumerate(tags):
+            tagname, tagvalue = tag.split('=')
+            mask[t] = self.tagvalue(tagname) == tagvalue
+        return mask
+
     def __lt__(self, other):
         return self.idx < other.idx
 
@@ -234,6 +253,12 @@ aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 
 
 class AssetCollection(object):
+    # the information about the assets is store in a numpy array and in a
+    # variable-length dataset aids_by_tags; we could store everything in a
+    # single array and it would be easier, but then we would need to transfer
+    # unneeded strings; also we would have to use fixed-length string, since
+    # numpy has no concept of variable-lenght strings; unless we associate
+    # numbers to each tagvalue, which is possible
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
     def __init__(self, assets_by_site, tagnames, cost_calculator,
@@ -318,17 +343,6 @@ class AssetCollection(object):
             for lt in self.loss_types:
                 vals[i][lt] = asset.value(lt, self.time_event)
         return vals
-
-    def tagmask(self):
-        """
-        :returns: array of booleans of shape (A, T)
-        """
-        tags = self.tags()
-        tagidx = {t: i for i, t in enumerate(tags)}
-        mask = numpy.zeros((len(self), len(tags)), bool)
-        for tag, aids in self.aids_by_tag.items():
-            mask[sorted(aids), tagidx[tag]] = True
-        return mask
 
     def get_tax_idx(self):
         """
