@@ -13,6 +13,8 @@ Note: you have to **restart every celery node** after a configuration change.
 ### Master node
 The `python-oq-engine-master` package must be installed on the **master** node. It provides extra functionalities like _RabbitMQ_.
 
+On **RHEL/CentOS** [EPEL](https://fedoraproject.org/wiki/EPEL) repository *must be configured and enabled* in the system.
+
 ### Worker nodes
 On **worker** nodes  `python-oq-engine-worker` must be installed **instead**; it adds _celery_ support on top of the standard `python-oq-engine` package.
 

@@ -76,6 +76,7 @@ class TectonicRegion(object):
     '''
     Definition of the tectonic region
     '''
+
     def __init__(self, identifier, name, shear_modulus=None,
                  disp_length_ratio=None, scaling_rel=None):
 
@@ -100,6 +101,7 @@ class TectonicRegionalisation(object):
     '''
     Defines a set of regionalisations
     '''
+
     def __init__(self):
         '''
         '''

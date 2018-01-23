@@ -182,6 +182,7 @@ class RateGridTestCase(unittest.TestCase):
     """
     General test class for Rate Grid calculation
     """
+
     def setUp(self):
         """
         Set up limits
@@ -378,6 +379,7 @@ class Dummy(object):
     """
     Dummy class to check coverage of non-supported source type
     """
+
     def __init__(self, name):
         """
         """
@@ -389,6 +391,7 @@ class RateGridFromFilesTestCase(unittest.TestCase):
     Tests to ensure that the same source models give the same rates if
     input from a source list or a file
     """
+
     def setUp(self):
         """
         """
@@ -416,10 +419,12 @@ class RateGridFromFilesTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(ratemodel1.rates,
                                              ratemodel2.rates)
 
+
 class RatePolygonTestCase(unittest.TestCase):
     """
     Tests of the Rate polygon tool
     """
+
     def setUp(self):
         """
         """
