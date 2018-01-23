@@ -86,12 +86,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 'expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
-    def test_case_1_csv(self):
-        oq = readinput.get_oqparam('job_expo_csv.ini', case_1)
-        expo = readinput.get_exposure(oq)
-        self.assertEqual(len(expo.assets), 5)
-
-    @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
         ekeys = [('agg_curves-stats', 'csv')]
