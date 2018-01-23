@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`Allen2012`
+Module exports :class:`AfshariStewart2016`,
+               :class:`AfshariStewart2016Japan`
 """
 from __future__ import division
 
