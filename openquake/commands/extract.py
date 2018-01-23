@@ -34,6 +34,8 @@ def extract(calc_id, what, extra):
     Extract an output from the datastore and save it into an .hdf5 file.
     """
     logging.basicConfig(level=logging.INFO)
+    if calc_id < 0:
+        calc_id = datastore.get_calc_ids()[calc_id]
     if dbserver.get_status() == 'running':
         job = dbcmd('get_job', calc_id)
         if job is not None:
