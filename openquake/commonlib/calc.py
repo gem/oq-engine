@@ -627,9 +627,16 @@ class RuptureGetter(object):
     """
     Iterable over ruptures.
 
-    :param dstore: a DataStore instance
-    :param slice_: a slice of ruptures (default: all)
-    :param grp_id: the group ID of the ruptures (default: all)
+    :param dstore:
+        a DataStore instance with a dataset names `ruptures`
+    :param mask:
+        which ruptures to read; it can be:
+        - None: read all ruptures
+        - a slice
+        - a boolean mask
+        - a list of integers
+    :param grp_id:
+        the group ID of the ruptures, if they are homogeneous, or None
     """
     @classmethod
     def from_(cls, dstore):
