@@ -365,7 +365,7 @@ class HazardCalculator(BaseCalculator):
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
             assets_by_site,
-            self.exposure.assets_by_tag,
+            self.exposure.tagnames,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
             time_events=hdf5.array_of_vstr(sorted(self.exposure.time_events)))
@@ -669,7 +669,6 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
         assets_by_site = self.assetcol.assets_by_site()
-        self.tagmask = self.assetcol.tagmask()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             sid_weight_pairs = [
@@ -685,7 +684,6 @@ class RiskCalculator(HazardCalculator):
                 reduced_eps = {}
                 for assets in reduced_assets:
                     for ass in assets:
-                        ass.tagmask = self.tagmask[ass.ordinal]
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs

@@ -137,7 +137,7 @@ class Type1RecurrenceModel(BaseRecurrenceModel):
         a_1 = self._get_a1(bbar, dbar, slip_moment, mmax)
         return a_1 * (bbar * np.exp(bbar * delta_m) * (delta_m > 0.0)) +\
             a_1 * dirac_term
-    
+
 
 class Type2RecurrenceModel(BaseRecurrenceModel):
     '''
@@ -177,7 +177,7 @@ class Type2RecurrenceModel(BaseRecurrenceModel):
         """
         delta_m = mmax - mag_value
         a_2 = self._get_a2(bbar, dbar, slip_moment, mmax)
-        return a_2 * bbar * np.exp(bbar * delta_m) * (delta_m > 0.0) 
+        return a_2 * bbar * np.exp(bbar * delta_m) * (delta_m > 0.0)
 
 
 class Type3RecurrenceModel(BaseRecurrenceModel):
