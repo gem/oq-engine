@@ -480,8 +480,8 @@ class RiskInput(object):
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.by_site = not isinstance(hazard_getter, GmfGetter)
-        self.weight = len(self.aids) if self.by_site else sum(
-            sr.weight for sr in hazard_getter.ebruptures)
+        self.weight = len(self.aids) if self.by_site else len(
+            hazard_getter.ebruptures)
 
     @property
     def imt_taxonomies(self):
@@ -505,7 +505,8 @@ class RiskInput(object):
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
-            self.__class__.__name__, ', '.join(self.taxonomies), self.weight)
+            self.__class__.__name__,
+            ', '.join(self.taxonomies), len(self.aids))
 
 
 class EpsilonMatrix0(object):

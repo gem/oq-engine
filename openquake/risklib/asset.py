@@ -20,7 +20,7 @@ from __future__ import division
 import operator
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid
 
@@ -42,7 +42,7 @@ class CostCalculator(object):
     The same "formula" applies to retrofitting cost.
     """
     def __init__(self, cost_types, area_types, units,
-                 deduct_abs=True, limit_abs=True):
+                 deduct_abs=True, limit_abs=True, tagi=None):
         if set(cost_types) != set(area_types):
             raise ValueError('cost_types has keys %s, area_types has keys %s'
                              % (sorted(cost_types), sorted(area_types)))
@@ -55,6 +55,7 @@ class CostCalculator(object):
         self.units = units
         self.deduct_abs = deduct_abs
         self.limit_abs = limit_abs
+        self.tagi = tagi
 
     def __call__(self, loss_type, values, area, number):
         cost = values.get(loss_type)
@@ -124,7 +125,8 @@ class Asset(object):
                  insurance_limits=None,
                  retrofitteds=None,
                  calc=costcalculator,
-                 ordinal=None):
+                 ordinal=None,
+                 tagvalues=()):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -161,6 +163,7 @@ class Asset(object):
         self.calc = calc
         self.ordinal = ordinal
         self._cost = {}  # cache for the costs
+        self.tagvalues = tagvalues
 
     def value(self, loss_type, time_event=None):
         """
@@ -174,6 +177,14 @@ class Asset(object):
             val = self.calc(loss_type, self.values, self.area, self.number)
             self._cost[loss_type] = val
         return val
+
+    def tagvalue(self, tagname):
+        """
+        :returns: the tagvalue associated to the given tagname
+        """
+        if tagname == 'taxonomy':
+            return self.taxonomy
+        return self.tagvalues[self.calc.tagi[tagname]]
 
     def deductible(self, loss_type):
         """
@@ -207,6 +218,16 @@ class Asset(object):
         return self.calc(loss_type, self.retrofitteds,
                          self.area, self.number)
 
+    def tagmask(self, tags):
+        """
+        :returns: a boolean array with True where the assets has tags
+        """
+        mask = numpy.zeros(len(tags), bool)
+        for t, tag in enumerate(tags):
+            tagname, tagvalue = tag.split('=')
+            mask[t] = self.tagvalue(tagname) == tagvalue
+        return mask
+
     def __lt__(self, other):
         return self.idx < other.idx
 
@@ -232,26 +253,31 @@ aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 
 
 class AssetCollection(object):
+    # the information about the assets is store in a numpy array and in a
+    # variable-length dataset aids_by_tags; we could store everything in a
+    # single array and it would be easier, but then we would need to transfer
+    # unneeded strings; also we would have to use fixed-length string, since
+    # numpy has no concept of variable-lenght strings; unless we associate
+    # numbers to each tagvalue, which is possible
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
-    def __init__(self, assets_by_site, assets_by_tag, cost_calculator,
+    def __init__(self, assets_by_site, tagnames, cost_calculator,
                  time_event, time_events=''):
         self.cc = cost_calculator
         self.time_event = time_event
         self.time_events = time_events
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_collection(assets_by_site, time_event)
-        dic = dict(zip(self.array['idx'], range(len(self.array))))
-        self.tagnames = assets_by_tag.tagnames
-        self.aids_by_tag = {}
-        for tag, idxs in assets_by_tag.items():
-            aids = []
-            for idx in idxs:
-                try:
-                    aids.append(dic[idx])
-                except KeyError:  # discarded by assoc_assets_sites
-                    continue
-            self.aids_by_tag[tag] = set(aids)
+        ordinal = dict(zip(self.array['idx'], range(len(self.array))))
+        self.tagnames = tagnames
+        self.aids_by_tag = general.AccumDict(accum=set())
+        for assets in assets_by_site:
+            for ass in assets:
+                for tagname, tagvalue in zip(tagnames, ass.tagvalues):
+                    tag = '%s=%s' % (tagname, tagvalue)
+                    self.aids_by_tag[tag].add(ordinal[ass.idx])
+                self.aids_by_tag['taxonomy=%s' % ass.taxonomy].add(
+                    ordinal[ass.idx])
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
@@ -318,17 +344,6 @@ class AssetCollection(object):
                 vals[i][lt] = asset.value(lt, self.time_event)
         return vals
 
-    def tagmask(self):
-        """
-        :returns: array of booleans of shape (A, T)
-        """
-        tags = self.tags()
-        tagidx = {t: i for i, t in enumerate(tags)}
-        mask = numpy.zeros((len(self), len(tags)), bool)
-        for tag, aids in self.aids_by_tag.items():
-            mask[sorted(aids), tagidx[tag]] = True
-        return mask
-
     def get_tax_idx(self):
         """
         :returns: list of tag indices corresponding to taxonomies
@@ -346,6 +361,12 @@ class AssetCollection(object):
                   if lt != 'occupants'}
         if 'occupants' in self.array.dtype.names:
             values['occupants_' + str(self.time_event)] = a['occupants']
+        dic = {}
+        for tag, aids in self.aids_by_tag.items():
+            if aid in aids:
+                tagname, tagvalue = tag.split('=')
+                dic[tagname] = tagvalue
+        tagvalues = [dic.get(tagname, '?') for tagname in self.tagnames]
         return Asset(
             a['idx'],
             self.taxonomies[aid],
@@ -357,7 +378,9 @@ class AssetCollection(object):
             deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
             insurance_limits={lt[self.I:]: a[lt] for lt in self.i_lim},
             retrofitteds={lt[self.R:]: a[lt] for lt in self.retro},
-            calc=self.cc, ordinal=aid)
+            calc=self.cc,
+            ordinal=aid,
+            tagvalues=tagvalues)
 
     def __len__(self):
         return len(self.array)
