@@ -60,10 +60,12 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hmtk.sources import source_conversion_utils as conv
 
+
 class TestRenderAspectRatio(unittest.TestCase):
     '''
     Tests the function to render the aspect ratio
     '''
+
     def setUp(self):
         '''
         '''
@@ -98,6 +100,7 @@ class TestRenderMSRToHazardlib(unittest.TestCase):
     """
     Tests the function to render the msr to the oq-hazardlib instance
     """
+
     def setUp(self):
         """
         """
@@ -138,6 +141,7 @@ class TestNPDtoPMF(unittest.TestCase):
     Tests the function to convert the nodal plane distribution to the :class:
     openquake.hazardlib.pmf.PMF
     """
+
     def setUp(self):
         self.npd_as_pmf = PMF([(0.5, NodalPlane(0., 90., 0.)),
                                (0.5, NodalPlane(90., 90., 180.))])
@@ -182,6 +186,7 @@ class TestHDDtoHazardlib(unittest.TestCase):
     Class to test the function hdd_to_pmf, which converts the hypocentral
     distribution to the :class: openquake.hazardlib.pmf.PMF
     """
+
     def setUp(self):
         self.depth_as_pmf = PMF([(0.5, 5.), (0.5, 10.)])
 
@@ -218,6 +223,7 @@ class TestConvertSourceGeometries(unittest.TestCase):
     complex_trace_to_wkt_linestring, which convert a simple edge or
     set of edges to linestrings
     '''
+
     def setUp(self):
         self.simple_edge = Line([Point(10.5, 10.5, 1.0),
                                  Point(11.35, 11.45, 2.0)])

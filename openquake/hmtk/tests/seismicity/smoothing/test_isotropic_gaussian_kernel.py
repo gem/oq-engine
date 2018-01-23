@@ -68,6 +68,7 @@ class TestIsotropicGaussian(unittest.TestCase):
     Simple tests the of Isotropic Gaussian Kernel
     (as implemented by Frankel (1995))
     '''
+
     def setUp(self):
         self.model = IsotropicGaussian()
         # Setup simple grid
@@ -78,7 +79,7 @@ class TestIsotropicGaussian(unittest.TestCase):
         gy = np.reshape(gy, [ngp, 1])
         depths = 10. * np.ones(ngp)
         self.data = np.column_stack([gx, gy, depths,
-                                    np.zeros(ngp, dtype=float)])
+                                     np.zeros(ngp, dtype=float)])
 
     def test_kernel_single_event(self):
         # ensure kernel is smoothing values correctly for a single event

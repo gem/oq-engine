@@ -56,7 +56,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from openquake.hmtk.seismicity.utils import (decimal_time, bootstrap_histogram_1D,
-                                   bootstrap_histogram_2D)
+                                             bootstrap_histogram_2D)
 
 
 class Catalogue(object):
@@ -442,7 +442,7 @@ class Catalogue(object):
                 elif attrib is 'data':
                     pass
                 elif attrib is 'number_earthquakes':
-                    setattr(self, attrib, atts+attn)
+                    setattr(self, attrib, atts + attn)
                 elif attrib is 'processes':
                     if atts != attn:
                         raise ValueError('The catalogues cannot be merged' +

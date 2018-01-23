@@ -335,7 +335,7 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
 
             idx = np.logical_and(mag_idx,
                                  catalogue.data['year'] >= comp_year - inc)
-            obs_idx = np.logical_and(mag_bins >= low_mag - dmag/2.,
+            obs_idx = np.logical_and(mag_bins >= low_mag - dmag / 2.,
                                      mag_bins < high_mag + dmag)
         temp_rates = np.histogram(catalogue.data['magnitude'][idx],
                                   mag_bins[obs_idx])[0]
