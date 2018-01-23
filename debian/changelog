@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the event based risk calculator from ruptures: now the ruptures
+    are instantiated in the workers and not in the controller if possible
   * Exported the parameter ses_per_logic_tree_path in the ruptures.csv file
   * Improved the display names for the risk outputs
   * Added a /v1/:calc_id/abort route to the engine server and Abort buttons
