@@ -96,7 +96,7 @@ class PenalizedMLE(SeismicityOccurrence):
             deviation on a
         """
         # Setup
-        if config["b_prior"]: 
+        if config["b_prior"]:
             betap = config["b_prior"] * np.log(10.)
             beta = np.copy(betap)
             has_prior = True
@@ -130,7 +130,7 @@ class PenalizedMLE(SeismicityOccurrence):
                 config["reference_magnitude"]:
             dm = config["reference_magnitude"] - completeness[0, 1]
             rate = 10.0 ** (np.log10(rate) - bval * dm)
-            sigma_rate = 10.0 ** (np.log10(rate + sigma_rate) -bval * dm) -\
+            sigma_rate = 10.0 ** (np.log10(rate + sigma_rate) - bval * dm) -\
                 rate
         else:
             dm = -completeness[0, 1]
@@ -140,7 +140,7 @@ class PenalizedMLE(SeismicityOccurrence):
         return bval, sigmab, rate, sigma_rate
 
     def _run_penalized_mle(self, config, delta, kval, tval, cum_count,
-            betap, beta, wbu, wau):
+                           betap, beta, wbu, wau):
         """
         Implements the core of the penalised maximum likelihood method for
         the b-value
@@ -150,22 +150,22 @@ class PenalizedMLE(SeismicityOccurrence):
             e_b = np.exp(beta * delta)
             deb = e_b[:-1] - e_b[1:]
             skmeb = np.sum(kval * ((delta[:-1] * e_b[:-1]) -
-                (delta[1:] * e_b[1:])) / deb)
+                                   (delta[1:] * e_b[1:])) / deb)
             skm2eb = np.sum(kval * (
                 ((((delta[:-1] ** 2.) * e_b[:-1]) -
-                ((delta[1:] ** 2.) * e_b[1:])) / deb) - 
+                  ((delta[1:] ** 2.) * e_b[1:])) / deb) -
                 (((delta[:-1] * e_b[:-1]) - (delta[1:] * e_b[1:])) / deb)
                 ** 2.))
             sateb = np.sum(config["area"] * tval * deb)
-            satmeb = np.sum(config["area"] * tval * 
-                ((delta[:-1] * e_b[:-1]) - (delta[1:] * e_b[1:])))
+            satmeb = np.sum(config["area"] * tval *
+                            ((delta[:-1] * e_b[:-1]) - (delta[1:] * e_b[1:])))
             satm2eb = np.sum(config["area"] * tval *
-                (((delta[:-1] ** 2.) * e_b[:-1]) -
-                ((delta[1:] ** 2.) * e_b[1:])))
-            dldb  = skmeb - cum_count[0] * (satmeb / sateb) -\
+                             (((delta[:-1] ** 2.) * e_b[:-1]) -
+                              ((delta[1:] ** 2.) * e_b[1:])))
+            dldb = skmeb - cum_count[0] * (satmeb / sateb) -\
                 (wbu * (beta - betap))
             d2ldb2 = skm2eb - cum_count[0] * (satm2eb / sateb -
-                (satmeb / sateb) ** 2.) - wbu
+                                              (satmeb / sateb) ** 2.) - wbu
             beta0 = np.copy(beta)
             am0 = cum_count[0] * (1.0 - e_b[-1]) / sateb
             if cum_count[1]:
@@ -186,14 +186,14 @@ class PenalizedMLE(SeismicityOccurrence):
         v11 = (cum_count[0] / ((am0 * config["area"]) ** 2.)) + (wau / am0)
         v22 = -d2ldb2 * (np.log(10.) ** 2.)
         v12 = np.log(10.) * ((satmeb / (1.0 - e_b[-1])) +
-            delta[-1] * e_b[-1] * sateb / ((1.0 - e_b[-1]) ** 2.)) /\
+                             delta[-1] * e_b[-1] * sateb / ((1.0 - e_b[-1]) ** 2.)) /\
             config["area"]
         vmat = np.matrix([[v11, v12], [v12, v22]])
         error_mat = np.linalg.inv(vmat)
         sigmab = np.sqrt(error_mat[1, 1])
         sigma_rate = np.sqrt(error_mat[0, 0])
         rho = error_mat[0, 1] / np.sqrt(error_mat[0, 0] * error_mat[1, 1])
-        return bval, sigmab, am0 * config["area"], sigma_rate, rho       
+        return bval, sigmab, am0 * config["area"], sigma_rate, rho
 
     def _get_rate_counts(self, catalogue, config, completeness):
         """
@@ -236,7 +236,7 @@ class PenalizedMLE(SeismicityOccurrence):
                                          sel_mags < cmag[j + 1])
                 count_table[j, i] += float(np.sum(mag_idx))
                 count_years[j, i] += float(nyrs)
-        
+
         delta = cmag[0] - cmag
         if not high_event:
             # Remove last row

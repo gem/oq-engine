@@ -341,7 +341,6 @@ class EbriskCalculator(base.RiskCalculator):
         oq = self.oqparam
         self.R = num_rlzs
         self.A = len(self.assetcol)
-        self.tagmask = self.assetcol.tagmask()  # shape (A, T)
         if oq.asset_loss_table:
             # save all_loss_ratios
             self.alr_nbytes = 0

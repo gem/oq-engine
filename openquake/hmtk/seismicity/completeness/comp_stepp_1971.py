@@ -124,6 +124,7 @@ class Stepp1971(BaseCatalogueCompleteness):
     :attribute numpy.ndarray completeness_table:
         Resulting completeness table
     '''
+
     def __init__(self):
         BaseCatalogueCompleteness.__init__(self)
         self.magnitude_bin = None
@@ -208,7 +209,7 @@ class Stepp1971(BaseCatalogueCompleteness):
 
         years = self.completeness_table[:, 0]
         mags = self.completeness_table[:, 1]
-        keep = np.array([True]*years.shape[0])
+        keep = np.array([True] * years.shape[0])
 
         if deduplicate:
             keep[1:] = years[1:] != years[:-1]
