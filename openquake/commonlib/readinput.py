@@ -654,8 +654,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
-    insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True)
-    deductible_is_absolute = deductible.attrib.get('isAbsolute', True)
+    insurance_limit_is_absolute = inslimit.get('isAbsolute', True)
+    deductible_is_absolute = deductible.get('isAbsolute', True)
     time_events = set()
     tagi = {name: i for i, name in enumerate(tagnames)}
     cc = asset.CostCalculator(
@@ -685,121 +685,6 @@ def get_cost_calculator(oqparam):
                          stop='assets')[0].cost_calculator
 
 
-def _add_asset(idx, asset_node, exposure, param):
-    values = {}
-    deductibles = {}
-    insurance_limits = {}
-    retrofitteds = {}
-    tagvalues = []
-    asset_id = asset_node['id'].encode('utf8')
-    with context(param['fname'], asset_node):
-        exposure.asset_refs.append(asset_id)
-        taxonomy = asset_node['taxonomy']
-        if 'damage' in param['calculation_mode']:
-            # calculators of 'damage' kind require the 'number'
-            # if it is missing a KeyError is raised
-            number = asset_node['number']
-        else:
-            # some calculators ignore the 'number' attribute;
-            # if it is missing it is considered 1, since we are going
-            # to multiply by it
-            try:
-                number = asset_node['number']
-            except KeyError:
-                number = 1
-            else:
-                if 'occupants' in param['all_cost_types']:
-                    values['occupants_None'] = number
-        location = asset_node.location['lon'], asset_node.location['lat']
-        if param['region'] and not geometry.Point(*location).within(
-                param['region']):
-            param['out_of_region'] += 1
-            return
-        tagnode = getattr(asset_node, 'tags', None)
-        if tagnode is not None:
-            # fill missing tagvalues with "?" and raise an error for
-            # unknown tagnames
-            with context(param['fname'], tagnode):
-                dic = tagnode.attrib.copy()
-                for tagname in exposure.tagnames:
-                    try:
-                        tagvalue = dic.pop(tagname)
-                    except KeyError:
-                        tagvalue = '?'
-                    else:
-                        if tagvalue in '?*':
-                            raise ValueError(
-                                'Invalid tagvalue="%s"' % tagvalue)
-                    tagvalues.append(tagvalue)
-                if dic:
-                    raise ValueError(
-                        'Unknown tagname %s or <tagNames> not '
-                        'specified in the exposure' % ', '.join(dic))
-    try:
-        costs = asset_node.costs
-    except AttributeError:
-        costs = Node('costs', [])
-    try:
-        occupancies = asset_node.occupancies
-    except AttributeError:
-        occupancies = Node('occupancies', [])
-    for cost in costs:
-        with context(param['fname'], cost):
-            cost_type = cost['type']
-            if cost_type in param['relevant_cost_types']:
-                values[cost_type] = cost['value']
-                retrovalue = cost.attrib.get('retrofitted')
-                if retrovalue is not None:
-                    retrofitteds[cost_type] = retrovalue
-                if param['insured_losses']:
-                    deductibles[cost_type] = cost['deductible']
-                    insurance_limits[cost_type] = cost['insuranceLimit']
-
-    # check we are not missing a cost type
-    missing = param['relevant_cost_types'] - set(values)
-    if missing and missing <= param['ignore_missing_costs']:
-        logging.warn(
-            'Ignoring asset %s, missing cost type(s): %s',
-            asset_id, ', '.join(missing))
-        for cost_type in missing:
-            values[cost_type] = None
-    elif missing and 'damage' not in param['calculation_mode']:
-        # missing the costs is okay for damage calculators
-        with context(param['fname'], asset_node):
-            raise ValueError("Invalid Exposure. "
-                             "Missing cost %s for asset %s" % (
-                                 missing, asset_id))
-    tot_occupants = 0
-    for occupancy in occupancies:
-        with context(param['fname'], occupancy):
-            exposure.time_events.add(occupancy['period'])
-            occupants = 'occupants_%s' % occupancy['period']
-            values[occupants] = occupancy['occupants']
-            tot_occupants += values[occupants]
-    if occupancies:  # store average occupants
-        values['occupants_None'] = tot_occupants / len(occupancies)
-    area = float(asset_node.attrib.get('area', 1))
-    ass = asset.Asset(idx, taxonomy, number, location, values, area,
-                      deductibles, insurance_limits, retrofitteds,
-                      exposure.cost_calculator, tagvalues=tagvalues)
-    exposure.assets.append(ass)
-
-
-def readcsv(text, dirname):
-    fnames = [os.path.join(dirname, f) for f in text.split()]
-    header = None
-    for fname in fnames:
-        with open(fname) as f:
-            newheader = csv.reader(f).next()
-            if header and newheader != header:
-                raise InvalidFile('Unexpected header in %s' % fname)
-            header = newheader
-    for fname in fnames:
-        with open(fname) as f:
-            for row in csv.reader(f):
-                yield row
-
-
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
@@ -821,20 +706,10 @@ def get_exposure(oqparam):
     param['fname'] = oqparam.inputs['exposure']
     param['relevant_cost_types'] = param['all_cost_types'] - set(['occupants'])
     param['ignore_missing_costs'] = set(oqparam.ignore_missing_costs)
-    exposure, assets_node = _get_exposure(
-        param['fname'], param['all_cost_types'])
-    iterasset = assets_node if assets_node else readcsv(
-        ~assets_node, os.path.dirname(param['fname']))
-
-    # populate exposure
-    asset_refs = set()
-    for idx, asset_node in enumerate(iterasset):
-        asset_id = asset_node['id']
-        if asset_id in asset_refs:
-            raise read_nrml.DuplicatedID(asset_id)
-        asset_refs.add(asset_id)
-        _add_asset(idx, asset_node, exposure, param)
-
+    exposure, assets = _get_exposure(param['fname'], param['all_cost_types'])
+    nodes = assets if assets else exposure.read_csv_assets(
+        ~assets, os.path.dirname(param['fname']))
+    exposure._populate_from(nodes, param)
     if param['region']:
         logging.info('Read %d assets within the region_constraint '
                      'and discarded %d assets outside the region',
@@ -848,11 +723,180 @@ def get_exposure(oqparam):
     return exposure
 
 
-Exposure = collections.namedtuple(
-    'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
-                 'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'asset_refs', 'cost_calculator',
-                 'tagnames'])
+class Exposure(object):
+    """
+    A class to read the exposure from XML/CSV files
+    """
+    fields = ['id', 'category', 'description', 'cost_types', 'time_events',
+              'insurance_limit_is_absolute', 'deductible_is_absolute',
+              'area', 'assets', 'asset_refs', 'cost_calculator', 'tagnames']
+
+    def __init__(self, *values):
+        assert len(values) == len(self.fields)
+        for field, value in zip(self.fields, values):
+            setattr(self, field, value)
+
+    def get_csv_header(self):
+        """
+        Extract the expected CSV header from the exposure metadata
+        """
+        fields = ['asset_ref', 'number', 'taxonomy', 'lon', 'lat']
+        for name in self.cost_types['name']:
+            fields.append(name)
+        if 'per_area' in self.cost_types['type']:
+            fields.append('area')
+        fields.extend(self.tagnames)
+        return fields
+
+    def read_csv_assets(self, csvnames, dirname):
+        """
+        :param csvnames: names of csv files, space separated
+        :param dirname: the directory where the csv files are
+        :yields: asset node instances
+        """
+        expected_header = self.get_csv_header()
+        fnames = [os.path.join(dirname, f) for f in csvnames.split()]
+        for fname in fnames:
+            with open(fname) as f:
+                header = next(csv.reader(f))
+                if header != expected_header:
+                    raise InvalidFile(
+                        'Unexpected header in %s\nExpected: %s\nGot: %s' %
+                        (fname, header, expected_header))
+        for fname in fnames:
+            with open(fname) as f:
+                for i, dic in enumerate(csv.DictReader(f), 1):
+                    attrs = dict(id=dic['asset_ref'],
+                                 number=float(dic['number']),
+                                 taxonomy=dic['taxonomy'])
+                    if 'area' in dic:  # optional attribute
+                        attrs['area'] = dic['area']
+                    loc = Node('location',
+                               dict(lon=valid.longitude(dic['lon']),
+                                    lat=valid.latitude(dic['lat'])))
+                    costs = Node('costs')
+                    for cost in self.cost_types['name']:
+                        a = dict(type=cost, value=dic[cost])
+                        costs.append(Node('cost', a))
+                    occupancies = Node('occupancies')
+                    for period in self.time_events:
+                        a = dict(occupants=dic[period], period=period)
+                        occupancies.append(Node('occupancy', a))
+                    tags = Node('tags')
+                    for tagname in self.tagnames:
+                        tags[tagname] = dic[tagname]
+                    asset = Node('asset', attrs,
+                                 nodes=[loc, costs, occupancies, tags],
+                                 lineno=i)
+                    yield asset
+
+    def _populate_from(self, asset_nodes, param):
+        asset_refs = set()
+        for idx, asset_node in enumerate(asset_nodes):
+            asset_id = asset_node['id']
+            if asset_id in asset_refs:
+                raise read_nrml.DuplicatedID(asset_id)
+            asset_refs.add(asset_id)
+            self._add_asset(idx, asset_node, param)
+
+    def _add_asset(self, idx, asset_node, param):
+        values = {}
+        deductibles = {}
+        insurance_limits = {}
+        retrofitteds = {}
+        tagvalues = []
+        asset_id = asset_node['id'].encode('utf8')
+        with context(param['fname'], asset_node):
+            self.asset_refs.append(asset_id)
+            taxonomy = asset_node['taxonomy']
+            if 'damage' in param['calculation_mode']:
+                # calculators of 'damage' kind require the 'number'
+                # if it is missing a KeyError is raised
+                number = asset_node['number']
+            else:
+                # some calculators ignore the 'number' attribute;
+                # if it is missing it is considered 1, since we are going
+                # to multiply by it
+                try:
+                    number = asset_node['number']
+                except KeyError:
+                    number = 1
+                else:
+                    if 'occupants' in param['all_cost_types']:
+                        values['occupants_None'] = number
+            location = asset_node.location['lon'], asset_node.location['lat']
+            if param['region'] and not geometry.Point(*location).within(
+                    param['region']):
+                param['out_of_region'] += 1
+                return
+            tagnode = getattr(asset_node, 'tags', None)
+            if tagnode is not None:
+                # fill missing tagvalues with "?" and raise an error for
+                # unknown tagnames
+                with context(param['fname'], tagnode):
+                    dic = tagnode.attrib.copy()
+                    for tagname in self.tagnames:
+                        try:
+                            tagvalue = dic.pop(tagname)
+                        except KeyError:
+                            tagvalue = '?'
+                        else:
+                            if tagvalue in '?*':
+                                raise ValueError(
+                                    'Invalid tagvalue="%s"' % tagvalue)
+                        tagvalues.append(tagvalue)
+                    if dic:
+                        raise ValueError(
+                            'Unknown tagname %s or <tagNames> not '
+                            'specified in the exposure' % ', '.join(dic))
+        try:
+            costs = asset_node.costs
+        except AttributeError:
+            costs = Node('costs', [])
+        try:
+            occupancies = asset_node.occupancies
+        except AttributeError:
+            occupancies = Node('occupancies', [])
+        for cost in costs:
+            with context(param['fname'], cost):
+                cost_type = cost['type']
+                if cost_type in param['relevant_cost_types']:
+                    values[cost_type] = cost['value']
+                    retrovalue = cost.get('retrofitted')
+                    if retrovalue is not None:
+                        retrofitteds[cost_type] = retrovalue
+                    if param['insured_losses']:
+                        deductibles[cost_type] = cost['deductible']
+                        insurance_limits[cost_type] = cost['insuranceLimit']
+
+        # check we are not missing a cost type
+        missing = param['relevant_cost_types'] - set(values)
+        if missing and missing <= param['ignore_missing_costs']:
+            logging.warn(
+                'Ignoring asset %s, missing cost type(s): %s',
+                asset_id, ', '.join(missing))
+            for cost_type in missing:
+                values[cost_type] = None
+        elif missing and 'damage' not in param['calculation_mode']:
+            # missing the costs is okay for damage calculators
+            with context(param['fname'], asset_node):
+                raise ValueError("Invalid Exposure. "
+                                 "Missing cost %s for asset %s" % (
+                                     missing, asset_id))
+        tot_occupants = 0
+        for occupancy in occupancies:
+            with context(param['fname'], occupancy):
+                self.time_events.add(occupancy['period'])
+                occupants = 'occupants_%s' % occupancy['period']
+                values[occupants] = occupancy['occupants']
+                tot_occupants += values[occupants]
+        if occupancies:  # store average occupants
+            values['occupants_None'] = tot_occupants / len(occupancies)
+        area = float(asset_node.get('area', 1))
+        ass = asset.Asset(idx, taxonomy, number, location, values, area,
+                          deductibles, insurance_limits, retrofitteds,
+                          self.cost_calculator, tagvalues=tagvalues)
+        self.assets.append(ass)
 
 
 def get_sitecol_assetcol(oqparam, exposure):
