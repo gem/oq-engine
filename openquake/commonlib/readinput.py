@@ -707,7 +707,7 @@ def get_exposure(oqparam):
     param['relevant_cost_types'] = param['all_cost_types'] - set(['occupants'])
     param['ignore_missing_costs'] = set(oqparam.ignore_missing_costs)
     exposure, assets = _get_exposure(param['fname'], param['all_cost_types'])
-    nodes = assets if assets else exposure.read_csv_assets(
+    nodes = assets if assets else exposure.read_csv(
         ~assets, os.path.dirname(param['fname']))
     exposure._populate_from(nodes, param)
     if param['region']:
@@ -748,11 +748,11 @@ class Exposure(object):
         fields.extend(self.tagnames)
         return fields
 
-    def read_csv_assets(self, csvnames, dirname):
+    def read_csv(self, csvnames, dirname):
         """
         :param csvnames: names of csv files, space separated
         :param dirname: the directory where the csv files are
-        :yields: asset node instances
+        :yields: asset nodes
         """
         expected_header = self.get_csv_header()
         fnames = [os.path.join(dirname, f) for f in csvnames.split()]
