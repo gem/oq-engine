@@ -175,10 +175,6 @@ def _build_eb_ruptures(
                 rup, indices, numpy.array(events, calc.event_dt), serial)
 
 
-def _count(ruptures):
-    return sum(ebr.multiplicity for ebr in ruptures)
-
-
 def get_events(ebruptures):
     """
     Extract an array of dtype stored_event_dt from a list of EBRuptures
@@ -306,34 +302,46 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Save the SES collection
         """
         self.rupser.close()
-        num_events = sum(_count(ruptures) for ruptures in result.values())
-        num_ruptures = sum(len(ruptures) for ruptures in result.values())
+        num_events = sum(set_counts(self.datastore, 'events').values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
                 'small or the maximum_distance is too small')
+        num_ruptures = sum(len(ruptures) for ruptures in result.values())
         logging.info('Setting %d event years on %d ruptures',
                      num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             numpy.random.seed(self.oqparam.ses_seed)
-            set_random_years(self.datastore,
+            set_random_years(self.datastore, 'events',
                              int(self.oqparam.investigation_time))
 
 
-def set_random_years(dstore, investigation_time):
+def set_counts(dstore, dsetname):
     """
-    Sort the `events` array and attach year labels sensitive to the
+    :param dstore: a DataStore instance
+    :dsetname: name of dataset with a field `grp_id`
+    :returns: a dictionary grp_id > counts
+    """
+    groups = dstore[dsetname]['grp_id']
+    unique, counts = numpy.unique(groups, return_counts=True)
+    dic = dict(zip(unique, counts))
+    dstore.set_attrs(dsetname, by_grp=sorted(dic.items()))
+    return dic
+
+
+def set_random_years(dstore, name, investigation_time):
+    """
+    Set on the `events` dataset year labels sensitive to the
     SES ordinal and the investigation time.
     """
-    events = dstore['events'].value
-    eids = numpy.sort(events['eid'])
+    events = dstore[name].value
     years = numpy.random.choice(investigation_time, len(events)) + 1
-    year_of = dict(zip(eids, years))
+    year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
     for event in events:
         idx = event['ses'] - 1  # starts from 0
         event['year'] = idx * investigation_time + year_of[event['eid']]
-    dstore['events'] = events
+    dstore[name] = events
 
 
 # ######################## GMF calculator ############################ #
