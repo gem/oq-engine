@@ -97,8 +97,7 @@ class GmfComputer(object):
         try:
             self.ctx = rupture.ctx
         except AttributeError:
-            self.ctx = cmaker.make_contexts(
-                sites, rupture, filter=not correlation_model)
+            self.ctx = cmaker.make_contexts(sites, rupture)
         self.sids = self.ctx[0].sids
         if correlation_model:
             self.sites = sites
