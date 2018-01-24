@@ -262,10 +262,10 @@ class AssetCollection(object):
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
     def __init__(self, assets_by_site, tagnames, cost_calculator,
-                 time_event, time_events=''):
+                 time_event, occupancy_periods=''):
         self.cc = cost_calculator
         self.time_event = time_event
-        self.time_events = time_events
+        self.occupancy_periods = occupancy_periods
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_collection(assets_by_site, time_event)
         ordinal = dict(zip(self.array['idx'], range(len(self.array))))
@@ -388,8 +388,9 @@ class AssetCollection(object):
     def __toh5__(self):
         # NB: the loss types do not contain spaces, so we can store them
         # together as a single space-separated string
+        op = ' '.join(map(decode, self.occupancy_periods))
         attrs = {'time_event': self.time_event or 'None',
-                 'time_events': ' '.join(map(decode, self.time_events)),
+                 'occupancy_periods': op,
                  'loss_types': ' '.join(self.loss_types),
                  'deduc': ' '.join(self.deduc),
                  'i_lim': ' '.join(self.i_lim),
@@ -407,7 +408,7 @@ class AssetCollection(object):
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
-        for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
+        for name in ('occupancy_periods', 'loss_types', 'deduc', 'i_lim', 'retro'):
             setattr(self, name, attrs[name].split())
         self.tagnames = attrs['tagnames']
         self.time_event = attrs['time_event']
