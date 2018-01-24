@@ -408,7 +408,8 @@ class AssetCollection(object):
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
-        for name in ('occupancy_periods', 'loss_types', 'deduc', 'i_lim', 'retro'):
+        for name in ('occupancy_periods', 'loss_types', 'deduc', 'i_lim',
+                     'retro'):
             setattr(self, name, attrs[name].split())
         self.tagnames = attrs['tagnames']
         self.time_event = attrs['time_event']
