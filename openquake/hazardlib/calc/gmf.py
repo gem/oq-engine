@@ -97,7 +97,8 @@ class GmfComputer(object):
         try:
             self.ctx = rupture.ctx
         except AttributeError:
-            self.ctx = cmaker.make_contexts(sites, rupture)
+            self.ctx = cmaker.make_contexts(
+                sites, rupture, filter=not correlation_model)
         self.sids = self.ctx[0].sids
         if correlation_model:
             self.sites = sites
@@ -172,7 +173,6 @@ class GmfComputer(object):
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
-
             intra_residual = stddev_intra * distribution.rvs(
                 size=(len(self.sids), num_events))
 
