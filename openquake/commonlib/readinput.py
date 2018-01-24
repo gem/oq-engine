@@ -638,6 +638,10 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
     try:
+        occupancy_periods = ~exposure.occupancyPeriods or ''
+    except AttributeError:
+        occupancy_periods = 'day night transit'
+    try:
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
@@ -656,7 +660,6 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     cost_types = numpy.array(cost_types, cost_type_dt)
     insurance_limit_is_absolute = inslimit.get('isAbsolute', True)
     deductible_is_absolute = deductible.get('isAbsolute', True)
-    occupancy_periods = set()
     tagi = {name: i for i, name in enumerate(tagnames)}
     cc = asset.CostCalculator(
         {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute, tagi)
@@ -669,9 +672,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     asset_refs = []
     exp = Exposure(
         exposure['id'], exposure['category'],
-        ~description, cost_types, occupancy_periods,
-        insurance_limit_is_absolute,
-        deductible_is_absolute,
+        ~description, cost_types, occupancy_periods.split(),
+        insurance_limit_is_absolute, deductible_is_absolute,
         area.attrib, assets, asset_refs, cc, tagnames)
     return exp, exposure.assets
 
@@ -756,6 +758,7 @@ class Exposure(object):
             fields.append(name)
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
+        fields.extend(self.occupancy_periods)
         fields.extend(self.tagnames)
         return fields
 
@@ -897,7 +900,6 @@ class Exposure(object):
         tot_occupants = 0
         for occupancy in occupancies:
             with context(param['fname'], occupancy):
-                self.occupancy_periods.add(occupancy['period'])
                 occupants = 'occupants_%s' % occupancy['period']
                 values[occupants] = occupancy['occupants']
                 tot_occupants += values[occupants]

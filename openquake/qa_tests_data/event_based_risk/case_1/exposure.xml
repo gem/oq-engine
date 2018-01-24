@@ -18,6 +18,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <costType name="nonstructural" type="aggregated" unit="EUR"/>
             </costTypes>
         </conversions>
+        <occupancyPeriods/>
         <assets>
             exposure.csv
         </assets>
