@@ -713,7 +713,7 @@ class Exposure(object):
               'cost_calculator', 'tagnames']
 
     @classmethod
-    def read(cls, fname, calculation_mode, insured_losses=False,
+    def read(cls, fname, calculation_mode='', insured_losses=False,
              region_constraint='', all_cost_types=(), ignore_missing_costs=()):
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
