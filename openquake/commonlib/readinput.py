@@ -646,7 +646,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     # read the cost types and make some check
     cost_types = []
     for ct in conversions.costTypes:
-        if ct['name'] in ok_cost_types:
+        if not ok_cost_types or ct['name'] in ok_cost_types:
             with context(fname, ct):
                 cost_types.append(
                     (ct['name'], valid.cost_type_type(ct['type']), ct['unit']))
@@ -695,32 +695,10 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance
     """
-    param = {'calculation_mode': oqparam.calculation_mode}
-    param['out_of_region'] = 0
-    param['insured_losses'] = oqparam.insured_losses
-    if oqparam.region_constraint:
-        param['region'] = wkt.loads(oqparam.region_constraint)
-    else:
-        param['region'] = None
-    param['all_cost_types'] = set(oqparam.all_cost_types)
-    param['fname'] = oqparam.inputs['exposure']
-    param['relevant_cost_types'] = param['all_cost_types'] - set(['occupants'])
-    param['ignore_missing_costs'] = set(oqparam.ignore_missing_costs)
-    exposure, assets = _get_exposure(param['fname'], param['all_cost_types'])
-    nodes = assets if assets else exposure.read_csv(
-        ~assets, os.path.dirname(param['fname']))
-    exposure._populate_from(nodes, param)
-    if param['region']:
-        logging.info('Read %d assets within the region_constraint '
-                     'and discarded %d assets outside the region',
-                     len(exposure.assets), param['out_of_region'])
-        if len(exposure.assets) == 0:
-            raise RuntimeError('Could not find any asset within the region!')
-
-    # sanity checks
-    values = any(len(ass.values) + ass.number for ass in exposure.assets)
-    assert values, 'Could not find any value??'
-    return exposure
+    return Exposure.read(
+        oqparam.inputs['exposure'], oqparam.calculation_mode,
+        oqparam.insured_losses, oqparam.region_constraint,
+        oqparam.all_cost_types, oqparam.ignore_missing_costs)
 
 
 class Exposure(object):
@@ -731,12 +709,44 @@ class Exposure(object):
               'insurance_limit_is_absolute', 'deductible_is_absolute',
               'area', 'assets', 'asset_refs', 'cost_calculator', 'tagnames']
 
+    @classmethod
+    def read(cls, fname, calculation_mode, insured_losses=False,
+             region_constraint='', all_cost_types=(), ignore_missing_costs=()):
+        param = {'calculation_mode': calculation_mode}
+        param['out_of_region'] = 0
+        param['insured_losses'] = insured_losses
+        if region_constraint:
+            param['region'] = wkt.loads(region_constraint)
+        else:
+            param['region'] = None
+        param['all_cost_types'] = set(all_cost_types)
+        param['fname'] = fname
+        param['relevant_cost_types'] = param['all_cost_types'] - set(
+            ['occupants'])
+        param['ignore_missing_costs'] = set(ignore_missing_costs)
+        exposure, assets = _get_exposure(
+            param['fname'], param['all_cost_types'])
+        nodes = assets if assets else exposure._read_csv(
+            ~assets, os.path.dirname(param['fname']))
+        exposure._populate_from(nodes, param)
+        if param['region']:
+            logging.info('Read %d assets within the region_constraint '
+                         'and discarded %d assets outside the region',
+                         len(exposure.assets), param['out_of_region'])
+            if len(exposure.assets) == 0:
+                raise RuntimeError(
+                    'Could not find any asset within the region!')
+        # sanity checks
+        values = any(len(ass.values) + ass.number for ass in exposure.assets)
+        assert values, 'Could not find any value??'
+        return exposure
+
     def __init__(self, *values):
         assert len(values) == len(self.fields)
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
 
-    def get_csv_header(self):
+    def _csv_header(self):
         """
         Extract the expected CSV header from the exposure metadata
         """
@@ -748,13 +758,13 @@ class Exposure(object):
         fields.extend(self.tagnames)
         return fields
 
-    def read_csv(self, csvnames, dirname):
+    def _read_csv(self, csvnames, dirname):
         """
         :param csvnames: names of csv files, space separated
         :param dirname: the directory where the csv files are
         :yields: asset nodes
         """
-        expected_header = self.get_csv_header()
+        expected_header = self._csv_header()
         fnames = [os.path.join(dirname, f) for f in csvnames.split()]
         for fname in fnames:
             with open(fname) as f:
