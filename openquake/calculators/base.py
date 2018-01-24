@@ -307,16 +307,16 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.flush()
 
 
-def check_time_event(oqparam, time_events):
+def check_time_event(oqparam, occupancy_periods):
     """
     Check the `time_event` parameter in the datastore, by comparing
     with the periods found in the exposure.
     """
     time_event = oqparam.time_event
-    if time_event and time_event not in time_events:
+    if time_event and time_event not in occupancy_periods:
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
-            (time_event, oqparam.inputs['job_ini'], ', '.join(time_events)))
+            (time_event, oqparam.inputs['job_ini'], ', '.join(occupancy_periods)))
 
 
 class HazardCalculator(BaseCalculator):
@@ -368,7 +368,7 @@ class HazardCalculator(BaseCalculator):
             self.exposure.tagnames,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
-            time_events=hdf5.array_of_vstr(sorted(self.exposure.time_events)))
+            occupancy_periods=hdf5.array_of_vstr(sorted(self.exposure.occupancy_periods)))
 
     def count_assets(self):
         """
@@ -566,7 +566,7 @@ class HazardCalculator(BaseCalculator):
         if oq_hazard:
             parent = self.datastore.parent
             if 'assetcol' in parent:
-                check_time_event(oq, parent['assetcol'].time_events)
+                check_time_event(oq, parent['assetcol'].occupancy_periods)
             if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
