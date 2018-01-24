@@ -670,7 +670,8 @@ class RuptureGetter(object):
             idxs = list(block)  # not numpy.int_(block)!
             rgetter = self.__class__(self.dstore, idxs, self.grp_id)
             rup = self.dstore['ruptures'][idxs]
-            rgetter.n_events = (rup['eidx2'] - rup['eidx1']).sum()
+            # use int below, otherwise n_events would be a numpy.uint64
+            rgetter.n_events = int((rup['eidx2'] - rup['eidx1']).sum())
             getters.append(rgetter)
         return getters
 
