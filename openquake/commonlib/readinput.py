@@ -753,14 +753,14 @@ class Exposure(object):
         """
         Extract the expected CSV header from the exposure metadata
         """
-        fields = ['asset_ref', 'number', 'taxonomy', 'lon', 'lat']
+        fields = ['id', 'number', 'taxonomy', 'lon', 'lat']
         for name in self.cost_types['name']:
             fields.append(name)
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
         fields.extend(self.occupancy_periods)
         fields.extend(self.tagnames)
-        return fields
+        return set(fields)
 
     def _read_csv(self, csvnames, dirname):
         """
@@ -772,15 +772,15 @@ class Exposure(object):
         fnames = [os.path.join(dirname, f) for f in csvnames.split()]
         for fname in fnames:
             with open(fname) as f:
-                header = next(csv.reader(f))
-                if header != expected_header:
+                header = set(next(csv.reader(f)))
+                if expected_header - header:
                     raise InvalidFile(
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
-                        (fname, header, expected_header))
+                        (fname, expected_header, header))
         for fname in fnames:
             with open(fname) as f:
                 for i, dic in enumerate(csv.DictReader(f), 1):
-                    attrs = dict(id=dic['asset_ref'],
+                    attrs = dict(id=dic['id'],
                                  number=float(dic['number']),
                                  taxonomy=dic['taxonomy'])
                     if 'area' in dic:  # optional attribute
