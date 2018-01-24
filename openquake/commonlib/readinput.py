@@ -656,7 +656,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     cost_types = numpy.array(cost_types, cost_type_dt)
     insurance_limit_is_absolute = inslimit.get('isAbsolute', True)
     deductible_is_absolute = deductible.get('isAbsolute', True)
-    time_events = set()
+    occupancy_periods = set()
     tagi = {name: i for i, name in enumerate(tagnames)}
     cc = asset.CostCalculator(
         {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute, tagi)
@@ -669,7 +669,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     asset_refs = []
     exp = Exposure(
         exposure['id'], exposure['category'],
-        ~description, cost_types, time_events,
+        ~description, cost_types, occupancy_periods,
         insurance_limit_is_absolute,
         deductible_is_absolute,
         area.attrib, assets, asset_refs, cc, tagnames)
@@ -705,9 +705,10 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['id', 'category', 'description', 'cost_types', 'time_events',
-              'insurance_limit_is_absolute', 'deductible_is_absolute',
-              'area', 'assets', 'asset_refs', 'cost_calculator', 'tagnames']
+    fields = ['id', 'category', 'description', 'cost_types',
+              'occupancy_periods', 'insurance_limit_is_absolute',
+              'deductible_is_absolute', 'area', 'assets', 'asset_refs',
+              'cost_calculator', 'tagnames']
 
     @classmethod
     def read(cls, fname, calculation_mode, insured_losses=False,
@@ -789,7 +790,7 @@ class Exposure(object):
                         a = dict(type=cost, value=dic[cost])
                         costs.append(Node('cost', a))
                     occupancies = Node('occupancies')
-                    for period in self.time_events:
+                    for period in self.occupancy_periods:
                         a = dict(occupants=dic[period], period=period)
                         occupancies.append(Node('occupancy', a))
                     tags = Node('tags')
@@ -896,7 +897,7 @@ class Exposure(object):
         tot_occupants = 0
         for occupancy in occupancies:
             with context(param['fname'], occupancy):
-                self.time_events.add(occupancy['period'])
+                self.occupancy_periods.add(occupancy['period'])
                 occupants = 'occupants_%s' % occupancy['period']
                 values[occupants] = occupancy['occupants']
                 tot_occupants += values[occupants]
@@ -926,8 +927,8 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = asset.AssetCollection(
         assets_by_site, exposure.tagnames, exposure.cost_calculator,
-        oqparam.time_event, time_events=hdf5.array_of_vstr(
-            sorted(exposure.time_events)))
+        oqparam.time_event, occupancy_periods=hdf5.array_of_vstr(
+            sorted(exposure.occupancy_periods)))
     return sitecol, assetcol
 
 
