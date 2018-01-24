@@ -256,7 +256,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        csm = self.csm.filter(SourceFilter(self.sitecol, oq.maximum_distance))
+        if oq.get_correl_model():
+            # do not filter if there is correlation
+            src_filter = SourceFilter(self.sitecol, {})
+        else:
+            src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        csm = self.csm.filter(src_filter)
         maxweight = csm.get_maxweight(oq.concurrent_tasks)
         numheavy = len(csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
@@ -274,7 +279,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 csm.add_infos(sg.sources)
                 for block in csm.split_in_blocks(maxweight, sg.sources):
                     block.samples = sm.samples
-                    yield block, csm.src_filter, gsims, param, monitor
+                    yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
