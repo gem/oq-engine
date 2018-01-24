@@ -218,17 +218,16 @@ class EbriskCalculator(base.RiskCalculator):
             samples = samples_by_grp[grp_id]
             ruptures = self.ruptures_by_grp.get(grp_id, [])
             num_ruptures[grp_id] = len(ruptures)
-            if hasattr(ruptures, 'split'):  # RuptureGetter
+            from_parent = hasattr(ruptures, 'split')
+            if from_parent:  # read the ruptures from the parent datastore
                 logging.info('Reading ruptures group #%d', grp_id)
                 with self.monitor('reading ruptures', measuremem=True):
                     blocks = ruptures.split(ruptures_per_block)
-            else:  # a simple list of ruptures
+            else:  # the ruptures are already in memory
                 blocks = block_splitter(ruptures, ruptures_per_block)
             for rupts in blocks:
-                if hasattr(rupts, 'n_events'):
-                    n_events = rupts.n_events
-                else:
-                    n_events = sum(ebr.multiplicity for ebr in rupts)
+                n_events = (rupts.n_events if from_parent
+                            else sum(ebr.multiplicity for ebr in rupts))
                 eps = self.get_eps(self.start, self.start + n_events)
                 num_events += n_events
                 self.start += n_events
