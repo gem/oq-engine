@@ -68,13 +68,13 @@ class Extract(collections.OrderedDict):
             return func
         return decorator
 
-    def __call__(self, dstore, key, *extra):
+    def __call__(self, dstore, key):
         try:
             k, v = key.split('/', 1)
         except ValueError:   # no slashes
             k, v = key, ''
         if k in self:
-            return self[k](dstore, v, *extra)
+            return self[k](dstore, v)
         else:
             return extract_(dstore, key)
 
