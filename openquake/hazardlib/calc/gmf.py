@@ -94,16 +94,13 @@ class GmfComputer(object):
         # level hazardlib rupture object as a .rupture attribute
         if hasattr(rupture, 'rupture'):
             rupture = rupture.rupture
-        if correlation_model:  # do not filter
-            self.ctx = cmaker.make_contexts(
-                sites.complete, rupture, filter=False)
-            self.sites = sites.complete
-        else:  # filter if needed
-            try:
-                self.ctx = rupture.ctx
-            except AttributeError:
-                self.ctx = cmaker.make_contexts(sites, rupture)
+        try:
+            self.ctx = rupture.ctx
+        except AttributeError:
+            self.ctx = cmaker.make_contexts(sites, rupture)
         self.sids = self.ctx[0].sids
+        if correlation_model:  # store the filtered sites
+            self.sites = sites.filtered(self.sids, sites.array)
 
     def compute(self, gsim, num_events, seed=None):
         """
