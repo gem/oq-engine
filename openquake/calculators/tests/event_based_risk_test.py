@@ -234,7 +234,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                       fname, delta=1E-5)
 
         # extract curves by tag
-        tags = ['taxonomy=tax1', 'state=01', 'cresta=0.11']
+        tags = ['taxonomy=tax1?state=01&cresta=0.11']
         a = extract(self.calc.datastore, 'aggcurves/structural', *tags)
         self.assertEqual(a.array.shape, (4, 2))  # 4 stats, 2 return periods
 
