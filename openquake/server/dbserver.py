@@ -25,7 +25,7 @@ import threading
 import subprocess
 
 from openquake.baselib import config, sap, zeromq as z, workerpool as w
-from openquake.baselib.general import socket_ready
+from openquake.baselib.general import socket_ready, detach_process
 from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
 from openquake.server.db import actions
@@ -213,4 +213,5 @@ run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':
+    detach_process()  # called by ensure_on
     run_server.callfunc()
