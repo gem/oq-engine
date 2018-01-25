@@ -213,7 +213,9 @@ run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':
-    if hasattr(os, 'fork'):
+    if hasattr(os, 'fork') and not config.dbserver.multi_user:
         # needed for https://github.com/gem/oq-engine/issues/3211
+        # but only if multi_user = False, otherwise init/supervisor
+        # will loose control of the process
         detach_process()
     run_server.callfunc()
