@@ -4,6 +4,7 @@
   * Adds significant duraction IMT definitions to support IMTs
 
   [Michele Simionato]
+  * Improved the test coverage for event based with GMF correlation
   * Optimized the event based risk calculator from ruptures: now the ruptures
     are instantiated in the workers and not in the controller if possible
   * Exported the parameter ses_per_logic_tree_path in the ruptures.csv file
