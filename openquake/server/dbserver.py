@@ -214,5 +214,6 @@ run_server.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':
     if hasattr(os, 'fork'):
-        detach_process()  # called by ensure_on
+        # needed for https://github.com/gem/oq-engine/issues/3211
+        detach_process()
     run_server.callfunc()
