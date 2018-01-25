@@ -251,9 +251,9 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
-        # this is a case where there is 1 rupture and 1 gmv per site
-        num_sites = len(self.calc.datastore['sitecol'])
-        self.assertEqual(len(self.calc.datastore['gmf_data/data']), num_sites)
+        # this is a case where there are 2 ruptures and 1 gmv per site
+        num_gmvs = len(self.calc.datastore['sitecol']) * 2
+        self.assertEqual(len(self.calc.datastore['gmf_data/data']), num_gmvs)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
