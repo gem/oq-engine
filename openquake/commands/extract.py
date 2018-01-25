@@ -55,5 +55,5 @@ def extract(what, calc_id=-1):
         print(mon)
 
 
-extract.arg('calc_id', 'number of the calculation', type=int)
 extract.arg('what', 'string specifying what to export')
+extract.arg('calc_id', 'number of the calculation', type=int)
