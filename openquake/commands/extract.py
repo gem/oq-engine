@@ -48,7 +48,8 @@ def extract(what, calc_id=-1):
         items = extract_(dstore, what)
         if not inspect.isgenerator(items):
             items = [(items.__class__.__name__, items)]
-        fname = '%s_%d.hdf5' % (what.replace('/', '-'), dstore.calc_id)
+        fname = '%s_%d.hdf5' % (what.replace('/', '-').replace('?', '-'),
+                                dstore.calc_id)
         hdf5.save(fname, items)
         print('Saved', fname)
     if mon.duration > 1:
