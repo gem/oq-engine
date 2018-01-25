@@ -16,9 +16,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import time
-import os.path
 import sqlite3
 import logging
 import threading
@@ -213,5 +213,6 @@ run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':
-    detach_process()  # called by ensure_on
+    if hasattr(os, 'fork'):
+        detach_process()  # called by ensure_on
     run_server.callfunc()
