@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import RSD595, RSD575
 
 class BommerEtAl2009RSD(GMPE):
     """
-    Implements the GMPE of Bommer et al. (2009) for significant duraction with
+    Implements the GMPE of Bommer et al. (2009) for significant duration with
     5 - 75 % Arias Intensity and 5 - 95 % Arias Intensity
     """
     #: Supported tectonic region type is active shallow crust
