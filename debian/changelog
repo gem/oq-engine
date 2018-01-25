@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Run the DbServer as a detached process
   * Improved the test coverage for event based with GMF correlation
   * Optimized the event based risk calculator from ruptures: now the ruptures
     are instantiated in the workers and not in the controller if possible
