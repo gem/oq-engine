@@ -933,13 +933,10 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
 def detach_process():
     """
     Detach the current process from the controlling terminal by using a
-    double fork. On platforms without fork (Windows) do nothing.
+    double fork. Can be used only on platforms with fork (no Windows).
     """
     # see https://pagure.io/python-daemon/blob/master/f/daemon/daemon.py and
     # https://stackoverflow.com/questions/45911705/why-use-os-setsid-in-python
-    if not hasattr(os, 'fork'):   # on windows
-        return
-
     def fork_then_exit_parent():
         pid = os.fork()
         if pid:  # in parent
