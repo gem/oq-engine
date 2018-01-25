@@ -61,13 +61,13 @@ RM       4,000
 ======== =========''', got)
 
         # test aggdamages, 1 realization x 3 damage states
-        [dmg] = extract(self.calc.datastore, 'aggdamages/structural',
-                        'taxonomy=RC', 'CRESTA=01.1')
+        [dmg] = extract(self.calc.datastore, 'aggdamages/structural?'
+                        'taxonomy=RC&CRESTA=01.1')
         numpy.testing.assert_almost_equal(
             [998.6327515, 720.0072021, 281.3600769], dmg)
         # test no intersection
-        dmg = extract(self.calc.datastore, 'aggdamages/structural',
-                      'taxonomy=RM', 'CRESTA=01.1')
+        dmg = extract(self.calc.datastore, 'aggdamages/structural?'
+                      'taxonomy=RM&CRESTA=01.1')
         self.assertEqual(len(dmg), 0)
 
     @attr('qa', 'risk', 'scenario_damage')
@@ -119,8 +119,8 @@ RM       4,000
     def test_case_5a(self):
         # this is a case with two gsims and one asset
         self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
-        dmg = extract(self.calc.datastore, 'aggdamages/structural',
-                      'taxonomy=*')
+        dmg = extract(self.calc.datastore,
+                      'aggdamages/structural?taxonomy=%2A')
         tmpname = write_csv(None, dmg)  # shape (T, R, D) == (1, 2, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 
@@ -128,8 +128,8 @@ RM       4,000
     def test_case_6(self):
         # this is a case with 5 assets on the same point
         self.assert_ok(case_6, 'job_h.ini,job_r.ini')
-        dmg = extract(self.calc.datastore, 'aggdamages/structural',
-                      'taxonomy=*')
+        dmg = extract(self.calc.datastore,
+                      'aggdamages/structural?taxonomy=%2A')
         tmpname = write_csv(None, dmg)  # shape (T, R, D) == (5, 1, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 
