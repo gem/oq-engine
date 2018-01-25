@@ -26,6 +26,10 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
+try:  # with Python 3
+    from urllib.parse import unquote_plus
+except ImportError:  # with Python 2
+    from urllib import unquote_plus
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import calc
@@ -217,8 +221,14 @@ def _filter_agg(assetcol, losses, selected):
             dict(selected=encode(selected), tags=encode(tags)))
 
 
+def get_loss_type_tags(what):
+    loss_type, query_string = what.rsplit('?', 1)
+    tags = [unquote_plus(tag) for tag in query_string.split('&')]
+    return loss_type, tags
+
+
 @extract.add('agglosses')
-def extract_agglosses(dstore, loss_type, *tags):
+def extract_agglosses(dstore, what):
     """
     Aggregate losses of the given loss type and tags. Use it as
     /extract/agglosses/structural?taxonomy=RC&zipcode=20126
@@ -229,6 +239,7 @@ def extract_agglosses(dstore, loss_type, *tags):
         an array of shape (R,), being R the number of realizations
         an array of length 0 if there is no data for the given tags
     """
+    loss_type, tags = get_loss_type_tags(what)
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
     l = dstore['oqparam'].lti[loss_type]
@@ -242,7 +253,7 @@ def extract_agglosses(dstore, loss_type, *tags):
 
 
 @extract.add('aggdamages')
-def extract_aggdamages(dstore, loss_type, *tags):
+def extract_aggdamages(dstore, what):
     """
     Aggregate damages of the given loss type and tags. Use it as
     /extract/aggdamages/structural?taxonomy=RC&zipcode=20126
@@ -252,6 +263,7 @@ def extract_aggdamages(dstore, loss_type, *tags):
         the number of damage states or array of length 0 if there is no
         data for the given tags
     """
+    loss_type, tags = get_loss_type_tags(what)
     if 'dmg_by_asset' in dstore:  # scenario_damage
         losses = dstore['dmg_by_asset'][loss_type]['mean']
     else:
@@ -260,7 +272,7 @@ def extract_aggdamages(dstore, loss_type, *tags):
 
 
 @extract.add('aggcurves')
-def extract_aggcurves(dstore, loss_type, *tags):
+def extract_aggcurves(dstore, what):
     """
     Aggregate loss curves of the given loss type and tags for
     event based risk calculations. Use it as
@@ -270,6 +282,7 @@ def extract_aggcurves(dstore, loss_type, *tags):
         array of shape (S, P), being P the number of return periods
         and S the number of statistics
     """
+    loss_type, tags = get_loss_type_tags(what)
     if 'curves-stats' in dstore:  # event_based_risk
         losses = dstore['curves-stats'][loss_type]
     else:
