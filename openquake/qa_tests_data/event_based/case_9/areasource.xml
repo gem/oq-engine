@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="None"
+    >
+        <areaSource
+        id="1"
+        name="C6"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <Polygon>
+                    <exterior>
+                        <LinearRing>
+                            <posList>
+                                -84.4553 10.5955 -84.1193 10.44 -83.5379 10.2479 -83.5381 10.1265 -83.6627 9.9272 -83.791 9.7056 -84.3553 9.7019 -84.7799 9.9923 -84.4553 10.5955
+                            </posList>
+                        </LinearRing>
+                    </exterior>
+                </Polygon>
+                <upperSeismoDepth>
+                    0.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    25.0
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.0
+            </ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="4.04" bValue="0.89" maxMag="7.1" minMag="5.5"/>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="1.0"
+                rake="90.0"
+                strike="0.0"
+                >
+                    1.0 0.0 90.0 90.0
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="10.0"
+                probability="1.0"
+                >
+                    1.0 10.0
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+    </sourceModel>
+</nrml>
