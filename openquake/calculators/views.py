@@ -18,6 +18,7 @@
 from __future__ import division
 import io
 import ast
+import math
 import os.path
 import numbers
 import operator
@@ -242,6 +243,9 @@ def view_ruptures_per_trt(token, dstore):
     eff_ruptures = 0
     tot_ruptures = 0
     csm_info = dstore['csm_info']
+    oq = dstore['oqparam']
+    num_sites = len(dstore['sitecol'])
+    num_tiles = math.ceil(num_sites / oq.sites_per_tile)
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
@@ -256,6 +260,8 @@ def view_ruptures_per_trt(token, dstore):
             ('#eff_ruptures', eff_ruptures),
             ('#tot_ruptures', tot_ruptures),
             ('#tot_weight', csm_info.tot_weight)]
+    if num_tiles > 1:
+        rows.insert(0, ('#tiles', num_tiles))
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
