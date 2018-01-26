@@ -26,10 +26,6 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-try:  # with Python 3
-    from urllib.parse import unquote_plus
-except ImportError:  # with Python 2
-    from urllib import unquote_plus
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import calc
@@ -226,8 +222,7 @@ def get_loss_type_tags(what):
         loss_type, query_string = what.rsplit('?', 1)
     except ValueError:  # no question mark
         loss_type, query_string = what, ''
-    tags = ([unquote_plus(tag) for tag in query_string.split('&')]
-            if query_string else [])
+    tags = query_string.split('&') if query_string else []
     return loss_type, tags
 
 
