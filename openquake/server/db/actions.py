@@ -21,7 +21,8 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import datastore
+from openquake.baselib import datastore, general
+from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
@@ -237,7 +238,40 @@ def get_outputs(db, job_id):
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
 
-DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset')
+DISPLAY_NAME = {
+    'gmf_data': 'Ground Motion Fields',
+    'dmg_by_asset': 'Average Asset Damages',
+    #'damages_by_asset': 'Average Asset Damages',
+    #'damages_by_event': 'Aggregate Event Damages',
+    'losses_by_asset': 'Average Asset Losses',
+    'losses_by_event': 'Aggregate Event Losses',
+    'damages-rlzs': 'Asset Damage Distribution',
+    'damages-stats': 'Asset Damage Statistics',
+    'avg_losses-rlzs': 'Average Asset Losses',
+    'avg_losses-stats': 'Average Asset Losses Statistics',
+    'loss_curves': 'Asset Loss Curves',
+    'loss_curves-stats': 'Asset Loss Curves Statistics',
+    'loss_maps-rlzs': 'Asset Loss Maps',
+    'loss_maps-stats': 'Asset Loss Maps Statistics',
+    'agg_curves-rlzs': 'Aggregate Loss Curves',
+    'agg_curves-stats': 'Aggregate Loss Curves Statistics',
+    'agg_loss_table': 'Aggregate Loss Table',
+    'agglosses-rlzs': 'Aggregate Asset Losses',
+    'bcr-rlzs': 'Benefit Cost Ratios',
+    'sourcegroups': 'Seismic Source Groups',
+    'ruptures': 'Earthquake Ruptures',
+    'hcurves': 'Hazard Curves',
+    'hmaps': 'Hazard Maps',
+    'uhs': 'Uniform Hazard Spectra',
+    'disagg': 'Disaggregation Outputs',
+    'realizations': 'Realizations',
+    'fullreport': 'Full Report',
+}
+
+# sanity check, all display name keys must be exportable
+dic = general.groupby(export, operator.itemgetter(0))
+for key in DISPLAY_NAME:
+    assert key in dic, key
 
 
 def create_outputs(db, job_id, dskeys):
@@ -500,21 +534,21 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               ' ORDER BY id DESC LIMIT %d'
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
-             job.is_running, job.description) for job in jobs]
+             job.is_running, job.description, job.pid) for job in jobs]
 
 
-def set_relevant(db, job_id, flag):
+def update_job(db, job_id, dic):
     """
-    Set the `relevant` field of the given calculation record.
+    Update the given calculation record.
 
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         a job ID
-    :param flag:
-        flag for the field job.relevant
+    :param dic:
+        a dictionary of valid field/values for the job table
     """
-    db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
+    db('UPDATE job SET ?D WHERE id=?x', dic, job_id)
 
 
 def update_parent_child(db, parent_child):

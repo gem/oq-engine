@@ -19,11 +19,11 @@
 from nose.plugins.attrib import attr
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
-    case_1, case_2, case_2d, case_1g, case_3, case_4, case_5,
+    case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, occupants, case_master)
 
 from openquake.baselib.general import writetmp
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -86,7 +86,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         numpy.testing.assert_almost_equal(tot.array, 0.01355099)
 
         # test agglosses with *
-        tbl = extract(self.calc.datastore, 'agglosses/occupants', 'taxonomy=*')
+        tbl = extract(self.calc.datastore, 'agglosses/occupants?taxonomy=*')
         self.assertEqual(tbl.array.shape, (1, 1))  # 1 taxonomy, 1 rlz
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -153,11 +153,24 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
+    def test_case_1h(self):
+        # this is a case with 2 assets spawning 2 tasks
+        out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv')
+        [fname] = out['losses_by_asset', 'csv']
+        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+
+        # with a single task
+        out = self.run_calc(case_1h.__file__, 'job.ini', exports='csv',
+                            concurrent_tasks='0')
+        [fname] = out['losses_by_asset', 'csv']
+        self.assertEqualFiles('expected/losses_by_asset.csv', fname)
+
+    @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
         # a case with two GSIMs
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
         # check losses by taxonomy
-        agglosses = extract(self.calc.datastore, 'agglosses/structural',
+        agglosses = extract(self.calc.datastore, 'agglosses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
         numpy.testing.assert_almost_equal(
             agglosses, [[1969.55847168, 2363.07958984],
@@ -165,8 +178,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                         [986.706604, 1344.03710938]])
 
         # extract agglosses with a * and a selection
-        obj = extract(self.calc.datastore, 'agglosses/structural',
-                      'state=*', 'cresta=0.11')
+        obj = extract(self.calc.datastore, 'agglosses/structural?'
+                      'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
         numpy.testing.assert_almost_equal(

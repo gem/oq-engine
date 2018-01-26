@@ -38,6 +38,7 @@ from openquake.commonlib import readinput, source, calc, riskmodels, writers
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
+from openquake.calculators.getters import GmfDataGetter, PmapGetter
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -365,7 +366,7 @@ class HazardCalculator(BaseCalculator):
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
             assets_by_site,
-            self.exposure.assets_by_tag,
+            self.exposure.tagnames,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
             time_events=hdf5.array_of_vstr(sorted(self.exposure.time_events)))
@@ -669,7 +670,6 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
         assets_by_site = self.assetcol.assets_by_site()
-        self.tagmask = self.assetcol.tagmask()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             sid_weight_pairs = [
@@ -677,7 +677,7 @@ class RiskCalculator(HazardCalculator):
                 for sid, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
-            dstore = self.can_read_parent()
+            dstore = self.can_read_parent() or self.datastore
             for block in blocks:
                 sids = numpy.array([sid for sid, _weight in block])
                 reduced_assets = assets_by_site[sids]
@@ -685,18 +685,14 @@ class RiskCalculator(HazardCalculator):
                 reduced_eps = {}
                 for assets in reduced_assets:
                     for ass in assets:
-                        ass.tagmask = self.tagmask[ass.ordinal]
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
-                if dstore is None:
-                    dstore = self.datastore
                 if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = calc.PmapGetter(dstore, sids)
+                    getter = PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
                 else:  # gmf
-                    getter = riskinput.GmfDataGetter(
-                        dstore, sids, self.R, eids)
+                    getter = GmfDataGetter(dstore, sids, self.R, eids)
                 if dstore is self.datastore:
                     # read the hazard data in the controller node
                     logging.info('Reading hazard')

@@ -64,6 +64,7 @@ class TestBilinearResiduals(unittest.TestCase):
     '''
     Class to test the function to calculate bilinear residuals
     '''
+
     def setUp(self):
         self.xdata = np.arange(0., 11., 1.)
         self.params = [2.0, -1.0, 5.0, 1.0]

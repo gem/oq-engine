@@ -31,7 +31,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.baselib import parallel
-from openquake.commonlib import calc
+from openquake.calculators import getters
 from openquake.calculators import base, classical
 
 
@@ -150,7 +150,7 @@ producing too small PoEs.'''
         """
         dic = {}
         imtls = self.oqparam.imtls
-        pgetter = calc.PmapGetter(self.datastore, sids=numpy.array([sid]))
+        pgetter = getters.PmapGetter(self.datastore, sids=numpy.array([sid]))
         pgetter.init()
         for rlz in self.rlzs_assoc.realizations:
             try:
