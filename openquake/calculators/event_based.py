@@ -32,10 +32,11 @@ from openquake.hazardlib.calc.filters import FarAwayRupture, SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
+from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
+from openquake.calculators.getters import GmfGetter
 from openquake.calculators.classical import (
     ClassicalCalculator, saving_sources_by_task)
 
