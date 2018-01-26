@@ -31,9 +31,6 @@ class ValidationError(Exception):
 
 U32 = numpy.uint32
 F32 = numpy.float32
-EVENTS = -2
-NBYTES = -1
-
 FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
 
@@ -444,52 +441,3 @@ def rsi2str(rlzi, sid, imt):
     'rlz-XXXX/sid-YYYY/ZZZ'
     """
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
-
-
-class LossRatiosGetter(object):
-    """
-    Read loss ratios from the datastore for all realizations or for a specific
-    realization.
-
-    :param dstore: a DataStore instance
-    """
-    def __init__(self, dstore, aids=None, lazy=True):
-        self.dstore = dstore
-        dset = self.dstore['all_loss_ratios/indices']
-        self.aids = list(aids or range(len(dset)))
-        self.indices = [dset[aid] for aid in self.aids]
-        self.data = None if lazy else self.get_all()
-
-    # used in the loss curves exporter
-    def get(self, rlzi):
-        """
-        :param rlzi: a realization ordinal
-        :returns: a dictionary aid -> array of shape (E, LI)
-        """
-        data = self.dstore['all_loss_ratios/data']
-        dic = collections.defaultdict(list)  # aid -> ratios
-        for aid, idxs in zip(self.aids, self.indices):
-            for idx in idxs:
-                for rec in data[idx[0]: idx[1]]:  # dtype (rlzi, ratios)
-                    if rlzi == rec['rlzi']:
-                        dic[aid].append(rec['ratios'])
-        return {a: numpy.array(dic[a]) for a in dic}
-
-    # used in the calculator
-    def get_all(self):
-        """
-        :returns: a list of A composite arrays of dtype `lrs_dt`
-        """
-        if getattr(self, 'data', None) is not None:
-            return self.data
-        self.dstore.open()  # if closed
-        data = self.dstore['all_loss_ratios/data']
-        loss_ratio_data = []
-        for aid, idxs in zip(self.aids, self.indices):
-            if len(idxs):
-                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
-            else:
-                # FIXME: a test for this case is missing
-                arr = numpy.array([], data.dtype)
-            loss_ratio_data.append(arr)
-        return loss_ratio_data
