@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * RPM packages moved to Python 3.5
+
   [Michele Simionato]
   * Added the ability to dump a specific calculation
   * Changed the signature of the extract command to `oq extract what calc_id`,
