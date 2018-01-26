@@ -103,7 +103,5 @@ config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
-
-# check if this is useful
-#DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
-#config.dbserver_url = 'tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT)
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+config.dbserver_url = 'tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT)
