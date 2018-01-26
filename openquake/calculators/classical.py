@@ -30,7 +30,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.commonlib import calc
+from openquake.calculators import getters
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -230,7 +230,7 @@ def fix_ones(pmap):
 
 def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
-    :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
+    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param hstats: a list of pairs (statname, statfunc)
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
@@ -274,10 +274,11 @@ class ClassicalCalculator(PSHACalculator):
             return {}
         elif not oq.hazard_stats():
             if oq.hazard_maps or oq.uniform_hazard_spectra:
-                raise ValueError('The job.ini says that no statistics should '
-                                 'be computed, but then there is no output!')
-            else:
-                return {}
+                logging.warn('mean_hazard_curves was false in the job.ini, '
+                             'so no outputs were generated.\nYou can compute '
+                             'the statistics without repeating the calculation'
+                             ' with the --hc option')
+            return {}
         # initialize datasets
         N = len(self.sitecol)
         L = len(oq.imtls.array)
@@ -312,7 +313,7 @@ class ClassicalCalculator(PSHACalculator):
         if parent is None:
             parent = self.datastore
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pgetter = calc.PmapGetter(parent, t.sids, self.rlzs_assoc)
+            pgetter = getters.PmapGetter(parent, t.sids, self.rlzs_assoc)
             if parent is self.datastore:  # read now, not in the workers
                 logging.info('Reading PoEs on %d sites', len(t))
                 pgetter.init()

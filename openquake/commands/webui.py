@@ -59,7 +59,7 @@ def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
     if cmd == 'start':
-        dbserver.ensure_on()  # start the dbserver in a subproces
+        dbserver.ensure_on()  # start the dbserver in a subprocess
         rundjango('runserver', hostport, skip_browser)
     elif cmd in commands:
         rundjango(cmd)

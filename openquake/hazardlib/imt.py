@@ -164,9 +164,30 @@ class RSD(_IMT):
     """
 
 
+class RSD595(_IMT):
+    """
+    Alias for RSD
+    """
+
+
+class RSD575(_IMT):
+    """
+    Relative significant duration, 5-75% of :class:`Arias intensity
+    <IA>`, in seconds.
+    """
+
+
+class RSD2080(_IMT):
+    """
+    Relative significant duration, 20-80% of :class:`Arias intensity
+    <IA>`, in seconds.
+    """
+
+
 class MMI(_IMT):
     """
     Modified Mercalli intensity, a Roman numeral describing the severity
     of an earthquake in terms of its effects on the earth's surface
     and on humans and their structures.
     """
+ 

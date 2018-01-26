@@ -88,7 +88,7 @@ class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
         if len(sites.complete) == len(sites):
             return numpy.dot(corma, residuals)
         # it is important to allocate little memory, this is why I am
-        # accumulating below; if S is the length of the complete sitecollection
+        # accumulating below; if S is the length of the complete sites
         # the correlation matrix has shape (S, S) and the residuals (N, s),
         # where s is the number of samples
         return numpy.sum(corma[sites.sids, sid] * res
