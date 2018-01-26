@@ -809,7 +809,7 @@ class Exposure(object):
         for idx, asset_node in enumerate(asset_nodes):
             asset_id = asset_node['id']
             if asset_id in asset_refs:
-                raise read_nrml.DuplicatedID(asset_id)
+                raise nrml.DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             self._add_asset(idx, asset_node, param)
 
