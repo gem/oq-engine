@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import numpy
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib.general import AccumDict, group_array, get_array
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import calc, probability_map, stats
 
