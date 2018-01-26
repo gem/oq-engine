@@ -676,8 +676,9 @@ def extract(request, calc_id, what):
         fd, fname = tempfile.mkstemp(
             prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
-        extra = ['%s=%s' % item for item in request.GET.items()]
-        obj = _extract(ds, what, *extra)
+        n = len(request.path_info)
+        query_string = request.get_full_path()[n:]
+        obj = _extract(ds, what + query_string)
         if inspect.isgenerator(obj):
             array, attrs = None, {k: _array(v) for k, v in obj}
         elif hasattr(obj, '__toh5__'):
