@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"  
+      xmlns="http://openquake.org/xmlns/nrml/0.4">    
+    <logicTree logicTreeID="lt1"> 
+        <logicTreeBranchingLevel branchingLevelID="_bl01">
+            <logicTreeBranchSet branchSetID="_bs01" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Active Shallow Crust">
+                <logicTreeBranch branchID="_ltb1_2">
+                    <uncertaintyModel>ZhaoEtAl2006Asc</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel> 
+        <logicTreeBranchingLevel branchingLevelID="_bl02">
+            <logicTreeBranchSet branchSetID="_bs02" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Subduction Interface">
+                <logicTreeBranch branchID="_ltb2_1">
+                    <uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel> 
+        <logicTreeBranchingLevel branchingLevelID="_bl03">
+            <logicTreeBranchSet branchSetID="_bs03" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Subduction IntraSlab">
+                <logicTreeBranch branchID="_ltb3_2">
+                    <uncertaintyModel>ZhaoEtAl2006SSlab</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel> 
+    </logicTree>
+</nrml>

@@ -96,6 +96,7 @@ class HMTKBaseMap(object):
     Class to plot the spatial distribution of events based in the Catalogue
     imported from openquake.hmtk.
     '''
+
     def __init__(self, config,
                  title=None, dpi=300, ax=None, lat_lon_spacing=2.):
         """
