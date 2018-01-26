@@ -119,8 +119,7 @@ RM       4,000
     def test_case_5a(self):
         # this is a case with two gsims and one asset
         self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
-        dmg = extract(self.calc.datastore,
-                      'aggdamages/structural?taxonomy=%2A')
+        dmg = extract(self.calc.datastore, 'aggdamages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg)  # shape (T, R, D) == (1, 2, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 
@@ -128,8 +127,7 @@ RM       4,000
     def test_case_6(self):
         # this is a case with 5 assets on the same point
         self.assert_ok(case_6, 'job_h.ini,job_r.ini')
-        dmg = extract(self.calc.datastore,
-                      'aggdamages/structural?taxonomy=%2A')
+        dmg = extract(self.calc.datastore, 'aggdamages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg)  # shape (T, R, D) == (5, 1, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 
