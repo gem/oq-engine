@@ -150,8 +150,10 @@ rm -rf %{buildroot}
 %systemd_postun_with_restart openquake-webui.service
 
 %files
-%attr(0750, openquake, openquake) %dir %{_localstatedir}/lib/openquake
 %defattr(-,root,root)
+%attr(0750, openquake, openquake) %dir %{_localstatedir}/lib/openquake
+%dir %{_sysconfdir}/openquake
+%dir %{_datadir}/openquake
 %doc README.md LICENSE CONTRIBUTORS.txt
 %doc doc/*.md
 %doc doc/img/*
