@@ -34,9 +34,9 @@ from openquake.qa_tests_data.classical import (
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
+        kind = kw.pop('kind', '')  # 'all' or ''
         self.run_calc(test_dir, 'job.ini', **kw)
         ds = self.calc.datastore
-        kind = kw.get('kind', '')  # 'all' or ''
         got = (export(('hcurves/' + kind, 'csv'), ds) +
                export(('hmaps/' + kind, 'csv'), ds) +
                export(('uhs/' + kind, 'csv'), ds))
@@ -123,13 +123,10 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__, kind='all')
 
-        with self.assertRaises(ValueError) as ctx:
-            self.run_calc(
-                case_7.__file__, 'job.ini', mean_hazard_curves='false',
-                hazard_maps='true', poes='0.1')
-        self.assertEqual(
-            'The job.ini says that no statistics should be computed, but then '
-            'there is no output!', str(ctx.exception))
+        # exercise the warning for no output when mean_hazard_curves='false'
+        self.run_calc(
+            case_7.__file__, 'job.ini', mean_hazard_curves='false',
+            hazard_maps='true', poes='0.1')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):

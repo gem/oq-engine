@@ -30,6 +30,7 @@ from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
+from openquake.calculators import getters
 from openquake.commonlib import writers, calc, hazard_writers
 from openquake.commonlib.util import (
     get_assets, compose_arrays, reader)
@@ -600,7 +601,7 @@ def export_asset_loss_table(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     monitor = performance.Monitor(key, fname)
     aids = range(len(assetcol))
-    allargs = [(riskinput.LossRatiosGetter(dstore, block), monitor)
+    allargs = [(getters.LossRatiosGetter(dstore, block), monitor)
                for block in split_in_blocks(aids, oq.concurrent_tasks)]
     dstore.close()  # avoid OSError: Can't read data (Wrong b-tree signature)
     L = len(loss_types)
