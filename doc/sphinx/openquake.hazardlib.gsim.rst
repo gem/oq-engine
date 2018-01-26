@@ -36,6 +36,14 @@ abrahamson_silva_2008
     :undoc-members:
     :show-inheritance:
 
+afshari_stewart_2016
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.afshari_stewart_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 akkar_2013
 ------------------------------------------
 
@@ -175,6 +183,14 @@ bindi_2017
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bindi_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bommer_2009
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bommer_2009
     :members:
     :undoc-members:
     :show-inheritance:

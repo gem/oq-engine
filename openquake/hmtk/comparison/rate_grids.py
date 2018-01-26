@@ -90,6 +90,7 @@ class RateGrid(object):
     :param float area_discretisation:
         Discretisation step (km) of area sources
     """
+
     def __init__(self, limits, sources, area_discretisation=10.):
         """
         Instantiate class with grid configurations
@@ -229,7 +230,7 @@ class RateGrid(object):
                 continue
             else:
                 self.rates[xloc, yloc, zloc] += float(hypo_depth[0]) * \
-                                               annual_rate
+                    annual_rate
 
     def _get_area_rates(self, source, mmin, mmax=np.inf):
         """
@@ -285,6 +286,7 @@ class RatePolygon(RateGrid):
     :param float area_discretisation:
         Discretisation spacing (km) of the area source
     """
+
     def __init__(self, limits, sources, area_discretisation=10.):
         """
         Instantiate class with grid configurations

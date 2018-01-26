@@ -18,7 +18,8 @@
 import numpy
 from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
-from openquake.risklib import riskinput, scientific
+from openquake.calculators import getters
+from openquake.risklib import scientific
 
 
 def get_loss_builder(dstore):
@@ -159,7 +160,7 @@ class LossCurveExporter(object):
 
         # otherwise event_based
         avalues = self.assetcol.values(aids)
-        lrgetter = riskinput.LossRatiosGetter(self.dstore, aids)
+        lrgetter = getters.LossRatiosGetter(self.dstore, aids)
         build = self.builder.build_rlz
         if key.startswith('rlz-'):
             rlzi = int(key[4:])
