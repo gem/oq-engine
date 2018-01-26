@@ -39,9 +39,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -57,21 +57,23 @@ import numpy as np
 from math import log
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hmtk.faults.mfd.anderson_luco_area_mmax import (Type1RecurrenceModel,
-    Type2RecurrenceModel, Type3RecurrenceModel, AndersonLucoAreaMmax)
+                                                               Type2RecurrenceModel, Type3RecurrenceModel, AndersonLucoAreaMmax)
 
 MAGNITUDES = np.arange(5., 8.1, 0.1)
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 BUN07_FIG1 = np.genfromtxt(os.path.join(BASE_DATA_PATH,
-        'anderson_luco_area_mmax_results.dat'))
+                                        'anderson_luco_area_mmax_results.dat'))
 AL83_AREA_MMAX_INC = np.genfromtxt(os.path.join(BASE_DATA_PATH,
-        'anderson_luco_area_mmax_incremental.dat'))
+                                                'anderson_luco_area_mmax_incremental.dat'))
+
 
 class TestType1Recurrence(unittest.TestCase):
     '''
     Tests the Recurrence function of the Anderson & Luco (1983) area Mmax
     type 1 model
     '''
+
     def setUp(self):
         '''
         '''
@@ -81,7 +83,6 @@ class TestType1Recurrence(unittest.TestCase):
         self.bbar = 1.0 * log(10.)
         self.dbar = 1.5 * log(10.)
         self.beta = None
-
 
     def test_recurrence_model_type1(self):
         '''
@@ -99,9 +100,8 @@ class TestType1Recurrence(unittest.TestCase):
         expected_results = BUN07_FIG1[:, 1]
         for iloc, mag in enumerate(self.magnitudes):
             self.assertAlmostEqual(expected_results[iloc],
-                self.model.cumulative_value(1.0, self.mmax, mag,
-                self.bbar, self.dbar, self.beta), 7)
-
+                                   self.model.cumulative_value(1.0, self.mmax, mag,
+                                                               self.bbar, self.dbar, self.beta), 7)
 
 
 class TestType2Recurrence(unittest.TestCase):
@@ -109,10 +109,12 @@ class TestType2Recurrence(unittest.TestCase):
     Tests the Recurrence function of the Anderson & Luco (1983) arbitrary
     type 2 model
     '''
+
     def setUp(self):
         '''
 
         '''
+
     def setUp(self):
         '''
         '''
@@ -122,7 +124,6 @@ class TestType2Recurrence(unittest.TestCase):
         self.bbar = 1.0 * log(10.)
         self.dbar = 1.5 * log(10.)
         self.beta = None
-
 
     def test_recurrence_model_type1(self):
         '''
@@ -140,8 +141,8 @@ class TestType2Recurrence(unittest.TestCase):
         expected_results = BUN07_FIG1[:, 2]
         for iloc, mag in enumerate(self.magnitudes):
             self.assertAlmostEqual(expected_results[iloc],
-                self.model.cumulative_value(1.0, self.mmax, mag,
-                self.bbar, self.dbar, self.beta), 7)
+                                   self.model.cumulative_value(1.0, self.mmax, mag,
+                                                               self.bbar, self.dbar, self.beta), 7)
 
 
 class TestType3Recurrence(unittest.TestCase):
@@ -149,6 +150,7 @@ class TestType3Recurrence(unittest.TestCase):
     Tests the Recurrence function of the Anderson & Luco (1983) arbitrary
     type 3 model
     '''
+
     def setUp(self):
         '''
         '''
@@ -158,7 +160,6 @@ class TestType3Recurrence(unittest.TestCase):
         self.bbar = 1.0 * log(10.)
         self.dbar = 1.5 * log(10.)
         self.beta = None
-
 
     def test_recurrence_model_type1(self):
         '''
@@ -176,8 +177,8 @@ class TestType3Recurrence(unittest.TestCase):
         expected_results = BUN07_FIG1[:, 3]
         for iloc, mag in enumerate(self.magnitudes):
             self.assertAlmostEqual(expected_results[iloc],
-                self.model.cumulative_value(1.0, self.mmax, mag,
-                self.bbar, self.dbar, self.beta), 7)
+                                   self.model.cumulative_value(1.0, self.mmax, mag,
+                                                               self.bbar, self.dbar, self.beta), 7)
 
 
 class TestAndersonLucoArbitrary(unittest.TestCase):
@@ -185,17 +186,17 @@ class TestAndersonLucoArbitrary(unittest.TestCase):
     Tests the Anderson & Luco Arbitrary models
     :class openquake.hmtk.faults.mfd.anderson_luco_arbitrary.AndersonLucoArbitrary
     '''
+
     def setUp(self):
         self.model = AndersonLucoAreaMmax()
         self.config = {'Model_Type': 'First',
-                      'MFD_spacing': 0.1,
-                      'Model_Weight': 1.0,
-                      'Minimum_Magnitude': 5.0,
-                      'Maximum_Magnitude': None,
-                      'b_value': [1.0, 0.1]}
+                       'MFD_spacing': 0.1,
+                       'Model_Weight': 1.0,
+                       'Minimum_Magnitude': 5.0,
+                       'Maximum_Magnitude': None,
+                       'b_value': [1.0, 0.1]}
 
         self.msr = WC1994()
-
 
     def test_case_setup(self):
         '''

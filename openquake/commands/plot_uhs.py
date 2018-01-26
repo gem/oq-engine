@@ -19,6 +19,7 @@
 from __future__ import print_function
 import numpy
 from openquake.baselib import sap, datastore
+from openquake.calculators import getters
 from openquake.commonlib import calc
 
 
@@ -60,7 +61,7 @@ def plot_uhs(calc_id, sites='0'):
     """
     # read the hazard data
     dstore = datastore.read(calc_id)
-    getter = calc.PmapGetter(dstore)
+    getter = getters.PmapGetter(dstore)
     getter.init()
     oq = dstore['oqparam']
     indices = list(map(int, sites.split(',')))

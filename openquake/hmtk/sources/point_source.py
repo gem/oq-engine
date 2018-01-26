@@ -57,6 +57,7 @@ from openquake.hazardlib.geo.point import Point
 import openquake.hmtk.sources.source_conversion_utils as conv
 from openquake.hazardlib.source.point import PointSource
 
+
 class mtkPointSource(object):
     '''New class to describe the mtkPointsource object
 

@@ -170,7 +170,7 @@ class VulnerabilityFunction(object):
         if epsilons is None:
             return means
         self.set_distribution(epsilons)
-        return self.distribution.sample(means, covs, None, idxs)
+        return self.distribution.sample(means, covs, means * covs, idxs)
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
@@ -841,7 +841,7 @@ class DiscreteDistribution(Distribution):
         ret = []
         r = numpy.arange(len(loss_ratios))
         for i in range(probs.shape[1]):
-            random.seed(self.seed)
+            random.seed(self.seed + i)
             # the seed is set inside the loop to avoid block-size dependency
             pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
             ret.append(loss_ratios[pmf])
