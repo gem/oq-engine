@@ -44,7 +44,7 @@ def smart_save(dbpath, archive):
 
 
 @sap.Script
-def dump(archive, user=None):
+def dump(archive, calc_id=None, user=None):
     """
     Dump the openquake database and all the complete calculations into a zip
     file. In a multiuser installation must be run as administrator.
@@ -53,6 +53,8 @@ def dump(archive, user=None):
     assert archive.endswith('.zip'), archive
     getfnames = 'select ds_calc_dir || ".hdf5" from job where ?A'
     param = dict(status='complete')
+    if calc_id:
+        param['id'] = calc_id
     if user:
         param['user_name'] = user
     fnames = [f for f, in db(getfnames, param) if os.path.exists(f)]
@@ -74,4 +76,5 @@ def dump(archive, user=None):
 
 
 dump.arg('archive', 'path to the zip file where to dump the calculations')
-dump.arg('user', 'if missing, dump all calculations')
+dump.arg('calc_id', 'calculation ID; if missing, dump all calculations')
+dump.opt('user', 'if missing, dump all calculations')
