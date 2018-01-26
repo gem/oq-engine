@@ -6,18 +6,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -46,11 +46,13 @@ import unittest
 from collections import OrderedDict
 from openquake.hmtk.faults import mfd
 
+
 class TestAvailableMFDs(unittest.TestCase):
     '''
     Simple test of the module openquake.hmtk.faults.get_available_mfds(), which should
     return an OrderedDict containing instances of all the available mfd classes
     '''
+
     def setUp(self):
         '''
         '''
@@ -68,13 +70,13 @@ class TestAvailableMFDs(unittest.TestCase):
         self.mfds = mfd.get_available_mfds()
         expected_dict = OrderedDict(
             [('AndersonLucoArbitrary',
-               mfd.anderson_luco_arbitrary.AndersonLucoArbitrary),
+              mfd.anderson_luco_arbitrary.AndersonLucoArbitrary),
              ('AndersonLucoAreaMmax',
-               mfd.anderson_luco_area_mmax.AndersonLucoAreaMmax),
+              mfd.anderson_luco_area_mmax.AndersonLucoAreaMmax),
              ('BaseMFDfromSlip', mfd.base.BaseMFDfromSlip),
              ('Characteristic', mfd.characteristic.Characteristic),
              ('YoungsCoppersmithCharacteristic',
-               mfd.youngs_coppersmith.YoungsCoppersmithCharacteristic),
+              mfd.youngs_coppersmith.YoungsCoppersmithCharacteristic),
              ('YoungsCoppersmithExponential',
-               mfd.youngs_coppersmith.YoungsCoppersmithExponential)])
-        self.assertDictEqual(self.mfds,expected_dict)
+              mfd.youngs_coppersmith.YoungsCoppersmithExponential)])
+        self.assertDictEqual(self.mfds, expected_dict)

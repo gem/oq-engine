@@ -14,8 +14,8 @@ import numpy as np
 import datetime
 from openquake.hmtk.seismicity.catalogue import Catalogue
 from openquake.hmtk.seismicity.selector import (_check_depth_limits,
-                                      _get_decimal_from_datetime,
-                                      CatalogueSelector)
+                                                _get_decimal_from_datetime,
+                                                CatalogueSelector)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.geo.line import Line
@@ -26,6 +26,7 @@ class TestSelector(unittest.TestCase):
     '''
     Tests the openquake.hmtk.seismicity.selector.Selector class
     '''
+
     def setUp(self):
         self.catalogue = Catalogue()
         self.polygon = None
@@ -57,7 +58,7 @@ class TestSelector(unittest.TestCase):
 
     def test_catalogue_selection(self):
         # Tests the tools for selecting events within the catalogue
-        self.catalogue.data['longitude'] = np.arange(1.,6., 1.)
+        self.catalogue.data['longitude'] = np.arange(1., 6., 1.)
         self.catalogue.data['latitude'] = np.arange(6., 11., 1.)
         self.catalogue.data['depth'] = np.ones(5, dtype=bool)
 
@@ -209,11 +210,11 @@ class TestSelector(unittest.TestCase):
         # Construct Fault
         trace0 = np.array([[5.5, 6.0], [5.5, 5.0]])
         fault_trace = Line([Point(trace0[i, 0], trace0[i, 1])
-                           for i in range(0, 2)])
+                            for i in range(0, 2)])
 
         # Simple fault with vertical dip
         fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 90.,
-                                                   1.)
+                                                    1.)
 
         # Within 100 km
         test_cat_100 = selector0.within_joyner_boore_distance(fault0, 100.)
@@ -247,11 +248,11 @@ class TestSelector(unittest.TestCase):
         # Construct Fault
         trace0 = np.array([[5.5, 6.0], [5.5, 5.0]])
         fault_trace = Line([Point(trace0[i, 0], trace0[i, 1])
-                           for i in range(0, 2)])
+                            for i in range(0, 2)])
 
         # Simple fault with vertical dip
         fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 90.,
-                                                   1.)
+                                                    1.)
 
         # Within 100 km
         test_cat_100 = selector0.within_rupture_distance(fault0, 100.)
@@ -303,7 +304,6 @@ class TestSelector(unittest.TestCase):
 
         test_cat_1 = selector0.within_time_period(start_time=begin_time)
         self._compare_time_data_dictionaries(expected_data, test_cat_1.data)
-
 
         # Test 3 - Start time not defined, end-time defined
         finish_time = datetime.datetime(1965, 1, 1, 0, 0, 0, 0)
@@ -373,7 +373,6 @@ class TestSelector(unittest.TestCase):
         np.testing.assert_array_almost_equal(test_cat_1.data['depth'],
                                              np.array([25., 35.]))
 
-
     def test_select_within_magnitude_range(self):
         '''
         Tests the function to select within the magnitude range
@@ -426,4 +425,4 @@ class TestSelector(unittest.TestCase):
         np.testing.assert_array_equal(cluster_set[2].data["EventID"],
                                       np.array([5, 6]))
         np.testing.assert_array_almost_equal(cluster_set[2].data["magnitude"],
-                                             np.array([4.0, 4.0])) 
+                                             np.array([4.0, 4.0]))
