@@ -32,10 +32,11 @@ from openquake.hazardlib.calc.filters import FarAwayRupture, SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, indices_dt
+from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
+from openquake.calculators.getters import GmfGetter
 from openquake.calculators.classical import (
     ClassicalCalculator, saving_sources_by_task)
 
@@ -175,10 +176,6 @@ def _build_eb_ruptures(
                 rup, indices, numpy.array(events, calc.event_dt), serial)
 
 
-def _count(ruptures):
-    return sum(ebr.multiplicity for ebr in ruptures)
-
-
 def get_events(ebruptures):
     """
     Extract an array of dtype stored_event_dt from a list of EBRuptures
@@ -260,7 +257,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        csm = self.csm.filter(SourceFilter(self.sitecol, oq.maximum_distance))
+        src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        csm = self.csm.filter(src_filter)
         maxweight = csm.get_maxweight(oq.concurrent_tasks)
         numheavy = len(csm.get_sources('heavy', maxweight))
         logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
@@ -278,7 +276,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 csm.add_infos(sg.sources)
                 for block in csm.split_in_blocks(maxweight, sg.sources):
                     block.samples = sm.samples
-                    yield block, csm.src_filter, gsims, param, monitor
+                    yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
@@ -306,34 +304,46 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Save the SES collection
         """
         self.rupser.close()
-        num_events = sum(_count(ruptures) for ruptures in result.values())
-        num_ruptures = sum(len(ruptures) for ruptures in result.values())
+        num_events = sum(set_counts(self.datastore, 'events').values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
                 'small or the maximum_distance is too small')
+        num_ruptures = sum(len(ruptures) for ruptures in result.values())
         logging.info('Setting %d event years on %d ruptures',
                      num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             numpy.random.seed(self.oqparam.ses_seed)
-            set_random_years(self.datastore,
+            set_random_years(self.datastore, 'events',
                              int(self.oqparam.investigation_time))
 
 
-def set_random_years(dstore, investigation_time):
+def set_counts(dstore, dsetname):
     """
-    Sort the `events` array and attach year labels sensitive to the
+    :param dstore: a DataStore instance
+    :dsetname: name of dataset with a field `grp_id`
+    :returns: a dictionary grp_id > counts
+    """
+    groups = dstore[dsetname]['grp_id']
+    unique, counts = numpy.unique(groups, return_counts=True)
+    dic = dict(zip(unique, counts))
+    dstore.set_attrs(dsetname, by_grp=sorted(dic.items()))
+    return dic
+
+
+def set_random_years(dstore, name, investigation_time):
+    """
+    Set on the `events` dataset year labels sensitive to the
     SES ordinal and the investigation time.
     """
-    events = dstore['events'].value
-    eids = numpy.sort(events['eid'])
+    events = dstore[name].value
     years = numpy.random.choice(investigation_time, len(events)) + 1
-    year_of = dict(zip(eids, years))
+    year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
     for event in events:
         idx = event['ses'] - 1  # starts from 0
         event['year'] = idx * investigation_time + year_of[event['eid']]
-    dstore['events'] = events
+    dstore[name] = events
 
 
 # ######################## GMF calculator ############################ #
