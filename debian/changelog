@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Changed the signature of the extract command to `oq extract what calc_id`,
+    where `what` is a path info plus query string;
+
+[Graeme Weatherill]
+  * Implements significant duration GMPEs of Bommer et al. (2009) and Afshari &
+    Stewart (2016)
+  * Adds significant duraction IMT definitions to support IMTs
+
+  [Michele Simionato]
+  * Run the DbServer as a detached process
+  * Improved the test coverage for event based with GMF correlation
   * Optimized the event based risk calculator from ruptures: now the ruptures
     are instantiated in the workers and not in the controller if possible
   * Exported the parameter ses_per_logic_tree_path in the ruptures.csv file
