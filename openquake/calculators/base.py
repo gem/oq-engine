@@ -38,6 +38,7 @@ from openquake.commonlib import readinput, source, calc, riskmodels, writers
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
+from openquake.calculators.getters import GmfDataGetter, PmapGetter
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -688,11 +689,10 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
                 if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = calc.PmapGetter(dstore, sids)
+                    getter = PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
                 else:  # gmf
-                    getter = riskinput.GmfDataGetter(
-                        dstore, sids, self.R, eids)
+                    getter = GmfDataGetter(dstore, sids, self.R, eids)
                 if dstore is self.datastore:
                     # read the hazard data in the controller node
                     logging.info('Reading hazard')

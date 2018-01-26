@@ -32,7 +32,7 @@ from openquake.baselib import parallel
 from openquake.hazardlib import nrml
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, util
-from openquake.calculators import base, event_based
+from openquake.calculators import base, event_based, getters
 from openquake.calculators.event_based_risk import (
     EbriskCalculator, event_based_risk)
 
@@ -835,7 +835,7 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     samples = ssm.info.get_samples_by_grp()
     num_rlzs = len(rlzs_assoc.realizations)
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(DEFAULT_TRT)
-    getter = riskinput.GmfGetter(
+    getter = getters.GmfGetter(
         rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
         src_filter.integration_distance, trunc_level, correl_model,
         samples[grp_id])
