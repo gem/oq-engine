@@ -25,7 +25,7 @@ from openquake.baselib.general import safeprint, zipfiles
 from openquake.server.dbserver import db
 
 
-def smart_save(dbpath, archive):
+def smart_save(dbpath, archive, calc_id):
     """
     Make a copy of the db, remove the incomplete jobs and add the copy
     to the archive
@@ -36,6 +36,8 @@ def smart_save(dbpath, archive):
     try:
         with sqlite3.connect(newdb) as conn:
             conn.execute('DELETE FROM job WHERE status != "complete"')
+            if calc_id:
+                conn.execute('DELETE FROM job WHERE id != %d' % calc_id)
     except:
         safeprint('Please check the copy of the db in %s' % newdb)
         raise
@@ -68,7 +70,7 @@ def dump(archive, calc_id=None, user=None):
             safeprint('%d %s %s' % (job_id, status, descr))
 
     # this also checks that the copied db is not corrupted
-    smart_save(db.path, archive)
+    smart_save(db.path, archive, calc_id)
 
     dt = time.time() - t0
     safeprint('Archived %d calculations into %s in %d seconds'
