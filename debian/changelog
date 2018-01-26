@@ -1,4 +1,24 @@
   [Michele Simionato]
+  * Changed the signature of the extract command to `oq extract what calc_id`,
+    where `what` is a path info plus query string;
+
+[Graeme Weatherill]
+  * Implements significant duration GMPEs of Bommer et al. (2009) and Afshari &
+    Stewart (2016)
+  * Adds significant duraction IMT definitions to support IMTs
+
+  [Michele Simionato]
+  * Run the DbServer as a detached process
+  * Improved the test coverage for event based with GMF correlation
+  * Optimized the event based risk calculator from ruptures: now the ruptures
+    are instantiated in the workers and not in the controller if possible
+  * Exported the parameter ses_per_logic_tree_path in the ruptures.csv file
+  * Improved the display names for the risk outputs
+  * Added a /v1/:calc_id/abort route to the engine server and Abort buttons
+    to the WebUI
+  * Fixed the seeds properly in the case of vulnerability functions with PMFs:
+    now even if the ground motion fields are all equal, the risk numbers
+    will be different since there is a different seed per each field
   * Stored a rupture loss table in event based risk calculations
   * Made sure that the number of effective ruptures is stored in csm_info
   * Fixed the HMTK tests to work with numpy from 1.11 to 1.14
@@ -6,8 +26,10 @@
   * Turned the 'realizations' output into a dynamic output
 
   [Matteo Nastasi]
+  * Split package from python-oq-engine to python-oq-engine,
+    python-oq-engine-master and python-oq-engine-worker
   * Implemented an API `/v1/on_same_fs` to check filesystem accessibility
-    between engine and a client application.
+    between engine and a client application
 
   [Michele Simionato]
   * Reduced the data transfer when computing the hazard curves in postprocessing

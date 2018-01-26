@@ -50,8 +50,7 @@ import numpy as np
 from openquake.hmtk.seismicity.occurrence.base import (
     SeismicityOccurrence, OCCURRENCE_METHODS)
 from openquake.hmtk.seismicity.occurrence.utils import (input_checks,
-                                              get_completeness_counts)
-                                              
+                                                        get_completeness_counts)
 
 
 @OCCURRENCE_METHODS.add(
@@ -72,7 +71,7 @@ class Weichert(SeismicityOccurrence):
                                                        config,
                                                        completeness)
         if not "dtime" in catalogue.data.keys() or not\
-            len(catalogue.data["dtime"]):
+                len(catalogue.data["dtime"]):
             catalogue.data["dtime"] = catalogue.get_decimal_time()
         if not catalogue.end_year:
             catalogue.update_end_year()
@@ -93,8 +92,8 @@ class Weichert(SeismicityOccurrence):
             config['maxiter'] = 1000
         bval, sigma_b, rate, sigma_rate, aval, sigma_a = \
             self.weichert_algorithm(t_per, cent_mag, n_obs, ref_mag,
-            config['bvalue'], config['itstab'], config['maxiter'])
-       
+                                    config['bvalue'], config['itstab'], config['maxiter'])
+
         if not config['reference_magnitude']:
             rate = np.log10(aval)
             sigma_rate = np.log10(aval + sigma_a) - np.log10(aval)
@@ -157,7 +156,7 @@ class Weichert(SeismicityOccurrence):
                 fn0 = fngtm0 * np.exp((beta) * (fmag[0] - (d_m / 2.0)))
                 stdfn0 = fn0 / np.sqrt(nkount)
                 a_m = fngtm0 * np.exp((-beta) * (mrate -
-                                                (fmag[0] - (d_m / 2.0))))
+                                                 (fmag[0] - (d_m / 2.0))))
                 siga_m = a_m / np.sqrt(nkount)
                 itbreak = 1
             else:
@@ -166,4 +165,3 @@ class Weichert(SeismicityOccurrence):
                     warnings.warn('Maximum Number of Iterations reached')
                     return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
         return bval, sigb, a_m, siga_m, fn0, stdfn0
-
