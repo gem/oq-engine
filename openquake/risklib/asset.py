@@ -253,7 +253,7 @@ aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 
 
 class AssetCollection(object):
-    # the information about the assets is store in a numpy array and in a
+    # the information about the assets is stored in a numpy array and in a
     # variable-length dataset aids_by_tags; we could store everything in a
     # single array and it would be easier, but then we would need to transfer
     # unneeded strings; also we would have to use fixed-length string, since
@@ -484,7 +484,7 @@ class AssetCollection(object):
                         except ValueError:  # no - in field
                             name, lt = 'value', field
                         # the line below retrieve one of `deductibles`,
-                        # `insured_limits` or `retrofitteds` ("s" suffix)
+                        # `insurance_limits` or `retrofitteds` ("s" suffix)
                         value = getattr(asset, name + 's')[lt]
                     record[field] = value
         return assetcol
