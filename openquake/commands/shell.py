@@ -26,6 +26,8 @@ class OQ(object):
     def __init__(self):
         from openquake.baselib.datastore import read
         from openquake.commonlib import readinput, calc
+        from openquake.calculators.extract import extract
+        self.extract = extract
         self.read = read
         self.read_exposure = readinput.Exposure.read
         self.get_oqparam = readinput.get_oqparam
