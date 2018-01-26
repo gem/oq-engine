@@ -19,12 +19,159 @@ import collections
 import numpy
 from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib import calc
+from openquake.hazardlib import calc, probability_map, stats
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
+EVENTS = -2
+NBYTES = -1
+
+
+class PmapGetter(object):
+    """
+    Read hazard curves from the datastore for all realizations or for a
+    specific realization.
+
+    :param dstore: a DataStore instance
+    :param sids: the subset of sites to consider (if None, all sites)
+    :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
+    """
+    def __init__(self, dstore, sids=None, rlzs_assoc=None):
+        dstore.open()  # if not
+        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        self.dstore = dstore
+        self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        self.num_levels = len(self.dstore['oqparam'].imtls.array)
+        self.sids = sids
+        self.eids = None
+        self.nbytes = 0
+        if sids is None:
+            self.sids = dstore['sitecol'].complete.sids
+
+    def init(self):
+        if hasattr(self, 'data'):  # already initialized
+            return
+        self.dstore.open()  # if not
+        # populate _pmap_by_grp
+        self._pmap_by_grp = {}
+        if 'poes' in self.dstore:
+            # build probability maps restricted to the given sids
+            for grp, dset in self.dstore['poes'].items():
+                sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
+                L, I = dset.shape[1:]
+                pmap = probability_map.ProbabilityMap(L, I)
+                for sid in self.sids:
+                    try:
+                        idx = sid2idx[sid]
+                    except KeyError:
+                        continue
+                    else:
+                        pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
+                self._pmap_by_grp[grp] = pmap
+                self.nbytes += pmap.nbytes
+
+        self.imtls = self.dstore['oqparam'].imtls
+        self.data = collections.OrderedDict()
+        try:
+            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
+        except IndexError:  # no data
+            return
+        for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
+            self.data[sid] = datadict = {}
+            for rlzi, hcurve in enumerate(hcurve_by_rlz):
+                datadict[rlzi] = lst = [None for imt in self.imtls]
+                for imti, imt in enumerate(self.imtls):
+                    lst[imti] = hcurve[imt]  # imls
+
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: an OrderedDict rlzi -> datadict
+        """
+        return self.data
+
+    def get(self, rlzi, grp=None):
+        """
+        :param rlzi: a realization index
+        :param grp: None (all groups) or a string of the form "grp-XX"
+        :returns: the hazard curves for the given realization
+        """
+        assert self.sids is not None
+        pmap = probability_map.ProbabilityMap(self.num_levels, 1)
+        grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
+        array = self.rlzs_assoc.by_grp()
+        for grp in grps:
+            for gsim_idx, rlzis in array[grp]:
+                for r in rlzis:
+                    if r == rlzi:
+                        pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
+                        break
+        return pmap
+
+    def get_pmaps(self, sids):  # used in classical
+        """
+        :param sids: an array of S site IDs
+        :returns: a list of R probability maps
+        """
+        return self.rlzs_assoc.combine_pmaps(self._pmap_by_grp)
+
+    def get_hcurves(self, imtls):
+        """
+        :param imtls: intensity measure types and levels
+        :returns: an array of (R, N) hazard curves
+        """
+        assert self.sids is not None, 'PmapGetter not bound to sids'
+        pmaps = [pmap.convert2(imtls, self.sids)
+                 for pmap in self.get_pmaps(self.sids)]
+        return numpy.array(pmaps)
+
+    def items(self, kind=''):
+        """
+        Extract probability maps from the datastore, possibly generating
+        on the fly the ones corresponding to the individual realizations.
+        Yields pairs (tag, pmap).
+
+        :param kind:
+            the kind of PoEs to extract; if not given, returns the realization
+            if there is only one or the statistics otherwise.
+        """
+        self.init()  # if not already initialized
+        num_rlzs = len(self.weights)
+        if not kind:  # use default
+            if 'hcurves' in self.dstore:
+                for k in sorted(self.dstore['hcurves']):
+                    yield k, self.dstore['hcurves/' + k]
+            elif num_rlzs == 1:
+                yield 'rlz-000', self.get(0)
+            return
+        if 'poes' in self.dstore and kind in ('rlzs', 'all'):
+            for rlzi in range(num_rlzs):
+                hcurves = self.get(rlzi)
+                yield 'rlz-%03d' % rlzi, hcurves
+        elif 'poes' in self.dstore and kind.startswith('rlz-'):
+            yield kind, self.get(int(kind[4:]))
+        if 'hcurves' in self.dstore and kind in ('stats', 'all'):
+            for k in sorted(self.dstore['hcurves']):
+                yield k, self.dstore['hcurves/' + k]
+
+    def get_mean(self, grp=None):
+        """
+        Compute the mean curve as a ProbabilityMap
+
+        :param grp:
+            if not None must be a string of the form "grp-XX"; in that case
+            returns the mean considering only the contribution for group XX
+        """
+        if self.sids is None:
+            self.sids = self.dstore['sitecol'].complete.sids
+        if len(self.weights) == 1:  # one realization
+            return self.get(0, grp)
+        else:  # multiple realizations, assume hcurves/mean is there
+            dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
+                   if grp is None else {grp: self.dstore['poes/' + grp]})
+            return self.rlzs_assoc.compute_pmap_stats(dic, [stats.mean_curve])
 
 
 class GmfDataGetter(collections.Mapping):
@@ -194,3 +341,52 @@ class GmfGetter(object):
             for rlzi in haz:
                 haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
         return hazard
+
+
+class LossRatiosGetter(object):
+    """
+    Read loss ratios from the datastore for all realizations or for a specific
+    realization.
+
+    :param dstore: a DataStore instance
+    """
+    def __init__(self, dstore, aids=None, lazy=True):
+        self.dstore = dstore
+        dset = self.dstore['all_loss_ratios/indices']
+        self.aids = list(aids or range(len(dset)))
+        self.indices = [dset[aid] for aid in self.aids]
+        self.data = None if lazy else self.get_all()
+
+    # used in the loss curves exporter
+    def get(self, rlzi):
+        """
+        :param rlzi: a realization ordinal
+        :returns: a dictionary aid -> array of shape (E, LI)
+        """
+        data = self.dstore['all_loss_ratios/data']
+        dic = collections.defaultdict(list)  # aid -> ratios
+        for aid, idxs in zip(self.aids, self.indices):
+            for idx in idxs:
+                for rec in data[idx[0]: idx[1]]:  # dtype (rlzi, ratios)
+                    if rlzi == rec['rlzi']:
+                        dic[aid].append(rec['ratios'])
+        return {a: numpy.array(dic[a]) for a in dic}
+
+    # used in the calculator
+    def get_all(self):
+        """
+        :returns: a list of A composite arrays of dtype `lrs_dt`
+        """
+        if getattr(self, 'data', None) is not None:
+            return self.data
+        self.dstore.open()  # if closed
+        data = self.dstore['all_loss_ratios/data']
+        loss_ratio_data = []
+        for aid, idxs in zip(self.aids, self.indices):
+            if len(idxs):
+                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+            else:
+                # FIXME: a test for this case is missing
+                arr = numpy.array([], data.dtype)
+            loss_ratio_data.append(arr)
+        return loss_ratio_data
