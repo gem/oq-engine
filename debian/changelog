@@ -6,7 +6,7 @@
   * Changed the signature of the extract command to `oq extract what calc_id`,
     where `what` is a path info plus query string;
 
-[Graeme Weatherill]
+  [Graeme Weatherill]
   * Implements significant duration GMPEs of Bommer et al. (2009) and Afshari &
     Stewart (2016)
   * Adds significant duraction IMT definitions to support IMTs
