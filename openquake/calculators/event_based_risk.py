@@ -585,7 +585,7 @@ class EbrPostCalculator(base.RiskCalculator):
                 allargs = []
                 for aids in split_in_blocks(range(A), oq.concurrent_tasks):
                     dstore = self.datastore.parent if lazy else self.datastore
-                    getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
+                    getter = getters.LossRatiosGetter(dstore, aids, lazy)
                     # a lazy getter will read the loss_ratios from the workers
                     # an eager getter reads the loss_ratios upfront
                     allargs.append((assetcol.values(aids), builder, getter,

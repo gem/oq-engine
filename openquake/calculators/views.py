@@ -39,6 +39,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
+from openquake.calculators import getters
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
@@ -676,7 +677,7 @@ def view_flat_hcurves(token, dstore):
     """
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
-    mean = calc.PmapGetter(dstore).get_mean()
+    mean = getters.PmapGetter(dstore).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
@@ -696,7 +697,7 @@ def view_flat_hmaps(token, dstore):
     assert oq.poes
     nsites = len(dstore['sitecol'])
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    mean = calc.PmapGetter(dstore).get_mean()
+    mean = getters.PmapGetter(dstore).get_mean()
     hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
     array = calc.convert_to_array(hmaps, nsites, pdic)
     res = numpy.zeros(1, array.dtype)
