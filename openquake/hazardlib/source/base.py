@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
+from __future__ import division
 import abc
 from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
@@ -40,6 +41,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
                'src_group_id', 'num_ruptures', 'seed', 'id']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     nsites = 1  # FIXME: remove this and fix all hazardlib tests
+    ngsims = 1
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -53,7 +55,8 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        return self.num_ruptures * self.RUPTURE_WEIGHT * self.nsites
+        return (self.num_ruptures * self.RUPTURE_WEIGHT *
+                self.nsites)  # * self.ngsims)
 
     @property
     def src_group_ids(self):

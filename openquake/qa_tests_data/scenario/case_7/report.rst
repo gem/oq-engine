@@ -3,8 +3,8 @@ Scenario QA Test with No Spatial Correlation
 
 ============== ===================
 checksum32     1,558,745,804      
-date           2017-10-24T05:47:09
-engine_version 2.8.0-git8e9cdf8   
+date           2018-01-11T04:29:23
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 2, num_imts = 1
@@ -57,5 +57,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 2.933E-05 0.0       1     
+reading site collection 4.315E-05 0.0       1     
 ======================= ========= ========= ======

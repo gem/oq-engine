@@ -95,7 +95,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        base.get_gmfs(self)
+        eids, self.R = base.get_gmfs(self)
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields
         logging.info('Building the epsilons')
@@ -103,7 +103,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        self.riskinputs = self.build_riskinputs('gmf', eps)
+        self.riskinputs = self.build_riskinputs('gmf', eps, eids)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
@@ -116,7 +116,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         loss_dt = self.oqparam.loss_dt()
         I = self.oqparam.insured_losses + 1
         with self.monitor('saving outputs', autoflush=True):
-            A, T = self.tagmask.shape
+            A = len(self.assetcol)
 
             # agg losses
             res = result['agg']

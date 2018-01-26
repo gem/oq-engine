@@ -82,9 +82,9 @@
             backref=true,
             backend=bibtex,
             bibencoding=ascii,
-            firstinits=true,
-	    	uniquename=false,
-	    	uniquelist=false]{biblatex}
+            giveninits=true,
+	    uniquename=false,
+	    uniquelist=false]{biblatex}
 \addbibresource{bibliography/hazard.bib} % Hazard BibTeX bibliography file
 \addbibresource{bibliography/risk.bib} % Risk BibTeX bibliography file
 \defbibheading{bibempty}{}
@@ -138,7 +138,17 @@
 \usepackage[cache=true]{minted} % Syntax highlighting for xml
 
 \usepackage{hyperref}
-\hypersetup{hidelinks,colorlinks=true,breaklinks=true,citecolor=oqblue,linkcolor=gembrown,urlcolor=oqblue,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+\hypersetup{
+hidelinks,
+colorlinks=true,
+breaklinks=true,
+citecolor=oqblue,
+linkcolor=gembrown,
+urlcolor=oqblue,
+bookmarksopen=false,
+pdftitle={The OpenQuake Engine Manual},
+pdfauthor={GEM Foundation}
+}
 
 % Package to create a glossary - must be loaded after hyperref
 \usepackage[acronym,nonumberlist,style=altlist,section=section,toc]{glossaries}

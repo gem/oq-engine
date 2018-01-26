@@ -25,11 +25,12 @@ from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import decode, encode
 from openquake.baselib.general import (
     group_array, split_in_blocks, deprecated as depr)
+from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export, loss_curves
-from openquake.calculators.export.hazard import savez
-from openquake.commonlib import writers, calc
+from openquake.calculators.export.hazard import savez, get_mesh
+from openquake.commonlib import writers, calc, hazard_writers
 from openquake.commonlib.util import (
     get_assets, compose_arrays, reader)
 
@@ -95,7 +96,7 @@ def export_avg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     name, kind = dskey.split('-')
     if kind == 'stats':
-        weights = dstore['realizations']['weight']
+        weights = dstore['csm_info'].rlzs['weight']
         tags, stats = zip(*oq.risk_stats())
         if dskey in dstore:  # precomputed
             value = dstore[dskey].value
@@ -104,7 +105,8 @@ def export_avg_losses(ekey, dstore):
                 dstore['avg_losses-rlzs'].value, stats, weights)
     else:  # rlzs
         value = dstore[dskey].value  # shape (A, R, LI)
-        tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
+        R = value.shape[1]
+        tags = ['rlz-%03d' % r for r in range(R)]
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
         array = numpy.zeros(len(values), dt)
@@ -199,6 +201,25 @@ def export_all_losses_npz(ekey, dstore):
     return [fname]
 
 
+@export.add(('rup_loss_table', 'xml'))
+def export_maxloss_ruptures(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    fnames = []
+    for loss_type in oq.loss_dt().names:
+        ebr = calc.get_maxloss_rupture(dstore, loss_type)
+        root = hazard_writers.rupture_to_element(ebr.export(mesh))
+        dest = dstore.export_path('rupture-%s.xml' % loss_type)
+        with open(dest, 'wb') as fh:
+            nrml.write(list(root), fh)
+        fnames.append(dest)
+    return fnames
+
+
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
 @depr('This exporter will be removed soon')
@@ -207,6 +228,9 @@ def export_agg_losses_ebr(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    if 'ruptures' not in dstore:
+        logging.warn('There are no ruptures in the datastore')
+        return []
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     has_rup_data = 'ruptures' in dstore
@@ -226,11 +250,13 @@ def export_agg_losses_ebr(ekey, dstore):
     rup_data = {}
     event_by_eid = {}  # eid -> event
     # populate rup_data and event_by_eid
+    ruptures_by_grp = calc.get_ruptures_by_grp(dstore)
+    # TODO: avoid reading the events twice
     for grp_id, events in all_events.items():
         for event in events:
             event_by_eid[event['eid']] = event
         if has_rup_data:
-            ruptures = calc.get_ruptures(dstore, the_events, grp_id)
+            ruptures = ruptures_by_grp.get(grp_id, [])
             rup_data.update(get_rup_data(ruptures))
     for r, row in enumerate(agg_losses):
         rec = elt[r]
@@ -264,7 +290,7 @@ def export_loss_curves(ekey, dstore):
 # this is used by classical_risk and event_based_risk
 @export.add(('loss_curves-stats', 'csv'))
 def export_loss_curves_stats(ekey, dstore):
-    num_rlzs = len(dstore['realizations'])
+    num_rlzs = dstore['csm_info'].get_num_rlzs()
     kind = 'stats' if num_rlzs > 1 else 'rlzs'
     return export_loss_curves(('loss_curves/' + kind, 'csv'), dstore)
 
@@ -293,7 +319,7 @@ def export_loss_maps_npz(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
     assets = get_assets(dstore)
     value = get_loss_maps(dstore, kind)
-    R = len(dstore['realizations'])
+    R = dstore['csm_info'].get_num_rlzs()
     if kind == 'rlzs':
         tags = ['rlz-%03d' % r for r in range(R)]
     else:

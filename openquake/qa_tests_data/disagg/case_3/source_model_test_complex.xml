@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="test_complex"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <complexFaultSource
+            id="f1"
+            name="fault"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <complexFaultGeometry>
+                    <faultTopEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                1.3300000E+01 4.3100000E+01 3.0000000E+00 1.3500000E+01 4.1500000E+01 3.0000000E+00
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <faultBottomEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                1.3150000E+01 4.3080000E+01 7.0000000E+00 1.3350000E+01 4.1030000E+01 7.0000000E+00
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </complexFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="4.5000000E+00"
+                >
+                    <occurRates>
+                        0.0000000E+00 0.0000000E+00 0.0000000E+00 0.0000000E+00 0.0000000E+00 0.0000000E+00 0.0000000E+00 0.0000000E+00 0.0000000E+00 1.6039000E-04 1.3529000E-04 1.1344000E-04 9.3913000E-05 7.5871000E-05 6.6927000E-05 4.8125000E-05 3.0843000E-05 1.6605000E-05 6.9236000E-06 1.9426000E-06 3.7567000E-07 3.0859000E-08 9.4641000E-10 7.3913000E-12 8.5045000E-15 7.1085000E-19 1.2194000E-24 9.6216000E-33 3.7917000E-44 3.2429000E-60 7.1727000E-83 7.8620000E-115 6.1927000E-160 1.3259000E-223
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    9.0000000E+01
+                </rake>
+            </complexFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

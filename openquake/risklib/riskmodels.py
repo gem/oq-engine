@@ -71,11 +71,14 @@ class RiskModel(object):
 
     def get_output(self, assets, data_by_lt, epsgetter):
         """
-        returns an ArrayWrapper of shape (L, ...)
+        :param assets: a list of assets with the same taxonomy
+        :param data_by_lt: hazards for each loss type
+        :param epsgetter: an epsilon getter function
+        :returns: an ArrayWrapper of shape (L, ...)
         """
         out = [self(lt, assets, data, epsgetter)
                for lt, data in zip(self.loss_types, data_by_lt)]
-        return ArrayWrapper(numpy.array(out), {})
+        return ArrayWrapper(numpy.array(out), dict(assets=assets))
 
     def __toh5__(self):
         risk_functions = {lt: func for lt, func in self.risk_functions.items()}
@@ -389,6 +392,7 @@ class ClassicalDamage(Damage):
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
+        assert risk_investigation_time, risk_investigation_time
 
     def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """

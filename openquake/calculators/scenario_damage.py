@@ -19,7 +19,6 @@
 import itertools
 import numpy
 
-from openquake.baselib.python3compat import encode
 from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
 from openquake.calculators import base, event_based
@@ -39,7 +38,7 @@ def dist_by_asset(data, multi_stat_dt):
     for l, lt in enumerate(multi_stat_dt.names):
         out_lt = out[lt]
         for n, r in itertools.product(range(N), range(R)):
-            out_lt[n, r] = data[n, r, l]
+            out_lt[n, r] = tuple(data[n, r, l])  # (mean, stddev)
     return out
 
 
@@ -82,7 +81,7 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
             for a, fraction in enumerate(damages):
                 asset = outputs.assets[a]
                 damages = fraction * asset.number
-                t = asset.tagmask
+                t = asset.tagmask(param['tags'])
                 result['d_tag'][t, r, l] += damages  # shape (E, D)
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
@@ -113,12 +112,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        base.get_gmfs(self)
+        eids, self.R = base.get_gmfs(self)
         self.param['number_of_ground_motion_fields'] = (
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.riskinputs = self.build_riskinputs('gmf')
+        self.riskinputs = self.build_riskinputs('gmf', eids=eids)
         self.param['tags'] = self.assetcol.tags()
 
     def post_execute(self, result):

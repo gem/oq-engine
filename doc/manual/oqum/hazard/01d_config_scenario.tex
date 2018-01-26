@@ -1,0 +1,61 @@
+In order to run this calculator, the parameter \Verb+calculation_mode+ needs
+to be set to \Verb+scenario+. The basic job configuration file required for
+running a scenario hazard calculation is shown in
+Listing~\ref{lst:config_scenario_hazard}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/hazard/verbatim/config_scenario.ini}
+  \caption{Example configuration file for a scenario hazard calculation (\href{https://raw.githubusercontent.com/gem/oq-engine/master/oqum/hazard/verbatim/config_scenario.ini}{Download example})}
+  \label{lst:config_scenario_hazard}
+\end{listing}
+
+Most of the job configuration parameters required for running a scenario
+hazard calculation seen in the example in
+Listing~\ref{lst:config_scenario_hazard} are the same as those described in
+the previous sections for the classical PSHA calculator
+(Section~\ref{subsec:config_classical_psha}) and the event-based PSHA
+calculator (Section~\ref{subsec:config_event_based_psha}). The set of sites at
+which the ground motion fields will be produced can be specifed by using
+either the \Verb+sites+ or \Verb+sites_csv+ parameters, or the \Verb+region+
+and \Verb+region_grid_spacing+  parameters, similar to the classical PSHA and
+event-based PSHA calculators. The parameter unique to the scenario calculator
+is described below:
+
+\begin{itemize}
+
+  \item \Verb+number_of_ground_motion_fields+: this parameter is used to
+    specify the number of Monte Carlo simulations of the ground motion
+    values at the specified sites
+
+  \item \Verb+gsim+: this parameter indicates the name of a ground motion
+  prediction equation (a list of available GMPEs can be obtained using
+  \texttt{oq info -g} or \texttt{oq info -{}-gsims} and these are also
+  documented at: \href{http://docs.openquake.org/oq-engine/2.8/openquake.hazardlib.gsim.html}{http://docs.openquake.org/oq-engine/2.8/openquake.hazardlib.gsim.html})
+
+\end{itemize}
+
+Multiple ground motion prediction equations can be used for a scenario hazard
+calculation by providing a GMPE logic tree file (described previously in 
+Section~\ref{subsec:gmlt}) using the parameter \Verb+gsim_logic_tree_file+.
+In this case, the \glsdesc{acr:oqe} generates ground motion fields
+for all GMPEs specified in the logic tree file. The branch weights in the logic
+tree file are ignored in a scenario analysis and only the individual branch
+results are computed. Mean or quantile ground motion fields will not be 
+generated.
+
+The ground motion fields will be computed at each of the sites and for each of
+the intensity measure types specified in the job configuration file. The
+above calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+After the calculation is completed, a message similar to the following will be
+displayed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 260 completed in 3 seconds. Results:
+  id | name
+ 569 | gmf_data
+\end{minted}

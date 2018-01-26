@@ -28,7 +28,6 @@ import os
 import re
 import sys
 import copy
-import random
 import itertools
 import collections
 import operator
@@ -1283,9 +1282,7 @@ class GsimLogicTree(object):
                 [trt] = self.values
             gsims = self.values[trt]
         else:
-            gsims = set()
-            for rlz in rlzs:
-                gsims.update(rlz.value)
+            gsims = set(self.get_gsim_by_trt(rlz, trt) for rlz in rlzs)
         return sorted(gsims)
 
     def __iter__(self):

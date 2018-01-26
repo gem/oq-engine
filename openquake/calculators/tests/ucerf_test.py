@@ -55,9 +55,7 @@ class UcerfTestCase(CalculatorTestCase):
         # check that we get the expected number of events
         with open(fname) as f:
             self.assertEqual(len(f.readlines()), 37)
-        if REFERENCE_OS:
-            # check the header and the first 18 events
-            self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20)
+        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
@@ -82,7 +80,7 @@ class UcerfTestCase(CalculatorTestCase):
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
-        got = writetmp(rst_table(gmdata, fmt='%s'))
+        got = writetmp(rst_table(gmdata, fmt='%.6f'))
         self.assertEqualFiles('expected/gmdata.csv', got)
 
         # check the mean hazard map

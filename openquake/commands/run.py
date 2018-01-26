@@ -80,9 +80,10 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
                   exports=exports, **params)
         hc_id = hcalc.datastore.calc_id
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
-    rcalc = base.calculators(oq, monitor)
-    with monitor:
-        rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
+    rcalc = base.calculators(oq)
+    with rcalc._monitor:
+        # disable concurrency in the second calculation to avoid fork issues
+        rcalc.run(concurrent_tasks=0, pdb=pdb, exports=exports,
                   hazard_calculation_id=hc_id, **params)
     return rcalc
 
@@ -147,6 +148,7 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
         print(get_pstats(pstat, slowest))
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params)
+
 
 run.arg('job_ini', 'calculation configuration file '
         '(or files, comma-separated)')

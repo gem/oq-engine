@@ -18,6 +18,7 @@
 from __future__ import division
 import io
 import ast
+import math
 import os.path
 import numbers
 import operator
@@ -237,36 +238,30 @@ def view_csm_info(token, dstore):
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
-    header = ('source_model grp_id trt num_sources '
-              'eff_ruptures tot_ruptures'.split())
+    header = ('source_model grp_id trt eff_ruptures tot_ruptures'.split())
     num_trts = 0
-    tot_sources = 0
     eff_ruptures = 0
     tot_ruptures = 0
-    source_info = dstore['source_info'].value
     csm_info = dstore['csm_info']
-    r = groupby(source_info, operator.itemgetter('grp_id'),
-                lambda rows: sum(r['num_ruptures'] for r in rows))
-    n = groupby(source_info, operator.itemgetter('grp_id'),
-                lambda rows: sum(1 for r in rows))
+    oq = dstore['oqparam']
+    num_sites = len(dstore['sitecol'])
+    num_tiles = math.ceil(num_sites / oq.sites_per_tile)
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
             er = src_group.eff_ruptures
             if er:
                 num_trts += 1
-                num_sources = n.get(src_group.id, 0)
-                tot_sources += num_sources
                 eff_ruptures += er
-                ruptures = r.get(src_group.id, 0)
-                tot_ruptures += ruptures
-                tbl.append((sm.name, src_group.id, trt,
-                            num_sources, er, ruptures))
+                tbl.append(
+                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
+            tot_ruptures += src_group.tot_ruptures
     rows = [('#TRT models', num_trts),
-            ('#sources', tot_sources),
             ('#eff_ruptures', eff_ruptures),
             ('#tot_ruptures', tot_ruptures),
-            ('#tot_weight', csm_info.tot_weight), ]
+            ('#tot_weight', csm_info.tot_weight)]
+    if num_tiles > 1:
+        rows.insert(0, ('#tiles', num_tiles))
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -345,7 +340,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = len(dstore['realizations'])
+    R = dstore['csm_info'].get_num_rlzs()
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
     I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
@@ -389,7 +384,7 @@ def view_portfolio_loss(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    R = len(dstore['realizations'])
+    R = dstore['csm_info'].get_num_rlzs()
     by_rlzi = group_array(dstore['agg_loss_table'].value, 'rlzi')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
@@ -426,7 +421,7 @@ def sum_table(records):
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
     dt = dstore['oqparam'].loss_dt()
-    weights = dstore['realizations']['weight']
+    weights = dstore['csm_info'].rlzs['weight']
     array = dstore['avg_losses-rlzs'].value  # shape (N, R)
     if len(weights) == 1:  # one realization
         mean = array[:, 0]
@@ -475,7 +470,7 @@ def view_assetcol(token, dstore):
 
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
-    num_ruptures = sum(len(v) for v in dstore['ruptures'].values())
+    num_ruptures = len(dstore['ruptures'])
     num_events = len(dstore['events'])
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
@@ -528,7 +523,8 @@ def stats(name, array, *extras):
     :param name: a descriptive string
     :returns: (name, mean, std, min, max, len)
     """
-    return (name, numpy.mean(array), numpy.std(array, ddof=1),
+    std = numpy.nan if len(array) == 1 else numpy.std(array, ddof=1)
+    return (name, numpy.mean(array), std,
             numpy.min(array), numpy.max(array), len(array)) + extras
 
 
@@ -604,7 +600,7 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
-        if task != 'source_data':  # this is special
+        if task not in ('task_sources', 'source_data'):  # this is special
             val = dstore['task_info/' + task]['duration']
             data.append(stats(task, val))
     if len(data) == 1:
@@ -639,7 +635,7 @@ def view_task(token, dstore):
     arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
     st = [stats('nsites', arr['nsites']),
           stats('weight', arr['weight'])]
-    sources = dstore['task_sources'][taskno - 1].split()
+    sources = dstore['task_info/task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
     res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
@@ -724,14 +720,11 @@ def view_dupl_sources(token, dstore):
             tot_calc_time += calc_time
             grp_ids = sorted(rec['grp_id'] for rec in records)
             tbl.append((source_id, calc_time, grp_ids))
-    if tbl:
-        if info.attrs['has_dupl_sources']:
-            tot = info['calc_time'].sum()
-            percent = tot_calc_time / tot * 100
-            m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
-                tot_calc_time, tot, percent)
-        else:
-            m = '\nSources with the same ID but different parameters'
+    if tbl and info.attrs['has_dupl_sources']:
+        tot = info['calc_time'].sum()
+        percent = tot_calc_time / tot * 100
+        m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
+            tot_calc_time, tot, percent)
         return rst_table(tbl, ['source_id', 'calc_time', 'src_group_ids']) + m
     else:
         return 'There are no duplicated sources'
@@ -752,3 +745,35 @@ def view_global_poes(token, dstore):
         gsim_avg = site_avg.sum(axis=1) / poes.shape_z
         tbl.append([grp] + list(gsim_avg))
     return rst_table(tbl, header=header)
+
+
+@view.add('mean_disagg')
+def view_mean_disagg(token, dstore):
+    """
+    Display mean quantities for the disaggregation. Useful for checking
+    differences between two calculations.
+    """
+    tbl = []
+    for key, dset in sorted(dstore['disagg'].items()):
+        vals = [ds.value.mean() for k, ds in sorted(dset.items())]
+        tbl.append([key] + vals)
+    header = ['key'] + sorted(dset)
+    return rst_table(sorted(tbl), header=header)
+
+
+@view.add('elt')
+def view_elt(token, dstore):
+    """
+    Display the event loss table averaged by event
+    """
+    oq = dstore['oqparam']
+    R = len(dstore['csm_info'].rlzs)
+    dic = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    header = oq.loss_dt().names
+    tbl = []
+    for rlzi in range(R):
+        if rlzi in dic:
+            tbl.append(dic[rlzi]['loss'].mean(axis=0))
+        else:
+            tbl.append([0.] * len(header))
+    return rst_table(tbl, header)

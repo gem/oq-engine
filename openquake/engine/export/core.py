@@ -27,26 +27,12 @@ import zipfile
 import traceback
 
 from openquake.calculators.export import export
-from openquake.baselib import datastore, __version__
+from openquake.baselib import general, datastore, __version__
 from openquake.commonlib import logs
 
 
 class DataStoreExportError(Exception):
     pass
-
-
-def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
-    """
-    Build a zip archive from the given file names.
-
-    :param fnames: list of path names
-    :param archive: path of the archive
-    """
-    z = zipfile.ZipFile(archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True)
-    for f in fnames:
-        log('Archiving %s' % f)
-        z.write(f, os.path.basename(f))
-    z.close()
 
 
 def check_version(dstore):
@@ -95,7 +81,7 @@ def export_from_db(output_key, calc_id, datadir, target):
             # generate it when not using the Web UI, but I will leave that
             # feature for after the removal of the old calculators
             archname = '.' + ds_key + '-' + fmt + '.zip'
-            zipfiles(exported, os.path.join(target, archname))
+            general.zipfiles(exported, os.path.join(target, archname))
             return os.path.join(target, archname)
         else:  # single file
             return exported[0]

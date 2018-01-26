@@ -22,10 +22,10 @@ import getpass
 from openquake.baselib import config, datastore
 
 try:
-    import openquakeplatform
-    STANDALONE = True
+    from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
 except ImportError:
     STANDALONE = False
+    STANDALONE_APPS = ()
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -165,16 +165,9 @@ LOGGING = {
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
-STANDALONE_APPS = ()
 if STANDALONE:
     INSTALLED_APPS += (
         'openquakeplatform',
-    )
-
-    STANDALONE_APPS += (
-        'openquakeplatform_ipt',
-        'openquakeplatform_taxtweb',
-        'openquakeplatform_taxonomy',
     )
 
     INSTALLED_APPS += STANDALONE_APPS

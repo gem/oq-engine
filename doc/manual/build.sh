@@ -12,7 +12,11 @@ bibtex oq-manual
 pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex
 makeindex oq-manual.idx
 makeglossaries oq-manual
-pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex) | egrep -i "error|warning|missing"
+pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex
+makeglossaries oq-manual) | egrep -i "error|warning|missing"
+
+echo -e "\n\n=== FINAL RUN ===\n\n"
+pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex | egrep -i "error|warning|missing"
 
 if [ -f oq-manual.pdf ]; then
     ./clean.sh || true

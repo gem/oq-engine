@@ -3,8 +3,8 @@ Ucerf test
 
 ============== ===================
 checksum32     2,080,369,829      
-date           2017-10-24T05:47:08
-engine_version 2.8.0-git8e9cdf8   
+date           2018-01-11T04:29:22
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 155, num_imts = 1
@@ -161,5 +161,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 7.830E-04 0.0       1     
+reading site collection 8.466E-04 0.0       1     
 ======================= ========= ========= ======

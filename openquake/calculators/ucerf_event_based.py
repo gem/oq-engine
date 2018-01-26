@@ -349,7 +349,7 @@ def sample_background_model(
     return background_ruptures, background_n_occ
 
 
-class UCERFControl(object):
+class UCERFSource(object):
     """
     :param source_file:
         Path to an existing HDF5 file containing the UCERF model
@@ -382,6 +382,8 @@ class UCERFControl(object):
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
+    tectonic_region_type = DEFAULT_TRT
+
     def __init__(
             self, source_file, id, investigation_time, start_date, min_mag,
             npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
@@ -402,6 +404,35 @@ class UCERFControl(object):
         self.msr = msr
         self.mesh_spacing = mesh_spacing
         self.tectonic_region_type = trt
+        self.num_ruptures = 0  # not set yet
+
+    def count_ruptures(self):
+        """
+        The length of the rupture array if the branch_id is set, else 0
+        """
+        return len(self.mags) if hasattr(self, 'mags') else 0
+
+    def new(self, grp_id, branch_id):
+        """
+        :param grp_id: ordinal of the source group
+        :param branch_name: name of the UCERF branch
+        :param branch_id: string associated to the branch
+        :returns: a new UCERFSource associated to the branch_id
+        """
+        new = copy.copy(self)
+        new.src_group_id = grp_id
+        new.source_id = branch_id
+        new.idx_set = build_idx_set(branch_id, self.start_date)
+        with h5py.File(self.source_file, "r") as hdf5:
+            # read from datasets like
+            # FM0_0/MEANFS/MEANMSR/Magnitude
+            # FM0_0/MEANFS/MEANMSR/Rates/MeanRates
+            # FM0_0/MEANFS/Rake
+            new.mags = hdf5[new.idx_set["mag"]].value
+            new.rate = hdf5[new.idx_set["rate"]].value
+            new.rake = hdf5[new.idx_set["rake"]].value
+            new.num_ruptures = len(new.mags)
+        return new
 
     def get_min_max_mag(self):
         """
@@ -415,30 +446,31 @@ class UCERFControl(object):
         """
         return PoissonTOM(self.inv_time)
 
+    def get_ridx(self, iloc):
+        """List of rupture indices for the given iloc"""
+        with h5py.File(self.source_file, "r") as hdf5:
+            return hdf5[self.idx_set["geol"] + "/RuptureIndex"][iloc]
 
-class UcerfSource(object):
-    """
-    Source-like class for use in UCERF calculations. It is build on top
-    of an UCERFControl object which wraps the input file in HDF5 format.
-    Each source has attributes `.source_id` (the name of the branch),
-    `.src_group_id` (the number of the group i.e. of the source model),
-    `.num_ruptures` (the number of ruptures in that branch) and `.idx_set`,
-    a dictionary of HDF5 keys determined by the `branch_id` string.
+    def get_centroids(self, ridx):
+        """
+        :returns: array of centroids for the given rupture index
+        """
+        centroids = []
+        with h5py.File(self.source_file, "r") as hdf5:
+            for idx in ridx:
+                trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
+                centroids.append(hdf5[trace + "/Centroids"].value)
+        return numpy.concatenate(centroids)
 
-    :param control: a :class:`UCERFControl` instance
-    :param grp_id: ordinal of the source group
-    :param branch_name: name of the UCERF branch
-    :param branch_id: string associated to the branch
-    """
-    tectonic_region_type = DEFAULT_TRT
-
-    def __init__(self, control, grp_id, branch_name, branch_id):
-        self.control = control
-        self.src_group_id = grp_id
-        self.source_id = branch_id
-        self.idx_set = build_idx_set(branch_id, control.start_date)
-        with h5py.File(self.control.source_file, "r") as hdf5:
-            self.num_ruptures = len(hdf5[self.idx_set["rate_idx"]])
+    def gen_trace_planes(self, ridx):
+        """
+        :yields: trace and rupture planes for the given rupture index
+        """
+        with h5py.File(self.source_file, "r") as hdf5:
+            for idx in ridx:
+                trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
+                plane = hdf5[trace + "/RupturePlanes"][:].astype("float64")
+                yield trace, plane
 
     @property
     def weight(self):
@@ -447,14 +479,12 @@ class UcerfSource(object):
         """
         return self.num_ruptures
 
-    def get_rupture_sites(self, hdf5, ridx, src_filter, mag):
+    def get_rupture_sites(self, ridx, src_filter, mag):
         """
         Determines if a rupture is likely to be inside the integration distance
         by considering the set of fault plane centroids and returns the
         affected sites if any.
 
-        :param hdf5:
-            Source of UCERF file as h5py.File object
         :param ridx:
             List of indices composing the rupture sections
         :param src_filter:
@@ -464,14 +494,10 @@ class UcerfSource(object):
         :returns:
             The sites affected by the rupture (or None)
         """
-        centroids = []
-        for idx in ridx:
-            trace_idx = "{:s}/{:s}".format(self.idx_set["sec_idx"], str(idx))
-            centroids.append(hdf5[trace_idx + "/Centroids"].value)
-        centroids = numpy.concatenate(centroids)
-        lons, lats = src_filter.sitecol.lons, src_filter.sitecol.lats
+        centroids = self.get_centroids(ridx)
         distance = min_geodetic_distance(
-            centroids[:, 0], centroids[:, 1], lons, lats)
+            centroids[:, 0], centroids[:, 1],
+            src_filter.sitecol.lons, src_filter.sitecol.lats)
         idist = src_filter.integration_distance(DEFAULT_TRT, mag)
         return src_filter.sitecol.filter(distance <= idist)
 
@@ -481,92 +507,75 @@ class UcerfSource(object):
         step - this is done here rather than in the sampling of the ruptures
         themselves
         """
-        ctl = self.control
         branch_key = self.idx_set["grid_key"]
         idist = src_filter.integration_distance(DEFAULT_TRT)
         lons, lats = src_filter.sitecol.lons, src_filter.sitecol.lats
-        with h5py.File(ctl.source_file, 'r') as hdf5:
+        with h5py.File(self.source_file, 'r') as hdf5:
             bg_locations = hdf5["Grid/Locations"].value
             n_locations = bg_locations.shape[0]
             distances = min_idx_dst(lons, lats, numpy.zeros_like(lons),
                                     bg_locations[:, 0], bg_locations[:, 1],
                                     numpy.zeros(n_locations))[1]
             # Add buffer equal to half of length of median area from Mmax
-            mmax_areas = ctl.msr.get_median_area(
+            mmax_areas = self.msr.get_median_area(
                 hdf5["/".join(["Grid", branch_key, "MMax"])].value, 0.0)
             # for instance hdf5['Grid/FM0_0_MEANFS_MEANMSR/MMax']
-            mmax_lengths = numpy.sqrt(mmax_areas / ctl.aspect)
+            mmax_lengths = numpy.sqrt(mmax_areas / self.aspect)
             ok = distances <= (0.5 * mmax_lengths + idist)
             # get list of indices from array of booleans
             return numpy.where(ok)[0].tolist()
 
-    def get_ucerf_rupture(self, hdf5, iloc, src_filter):
+    def get_ucerf_rupture(self, iloc, src_filter):
         """
-        :param hdf5:
-            Source Model hdf5 object as instance of :class: h5py.File
-        :param int iloc:
+        :param iloc:
             Location of the rupture plane in the hdf5 file
         :param src_filter:
             Sites for consideration and maximum distance
         """
-        ctl = self.control
-        mesh_spacing = ctl.mesh_spacing
-        trt = ctl.tectonic_region_type
-        ridx = hdf5[self.idx_set["geol_idx"] + "/RuptureIndex"][iloc]
-        mag = hdf5[self.idx_set["mag_idx"]][iloc]
+        mesh_spacing = self.mesh_spacing
+        trt = self.tectonic_region_type
+        ridx = self.get_ridx(iloc)
+        mag = self.mags[iloc]
         surface_set = []
-        r_sites = self.get_rupture_sites(hdf5, ridx, src_filter, mag)
+        r_sites = self.get_rupture_sites(ridx, src_filter, mag)
         if r_sites is None:
-            return None, None
-        for idx in ridx:
-            # Build simple fault surface
-            trace_idx = "{:s}/{:s}".format(self.idx_set["sec_idx"], str(idx))
-            rup_plane = hdf5[trace_idx + "/RupturePlanes"][:].astype("float64")
-            for jloc in range(0, rup_plane.shape[2]):
-                top_left = Point(rup_plane[0, 0, jloc],
-                                 rup_plane[0, 1, jloc],
-                                 rup_plane[0, 2, jloc])
-                top_right = Point(rup_plane[1, 0, jloc],
-                                  rup_plane[1, 1, jloc],
-                                  rup_plane[1, 2, jloc])
-                bottom_right = Point(rup_plane[2, 0, jloc],
-                                     rup_plane[2, 1, jloc],
-                                     rup_plane[2, 2, jloc])
-                bottom_left = Point(rup_plane[3, 0, jloc],
-                                    rup_plane[3, 1, jloc],
-                                    rup_plane[3, 2, jloc])
+            return None
+        for trace, plane in self.gen_trace_planes(ridx):
+            # build simple fault surface
+            for jloc in range(0, plane.shape[2]):
+                top_left = Point(
+                    plane[0, 0, jloc], plane[0, 1, jloc], plane[0, 2, jloc])
+                top_right = Point(
+                    plane[1, 0, jloc], plane[1, 1, jloc], plane[1, 2, jloc])
+                bottom_right = Point(
+                    plane[2, 0, jloc], plane[2, 1, jloc], plane[2, 2, jloc])
+                bottom_left = Point(
+                    plane[3, 0, jloc], plane[3, 1, jloc], plane[3, 2, jloc])
                 try:
                     surface_set.append(
                         ImperfectPlanarSurface.from_corner_points(
                             mesh_spacing, top_left, top_right,
                             bottom_right, bottom_left))
-                except ValueError as evl:
-                    raise ValueError(evl, trace_idx, top_left, top_right,
+                except ValueError as err:
+                    raise ValueError(err, trace, top_left, top_right,
                                      bottom_right, bottom_left)
 
         rupture = ParametricProbabilisticRupture(
-            mag,
-            hdf5[self.idx_set["rake_idx"]][iloc],
-            trt,
+            mag, self.rake[iloc], trt,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set),
-            CharacteristicFaultSource,
-            hdf5[self.idx_set["rate_idx"]][iloc],
-            ctl.tom)
+            MultiSurface(surface_set), CharacteristicFaultSource,
+            self.rate[iloc], self.tom)
 
-        # Get rupture index code string
-        ridx_string = "-".join(str(val) for val in ridx)
-        return rupture, ridx_string
+        return rupture
 
     def generate_event_set(self, background_sids, src_filter, seed):
         """
         Generates the event set corresponding to a particular branch
         """
         # get rates from file
-        ctl = self.control
-        with h5py.File(ctl.source_file, 'r') as hdf5:
-            rates = hdf5[self.idx_set["rate_idx"]].value
-            occurrences = ctl.tom.sample_number_of_occurrences(rates, seed)
+        with h5py.File(self.source_file, 'r') as hdf5:
+            occurrences = self.tom.sample_number_of_occurrences(
+                self.rate, seed)
             indices = numpy.where(occurrences)[0]
             logging.debug(
                 'Considering "%s", %d ruptures', self.source_id, len(indices))
@@ -574,17 +583,17 @@ class UcerfSource(object):
             # get ruptures from the indices
             ruptures = []
             rupture_occ = []
-            for idx, n_occ in zip(indices, occurrences[indices]):
-                ucerf_rup, _ = self.get_ucerf_rupture(hdf5, idx, src_filter)
+            for iloc, n_occ in zip(indices, occurrences[indices]):
+                ucerf_rup = self.get_ucerf_rupture(iloc, src_filter)
                 if ucerf_rup:
                     ruptures.append(ucerf_rup)
                     rupture_occ.append(n_occ)
 
             # sample background sources
             background_ruptures, background_n_occ = sample_background_model(
-                hdf5, self.idx_set["grid_key"], ctl.tom, seed, background_sids,
-                ctl.min_mag, ctl.npd, ctl.hdd, ctl.usd, ctl.lsd, ctl.msr,
-                ctl.aspect, ctl.tectonic_region_type)
+                hdf5, self.idx_set["grid_key"], self.tom, seed,
+                background_sids, self.min_mag, self.npd, self.hdd, self.usd,
+                self.lsd, self.msr, self.aspect, self.tectonic_region_type)
             ruptures.extend(background_ruptures)
             rupture_occ.extend(background_n_occ)
         return ruptures, rupture_occ
@@ -593,20 +602,13 @@ class UcerfSource(object):
         """
         Yield ruptures for the current set of indices (.rupset_idx)
         """
-        ctl = self.control
-        with h5py.File(ctl.source_file, "r") as hdf5:
-            try:  # the source has set a subset of indices
-                rupset_idx = self.rupset_idx
-            except AttributeError:  # use all indices
-                rupset_idx = numpy.arange(self.num_ruptures)
-            rate = hdf5[self.idx_set["rate_idx"]]
-            for ridx in rupset_idx:
-                # Get the ucerf rupture rate from the MeanRates array
-                if not rate[ridx]:
-                    # ruptures may have have zero rate
-                    continue
-                rup, ridx_string = self.get_ucerf_rupture(
-                    hdf5, ridx, self.src_filter)
+        try:  # the source has set a subset of indices
+            rupset_idx = self.rupset_idx
+        except AttributeError:  # use all indices
+            rupset_idx = numpy.arange(self.num_ruptures)
+        for ridx in rupset_idx:
+            if self.rate[ridx]:  # ruptures may have have zero rate
+                rup = self.get_ucerf_rupture(ridx, self.src_filter)
                 if rup:
                     yield rup
 
@@ -617,9 +619,8 @@ class UcerfSource(object):
         :param src_filter:
             SourceFilter instance
         """
-        ctl = self.control
         background_sids = self.get_background_sids(src_filter)
-        with h5py.File(ctl.source_file, "r") as hdf5:
+        with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             mags = hdf5[grid_loc + "/Magnitude"].value
             mmax = hdf5[grid_loc + "/MMax"][background_sids]
@@ -631,35 +632,40 @@ class UcerfSource(object):
                 src_name = "|".join([self.idx_set["total_key"], str(bg_idx)])
                 # Get MFD
                 mag_idx = numpy.logical_and(
-                    mags >= ctl.min_mag, mags < mmax[i])
+                    mags >= self.min_mag, mags < mmax[i])
                 src_mags = mags[mag_idx]
                 src_rates = rates[i, :]
                 src_mfd = EvenlyDiscretizedMFD(
                     src_mags[0], src_mags[1] - src_mags[0],
                     src_rates[mag_idx].tolist())
                 ps = PointSource(
-                    src_id, src_name, ctl.tectonic_region_type, src_mfd,
-                    ctl.mesh_spacing, ctl.msr, ctl.aspect, ctl.tom, ctl.usd,
-                    ctl.lsd, Point(locations[i, 0], locations[i, 1]),
-                    ctl.npd, ctl.hdd)
+                    src_id, src_name, self.tectonic_region_type, src_mfd,
+                    self.mesh_spacing, self.msr, self.aspect, self.tom,
+                    self.usd, self.lsd,
+                    Point(locations[i, 0], locations[i, 1]),
+                    self.npd, self.hdd)
+                ps.src_group_id = self.src_group_id
                 sources.append(ps)
         return sources
+
+    def filter_sites_by_distance_to_source(self, integration_distance, sites):
+        # do not filter
+        return sites
 
 
 def build_idx_set(branch_id, start_date):
     """
-    Builds a dictionary of indices based on the branch code
+    Builds a dictionary of keys based on the branch code
     """
     code_set = branch_id.split("/")
-    idx_set = {
-        "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
-        "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
-                             "Magnitude"])}
     code_set.insert(3, "Rates")
-    idx_set["rate_idx"] = "/".join(code_set)
-    idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
-    idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
-    idx_set["geol_idx"] = code_set[0]
+    idx_set = {
+        "sec": "/".join([code_set[0], code_set[1], "Sections"]),
+        "mag": "/".join([code_set[0], code_set[1], code_set[2], "Magnitude"])}
+    idx_set["rate"] = "/".join(code_set)
+    idx_set["rake"] = "/".join([code_set[0], code_set[1], "Rake"])
+    idx_set["msr"] = "-".join(code_set[:3])
+    idx_set["geol"] = code_set[0]
     if start_date:  # time-dependent source
         idx_set["grid_key"] = "_".join(
             branch_id.replace("/", "_").split("_")[:-1])
@@ -706,15 +712,15 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         r_sites, rrup = idist.get_closest(sitecol, rup)
                     except FarAwayRupture:
                         continue
-                    indices = r_sites.indices
+                    indices = (numpy.arange(len(r_sites)) if r_sites.indices
+                               is None else r_sites.indices)
                     events = []
                     for _ in range(n_occ):
-                        events.append((0, ses_idx, sample))
+                        events.append((0, src.src_group_id, ses_idx, sample))
                     if events:
                         evs = numpy.array(events, calc.event_dt)
                         ebruptures.append(
-                            calc.EBRupture(rup, indices, evs,
-                                           src.src_group_id, serial))
+                            calc.EBRupture(rup, indices, evs, serial))
                         serial += 1
     res.num_events = event_based.set_eids(ebruptures)
     res[src.src_group_id] = ebruptures
@@ -732,18 +738,17 @@ def get_composite_source_model(oq):
     :param oq: :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns: a `class:`openquake.commonlib.source.CompositeSourceModel`
     """
-    gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
-    smlt = readinput.get_source_model_lt(oq)
     [src_group] = nrml.parse(
         oq.inputs["source_model"],
         SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
-    [src] = src_group
     source_models = []
+    gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
+    smlt = readinput.get_source_model_lt(oq)
     for sm in smlt.gen_source_models(gsim_lt):
         sg = copy.copy(src_group)
         sg.id = sm.ordinal
         sm.src_groups = [sg]
-        sg.sources = [UcerfSource(sg[0], sm.ordinal, sm.path[0], sm.name)]
+        sg.sources = [sg[0].new(sm.ordinal, sm.name)]
         source_models.append(sm)
     return source.CompositeSourceModel(gsim_lt, smlt, source_models)
 
@@ -762,8 +767,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
-        self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         self.csm = get_composite_source_model(oq)
+        self.csm.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['csm_info'] = self.csm_info = self.csm.info
@@ -793,7 +798,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
                              save_ruptures=oq.save_ruptures)
-                allargs.append((srcs, self.src_filter, gsims, param, monitor))
+                allargs.append(
+                    (srcs, self.csm.src_filter, gsims, param, monitor))
         return allargs
 
 
@@ -828,17 +834,19 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     samples = ssm.info.get_samples_by_grp()
     num_rlzs = len(rlzs_assoc.realizations)
-    rlzs_by_gsim = rlzs_assoc.rlzs_by_gsim[grp_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(DEFAULT_TRT)
     getter = riskinput.GmfGetter(
         rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
-        trunc_level, correl_model, samples[grp_id])
-    ri = riskinput.RiskInputFromRuptures(getter)
+        src_filter.integration_distance, trunc_level, correl_model,
+        samples[grp_id])
+    ri = riskinput.RiskInput(getter, param['assetcol'].assets_by_site())
     res.append(event_based_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.hazard_getter.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
     res.events_by_grp = ruptures_by_grp.events_by_grp
+    res.eff_ruptures = ruptures_by_grp.eff_ruptures
     return res
 
 
@@ -872,17 +880,19 @@ class UCERFRiskCalculator(EbriskCalculator):
                               ('loss', (F32, (self.L, self.I)))])
         monitor = self.monitor('compute_losses')
         for sm in self.csm.source_models:
+            if sm.samples > 1:
+                logging.warn('Sampling in ucerf_risk is untested')
             ssm = self.csm.get_model(sm.ordinal)
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx)],
-                             samples=1, assetcol=self.assetcol,
+                             samples=sm.samples, assetcol=self.assetcol,
                              save_ruptures=False,
                              ses_ratio=oq.ses_ratio,
                              avg_losses=oq.avg_losses,
                              elt_dt=elt_dt,
                              asset_loss_table=False,
                              insured_losses=oq.insured_losses)
-                yield (ssm, self.src_filter, param,
+                yield (ssm, self.csm.src_filter, param,
                        self.riskmodel, imts, oq.truncation_level,
                        correl_model, min_iml, monitor)
 
@@ -891,5 +901,8 @@ class UCERFRiskCalculator(EbriskCalculator):
         self.grp_trt = self.csm_info.grp_trt()
         res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
         self.vals = self.assetcol.values()
+        self.eff_ruptures = AccumDict(accum=0)
         num_events = self.save_results(res, num_rlzs)
+        self.csm.info.update_eff_ruptures(self.eff_ruptures)
+        self.datastore['csm_info'] = self.csm.info
         return num_events

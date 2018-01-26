@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+
+ <logicTreeBranchingLevel branchingLevelID="bl1">
+     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1" applyToTectonicRegionType="Active Shallow Crust">
+  <logicTreeBranch branchID="BeA11">
+ 										<uncertaintyModel>BindiEtAl2011</uncertaintyModel>
+      <uncertaintyWeight>0.334</uncertaintyWeight>
+  </logicTreeBranch>
+  <logicTreeBranch branchID="BeA14">
+ 										<uncertaintyModel>BindiEtAl2014Rhyp</uncertaintyModel>
+      <uncertaintyWeight>0.333</uncertaintyWeight>
+  </logicTreeBranch>
+     <logicTreeBranch branchID="CeA15">
+										<uncertaintyModel>CauzziEtAl2014</uncertaintyModel>
+      <uncertaintyWeight>0.333</uncertaintyWeight>
+  </logicTreeBranch>
+     </logicTreeBranchSet>     
+ </logicTreeBranchingLevel>
+
+ <logicTreeBranchingLevel branchingLevelID="bl2">
+     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2" applyToTectonicRegionType="Volcanic">
+  <logicTreeBranch branchID="TL16">
+ 										<uncertaintyModel>TusaLanger2016RepiSP87SE</uncertaintyModel>
+      <uncertaintyWeight>1</uncertaintyWeight>
+  </logicTreeBranch>
+     </logicTreeBranchSet>
+ </logicTreeBranchingLevel>
+
+ <logicTreeBranchingLevel branchingLevelID="bl3">
+     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3" applyToTectonicRegionType="Stable Shallow Crust">
+								<logicTreeBranch branchID="BeA11">
+ 										<uncertaintyModel>BindiEtAl2011</uncertaintyModel>
+      <uncertaintyWeight>1</uncertaintyWeight>
+    </logicTreeBranch>
+     </logicTreeBranchSet>
+ </logicTreeBranchingLevel>
+
+			<logicTreeBranchingLevel branchingLevelID="bl4">
+     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4" applyToTectonicRegionType="Subduction Interface">
+								<logicTreeBranch branchID="AeA15interf">
+ 										<uncertaintyModel>AbrahamsonEtAl2015SInter</uncertaintyModel>
+      <uncertaintyWeight>1</uncertaintyWeight>
+  </logicTreeBranch>
+      </logicTreeBranchSet>     
+ </logicTreeBranchingLevel>
+
+<logicTreeBranchingLevel branchingLevelID="bl5">
+     <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs5" applyToTectonicRegionType="Subduction Inslab">
+								<logicTreeBranch branchID="AeA15inslab">
+ 										<uncertaintyModel>AbrahamsonEtAl2015SSlab</uncertaintyModel>
+      <uncertaintyWeight>1</uncertaintyWeight>
+  </logicTreeBranch>
+      </logicTreeBranchSet>     
+ </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>
+

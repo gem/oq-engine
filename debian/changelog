@@ -1,4 +1,127 @@
+  [Graeme Weatherill]
+  * Implements significant duration GMPEs of Bommer et al. (2009) and Afshari &
+    Stewart (2016)
+  * Adds significant duraction IMT definitions to support IMTs
+
   [Michele Simionato]
+  * Run the DbServer as a detached process
+  * Improved the test coverage for event based with GMF correlation
+  * Optimized the event based risk calculator from ruptures: now the ruptures
+    are instantiated in the workers and not in the controller if possible
+  * Exported the parameter ses_per_logic_tree_path in the ruptures.csv file
+  * Improved the display names for the risk outputs
+  * Added a /v1/:calc_id/abort route to the engine server and Abort buttons
+    to the WebUI
+  * Fixed the seeds properly in the case of vulnerability functions with PMFs:
+    now even if the ground motion fields are all equal, the risk numbers
+    will be different since there is a different seed per each field
+  * Stored a rupture loss table in event based risk calculations
+  * Made sure that the number of effective ruptures is stored in csm_info
+  * Fixed the HMTK tests to work with numpy from 1.11 to 1.14
+  * Added a command `oq shell` to open an embedded (I)Python shell
+  * Turned the 'realizations' output into a dynamic output
+
+  [Matteo Nastasi]
+  * Split package from python-oq-engine to python-oq-engine,
+    python-oq-engine-master and python-oq-engine-worker
+  * Implemented an API `/v1/on_same_fs` to check filesystem accessibility
+    between engine and a client application
+
+  [Michele Simionato]
+  * Reduced the data transfer when computing the hazard curves in postprocessing
+  * Removed the FilteredSiteCollection class
+
+  [Nick Ackerley]
+  * Some improvements to the plotting routines of the HMTK
+
+  [Michele Simionato]
+  * Removed the ability to run `oq engine --run job_h.ini,job_r.ini`
+  * Forbidden the site model in gmf_ebrisk calculations
+  * When the option `--hc` is given the ruptures can now be read directly
+    from the workers, thus saving some startup time
+  * Optimized the storage of the ruptures: the site IDs are not saved anymore
+  * Added a check for missing risk_investigation_time
+  * Reduced the data transfer in the gmf_ebrisk calculator
+  * Now the gmf_ebrisk calculator builds the aggregate loss curves too
+  * Extended the gmf_ebrisk calculator to use the GMFs produced by an event
+    based hazard calculation, both via CSV and via the --hc option
+  * Fixed a performance bug in the computations of the aggregate loss curves
+    by reading the full event loss table at once
+  * Fixed oq zip to work with gmf_ebrisk calculations
+  * Fixed a serious bug in the gmf_ebrisk calculator: the results were in most
+    cases wrong and dependent on the number of spawned tasks
+  * Now the `master_seed` controls the generation of the epsilons in all
+    situations (before in event_based_risk without `asset_correlation` it was
+    managed by `random_seed`)
+  * Changed the management of the epsilons in the gmf_ebrisk calculator to
+    be the same as in the event_based_risk calculator
+  * Added a check on the input files: the listed paths must be relative paths
+  * Fixed a bug when storing the disagg-bins in the case the lenghts of the
+    arrays are not the same for all sites
+  * In the case of a single tile the prefiltering was applied twice: fixed the
+    problem and generally improved the filtering/weighting of the sources
+  * Fixed the CSV exporter for disaggregation outputs when iml_disagg is set
+
+  [Graeme Weatherill]
+  * Fixed ASK14 GMPE behaviour to remove ValueError
+  * Implements comprehensive suite of NGA East ground motion models for
+    central and eastern United States
+  * Minor modification of check_gsim functions to permit instantiated classes
+    to be passed
+
+python-oq-engine (2.8.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * `iml_disagg` and `poes_disagg` cannot coexist in the job.ini file
+  * Added a check on `conditional_loss_poes` in the event_based_risk calculator:
+    now it requires `asset_loss_table` to be set
+
+  [Anirudh Rao]
+  * Sorted taxonomies before comparison in the BCR calculator
+
+  [Michele Simionato]
+  * Optimized the disaggregation calculation by performing the PMF extraction
+    only once at the end of the calculation and not in the workers
+  * Added an `oq zip` command
+  * Avoided running an useless classical calculation if `iml_disagg` is given
+
+  [Valerio Poggi]
+  * Implemented subclasses for ZhaoEtAl2006Asc and AtkinsonBoore2006 to account
+    for the distance filter used by SGS in their PSHA model for Saudi Arabia.
+    Distance threshold is hard coded to 5km in this implementation.
+  [Michele Simionato]
+  * Added a warning if the aggregated probability of exceedence (poe_agg) in
+    a disaggregation output is very dissimilar from poes_disagg
+  * Removed the flag `split_sources`
+  * Optimized the operation `arrange_data_in_bins` in the disaggregation
+    calculator and reduced the data transfer by the number of tectonic
+    region types
+  * Improved the sending of the sources to the workers, especially for the
+    MultiPointSources
+  * Better error message if the user sets a wrong site_id in the sites.csv file
+  * Now the distance and lon lat bins for disaggregation are built directly
+    from the integration distance
+  * Used uniform bins for disaggregation (before they were potentially
+    different across realizations / source models)
+  * Improved the error message if the user forgets both sites and sites.csv
+    in a calculation starting from predetermined GMFs
+  * Improved the error message if the user specifies a non-existing file in
+    the job.ini
+  * Change the ordering of the TRT bins in disaggregation: now they are
+    ordered lexicographically
+  * Added more validity checks on the job.ini file for disaggregation
+  * Changed the .hdf5 format generated by `oq extract -1 hazard/rlzs`; you can
+    still produce the old format by using `oq extract -1 qgis-hazard/rlzs`
+  * Optimized the disaggregation calculator by instantiating
+    `scipy.stats.truncnorm` only once per task and not once per rupture
+  * Optimized the disaggregation calculator when `iml_disagg` is specified,
+    by caching duplicated results
+  * Made sure that `oq dbserver stop` also stops the zmq workers if the zmq
+    distribution is enabled
+  * Added a check when disaggregating for a PoE too big for the source model
+  * If `iml_disagg` is given, forbid `intensity_measure_types_and_levels`
+  * Fixed the disaggregation outputs when `iml_disagg` is given: the PoE has
+    been removed by the name of the output and correct PoE is in the XML file
   * Fixed `oq export loss_curves/rlzs` for event_based_risk/case_master
   * Removed the obsolete parameter `loss_curve_resolution`
   * Fixed a Python 3 unicode error with `oq engine --run job.zip`
@@ -27,6 +150,8 @@
     variable in the job.ini (experimental)
   * Fixed the precedence order when reading openquake.cfd
 
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 29 Nov 2017 14:33:05 +0100
+
 python-oq-engine (2.7.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
@@ -53,6 +178,7 @@ python-oq-engine (2.7.0-0~precise01) precise; urgency=low
     of the damage states
   * Extended the FragilityFunctions to accept sequences/arrays of intensity
     levels, as requested by Hyeuk Ryu
+>>>>>>> master
 
   [Daniele Viganò]
   * Added support for groups in the WebUI/API server

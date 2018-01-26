@@ -175,18 +175,16 @@ class DataStore(collections.MutableMapping):
         self.hdf5path = self.calc_dir + '.hdf5'
         if mode == 'r' and not os.path.exists(self.hdf5path):
             raise IOError('File not found: %s' % self.hdf5path)
-        self.hdf5 = None
+        self.hdf5 = ()  # so that `key in self.hdf5` is valid
         self.open()
 
     def open(self):
         """
         Open the underlying .hdf5 file and the parent, if any
         """
-        if self.hdf5 is None:  # not already open
+        if self.hdf5 == ():  # not already open
             mode = self.mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
             self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
-            if self.parent != () and self.parent.hdf5 is None:
-                self.parent.open()
 
     @property
     def export_dir(self):
@@ -361,7 +359,7 @@ class DataStore(collections.MutableMapping):
         if self.hdf5:  # is open
             self.hdf5.flush()
             self.hdf5.close()
-            self.hdf5 = None
+            self.hdf5 = ()
 
     def clear(self):
         """Remove the datastore from the file system"""
@@ -392,6 +390,7 @@ class DataStore(collections.MutableMapping):
             val = self.hdf5[key]
         except KeyError:
             if self.parent != ():
+                self.parent.open()
                 try:
                     val = self.parent[key]
                 except KeyError:
@@ -417,7 +416,7 @@ class DataStore(collections.MutableMapping):
         del self.hdf5[key]
 
     def __enter__(self):
-        self.was_close = self.hdf5 is None
+        self.was_close = self.hdf5 == ()
         if self.was_close:
             self.open()
         return self
@@ -432,7 +431,7 @@ class DataStore(collections.MutableMapping):
         return dict(mode='r',
                     parent=self.parent,
                     calc_id=self.calc_id,
-                    hdf5=None,
+                    hdf5=(),
                     hdf5path=self.hdf5path)
 
     def __iter__(self):
@@ -445,7 +444,9 @@ class DataStore(collections.MutableMapping):
         return key in self.hdf5 or self.parent and key in self.parent.hdf5
 
     def __len__(self):
-        return sum(1 for f in self)
+        if self.hdf5 == ():  # closed
+            return 1
+        return sum(1 for f in self.hdf5)
 
     def __hash__(self):
         return self.calc_id

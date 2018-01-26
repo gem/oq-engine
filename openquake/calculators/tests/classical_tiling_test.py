@@ -23,7 +23,7 @@ from openquake.qa_tests_data.classical_tiling import case_1, case_2
 
 
 class ClassicalTilingTestCase(CalculatorTestCase):
-    @attr('qa', 'hazard', 'classical_tiling')
+    @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
         expected = [
@@ -38,7 +38,7 @@ class ClassicalTilingTestCase(CalculatorTestCase):
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual, delta=1E-6)
 
-    @attr('qa', 'hazard', 'classical_tiling')
+    @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini', exports='csv,geojson')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)

@@ -37,15 +37,13 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-#!/usr/bin/env python
 '''Tests for revised Stepp (1971) completeness analysis procedure'''
 import os
 import unittest
@@ -61,12 +59,12 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 
 INPUT_FILE_1 = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
 
-#INPUT_FILE_1 = 'tests/seismicity/completeness/data/completeness_test_cat.csv'
 
 class TestBilinearResiduals(unittest.TestCase):
     '''
     Class to test the function to calculate bilinear residuals
     '''
+
     def setUp(self):
         self.xdata = np.arange(0., 11., 1.)
         self.params = [2.0, -1.0, 5.0, 1.0]
@@ -76,16 +74,15 @@ class TestBilinearResiduals(unittest.TestCase):
                                                        self.xdata[ival])
 
     def test_bilinear_residuals_stepp(self):
-        '''
-        Calculates residual sum of squares (RSS) for two test cases
-        i) RSS > 0 (alternating +/- residuals)
-        ii) RSS = 0
-        '''
+        # Calculates residual sum of squares (RSS) for two test cases
+        # i) RSS > 0 (alternating +/- residuals)
+        # ii) RSS = 0
         # Offset = +/- 0.1
         offset1 = np.array([0.1, -0.1, 0.1, -0.1, 0.1, -0.1, 0.1, -0.1, 0.1,
                             -0.1, 0.1])
         y_offset1 = self.ydata + offset1
-        self.assertAlmostEqual(np.sum(offset1 ** 2.),
+        self.assertAlmostEqual(
+            np.sum(offset1 ** 2.),
             get_bilinear_residuals_stepp(self.params[1:], self.xdata,
                                          y_offset1, self.params[0]))
 
@@ -108,10 +105,8 @@ class TestSteppCompleteness(unittest.TestCase):
         self.config = {'time_bin': None}
 
     def test_stepp_get_windows(self):
-        '''
-        Tests the Stepp private function to generate the time bins from the
-        config file
-        '''
+        # Tests the Stepp private function to generate the time bins from the
+        # config file
         # Test 1: Simple catalogue and single time step
         decimal_years = np.array([1950., 1970., 1990., 2010.])
         self.config['time_bin'] = 20.
@@ -127,7 +122,8 @@ class TestSteppCompleteness(unittest.TestCase):
         with self.assertRaises(ValueError) as ae:
             _, _ = self.process._get_time_limits_from_config(self.config,
                                                              decimal_years)
-            self.assertEqual(str(ae.exception),
+            self.assertEqual(
+                str(ae.exception),
                 'Catalogue duration smaller than time bin width - '
                 'change time window size!')
         # Test 3:  Time input as bins
@@ -145,37 +141,34 @@ class TestSteppCompleteness(unittest.TestCase):
         with self.assertRaises(ValueError) as ae:
             _, _ = self.process._get_time_limits_from_config(self.config,
                                                              decimal_years)
-            self.assertEqual(str(ae.exception),
+            self.assertEqual(
+                str(ae.exception),
                 'Configuration time windows must be ordered from '
                 'recent to oldest')
 
-
     def test_stepp_get_magnitudes(self):
-        '''
-        Tests the stepp private function _get_magnitudes_from_spacing
-        '''
+        # Tests the stepp private function _get_magnitudes_from_spacing
         magnitudes = np.arange(3.7, 7.8, 0.5)
         expected = np.arange(3.5, 8.0, 0.5)
-        self.assertTrue(np.allclose(expected,
-            self.process._get_magnitudes_from_spacing(magnitudes, 0.5)))
+        np.testing.assert_allclose(
+            expected,
+            self.process._get_magnitudes_from_spacing(magnitudes, 0.5))
         expected = np.arange(3.6, 8.0, 0.2)
-        self.assertTrue(np.allclose(expected,
-            self.process._get_magnitudes_from_spacing(magnitudes, 0.2)))
+        np.testing.assert_allclose(
+            expected,
+            self.process._get_magnitudes_from_spacing(magnitudes, 0.2))
         # Test case where magnitude spacing is greater than magnitude range
         bad_magnitudes = np.arange(4.1, 4.5, 0.1)
         with self.assertRaises(ValueError) as ae:
-            _ = self.process._get_magnitudes_from_spacing(bad_magnitudes, 0.5)
+            self.process._get_magnitudes_from_spacing(bad_magnitudes, 0.5)
             self.assertEqual(str(ae.exception),
-                'Bin width greater than magnitude range!')
-
+                             'Bin width greater than magnitude range!')
 
     def test_stepp_count_magnitudes(self):
-        '''
-        Tests the stepp private function _count_magnitudes which counts
-        the number of magnitudes above.
-        Creates a simple catalogue containing a fixed set of magnitudes
-        for each year
-        '''
+        # Tests the stepp private function _count_magnitudes which counts
+        # the number of magnitudes above.
+        # Creates a simple catalogue containing a fixed set of magnitudes
+        # for each year
         test_mags, test_times, time_bin = self._setup_data_for_count_test()
         expected_sigma = np.tile(
             np.array([[0.15811388], [0.18257419], [0.2236068], [0.31622777]]),
@@ -191,7 +184,6 @@ class TestSteppCompleteness(unittest.TestCase):
         self.assertEqual(n_times, 4)
         self.assertTrue(np.allclose(n_years, np.array([40., 30., 20., 10.])))
 
-
     def _setup_data_for_count_test(self):
         '''
         Sets up a simple test catalogue for the counting test
@@ -204,17 +196,15 @@ class TestSteppCompleteness(unittest.TestCase):
         event_times = np.copy(time_vals)
         for ival in range(1, len(mag_vals)):
             event_times = np.column_stack([event_times, time_vals])
-            magnitudes = np.column_stack([magnitudes,
-                mag_vals[ival] * np.ones(len(time_vals))])
+            magnitudes = np.column_stack([
+                magnitudes, mag_vals[ival] * np.ones(len(time_vals))])
         event_times = np.reshape(event_times, len(mag_vals) * len(time_vals))
         magnitudes = np.reshape(magnitudes, len(mag_vals) * len(time_vals))
         return magnitudes, event_times, time_bin
 
     def test_fit_bilinear_function(self):
-        '''
-        Tests the function to fit a bilinear model to a data set with a
-        known set of coefficients
-        '''
+        # Tests the function to fit a bilinear model to a data set with a
+        # known set of coefficients
         self.xdata = np.arange(0., 21., 1.)
         self.params = [-0.5, -1.0, 8.0, 10.0]
         self.ydata = np.zeros(len(self.xdata), dtype=float)
@@ -225,7 +215,7 @@ class TestSteppCompleteness(unittest.TestCase):
         comp_time, gradient, model_line = self.process._fit_bilinear_to_stepp(
             self.xdata,
             self.ydata,
-            initial_values = [-0.75, 10.0, 0.0])
+            initial_values=[-0.75, 10.0, 0.0])
         # Number of decimal places lowered to allow for uncertainty in
         # optimisation results
         self.assertAlmostEqual(np.log10(comp_time),
@@ -239,11 +229,9 @@ class TestSteppCompleteness(unittest.TestCase):
                                    places=3)
 
     def test_get_completeness_points(self):
-        '''
-        Tests the function get_completeness_points using a synthetic
-        set of "sigma" derived from a bilinear function with known gradients
-        and crossover points
-        '''
+        # Tests the function get_completeness_points using a synthetic
+        # set of "sigma" derived from a bilinear function with known gradients
+        # and crossover points
         crossovers = [20., 50., 80.]
         params1 = [-0.5, -1.0, np.log10(crossovers[0]), 1.5]
         params2 = [-0.5, -1.3, np.log10(crossovers[1]), 1.0]
@@ -255,12 +243,12 @@ class TestSteppCompleteness(unittest.TestCase):
         yvals_2 = np.zeros(number_values, dtype=float)
         yvals_3 = np.zeros(number_values, dtype=float)
         for ival in range(0, number_values):
-            yvals_1[ival] = 10. ** piecewise_linear_scalar(params1,
-                np.log10(n_years[ival]))
-            yvals_2[ival] = 10. ** piecewise_linear_scalar(params2,
-                np.log10(n_years[ival]))
-            yvals_3[ival] = 10. ** piecewise_linear_scalar(params3,
-                np.log10(n_years[ival]))
+            yvals_1[ival] = 10. ** piecewise_linear_scalar(
+                params1, np.log10(n_years[ival]))
+            yvals_2[ival] = 10. ** piecewise_linear_scalar(
+                params2, np.log10(n_years[ival]))
+            yvals_3[ival] = 10. ** piecewise_linear_scalar(
+                params3, np.log10(n_years[ival]))
 
         test_sigma = np.column_stack([yvals_1, yvals_2, yvals_3])
         (ntime, nmags) = np.shape(test_sigma)
@@ -275,10 +263,8 @@ class TestSteppCompleteness(unittest.TestCase):
         self.assertTrue(fabs(gradients[2] - -0.8) < 0.1)
 
     def test_complete_stepp_analysis_basic(self):
-        '''
-        Basic test of the entire completeness analysis using a synthetic
-        test catalogue with in-built completeness periods
-        '''
+        # Basic test of the entire completeness analysis using a synthetic
+        # test catalogue with in-built completeness periods
         parser0 = CsvCatalogueParser(INPUT_FILE_1)
         self.catalogue = parser0.read_file()
 
@@ -294,7 +280,6 @@ class TestSteppCompleteness(unittest.TestCase):
                                                 [1906., 6.0],
                                                 [1904., 6.5],
                                                 [1904., 7.0]])
-
 
         np.testing.assert_array_almost_equal(
             expected_completeness_table,

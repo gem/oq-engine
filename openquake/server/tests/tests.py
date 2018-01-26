@@ -29,12 +29,15 @@ import json
 import time
 import unittest
 import numpy
+import zlib
+import tempfile
+import string
+import random
 from django.test import Client
 from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
-from openquake.commands.abort import abort
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -175,10 +178,10 @@ class EngineServerTestCase(unittest.TestCase):
         job_id = self.postzip('classical.zip')
         self.wait()
 
-        # check that we get the expected outputs
+        # check that we get the expected 5 outputs
+        # fullreport, hcurves, hmaps, realizations, sourcegroups
         results = self.get('%s/results' % job_id)
-        self.assertEqual(['fullreport', 'hcurves', 'hmaps', 'realizations',
-                          'sourcegroups'], [r['name'] for r in results])
+        self.assertEqual(len(results), 5)
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
@@ -198,11 +201,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_abort(self):
-        raise unittest.SkipTest('abort does not work with zmq')
-        job_id = self.postzip('archive_ok.zip')
-        time.sleep(1)  # give time
-        abort(job_id)
-        self.wait()
+        resp = self.c.post('/v1/calc/0/abort')  # 0 is a non-existing job
+        print(resp.content.decode('utf8'))
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
@@ -282,3 +282,35 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.content,
                          b'Please provide the "xml_text" parameter')
+
+    def test_check_fs_access(self):
+        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
+            filename = f.name
+            content = bytes(''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(32)),
+                            'utf-8')
+            f.write(content)
+            checksum = str(zlib.adler32(content, 0) & 0xffffffff)
+
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum})
+
+            self.assertEqual(resp.status_code, 200)
+            resp_text_dict = json.loads(resp.content.decode('utf8'))
+            self.assertTrue(resp_text_dict['success'])
+
+    def test_check_fs_access_fail(self):
+        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
+            filename = f.name
+            content = bytes(''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(32)),
+                            'utf-8')
+            f.write(content)
+            checksum = 'impossible'
+
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum})
+
+            self.assertEqual(resp.status_code, 200)
+            resp_text_dict = json.loads(resp.content.decode('utf8'))
+            self.assertFalse(resp_text_dict['success'])

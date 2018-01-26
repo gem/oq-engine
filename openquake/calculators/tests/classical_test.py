@@ -34,9 +34,9 @@ from openquake.qa_tests_data.classical import (
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
+        kind = kw.pop('kind', '')  # 'all' or ''
         self.run_calc(test_dir, 'job.ini', **kw)
         ds = self.calc.datastore
-        kind = kw.get('kind', '')  # 'all' or ''
         got = (export(('hcurves/' + kind, 'csv'), ds) +
                export(('hmaps/' + kind, 'csv'), ds) +
                export(('uhs/' + kind, 'csv'), ds))
@@ -67,7 +67,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check extraction
         sitecol = extract(self.calc.datastore, 'sitecol')
-        self.assertEqual(repr(sitecol), '<SiteCollection with 1 sites>')
+        self.assertEqual(repr(sitecol), '<SiteCollection with 1/1 sites>')
 
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
@@ -123,13 +123,10 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__, kind='all')
 
-        with self.assertRaises(ValueError) as ctx:
-            self.run_calc(
-                case_7.__file__, 'job.ini', mean_hazard_curves='false',
-                hazard_maps='true', poes='0.1')
-        self.assertEqual(
-            'The job.ini says that no statistics should be computed, but then '
-            'there is no output!', str(ctx.exception))
+        # exercise the warning for no output when mean_hazard_curves='false'
+        self.run_calc(
+            case_7.__file__, 'job.ini', mean_hazard_curves='false',
+            hazard_maps='true', poes='0.1')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):
@@ -186,8 +183,25 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
 
-        # test extract; 'hazard/rlzs also works
-        haz = dict(extract(self.calc.datastore, 'hazard/rlz-0'))
+        # test extract/hazard/rlzs
+        dic = dict(extract(self.calc.datastore, 'hazard/rlzs'))
+        hcurves = sorted(k for k in dic if k.startswith('hcurves'))
+        hmaps = sorted(k for k in dic if k.startswith('hmaps'))
+        self.assertEqual(hcurves, ['hcurves/PGA/rlz-000',
+                                   'hcurves/PGA/rlz-001',
+                                   'hcurves/PGA/rlz-002',
+                                   'hcurves/PGA/rlz-003',
+                                   'hcurves/SA(0.2)/rlz-000',
+                                   'hcurves/SA(0.2)/rlz-001',
+                                   'hcurves/SA(0.2)/rlz-002',
+                                   'hcurves/SA(0.2)/rlz-003'])
+        self.assertEqual(hmaps, ['hmaps/poe-0.2/rlz-000',
+                                 'hmaps/poe-0.2/rlz-001',
+                                 'hmaps/poe-0.2/rlz-002',
+                                 'hmaps/poe-0.2/rlz-003'])
+
+        # test extract/qgis-hazard/rlz-0 also works
+        haz = dict(extract(self.calc.datastore, 'qgis-hazard/rlz-0'))
         self.assertEqual(
             sorted(haz),
             ['checksum32', 'hcurves-rlz-0', 'hmaps-rlz-0', 'oqparam',
@@ -250,26 +264,31 @@ hazard_uhs-mean.csv
         # 3	1	 {7}
         # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
 
-        # reduction of the source model logic tree
+        # full source model logic tree
         cinfo = self.calc.datastore['csm_info']
         ra0 = cinfo.get_rlzs_assoc()
         self.assertEqual(
-            sorted(ra0.array), ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
+            sorted(ra0.by_grp()), ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
 
+        # reduction of the source model logic tree
         ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM2', 'a3b1'])
-        self.assertEqual(len(ra.array), 1)
+        self.assertEqual(len(ra.by_grp()), 1)
         numpy.testing.assert_equal(
-            ra.array['grp-02']['gsim_idx'], ra0.array['grp-02']['gsim_idx'])
+            len(ra.by_grp()['grp-02']),
+            len(ra0.by_grp()['grp-02']))
 
+        # more reduction of the source model logic tree
         ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM1'])
-        self.assertEqual(sorted(ra.array), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(ra.array['grp-00'], ra0.array['grp-00'])
-        numpy.testing.assert_equal(ra.array['grp-01'], ra0.array['grp-01'])
+        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
+        numpy.testing.assert_equal(
+            ra.by_grp()['grp-00'], ra0.by_grp()['grp-00'])
+        numpy.testing.assert_equal(
+            ra.by_grp()['grp-01'], ra0.by_grp()['grp-01'])
 
         # reduction of the gsim logic tree
         ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
-        self.assertEqual(sorted(ra.array), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(ra.array['grp-00']['gsim_idx'], [0])
+        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
+        numpy.testing.assert_equal(ra.by_grp()['grp-00'][0], [0, [0, 1]])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling

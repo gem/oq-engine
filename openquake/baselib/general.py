@@ -28,6 +28,7 @@ import copy
 import math
 import socket
 import random
+import zipfile
 import operator
 import warnings
 import tempfile
@@ -286,7 +287,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         return
     if isinstance(a, (str, bytes, int)):
         # another shortcut
-        assert a == b
+        assert a == b, (a, b)
         return
     if hasattr(a, '_slots_'):  # record-like objects
         assert a._slots_ == b._slots_
@@ -296,7 +297,8 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     if hasattr(a, 'keys'):  # dict-like objects
         assert a.keys() == b.keys()
         for x in a:
-            assert_close(a[x], b[x], rtol, atol, x)
+            if x != '__geom__':
+                assert_close(a[x], b[x], rtol, atol, x)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
         assert_close(vars(a), vars(b), context=a)
@@ -512,6 +514,26 @@ class CallableDict(collections.OrderedDict):
         raise KeyError(key)
 
 
+class pack(dict):
+    """
+    Compact a dictionary of lists into a dictionary of arrays.
+    If attrs are given, consider those keys as attributes. For instance,
+
+    >>> p = pack(dict(x=[1], a=[0]), ['a'])
+    >>> p
+    {'x': array([1])}
+    >>> p.a
+    array([0])
+    """
+    def __init__(self, dic, attrs=()):
+        for k, v in dic.items():
+            arr = numpy.array(v)
+            if k in attrs:
+                setattr(self, k, arr)
+            else:
+                self[k] = arr
+
+
 class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables::
@@ -670,7 +692,8 @@ class DictArray(collections.Mapping):
     """
     def __init__(self, imtls):
         self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(imls) if hasattr(imls, '__len__') else 1)
+            [(str(imt), F64,
+              (len(imls),) if hasattr(imls, '__len__') else (1,))
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
@@ -890,3 +913,34 @@ def _get_free_port():
         if not socket_ready(('127.0.0.1', port)):  # no server listening
             return port  # the port is free
     raise RuntimeError('No free ports in the range 1920:2000')
+
+
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
+    """
+    Build a zip archive from the given file names.
+
+    :param fnames: list of path names
+    :param archive: path of the archive
+    """
+    prefix = len(os.path.commonprefix([os.path.dirname(f) for f in fnames]))
+    with zipfile.ZipFile(
+            archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True) as z:
+        for f in fnames:
+            log('Archiving %s' % f)
+            z.write(f, f[prefix:])
+
+
+def detach_process():
+    """
+    Detach the current process from the controlling terminal by using a
+    double fork. Can be used only on platforms with fork (no Windows).
+    """
+    # see https://pagure.io/python-daemon/blob/master/f/daemon/daemon.py and
+    # https://stackoverflow.com/questions/45911705/why-use-os-setsid-in-python
+    def fork_then_exit_parent():
+        pid = os.fork()
+        if pid:  # in parent
+            os._exit(0)
+    fork_then_exit_parent()
+    os.setsid()
+    fork_then_exit_parent()

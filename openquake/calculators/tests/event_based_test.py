@@ -35,7 +35,7 @@ from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
-    case_8, case_12, case_13, case_17, case_18)
+    case_8, case_9, case_12, case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -133,8 +133,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        [fname] = export(('gmf_scenario/rup-1', 'csv'),
-                         self.calc.datastore)
+        [fname] = export(('gmf_scenario/rup-0', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-rlz-0-PGA.csv', fname)
 
         # test that the .npz export runs
@@ -215,7 +214,7 @@ class EventBasedTestCase(CalculatorTestCase):
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
 
-        [fname] = out['realizations', 'csv']
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # test for the mean gmv
@@ -249,6 +248,13 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
+    def test_case_9(self):
+        # example with correlation: the site collection must not be filtered
+        self.run_calc(case_9.__file__, 'job.ini', exports='csv')
+        # this is a case where there are 2 ruptures and 1 gmv per site
+        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 17)
+
+    @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
         out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
         [fname] = out['hcurves', 'csv']
@@ -275,7 +281,8 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-rlz-004.csv',
         ]
         # test --hc functionality, i.e. that the ruptures are read correctly
-        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
+        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv',
+                            concurrent_tasks='0')
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)

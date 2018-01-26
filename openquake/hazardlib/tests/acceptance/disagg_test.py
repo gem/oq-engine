@@ -69,24 +69,17 @@ class DisaggTestCase(unittest.TestCase):
         # compute disaggregation
         bin_edges, diss_matrix = disagg.disaggregation(
             [src], site, imt, iml, gsims, truncation_level,
-            n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width
-        )
+            n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width)
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
         numpy.testing.assert_almost_equal(
-            mag_bins, [5., 5.2, 5.4, 5.6, 5.8, 6., 6.2, 6.4, 6.6]
-        )
+            mag_bins, [5., 5.2, 5.4, 5.6, 5.8, 6., 6.2, 6.4, 6.6])
         numpy.testing.assert_almost_equal(
-            dist_bins, [0., 10., 20., 30., 40., 50., 60., 70., 80.]
-        )
+            dist_bins, [0., 10., 20., 30., 40., 50., 60., 70., 80.])
         numpy.testing.assert_almost_equal(
-            lat_bins, [-0.6, -0.4, -0.2, 0., 0.2, 0.4, 0.6]
-        )
+            lat_bins, [[-0.6, -0.4, -0.2, 0., 0.2, 0.4, 0.6]])
         numpy.testing.assert_almost_equal(
-            lon_bins, [-0.6, -0.4, -0.2, 0., 0.2, 0.4, 0.6]
-        )
-        numpy.testing.assert_almost_equal(
-            eps_bins, [-3., -1., 1., 3.]
-        )
+            lon_bins, [[-0.6, -0.4, -0.2, 0., 0.2, 0.4, 0.6]])
+        numpy.testing.assert_almost_equal(eps_bins, [-3., -1., 1., 3.])
         self.assertEqual(trt_bins, ['Active Shallow Crust'])
 
         expected_matrix = numpy.fromstring(codecs.decode(codecs.decode(b"""\

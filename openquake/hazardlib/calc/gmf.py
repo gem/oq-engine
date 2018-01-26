@@ -26,7 +26,6 @@ import scipy.stats
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.filters import IntegrationDistance
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -52,14 +51,14 @@ class GmfComputer(object):
     :param rupture:
         Rupture to calculate ground motion fields radiated from.
 
-    :param :class:`openquake.hazardlib.site.SiteCollection` sites:
-        Sites of interest to calculate GMFs.
+    :param :class:`openquake.hazardlib.site.SiteCollection` sitecol:
+        a complete SiteCollection
 
     :param imts:
         a sorted list of Intensity Measure Type strings
 
-    :param gsims:
-        a set of GSIM instances
+    :param cmaker:
+        a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
 
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
@@ -70,10 +69,6 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
-
-    :param maximum_distance:
-       Instance of :class:`openquake.hazardlib.calc.filters.IntegrationDistance`
-       By default there is no maximum_distance.
     """
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an higher level containing a
@@ -82,28 +77,30 @@ class GmfComputer(object):
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sites, imts, gsims,
-                 truncation_level=None, correlation_model=None,
-                 maximum_distance=IntegrationDistance(None)):
-        if len(sites) == 0:
+    def __init__(self, rupture, sitecol, imts, cmaker,
+                 truncation_level=None, correlation_model=None):
+        if len(sitecol) == 0:
             raise ValueError('No sites')
         elif len(imts) == 0:
             raise ValueError('No IMTs')
-        elif len(gsims) == 0:
+        elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
         self.rupture = rupture
-        self.sites = sites
         self.imts = [from_string(imt) for imt in imts]
-        self.gsims = sorted(gsims)
+        self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        self.maximum_distance = maximum_distance
         # `rupture` can be a high level rupture object containing a low
         # level hazardlib rupture object as a .rupture attribute
         if hasattr(rupture, 'rupture'):
             rupture = rupture.rupture
-        self.ctx = ContextMaker(gsims, maximum_distance).make_contexts(
-            sites, rupture)
+        try:
+            self.ctx = rupture.ctx
+        except AttributeError:
+            self.ctx = cmaker.make_contexts(sitecol, rupture)
+        self.sids = self.ctx[0].sids
+        if correlation_model:  # store the filtered sitecol
+            self.sites = sitecol.filtered(self.sids, sitecol.array)
 
     def compute(self, gsim, num_events, seed=None):
         """
@@ -119,7 +116,7 @@ class GmfComputer(object):
         if seed is not None:
             numpy.random.seed(seed)
         result = numpy.zeros(
-            (len(self.imts), len(self.sites), num_events), numpy.float32)
+            (len(self.imts), len(self.sids), num_events), numpy.float32)
         for imti, imt in enumerate(self.imts):
             result[imti] = self._compute(None, gsim, num_events, imt)
         return result
@@ -166,7 +163,7 @@ class GmfComputer(object):
             mean = mean.reshape(mean.shape + (1, ))
 
             total_residual = stddev_total * distribution.rvs(
-                size=(len(self.sites), num_events))
+                size=(len(self.sids), num_events))
             gmf = gsim.to_imt_unit_values(mean + total_residual)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
@@ -175,9 +172,8 @@ class GmfComputer(object):
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
-
             intra_residual = stddev_intra * distribution.rvs(
-                size=(len(self.sites), num_events))
+                size=(len(self.sids), num_events))
 
             if self.correlation_model is not None:
                 ir = self.correlation_model.apply_correlation(
@@ -193,7 +189,6 @@ class GmfComputer(object):
 
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
-
         return gmf
 
 
@@ -243,7 +238,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts], [gsim],
-                     truncation_level, correlation_model)
+    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
+                     ContextMaker([gsim]), truncation_level, correlation_model)
     res = gc.compute(gsim, realizations, seed)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

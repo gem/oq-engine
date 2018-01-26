@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     4,162,972,727      
-date           2017-10-24T05:47:14
-engine_version 2.8.0-git8e9cdf8   
+checksum32     852,550,231        
+date           2018-01-11T04:29:27
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 7, num_imts = 1
@@ -25,7 +25,7 @@ area_source_discretization      None
 ground_motion_correlation_model 'JB2009'          
 random_seed                     24                
 master_seed                     42                
-avg_losses                      False             
+avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -67,31 +67,31 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           482          482         
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 482          482         
+================ ====== ==================== ============ ============
 
 Informational data
 ------------------
-========================= ====================================================================================
-compute_ruptures.received tot 252.6 KB, max_per_task 31.34 KB                                                 
-compute_ruptures.sent     sources 17.59 KB, src_filter 10.82 KB, param 6.97 KB, monitor 4.13 KB, gsims 1.29 KB
-hazard.input_weight       3374.0                                                                              
-hazard.n_imts             1                                                                                   
-hazard.n_levels           1                                                                                   
-hazard.n_realizations     1                                                                                   
-hazard.n_sites            7                                                                                   
-hazard.n_sources          1                                                                                   
-hazard.output_weight      7.0                                                                                 
-hostname                  tstation.gem.lan                                                                    
-require_epsilons          True                                                                                
-========================= ====================================================================================
+========================= ===================================================================================
+compute_ruptures.received tot 306.57 KB, max_per_task 39.34 KB                                               
+compute_ruptures.sent     sources 17.89 KB, src_filter 13.32 KB, param 7.15 KB, monitor 4.1 KB, gsims 1.29 KB
+hazard.input_weight       482.0                                                                              
+hazard.n_imts             1                                                                                  
+hazard.n_levels           1                                                                                  
+hazard.n_realizations     1                                                                                  
+hazard.n_sites            7                                                                                  
+hazard.n_sources          1                                                                                  
+hazard.output_weight      7.0                                                                                
+hostname                  tstation.gem.lan                                                                   
+require_epsilons          True                                                                               
+========================= ===================================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 50 tasks = 2.73 KB
+7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 1.09 KB
 
 Exposure model
 --------------
@@ -109,11 +109,11 @@ tax1     1.000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-====== ========= ================= ============ ========= ========= =========
-grp_id source_id source_class      num_ruptures calc_time num_sites num_split
-====== ========= ================= ============ ========= ========= =========
-0      1         SimpleFaultSource 482          0.0       7         0        
-====== ========= ================= ============ ========= ========= =========
+========= ================= ============ ========= ========= =========
+source_id source_class      num_ruptures calc_time num_sites num_split
+========= ================= ============ ========= ========= =========
+1         SimpleFaultSource 482          0.0       1         0        
+========= ================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.026 0.013  0.009 0.053 13       
+compute_ruptures   0.072 0.024  0.039 0.121 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,14 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.333     0.734     13    
-filtering ruptures             0.115     0.0       259   
-managing sources               0.062     0.0       1     
-saving ruptures                0.041     0.0       13    
-reading exposure               0.008     0.0       1     
-store source_info              0.005     0.0       1     
-reading composite source model 0.004     0.0       1     
-setting event years            0.004     0.0       1     
-prefiltering source model      0.002     0.0       1     
-reading site collection        6.199E-06 0.0       1     
+total compute_ruptures         0.942     1.000     13    
+making contexts                0.724     0.0       259   
+managing sources               0.218     0.0       1     
+saving ruptures                0.034     0.0       13    
+reading exposure               0.009     0.0       1     
+reading composite source model 0.007     0.0       1     
+store source_info              0.003     0.0       1     
+setting event years            0.002     0.0       1     
+reading site collection        6.437E-06 0.0       1     
 ============================== ========= ========= ======

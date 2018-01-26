@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import numpy
-from openquake.hazardlib.sourceconverter import split_source
+from openquake.hazardlib.source import split_source
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.source.multi import MultiPointSource

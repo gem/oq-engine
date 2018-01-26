@@ -170,7 +170,7 @@ class VulnerabilityFunction(object):
         if epsilons is None:
             return means
         self.set_distribution(epsilons)
-        return self.distribution.sample(means, covs, None, idxs)
+        return self.distribution.sample(means, covs, means * covs, idxs)
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
@@ -841,7 +841,7 @@ class DiscreteDistribution(Distribution):
         ret = []
         r = numpy.arange(len(loss_ratios))
         for i in range(probs.shape[1]):
-            random.seed(self.seed)
+            random.seed(self.seed + i)
             # the seed is set inside the loop to avoid block-size dependency
             pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
             ret.append(loss_ratios[pmf])
@@ -1271,22 +1271,24 @@ def losses_by_period(losses, return_periods, num_events, eff_time):
     """
     :param losses: array of simulated losses
     :param return_periods: return periods of interest
-    :param num_events: the number of events
+    :param num_events: the number of events (must be more than the losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
-    where min_time = eff_time /len(losses). Outsided the interval they
+    where min_time = eff_time /len(losses). Outside the interval they
     have NaN values. If there are less losses than events, the array
-    is filled with zeros.
-    Here is an example:
+    is filled with zeros. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20, 100)
     array([  nan,   nan,   0. ,   3.5,   8. ,  13. ,  23. ])
     """
-    assert num_events >= len(losses), (num_events, len(losses))
+    if num_events < len(losses):
+        raise ValueError(
+            'There are not enough events to compute the loss curves: %d'
+            % num_events)
     losses = numpy.sort(losses)
     num_zeros = num_events - len(losses)
     if num_zeros:
@@ -1374,10 +1376,10 @@ class LossesByPeriodBuilder(object):
                     self.num_events[rlzi], self.eff_time)
         return array
 
-    def build(self, agg_loss_table, stats=()):
+    def build(self, agg_loss_table_array, stats=()):
         """
-        :param agg_loss_table:
-            the aggregate loss table
+        :param agg_loss_table_array:
+            the aggregate loss table as an array
         :param stats:
             list of pairs [(statname, statfunc), ...]
         :returns:
@@ -1385,7 +1387,7 @@ class LossesByPeriodBuilder(object):
         """
         P, R = len(self.return_periods), len(self.weights)
         array = numpy.zeros((P, R), self.loss_dt)
-        dic = group_array(agg_loss_table, 'rlzi')
+        dic = group_array(agg_loss_table_array, 'rlzi')
         for r in dic:
             num_events = self.num_events[r]
             losses = dic[r]['loss']

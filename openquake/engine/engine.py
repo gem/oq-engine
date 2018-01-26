@@ -64,7 +64,7 @@ if parallel.oq_distribute() == 'zmq':
                     logs.LOG.warn('%s is not running', url)
                     continue
                 num_workers += sock.send('get_num_workers')
-        OqParam.concurrent_tasks.default = num_workers * 5
+        OqParam.concurrent_tasks.default = num_workers * 2
         logs.LOG.info('Using %d zmq workers', num_workers)
 
 elif USE_CELERY:
@@ -79,7 +79,7 @@ elif USE_CELERY:
         if not stats:
             sys.exit("No live compute nodes, aborting calculation")
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = num_cores * 5
+        OqParam.concurrent_tasks.default = num_cores * 2
         logs.LOG.info(
             'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
 
@@ -114,10 +114,9 @@ def expose_outputs(dstore):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    try:
-        rlzs = list(dstore['realizations'])
-    except KeyError:
-        rlzs = []
+    rlzs = dstore['csm_info'].rlzs
+    if len(rlzs) > 1:
+        dskeys.add('realizations')
     # expose gmf_data only if < 10 MB
     if oq.ground_motion_fields and calcmode == 'event_based':
         nbytes = dstore['gmf_data'].attrs['nbytes']
@@ -132,7 +131,8 @@ def expose_outputs(dstore):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-stats' in dstore or ('avg_losses-rlzs' in dstore and rlzs):
+    if 'avg_losses-stats' in dstore or (
+            'avg_losses-rlzs' in dstore and len(rlzs)):
         dskeys.add('avg_losses-stats')
     if 'curves-stats' in dstore:
         logs.LOG.warn('loss curves are exportable with oq export')
@@ -141,10 +141,10 @@ def expose_outputs(dstore):
             dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
         dskeys.remove('all_loss_ratios')  # export only specific IDs
-    if 'realizations' in dskeys and len(rlzs) <= 1:
-        dskeys.remove('realizations')  # do not export a single realization
     if 'ruptures' in dskeys and 'scenario' in calcmode:
         exportable.remove('ruptures')  # do not export, as requested by Vitor
+    if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
+        dskeys.remove('rup_loss_table')
     logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
 
 

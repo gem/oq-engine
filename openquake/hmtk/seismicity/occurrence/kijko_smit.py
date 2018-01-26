@@ -63,6 +63,7 @@ class KijkoSmit(SeismicityOccurrence):
     Class to Implement the Kijko & Smit (2012) algorithm for estimation
     of a- and b-value
     """
+
     def calculate(self, catalogue, config, completeness=None):
         """
         Main function to calculate the a- and b-value

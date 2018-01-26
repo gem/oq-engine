@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     796,188,147        
-date           2017-10-24T05:47:56
-engine_version 2.8.0-git8e9cdf8   
+date           2018-01-11T04:54:42
+engine_version 2.9.0-git3c583c4   
 ============== ===================
 
 num_sites = 1, num_imts = 1
@@ -64,35 +64,35 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           91           91          
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 91           91          
+================ ====== ==================== ============ ============
 
 Informational data
 ------------------
-=========================== ========================================================================
-count_eff_ruptures.received max_per_task 606 B, tot 606 B                                           
-count_eff_ruptures.sent     sources 1.05 KB, srcfilter 684 B, param 604 B, monitor 327 B, gsims 91 B
-hazard.input_weight         91.0                                                                    
-hazard.n_imts               1                                                                       
-hazard.n_levels             3                                                                       
-hazard.n_realizations       1                                                                       
-hazard.n_sites              1                                                                       
-hazard.n_sources            1                                                                       
-hazard.output_weight        3.0                                                                     
-hostname                    tstation.gem.lan                                                        
-require_epsilons            False                                                                   
-=========================== ========================================================================
+======================= ========================================================================
+count_ruptures.received max_per_task 588 B, tot 588 B                                           
+count_ruptures.sent     sources 1.06 KB, srcfilter 722 B, param 418 B, monitor 319 B, gsims 91 B
+hazard.input_weight     91.0                                                                    
+hazard.n_imts           1                                                                       
+hazard.n_levels         3                                                                       
+hazard.n_realizations   1                                                                       
+hazard.n_sites          1                                                                       
+hazard.n_sources        1                                                                       
+hazard.output_weight    3.0                                                                     
+hostname                tstation.gem.lan                                                        
+require_epsilons        False                                                                   
+======================= ========================================================================
 
 Slowest sources
 ---------------
-====== ========= ================= ============ ========= ========= =========
-grp_id source_id source_class      num_ruptures calc_time num_sites num_split
-====== ========= ================= ============ ========= ========= =========
-0      1         SimpleFaultSource 91           0.003     1         1        
-====== ========= ================= ============ ========= ========= =========
+========= ================= ============ ========= ========= =========
+source_id source_class      num_ruptures calc_time num_sites num_split
+========= ================= ============ ========= ========= =========
+1         SimpleFaultSource 91           0.003     1         1        
+========= ================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.004 NaN    0.004 0.004 1        
+count_ruptures     0.004 NaN    0.004 0.004 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,12 +118,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.015     0.0       1     
-total count_eff_ruptures       0.004     0.0       1     
+reading composite source model 0.029     0.0       1     
+total count_ruptures           0.004     0.0       1     
+managing sources               0.003     0.0       1     
 store source_info              0.003     0.0       1     
-prefiltering source model      0.001     0.0       1     
-managing sources               0.001     0.0       1     
-reading site collection        4.387E-05 0.0       1     
-saving probability maps        2.265E-05 0.0       1     
-aggregate curves               1.740E-05 0.0       1     
+reading site collection        4.339E-05 0.0       1     
+saving probability maps        2.313E-05 0.0       1     
+aggregate curves               1.216E-05 0.0       1     
 ============================== ========= ========= ======

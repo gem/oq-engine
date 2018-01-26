@@ -153,25 +153,11 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
-        job_inis = [os.path.expanduser(ini) for ini in run.split(',')]
-        if len(job_inis) not in (1, 2):
-            sys.exit('%s should be a .ini filename or a pair of filenames '
-                     'separated by a comma' % run)
-        for job_ini in job_inis:
-            open(job_ini, 'rb').read()  # IOError if the file does not exist
+        job_ini = os.path.expanduser(run)
+        open(job_ini, 'rb').read()  # IOError if the file does not exist
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
-
-        if len(job_inis) == 2:
-            # run hazard
-            job_id = run_job(job_inis[0], log_level,
-                             log_file, exports)
-            # run risk
-            run_job(job_inis[1], log_level, log_file,
-                    exports, hazard_calculation_id=job_id)
-        else:
-            run_job(
-                os.path.expanduser(run), log_level, log_file,
+        run_job(os.path.expanduser(run), log_level, log_file,
                 exports, hazard_calculation_id=hc_id)
     # hazard
     elif list_hazard_calculations:

@@ -19,6 +19,11 @@
 from __future__ import print_function
 import os
 import sys
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
 from django.core.management import execute_from_command_line
 from openquake.server import dbserver
 from openquake.server.db import actions
@@ -52,4 +57,5 @@ if __name__ == "__main__":
         logs.dbcmd('upgrade_db')  # make sure the DB exists
         logs.dbcmd('reset_is_running')  # reset the flag is_running
 
+    setproctitle('oq-webui')
     execute_from_command_line(sys.argv)

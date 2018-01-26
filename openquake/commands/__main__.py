@@ -24,10 +24,6 @@ import importlib
 from openquake.baselib import sap
 from openquake.commonlib import __version__
 from openquake import commands
-from openquake.baselib import config
-
-if 'OQ_DISTRIBUTE' not in os.environ:
-    os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
 # force cluster users to use `oq engine` so that we have centralized logs
 if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:

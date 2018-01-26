@@ -8,12 +8,6 @@ The Scenario Risk Calculator produces the following set of output files:
     deviation (\Verb+stddev+) of the total loss for the portfolio of
     \glspl{asset} are listed in this file.
 
-  \item \Verb+losses_by_tag+: this file contains the scenario
-    loss statistics for each of the \glspl{tag} defined in the
-    \gls{exposuremodel}. For each \gls{tag}, the mean (\Verb+mean+)
-    and associated standard deviation (\Verb+stddev+)
-    of the losses for each tag are listed in this file.
-
   \item \Verb+losses_by_asset+: this file contains mean (\Verb+mean+) and
     associated standard deviation (\Verb+stddev+) of the scenario loss for all
     \glspl{asset} at each of the unique locations in the \gls{exposuremodel}.
@@ -22,6 +16,20 @@ The Scenario Risk Calculator produces the following set of output files:
     portfolio of \glspl{asset} defined in the \gls{exposuremodel} for each
     realization of the scenario generated in the Monte Carlo simulation process.
 
+\end{enumerate}
+
+In addition, if the OpenQuake-QGIS \gls{acr:irmt} plugin is used for
+visualizing or exporting the results from a Scenario Risk Calculation, the
+following additional outputs can be exported:
+
+\begin{enumerate}
+\setcounter{enumi}{3}
+
+  \item \Verb+losses_by_tag+: this file contains the scenario
+    loss statistics for each of the \glspl{tag} defined in the
+    \gls{exposuremodel}. For each \gls{tag}, the mean (\Verb+mean+)
+    and associated standard deviation (\Verb+stddev+)
+    of the losses for each tag are listed in this file.
 
 \end{enumerate}
 
@@ -53,15 +61,17 @@ Table~\ref{output:scenario_loss_asset}.
 \subsubsection{Tag loss statistics}
 \label{subsubsec:scenario_tag_loss_statistics}
 
-The Scenario Risk calculator also estimates the total expected losses for
-assets of each \gls{tag}. This distribution of losses per asset
-\gls{tag} is depicted in the example output file snippet in
+If the OpenQuake-QGIS \gls{acr:irmt} plugin is used for visualizing or
+exporting the results from a Scenario Risk Calculation, the total expected
+losses for assets of each \gls{tag} will be computed and made available for
+export as a csv file. This distribution of losses per asset \gls{tag} is
+depicted in the example output file snippet in
 Table~\ref{output:scenario_loss_tag}.
 
 \input{oqum/risk/verbatim/output_scenario_loss_tag}
 
 The output file lists the mean loss aggregated for each \glspl{tag}
-found in the exposure model for all loss types (amongst ``structural'',
+present in the exposure model and selected by the for all loss types (amongst ``structural'',
 ``nonstructural'', ``contents'', or ``business\_interruption'') for which a
 \gls{vulnerabilitymodel} file was provided in the configuration file.
 
@@ -69,10 +79,11 @@ found in the exposure model for all loss types (amongst ``structural'',
 \subsubsection{Total loss statistics}
 \label{subsubsec:scenario_total_loss_statistics}
 
-This output is always produced for a Scenario Risk calculation and comprises a
-mean total loss and associated standard deviation for the selected earthquake
-rupture. These results are stored in a comma separate value (.csv) file as
-illustrated in the example shown in Table~\ref{output:scenario_loss_total}.
+If the OpenQuake-QGIS \gls{acr:irmt} plugin is used for visualizing or
+exporting the results from a Scenario Risk Calculation, the mean total loss
+and associated standard deviation for the selected earthquake rupture will be
+computed and made available for export as a csv file, as illustrated in the
+example shown in Table~\ref{output:scenario_loss_total}.
 
 \input{oqum/risk/verbatim/output_scenario_loss_total}
 

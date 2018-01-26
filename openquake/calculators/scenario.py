@@ -19,6 +19,7 @@ import collections
 import numpy
 
 from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
 
@@ -45,7 +46,7 @@ class ScenarioCalculator(base.HazardCalculator):
         rupser.save([ebr])
         rupser.close()
         self.computer = GmfComputer(
-            ebr, self.sitecol, oq.imtls, self.gsims,
+            ebr, self.sitecol, oq.imtls, ContextMaker(self.gsims),
             trunc_level, correl_model)
         gsim_lt = readinput.get_gsim_lt(oq)
         cinfo = source.CompositionInfo.fake(gsim_lt)

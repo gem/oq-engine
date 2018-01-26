@@ -15,15 +15,16 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+import collections
 import logging
 import numpy
 
-from openquake.baselib import general
-from openquake.commonlib import readinput
-from openquake.calculators import base, event_based_risk as ebr
+from openquake.risklib import riskinput
+from openquake.hazardlib import InvalidFile
+from openquake.calculators import base, event_based, event_based_risk as ebr
 
 U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64  # higher precision to avoid task order dependency
@@ -47,16 +48,45 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.tags())
         self.A = len(self.assetcol)
         self.I = oq.insured_losses + 1
-        eids, gmfs = base.get_gmfs(self)  # shape (R, N, E, I)
-        self.E = len(eids)
-        if oq.ignore_covs:
-            eps = numpy.zeros((self.A, self.E), numpy.float32)
-        else:
-            logging.info('Building the epsilons')
-            eps = self.make_eps(self.E)
-        self.R = len(gmfs)
-        self.riskinputs = self.build_riskinputs('gmf', eps, eids)
-        self.param['assetcol'] = self.assetcol
+        if oq.hazard_calculation_id:  # read the GMFs from a previous calc
+            assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
+            parent = self.read_previous(oq.hazard_calculation_id)
+            oqp = parent['oqparam']
+            if oqp.ses_per_logic_tree_path != 1:
+                logging.warn(
+                    'The parent calculation was using ses_per_logic_tree_path'
+                    '=%d != 1', oqp.ses_per_logic_tree_path)
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.minimum_intensity != oq.minimum_intensity:
+                raise ValueError(
+                    'The parent calculation was using minimum_intensity=%s'
+                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
+            self.eids = parent['events']['eid']
+            self.datastore['csm_info'] = parent['csm_info']
+            self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
+            self.R = len(self.rlzs_assoc.realizations)
+        else:  # read the GMFs from a file
+            if 'site_model' in oq.inputs:
+                raise InvalidFile('it makes no sense to define a site model in'
+                                  ' %(job_ini)s' % oq.inputs)
+            with self.monitor('reading GMFs', measuremem=True):
+                fname = oq.inputs['gmfs']
+                sids = self.sitecol.complete.sids
+                if fname.endswith('.xml'):  # old approach
+                    self.eids, self.R = base.get_gmfs(self)
+                else:  # import csv
+                    self.eids, self.R, self.gmdata = base.import_gmfs(
+                        self.datastore, fname, sids)
+                    event_based.save_gmdata(self, self.R)
+        self.E = len(self.eids)
+        eps = riskinput.make_epsilon_getter(
+            len(self.assetcol), self.E, oq.asset_correlation,
+            oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
+        self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)
+        self.param['gmf_ebrisk'] = True
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
@@ -69,30 +99,33 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
-
-        events = numpy.zeros(oq.number_of_ground_motion_fields,
-                             readinput.stored_event_dt)
-        events['eid'] = eids
-        self.datastore['events'] = events
-        self.agglosses = general.AccumDict(
-            accum=numpy.zeros(self.L * self.I, F32))
+        self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
         self.vals = self.assetcol.values()
+        self.num_losses = numpy.zeros((self.A, self.R), U32)
+        if oq.asset_loss_table:
+            # save all_loss_ratios
+            self.alr_nbytes = 0
+            self.indices = collections.defaultdict(list)  # sid -> pairs
 
     def post_execute(self, result):
         """
         Save the event loss table
         """
-        alt = numpy.zeros(len(self.agglosses), self.param['elt_dt'])
-        i = 0
-        for (e, r), loss in self.agglosses.items():
-            alt[i] = (e, r, loss)
-            i += 1
-        self.datastore['agg_loss_table'] = alt
+        logging.info('Saving event loss table')
+        with self.monitor('saving event loss table', measuremem=True):
+            # saving also zeros is a lot faster than adding an `if loss.sum()`
+            agglosses = numpy.fromiter(
+                ((e, r, loss)
+                 for e, losses in zip(self.eids, self.agglosses)
+                 for r, loss in enumerate(losses) if loss.sum()),
+                self.param['elt_dt'])
+            self.datastore['agg_loss_table'] = agglosses
+        ebr.EbriskCalculator.__dict__['postproc'](self)
 
     def combine(self, dummy, res):
         """
         :param dummy: unused parameter
         :param res: a result dictionary
         """
-        ebr.EbriskCalculator.__dict__['save_losses'](self, res, 0)
+        ebr.EbriskCalculator.__dict__['save_losses'](self, res, offset=0)
         return 1

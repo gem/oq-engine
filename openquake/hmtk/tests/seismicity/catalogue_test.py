@@ -64,14 +64,15 @@ class CatalogueTestCase(unittest.TestCase):
     """
     Unit tests for the Catalogue class
     """
+
     def setUp(self):
         self.data_array = np.array([
-            [1900, 5.00],  # E
+            [1900, 5.00],  #  E
             [1910, 6.00],  # E
             [1920, 7.00],  # I
             [1930, 5.00],  # E
             [1970, 5.50],  # I
-            [1960, 5.01],  # I
+            [1960, 5.01],  #  I
             [1960, 6.99],  # I
         ])
         self.mt_table = np.array([
@@ -201,6 +202,7 @@ class TestGetDistributions(unittest.TestCase):
     determine depth distribution, magnitude-depth distribution,
     and magnitude-time distribution
     """
+
     def setUp(self):
         self.catalogue = Catalogue()
 
@@ -254,6 +256,7 @@ class TestMagnitudeDepthDistribution(unittest.TestCase):
     """
     Tests the method for generating the magnitude depth distribution
     """
+
     def setUp(self):
         self.catalogue = Catalogue()
         x, y = np.meshgrid(np.arange(5., 50., 10.), np.arange(5.5, 9.0, 1.))
@@ -340,6 +343,7 @@ class TestMagnitudeTimeDistribution(unittest.TestCase):
     """
     Simple class to test the magnitude time density distribution
     """
+
     def setUp(self):
         self.catalogue = Catalogue()
         x, y = np.meshgrid(np.arange(1915., 2010., 10.),
@@ -403,4 +407,3 @@ class TestCatalogueConcatenate(unittest.TestCase):
         self.cat2.data['month'] = np.array([1.0, 2.0, 3.0])
         with self.assertRaises(Warning):
             self.cat1.concatenate(self.cat2)
-

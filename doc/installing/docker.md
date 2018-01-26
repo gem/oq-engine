@@ -31,7 +31,7 @@ $ docker pull docker.io/openquake/engine:2.2
 
 Each container includes:
 
-- Python 2.7
+- Python 3.6
 - Python dependencies (numpy, scipy, h5py...)
 - OpenQuake Engine and Hazardlib
 - The `oq` command line tool

@@ -64,6 +64,17 @@ class DuplicatedPoint(Exception):
     """
 
 
+def assert_relpath(name, fname):
+    """
+    Make sure the given name is a relative path.
+
+    :param name: a path name
+    :param fname: the file where the path is listed
+    """
+    if os.path.relpath(name) != os.path.normpath(name):
+        raise ValueError('%s is not a relative path [in %s]' % (name, fname))
+
+
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -128,9 +139,9 @@ def get_params(job_inis):
     for sect in cp.sections():
         for key, value in cp.items(sect):
             if key.endswith(('_file', '_csv')):
+                assert_relpath(value, job_ini)
                 input_type, _ext = key.rsplit('_', 1)
-                path = value if os.path.isabs(value) else os.path.join(
-                    base_path, value)
+                path = os.path.join(base_path, value)
                 params['inputs'][input_type] = path
             else:
                 params[key] = value
@@ -138,16 +149,16 @@ def get_params(job_inis):
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = sorted(
-            _get_paths(base_path, source.collect_source_model_paths(smlt)))
+        params['inputs']['source'] = sorted(_get_paths(base_path, smlt))
 
     return params
 
 
-def _get_paths(base_path, uncertainty_models):
+def _get_paths(base_path, smlt):
     # extract the path names for the source models listed in the smlt file
-    for model in uncertainty_models:
+    for model in source.collect_source_model_paths(smlt):
         for name in model.split():
+            assert_relpath(name, smlt)
             fname = os.path.abspath(os.path.join(base_path, name))
             if os.path.exists(fname):  # consider only real paths
                 yield fname
@@ -178,7 +189,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
 
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
-
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params([os.path.join(basedir, job_ini)])
@@ -206,7 +216,10 @@ def get_mesh(oqparam):
             data = []
             for i, line in enumerate(csv_data[1:]):
                 row = line.replace(',', ' ').split()
-                assert int(row[0]) == i, (row[0], i)
+                sid = row[0]
+                if sid != str(i):
+                    raise InvalidFile('%s: expected site_id=%d, got %s' % (
+                        oqparam.inputs['sites'], i, sid))
                 data.append(' '.join(row[1:]))
         elif oqparam.calculation_mode == 'gmf_ebrisk':
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
@@ -350,7 +363,7 @@ def get_rupture_sitecol(oqparam, sitecol):
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
-        a pair (EBRupture, FilteredSiteCollection)
+        a pair (EBRupture, SiteCollection)
     """
     rup_model = oqparam.inputs['rupture_model']
     [rup_node] = nrml.read(rup_model)
@@ -628,7 +641,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-
+    tagnames = ~tagNames
+    
     # read the cost types and make some check
     cost_types = []
     for ct in conversions.costTypes:
@@ -643,8 +657,9 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True)
     deductible_is_absolute = deductible.attrib.get('isAbsolute', True)
     time_events = set()
+    tagi = {name: i for i, name in enumerate(tagnames)}
     cc = asset.CostCalculator(
-        {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute)
+        {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute, tagi)
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
@@ -652,14 +667,12 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         cc.units[name] = ct['unit']
     assets = []
     asset_refs = []
-    assets_by_tag = AccumDict(accum=[])
-    assets_by_tag.tagnames = ~tagNames
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, time_events,
         insurance_limit_is_absolute,
         deductible_is_absolute,
-        area.attrib, assets, asset_refs, cc, assets_by_tag)
+        area.attrib, assets, asset_refs, cc, tagnames)
     return exp, exposure.assets
 
 
@@ -699,6 +712,7 @@ def get_exposure(oqparam):
         deductibles = {}
         insurance_limits = {}
         retrofitteds = {}
+        tagvalues = []
         with context(fname, asset_node):
             asset_id = asset_node['id'].encode('utf8')
             if asset_id in asset_refs:
@@ -726,13 +740,12 @@ def get_exposure(oqparam):
                 out_of_region += 1
                 continue
             tagnode = getattr(asset_node, 'tags', None)
-            assets_by_tag = exposure.assets_by_tag
             if tagnode is not None:
                 # fill missing tagvalues with "?" and raise an error for
                 # unknown tagnames
                 with context(fname, tagnode):
                     dic = tagnode.attrib.copy()
-                    for tagname in assets_by_tag.tagnames:
+                    for tagname in exposure.tagnames:
                         try:
                             tagvalue = dic.pop(tagname)
                         except KeyError:
@@ -741,13 +754,11 @@ def get_exposure(oqparam):
                             if tagvalue in '?*':
                                 raise ValueError(
                                     'Invalid tagvalue="%s"' % tagvalue)
-                        tag = '%s=%s' % (tagname, tagvalue)
-                        assets_by_tag[tag].append(idx)
+                        tagvalues.append(tagvalue)
                     if dic:
                         raise ValueError(
                             'Unknown tagname %s or <tagNames> not '
                             'specified in the exposure' % ', '.join(dic))
-            exposure.assets_by_tag['taxonomy=' + taxonomy].append(idx)
         try:
             costs = asset_node.costs
         except AttributeError:
@@ -794,7 +805,7 @@ def get_exposure(oqparam):
         area = float(asset_node.attrib.get('area', 1))
         ass = asset.Asset(idx, taxonomy, number, location, values, area,
                           deductibles, insurance_limits, retrofitteds,
-                          exposure.cost_calculator)
+                          exposure.cost_calculator, tagvalues=tagvalues)
         exposure.assets.append(ass)
     if region:
         logging.info('Read %d assets within the region_constraint '
@@ -813,7 +824,7 @@ Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
                  'area', 'assets', 'asset_refs', 'cost_calculator',
-                 'assets_by_tag'])
+                 'tagnames'])
 
 
 def get_sitecol_assetcol(oqparam, exposure):
@@ -832,7 +843,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = asset.AssetCollection(
-        assets_by_site, exposure.assets_by_tag, exposure.cost_calculator,
+        assets_by_site, exposure.tagnames, exposure.cost_calculator,
         oqparam.time_event, time_events=hdf5.array_of_vstr(
             sorted(exposure.time_events)))
     return sitecol, assetcol
@@ -1132,5 +1143,5 @@ def get_checksum32(oqparam):
             data = open(fname, 'rb').read()
             checksum = zlib.adler32(data, checksum) & 0xffffffff
         else:
-            raise ValueError('%s is not a file' % fname)
+            raise ValueError('%s does not exist or is not a file' % fname)
     return checksum

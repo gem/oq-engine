@@ -20,6 +20,7 @@ import os
 import sys
 import mock
 import shutil
+import zipfile
 import tempfile
 import unittest
 
@@ -36,13 +37,15 @@ from openquake.commands.engine import run_job
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
+from openquake.commands.zip import zip as zip_cmd
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
-from openquake.qa_tests_data.classical import case_1
+from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
 from openquake.qa_tests_data.event_based_risk import case_master
+from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -104,6 +107,13 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         with Print.patch() as p:
             info(None, None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
+
+    def test_job_ini(self):
+        path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        with Print.patch() as p:
+            info(None, None, None, None, None, None, path)
+        # this is a test with multiple same ID sources
+        self.assertIn('multiplicity', str(p))
 
     # NB: info --report is tested in the packager
 
@@ -196,11 +206,11 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('sitecol', self.calc_id)
-        self.assertEqual(str(p), '<SiteCollection with 1 sites>')
+        self.assertEqual(str(p), '<SiteCollection with 1/1 sites>')
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('grp_id source_id source_class num_ruptures calc_time '
+        self.assertIn('source_id source_class num_ruptures calc_time '
                       'num_sites num_split', str(p))
 
     def test_show_attrs(self):
@@ -279,6 +289,39 @@ class UpgradeNRMLTestCase(unittest.TestCase):
 </nrml>''')
         upgrade_nrml(tmpdir, False, False)
         shutil.rmtree(tmpdir)
+
+
+class ZipTestCase(unittest.TestCase):
+    """
+    Test for the command oq zip
+    """
+    def test_zip(self):
+        ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
+        dtemp = tempfile.mkdtemp()
+        xzip = os.path.join(dtemp, 'x.zip')
+        zip_cmd(ini, xzip)
+        names = sorted(zipfile.ZipFile(xzip).namelist())
+        self.assertEqual(['Wcrust_high_rhypo.hdf5',
+                          'Wcrust_low_rhypo.hdf5',
+                          'Wcrust_med_rhypo.hdf5',
+                          'job.ini',
+                          'nbc_asc_logic_tree.xml',
+                          'source_model_logic_tree.xml',
+                          'vancouver_area_source.xml',
+                          'vancouver_school_sites.csv'], names)
+        shutil.rmtree(dtemp)
+
+    def test_zip_gmf_ebrisk(self):
+        # this is a case without gsims and with a gmf file
+        ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
+        dtemp = tempfile.mkdtemp()
+        xzip = os.path.join(dtemp, 'x.zip')
+        zip_cmd(ini, xzip)
+        names = sorted(zipfile.ZipFile(xzip).namelist())
+        self.assertEqual(['exposure_model.xml', 'gmf_scenario.csv',
+                          'job_risk.ini', 'sites.csv', 'vulnerability.xml'],
+                         names)
+        shutil.rmtree(dtemp)
 
 
 class SourceModelShapefileConverterTestCase(unittest.TestCase):

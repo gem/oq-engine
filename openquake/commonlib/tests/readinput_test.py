@@ -28,7 +28,7 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib import general
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, InvalidFile
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation
 from openquake.qa_tests_data.classical import case_1, case_2
@@ -44,6 +44,28 @@ def getparams(oq):
 
 
 class ParseConfigTestCase(unittest.TestCase):
+
+    def test_no_absolute_path(self):
+        temp_dir = tempfile.mkdtemp()
+        site_model_input = general.writetmp(dir=temp_dir, content="foo")
+        job_config = general.writetmp(dir=temp_dir, content="""
+[general]
+calculation_mode = event_based
+[foo]
+bar = baz
+[site]
+sites = 0 0
+site_model_file = %s
+maximum_distance=1
+truncation_level=0
+random_seed=0
+intensity_measure_types = PGA
+investigation_time = 50
+export_dir = %s
+        """ % (site_model_input, TMP))
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_params([job_config])
+        self.assertIn('not a relative path', str(ctx.exception))
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
@@ -62,7 +84,7 @@ random_seed=0
 intensity_measure_types = PGA
 investigation_time = 50
 export_dir = %s
-        """ % (site_model_input, TMP))
+        """ % (os.path.basename(site_model_input), TMP))
 
         try:
             exp_base_path = os.path.dirname(job_config)
@@ -117,7 +139,7 @@ reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
-            """ % (sites_csv, TMP))
+            """ % (os.path.basename(sites_csv), TMP))
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
 
@@ -144,6 +166,33 @@ export_dir = %s
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
+
+    def test_wrong_sites_csv(self):
+        sites_csv = general.writetmp(
+            'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
+        source = general.writetmp("""
+[general]
+calculation_mode = classical
+[geometry]
+sites_csv = %s
+[misc]
+maximum_distance=1
+truncation_level=3
+random_seed=5
+[site_params]
+reference_vs30_type = measured
+reference_vs30_value = 600.0
+reference_depth_to_2pt5km_per_sec = 5.0
+reference_depth_to_1pt0km_per_sec = 100.0
+intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
+investigation_time = 50.
+export_dir = %s
+""" % (os.path.basename(sites_csv), TMP))
+        oq = readinput.get_oqparam(source, hc_id=1)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_mesh(oq)
+        self.assertIn('expected site_id=0, got 1', str(ctx.exception))
+        os.unlink(sites_csv)
 
     def test_wrong_discretization(self):
         source = general.writetmp("""
