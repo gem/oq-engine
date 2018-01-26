@@ -19,6 +19,12 @@
 from __future__ import print_function
 import inspect
 import logging
+try:
+    # Python 3
+    from urllib.parse import quote_plus
+except ImportError:
+    # Python 2
+    from urllib import quote_plus
 
 from openquake.baselib import performance, sap, hdf5, datastore
 
@@ -27,9 +33,21 @@ from openquake.calculators.extract import extract as extract_
 from openquake.server import dbserver
 
 
+def quote(url_like):
+    try:
+        path, query = url_like.split('?', 1)
+    except ValueError:  # no question mark
+        return url_like
+    namevals = []
+    for nv in query.split('&'):
+        n, v = nv.split('=')
+        namevals.append('%s=%s' % (n, quote_plus(v)))
+    return path + '?' + '&'.join(namevals)
+
+
 # `oq extract` is tested in the demos
 @sap.Script
-def extract(calc_id, what, extra):
+def extract(what, calc_id=-1):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     """
@@ -44,17 +62,18 @@ def extract(calc_id, what, extra):
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.parent = datastore.read(parent_id)
+    print('Emulating call to /v1/calc/%d/extract/%s' % (calc_id, quote(what)))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
-        items = extract_(dstore, what, *extra)
+        items = extract_(dstore, what)
         if not inspect.isgenerator(items):
             items = [(items.__class__.__name__, items)]
-        fname = '%s_%d.hdf5' % (what.replace('/', '-'), dstore.calc_id)
+        fname = '%s_%d.hdf5' % (what.replace('/', '-').replace('?', '-'),
+                                dstore.calc_id)
         hdf5.save(fname, items)
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)
 
 
-extract.arg('calc_id', 'number of the calculation', type=int)
 extract.arg('what', 'string specifying what to export')
-extract.arg('extra', 'extra arguments', nargs='*')
+extract.arg('calc_id', 'number of the calculation', type=int)
