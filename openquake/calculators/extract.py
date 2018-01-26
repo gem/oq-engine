@@ -28,6 +28,7 @@ else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode
+from openquake.calculators import getters
 from openquake.commonlib import calc
 
 
@@ -132,7 +133,7 @@ def extract_hazard(dstore, what):
     nsites = len(sitecol)
     M = len(oq.imtls)
     P = len(oq.poes)
-    for kind, pmap in calc.PmapGetter(dstore).items(what):
+    for kind, pmap in getters.PmapGetter(dstore).items(what):
         for imt in oq.imtls:
             key = 'hcurves/%s/%s' % (imt, kind)
             arr = numpy.zeros((nsites, len(oq.imtls[imt])))
@@ -167,7 +168,7 @@ def extract_hazard_for_qgis(dstore, what):
     N = len(sitecol)
     if oq.poes:
         pdic = {imt: oq.poes for imt in oq.imtls}
-    for kind, hcurves in calc.PmapGetter(dstore).items(what):
+    for kind, hcurves in getters.PmapGetter(dstore).items(what):
         logging.info('extracting hazard/%s', kind)
         yield 'hcurves-' + kind, calc.convert_to_array(hcurves, N, oq.imtls)
         if oq.poes and oq.uniform_hazard_spectra:

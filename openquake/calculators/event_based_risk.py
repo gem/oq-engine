@@ -28,7 +28,7 @@ from openquake.baselib.general import (
 from openquake.baselib import parallel
 from openquake.risklib import riskinput
 from openquake.commonlib import calc
-from openquake.calculators import base, event_based
+from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
 U8 = numpy.uint8
@@ -231,7 +231,7 @@ class EbriskCalculator(base.RiskCalculator):
                 eps = self.get_eps(self.start, self.start + n_events)
                 num_events += n_events
                 self.start += n_events
-                getter = riskinput.GmfGetter(
+                getter = getters.GmfGetter(
                     rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
                     self.oqparam.maximum_distance, trunc_level, correl_model,
                     samples)
@@ -585,7 +585,7 @@ class EbrPostCalculator(base.RiskCalculator):
                 allargs = []
                 for aids in split_in_blocks(range(A), oq.concurrent_tasks):
                     dstore = self.datastore.parent if lazy else self.datastore
-                    getter = riskinput.LossRatiosGetter(dstore, aids, lazy)
+                    getter = getters.LossRatiosGetter(dstore, aids, lazy)
                     # a lazy getter will read the loss_ratios from the workers
                     # an eager getter reads the loss_ratios upfront
                     allargs.append((assetcol.values(aids), builder, getter,
