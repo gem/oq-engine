@@ -72,7 +72,7 @@ def gsim(value, **kwargs):
     """
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
     if value == 'FromFile':
-        gs = FromFile()
+        return FromFile()
     elif value.endswith('()'):
         value = value[:-2]  # strip parenthesis
     try:
