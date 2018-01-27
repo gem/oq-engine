@@ -802,6 +802,8 @@ class Exposure(object):
                     asset = Node('asset', attrs,
                                  nodes=[loc, costs, occupancies, tags],
                                  lineno=i)
+                    if i % 100000 == 0:
+                        logging.info('Read %d assets', i)
                     yield asset
 
     def _populate_from(self, asset_nodes, param):
