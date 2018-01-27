@@ -70,8 +70,9 @@ def gsim(value, **kwargs):
     >>> gsim('BooreAtkinson2011')
     'BooreAtkinson2011()'
     """
+    minimum_distance = float(kwargs.pop('minimum_distance', 0))
     if value == 'FromFile':
-        return FromFile()
+        gs = FromFile()
     elif value.endswith('()'):
         value = value[:-2]  # strip parenthesis
     try:
@@ -79,9 +80,11 @@ def gsim(value, **kwargs):
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % value)
     try:
-        return gsim_class(**kwargs)
+        gs = gsim_class(**kwargs)
     except TypeError:
         raise ValueError('Could not instantiate %s%s' % (value, kwargs))
+    gs.minimum_distance = minimum_distance
+    return gs
 
 
 def logic_tree_path(value):
