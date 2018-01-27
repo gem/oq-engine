@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Introduced a minimum_distance for the GSIMs, honored for event based and
+    scenario calculations
+
   [Daniele Viganò]
   * RPM packages moved to Python 3.5
 
