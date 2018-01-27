@@ -780,30 +780,30 @@ class Exposure(object):
         for fname in fnames:
             with open(fname) as f:
                 for i, dic in enumerate(csv.DictReader(f), 1):
-                    attrs = dict(id=dic['id'],
-                                 number=float(dic['number']),
-                                 taxonomy=dic['taxonomy'])
-                    if 'area' in dic:  # optional attribute
-                        attrs['area'] = dic['area']
-                    loc = Node('location',
-                               dict(lon=valid.longitude(dic['lon']),
-                                    lat=valid.latitude(dic['lat'])))
-                    costs = Node('costs')
-                    for cost in self.cost_types['name']:
-                        a = dict(type=cost, value=dic[cost])
-                        costs.append(Node('cost', a))
-                    occupancies = Node('occupancies')
-                    for period in self.occupancy_periods:
-                        a = dict(occupants=dic[period], period=period)
-                        occupancies.append(Node('occupancy', a))
-                    tags = Node('tags')
-                    for tagname in self.tagnames:
-                        tags[tagname] = dic[tagname]
-                    asset = Node('asset', attrs,
-                                 nodes=[loc, costs, occupancies, tags],
-                                 lineno=i)
-                    if i % 100000 == 0:
-                        logging.info('Read %d assets', i)
+                    asset = Node('asset', lineno=i)
+                    with context(fname, asset):
+                        asset['id'] = dic['id']
+                        asset['number'] = float(dic['number'])
+                        asset['taxonomy'] = dic['taxonomy']
+                        if 'area' in dic:  # optional attribute
+                            asset['area'] = dic['area']
+                        loc = Node('location',
+                                   dict(lon=valid.longitude(dic['lon']),
+                                        lat=valid.latitude(dic['lat'])))
+                        costs = Node('costs')
+                        for cost in self.cost_types['name']:
+                            a = dict(type=cost, value=dic[cost])
+                            costs.append(Node('cost', a))
+                        occupancies = Node('occupancies')
+                        for period in self.occupancy_periods:
+                            a = dict(occupants=dic[period], period=period)
+                            occupancies.append(Node('occupancy', a))
+                        tags = Node('tags')
+                        for tagname in self.tagnames:
+                            tags[tagname] = dic[tagname]
+                        asset.nodes.extend([loc, costs, occupancies, tags])
+                        if i % 100000 == 0:
+                            logging.info('Read %d assets', i)
                     yield asset
 
     def _populate_from(self, asset_nodes, param):
