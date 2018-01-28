@@ -699,7 +699,7 @@ class CompositeSourceModel(collections.Sequence):
                 self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
-                    if hasattr(src, '__iter__'):  # MultiPointSource
+                    if hasattr(src, '__iter__'):  # MultiPoint, AreaSource
                         sources.extend(source.split_source(src))
                     else:
                         sources.append(src)
