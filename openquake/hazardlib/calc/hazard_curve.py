@@ -56,7 +56,7 @@ the engine manages all the realizations at once.
 from __future__ import division
 import time
 import operator
-
+import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, groupby, AccumDict
@@ -107,7 +107,7 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
         acc = AccumDict({group.id: pmap})
         # adding the number of contributing ruptures too
         acc.eff_ruptures = {group.id: ctx_mon.counts}
-        acc.calc_times = calc_times
+        acc.calc_times = numpy.array(calc_times)
         return acc
 
 
@@ -148,6 +148,7 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
             # storing the number of contributing ruptures too
             pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
                                   for grp_id in src.src_group_ids}
+        pmap.calc_times = numpy.array(pmap.calc_times)
         return pmap
 
 
