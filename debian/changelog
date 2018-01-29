@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Introduced a minimum_distance for the GSIMs, honored for event based and
     scenario calculations
+  * Added the ability to import large exposures as CSV (experimental)
   * Changed the source weights to be proportional to the number of GSIMs
     relevant for the tectonic region type, improving the task distribution
 

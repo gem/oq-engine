@@ -49,6 +49,13 @@ def zip(job_ini, archive_zip):
                 if table:
                     files.add(table)
 
+    # collect exposure.csv, if any
+    exposure_xml = oq.inputs.get('exposure')
+    if exposure_xml:
+        exposure_csv = exposure_xml[:-4] + '.csv'
+        if os.path.exists(exposure_csv):
+            files.add(os.path.normpath(exposure_csv))
+
     # collect all other files
     for key in oq.inputs:
         fname = oq.inputs[key]
