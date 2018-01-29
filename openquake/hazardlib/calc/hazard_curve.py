@@ -101,7 +101,7 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
                 pcurve = pmap.setdefault(sid, 0)
                 pcurve += poemap[sid] * weight
             src_id = src.source_id.split(':', 1)[0]
-            pmap.calc_times[src_id] += numpy.array(
+            calc_times[src_id] += numpy.array(
                 [src.weight, len(s_sites), time.time() - t0, 1])
         if group.grp_probability is not None:
             pmap *= group.grp_probability
