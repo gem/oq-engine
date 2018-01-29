@@ -38,7 +38,7 @@ def expo2csv(job_ini):
             header.append(costname)
             header.append(costname + '-deductible')
             header.append(costname + '-insured_limit')
-    header.extend(exposure.time_events)
+    header.extend(exposure.occupancy_periods)
     header.extend(exposure.tagnames)
     for asset, asset_ref in zip(exposure.assets, exposure.asset_refs):
         row = [asset_ref.decode('utf8'), asset.number, asset.area,
@@ -48,7 +48,7 @@ def expo2csv(job_ini):
                 row.append(asset.values[costname])
                 row.append(asset.deductibles.get(costname, '?'))
                 row.append(asset.insurance_limits.get(costname, '?'))
-        for time_event in exposure.time_events:
+        for time_event in exposure.occupancy_periods:
             row.append(asset.value(time_event))
         for tagname, tagvalue in zip(exposure.tagnames, asset.tagvalues):
             row.append(tagvalue)
