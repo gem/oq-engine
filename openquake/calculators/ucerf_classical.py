@@ -106,8 +106,9 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     if s_sites is None:  # return an empty probability map
         pm = ProbabilityMap(len(imtls.array), len(gsims))
         acc = AccumDict({grp_id: pm})
-        acc.calc_times = [(ucerf_source.source_id, nruptures,
-                           None, time.time() - t0)]
+        acc.calc_times = {
+            ucerf_source.source_id:
+            numpy.array([nruptures, 0, time.time() - t0, 1])}
         acc.eff_ruptures = {grp_id: 0}
         return acc
 
@@ -120,8 +121,9 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
                           truncation_level, ctx_mon, poe_mon)
     nsites = len(s_sites)
     acc = AccumDict({grp_id: pmap})
-    acc.calc_times = [
-        (ucerf_source.source_id, nruptures * nsites, nsites, time.time() - t0)]
+    acc.calc_times = {
+        ucerf_source.source_id:
+        numpy.array([nruptures * nsites, nsites, time.time() - t0, 1])}
     acc.eff_ruptures = {grp_id: ucerf_source.num_ruptures}
     return acc
 
@@ -158,7 +160,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         acc = AccumDict({
             grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
             for grp_id, gsims in self.gsims_by_grp.items()})
-        acc.calc_times = []
+        acc.calc_times = {}
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level)

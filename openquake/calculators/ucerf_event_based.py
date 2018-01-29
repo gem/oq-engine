@@ -724,8 +724,9 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         serial += 1
     res.num_events = event_based.set_eids(ebruptures)
     res[src.src_group_id] = ebruptures
-    res.calc_times[src.src_group_id] = (
-        src.source_id, len(sitecol), time.time() - t0)
+    res.calc_times[src.src_group_id] = {
+        src.source_id:
+        numpy.array([src.weight, len(sitecol), time.time() - t0, 1])}
     if not param['save_ruptures']:
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
