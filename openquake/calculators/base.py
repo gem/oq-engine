@@ -125,7 +125,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     from_engine = False  # set by engine.run_calc
     sitecol = datastore.persistent_attribute('sitecol')
-    assetcol = datastore.persistent_attribute('assetcol')
     performance = datastore.persistent_attribute('performance')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
@@ -559,6 +558,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
             self.assoc_assets(haz_sitecol)
+            self.datastore['assetcol'] = self.assetcol
         elif oq.job_type == 'risk':
             raise RuntimeError(
                 'Missing exposure_file in %(job_ini)s' % oq.inputs)
@@ -671,6 +671,8 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
+        if not hasattr(self, 'assetcol'):
+            self.assetcol = self.datastore['assetcol']
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
