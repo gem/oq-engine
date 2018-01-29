@@ -98,12 +98,12 @@ class PSHACalculator(base.HazardCalculator):
             for grp_id in pmap:
                 if pmap[grp_id]:
                     acc[grp_id] |= pmap[grp_id]
-            for src_id, srcweight, nsites, calc_time in pmap.calc_times:
-                srcid = src_id.split(':', 1)[0]
+            for srcid, (srcweight, nsites, calc_time, split) in \
+                    pmap.calc_times.items():
                 info = self.csm.infos[srcid]
                 info.calc_time += calc_time
-                info.num_sites = max(info.num_sites, nsites or 0)
-                info.num_split += 1
+                info.num_sites += nsites
+                info.num_split += split
         return acc
 
     def zerodict(self):
