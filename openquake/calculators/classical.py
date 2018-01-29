@@ -98,7 +98,7 @@ class PSHACalculator(base.HazardCalculator):
             for grp_id in pmap:
                 if pmap[grp_id]:
                     acc[grp_id] |= pmap[grp_id]
-            for src_id, nsites, srcweight, calc_time in pmap.calc_times:
+            for src_id, srcweight, nsites, calc_time in pmap.calc_times:
                 srcid = src_id.split(':', 1)[0]
                 info = self.csm.infos[srcid]
                 info.calc_time += calc_time
