@@ -38,6 +38,7 @@ def zip(job_ini, archive_zip):
         sys.exit('%s exists already' % archive_zip)
     logging.basicConfig(level=logging.INFO)
     oq = readinput.get_oqparam(job_ini)
+    import pdb; pdb.set_trace()
     files = set()
 
     # collect .hdf5 tables for the GSIMs, if any
