@@ -492,6 +492,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
+        oqparam.ignore_missing_costs = []
         oqparam.region_constraint = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': self.exposure2,
