@@ -317,7 +317,8 @@ def check_time_event(oqparam, occupancy_periods):
     if time_event and time_event not in occupancy_periods:
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
-            (time_event, oqparam.inputs['job_ini'], ', '.join(occupancy_periods)))
+            (time_event, oqparam.inputs['job_ini'],
+             ', '.join(occupancy_periods)))
 
 
 class HazardCalculator(BaseCalculator):
@@ -369,7 +370,8 @@ class HazardCalculator(BaseCalculator):
             self.exposure.tagnames,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
-            occupancy_periods=hdf5.array_of_vstr(sorted(self.exposure.occupancy_periods)))
+            occupancy_periods=hdf5.array_of_vstr(
+                sorted(self.exposure.occupancy_periods)))
 
     def count_assets(self):
         """
