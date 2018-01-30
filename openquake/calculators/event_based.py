@@ -214,7 +214,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.grp_trt = self.csm.info.grp_trt()
+        self.grp_trt = self.csm.info.grp_by("trt")
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
