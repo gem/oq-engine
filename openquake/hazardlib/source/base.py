@@ -166,7 +166,8 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         if integration_distance is None:  # no filtering
             return sites
         rup_enc_poly = self.get_rupture_enclosing_polygon(integration_distance)
-        return sites.filter(rup_enc_poly.intersects(sites.mesh))
+        mask = rup_enc_poly.intersects(sites.mesh)
+        return sites.filter(mask)
 
     def modify(self, modification, parameters):
         """
