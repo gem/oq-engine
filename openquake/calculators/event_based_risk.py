@@ -314,6 +314,8 @@ class EbriskCalculator(base.RiskCalculator):
         source_models = self.csm_info.source_models
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
         num_events = len(self.datastore['events'])
+        if not hasattr(self, 'assetcol'):
+            self.assetcol = self.datastore['assetcol']
         self.get_eps = riskinput.make_epsilon_getter(
             len(self.assetcol), num_events,
             self.oqparam.asset_correlation,
@@ -555,7 +557,7 @@ class EbrPostCalculator(base.RiskCalculator):
         R = len(self.loss_builder.weights)
         # build loss maps
         if 'all_loss_ratios' in self.datastore and oq.conditional_loss_poes:
-            assetcol = self.assetcol
+            assetcol = self.datastore['assetcol']
             stats = oq.risk_stats()
             builder = self.loss_builder
             A = len(assetcol)
