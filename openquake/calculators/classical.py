@@ -102,7 +102,7 @@ class PSHACalculator(base.HazardCalculator):
                 srcid = src_id.split(':', 1)[0]
                 info = self.csm.infos[srcid]
                 info.calc_time += calc_time
-                info.num_sites = max(info.num_sites, nsites)
+                info.num_sites = max(info.num_sites, nsites or 0)
                 info.num_split += 1
         return acc
 
@@ -200,14 +200,16 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap_by_grp_id:
             a dictionary grp_id -> hazard curves
         """
-        grp_trt = self.csm.info.grp_trt()
+        grp_trt = self.csm.info.grp_by("trt")
+        grp_name = self.csm.info.grp_by("name")
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     fix_ones(pmap)  # avoid saving PoEs == 1
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
+                    self.datastore.set_attrs(key, trt=grp_trt[grp_id],
+                                             name=str(grp_name[grp_id]))
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
 
