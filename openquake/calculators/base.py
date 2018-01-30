@@ -324,6 +324,8 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    grp_by_src = False  # set True in disaggregation
+
     def can_read_parent(self):
         """
         :returns:
@@ -417,6 +419,8 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
+                if self.grp_by_src:  # set in disaggregation
+                    self.csm = self.csm.grp_by_src()
             if self.is_stochastic:
                 # initialize the rupture serial numbers before the
                 # filtering; in this way the serials are independent

@@ -95,7 +95,7 @@ def export_ruptures_csv(ekey, dstore):
     header = ('rupid multiplicity mag centroid_lon centroid_lat centroid_depth'
               ' trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
-    grp_trt = csm_info.grp_trt()
+    grp_trt = csm_info.grp_by("trt")
     rows = []
     ruptures_by_grp = calc.get_ruptures_by_grp(dstore)
     for grp_id, trt in sorted(grp_trt.items()):

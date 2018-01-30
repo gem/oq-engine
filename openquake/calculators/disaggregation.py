@@ -109,6 +109,7 @@ producing too small PoEs.'''
             # the hazard curves, hence the need to run a PSHACalculator here
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
+            cl.grp_by_src = True
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
