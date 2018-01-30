@@ -96,6 +96,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
         eids, self.R = base.get_gmfs(self)
+        self.assetcol = self.datastore['assetcol']
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields
         logging.info('Building the epsilons')

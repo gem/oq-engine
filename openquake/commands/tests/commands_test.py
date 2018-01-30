@@ -265,7 +265,7 @@ class ReduceTestCase(unittest.TestCase):
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
             reduce(dest, 0.5)
-        self.assertIn('Extracted 50 lines out of 100', str(p))
+        self.assertIn('Extracted 50 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
 
