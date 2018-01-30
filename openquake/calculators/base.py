@@ -414,7 +414,7 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         wakeup_pool()  # fork before reading the data
         self.read_risk_data()
-        if 'source' in oq.inputs:
+        if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
             if self.is_stochastic:
@@ -447,7 +447,7 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.precalc = None
             self.read_inputs()
-            if 'source' in self.oqparam.inputs:
+            if 'source' in self.oqparam.inputs and precalc_id is None:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
         if hasattr(self, 'riskmodel'):
