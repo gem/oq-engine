@@ -78,7 +78,7 @@ PRECALC_MAP = dict(
                  'event_based_risk', 'ucerf_rupture'],
     event_based_risk=['event_based', 'event_based_rupture', 'ucerf_rupture',
                       'event_based_risk'],
-    gmf_ebrisk=['event_based'],
+    gmf_ebrisk=['event_based', 'ucerf_hazard'],
     ucerf_classical=['ucerf_psha'],
     ucerf_hazard=['ucerf_rupture'])
 
@@ -125,7 +125,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     from_engine = False  # set by engine.run_calc
     sitecol = datastore.persistent_attribute('sitecol')
-    assetcol = datastore.persistent_attribute('assetcol')
     performance = datastore.persistent_attribute('performance')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
@@ -308,22 +307,25 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.flush()
 
 
-def check_time_event(oqparam, time_events):
+def check_time_event(oqparam, occupancy_periods):
     """
     Check the `time_event` parameter in the datastore, by comparing
     with the periods found in the exposure.
     """
     time_event = oqparam.time_event
-    if time_event and time_event not in time_events:
+    if time_event and time_event not in occupancy_periods:
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
-            (time_event, oqparam.inputs['job_ini'], ', '.join(time_events)))
+            (time_event, oqparam.inputs['job_ini'],
+             ', '.join(occupancy_periods)))
 
 
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    grp_by_src = False  # set True in disaggregation
+
     def can_read_parent(self):
         """
         :returns:
@@ -369,7 +371,8 @@ class HazardCalculator(BaseCalculator):
             self.exposure.tagnames,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
-            time_events=hdf5.array_of_vstr(sorted(self.exposure.time_events)))
+            occupancy_periods=hdf5.array_of_vstr(
+                sorted(self.exposure.occupancy_periods)))
 
     def count_assets(self):
         """
@@ -413,9 +416,11 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         wakeup_pool()  # fork before reading the data
         self.read_risk_data()
-        if 'source' in oq.inputs:
+        if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
+                if self.grp_by_src:  # set in disaggregation
+                    self.csm = self.csm.grp_by_src()
             if self.is_stochastic:
                 # initialize the rupture serial numbers before the
                 # filtering; in this way the serials are independent
@@ -446,7 +451,7 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.precalc = None
             self.read_inputs()
-            if 'source' in self.oqparam.inputs:
+            if 'source' in self.oqparam.inputs and precalc_id is None:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
         if hasattr(self, 'riskmodel'):
@@ -510,6 +515,7 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
+        logging.info('Reading the risk model')
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:  # can happen only in a hazard calculation
             return
@@ -557,6 +563,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
             self.assoc_assets(haz_sitecol)
+            self.datastore['assetcol'] = self.assetcol
         elif oq.job_type == 'risk':
             raise RuntimeError(
                 'Missing exposure_file in %(job_ini)s' % oq.inputs)
@@ -567,7 +574,7 @@ class HazardCalculator(BaseCalculator):
         if oq_hazard:
             parent = self.datastore.parent
             if 'assetcol' in parent:
-                check_time_event(oq, parent['assetcol'].time_events)
+                check_time_event(oq, parent['assetcol'].occupancy_periods)
             if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
@@ -669,6 +676,8 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
+        if not hasattr(self, 'assetcol'):
+            self.assetcol = self.datastore['assetcol']
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
