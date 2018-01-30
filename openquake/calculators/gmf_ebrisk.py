@@ -52,10 +52,6 @@ class GmfEbRiskCalculator(base.RiskCalculator):
             assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
             parent = self.read_previous(oq.hazard_calculation_id)
             oqp = parent['oqparam']
-            if oqp.ses_per_logic_tree_path != 1:
-                logging.warn(
-                    'The parent calculation was using ses_per_logic_tree_path'
-                    '=%d != 1', oqp.ses_per_logic_tree_path)
             if oqp.investigation_time != oq.investigation_time:
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
