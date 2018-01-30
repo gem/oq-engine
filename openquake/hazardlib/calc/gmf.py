@@ -132,6 +132,7 @@ class GmfComputer(object):
         if seed is not None:
             numpy.random.seed(seed)
         sctx, rctx, dctx = self.ctx
+        dctx = dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
             assert self.correlation_model is None
             mean, _stddevs = gsim.get_mean_and_stddevs(

@@ -342,7 +342,7 @@ def get_gsims(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
+    return [rlz.value[0] for rlz in get_gsim_lt(oqparam)]
 
 
 def get_rlzs_by_gsim(oqparam):
