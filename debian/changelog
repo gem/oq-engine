@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced a minimum_distance for the GSIMs, honored for event based and
+    scenario calculations
   * Fixed several small issues with the UCERF calculators; now ucerf_hazard
     can be used as a precalculator of gmf_ebrisk
   * Initial support for disaggregation by source
