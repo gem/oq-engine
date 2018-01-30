@@ -359,7 +359,7 @@ class CompositionInfo(object):
         self.init()
 
     def init(self):
-        self.trt_by_grp = self.grp_trt()
+        self.trt_by_grp = self.grp_by("trt")
         if self.num_samples:
             self.seed_samples_by_grp = {}
             seed = self.seed
@@ -596,14 +596,14 @@ class CompositionInfo(object):
         return {grp.id: sm.ordinal for sm in self.source_models
                 for grp in sm.src_groups}
 
-    def grp_trt(self):
+    def grp_by(self, name):
         """
         :returns: a dictionary grp_id -> TRT string
         """
         dic = {}
         for smodel in self.source_models:
             for src_group in smodel.src_groups:
-                dic[src_group.id] = src_group.trt
+                dic[src_group.id] = getattr(src_group, name)
         return dic
 
     def _get_rlzs(self, smodel, all_rlzs, seed):
@@ -667,6 +667,26 @@ class CompositeSourceModel(collections.Sequence):
             self.has_dupl_sources = 0
         else:
             self.has_dupl_sources = len(dupl_sources)
+
+    def grp_by_src(self):
+        """
+        :returns: a new CompositeSourceModel with one group per source
+        """
+        smodels = []
+        grp_id = 0
+        for sm in self.source_models:
+            src_groups = []
+            smodel = sm.__class__(sm.name, sm.weight, sm.path, src_groups,
+                                  sm.num_gsim_paths, sm.ordinal, sm.samples)
+            for sg in sm.src_groups:
+                for src in sg.sources:
+                    src.src_group_id = grp_id
+                    src_groups.append(
+                        sourceconverter.SourceGroup(
+                            sg.trt, [src], name=src.source_id, id=grp_id))
+                    grp_id += 1
+            smodels.append(smodel)
+        return self.__class__(self.gsim_lt, self.source_model_lt, smodels)
 
     def get_model(self, sm_id):
         """
