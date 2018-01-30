@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * `oq engine --delete-calculation` now aborts the calculation first
   * Initial support for disaggregation by source
   * Added the ability to import large exposures as CSV (experimental)
   * Changed the source weights to be proportional to the number of GSIMs
