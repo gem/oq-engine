@@ -783,12 +783,14 @@ def view_elt(token, dstore):
 @view.add('pmap')
 def view_pmap(token, dstore):
     """
-    Display the ProbabilityMap associated to a given source group name
+    Display the mean ProbabilityMap associated to a given source group name
     """
     name = token.split(':')[1]  # called as pmap:name
     pmap = {}
+    pgetter = getters.PmapGetter(dstore)
+    pgetter.init()
     for grp, dset in dstore['poes'].items():
         if dset.attrs['name'] == name:
-            pmap = dstore['poes/' + grp]
+            pmap = pgetter.get_mean(grp)
             break
     return str(pmap)

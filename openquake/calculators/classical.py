@@ -102,7 +102,7 @@ class PSHACalculator(base.HazardCalculator):
                 srcid = src_id.split(':', 1)[0]
                 info = self.csm.infos[srcid]
                 info.calc_time += calc_time
-                info.num_sites = max(info.num_sites, nsites)
+                info.num_sites = max(info.num_sites, nsites or 0)
                 info.num_split += 1
         return acc
 
