@@ -533,7 +533,7 @@ class RuptureGetter(object):
     def __iter__(self):
         self.dstore.open()  # if needed
         oq = self.dstore['oqparam']
-        grp_trt = self.dstore['csm_info'].grp_trt()
+        grp_trt = self.dstore['csm_info'].grp_by("trt")
         ruptures = self.dstore['ruptures'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
         # <ufunc 'greater'> returned a result with an error set
