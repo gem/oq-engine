@@ -63,7 +63,7 @@ def extract(what, calc_id=-1):
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.parent = datastore.read(parent_id)
-    print('Emulating call to /v1/calc/%s/extract/%d' % (calc_id, quote(what)))
+    print('Emulating call to /v1/calc/%d/extract/%s' % (calc_id, quote(what)))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
         items = extract_(dstore, what)
         if not inspect.isgenerator(items):
