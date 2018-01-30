@@ -54,15 +54,16 @@ def extract(what, calc_id=-1):
     logging.basicConfig(level=logging.INFO)
     if calc_id < 0:
         calc_id = datastore.get_calc_ids()[calc_id]
+    hdf5path = None
     if dbserver.get_status() == 'running':
         job = dbcmd('get_job', calc_id)
         if job is not None:
-            calc_id = job.ds_calc_dir + '.hdf5'
-    dstore = datastore.read(calc_id)
+            hdf5path = job.ds_calc_dir + '.hdf5'
+    dstore = datastore.read(hdf5path or calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.parent = datastore.read(parent_id)
-    print('Emulating call to /v1/calc/%s/extract/%s' % (calc_id, quote(what)))
+    print('Emulating call to /v1/calc/%d/extract/%s' % (calc_id, quote(what)))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
         items = extract_(dstore, what)
         if not inspect.isgenerator(items):
