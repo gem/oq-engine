@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed several small issues with the UCERF calculators; now ucerf_hazard
+    can be used as a precalculator of gmf_ebrisk
   * Initial support for disaggregation by source
   * Added the ability to import large exposures as CSV (experimental)
   * Changed the source weights to be proportional to the number of GSIMs
