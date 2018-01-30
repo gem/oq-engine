@@ -27,7 +27,7 @@ from openquake.baselib.general import (
     group_array, split_in_blocks, deprecated as depr)
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
