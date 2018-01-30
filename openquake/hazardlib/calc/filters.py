@@ -331,7 +331,7 @@ class SourceFilter(object):
     :param use_rtree:
         by default True, i.e. try to use the rtree module if available
     """
-    def __init__(self, sitecol, integration_distance, use_rtree=False):
+    def __init__(self, sitecol, integration_distance, use_rtree=True):
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
