@@ -492,6 +492,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
+    minimum_distance = 0  # can be set by the engine
+
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -910,6 +912,24 @@ class DistancesContext(BaseContext):
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
                'azimuth', 'hanging_wall', 'rvolc')
+
+    def roundup(self, minimum_distance):
+        """
+        If the minimum_distance is nonzero, returns a copy of the
+        DistancesContext with updated distances, i.e. the ones below
+        minimum_distance are rounded up to the minimum_distance. Otherwise,
+        returns the original DistancesContext unchanged.
+        """
+        if not minimum_distance:
+            return self
+        ctx = DistancesContext()
+        for dist, array in vars(self).items():
+            small_distances = array < minimum_distance
+            if small_distances.any():
+                array = array[:]  # make a copy first
+                array[small_distances] = minimum_distance
+            setattr(ctx, dist, array)
+        return ctx
 
 
 class RuptureContext(BaseContext):
