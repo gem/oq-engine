@@ -80,7 +80,7 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
             c_model = c_models.get(loss_type)
             for a, fraction in enumerate(damages):
                 asset = outputs.assets[a]
-                taxo = riskmodel.taxonomies[asset.taxonomy]
+                taxo = riskmodel.taxonomy[asset.taxonomy]
                 damages = fraction * asset.number
                 t = asset.tagmask(param['tags'])
                 result['d_tag'][t, r, l] += damages  # shape (E, D)
