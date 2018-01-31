@@ -120,6 +120,7 @@ class CompositeRiskModel(collections.Mapping):
         self.curve_params = self.make_curve_params(oqparam)
         self.loss_types = [cp.loss_type for cp in self.curve_params]
         self.insured_losses = oqparam.insured_losses
+        self.idx_taxonomy = {}  # must be set by the engine
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
@@ -135,14 +136,6 @@ class CompositeRiskModel(collections.Mapping):
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
-
-    def alias_taxonomies(self, taxo2idx):
-        """
-        Make it possible to access the underlying RiskModels by taxonomy index
-        """
-        for taxonomy, riskmodel in sorted(self._riskmodels.items()):
-            if taxonomy in taxo2idx:
-                self._riskmodels[taxo2idx[taxonomy]] = riskmodel
 
     def get_min_iml(self):
         iml = collections.defaultdict(list)
@@ -201,7 +194,11 @@ class CompositeRiskModel(collections.Mapping):
         return sorted(ltypes)
 
     def __getitem__(self, taxonomy):
-        return self._riskmodels[taxonomy]
+        try:
+            return self._riskmodels[taxonomy]
+        except KeyError:  # taxonomy was an index
+            taxo = self.idx_taxonomy[taxonomy]
+            return self._riskmodels[taxo]
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
