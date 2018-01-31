@@ -820,7 +820,7 @@ class Exposure(object):
         deductibles = {}
         insurance_limits = {}
         retrofitteds = {}
-        tagvalues = []
+        idxs = []  # tag indices
         asset_id = asset_node['id'].encode('utf8')
         with context(param['fname'], asset_node):
             self.asset_refs.append(asset_id)

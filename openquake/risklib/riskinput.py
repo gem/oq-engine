@@ -31,9 +31,6 @@ class ValidationError(Exception):
 
 U32 = numpy.uint32
 F32 = numpy.float32
-FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
-          'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
-
 by_taxonomy = operator.attrgetter('taxonomy')
 aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
