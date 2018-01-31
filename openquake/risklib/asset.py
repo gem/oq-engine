@@ -273,7 +273,7 @@ class TagCollection(object):
             return idx
 
     def add_tags(self, dic):
-        idxs, vals = [], []
+        idxs = []
         for tagname in self.tagnames:
             try:
                 tagvalue = dic.pop(tagname)
@@ -283,16 +283,15 @@ class TagCollection(object):
                 if tagvalue in '?*':
                     raise ValueError(
                         'Invalid tagvalue="%s"' % tagvalue)
-            vals.append(tagvalue)
             idxs.append(self.add(tagname, tagvalue))
         if dic:
             raise ValueError(
                 'Unknown tagname %s or <tagNames> not '
                 'specified in the exposure' % ', '.join(dic))
-        return idxs, vals
+        return idxs
 
-    def tagvalue(self, tagname, idx):
-        return getattr(self, tagname)[idx]
+    def get_tag(self, tagname, idx):
+        return '%s=%s' % (tagname, getattr(self, tagname)[idx])
 
     def __toh5__(self):
         dic = {}
@@ -331,7 +330,7 @@ class AssetCollection(object):
         for assets in assets_by_site:
             for ass in assets:
                 for tagname, tagvalue in zip(self.tagnames, ass.tagvalues):
-                    tag = '%s=%s' % (tagname, tagvalue)
+                    tag = tagc.get_tag(tagname, tagvalue)
                     self.aids_by_tag[tag].add(ordinal[ass.idx])
                 self.aids_by_tag['taxonomy=%s' % ass.taxonomy].add(
                     ordinal[ass.idx])
