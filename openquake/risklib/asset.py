@@ -314,15 +314,15 @@ class AssetCollection(object):
     # numbers to each tagvalue, which is possible
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
-    def __init__(self, assets_by_site, tagc, cost_calculator,
+    def __init__(self, assets_by_site, tagcol, cost_calculator,
                  time_event, occupancy_periods=''):
-        self.tagc = tagc
+        self.tagcol = tagcol
         self.cc = cost_calculator
         self.time_event = time_event
         self.occupancy_periods = occupancy_periods
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_collection(
-            assets_by_site, tagc.tagnames, time_event)
+            assets_by_site, tagcol.tagnames, time_event)
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
@@ -334,14 +334,14 @@ class AssetCollection(object):
 
     @property
     def tagnames(self):
-        return self.tagc.tagnames
+        return self.tagcol.tagnames
 
     def get_aids_by_tag(self):
         ordinal = dict(zip(self.array['idx'], range(len(self.array))))
         aids_by_tag = general.AccumDict(accum=set())
         for ass in self:
             for tagname, tagidx in zip(self.tagnames, ass.tagvalues):
-                tag = self.tagc.get_tag(tagname, tagidx)
+                tag = self.tagcol.get_tag(tagname, tagidx)
                 aids_by_tag[tag].add(ordinal[ass.idx])
         return aids_by_tag
 
@@ -443,7 +443,7 @@ class AssetCollection(object):
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(
-            array=self.array, cost_calculator=self.cc, tagc=self.tagc
+            array=self.array, cost_calculator=self.cc, tagcol=self.tagcol
         ), attrs
 
     def __fromh5__(self, dic, attrs):
@@ -454,7 +454,7 @@ class AssetCollection(object):
         self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
-        self.tagc = dic['tagc']
+        self.tagcol = dic['tagcol']
         self.cc = dic['cost_calculator']
         self.cc.tagi = {decode(tagname): i
                         for i, tagname in enumerate(self.tagnames)}
