@@ -674,7 +674,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         exposure['id'], exposure['category'],
         ~description, cost_types, occupancy_periods.split(),
         insurance_limit_is_absolute, deductible_is_absolute,
-        area.attrib, assets, asset_refs, cc, tagnames)
+        area.attrib, assets, asset_refs, cc, asset.TagCollection(tagnames))
     return exp, exposure.assets
 
 
@@ -710,7 +710,7 @@ class Exposure(object):
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'insurance_limit_is_absolute',
               'deductible_is_absolute', 'area', 'assets', 'asset_refs',
-              'cost_calculator', 'tagnames']
+              'cost_calculator', 'tagc']
 
     @classmethod
     def read(cls, fname, calculation_mode='', insured_losses=False,
@@ -748,7 +748,6 @@ class Exposure(object):
         assert len(values) == len(self.fields)
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
-        self.tagc = asset.TagCollection(self.tagnames)
 
     def _csv_header(self):
         """
@@ -760,7 +759,7 @@ class Exposure(object):
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
         fields.extend(self.occupancy_periods)
-        fields.extend(self.tagnames)
+        fields.extend(self.tagc.tagnames)
         return set(fields)
 
     def _read_csv(self, csvnames, dirname):
@@ -800,7 +799,7 @@ class Exposure(object):
                             a = dict(occupants=dic[period], period=period)
                             occupancies.append(Node('occupancy', a))
                         tags = Node('tags')
-                        for tagname in self.tagnames:
+                        for tagname in self.tagc.tagnames:
                             tags[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
                         if i % 100000 == 0:
@@ -917,7 +916,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = asset.AssetCollection(
-        assets_by_site, exposure.tagnames, exposure.cost_calculator,
+        assets_by_site, exposure.tagc, exposure.cost_calculator,
         oqparam.time_event, occupancy_periods=hdf5.array_of_vstr(
             sorted(exposure.occupancy_periods)))
     return sitecol, assetcol
