@@ -120,7 +120,7 @@ class CompositeRiskModel(collections.Mapping):
         self.curve_params = self.make_curve_params(oqparam)
         self.loss_types = [cp.loss_type for cp in self.curve_params]
         self.insured_losses = oqparam.insured_losses
-        self.idx_taxonomy = {}  # must be set by the engine
+        self.taxonomy = []  # must be set by the engine
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
@@ -197,7 +197,7 @@ class CompositeRiskModel(collections.Mapping):
         try:
             return self._riskmodels[taxonomy]
         except KeyError:  # taxonomy was an index
-            taxo = self.idx_taxonomy[taxonomy]
+            taxo = self.taxonomy[taxonomy]
             return self._riskmodels[taxo]
 
     def __iter__(self):

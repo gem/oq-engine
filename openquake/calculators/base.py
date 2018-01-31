@@ -676,8 +676,7 @@ class RiskCalculator(HazardCalculator):
         num_tasks = self.oqparam.concurrent_tasks or 1
         if not hasattr(self, 'assetcol'):
             self.assetcol = self.datastore['assetcol']
-        self.riskmodel.idx_taxonomy = {
-            idx: tax for tax, idx in self.assetcol.tagcol.taxonomy_idx.items()}
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
