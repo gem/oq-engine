@@ -252,6 +252,58 @@ by_taxonomy = operator.attrgetter('taxonomy')
 aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 
 
+class TagCollection(object):
+    def __init__(self, tagnames):
+        # assert tagnames[0] == 'taxonomy', tagnames
+        self._tagnames = tagnames
+        for tagname in tagnames:
+            setattr(self, tagname, {'?': 0})
+
+    def add(self, tagname, tagvalue):
+        """
+        :returns: numeric index associated to the tag
+        """
+        dic = getattr(self, tagname)
+        try:
+            return dic[tagvalue]
+        except KeyError:
+            dic[tagvalue] = idx = len(dic)
+            return idx
+
+    def add_tags(self, dic):
+        idxs, vals = [], []
+        for tagname in self._tagnames:
+            try:
+                tagvalue = dic.pop(tagname)
+            except KeyError:
+                tagvalue = '?'
+            else:
+                if tagvalue in '?*':
+                    raise ValueError(
+                        'Invalid tagvalue="%s"' % tagvalue)
+            vals.append(tagvalue)
+            idxs.append(self.add(tagname, tagvalue))
+        if dic:
+            raise ValueError(
+                'Unknown tagname %s or <tagNames> not '
+                'specified in the exposure' % ', '.join(dic))
+        return idxs, vals
+
+    def __toh5__(self):
+        dic = {}
+        for tagname in self._tagnames:
+            tagvalues = [tag for tag, idx in sorted(
+                getattr(self, tagname).items(), key=operator.itemgetter(1))]
+            dic[tagname] = numpy.array(tagvalues, hdf5.vstr)
+        return dic, {'_tagnames': self._tagnames}
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        for tagname in dic:
+            setattr(self, tagname,
+                    {tag: idx for idx, tag in enumerate(dic[tagname])})
+
+
 class AssetCollection(object):
     # the information about the assets is stored in a numpy array and in a
     # variable-length dataset aids_by_tags; we could store everything in a

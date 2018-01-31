@@ -645,7 +645,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ~tagNames
+    tagnames = ~tagNames or []
 
     # read the cost types and make some check
     cost_types = []
@@ -748,6 +748,7 @@ class Exposure(object):
         assert len(values) == len(self.fields)
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
+        self.tagc = asset.TagCollection(self.tagnames)
 
     def _csv_header(self):
         """
@@ -850,21 +851,7 @@ class Exposure(object):
                 # fill missing tagvalues with "?" and raise an error for
                 # unknown tagnames
                 with context(param['fname'], tagnode):
-                    dic = tagnode.attrib.copy()
-                    for tagname in self.tagnames:
-                        try:
-                            tagvalue = dic.pop(tagname)
-                        except KeyError:
-                            tagvalue = '?'
-                        else:
-                            if tagvalue in '?*':
-                                raise ValueError(
-                                    'Invalid tagvalue="%s"' % tagvalue)
-                        tagvalues.append(tagvalue)
-                    if dic:
-                        raise ValueError(
-                            'Unknown tagname %s or <tagNames> not '
-                            'specified in the exposure' % ', '.join(dic))
+                    idxs, tagvalues = self.tagc.add_tags(tagnode.attrib.copy())
         try:
             costs = asset_node.costs
         except AttributeError:
