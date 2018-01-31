@@ -711,7 +711,7 @@ class Exposure(object):
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'insurance_limit_is_absolute',
               'deductible_is_absolute', 'area', 'assets', 'asset_refs',
-              'cost_calculator', 'tagc']
+              'cost_calculator', 'tagcol']
 
     @classmethod
     def read(cls, fname, calculation_mode='', insured_losses=False,
@@ -760,7 +760,7 @@ class Exposure(object):
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
         fields.extend(self.occupancy_periods)
-        fields.extend(self.tagc.tagnames)
+        fields.extend(self.tagcol.tagnames)
         return set(fields)
 
     def _read_csv(self, csvnames, dirname):
@@ -800,7 +800,7 @@ class Exposure(object):
                             a = dict(occupants=dic[period], period=period)
                             occupancies.append(Node('occupancy', a))
                         tags = Node('tags')
-                        for tagname in self.tagc.tagnames:
+                        for tagname in self.tagcol.tagnames:
                             if tagname != 'taxonomy':
                                 tags[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
@@ -852,7 +852,7 @@ class Exposure(object):
             # unknown tagnames
             with context(param['fname'], tagnode):
                 dic['taxonomy'] = taxonomy
-                idxs = self.tagc.add_tags(dic)
+                idxs = self.tagcol.add_tags(dic)
         try:
             costs = asset_node.costs
         except AttributeError:
@@ -920,7 +920,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = asset.AssetCollection(
-        assets_by_site, exposure.tagc, exposure.cost_calculator,
+        assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, occupancy_periods=hdf5.array_of_vstr(
             sorted(exposure.occupancy_periods)))
     return sitecol, assetcol

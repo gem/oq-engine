@@ -131,7 +131,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     @property
     def taxonomies(self):
-        return set(taxo for taxo in self.datastore['assetcol/tagc/taxonomy']
+        return set(taxo for taxo in self.datastore['assetcol/tagcol/taxonomy']
                    if taxo != '?')
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
@@ -366,7 +366,7 @@ class HazardCalculator(BaseCalculator):
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
             assets_by_site,
-            self.exposure.tagc,
+            self.exposure.tagcol,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
             occupancy_periods=hdf5.array_of_vstr(
@@ -676,7 +676,7 @@ class RiskCalculator(HazardCalculator):
         num_tasks = self.oqparam.concurrent_tasks or 1
         if not hasattr(self, 'assetcol'):
             self.assetcol = self.datastore['assetcol']
-        self.riskmodel.alias_taxonomies(self.assetcol.tagc.taxonomy_idx)
+        self.riskmodel.alias_taxonomies(self.assetcol.tagcol.taxonomy_idx)
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
