@@ -847,7 +847,7 @@ class Exposure(object):
                 param['out_of_region'] += 1
                 return
             tagnode = getattr(asset_node, 'tags', None)
-            dic = tagnode.attrib.copy() if tagnode else {}
+            dic = {} if tagnode is None else tagnode.attrib.copy()
             # fill missing tagvalues with "?" and raise an error for
             # unknown tagnames
             with context(param['fname'], tagnode):
