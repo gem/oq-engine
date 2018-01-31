@@ -243,10 +243,7 @@ U64 = numpy.uint64
 TWO16 = 2 ** 16
 EVENTS = -2
 NBYTES = -1
-
 by_taxonomy = operator.attrgetter('taxonomy')
-
-aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 
 
 class TagCollection(object):
@@ -356,7 +353,7 @@ class AssetCollection(object):
         """
         :returns: list of sorted tags
         """
-        return sorted(self.aids_by_tag)
+        return sorted(self.get_aids_by_tag())
 
     def units(self, loss_types):
         """
