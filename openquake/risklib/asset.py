@@ -288,6 +288,12 @@ class TagCollection(object):
     def get_tag(self, tagname, idx):
         return '%s=%s' % (tagname, getattr(self, tagname)[idx])
 
+    def taxonomies(self):
+        lst = [None] * len(self.taxonomy_idx)
+        for taxo, idx in self.taxonomy_idx.items():
+            lst[idx] = taxo
+        return lst
+
     def __toh5__(self):
         dic = {}
         for tagname in self.tagnames:
