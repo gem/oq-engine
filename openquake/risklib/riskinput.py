@@ -136,6 +136,14 @@ class CompositeRiskModel(collections.Mapping):
                     ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
 
+    def alias_taxonomies(self, taxo2idx):
+        """
+        Make it possible to access the underlying RiskModels by taxonomy index
+        """
+        for taxonomy, riskmodel in sorted(self._riskmodels.items()):
+            if taxonomy in taxo2idx:
+                self._riskmodels[taxo2idx[taxonomy]] = riskmodel
+
     def get_min_iml(self):
         iml = collections.defaultdict(list)
         for taxo, rm in self._riskmodels.items():

@@ -131,10 +131,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     @property
     def taxonomies(self):
-        L = len('taxonomy=')
-        return [tag[L:]
-                for tag in self.datastore['assetcol/tags']
-                if tag.startswith('taxonomy=')]
+        return set(taxo for taxo in self.datastore['assetcol/tagc/taxonomy']
+                   if taxo != '?')
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
@@ -678,6 +676,7 @@ class RiskCalculator(HazardCalculator):
         num_tasks = self.oqparam.concurrent_tasks or 1
         if not hasattr(self, 'assetcol'):
             self.assetcol = self.datastore['assetcol']
+        self.riskmodel.alias_taxonomies(self.assetcol.tagc.taxonomy_idx)
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
