@@ -850,7 +850,7 @@ class Exposure(object):
                 # fill missing tagvalues with "?" and raise an error for
                 # unknown tagnames
                 with context(param['fname'], tagnode):
-                    idxs, tagvalues = self.tagc.add_tags(tagnode.attrib.copy())
+                    idxs = self.tagc.add_tags(tagnode.attrib.copy())
         try:
             costs = asset_node.costs
         except AttributeError:
@@ -896,7 +896,7 @@ class Exposure(object):
         area = float(asset_node.get('area', 1))
         ass = asset.Asset(idx, taxonomy, number, location, values, area,
                           deductibles, insurance_limits, retrofitteds,
-                          self.cost_calculator, tagvalues=tagvalues)
+                          self.cost_calculator, tagvalues=idxs)
         self.assets.append(ass)
 
 
