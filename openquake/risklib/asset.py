@@ -240,12 +240,9 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-TWO48 = 2 ** 48
+TWO16 = 2 ** 16
 EVENTS = -2
 NBYTES = -1
-
-FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
-          'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
 
 by_taxonomy = operator.attrgetter('taxonomy')
 
@@ -270,6 +267,7 @@ class TagCollection(object):
         except KeyError:
             dic[tagvalue] = idx = len(dic)
             getattr(self, tagname).append(tagvalue)
+            assert idx < TWO16, idx
             return idx
 
     def add_tags(self, dic):
@@ -323,7 +321,8 @@ class AssetCollection(object):
         self.time_event = time_event
         self.occupancy_periods = occupancy_periods
         self.tot_sites = len(assets_by_site)
-        self.array = self.build_asset_collection(assets_by_site, time_event)
+        self.array = self.build_asset_collection(
+            assets_by_site, tagc.tagnames, time_event)
         ordinal = dict(zip(self.array['idx'], range(len(self.array))))
         self.tagnames = tagc.tagnames
         self.aids_by_tag = general.AccumDict(accum=set())
@@ -417,12 +416,6 @@ class AssetCollection(object):
                   if lt != 'occupants'}
         if 'occupants' in self.array.dtype.names:
             values['occupants_' + str(self.time_event)] = a['occupants']
-        dic = {}
-        for tag, aids in self.aids_by_tag.items():
-            if aid in aids:
-                tagname, tagvalue = tag.split('=')
-                dic[tagname] = tagvalue
-        tagvalues = [dic.get(tagname, '?') for tagname in self.tagnames]
         return Asset(
             a['idx'],
             self.taxonomies[aid],
@@ -436,7 +429,7 @@ class AssetCollection(object):
             retrofitteds={lt[self.R:]: a[lt] for lt in self.retro},
             calc=self.cc,
             ordinal=aid,
-            tagvalues=tagvalues)
+            tagvalues=[a[decode(name)] for name in self.tagnames])
 
     def __len__(self):
         return len(self.array)
@@ -479,9 +472,10 @@ class AssetCollection(object):
                 dic['tags'], dic['aids']['aids'])}
 
     @staticmethod
-    def build_asset_collection(assets_by_site, time_event=None):
+    def build_asset_collection(assets_by_site, tagnames=(), time_event=None):
         """
         :param assets_by_site: a list of lists of assets
+        :param tagnames: a list of tag names
         :param time_event: a time event string (or None)
         :returns: an array `assetcol`
         """
@@ -508,10 +502,12 @@ class AssetCollection(object):
         limits = ['insurance_limit-%s' % name for name in limit_d]
         retrofittings = ['retrofitted-%s' % n for n in retrofitting_d]
         float_fields = loss_types + deductibles + limits + retrofittings
+        int_fields = [(tagname, U16) for tagname in tagnames]
+        tagi = {tagname: i for i, tagname in enumerate(tagnames)}
         asset_dt = numpy.dtype(
             [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
              ('number', F32), ('area', F32)] + [
-                 (str(name), float) for name in float_fields])
+                 (str(name), float) for name in float_fields] + int_fields)
         num_assets = sum(len(assets) for assets in assets_by_site)
         assetcol = numpy.zeros(num_assets, asset_dt)
         asset_ordinal = 0
@@ -536,6 +532,8 @@ class AssetCollection(object):
                         value = asset.location[1]
                     elif field == 'occupants':
                         value = asset.values[the_occupants]
+                    elif field in tagnames:
+                        value = asset.tagvalues[tagi[field]]
                     else:
                         try:
                             name, lt = field.split('-')
