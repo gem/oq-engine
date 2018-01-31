@@ -534,9 +534,10 @@ def view_num_units(token, dstore):
     """
     Display the number of units by taxonomy
     """
+    taxo = dstore['assetcol/tagcol/taxonomy'].value
     counts = collections.Counter()
     for asset in dstore['assetcol']:
-        counts[asset.taxonomy] += asset.number
+        counts[taxo[asset.taxonomy]] += asset.number
     data = sorted(counts.items())
     data.append(('*ALL*', sum(d[1] for d in data)))
     return rst_table(data, header=['taxonomy', 'num_units'])
