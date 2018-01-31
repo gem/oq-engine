@@ -368,7 +368,7 @@ class HazardCalculator(BaseCalculator):
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
             assets_by_site,
-            self.exposure.tagnames,
+            self.exposure.tagc,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
             occupancy_periods=hdf5.array_of_vstr(

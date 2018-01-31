@@ -255,24 +255,26 @@ aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 class TagCollection(object):
     def __init__(self, tagnames):
         # assert tagnames[0] == 'taxonomy', tagnames
-        self._tagnames = tagnames
+        self.tagnames = tagnames
         for tagname in tagnames:
-            setattr(self, tagname, {'?': 0})
+            setattr(self, tagname + '_idx', {'?': 0})
+            setattr(self, tagname, ['?'])
 
     def add(self, tagname, tagvalue):
         """
         :returns: numeric index associated to the tag
         """
-        dic = getattr(self, tagname)
+        dic = getattr(self, tagname + '_idx')
         try:
             return dic[tagvalue]
         except KeyError:
             dic[tagvalue] = idx = len(dic)
+            getattr(self, tagname).append(tagvalue)
             return idx
 
     def add_tags(self, dic):
         idxs, vals = [], []
-        for tagname in self._tagnames:
+        for tagname in self.tagnames:
             try:
                 tagvalue = dic.pop(tagname)
             except KeyError:
@@ -289,13 +291,16 @@ class TagCollection(object):
                 'specified in the exposure' % ', '.join(dic))
         return idxs, vals
 
+    def tagvalue(self, tagname, idx):
+        return getattr(self, tagname)[idx]
+
     def __toh5__(self):
         dic = {}
-        for tagname in self._tagnames:
+        for tagname in self.tagnames:
             tagvalues = [tag for tag, idx in sorted(
                 getattr(self, tagname).items(), key=operator.itemgetter(1))]
             dic[tagname] = numpy.array(tagvalues, hdf5.vstr)
-        return dic, {'_tagnames': self._tagnames}
+        return dic, {'tagnames': self.tagnames}
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
@@ -313,7 +318,7 @@ class AssetCollection(object):
     # numbers to each tagvalue, which is possible
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
-    def __init__(self, assets_by_site, tagnames, cost_calculator,
+    def __init__(self, assets_by_site, tagc, cost_calculator,
                  time_event, occupancy_periods=''):
         self.cc = cost_calculator
         self.time_event = time_event
@@ -321,11 +326,11 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_collection(assets_by_site, time_event)
         ordinal = dict(zip(self.array['idx'], range(len(self.array))))
-        self.tagnames = tagnames
+        self.tagnames = tagc.tagnames
         self.aids_by_tag = general.AccumDict(accum=set())
         for assets in assets_by_site:
             for ass in assets:
-                for tagname, tagvalue in zip(tagnames, ass.tagvalues):
+                for tagname, tagvalue in zip(self.tagnames, ass.tagvalues):
                     tag = '%s=%s' % (tagname, tagvalue)
                     self.aids_by_tag[tag].add(ordinal[ass.idx])
                 self.aids_by_tag['taxonomy=%s' % ass.taxonomy].add(
