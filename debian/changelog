@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Fixed the ordering of the IMTs in hazardlib
+  * Added some documentation about how to access the datastore
   * Introduced a minimum_distance for the GSIMs, honored for event based and
     scenario calculations
   * Fixed several small issues with the UCERF calculators; now ucerf_hazard
