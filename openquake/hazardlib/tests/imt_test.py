@@ -106,3 +106,7 @@ class ImtOrderingTestCase(unittest.TestCase):
         self.assertLess(a, c)
         self.assertGreater(c, a)
         self.assertEqual(a, b)
+        self.assertLess(imt_module.from_string('SA(9)'),
+                        imt_module.from_string('SA(10)'))
+        self.assertGreater(imt_module.from_string('SA(10)'),
+                           imt_module.from_string('SA(9)'))
