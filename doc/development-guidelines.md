@@ -29,6 +29,16 @@ All new code which can be reasonably tested must be tested. We do not hold ourse
 
 If code is difficult to test, it might need to be redesigned.
 
+**Design**
+
+We try to keep designs as simple as possible. If there is magic or overcomplexity, we try to replace it with something simpler.
+
+When we design and build features, we strive to make the minimum change necessary to ship (but we don’t skimp on testing). This allows us to quickly get feedback not only from users but other developers and we can react to resulting changes very quickly.
+
+We design by consensus. No single developer makes significant design decisions unilaterally. For changes which are user-visible (user interface, calculation inputs and outputs, etc.), we ask the user(s) of the Engine for their input and agree on a design. For technical changes which are not user-visible, we discuss designs with other OQ Engine core developers and agree on a design.
+
+If we need it, we build it. if we don’t need it, we don’t build it. If we don’t need it anymore, we remove it.
+
 ### Development Philosophy
 
 We take to heart the words of Tim Peters in his poem _The Zen of Python_:
@@ -52,13 +62,3 @@ Beautiful is better than ugly.
 <br />If the implementation is hard to explain, it's a bad idea.
 <br />If the implementation is easy to explain, it may be a good idea.
 <br />Namespaces are one honking great idea -- let's do more of those!
-
-**Design**
-
-We try to keep designs as simple as possible. If there is magic or overcomplexity, we try to replace it with something simpler.
-
-When we design and build features, we strive to make the minimum change necessary to ship (but we don’t skimp on testing). This allows us to quickly get feedback not only from users but other developers and we can react to resulting changes very quickly.
-
-We design by consensus. No single developer makes significant design decisions unilaterally. For changes which are user-visible (user interface, calculation inputs and outputs, etc.), we ask the user(s) of the Engine for their input and agree on a design. For technical changes which are not user-visible, we discuss designs with other OQ Engine core developers and agree on a design.
-
-If we need it, we build it. if we don’t need it, we don’t build it. If we don’t need it anymore, we remove it.
