@@ -205,7 +205,7 @@ def _filter_agg(assetcol, losses, selected):
             _agg(losses, idxs), dict(selected=encode(selected)))
     else:  # return an array of shape (T, ..., R)
         [tagname] = tagnames
-        _tags = getattr(assetcol.tagcol, tagname)
+        _tags = list(assetcol.tagcol.gen_tags(tagname))
         all_idxs = [idxs & aids_by_tag[t] for t in _tags]
         # NB: using a generator expression for all_idxs caused issues (?)
         data, tags = [], []
