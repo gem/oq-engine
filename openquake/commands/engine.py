@@ -28,6 +28,8 @@ from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
+from openquake.commands.abort import abort
+
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
@@ -80,13 +82,20 @@ def del_calculation(job_id, confirmed=False):
     """
     Delete a calculation and all associated outputs.
     """
+    if logs.dbcmd('get_job', job_id) is None:
+        print('There is no job %d' % job_id)
+        return
+
     if confirmed or confirm(
-            'Are you sure you want to delete this calculation and all '
-            'associated outputs?\nThis action cannot be undone. (y/n): '):
+            'Are you sure you want to (abort and) delete this calculation and '
+            'all associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
+            abort(job_id)
             logs.dbcmd('del_calc', job_id, getpass.getuser())
         except RuntimeError as err:
             safeprint(err)
+        else:
+            print('Removed %d' % job_id)
 
 
 @sap.Script
