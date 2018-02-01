@@ -150,4 +150,4 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                             array[lt][aid, :, r] = lba[:, i]
                 self.datastore['all_losses-rlzs'] = array
                 self.datastore.set_attrs('all_losses-rlzs',
-                                         tags=encode(self.assetcol.tags()))
+                                         tags=encode(self.assetcol.tagcol))
