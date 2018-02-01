@@ -26,7 +26,6 @@ from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
 from openquake.baselib.python3compat import decode
 from openquake.baselib.parallel import Sequential
-from openquake.commonlib import readinput
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)

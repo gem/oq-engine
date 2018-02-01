@@ -645,7 +645,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ~tagNames
+    tagnames = ~tagNames or []
+    tagnames.insert(0, 'taxonomy')
 
     # read the cost types and make some check
     cost_types = []
@@ -674,7 +675,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         exposure['id'], exposure['category'],
         ~description, cost_types, occupancy_periods.split(),
         insurance_limit_is_absolute, deductible_is_absolute,
-        area.attrib, assets, asset_refs, cc, tagnames)
+        area.attrib, assets, asset_refs, cc, asset.TagCollection(tagnames))
     return exp, exposure.assets
 
 
@@ -710,7 +711,7 @@ class Exposure(object):
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'insurance_limit_is_absolute',
               'deductible_is_absolute', 'area', 'assets', 'asset_refs',
-              'cost_calculator', 'tagnames']
+              'cost_calculator', 'tagcol']
 
     @classmethod
     def read(cls, fname, calculation_mode='', insured_losses=False,
@@ -759,7 +760,7 @@ class Exposure(object):
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
         fields.extend(self.occupancy_periods)
-        fields.extend(self.tagnames)
+        fields.extend(self.tagcol.tagnames)
         return set(fields)
 
     def _read_csv(self, csvnames, dirname):
@@ -799,8 +800,9 @@ class Exposure(object):
                             a = dict(occupants=dic[period], period=period)
                             occupancies.append(Node('occupancy', a))
                         tags = Node('tags')
-                        for tagname in self.tagnames:
-                            tags[tagname] = dic[tagname]
+                        for tagname in self.tagcol.tagnames:
+                            if tagname != 'taxonomy':
+                                tags[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
                         if i % 100000 == 0:
                             logging.info('Read %d assets', i)
@@ -820,7 +822,6 @@ class Exposure(object):
         deductibles = {}
         insurance_limits = {}
         retrofitteds = {}
-        tagvalues = []
         asset_id = asset_node['id'].encode('utf8')
         with context(param['fname'], asset_node):
             self.asset_refs.append(asset_id)
@@ -846,25 +847,12 @@ class Exposure(object):
                 param['out_of_region'] += 1
                 return
             tagnode = getattr(asset_node, 'tags', None)
-            if tagnode is not None:
-                # fill missing tagvalues with "?" and raise an error for
-                # unknown tagnames
-                with context(param['fname'], tagnode):
-                    dic = tagnode.attrib.copy()
-                    for tagname in self.tagnames:
-                        try:
-                            tagvalue = dic.pop(tagname)
-                        except KeyError:
-                            tagvalue = '?'
-                        else:
-                            if tagvalue in '?*':
-                                raise ValueError(
-                                    'Invalid tagvalue="%s"' % tagvalue)
-                        tagvalues.append(tagvalue)
-                    if dic:
-                        raise ValueError(
-                            'Unknown tagname %s or <tagNames> not '
-                            'specified in the exposure' % ', '.join(dic))
+            dic = {} if tagnode is None else tagnode.attrib.copy()
+            # fill missing tagvalues with "?" and raise an error for
+            # unknown tagnames
+            with context(param['fname'], tagnode):
+                dic['taxonomy'] = taxonomy
+                idxs = self.tagcol.add_tags(dic)
         try:
             costs = asset_node.costs
         except AttributeError:
@@ -908,9 +896,11 @@ class Exposure(object):
         if occupancies:  # store average occupants
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset_node.get('area', 1))
-        ass = asset.Asset(idx, taxonomy, number, location, values, area,
+        ass = asset.Asset(idx, idxs, number, location, values, area,
                           deductibles, insurance_limits, retrofitteds,
-                          self.cost_calculator, tagvalues=tagvalues)
+                          self.cost_calculator)
+        if not idxs:
+            import pdb; pdb.set_trace()
         self.assets.append(ass)
 
 
@@ -930,7 +920,7 @@ def get_sitecol_assetcol(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     assetcol = asset.AssetCollection(
-        assets_by_site, exposure.tagnames, exposure.cost_calculator,
+        assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, occupancy_periods=hdf5.array_of_vstr(
             sorted(exposure.occupancy_periods)))
     return sitecol, assetcol

@@ -189,6 +189,7 @@ def _agg(losses, idxs):
 
 def _filter_agg(assetcol, losses, selected):
     # losses is an array of shape (A, ..., R) with A=#assets, R=#realizations
+    aids_by_tag = assetcol.get_aids_by_tag()
     idxs = set(range(len(assetcol)))
     tagnames = []
     for tag in selected:
@@ -196,7 +197,7 @@ def _filter_agg(assetcol, losses, selected):
         if tagvalue == '*':
             tagnames.append(tagname)
         else:
-            idxs &= assetcol.aids_by_tag[tag]
+            idxs &= aids_by_tag[tag]
     if len(tagnames) > 1:
         raise ValueError('Too many * as tag values in %s' % tagnames)
     elif not tagnames:  # return an array of shape (..., R)
@@ -204,8 +205,8 @@ def _filter_agg(assetcol, losses, selected):
             _agg(losses, idxs), dict(selected=encode(selected)))
     else:  # return an array of shape (T, ..., R)
         [tagname] = tagnames
-        _tags = [t for t in assetcol.tags() if t.startswith(tagname)]
-        all_idxs = [idxs & assetcol.aids_by_tag[t] for t in _tags]
+        _tags = list(assetcol.tagcol.gen_tags(tagname))
+        all_idxs = [idxs & aids_by_tag[t] for t in _tags]
         # NB: using a generator expression for all_idxs caused issues (?)
         data, tags = [], []
         for idxs, tag in zip(all_idxs, _tags):
