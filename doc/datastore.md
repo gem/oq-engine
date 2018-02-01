@@ -35,7 +35,7 @@ http://docs.h5py.org/en/latest/quick.html#quick) reading the
 datastore is by fast the simplest, more convenient and most
 efficient way to postprocess and visualize the results of
 a calculation. However you should be warned that
-**the datastore internals are reserved and subject to change!**.
+**the datastore internals are reserved and subject to change!**
 
 There is an extraction API that is more stable, you should use
 it as much as possible. For instance if you want to extract
@@ -58,5 +58,5 @@ keep working in the same way forever. The stable API is the
 Accessing directly the datastore is meant for internal users (i.e. GEM
 staff) and for power users that are willing to accept some instability
 in order to get the cutting edge features of the engine. It is also
-to only way if you need to perform advanced postprocessing of the
+the only way for people needing to perform advanced postprocessing of the
 results.
