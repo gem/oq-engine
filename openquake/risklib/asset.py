@@ -286,7 +286,11 @@ class TagCollection(object):
         return idxs
 
     def get_tag(self, tagname, idx):
-        return '%s=%s' % (tagname, getattr(self, tagname)[idx])
+        return '%s=%s' % (tagname, decode(getattr(self, tagname)[idx]))
+
+    def gen_tags(self, tagname):
+        for tagvalue in getattr(self, tagname):
+            yield '%s=%s' % (tagname, decode(tagvalue))
 
     def taxonomies(self):
         lst = [None] * len(self.taxonomy_idx)
@@ -312,7 +316,7 @@ class TagCollection(object):
         for tagname in self.tagnames:
             for tagvalue in getattr(self, tagname):
                 tags.append('%s=%s' % (tagname, tagvalue))
-        return sorted(tags)
+        return iter(sorted(tags))
 
     def __len__(self):
         return sum(len(getattr(self, tagname)) for tagname in self.tagnames)
@@ -452,7 +456,7 @@ class AssetCollection(object):
     def __fromh5__(self, dic, attrs):
         for name in ('occupancy_periods', 'loss_types', 'deduc', 'i_lim',
                      'retro'):
-            setattr(self, name, attrs[name].split())
+            setattr(self, name, [decode(x) for x in attrs[name].split()])
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
@@ -493,8 +497,8 @@ class AssetCollection(object):
         limits = ['insurance_limit-%s' % name for name in limit_d]
         retrofittings = ['retrofitted-%s' % n for n in retrofitting_d]
         float_fields = loss_types + deductibles + limits + retrofittings
-        int_fields = [(tagname, U16) for tagname in tagnames]
-        tagi = {tagname: i for i, tagname in enumerate(tagnames)}
+        int_fields = [(str(name), U16) for name in tagnames]
+        tagi = {str(name): i for i, name in enumerate(tagnames)}
         asset_dt = numpy.dtype(
             [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
              ('number', F32), ('area', F32)] + [
