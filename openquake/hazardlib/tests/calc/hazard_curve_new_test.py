@@ -96,7 +96,9 @@ class HazardCurvesTestCase01(unittest.TestCase):
         s_filter = SourceFilter(SiteCollection([site]), {})
         self.sites = s_filter
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
-        self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        gsim = SadighEtAl1997()
+        gsim.minimum_distance = 12  # test minimum_distance
+        self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
 
     def test_hazard_curve_X(self):
         # Test the former calculator
@@ -117,7 +119,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        npt.assert_almost_equal(numpy.array([0.30000, 0.27855, 0.08912]),
+        npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
                                 crv, decimal=4)
 
     def test_hazard_curve_B(self):
@@ -130,7 +132,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.imtls,
                                     self.gsim_by_trt,
                                     truncation_level=None)
-        npt.assert_almost_equal(numpy.array([0.30000, 0.27855, 0.08912]),
+        npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
                                 curves[0][0], decimal=4)
 
 
@@ -181,7 +183,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        npt.assert_almost_equal(numpy.array([0.58000, 0.53891, 0.15929]),
+        npt.assert_almost_equal(numpy.array([0.58000, 0.53, 0.1347]),
                                 crv, decimal=4)
 
 
