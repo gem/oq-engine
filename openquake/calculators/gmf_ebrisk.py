@@ -45,7 +45,7 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         oq = self.oqparam
         self.L = len(self.riskmodel.lti)
-        self.T = len(self.assetcol.tags())
+        self.T = len(self.assetcol.tagcol)
         self.A = len(self.assetcol)
         self.I = oq.insured_losses + 1
         if oq.hazard_calculation_id:  # read the GMFs from a previous calc
