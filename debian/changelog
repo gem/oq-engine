@@ -2,8 +2,7 @@
   * Fixed the ordering of the IMTs in hazardlib
   * `oq engine --delete-calculation` now aborts the calculation first
   * Added some documentation about how to access the datastore
-  * Introduced a minimum_distance for the GSIMs, honored for event based and
-    scenario calculations
+  * Introduced a minimum_distance for the GSIMs
   * Fixed several small issues with the UCERF calculators; now ucerf_hazard
     can be used as a precalculator of gmf_ebrisk
   * Initial support for disaggregation by source
