@@ -149,5 +149,5 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                             lt = loss_dt.names[l + L * i]
                             array[lt][aid, :, r] = lba[:, i]
                 self.datastore['all_losses-rlzs'] = array
-                self.datastore.set_attrs('all_losses-rlzs',
-                                         tags=encode(self.assetcol.tagcol))
+                tags = [encode(tag) for tag in self.assetcol.tagcol]
+                self.datastore.set_attrs('all_losses-rlzs', tags=tags)
