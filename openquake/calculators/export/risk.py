@@ -427,7 +427,7 @@ def export_dmg_by_asset_npz(ekey, dstore):
 @depr('This output will be removed soon')
 def export_dmg_by_tag_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    tags = add_quotes(dstore['assetcol'].tags())
+    tags = add_quotes(dstore['assetcol'].tagcol)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
