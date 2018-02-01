@@ -131,7 +131,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     @property
     def taxonomies(self):
-        return set(taxo for taxo in self.datastore['assetcol/tagcol/taxonomy']
+        """
+        :returns: the set of available taxonomies
+        """
+        return set(taxo for taxo in self.assetcol.tagcol.taxonomies()
                    if taxo != '?')
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
@@ -141,7 +144,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     def monitor(self, operation, **kw):
         """
-        Return a new Monitor instance
+        :returns: a new Monitor instance
         """
         mon = self._monitor(operation, hdf5path=self.datastore.hdf5path)
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
