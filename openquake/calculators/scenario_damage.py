@@ -119,7 +119,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
         self.riskinputs = self.build_riskinputs('gmf', eids=eids)
-        self.param['tags'] = self.assetcol.tags()
+        self.param['tags'] = list(self.assetcol.tagcol)
 
     def post_execute(self, result):
         """

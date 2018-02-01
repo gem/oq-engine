@@ -307,6 +307,16 @@ class TagCollection(object):
                     {tag: idx for idx, tag in enumerate(dic[tagname])})
             setattr(self, tagname, dic[tagname].value)
 
+    def __iter__(self):
+        tags = []
+        for tagname in self.tagnames:
+            for tagvalue in getattr(self, tagname):
+                tags.append('%s=%s' % (tagname, tagvalue))
+        return sorted(tags)
+
+    def __len__(self):
+        return sum(len(getattr(self, tagname)) for tagname in self.tagnames)
+
 
 class AssetCollection(object):
     # the information about the assets is stored in a numpy array and in a
@@ -340,6 +350,9 @@ class AssetCollection(object):
         return self.tagcol.tagnames
 
     def get_aids_by_tag(self):
+        """
+        :returns: dict tag -> asset ordinals
+        """
         ordinal = dict(zip(self.array['idx'], range(len(self.array))))
         aids_by_tag = general.AccumDict(accum=set())
         for ass in self:
@@ -354,12 +367,6 @@ class AssetCollection(object):
         Return a list of taxonomies, one per asset (with duplicates)
         """
         return self.array['taxonomy']
-
-    def tags(self):
-        """
-        :returns: list of sorted tags
-        """
-        return sorted(self.get_aids_by_tag())
 
     def units(self, loss_types):
         """
@@ -397,13 +404,6 @@ class AssetCollection(object):
             for lt in self.loss_types:
                 vals[i][lt] = asset.value(lt, self.time_event)
         return vals
-
-    def get_tax_idx(self):
-        """
-        :returns: list of tag indices corresponding to taxonomies
-        """
-        return [i for i, t in enumerate(self.tags())
-                if t.startswith('taxonomy=')]
 
     def __iter__(self):
         for i in range(len(self)):
