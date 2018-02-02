@@ -284,13 +284,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 logging.warn('', exc_info=True)
 
     def _export(self, ekey):
-        if ekey in self.exported:  # already exported
+        if ekey not in exp or ekey in self.exported:  # already exported
             return
-        if ekey in exp:
-            with self.monitor('export'):
-                self.exported[ekey] = fnames = exp(ekey, self.datastore)
-                if fnames:
-                    logging.info('exported %s: %s', ekey[0], fnames)
+        with self.monitor('export'):
+            self.exported[ekey] = fnames = exp(ekey, self.datastore)
+            if fnames:
+                logging.info('exported %s: %s', ekey[0], fnames)
 
     def before_export(self):
         """
