@@ -237,22 +237,6 @@ hazard_uhs-mean.csv
         self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
-        # test hmaps geojson export
-        fnames = [f for f in export(('hmaps', 'geojson'), self.calc.datastore)
-                  if 'mean' in f]
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.01-PGA.geojson', fnames[0])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.01-SA(0.1).geojson', fnames[1])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.1-PGA.geojson', fnames[2])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.1-SA(0.1).geojson', fnames[3])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.2-PGA.geojson', fnames[4])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
-
         # npz exports
         export(('hmaps', 'npz'), self.calc.datastore)
         export(('uhs', 'npz'), self.calc.datastore)
