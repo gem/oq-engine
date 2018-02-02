@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added a test for `oq engine --run job.ini --exports npz`
+  * Fixed a bug with `oq engine --run job.ini --exports npz`
   * Fixed the ordering of the IMTs in hazardlib
   * `oq engine --delete-calculation` now aborts the calculation first
   * Added some documentation about how to access the datastore

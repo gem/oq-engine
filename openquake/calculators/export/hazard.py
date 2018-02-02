@@ -543,7 +543,7 @@ def save_np(fname, dic, mesh, *extras, **kw):
     :param kw: dictionary of parameters (like investigation_time)
     """
     if not dic:
-        return
+        return []
     arr = dic[next(iter(dic))]
     dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
     for field, dtype, values in extras:
@@ -568,8 +568,7 @@ def export_hcurves_np(ekey, dstore):
     dic = {}
     for kind, hcurves in PmapGetter(dstore).items():
         dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
-    save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
-    return [fname]
+    return save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
 
 
 @export.add(('uhs', 'npz'))
@@ -580,8 +579,7 @@ def export_uhs_np(ekey, dstore):
     dic = {}
     for kind, hcurves in PmapGetter(dstore).items():
         dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
-    save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
-    return [fname]
+    return save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
 
 
 @export.add(('hmaps', 'npz'))
@@ -595,9 +593,8 @@ def export_hmaps_np(ekey, dstore):
     for kind, hcurves in PmapGetter(dstore).items():
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
         dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
-    save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30),
-            investigation_time=oq.investigation_time)
-    return [fname]
+    return save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30),
+                   investigation_time=oq.investigation_time)
 
 
 @export.add(('gmf_data', 'xml'))
