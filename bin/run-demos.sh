@@ -3,7 +3,7 @@ set -e
 # run demos with job_hazard.ini and job_risk.ini
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then
-       oq engine --run $demo_dir/job_hazard.ini
+       oq engine --run $demo_dir/job_hazard.ini --exports npz
        oq engine --run $demo_dir/job_risk.ini --hc -1
    fi
 done

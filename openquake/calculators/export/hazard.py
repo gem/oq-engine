@@ -542,6 +542,8 @@ def save_np(fname, dic, mesh, *extras, **kw):
     :param extras: optional triples (field, dtype, values)
     :param kw: dictionary of parameters (like investigation_time)
     """
+    if not dic:
+        return
     arr = dic[next(iter(dic))]
     dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
     for field, dtype, values in extras:
