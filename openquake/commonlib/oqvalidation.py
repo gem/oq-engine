@@ -203,6 +203,13 @@ class OqParam(valid.ParamSet):
 
         self.check_source_model()
 
+        # check for precomputed GMFs
+        if (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs)\
+           and 'site_model' in self.inputs:
+            raise InvalidFile(
+                'Please remove site_model_file from %s, it makes no sense '
+                'in %s' % (self.inputs['job_ini'], self.calculation_mode))
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and not self.iml_disagg:
