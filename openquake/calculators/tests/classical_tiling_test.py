@@ -32,8 +32,7 @@ class ClassicalTilingTestCase(CalculatorTestCase):
             'quantile_curve-0.1-SA(0.2).csv', 'quantile_curve-0.1-SA(0.5).csv',
             'hazard_map-mean.csv', 'quantile_map-0.1.csv',
         ]
-        got = (out['hcurves', 'csv'] +
-               out.get(('hmaps', 'csv'), []))
+        got = (out['hcurves', 'csv'] + out.get(('hmaps', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual, delta=1E-6)
