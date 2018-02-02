@@ -897,7 +897,7 @@ class UCERFRiskCalculator(EbriskCalculator):
                        correl_model, min_iml, monitor)
 
     def execute(self):
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm_info.grp_by("trt")
         res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()

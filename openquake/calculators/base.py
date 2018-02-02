@@ -129,14 +129,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
-    @property
-    def taxonomies(self):
-        """
-        :returns: the set of available taxonomies
-        """
-        return set(taxo for taxo in self.assetcol.tagcol.taxonomies()
-                   if taxo != '?')
-
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
@@ -480,7 +472,7 @@ class HazardCalculator(BaseCalculator):
     def read_exposure(self):
         """
         Read the exposure, the riskmodel and update the attributes .exposure,
-        .sitecol, .assets_by_site, .taxonomies.
+        .sitecol, .assets_by_site
         """
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
@@ -583,7 +575,8 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if self.oqparam.job_type == 'risk':
-            taxonomies = set(self.taxonomies)
+            taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
+                             if taxo != '?')
 
             # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.riskmodel.taxonomies)
@@ -679,7 +672,7 @@ class RiskCalculator(HazardCalculator):
         num_tasks = self.oqparam.concurrent_tasks or 1
         if not hasattr(self, 'assetcol'):
             self.assetcol = self.datastore['assetcol']
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
