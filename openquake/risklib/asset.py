@@ -116,7 +116,7 @@ class Asset(object):
     """
     def __init__(self,
                  asset_id,
-                 tagvalues,
+                 tagidxs,
                  number,
                  location,
                  values,
@@ -129,7 +129,7 @@ class Asset(object):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
-        :param tagvalues:
+        :param tagidxs:
             a list of indices for the taxonomy and other tags
         :param number:
             number of apartments of number of people in the given asset
@@ -151,7 +151,7 @@ class Asset(object):
             asset collection ordinal
         """
         self.idx = asset_id
-        self.tagvalues = tagvalues
+        self.tagidxs = tagidxs
         self.number = number
         self.location = location
         self.values = values
@@ -184,7 +184,7 @@ class Asset(object):
         """
         :returns: the tagvalue associated to the given tagname
         """
-        return self.tagvalues[self.calc.tagi[tagname]]
+        return self.tagidxs[self.calc.tagi[tagname]]
 
     def deductible(self, loss_type):
         """
@@ -376,7 +376,7 @@ class AssetCollection(object):
         ordinal = dict(zip(self.array['idx'], range(len(self.array))))
         aids_by_tag = general.AccumDict(accum=set())
         for ass in self:
-            for tagname, tagidx in zip(self.tagnames, ass.tagvalues):
+            for tagname, tagidx in zip(self.tagnames, ass.tagidxs):
                 tag = self.tagcol.get_tag(tagname, tagidx)
                 aids_by_tag[tag].add(ordinal[ass.idx])
         return aids_by_tag
@@ -544,7 +544,7 @@ class AssetCollection(object):
                     elif field == 'occupants':
                         value = asset.values[the_occupants]
                     elif field in tagnames:
-                        value = asset.tagvalues[tagi[field]]
+                        value = asset.tagidxs[tagi[field]]
                     else:
                         try:
                             name, lt = field.split('-')
