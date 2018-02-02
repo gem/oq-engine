@@ -29,6 +29,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
+from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
 from openquake.calculators.getters import GmfGetter, PmapGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
@@ -47,21 +48,6 @@ Consider canceling the operation and accessing directly %s.'''
 
 # with compression you can save 60% of space by losing only 10% of saving time
 savez = numpy.savez_compressed
-
-
-def get_mesh(sitecol, complete=True):
-    sc = sitecol.complete if complete else sitecol
-    if sc.at_sea_level():
-        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
-        mesh['lon'] = sc.lons
-        mesh['lat'] = sc.lats
-    else:
-        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64),
-                                     ('depth', F64)])
-        mesh['lon'] = sc.lons
-        mesh['lat'] = sc.lats
-        mesh['depth'] = sc.depths
-    return mesh
 
 
 @export.add(('ruptures', 'xml'))
@@ -527,74 +513,11 @@ def _extract(hmap, imt, j):
     return tup
 
 
-def save_np(fname, dic, mesh, *extras, **kw):
-    """
-    Save a dictionary of arrays as a single .npy file containing a
-    structured array with fields which are they keys of the dictionary,
-    plus lon/lat fields coming from the mesh.
-    The length of the array is assumed to be equal to the length of the
-    mesh. It is also possible to pass extra triples (field, dtype, values)
-    to store additional fields.
-
-    :param fname: .npy or .npz file name
-    :param dic: dictionary of arrays of the same shape
-    :param mesh: a mesh array with lon, lat fields of the same length
-    :param extras: optional triples (field, dtype, values)
-    :param kw: dictionary of parameters (like investigation_time)
-    """
-    if not dic:
-        return []
-    arr = dic[next(iter(dic))]
-    dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
-    for field, dtype, values in extras:
-        dtlist.append((str(field), dtype))
-    array = numpy.zeros(arr.shape, dtlist)
-    for field in dic:
-        array[field] = dic[field]
-    for field, dtype, values in extras:
-        array[field] = values
-    if fname.endswith('.npy'):
-        numpy.save(fname, util.compose_arrays(mesh, array))
-    else:  # npz
-        numpy.savez(fname, all=util.compose_arrays(mesh, array), **kw)
-    return [fname]
-
-
-@export.add(('hcurves', 'npz'))
+@export.add(('hcurves', 'npz'), ('hmaps', 'npz'), ('uhs', 'npz'))
 def export_hcurves_np(ekey, dstore):
-    oq = dstore['oqparam']
-    mesh = get_mesh(dstore['sitecol'])
     fname = dstore.export_path('%s.%s' % ekey)
-    dic = {}
-    for kind, hcurves in PmapGetter(dstore).items():
-        dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
-    return save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
-
-
-@export.add(('uhs', 'npz'))
-def export_uhs_np(ekey, dstore):
-    oq = dstore['oqparam']
-    mesh = get_mesh(dstore['sitecol'])
-    fname = dstore.export_path('%s.%s' % ekey)
-    dic = {}
-    for kind, hcurves in PmapGetter(dstore).items():
-        dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
-    return save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
-
-
-@export.add(('hmaps', 'npz'))
-def export_hmaps_np(ekey, dstore):
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    mesh = get_mesh(sitecol)
-    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    fname = dstore.export_path('%s.%s' % ekey)
-    dic = {}
-    for kind, hcurves in PmapGetter(dstore).items():
-        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
-    return save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30),
-                   investigation_time=oq.investigation_time)
+    numpy.savez(fname, **extract(dstore, ekey[0]))
+    return [fname]
 
 
 @export.add(('gmf_data', 'xml'))
