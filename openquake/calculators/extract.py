@@ -183,7 +183,7 @@ def hazard_items(dic, mesh, *extras, **kw):
     :param mesh: a mesh array with lon, lat fields of the same length
     :param extras: optional triples (field, dtype, values)
     :param kw: dictionary of parameters (like investigation_time)
-    :returns: a list of pairs (key, value) suitable for storage in .nzp format
+    :returns: a list of pairs (key, value) suitable for storage in .npz format
     """
     for item in kw.items():
         yield item
