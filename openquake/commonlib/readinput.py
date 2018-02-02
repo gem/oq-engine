@@ -848,8 +848,6 @@ class Exposure(object):
                 return
             tagnode = getattr(asset_node, 'tags', None)
             dic = {} if tagnode is None else tagnode.attrib.copy()
-            # fill missing tagvalues with "?" and raise an error for
-            # unknown tagnames
             with context(param['fname'], tagnode):
                 dic['taxonomy'] = taxonomy
                 idxs = self.tagcol.add_tags(dic)
@@ -899,8 +897,6 @@ class Exposure(object):
         ass = asset.Asset(idx, idxs, number, location, values, area,
                           deductibles, insurance_limits, retrofitteds,
                           self.cost_calculator)
-        if not idxs:
-            import pdb; pdb.set_trace()
         self.assets.append(ass)
 
 
