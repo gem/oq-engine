@@ -680,7 +680,7 @@ def extract(request, calc_id, what):
         query_string = request.get_full_path()[n:]
         obj = _extract(ds, what + query_string)
         if inspect.isgenerator(obj):
-            array, attrs = None, {k: _array(v) for k, v in obj}
+            array, attrs = 0, {k: _array(v) for k, v in obj}
         elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
