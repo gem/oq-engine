@@ -70,7 +70,7 @@ def extract(what, calc_id=-1, hostport=None):
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
         if hostport:
             data = urlopen('http://%s%s' % (hostport, urlpath)).read()
-            items = numpy.load(io.BytesIO(data)).items()
+            items = (item for item in numpy.load(io.BytesIO(data)).items())
         else:
             print('Emulating call to %s' % urlpath)
             items = extract_(dstore, what)
