@@ -50,9 +50,10 @@ class PmapGetter(object):
         if sids is None:
             self.sids = dstore['sitecol'].complete.sids
 
-    def init(self):
-        if hasattr(self, 'data'):  # already initialized
-            return
+    @property
+    def pmap_by_grp(self):
+        if hasattr(self, '_pmap_by_grp'):  # already initialized
+            return self._pmap_by_grp
         self.dstore.open()  # if not
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
@@ -85,6 +86,8 @@ class PmapGetter(object):
                 for imti, imt in enumerate(self.imtls):
                     lst[imti] = hcurve[imt]  # imls
 
+        return self._pmap_by_grp
+
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
@@ -100,13 +103,13 @@ class PmapGetter(object):
         """
         assert self.sids is not None
         pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
+        grps = [grp] if grp is not None else sorted(self.pmap_by_grp)
         array = self.rlzs_assoc.by_grp()
         for grp in grps:
             for gsim_idx, rlzis in array[grp]:
                 for r in rlzis:
                     if r == rlzi:
-                        pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
+                        pmap |= self.pmap_by_grp[grp].extract(gsim_idx)
                         break
         return pmap
 
@@ -115,7 +118,7 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
-        return self.rlzs_assoc.combine_pmaps(self._pmap_by_grp)
+        return self.rlzs_assoc.combine_pmaps(self.pmap_by_grp)
 
     def get_hcurves(self, imtls):
         """
@@ -137,7 +140,6 @@ class PmapGetter(object):
             the kind of PoEs to extract; if not given, returns the realization
             if there is only one or the statistics otherwise.
         """
-        self.init()  # if not already initialized
         num_rlzs = len(self.weights)
         if not kind:  # use default
             if 'hcurves' in self.dstore:
