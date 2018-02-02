@@ -425,19 +425,15 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@export.add(('hcurves', 'xml'), ('hcurves', 'geojson'))
+@export.add(('hcurves', 'xml'))
 def export_hcurves_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
-    if fmt == 'geojson':
-        logging.warn('The geojson exporters will be removed soon')
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
-    writercls = (hazard_writers.HazardCurveGeoJSONWriter
-                 if fmt == 'geojson' else
-                 hazard_writers.HazardCurveXMLWriter)
+    writercls = hazard_writers.HazardCurveXMLWriter
     for kind, hcurves in PmapGetter(dstore).items(kind):
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
@@ -463,19 +459,15 @@ def export_hcurves_xml_json(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hmaps', 'xml'), ('hmaps', 'geojson'))
+@export.add(('hmaps', 'xml'))
 def export_hmaps_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
-    if fmt == 'geojson':
-        logging.warn('The geojson exporters will be removed soon')
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
-    writercls = (hazard_writers.HazardMapGeoJSONWriter
-                 if fmt == 'geojson' else
-                 hazard_writers.HazardMapXMLWriter)
+    writercls = hazard_writers.HazardMapXMLWriter
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     nsites = len(sitemesh)
     for kind, hcurves in PmapGetter(dstore).items():
