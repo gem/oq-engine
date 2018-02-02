@@ -317,7 +317,7 @@ class ClassicalCalculator(PSHACalculator):
             pgetter = getters.PmapGetter(parent, t.sids, self.rlzs_assoc)
             if parent is self.datastore:  # read now, not in the workers
                 logging.info('Reading PoEs on %d sites', len(t))
-                pgetter.pmap_by_grp
+                pgetter.init()
             yield pgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
