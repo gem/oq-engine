@@ -177,15 +177,16 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def hazard_npz(dic, mesh, *extras, **kw):
+def hazard_items(dic, mesh, *extras, **kw):
     """
     :param dic: dictionary of arrays of the same shape
     :param mesh: a mesh array with lon, lat fields of the same length
     :param extras: optional triples (field, dtype, values)
     :param kw: dictionary of parameters (like investigation_time)
-    :returns: a dictionary key -> array suitable for storage in .nzp format
+    :returns: a list of pairs (key, value) suitable for storage in .nzp format
     """
-    npz = kw.copy()
+    for item in kw.items():
+        yield item
     arr = dic[next(iter(dic))]
     dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
     for field, dtype, values in extras:
@@ -195,8 +196,7 @@ def hazard_npz(dic, mesh, *extras, **kw):
         array[field] = dic[field]
     for field, dtype, values in extras:
         array[field] = values
-    npz['all'] = util.compose_arrays(mesh, array)
-    return npz
+    yield 'all', util.compose_arrays(mesh, array)
 
 
 @extract.add('hcurves')
@@ -206,7 +206,7 @@ def extract_hcurves(dstore, what):
     dic = {}
     for kind, hcurves in getters.PmapGetter(dstore).items():
         dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
-    return hazard_npz(dic, mesh, investigation_time=oq.investigation_time)
+    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
 @extract.add('uhs')
@@ -216,7 +216,7 @@ def extract_uhs(dstore, what):
     dic = {}
     for kind, hcurves in getters.PmapGetter(dstore).items():
         dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
-    return hazard_npz(dic, mesh, investigation_time=oq.investigation_time)
+    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
 @extract.add('hmaps')
@@ -229,8 +229,8 @@ def extract_hmaps(dstore, what):
     for kind, hcurves in getters.PmapGetter(dstore).items():
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
         dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
-    return hazard_npz(dic, mesh, ('vs30', F32, sitecol.vs30),
-                      investigation_time=oq.investigation_time)
+    return hazard_items(dic, mesh, ('vs30', F32, sitecol.vs30),
+                        investigation_time=oq.investigation_time)
 
 
 def _agg(losses, idxs):
