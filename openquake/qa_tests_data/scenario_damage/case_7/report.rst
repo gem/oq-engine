@@ -3,11 +3,11 @@ scenario hazard
 
 ============== ===================
 checksum32     3,204,585,490      
-date           2018-01-11T04:29:22
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:02:36
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 1
 
 Parameters
 ----------
@@ -64,7 +64,7 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 NaN    1   1   1         1         
+1        1.000 NaN    1   1   1         1         
 ======== ===== ====== === === ========= ==========
 
 Slowest operations
@@ -72,6 +72,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
-reading site collection 5.722E-06 0.0       1     
+reading exposure        0.002     0.0       1     
+reading site collection 4.292E-06 0.0       1     
 ======================= ========= ========= ======
