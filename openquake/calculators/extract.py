@@ -27,9 +27,13 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.general import DictArray
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
-from openquake.commonlib import calc
+from openquake.commonlib import calc, util
+
+F32 = numpy.float32
+F64 = numpy.float64
 
 
 def extract_(dstore, dspath):
@@ -153,29 +157,80 @@ def extract_hazard(dstore, what):
             yield key, arr
 
 
-@extract.add('qgis-hazard')
-def extract_hazard_for_qgis(dstore, what):
+def get_mesh(sitecol, complete=True):
     """
-    Extracts hazard curves and possibly hazard maps and/or uniform hazard
-    spectra. Use it as /extract/qgis-hazard/rlz-0, etc
+    :returns:
+        a lon-lat or lon-lat-depth array depending if the site collection
+        is at sea level or not
     """
+    sc = sitecol.complete if complete else sitecol
+    if sc.at_sea_level():
+        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
+        mesh['lon'] = sc.lons
+        mesh['lat'] = sc.lats
+    else:
+        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64),
+                                     ('depth', F64)])
+        mesh['lon'] = sc.lons
+        mesh['lat'] = sc.lats
+        mesh['depth'] = sc.depths
+    return mesh
+
+
+def hazard_items(dic, mesh, *extras, **kw):
+    """
+    :param dic: dictionary of arrays of the same shape
+    :param mesh: a mesh array with lon, lat fields of the same length
+    :param extras: optional triples (field, dtype, values)
+    :param kw: dictionary of parameters (like investigation_time)
+    :returns: a list of pairs (key, value) suitable for storage in .npz format
+    """
+    for item in kw.items():
+        yield item
+    arr = dic[next(iter(dic))]
+    dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
+    for field, dtype, values in extras:
+        dtlist.append((str(field), dtype))
+    array = numpy.zeros(arr.shape, dtlist)
+    for field in dic:
+        array[field] = dic[field]
+    for field, dtype, values in extras:
+        array[field] = values
+    yield 'all', util.compose_arrays(mesh, array)
+
+
+@extract.add('hcurves')
+def extract_hcurves(dstore, what):
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    dic = {}
+    for kind, hcurves in getters.PmapGetter(dstore).items():
+        dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
+    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+
+
+@extract.add('uhs')
+def extract_uhs(dstore, what):
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    dic = {}
+    for kind, hcurves in getters.PmapGetter(dstore).items():
+        dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
+    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+
+
+@extract.add('hmaps')
+def extract_hmaps(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    yield 'sitecol', sitecol
-    yield 'oqparam', oq
-    yield 'realizations', dstore['csm_info'].rlzs
-    yield 'checksum32', dstore['/'].attrs['checksum32']
-    N = len(sitecol)
-    if oq.poes:
-        pdic = {imt: oq.poes for imt in oq.imtls}
-    for kind, hcurves in getters.PmapGetter(dstore).items(what):
-        logging.info('extracting hazard/%s', kind)
-        yield 'hcurves-' + kind, calc.convert_to_array(hcurves, N, oq.imtls)
-        if oq.poes and oq.uniform_hazard_spectra:
-            yield 'uhs-' + kind, calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
-        if oq.poes and oq.hazard_maps:
-            hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-            yield 'hmaps-' + kind, calc.convert_to_array(hmaps, N, pdic)
+    mesh = get_mesh(sitecol)
+    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
+    dic = {}
+    for kind, hcurves in getters.PmapGetter(dstore).items():
+        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
+    return hazard_items(dic, mesh, ('vs30', F32, sitecol.vs30),
+                        investigation_time=oq.investigation_time)
 
 
 def _agg(losses, idxs):
