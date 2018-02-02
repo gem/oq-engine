@@ -247,8 +247,19 @@ by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class TagCollection(object):
+    """
+    An iterable collection of tags in the form "tagname=tagvalue".
+
+    :param tagnames: a list of tagnames starting with 'taxonomy'
+
+    The collection has a couple of attributes for each tagname,
+    starting with .taxonomy (a list of taxonomies) and .taxonomy_idx
+    (a dictionary taxonomy -> integer index).
+    """
     def __init__(self, tagnames):
         assert tagnames[0] == 'taxonomy', tagnames
+        assert len(tagnames) == len(set(tagnames)), (
+            'The tagnames %s contain duplicates' % tagnames)
         self.tagnames = tagnames
         for tagname in self.tagnames:
             setattr(self, tagname + '_idx', {'?': 0})
@@ -268,6 +279,11 @@ class TagCollection(object):
             return idx
 
     def add_tags(self, dic):
+        """
+        :param dic: a dictionary tagname -> tagvalue
+        :returns: a list of tag indices, one per tagname
+        """
+        # fill missing tagvalues with "?", raise an error for unknown tagnames
         idxs = []
         for tagname in self.tagnames:
             try:
@@ -285,18 +301,18 @@ class TagCollection(object):
                 'specified in the exposure' % ', '.join(dic))
         return idxs
 
-    def get_tag(self, tagname, idx):
-        return '%s=%s' % (tagname, decode(getattr(self, tagname)[idx]))
+    def get_tag(self, tagname, tagidx):
+        """
+        :returns: the tag associated to the given tagname and tag index
+        """
+        return '%s=%s' % (tagname, decode(getattr(self, tagname)[tagidx]))
 
     def gen_tags(self, tagname):
+        """
+        :yields: the tags associated to the given tagname
+        """
         for tagvalue in getattr(self, tagname):
             yield '%s=%s' % (tagname, decode(tagvalue))
-
-    def taxonomies(self):
-        lst = [None] * len(self.taxonomy_idx)
-        for taxo, idx in self.taxonomy_idx.items():
-            lst[idx] = taxo
-        return lst
 
     def __toh5__(self):
         dic = {}

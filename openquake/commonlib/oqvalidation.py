@@ -202,13 +202,7 @@ class OqParam(valid.ParamSet):
             self.check_gsims([self.gsim])
 
         self.check_source_model()
-
-        # check for precomputed GMFs
-        if (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs)\
-           and 'site_model' in self.inputs:
-            raise InvalidFile(
-                'Please remove site_model_file from %s, it makes no sense '
-                'in %s' % (self.inputs['job_ini'], self.calculation_mode))
+        self.check_site_model()
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -642,3 +636,10 @@ class OqParam(valid.ParamSet):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
                              self.inputs.get('job_ini', 'job_ini'))
+
+    def check_site_model(self):
+        if (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs or
+            'hazard_curves' in self.inputs) and 'site_model' in self.inputs:
+            raise InvalidFile(
+                'Please remove site_model_file from %s, it makes no sense '
+                'in %s' % (self.inputs['job_ini'], self.calculation_mode))
