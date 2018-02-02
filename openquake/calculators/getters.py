@@ -50,6 +50,12 @@ class PmapGetter(object):
         if sids is None:
             self.sids = dstore['sitecol'].complete.sids
 
+    def init(self):
+        """
+        Read the poes and set the .data attribute with the hazard curves
+        """
+        self.pmap_by_grp
+
     @property
     def pmap_by_grp(self):
         if hasattr(self, '_pmap_by_grp'):  # already initialized
