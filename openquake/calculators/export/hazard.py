@@ -514,9 +514,9 @@ def _extract(hmap, imt, j):
 
 
 @export.add(('hcurves', 'npz'), ('hmaps', 'npz'), ('uhs', 'npz'))
-def export_hcurves_np(ekey, dstore):
+def export_hazard_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
-    numpy.savez(fname, **extract(dstore, ekey[0]))
+    savez(fname, **extract(dstore, ekey[0]))
     return [fname]
 
 
