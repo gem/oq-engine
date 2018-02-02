@@ -241,7 +241,6 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     used to specify the kind of output.
     """
     with monitor('combine pmaps'):
-        pgetter.init()  # if not already initialized
         try:
             pmaps = pgetter.get_pmaps(pgetter.sids)
         except IndexError:  # no data
@@ -318,7 +317,7 @@ class ClassicalCalculator(PSHACalculator):
             pgetter = getters.PmapGetter(parent, t.sids, self.rlzs_assoc)
             if parent is self.datastore:  # read now, not in the workers
                 logging.info('Reading PoEs on %d sites', len(t))
-                pgetter.init()
+                pgetter.pmap_by_grp
             yield pgetter, hstats, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
