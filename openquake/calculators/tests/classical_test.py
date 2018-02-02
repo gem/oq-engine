@@ -200,12 +200,17 @@ class ClassicalTestCase(CalculatorTestCase):
                                  'hmaps/poe-0.2/rlz-002',
                                  'hmaps/poe-0.2/rlz-003'])
 
-        # test extract/qgis-hazard/rlz-0 also works
-        haz = dict(extract(self.calc.datastore, 'qgis-hazard/rlz-0'))
+        # test extract/hcurves/rlz-0 also works, used by the npz exports
+        haz = dict(extract(self.calc.datastore, 'hcurves/rlz-0'))
+        self.assertEqual(sorted(haz), ['all', 'investigation_time'])
         self.assertEqual(
-            sorted(haz),
-            ['checksum32', 'hcurves-rlz-0', 'hmaps-rlz-0', 'oqparam',
-             'realizations', 'sitecol'])
+            haz['all'].dtype.names, ('lon', 'lat', 'depth', 'mean'))
+        array = haz['all']['mean']
+        self.assertEqual(array.dtype.names, ('PGA', 'SA(0.2)'))
+        self.assertEqual(array['PGA'].dtype.names,
+                         ('0.005', '0.007', '0.0098', '0.0137', '0.0192',
+                          '0.0269', '0.0376', '0.0527', '0.0738', '0.103',
+                          '0.145', '0.203', '0.284'))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
