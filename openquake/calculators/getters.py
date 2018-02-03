@@ -54,11 +54,27 @@ class PmapGetter(object):
         """
         Read the poes and set the .data attribute with the hazard curves
         """
-        self.pmap_by_grp
+        if hasattr(self, 'data'):  # already initialized
+            return
+        self.imtls = self.dstore['oqparam'].imtls
+        self.data = collections.OrderedDict()
+        try:
+            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
+        except IndexError:  # no data
+            return
+        for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
+            self.data[sid] = datadict = {}
+            for rlzi, hcurve in enumerate(hcurve_by_rlz):
+                datadict[rlzi] = lst = [None for imt in self.imtls]
+                for imti, imt in enumerate(self.imtls):
+                    lst[imti] = hcurve[imt]  # imls
 
     @property
     def pmap_by_grp(self):
-        if hasattr(self, '_pmap_by_grp'):  # already initialized
+        """
+        :returns: dictionary "grp-XXX" -> ProbabilityMap instance
+        """
+        if hasattr(self, '_pmap_by_grp'):  # already called
             return self._pmap_by_grp
         self.dstore.open()  # if not
         # populate _pmap_by_grp
@@ -78,20 +94,6 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
-
-        self.imtls = self.dstore['oqparam'].imtls
-        self.data = collections.OrderedDict()
-        try:
-            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
-        except IndexError:  # no data
-            return
-        for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
-            self.data[sid] = datadict = {}
-            for rlzi, hcurve in enumerate(hcurve_by_rlz):
-                datadict[rlzi] = lst = [None for imt in self.imtls]
-                for imti, imt in enumerate(self.imtls):
-                    lst[imti] = hcurve[imt]  # imls
-
         return self._pmap_by_grp
 
     def get_hazard(self, gsim=None):
