@@ -56,6 +56,7 @@ class PmapGetter(object):
         """
         if hasattr(self, 'data'):  # already initialized
             return
+        self.dstore.open()  # if not
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
         try:
@@ -76,7 +77,6 @@ class PmapGetter(object):
         """
         if hasattr(self, '_pmap_by_grp'):  # already called
             return self._pmap_by_grp
-        self.dstore.open()  # if not
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
