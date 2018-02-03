@@ -323,6 +323,7 @@ class EbriskCalculator(base.RiskCalculator):
             self.oqparam.ignore_covs or not self.riskmodel.covs)
         self.assets_by_site = self.assetcol.assets_by_site()
         self.start = 0
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
         for i, args in enumerate(self.gen_args()):
             ires = self.start_tasks(*args)
             allres.append(ires)
