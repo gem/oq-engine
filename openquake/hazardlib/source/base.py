@@ -57,7 +57,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         return (self.num_ruptures * self.RUPTURE_WEIGHT *
-                (1 + math.log(self.nsites)) * self.ngsims)
+                self.nsites * self.ngsims)
 
     @property
     def src_group_ids(self):
