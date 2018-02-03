@@ -3,11 +3,11 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     3,074,586,051      
-date           2018-01-11T04:29:22
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:02:36
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 1, num_imts = 2
+num_sites = 1, num_levels = 40
 
 Parameters
 ----------
@@ -63,21 +63,21 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-============== ===== ====== === === ========= ==========
-taxonomy       mean  stddev min max num_sites num_assets
-MUR/LWAL/HEX:1 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:2 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:3 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:4 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:5 1.000 NaN    1   1   1         1         
-*ALL*          5.000 NaN    5   5   1         5         
-============== ===== ====== === === ========= ==========
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+1        1.000 NaN    1   1   1         1         
+2        1.000 NaN    1   1   1         1         
+3        1.000 NaN    1   1   1         1         
+4        1.000 NaN    1   1   1         1         
+5        1.000 NaN    1   1   1         1         
+*ALL*    5.000 NaN    5   5   1         5         
+======== ===== ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.008     0.0       1     
+reading exposure        0.002     0.0       1     
 reading site collection 6.199E-06 0.0       1     
 ======================= ========= ========= ======

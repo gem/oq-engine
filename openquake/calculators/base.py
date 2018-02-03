@@ -131,10 +131,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     @property
     def taxonomies(self):
-        L = len('taxonomy=')
-        return [tag[L:]
-                for tag in self.datastore['assetcol/tags']
-                if tag.startswith('taxonomy=')]
+        """
+        :returns: the set of available taxonomies
+        """
+        return set(taxo for taxo in self.assetcol.tagcol.taxonomies()
+                   if taxo != '?')
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
@@ -143,7 +144,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     def monitor(self, operation, **kw):
         """
-        Return a new Monitor instance
+        :returns: a new Monitor instance
         """
         mon = self._monitor(operation, hdf5path=self.datastore.hdf5path)
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
@@ -192,7 +193,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             # save the used concurrent_tasks
             self.oqparam.concurrent_tasks = ct
         self.save_params(**kw)
-        exported = {}
         try:
             if pre_execute:
                 self.pre_execute()
@@ -200,7 +200,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if self.result is not None:
                 self.post_execute(self.result)
             self.before_export()
-            exported = self.export(kw.get('exports', ''))
+            self.export(kw.get('exports', ''))
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
@@ -215,7 +215,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                     del os.environ['OQ_DISTRIBUTE']
                 else:
                     os.environ['OQ_DISTRIBUTE'] = oq_distribute
-        return exported
+        return getattr(self, 'exported', {})
 
     def core_task(*args):
         """
@@ -248,10 +248,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Export all the outputs in the datastore in the given export formats.
         Individual outputs are not exported if there are multiple realizations.
-
-        :returns: dictionary output_key -> sorted list of exported paths
         """
-        exported = {}
+        self.exported = getattr(self.precalc, 'exported', {})
         if isinstance(exports, tuple):
             fmts = exports
         elif exports:  # is a string
@@ -270,11 +268,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and self.R > 1:
                     continue  # skip individual curves
-                self._export((key, fmt), exported)
+                self._export((key, fmt))
             if has_hcurves and self.oqparam.hazard_maps:
-                self._export(('hmaps', fmt), exported)
+                self._export(('hmaps', fmt))
             if has_hcurves and self.oqparam.uniform_hazard_spectra:
-                self._export(('uhs', fmt), exported)
+                self._export(('uhs', fmt))
 
         if self.close:  # in the engine we close later
             self.result = None
@@ -284,13 +282,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 # sometimes produces errors but they are difficult to
                 # reproduce
                 logging.warn('', exc_info=True)
-        return exported
 
-    def _export(self, ekey, exported):
-        if ekey in exp:
-            with self.monitor('export'):
-                exported[ekey] = exp(ekey, self.datastore)
-                logging.info('exported %s: %s', ekey[0], exported[ekey])
+    def _export(self, ekey):
+        if ekey not in exp or self.exported.get(ekey):  # already exported
+            return
+        with self.monitor('export'):
+            self.exported[ekey] = fnames = exp(ekey, self.datastore)
+            if fnames:
+                logging.info('exported %s: %s', ekey[0], fnames)
 
     def before_export(self):
         """
@@ -325,6 +324,7 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     grp_by_src = False  # set True in disaggregation
+    precalc = None
 
     def can_read_parent(self):
         """
@@ -368,7 +368,7 @@ class HazardCalculator(BaseCalculator):
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
             assets_by_site,
-            self.exposure.tagnames,
+            self.exposure.tagcol,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
             occupancy_periods=hdf5.array_of_vstr(
@@ -444,12 +444,10 @@ class HazardCalculator(BaseCalculator):
             if precalc_id is None:
                 self.precalc = self.compute_previous()
             else:
-                self.precalc = None
                 self.read_previous(precalc_id)
                 self.read_risk_data()
             self.init()
         else:  # we are in a basic calculator
-            self.precalc = None
             self.read_inputs()
             if 'source' in self.oqparam.inputs and precalc_id is None:
                 job_info.update(readinput.get_job_info(
@@ -678,6 +676,7 @@ class RiskCalculator(HazardCalculator):
         num_tasks = self.oqparam.concurrent_tasks or 1
         if not hasattr(self, 'assetcol'):
             self.assetcol = self.datastore['assetcol']
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
         assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
