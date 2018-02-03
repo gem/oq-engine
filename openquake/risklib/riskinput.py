@@ -31,9 +31,6 @@ class ValidationError(Exception):
 
 U32 = numpy.uint32
 F32 = numpy.float32
-FIELDS = ('site_id', 'lon', 'lat', 'idx', 'area', 'number',
-          'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
-
 by_taxonomy = operator.attrgetter('taxonomy')
 aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
@@ -123,6 +120,7 @@ class CompositeRiskModel(collections.Mapping):
         self.curve_params = self.make_curve_params(oqparam)
         self.loss_types = [cp.loss_type for cp in self.curve_params]
         self.insured_losses = oqparam.insured_losses
+        self.taxonomy = []  # must be set by the engine
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
@@ -196,7 +194,11 @@ class CompositeRiskModel(collections.Mapping):
         return sorted(ltypes)
 
     def __getitem__(self, taxonomy):
-        return self._riskmodels[taxonomy]
+        try:
+            return self._riskmodels[taxonomy]
+        except KeyError:  # taxonomy was an index
+            taxo = self.taxonomy[taxonomy]
+            return self._riskmodels[taxo]
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))

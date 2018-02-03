@@ -2,12 +2,12 @@ Event Based Risk QA Test 1
 ==========================
 
 ============== ===================
-checksum32     2,240,749,545      
-date           2018-01-11T04:29:54
-engine_version 2.9.0-git3c583c4   
+checksum32     261,398,150        
+date           2018-02-02T16:03:11
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 3, num_imts = 5
+num_sites = 3, num_levels = 25
 
 Parameters
 ----------
@@ -78,8 +78,8 @@ source_model.xml 0      Active Shallow Crust 18           18
 Informational data
 ------------------
 ========================= ============================================================================
-compute_ruptures.received max_per_task 12.04 KB, tot 12.04 KB                                         
-compute_ruptures.sent     sources 2.17 KB, param 1.01 KB, src_filter 830 B, monitor 323 B, gsims 175 B
+compute_ruptures.received tot 12.07 KB, max_per_task 12.07 KB                                         
+compute_ruptures.sent     sources 2.17 KB, param 1.01 KB, src_filter 830 B, monitor 323 B, gsims 216 B
 hazard.input_weight       1.8000000000000003                                                          
 hazard.n_imts             5                                                                           
 hazard.n_levels           25                                                                          
@@ -106,9 +106,9 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-RC       1.000 NaN    1   1   1         1         
-RM       1.000 0.0    1   1   2         2         
-W        1.000 NaN    1   1   1         1         
+1        1.000 0.0    1   1   2         2         
+2        1.000 NaN    1   1   1         1         
+3        1.000 NaN    1   1   1         1         
 *ALL*    1.333 0.577  1   2   3         4         
 ======== ===== ====== === === ========= ==========
 
@@ -117,9 +117,9 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         PointSource  6            0.0       1         0        
 3         PointSource  6            0.0       1         0        
 2         PointSource  6            0.0       1         0        
+1         PointSource  6            0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -138,7 +138,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.026 NaN    0.026 0.026 1        
+compute_ruptures   0.028 NaN    0.028 0.028 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -146,14 +146,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.040     0.0       1     
-total compute_ruptures         0.026     0.0       1     
-making contexts                0.011     0.0       9     
-reading exposure               0.008     0.0       1     
-assoc_assets_sites             0.006     0.0       1     
+managing sources               0.043     0.0       1     
+total compute_ruptures         0.028     0.0       1     
+making contexts                0.012     0.0       9     
 store source_info              0.004     0.0       1     
+reading exposure               0.003     0.0       1     
 saving ruptures                0.003     0.0       1     
 reading composite source model 0.003     0.0       1     
+assoc_assets_sites             0.002     0.0       1     
 setting event years            0.001     0.0       1     
-reading site collection        5.722E-05 0.0       1     
+reading site collection        6.557E-05 0.0       1     
 ============================== ========= ========= ======

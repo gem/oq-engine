@@ -3,11 +3,11 @@ scenario risk
 
 ============== ===================
 checksum32     1,697,824,437      
-date           2018-01-11T04:31:23
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:04:44
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 7, num_imts = 4
+num_sites = 7, num_levels = 46
 
 Parameters
 ----------
@@ -79,9 +79,9 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 0.0    1   1   4         4         
-tax2     1.000 0.0    1   1   2         2         
-tax3     1.000 NaN    1   1   1         1         
+1        1.000 0.0    1   1   4         4         
+2        1.000 0.0    1   1   2         2         
+3        1.000 NaN    1   1   1         1         
 *ALL*    1.000 0.0    1   1   7         7         
 ======== ===== ====== === === ========= ==========
 
@@ -90,10 +90,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.015     0.0       1     
-computing gmfs          0.011     0.0       1     
-reading exposure        0.008     0.0       1     
-saving gmfs             0.006     0.0       1     
-building epsilons       3.312E-04 0.0       1     
+building riskinputs     0.016     0.0       1     
+computing gmfs          0.012     0.0       1     
+saving gmfs             0.007     0.0       1     
+reading exposure        0.004     0.0       1     
+building epsilons       3.676E-04 0.0       1     
 reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======
