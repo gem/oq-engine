@@ -86,20 +86,20 @@ class PSHACalculator(base.HazardCalculator):
     """
     core_task = classical
 
-    def agg_dicts(self, acc, pmap):
+    def agg_dicts(self, acc, pmap_by_grp):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param pmap: dictionary grp_id -> ProbabilityMap
+        :param pmap_by_grp: dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            acc.eff_ruptures += pmap.eff_ruptures
-            for grp_id in pmap:
-                if pmap[grp_id]:
-                    acc[grp_id] |= pmap[grp_id]
+            acc.eff_ruptures += pmap_by_grp.eff_ruptures
+            for grp_id in pmap_by_grp:
+                if pmap_by_grp[grp_id]:
+                    acc[grp_id] |= pmap_by_grp[grp_id]
             for srcid, (srcweight, nsites, calc_time, split) in \
-                    pmap.calc_times.items():
+                    pmap_by_grp.calc_times.items():
                 info = self.csm.infos[srcid]
                 info.calc_time += calc_time
                 info.num_sites += nsites
