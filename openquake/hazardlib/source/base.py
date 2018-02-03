@@ -19,6 +19,7 @@ seismic sources.
 """
 from __future__ import division
 import abc
+import math
 from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
 
@@ -56,7 +57,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         return (self.num_ruptures * self.RUPTURE_WEIGHT *
-                min(self.nsites, 2000) * self.ngsims)
+                (1 + math.log(self.nsites)) * self.ngsims)
 
     @property
     def src_group_ids(self):
