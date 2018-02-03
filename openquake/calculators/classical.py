@@ -241,6 +241,7 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
     used to specify the kind of output.
     """
     with monitor('combine pmaps'):
+        pgetter.init()  # if not already initialized
         try:
             pmaps = pgetter.get_pmaps(pgetter.sids)
         except IndexError:  # no data
