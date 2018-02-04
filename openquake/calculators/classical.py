@@ -145,7 +145,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.core_task.__func__, iterargs).submit_all()
         self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
-        logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
+        logging.info('Effective sites per task: %s', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc
@@ -160,7 +160,7 @@ class PSHACalculator(base.HazardCalculator):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
         num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-        tasks_per_tile = oq.concurrent_tasks / math.sqrt(num_tiles)
+        tasks_per_tile = math.ceil(oq.concurrent_tasks / math.sqrt(num_tiles))
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
@@ -173,7 +173,8 @@ class PSHACalculator(base.HazardCalculator):
                 logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
                 src_filter = SourceFilter(tile, oq.maximum_distance)
                 csm = self.csm.filter(src_filter)
-            maxweight = csm.get_maxweight(tasks_per_tile)
+            if tile_i == 1:  # set it only on the first tile
+                maxweight = csm.get_maxweight(tasks_per_tile)
             numheavy = len(csm.get_sources('heavy', maxweight))
             logging.info('Using maxweight=%d, numheavy=%d',
                          maxweight, numheavy)
