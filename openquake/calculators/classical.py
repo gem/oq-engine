@@ -145,7 +145,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.core_task.__func__, iterargs).submit_all()
         self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
-        logging.info('effective sites per task: %d', numpy.mean(self.nsites))
+        logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc
