@@ -1,7 +1,4 @@
   [Michele Simionato]
-  * If the hazard is precomputed, setting the `site_model_file` is an error
-    while setting  `gsim_logic_tree_file` or `source_model_logic_tree_file`
-    gives a warning
   * Removed the obsolete API `/extract/qgis-` and added `extract/hcurves`,
     `extract/hmaps`, `extract/uhs` for use with the QGIS plugin
   * Removed the deprecated GeoJSON exporters
