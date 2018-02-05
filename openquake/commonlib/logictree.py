@@ -429,6 +429,38 @@ class BranchSet(object):
                                        occurrence_rates=occur_rates))
 
 
+class FakeSmlt(object):
+    def __init__(self, filename, seed=0, num_samples=0):
+        self.filename = filename
+        self.basepath = os.path.dirname(filename)
+        self.seed = seed
+        self.num_samples = num_samples
+        self.tectonic_region_types = set()
+
+    def gen_source_models(self, gsim_lt):
+        num_gsim_paths = (1 if self.num_samples
+                          else gsim_lt.get_num_paths())
+        for i, rlz in enumerate(self):
+            yield SourceModel(
+                rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
+
+    def make_apply_uncertainties(self, branch_ids):
+        """
+        :returns: a do nothing function
+        """
+        return lambda source: None
+
+    def __iter__(self):
+        name = os.path.basename(self.filename)
+        smlt_path = ('b1',)
+        if self.num_samples:  # many realizations of equal weight
+            weight = 1. / self.num_samples
+            for i in range(self.num_samples):
+                yield Realization(name, weight, smlt_path, None, smlt_path)
+        else:  # there is a single realization
+            yield Realization(name, 1.0, smlt_path, 0, smlt_path)
+
+
 class SourceModelLogicTree(object):
     """
     Source model logic tree parser.
@@ -627,11 +659,13 @@ class SourceModelLogicTree(object):
                 yield Realization(name, weight, tuple(sm_lt_path), None,
                                   tuple(sm_lt_path))
         else:  # full enumeration
+            ordinal = 0
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, tuple(smlt_branch_ids), None,
-                                  tuple(smlt_branch_ids))
+                yield Realization(name, weight, tuple(smlt_branch_ids),
+                                  ordinal, tuple(smlt_branch_ids))
+                ordinal += 1
 
     def parse_uncertainty_value(self, node, branchset):
         """
