@@ -62,7 +62,11 @@ install:
   # the wheels first, put the folder in cache and then install the wheels from there.
   # A second run of 'pip download' will download only the missing wheels. 
   - pip -q download -r requirements-py35-linux64.txt -d wheels
-  - pip -q install wheels/*
+  # use '[skip wheels]' to get dependencies from upstream pypi without using cached wheels
+  # this is needed to test that (max) requirements in setup.py are still valid
+  - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
+        pip -q install wheels/*;
+    fi
   - pip -q install -e .
 
 before_script:
