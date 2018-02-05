@@ -56,7 +56,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         return (self.num_ruptures * self.RUPTURE_WEIGHT *
-                self.nsites)  # * self.ngsims)
+                self.nsites * self.ngsims)
 
     @property
     def src_group_ids(self):
@@ -166,7 +166,8 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         if integration_distance is None:  # no filtering
             return sites
         rup_enc_poly = self.get_rupture_enclosing_polygon(integration_distance)
-        return sites.filter(rup_enc_poly.intersects(sites.mesh))
+        mask = rup_enc_poly.intersects(sites.mesh)
+        return sites.filter(mask)
 
     def modify(self, modification, parameters):
         """

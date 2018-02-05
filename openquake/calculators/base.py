@@ -38,6 +38,7 @@ from openquake.commonlib import readinput, source, calc, riskmodels, writers
 from openquake.baselib.parallel import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
+from openquake.calculators.getters import GmfDataGetter, PmapGetter
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -77,7 +78,7 @@ PRECALC_MAP = dict(
                  'event_based_risk', 'ucerf_rupture'],
     event_based_risk=['event_based', 'event_based_rupture', 'ucerf_rupture',
                       'event_based_risk'],
-    gmf_ebrisk=['event_based'],
+    gmf_ebrisk=['event_based', 'ucerf_hazard'],
     ucerf_classical=['ucerf_psha'],
     ucerf_hazard=['ucerf_rupture'])
 
@@ -124,17 +125,17 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     from_engine = False  # set by engine.run_calc
     sitecol = datastore.persistent_attribute('sitecol')
-    assetcol = datastore.persistent_attribute('assetcol')
     performance = datastore.persistent_attribute('performance')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
     @property
     def taxonomies(self):
-        L = len('taxonomy=')
-        return [tag[L:]
-                for tag in self.datastore['assetcol/tags']
-                if tag.startswith('taxonomy=')]
+        """
+        :returns: the set of available taxonomies
+        """
+        return set(taxo for taxo in self.assetcol.tagcol.taxonomies()
+                   if taxo != '?')
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self._monitor = monitor
@@ -143,7 +144,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     def monitor(self, operation, **kw):
         """
-        Return a new Monitor instance
+        :returns: a new Monitor instance
         """
         mon = self._monitor(operation, hdf5path=self.datastore.hdf5path)
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
@@ -192,7 +193,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             # save the used concurrent_tasks
             self.oqparam.concurrent_tasks = ct
         self.save_params(**kw)
-        exported = {}
         try:
             if pre_execute:
                 self.pre_execute()
@@ -200,7 +200,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if self.result is not None:
                 self.post_execute(self.result)
             self.before_export()
-            exported = self.export(kw.get('exports', ''))
+            self.export(kw.get('exports', ''))
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
@@ -215,7 +215,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                     del os.environ['OQ_DISTRIBUTE']
                 else:
                     os.environ['OQ_DISTRIBUTE'] = oq_distribute
-        return exported
+        return getattr(self, 'exported', {})
 
     def core_task(*args):
         """
@@ -248,10 +248,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Export all the outputs in the datastore in the given export formats.
         Individual outputs are not exported if there are multiple realizations.
-
-        :returns: dictionary output_key -> sorted list of exported paths
         """
-        exported = {}
+        self.exported = getattr(self.precalc, 'exported', {})
         if isinstance(exports, tuple):
             fmts = exports
         elif exports:  # is a string
@@ -270,11 +268,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and self.R > 1:
                     continue  # skip individual curves
-                self._export((key, fmt), exported)
+                self._export((key, fmt))
             if has_hcurves and self.oqparam.hazard_maps:
-                self._export(('hmaps', fmt), exported)
+                self._export(('hmaps', fmt))
             if has_hcurves and self.oqparam.uniform_hazard_spectra:
-                self._export(('uhs', fmt), exported)
+                self._export(('uhs', fmt))
 
         if self.close:  # in the engine we close later
             self.result = None
@@ -284,13 +282,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 # sometimes produces errors but they are difficult to
                 # reproduce
                 logging.warn('', exc_info=True)
-        return exported
 
-    def _export(self, ekey, exported):
-        if ekey in exp:
-            with self.monitor('export'):
-                exported[ekey] = exp(ekey, self.datastore)
-                logging.info('exported %s: %s', ekey[0], exported[ekey])
+    def _export(self, ekey):
+        if ekey not in exp or self.exported.get(ekey):  # already exported
+            return
+        with self.monitor('export'):
+            self.exported[ekey] = fnames = exp(ekey, self.datastore)
+            if fnames:
+                logging.info('exported %s: %s', ekey[0], fnames)
 
     def before_export(self):
         """
@@ -307,22 +306,26 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.flush()
 
 
-def check_time_event(oqparam, time_events):
+def check_time_event(oqparam, occupancy_periods):
     """
     Check the `time_event` parameter in the datastore, by comparing
     with the periods found in the exposure.
     """
     time_event = oqparam.time_event
-    if time_event and time_event not in time_events:
+    if time_event and time_event not in occupancy_periods:
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
-            (time_event, oqparam.inputs['job_ini'], ', '.join(time_events)))
+            (time_event, oqparam.inputs['job_ini'],
+             ', '.join(occupancy_periods)))
 
 
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    grp_by_src = False  # set True in disaggregation
+    precalc = None
+
     def can_read_parent(self):
         """
         :returns:
@@ -365,10 +368,11 @@ class HazardCalculator(BaseCalculator):
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
             assets_by_site,
-            self.exposure.assets_by_tag,
+            self.exposure.tagcol,
             self.exposure.cost_calculator,
             self.oqparam.time_event,
-            time_events=hdf5.array_of_vstr(sorted(self.exposure.time_events)))
+            occupancy_periods=hdf5.array_of_vstr(
+                sorted(self.exposure.occupancy_periods)))
 
     def count_assets(self):
         """
@@ -412,9 +416,11 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         wakeup_pool()  # fork before reading the data
         self.read_risk_data()
-        if 'source' in oq.inputs:
+        if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
+                if self.grp_by_src:  # set in disaggregation
+                    self.csm = self.csm.grp_by_src()
             if self.is_stochastic:
                 # initialize the rupture serial numbers before the
                 # filtering; in this way the serials are independent
@@ -438,14 +444,12 @@ class HazardCalculator(BaseCalculator):
             if precalc_id is None:
                 self.precalc = self.compute_previous()
             else:
-                self.precalc = None
                 self.read_previous(precalc_id)
                 self.read_risk_data()
             self.init()
         else:  # we are in a basic calculator
-            self.precalc = None
             self.read_inputs()
-            if 'source' in self.oqparam.inputs:
+            if 'source' in self.oqparam.inputs and precalc_id is None:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
         if hasattr(self, 'riskmodel'):
@@ -509,6 +513,7 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
+        logging.info('Reading the risk model')
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:  # can happen only in a hazard calculation
             return
@@ -556,6 +561,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
             self.assoc_assets(haz_sitecol)
+            self.datastore['assetcol'] = self.assetcol
         elif oq.job_type == 'risk':
             raise RuntimeError(
                 'Missing exposure_file in %(job_ini)s' % oq.inputs)
@@ -566,7 +572,7 @@ class HazardCalculator(BaseCalculator):
         if oq_hazard:
             parent = self.datastore.parent
             if 'assetcol' in parent:
-                check_time_event(oq, parent['assetcol'].time_events)
+                check_time_event(oq, parent['assetcol'].occupancy_periods)
             if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
@@ -668,8 +674,10 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = self.oqparam.concurrent_tasks or 1
+        if not hasattr(self, 'assetcol'):
+            self.assetcol = self.datastore['assetcol']
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
         assets_by_site = self.assetcol.assets_by_site()
-        self.tagmask = self.assetcol.tagmask()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             sid_weight_pairs = [
@@ -685,16 +693,14 @@ class RiskCalculator(HazardCalculator):
                 reduced_eps = {}
                 for assets in reduced_assets:
                     for ass in assets:
-                        ass.tagmask = self.tagmask[ass.ordinal]
                         if eps is not None and len(eps):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
                 if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = calc.PmapGetter(dstore, sids)
+                    getter = PmapGetter(dstore, sids)
                     getter.num_rlzs = self.R
                 else:  # gmf
-                    getter = riskinput.GmfDataGetter(
-                        dstore, sids, self.R, eids)
+                    getter = GmfDataGetter(dstore, sids, self.R, eids)
                 if dstore is self.datastore:
                     # read the hazard data in the controller node
                     logging.info('Reading hazard')

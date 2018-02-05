@@ -27,9 +27,10 @@ from openquake.baselib.general import (
     group_array, split_in_blocks, deprecated as depr)
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
+from openquake.calculators import getters
 from openquake.commonlib import writers, calc, hazard_writers
 from openquake.commonlib.util import (
     get_assets, compose_arrays, reader)
@@ -426,7 +427,7 @@ def export_dmg_by_asset_npz(ekey, dstore):
 @depr('This output will be removed soon')
 def export_dmg_by_tag_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    tags = add_quotes(dstore['assetcol'].tags())
+    tags = add_quotes(dstore['assetcol'].tagcol)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
@@ -600,7 +601,7 @@ def export_asset_loss_table(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     monitor = performance.Monitor(key, fname)
     aids = range(len(assetcol))
-    allargs = [(riskinput.LossRatiosGetter(dstore, block), monitor)
+    allargs = [(getters.LossRatiosGetter(dstore, block), monitor)
                for block in split_in_blocks(aids, oq.concurrent_tasks)]
     dstore.close()  # avoid OSError: Can't read data (Wrong b-tree signature)
     L = len(loss_types)
