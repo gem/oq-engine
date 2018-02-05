@@ -201,7 +201,7 @@ class ClassicalTestCase(CalculatorTestCase):
                                  'hmaps/poe-0.2/rlz-003'])
 
         # test extract/hcurves/rlz-0 also works, used by the npz exports
-        haz = dict(extract(self.calc.datastore, 'hcurves/rlz-0'))
+        haz = dict(extract(self.calc.datastore, 'hcurves'))
         self.assertEqual(sorted(haz), ['all', 'investigation_time'])
         self.assertEqual(
             haz['all'].dtype.names, ('lon', 'lat', 'depth', 'mean'))
