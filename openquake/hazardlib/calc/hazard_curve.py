@@ -136,6 +136,7 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
         poe_mon = monitor('get_poes', measuremem=False)
         pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                           for grp_id in grp_ids})
+        # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
         pmap.calc_times = AccumDict(accum=numpy.zeros(4))
         pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
         for src, s_sites in src_filter(srcs):  # filter now
