@@ -44,6 +44,23 @@ source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
 
+def get_src_ids(sources):
+    """
+    :returns:
+       a string with the source IDs of the given sources, stripping the
+       extension after the colon, if any
+    """
+    src_ids = []
+    for src in sources:
+        long_src_id = src.source_id
+        try:
+            src_id, ext = long_src_id.rsplit(':', 1)
+        except ValueError:
+            src_id = long_src_id
+        src_ids.append(src_id)
+    return ' '.join(set(src_ids))
+
+
 def saving_sources_by_task(iterargs, dstore):
     """
     Yield the iterargs again by populating 'task_info/source_data'
@@ -51,7 +68,7 @@ def saving_sources_by_task(iterargs, dstore):
     source_ids = []
     data = []
     for i, args in enumerate(iterargs, 1):
-        source_ids.append(' ' .join(src.source_id for src in args[0]))
+        source_ids.append(get_src_ids(args[0]))
         for src in args[0]:  # collect source data
             data.append((i, src.nsites, src.num_ruptures, src.weight))
         yield args
