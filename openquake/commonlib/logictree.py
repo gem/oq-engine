@@ -436,9 +436,10 @@ class FakeSmlt(object):
     `source_model_logic_tree_file` is missing but there is a
     `source_model_file` in the job.ini file.
     """
-    def __init__(self, filename, num_samples=0):
+    def __init__(self, filename, seed=0, num_samples=0):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
+        self.seed = seed
         self.num_samples = num_samples
         self.tectonic_region_types = set()
 
