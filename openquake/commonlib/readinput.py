@@ -147,10 +147,12 @@ def get_params(job_inis):
                 params[key] = value
 
     # populate the 'source' list
-    smlt = params['inputs'].get('source_model_logic_tree')
+    inputs = params['inputs']
+    smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = sorted(_get_paths(base_path, smlt))
-
+        inputs['source'] = sorted(_get_paths(base_path, smlt))
+    elif 'source_model' in inputs:
+        inputs['source'] = [inputs['source_model']]
     return params
 
 
@@ -394,6 +396,10 @@ def get_source_model_lt(oqparam):
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
         instance
     """
+    if 'source_model' in oqparam.inputs:
+        return logictree.FakeSmlt(oqparam.inputs['source_model'],
+                                  int(oqparam.random_seed),
+                                  oqparam.number_of_logic_tree_samples)
     fname = oqparam.inputs['source_model_logic_tree']
     # NB: converting the random_seed into an integer is needed on Windows
     return logictree.SourceModelLogicTree(
