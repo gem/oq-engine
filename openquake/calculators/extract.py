@@ -36,6 +36,15 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
+def barray(iterlines):
+    """
+    Array of bytes
+    """
+    lst = [line.encode('utf-8') for line in iterlines]
+    arr = numpy.array(lst)
+    return arr
+
+
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
@@ -119,6 +128,19 @@ def extract_asset_values(dstore, sid):
                 vals[a][lt] = asset.value(lt, time_event)
         data.append(vals)
     return data
+
+
+@extract.add('asset_tags')
+def extract_asset_tags(dstore, tagname):
+    """
+    Extract an array of asset tags for the given tagname. Use it as
+    /extract/asset_tags or /extract/asset_tags/taxonomy
+    """
+    tagcol = dstore['assetcol/tagcol']
+    if tagname:
+        yield tagname, barray(tagcol.gen_tags(tagname))
+    for tagname in tagcol.tagnames:
+        yield tagname, barray(tagcol.gen_tags(tagname))
 
 
 @extract.add('hazard')
