@@ -3,11 +3,11 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     4,221,156,752      
-date           2018-01-11T04:29:49
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:03:05
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 281, num_imts = 1
+num_sites = 281, num_levels = 50
 
 Parameters
 ----------
@@ -87,7 +87,7 @@ Informational data
 ------------------
 ========================= ====================================================================================
 compute_ruptures.received tot 3.42 MB, max_per_task 1.19 MB                                                   
-compute_ruptures.sent     src_filter 1.05 MB, sources 43.01 KB, param 10.36 KB, monitor 3.47 KB, gsims 1.12 KB
+compute_ruptures.sent     src_filter 1.05 MB, sources 43.01 KB, param 10.36 KB, monitor 3.47 KB, gsims 1.43 KB
 hazard.input_weight       26012.0                                                                             
 hazard.n_imts             1                                                                                   
 hazard.n_levels           50                                                                                  
@@ -112,29 +112,29 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-========== ===== ====== === === ========= ==========
-taxonomy   mean  stddev min max num_sites num_assets
-A-SPSB-1   1.250 0.463  1   2   8         10        
-MC-RCSB-1  1.286 0.561  1   3   21        27        
-MC-RLSB-2  1.256 0.880  1   6   39        49        
-MR-RCSB-2  1.456 0.799  1   6   171       249       
-MR-SLSB-1  1.000 0.0    1   1   5         5         
-MS-FLSB-2  1.250 0.452  1   2   12        15        
-MS-SLSB-1  1.545 0.934  1   4   11        17        
-PCR-RCSM-5 1.000 0.0    1   1   2         2         
-PCR-SLSB-1 1.000 0.0    1   1   3         3         
-W-FLFB-2   1.222 0.502  1   3   54        66        
-W-SLFB-1   1.265 0.520  1   3   83        105       
-*ALL*      0.306 0.877  0   10  1,792     548       
-========== ===== ====== === === ========= ==========
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+1        1.250 0.452  1   2   12        15        
+2        1.545 0.934  1   4   11        17        
+3        1.256 0.880  1   6   39        49        
+4        1.265 0.520  1   3   83        105       
+5        1.456 0.799  1   6   171       249       
+6        1.286 0.561  1   3   21        27        
+7        1.222 0.502  1   3   54        66        
+8        1.000 0.0    1   1   2         2         
+9        1.000 0.0    1   1   5         5         
+10       1.250 0.463  1   2   8         10        
+11       1.000 0.0    1   1   3         3         
+*ALL*    0.306 0.877  0   10  1,792     548       
+======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ========= ================== ============ ========= ========= =========
 source_id source_class       num_ruptures calc_time num_sites num_split
 ========= ================== ============ ========= ========= =========
-F         ComplexFaultSource 2,558        0.0       1         0        
 D         ComplexFaultSource 3,945        0.0       1         0        
+F         ComplexFaultSource 2,558        0.0       1         0        
 ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -153,7 +153,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.960 0.435  0.621 2.083 11       
+compute_ruptures   0.974 0.444  0.640 2.145 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,14 +161,14 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         10       4.059     11    
-managing sources               3.455    0.0       1     
-making contexts                0.723    0.0       489   
-reading composite source model 0.303    0.0       1     
-reading site collection        0.209    0.0       1     
-assoc_assets_sites             0.182    0.0       1     
-reading exposure               0.099    0.0       1     
-saving ruptures                0.052    0.0       11    
-store source_info              0.005    0.0       1     
-setting event years            0.005    0.0       1     
+total compute_ruptures         10       3.945     11    
+managing sources               3.840    0.0       1     
+assoc_assets_sites             1.416    0.0       1     
+making contexts                0.736    0.0       489   
+reading composite source model 0.309    0.0       1     
+reading site collection        0.213    0.0       1     
+reading exposure               0.130    0.0       1     
+saving ruptures                0.054    0.0       11    
+store source_info              0.007    0.0       1     
+setting event years            0.006    0.0       1     
 ============================== ======== ========= ======
