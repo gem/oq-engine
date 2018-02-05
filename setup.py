@@ -61,7 +61,7 @@ install_requires = [
     'shapely >=1.3, <1.7',
     'docutils >=0.11, <0.15',
     'decorator >=3.4',
-    'django >=1.6, <1.12',
+    'django >=1.6, <2.1',
     'matplotlib >=1.5, <2.2',
     'requests >=2.2, <2.19',
     # pyshp is fragile, we want only versions we have tested
