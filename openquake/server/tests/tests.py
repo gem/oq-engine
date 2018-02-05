@@ -156,6 +156,12 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(len(got['array']), 0)  # there are 0 assets on site 0
         self.assertEqual(resp.status_code, 200)
 
+        # check asset_tags
+        resp = self.c.get(extract_url + 'asset_tags')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertEqual(len(got['taxonomy']), 7)
+
         # check avg_losses-rlzs
         resp = self.c.get(
             extract_url + 'agglosses/structural?taxonomy=W-SLFB-1')
