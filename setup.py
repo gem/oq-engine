@@ -51,19 +51,19 @@ Copyright (C) 2010-2017 GEM Foundation
 PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
-    'mock >=1.0, <1.4',
+    'mock >=1.0, <2.0',
     'h5py >=2.2, <2.8',
     'nose >=1.3, <1.4',
     'numpy >=1.8, <1.12',
     'scipy >=0.13, <0.18',
     'pyzmq <17.0',
-    'psutil >=1.2, <4.5',
-    'shapely >=1.3, <1.6',
-    'docutils >=0.11, <0.14',
-    'decorator >=3.4, <4.2',
+    'psutil >=1.2, <5.5',
+    'shapely >=1.3, <1.7',
+    'docutils >=0.11, <0.15',
+    'decorator >=3.4',
     'django >=1.6, <1.12',
-    'matplotlib >=1.5, <2.0',
-    'requests >=2.2, <2.13',
+    'matplotlib >=1.5, <2.2',
+    'requests >=2.2, <2.19',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
     'PyYAML',
