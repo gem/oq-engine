@@ -3,11 +3,11 @@ Event Based Risk from GMF
 
 ============== ===================
 checksum32     3,795,250,863      
-date           2018-01-11T04:30:28
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:03:46
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 11, num_imts = 2
+num_sites = 11, num_levels = 170
 
 Parameters
 ----------
@@ -65,28 +65,28 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-==================================== ===== ====== === === ========= ==========
-taxonomy                             mean  stddev min max num_sites num_assets
-CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010 1.000 0.0    1   1   2         2         
-CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010 1.200 0.447  1   2   5         6         
-MATO/LN+DNO/HEX:1/Y99                1.500 0.707  1   2   2         3         
-MCF/LWALL+DLO/HEX:1/YBET:1980-2010   1.000 0.0    1   1   2         2         
-MCF/LWALL+DUC/HEX:1/YBET:1980-2010   1.000 0.0    1   1   4         4         
-MCF/LWALL+DUC/HEX:2/YBET:1980-2010   1.500 0.577  1   2   4         6         
-MR/LWALL+DLO/HEX:1/YBET:1980-2010    1.000 0.0    1   1   2         2         
-MR/LWALL+DUC/HEX:1/YBET:1980-2010    1.000 0.0    1   1   2         2         
-W+WLI/LWALL+DLO/HEX:1/YPRE:1980      1.000 0.0    1   1   3         3         
-W+WLI/LWALL+DNO/HEX:1/YPRE:1980      1.333 0.577  1   2   3         4         
-*ALL*                                2.615 1.895  0   6   13        34        
-==================================== ===== ====== === === ========= ==========
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+1        1.000 0.0    1   1   2         2         
+2        1.333 0.577  1   2   3         4         
+3        1.200 0.447  1   2   5         6         
+4        1.500 0.577  1   2   4         6         
+5        1.500 0.707  1   2   2         3         
+6        1.000 0.0    1   1   3         3         
+7        1.000 0.0    1   1   2         2         
+8        1.000 0.0    1   1   4         4         
+9        1.000 0.0    1   1   2         2         
+10       1.000 0.0    1   1   2         2         
+*ALL*    2.615 1.895  0   6   13        34        
+======== ===== ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.023     0.0       1     
-building riskinputs     0.023     0.0       1     
-assoc_assets_sites      0.014     0.0       1     
-reading site collection 1.912E-04 0.0       1     
+building riskinputs     0.029     0.0       1     
+reading exposure        0.024     0.0       1     
+assoc_assets_sites      0.012     0.0       1     
+reading site collection 2.444E-04 0.0       1     
 ======================= ========= ========= ======

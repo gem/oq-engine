@@ -98,6 +98,7 @@ class PSHACalculator(base.HazardCalculator):
             for grp_id in pmap:
                 if pmap[grp_id]:
                     acc[grp_id] |= pmap[grp_id]
+                self.nsites.append(len(pmap[grp_id]))
             for src_id, srcweight, nsites, calc_time in pmap.calc_times:
                 srcid = src_id.split(':', 1)[0]
                 info = self.csm.infos[srcid]
@@ -142,7 +143,9 @@ class PSHACalculator(base.HazardCalculator):
                 iterargs = list(iterargs)
             ires = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
+        self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
+        logging.info('effective sites per task: %d', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc
