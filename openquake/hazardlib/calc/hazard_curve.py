@@ -90,6 +90,7 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
         ctx_mon = monitor('make_contexts', measuremem=False)
         poe_mon = monitor('get_poes', measuremem=False)
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
+        # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
         calc_times = AccumDict(accum=numpy.zeros(4))
         for src, s_sites in src_filter(srcs):
             t0 = time.time()
