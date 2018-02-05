@@ -124,7 +124,7 @@ class GeodeticStrain(object):
         center_normal_rate = (self.data['exx'] +
                               self.data['eyy']) / 2.
         radius_rate = np.sqrt((self.data['exx'] -
-                              center_normal_rate) ** 2. +
+                               center_normal_rate) ** 2. +
                               (self.data['exy'] ** 2.))
         # e1h and e2h
         self.data['e1h'] = center_normal_rate - radius_rate

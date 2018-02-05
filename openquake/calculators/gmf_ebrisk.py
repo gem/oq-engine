@@ -45,17 +45,13 @@ class GmfEbRiskCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         oq = self.oqparam
         self.L = len(self.riskmodel.lti)
-        self.T = len(self.assetcol.tags())
+        self.T = len(self.assetcol.tagcol)
         self.A = len(self.assetcol)
         self.I = oq.insured_losses + 1
         if oq.hazard_calculation_id:  # read the GMFs from a previous calc
             assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
             parent = self.read_previous(oq.hazard_calculation_id)
             oqp = parent['oqparam']
-            if oqp.ses_per_logic_tree_path != 1:
-                logging.warn(
-                    'The parent calculation was using ses_per_logic_tree_path'
-                    '=%d != 1', oqp.ses_per_logic_tree_path)
             if oqp.investigation_time != oq.investigation_time:
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'

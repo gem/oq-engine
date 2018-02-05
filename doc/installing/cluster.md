@@ -10,12 +10,13 @@ Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](
 
 Note: you have to **restart every celery node** after a configuration change.
 
-### Ubuntu
-On all nodes, install the `python-oq-engine` package as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md).
+### Master node
+The `python-oq-engine-master` package must be installed on the **master** node. It provides extra functionalities like _RabbitMQ_.
 
-### RedHat
-For **RedHat** and derivates, install `python-oq-engine-master` package on the **master** node. It provides extra functionalities like _RabbitMQ_.
-On the workers install `python-oq-engine-worker`; it adds _celery_ support on top of the standard `python-oq-engine` package.
+On **RHEL/CentOS** [EPEL](https://fedoraproject.org/wiki/EPEL) repository *must be configured and enabled* in the system.
+
+### Worker nodes
+On **worker** nodes  `python-oq-engine-worker` must be installed **instead**; it adds _celery_ support on top of the standard `python-oq-engine` package.
 
 ## OpenQuake Engine 'master' node configuration File
 

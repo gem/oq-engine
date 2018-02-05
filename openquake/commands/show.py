@@ -27,7 +27,8 @@ from openquake.hazardlib import stats
 from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.commonlib import logs, calc
+from openquake.commonlib import logs
+from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract
 
@@ -49,7 +50,7 @@ def get_hcurves_and_means(dstore):
 
     :returns: curves_by_rlz, mean_curves
     """
-    getter = calc.PmapGetter(dstore)
+    getter = getters.PmapGetter(dstore)
     sitecol = dstore['sitecol']
     pmaps = getter.get_pmaps(sitecol.sids)
     return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']
@@ -87,7 +88,7 @@ def show(what='contents', calc_id=-1, extra=()):
     # this part is experimental
     if what == 'rlzs' and 'poes' in ds:
         min_value = 0.01  # used in rmsep
-        getter = calc.PmapGetter(ds)
+        getter = getters.PmapGetter(ds)
         sitecol = ds['sitecol']
         pmaps = getter.get_pmaps(sitecol.sids)
         weights = [rlz.weight for rlz in getter.rlzs]

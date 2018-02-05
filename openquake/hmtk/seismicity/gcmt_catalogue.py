@@ -30,6 +30,7 @@ class GCMTHypocentre(object):
     """
     Simple representation of the hypocentre
     """
+
     def __init__(self):
         """
         """
@@ -48,6 +49,7 @@ class GCMTCentroid(object):
     """
     Representation of a GCMT centroid
     """
+
     def __init__(self, reference_date, reference_time):
         """
         :param reference_date:
@@ -92,20 +94,20 @@ class GCMTPrincipalAxes(object):
     Class to represent the eigensystem of the tensor in terms of  T-, B- and P-
     plunge and azimuth
     """
+
     def __init__(self):
         """
         """
         self.t_axis = None
         self.b_axis = None
         self.p_axis = None
-        
+
     def get_moment_tensor_from_principal_axes(self):
         """
         Retreives the moment tensor from the prinicpal axes
         """
         raise NotImplementedError('Moment tensor from principal axes not yet '
                                   'implemented!')
-
 
     def get_azimuthal_projection(self, height=1.0):
         """
@@ -116,11 +118,11 @@ class GCMTPrincipalAxes(object):
                                   'implemented!')
 
 
-
 class GCMTMomentTensor(object):
     """
     Class to represent a moment tensor and its associated methods
     """
+
     def __init__(self, reference_frame=None):
         """
         """
@@ -150,7 +152,7 @@ class GCMTMomentTensor(object):
         if self.ref_frame is 'USE':
             # Rotate
             return utils.use_to_ned(self.tensor), \
-                   utils.use_to_ned(self.tensor_sigma)
+                utils.use_to_ned(self.tensor_sigma)
         elif self.ref_frame is 'NED':
             # Alreadt NED
             return self.tensor, self.tensor_sigma
@@ -165,7 +167,7 @@ class GCMTMomentTensor(object):
         if self.ref_frame is 'NED':
             # Rotate
             return utils.ned_to_use(self.tensor), \
-                   utils.ned_to_use(self.tensor_sigma)
+                utils.ned_to_use(self.tensor_sigma)
         elif self.ref_frame is 'USE':
             # Already USE
             return self.tensor, self.tensor_sigma
@@ -188,7 +190,7 @@ class GCMTMomentTensor(object):
         self.eigenvalues, self.eigenvectors = utils.eigendecompose(self.tensor,
                                                                    normalise)
         return self.eigenvalues, self.eigenvectors
-    
+
     def get_nodal_planes(self):
         """
         Returns the nodal planes by eigendecomposition of the moment tensor
@@ -201,28 +203,28 @@ class GCMTMomentTensor(object):
         _, evect = utils.eigendecompose(self.tensor)
         # Rotation matrix
         _, rot_vec = utils.eigendecompose(np.matrix([[0., 0., -1],
-                                                    [0., 0., 0.],
-                                                    [-1., 0., 0.]]))
+                                                     [0., 0., 0.],
+                                                     [-1., 0., 0.]]))
         rotation_matrix = (np.matrix(evect * rot_vec.T)).T
-        if  np.linalg.det(rotation_matrix) < 0.:
+        if np.linalg.det(rotation_matrix) < 0.:
             rotation_matrix *= -1.
-        flip_dc = np.matrix([[0., 0., -1.], 
+        flip_dc = np.matrix([[0., 0., -1.],
                              [0., -1., 0.],
                              [-1., 0., 0.]])
         rotation_matrices = sorted(
             [rotation_matrix, flip_dc * rotation_matrix],
             cmp=cmp_mat)
         nodal_planes = GCMTNodalPlanes()
-        dip, strike, rake = [(180. / pi) * angle 
-            for angle in utils.matrix_to_euler(rotation_matrices[0])]
+        dip, strike, rake = [(180. / pi) * angle
+                             for angle in utils.matrix_to_euler(rotation_matrices[0])]
         # 1st Nodal Plane
         nodal_planes.nodal_plane_1 = {'strike': strike % 360,
                                       'dip': dip,
                                       'rake': -rake}
 
         # 2nd Nodal Plane
-        dip, strike, rake = [(180. / pi) * angle 
-            for angle in utils.matrix_to_euler(rotation_matrices[1])]
+        dip, strike, rake = [(180. / pi) * angle
+                             for angle in utils.matrix_to_euler(rotation_matrices[1])]
         nodal_planes.nodal_plane_2 = {'strike': strike % 360.,
                                       'dip': dip,
                                       'rake': -rake}
@@ -256,11 +258,11 @@ class GCMTMomentTensor(object):
         return principal_axes
 
 
-
 class GCMTEvent(object):
     """
     Class to represent full GCMT moment tensor in ndk format
     """
+
     def __init__(self):
         """
         """
@@ -290,7 +292,7 @@ class GCMTEvent(object):
         denominator = np.max(np.array([
             fabs(self.principal_axes.t_axis['eigenvalue']),
             fabs(self.principal_axes.p_axis['eigenvalue'])
-            ]))
+        ]))
         self.f_clvd = -self.principal_axes.b_axis['eigenvalue'] / denominator
         return self.f_clvd
 
@@ -303,10 +305,10 @@ class GCMTEvent(object):
         if not self.moment_tensor:
             raise ValueError('Moment tensor not defined!')
 
-        numer = np.tensordot(self.moment_tensor.tensor_sigma, 
+        numer = np.tensordot(self.moment_tensor.tensor_sigma,
                              self.moment_tensor.tensor_sigma)
 
-        denom = np.tensordot(self.moment_tensor.tensor, 
+        denom = np.tensordot(self.moment_tensor.tensor,
                              self.moment_tensor.tensor)
         self.e_rel = sqrt(numer / denom)
         return self.e_rel
@@ -318,6 +320,7 @@ class GCMTNodalPlanes(object):
     Each nodal plane is represented as a dictionary of the form:
     {'strike':, 'dip':, 'rake':}
     """
+
     def __init__(self):
         """
         """
@@ -347,8 +350,8 @@ class GCMTCatalogue(Catalogue):
 
     TOTAL_ATTRIBUTE_LIST = list(
         (set(FLOAT_ATTRIBUTE_LIST).union(
-                set(INT_ATTRIBUTE_LIST))).union(
-                    set(STRING_ATTRIBUTE_LIST)))
+            set(INT_ATTRIBUTE_LIST))).union(
+            set(STRING_ATTRIBUTE_LIST)))
 
     def __init__(self, start_year=None, end_year=None):
         """
@@ -393,7 +396,7 @@ class GCMTCatalogue(Catalogue):
                 continue
 
         if len(self.gcmts) > 0:
-            self.gcmts = [self.gcmts[iloc] for iloc in id0] 
+            self.gcmts = [self.gcmts[iloc] for iloc in id0]
             self.number_gcmts = self.get_number_tensors()
 
     def gcmt_to_simple_array(self, centroid_location=True):
@@ -443,7 +446,7 @@ class GCMTCatalogue(Catalogue):
             catalogue[iloc, 18] = tensor.nodal_planes.nodal_plane_2['dip']
             catalogue[iloc, 19] = tensor.nodal_planes.nodal_plane_2['rake']
             # Principal axes
-            catalogue[iloc, 20] = tensor.principal_axes.b_axis['eigenvalue'] 
+            catalogue[iloc, 20] = tensor.principal_axes.b_axis['eigenvalue']
             catalogue[iloc, 21] = tensor.principal_axes.b_axis['azimuth']
             catalogue[iloc, 22] = tensor.principal_axes.b_axis['plunge']
             catalogue[iloc, 23] = tensor.principal_axes.p_axis['eigenvalue']

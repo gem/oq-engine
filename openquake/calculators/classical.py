@@ -30,7 +30,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.commonlib import calc
+from openquake.calculators import getters
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -98,11 +98,12 @@ class PSHACalculator(base.HazardCalculator):
             for grp_id in pmap:
                 if pmap[grp_id]:
                     acc[grp_id] |= pmap[grp_id]
-            for src_id, nsites, srcweight, calc_time in pmap.calc_times:
+                self.nsites.append(len(pmap[grp_id]))
+            for src_id, srcweight, nsites, calc_time in pmap.calc_times:
                 srcid = src_id.split(':', 1)[0]
                 info = self.csm.infos[srcid]
                 info.calc_time += calc_time
-                info.num_sites = max(info.num_sites, nsites)
+                info.num_sites = max(info.num_sites, nsites or 0)
                 info.num_split += 1
         return acc
 
@@ -142,7 +143,9 @@ class PSHACalculator(base.HazardCalculator):
                 iterargs = list(iterargs)
             ires = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
+        self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
+        logging.info('effective sites per task: %d', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc
@@ -200,14 +203,16 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap_by_grp_id:
             a dictionary grp_id -> hazard curves
         """
-        grp_trt = self.csm.info.grp_trt()
+        grp_trt = self.csm.info.grp_by("trt")
+        grp_name = self.csm.info.grp_by("name")
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     fix_ones(pmap)  # avoid saving PoEs == 1
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
+                    self.datastore.set_attrs(key, trt=grp_trt[grp_id],
+                                             name=str(grp_name[grp_id]))
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
 
@@ -230,7 +235,7 @@ def fix_ones(pmap):
 
 def build_hcurves_and_stats(pgetter, hstats, monitor):
     """
-    :param pgetter: an :class:`openquake.commonlib.calc.PmapGetter`
+    :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param hstats: a list of pairs (statname, statfunc)
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
@@ -274,10 +279,11 @@ class ClassicalCalculator(PSHACalculator):
             return {}
         elif not oq.hazard_stats():
             if oq.hazard_maps or oq.uniform_hazard_spectra:
-                raise ValueError('The job.ini says that no statistics should '
-                                 'be computed, but then there is no output!')
-            else:
-                return {}
+                logging.warn('mean_hazard_curves was false in the job.ini, '
+                             'so no outputs were generated.\nYou can compute '
+                             'the statistics without repeating the calculation'
+                             ' with the --hc option')
+            return {}
         # initialize datasets
         N = len(self.sitecol)
         L = len(oq.imtls.array)
@@ -312,7 +318,7 @@ class ClassicalCalculator(PSHACalculator):
         if parent is None:
             parent = self.datastore
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pgetter = calc.PmapGetter(parent, t.sids, self.rlzs_assoc)
+            pgetter = getters.PmapGetter(parent, t.sids, self.rlzs_assoc)
             if parent is self.datastore:  # read now, not in the workers
                 logging.info('Reading PoEs on %d sites', len(t))
                 pgetter.init()
