@@ -21,6 +21,7 @@ import unittest
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
+from openquake.hazardlib import InvalidFile
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -115,6 +116,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       calculation_mode='gmf_ebrisk',
                       hazard_calculation_id=str(calc1.calc_id),
+                      source_model_logic_tree_file='',
+                      gsim_logic_tree_file='',
                       concurrent_tasks='0')  # to avoid numeric issues
         calc2 = self.calc.datastore  # gmf_ebrisk
 
@@ -135,3 +138,9 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/elt.txt', f0, delta=1E-5)
         f2 = writetmp(view('elt', calc2))
         self.assertEqualFiles('expected/elt.txt', f2, delta=1E-5)
+
+        # test invalid job_risk
+        with self.assertRaises(InvalidFile):
+            self.run_calc(case_master.__file__, 'job.ini',
+                          calculation_mode='gmf_ebrisk',
+                          hazard_calculation_id=str(calc1.calc_id))
