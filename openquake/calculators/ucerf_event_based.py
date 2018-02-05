@@ -32,7 +32,7 @@ from openquake.baselib import parallel
 from openquake.hazardlib import nrml
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, util
-from openquake.calculators import base, event_based
+from openquake.calculators import base, event_based, getters
 from openquake.calculators.event_based_risk import (
     EbriskCalculator, event_based_risk)
 
@@ -835,7 +835,7 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     samples = ssm.info.get_samples_by_grp()
     num_rlzs = len(rlzs_assoc.realizations)
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(DEFAULT_TRT)
-    getter = riskinput.GmfGetter(
+    getter = getters.GmfGetter(
         rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
         src_filter.integration_distance, trunc_level, correl_model,
         samples[grp_id])
@@ -880,10 +880,12 @@ class UCERFRiskCalculator(EbriskCalculator):
                               ('loss', (F32, (self.L, self.I)))])
         monitor = self.monitor('compute_losses')
         for sm in self.csm.source_models:
+            if sm.samples > 1:
+                logging.warn('Sampling in ucerf_risk is untested')
             ssm = self.csm.get_model(sm.ordinal)
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx)],
-                             samples=1, assetcol=self.assetcol,
+                             samples=sm.samples, assetcol=self.assetcol,
                              save_ruptures=False,
                              ses_ratio=oq.ses_ratio,
                              avg_losses=oq.avg_losses,
@@ -895,8 +897,9 @@ class UCERFRiskCalculator(EbriskCalculator):
                        correl_model, min_iml, monitor)
 
     def execute(self):
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
         num_rlzs = len(self.rlzs_assoc.realizations)
-        self.grp_trt = self.csm_info.grp_trt()
+        self.grp_trt = self.csm_info.grp_by("trt")
         res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
         self.vals = self.assetcol.values()
         self.eff_ruptures = AccumDict(accum=0)

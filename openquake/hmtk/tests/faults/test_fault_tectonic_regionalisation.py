@@ -48,8 +48,8 @@ Module to test :openquake.hmtk.faults.tectonic_regionalisation class
 import unittest
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hmtk.faults.tectonic_regionalisation import (_check_list_weights,
-                                                  TectonicRegion,
-                                                  TectonicRegionalisation)
+                                                            TectonicRegion,
+                                                            TectonicRegionalisation)
 
 
 class TestCheckUtil(unittest.TestCase):
@@ -57,6 +57,7 @@ class TestCheckUtil(unittest.TestCase):
     Simply tests the openquake.hmtk.faults.tectonic_regionalisation._check_list_weights
     function
     '''
+
     def test_correct_instance(self):
         # Tests the instance when the list of parameters is entered correctly
         # as a tuple with weights summing to 1.0
@@ -91,6 +92,7 @@ class TestTectonicRegion(unittest.TestCase):
     Tests that a openquake.hmtk.faults.tectonic_regionalistion.TectonicRegion class
     has been raised correctly
     '''
+
     def setUp(self):
         self.tect_reg = None
 
@@ -106,7 +108,6 @@ class TestTectonicRegion(unittest.TestCase):
         self.assertAlmostEqual(self.tect_reg.disp_length_ratio[0][1], 1.0)
         self.assertTrue(isinstance(self.tect_reg.scaling_rel[0][0], WC1994))
         self.assertAlmostEqual(self.tect_reg.scaling_rel[0][1], 1.0)
-
 
     def test_input_values(self):
         '''
@@ -134,6 +135,7 @@ class TestTectonicRegionalisation(unittest.TestCase):
     Class to test the module
     openquake.hmtk.faults.tectonic_regionalisation.TectonicRegionalisation
     '''
+
     def setUp(self):
         '''
         '''
@@ -179,12 +181,12 @@ class TestTectonicRegionalisation(unittest.TestCase):
                         'Shear_Modulus': [(20., 0.3), (30., 0.7)],
                         'Displacement_Length_Ratio': [(1.5E-5, 1.0)],
                         'Magnitude_Scaling_Relation': [(WC1994, 1.0)]},
-                        {'Code': '002',
+                       {'Code': '002',
                         'Name': 'Stable Continental',
                         'Shear_Modulus': [(30., 1.0)],
                         'Displacement_Length_Ratio': [(1.0E-4, 1.0)],
                         'Magnitude_Scaling_Relation': [(WC1994, 1.0)]}
-                        ]
+                       ]
 
         expected_key_list = ['Active Shallow', 'Stable Continental']
         expected_regions = [{'id': '001',

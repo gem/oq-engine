@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -125,6 +125,7 @@ class FaultYmltoSource(object):
     Class to parse a fault model definition from Yaml format to a fault model
     class
     '''
+
     def __init__(self, filename):
         '''
         :param str filename:
@@ -232,8 +233,8 @@ class FaultYmltoSource(object):
             for raw_trace in geo_dict['Fault_Trace']:
                 fault_edge = Line(
                     [Point(raw_trace[ival], raw_trace[ival + 1],
-                     raw_trace[ival + 2]) for ival in range(0, len(raw_trace),
-                     3)])
+                           raw_trace[ival + 2]) for ival in range(0, len(raw_trace),
+                                                                  3)])
                 trace.append(fault_edge)
             geometry = ComplexFaultGeometry(trace, mesh_spacing)
         else:

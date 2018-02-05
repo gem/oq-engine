@@ -96,6 +96,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
         eids, self.R = base.get_gmfs(self)
+        self.assetcol = self.datastore['assetcol']
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields
         logging.info('Building the epsilons')
@@ -116,7 +117,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         loss_dt = self.oqparam.loss_dt()
         I = self.oqparam.insured_losses + 1
         with self.monitor('saving outputs', autoflush=True):
-            A, T = self.tagmask.shape
+            A = len(self.assetcol)
 
             # agg losses
             res = result['agg']
@@ -148,5 +149,5 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                             lt = loss_dt.names[l + L * i]
                             array[lt][aid, :, r] = lba[:, i]
                 self.datastore['all_losses-rlzs'] = array
-                self.datastore.set_attrs('all_losses-rlzs',
-                                         tags=encode(self.assetcol.tags()))
+                tags = [encode(tag) for tag in self.assetcol.tagcol]
+                self.datastore.set_attrs('all_losses-rlzs', tags=tags)

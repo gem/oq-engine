@@ -95,7 +95,7 @@
                 <% } else { %>
                   <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
-              <% } else { %>
+              <% } else if (calc.get('abortable')) { %>
               <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Abort</a>
               <!-- confirm_modal -->
               <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
