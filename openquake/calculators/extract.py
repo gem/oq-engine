@@ -26,7 +26,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import DictArray
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
@@ -119,6 +119,18 @@ def extract_asset_values(dstore, sid):
                 vals[a][lt] = asset.value(lt, time_event)
         data.append(vals)
     return data
+
+
+@extract.add('asset_tags')
+def extract_asset_tags(dstore, tagname):
+    """
+    Extract an array of asset tags for the given tagname. Use it as
+    /extract/asset_tags/taxonomy
+    """
+    tagcol = dstore['assetcol/tagcol']
+    if tagname:
+        return tagcol.get_tags(tagname)
+    return numpy.fromiter(iter(tagcol), vstr)
 
 
 @extract.add('hazard')
