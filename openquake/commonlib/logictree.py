@@ -430,6 +430,12 @@ class BranchSet(object):
 
 
 class FakeSmlt(object):
+    """
+    A replacement for the SourceModelLogicTree to be used when there is a
+    trivial source model logic tree. In practice, when
+    `source_model_logic_tree_file` is missing but there is a
+    `source_model_file`.
+    """
     def __init__(self, filename, seed=0, num_samples=0):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
@@ -438,6 +444,9 @@ class FakeSmlt(object):
         self.tectonic_region_types = set()
 
     def gen_source_models(self, gsim_lt):
+        """
+        Yield the underlying SourceModel, multiple times if there is sampling
+        """
         num_gsim_paths = (1 if self.num_samples
                           else gsim_lt.get_num_paths())
         for i, rlz in enumerate(self):
