@@ -50,8 +50,8 @@ def expo2csv(job_ini):
                 row.append(asset.insurance_limits.get(costname, '?'))
         for time_event in exposure.occupancy_periods:
             row.append(asset.value(time_event))
-        for tagname, tagvalue in zip(exposure.tagnames, asset.tagvalues):
-            row.append(tagvalue)
+        for tagname, tagidx in zip(exposure.tagnames, asset.tagidxs):
+            row.append(tagidx)
         rows.append(row)
 
     with performance.Monitor('expo2csv') as mon:
