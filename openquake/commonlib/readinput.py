@@ -396,7 +396,8 @@ def get_source_model_lt(oqparam):
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
         instance
     """
-    if 'source_model' in oqparam.inputs:
+    if ('source_model' in oqparam.inputs and
+        'ucerf' not in oqparam.calculation_mode):
         return logictree.FakeSmlt(oqparam.inputs['source_model'],
                                   int(oqparam.random_seed),
                                   oqparam.number_of_logic_tree_samples)
