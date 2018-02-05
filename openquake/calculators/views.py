@@ -789,7 +789,6 @@ def view_pmap(token, dstore):
     name = token.split(':')[1]  # called as pmap:name
     pmap = {}
     pgetter = getters.PmapGetter(dstore)
-    pgetter.init()
     for grp, dset in dstore['poes'].items():
         if dset.attrs['name'] == name:
             pmap = pgetter.get_mean(grp)
