@@ -109,7 +109,7 @@ producing too small PoEs.'''
             # the hazard curves, hence the need to run a PSHACalculator here
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
-            cl.grp_by_src = True
+            cl.grp_by_src = oq.disagg_by_src
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
@@ -142,7 +142,6 @@ producing too small PoEs.'''
         dic = {}
         imtls = self.oqparam.imtls
         pgetter = getters.PmapGetter(self.datastore, sids=numpy.array([sid]))
-        pgetter.init()
         for rlz in self.rlzs_assoc.realizations:
             try:
                 pmap = pgetter.get(rlz.ordinal)

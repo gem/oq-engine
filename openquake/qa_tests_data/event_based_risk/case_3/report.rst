@@ -3,11 +3,11 @@ Event Based Risk Lisbon
 
 ============== ===================
 checksum32     1,228,666,719      
-date           2018-01-11T04:29:28
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:02:42
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 40
 
 Parameters
 ----------
@@ -97,19 +97,19 @@ SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 21,381       21,381
 
 Informational data
 ------------------
-========================= ===================================================================================
-compute_ruptures.received tot 53.13 KB, max_per_task 6.66 KB                                                 
-compute_ruptures.sent     sources 997 KB, param 15.63 KB, src_filter 12.69 KB, monitor 5.68 KB, gsims 3.15 KB
-hazard.input_weight       13980.399999999998                                                                 
-hazard.n_imts             1                                                                                  
-hazard.n_levels           40                                                                                 
-hazard.n_realizations     8                                                                                  
-hazard.n_sites            1                                                                                  
-hazard.n_sources          22                                                                                 
-hazard.output_weight      40.0                                                                               
-hostname                  tstation.gem.lan                                                                   
-require_epsilons          False                                                                              
-========================= ===================================================================================
+========================= ======================================================================================
+compute_ruptures.received tot 51.83 KB, max_per_task 6.66 KB                                                    
+compute_ruptures.sent     sources 850.47 KB, param 13.89 KB, src_filter 11.28 KB, monitor 5.05 KB, gsims 3.44 KB
+hazard.input_weight       13980.399999999998                                                                    
+hazard.n_imts             1                                                                                     
+hazard.n_levels           40                                                                                    
+hazard.n_realizations     8                                                                                     
+hazard.n_sites            1                                                                                     
+hazard.n_sources          22                                                                                    
+hazard.output_weight      40.0                                                                                  
+hostname                  tstation.gem.lan                                                                      
+require_epsilons          False                                                                                 
+========================= ======================================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -126,7 +126,7 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-M1_2_PC  1.000 NaN    1   1   1         1         
+1        1.000 NaN    1   1   1         1         
 ======== ===== ====== === === ========= ==========
 
 Slowest sources
@@ -134,16 +134,16 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
+0         AreaSource   24,435       0.0       1         0        
+8         AreaSource   1,440        0.0       1         0        
+6         AreaSource   4,123        0.0       1         0        
+2         AreaSource   19,923       0.0       1         0        
+5         AreaSource   2,349        0.0       1         0        
 1         AreaSource   4,163        0.0       1         0        
 7         AreaSource   1,690        0.0       1         0        
-8         AreaSource   1,440        0.0       1         0        
-0         AreaSource   24,435       0.0       1         0        
-2         AreaSource   19,923       0.0       1         0        
-4         AreaSource   1,280        0.0       1         0        
-5         AreaSource   2,349        0.0       1         0        
-3         AreaSource   3,509        0.0       1         0        
 9         AreaSource   2,508        0.0       1         0        
-6         AreaSource   4,123        0.0       1         0        
+4         AreaSource   1,280        0.0       1         0        
+3         AreaSource   3,509        0.0       1         0        
 10        AreaSource   4,482        0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
@@ -163,7 +163,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.659 0.687  0.334 2.587 18       
+compute_ruptures   1.977 0.599  0.955 2.803 16       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -171,13 +171,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         29        0.387     18    
-managing sources               4.230     0.0       1     
-reading composite source model 1.675     0.0       1     
-saving ruptures                0.024     0.0       18    
-store source_info              0.007     0.0       1     
+total compute_ruptures         31        0.297     16    
+managing sources               4.538     0.0       1     
+reading composite source model 1.821     0.0       1     
+saving ruptures                0.025     0.0       16    
+store source_info              0.008     0.0       1     
 making contexts                0.007     0.0       12    
-reading exposure               0.005     0.0       1     
+reading exposure               0.003     0.0       1     
 setting event years            0.002     0.0       1     
-reading site collection        4.768E-06 0.0       1     
+reading site collection        5.722E-06 0.0       1     
 ============================== ========= ========= ======
