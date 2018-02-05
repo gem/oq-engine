@@ -60,7 +60,7 @@ before_install:
 install:
   # Use '[skip wheels]' to get dependencies from upstream pypi without using cached wheels;
   # this is needed to test that (max) requirements in setup.py are still valid.
-  # Also pip do not cache data when requirements includes full http URLs, so we need
+  # Also pip does not cache data when requirements includes full http URLs, so we need
   # to download the wheels first, put the folder in cache and then install the wheels from there.
   # A second run of 'pip download' will download only the missing wheels.
   - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
