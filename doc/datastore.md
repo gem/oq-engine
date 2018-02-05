@@ -57,6 +57,9 @@ keep working in the same way forever. The stable API is the
 
 Accessing directly the datastore is meant for internal users (i.e. GEM
 staff) and for power users that are willing to accept some instability
-in order to get the cutting edge features of the engine. It is also
-the only way for people needing to perform advanced postprocessing of the
-results.
+in order to get the cutting edge features of the engine.
+
+It is the only way for people needing to perform advanced
+postprocessing of the results and/or for people managing large amounts
+of data, i.e. continental scale computations, where exporting the
+results can be extremely slow and can cause out-of-memory issues.
