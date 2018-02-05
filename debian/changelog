@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the task distribution by splitting the AreaSources upfront
+    and by improving the weighting algorithm
   * Removed the obsolete API `/extract/qgis-` and added `extract/hcurves`,
     `extract/hmaps`, `extract/uhs` for use with the QGIS plugin
   * Removed the deprecated GeoJSON exporters
