@@ -29,8 +29,9 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
+from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
-from openquake.risklib.riskinput import GmfGetter
+from openquake.calculators.getters import GmfGetter, PmapGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -47,21 +48,6 @@ Consider canceling the operation and accessing directly %s.'''
 
 # with compression you can save 60% of space by losing only 10% of saving time
 savez = numpy.savez_compressed
-
-
-def get_mesh(sitecol, complete=True):
-    sc = sitecol.complete if complete else sitecol
-    if sc.at_sea_level():
-        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
-        mesh['lon'] = sc.lons
-        mesh['lat'] = sc.lats
-    else:
-        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64),
-                                     ('depth', F64)])
-        mesh['lon'] = sc.lons
-        mesh['lat'] = sc.lats
-        mesh['depth'] = sc.depths
-    return mesh
 
 
 @export.add(('ruptures', 'xml'))
@@ -95,7 +81,7 @@ def export_ruptures_csv(ekey, dstore):
     header = ('rupid multiplicity mag centroid_lon centroid_lat centroid_depth'
               ' trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
-    grp_trt = csm_info.grp_trt()
+    grp_trt = csm_info.grp_by("trt")
     rows = []
     ruptures_by_grp = calc.get_ruptures_by_grp(dstore)
     for grp_id, trt in sorted(grp_trt.items()):
@@ -107,8 +93,9 @@ def export_ruptures_csv(ekey, dstore):
                  trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
     rows.sort()  # by rupture serial
-    writers.write_csv(dest, rows, header=header, sep='\t',
-                      comment='investigation_time=%s' % oq.investigation_time)
+    comment = 'investigation_time=%s, ses_per_logic_tree_path=%s' % (
+        oq.investigation_time, oq.ses_per_logic_tree_path)
+    writers.write_csv(dest, rows, header=header, sep='\t', comment=comment)
     return [dest]
 
 
@@ -354,7 +341,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    for kind, hcurves in calc.PmapGetter(dstore).items(kind):
+    for kind, hcurves in PmapGetter(dstore).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
@@ -406,7 +393,7 @@ def get_metadata(realizations, kind):
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    pgetter = calc.PmapGetter(dstore)
+    pgetter = PmapGetter(dstore)
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
@@ -438,20 +425,16 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@export.add(('hcurves', 'xml'), ('hcurves', 'geojson'))
+@export.add(('hcurves', 'xml'))
 def export_hcurves_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
-    if fmt == 'geojson':
-        logging.warn('The geojson exporters will be removed soon')
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
     sitemesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
-    writercls = (hazard_writers.HazardCurveGeoJSONWriter
-                 if fmt == 'geojson' else
-                 hazard_writers.HazardCurveXMLWriter)
-    for kind, hcurves in calc.PmapGetter(dstore).items(kind):
+    writercls = hazard_writers.HazardCurveXMLWriter
+    for kind, hcurves in PmapGetter(dstore).items(kind):
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
@@ -476,22 +459,18 @@ def export_hcurves_xml_json(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hmaps', 'xml'), ('hmaps', 'geojson'))
+@export.add(('hmaps', 'xml'))
 def export_hmaps_xml_json(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
-    if fmt == 'geojson':
-        logging.warn('The geojson exporters will be removed soon')
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     sitemesh = get_mesh(sitecol)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
-    writercls = (hazard_writers.HazardMapGeoJSONWriter
-                 if fmt == 'geojson' else
-                 hazard_writers.HazardMapXMLWriter)
+    writercls = hazard_writers.HazardMapXMLWriter
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     nsites = len(sitemesh)
-    for kind, hcurves in calc.PmapGetter(dstore).items():
+    for kind, hcurves in PmapGetter(dstore).items():
         hmaps = calc.make_hmap(
             hcurves, oq.imtls, oq.poes).convert(pdic, nsites)
         if kind.startswith('rlz-'):
@@ -526,74 +505,10 @@ def _extract(hmap, imt, j):
     return tup
 
 
-def save_np(fname, dic, mesh, *extras, **kw):
-    """
-    Save a dictionary of arrays as a single .npy file containing a
-    structured array with fields which are they keys of the dictionary,
-    plus lon/lat fields coming from the mesh.
-    The length of the array is assumed to be equal to the length of the
-    mesh. It is also possible to pass extra triples (field, dtype, values)
-    to store additional fields.
-
-    :param fname: .npy or .npz file name
-    :param dic: dictionary of arrays of the same shape
-    :param mesh: a mesh array with lon, lat fields of the same length
-    :param extras: optional triples (field, dtype, values)
-    :param kw: dictionary of parameters (like investigation_time)
-    """
-    arr = dic[next(iter(dic))]
-    dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
-    for field, dtype, values in extras:
-        dtlist.append((str(field), dtype))
-    array = numpy.zeros(arr.shape, dtlist)
-    for field in dic:
-        array[field] = dic[field]
-    for field, dtype, values in extras:
-        array[field] = values
-    if fname.endswith('.npy'):
-        numpy.save(fname, util.compose_arrays(mesh, array))
-    else:  # npz
-        numpy.savez(fname, all=util.compose_arrays(mesh, array), **kw)
-    return [fname]
-
-
-@export.add(('hcurves', 'npz'))
-def export_hcurves_np(ekey, dstore):
-    oq = dstore['oqparam']
-    mesh = get_mesh(dstore['sitecol'])
+@export.add(('hcurves', 'npz'), ('hmaps', 'npz'), ('uhs', 'npz'))
+def export_hazard_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
-    dic = {}
-    for kind, hcurves in calc.PmapGetter(dstore).items():
-        dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
-    save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
-    return [fname]
-
-
-@export.add(('uhs', 'npz'))
-def export_uhs_np(ekey, dstore):
-    oq = dstore['oqparam']
-    mesh = get_mesh(dstore['sitecol'])
-    fname = dstore.export_path('%s.%s' % ekey)
-    dic = {}
-    for kind, hcurves in calc.PmapGetter(dstore).items():
-        dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
-    save_np(fname, dic, mesh, investigation_time=oq.investigation_time)
-    return [fname]
-
-
-@export.add(('hmaps', 'npz'))
-def export_hmaps_np(ekey, dstore):
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    mesh = get_mesh(sitecol)
-    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    fname = dstore.export_path('%s.%s' % ekey)
-    dic = {}
-    for kind, hcurves in calc.PmapGetter(dstore).items():
-        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
-    save_np(fname, dic, mesh, ('vs30', F32, sitecol.vs30),
-            investigation_time=oq.investigation_time)
+    savez(fname, **dict(extract(dstore, ekey[0])))
     return [fname]
 
 

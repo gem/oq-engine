@@ -35,7 +35,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
     UCERFSource, get_composite_source_model)
-# FIXME: the counting of effective ruptures has to be revised completely
+# FIXME: the counting of effective ruptures has to be revised
 
 
 def convert_UCERFSource(self, node):
@@ -155,6 +155,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq = self.oqparam
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        self.nsites = []
         acc = AccumDict({
             grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
             for grp_id, gsims in self.gsims_by_grp.items()})

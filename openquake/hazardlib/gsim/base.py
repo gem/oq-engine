@@ -342,10 +342,11 @@ class ContextMaker(object):
         pne_array = numpy.zeros(
             (len(rupture.sctx.sids), len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
+            dctx = rupture.dctx.roundup(gsim.minimum_distance)
             pnos = []  # list of arrays nsites x nlevels
             for imt in imtls:
                 poes = gsim.get_poes(
-                    rupture.sctx, rupture.rctx, rupture.dctx,
+                    rupture.sctx, rupture.rctx, dctx,
                     imt_module.from_string(imt), imtls[imt], trunclevel)
                 pnos.append(rupture.get_probability_no_exceedance(poes))
             pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
@@ -371,14 +372,15 @@ class ContextMaker(object):
         pne_mon = monitor('disaggregate_pne', measuremem=False)
         for rupture in ruptures:
             with ctx_mon:
-                sctx, rctx, dctx = self.make_contexts(
+                sctx, rctx, orig_dctx = self.make_contexts(
                     sitecol, rupture, filter=False)
             if (self.maximum_distance and
-                dctx.rjb.min() > self.maximum_distance(
+                orig_dctx.rjb.min() > self.maximum_distance(
                     rupture.tectonic_region_type, rupture.mag)):
                 continue  # rupture away from all sites
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
+                dctx = orig_dctx.roundup(gsim.minimum_distance)
                 for m, imt in enumerate(iml4.imts):
                     for p, poe in enumerate(iml4.poes_disagg):
                         iml = tuple(iml4.array[:, r, m, p])
@@ -491,6 +493,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
+
+    minimum_distance = 0  # can be set by the engine
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -910,6 +914,24 @@ class DistancesContext(BaseContext):
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
                'azimuth', 'hanging_wall', 'rvolc')
+
+    def roundup(self, minimum_distance):
+        """
+        If the minimum_distance is nonzero, returns a copy of the
+        DistancesContext with updated distances, i.e. the ones below
+        minimum_distance are rounded up to the minimum_distance. Otherwise,
+        returns the original DistancesContext unchanged.
+        """
+        if not minimum_distance:
+            return self
+        ctx = DistancesContext()
+        for dist, array in vars(self).items():
+            small_distances = array < minimum_distance
+            if small_distances.any():
+                array = array[:]  # make a copy first
+                array[small_distances] = minimum_distance
+            setattr(ctx, dist, array)
+        return ctx
 
 
 class RuptureContext(BaseContext):

@@ -22,7 +22,7 @@ import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
 from openquake.hazardlib.probability_map import combine
-from openquake.commonlib import calc
+from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
@@ -62,8 +62,7 @@ class DisaggregationTestCase(CalculatorTestCase):
             fmt='csv')
 
         # disaggregation by source group
-        pgetter = calc.PmapGetter(self.calc.datastore)
-        pgetter.init()
+        pgetter = getters.PmapGetter(self.calc.datastore)
         pmaps = []
         for grp in sorted(pgetter.dstore['poes']):
             pmaps.append(pgetter.get_mean(grp))

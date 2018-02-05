@@ -33,6 +33,7 @@ except ImportError:
     import urlparse
 import re
 import numpy
+import psutil
 
 from xml.parsers.expat import ExpatError
 from django.http import (
@@ -319,12 +320,22 @@ def calc_list(request, id=None):
                            allowed_users, user['acl_on'], id)
 
     response_data = []
-    for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
+    for hc_id, owner, status, calculation_mode, is_running, desc, pid \
+            in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
+        abortable = False
+        if is_running:
+            try:
+                if (psutil.Process(pid).username() ==
+                        psutil.Process(os.getpid()).username()):
+                    abortable = True
+            except psutil.NoSuchProcess:
+                pass
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
-                 is_running=bool(is_running), description=desc, url=url))
+                 is_running=bool(is_running), description=desc, url=url,
+                 abortable=abortable))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -342,8 +353,12 @@ def calc_abort(request, calc_id):
     Abort the given calculation, it is it running
     """
     job = logs.dbcmd('get_job', calc_id)
-    message = {'error': 'Job %s is not running' % job.id}
-    if job is None or job.status not in ('executing', 'running'):
+    if job is None:
+        message = {'error': 'Unknown job %s' % calc_id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    if job.status not in ('executing', 'running'):
+        message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
     user = utils.get_user_data(request)
@@ -661,10 +676,11 @@ def extract(request, calc_id, what):
         fd, fname = tempfile.mkstemp(
             prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
-        extra = ['%s=%s' % item for item in request.GET.items()]
-        obj = _extract(ds, what, *extra)
+        n = len(request.path_info)
+        query_string = request.get_full_path()[n:]
+        obj = _extract(ds, what + query_string)
         if inspect.isgenerator(obj):
-            array, attrs = None, {k: _array(v) for k, v in obj}
+            array, attrs = 0, {k: _array(v) for k, v in obj}
         elif hasattr(obj, '__toh5__'):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array

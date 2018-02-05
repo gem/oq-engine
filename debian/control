@@ -8,13 +8,35 @@ Homepage: http://github.com/gem/oq-engine
 
 Package: python-oq-engine
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-oq-libs (>=1.5.0~), rabbitmq-server (>=2.8.0-2~gem02), supervisor (>=3.0b2-1~)
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-oq-libs (>=1.5.0~), supervisor (>=3.0b2-1~)
 Conflicts: python-noq, python-oq, python-nhlib
 Replaces: python-oq-risklib, python-oq-hazardlib
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
 Breaks: python-oq-risklib, python-oq-hazardlib
 Recommends: ${dist:Recommends}
 Suggests: python-oq-libs-extra (>= 1.5.0~)
+Description: computes seismic hazard and physical risk
+ based on the hazard and risk libraries developed by the GEM foundation
+ (http://www.globalquakemodel.org/)
+
+Package: python-oq-engine-master
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, rabbitmq-server (>=2.8.0-2~gem02), python-oq-engine (= ${binary:Version})
+Replaces: python-oq-risklib, python-oq-hazardlib
+# See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
+Breaks: python-oq-risklib, python-oq-hazardlib
+Recommends: ${dist:Recommends}
+Description: computes seismic hazard and physical risk
+ based on the hazard and risk libraries developed by the GEM foundation
+ (http://www.globalquakemodel.org/)
+
+Package: python-oq-engine-worker
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, supervisor (>=3.0b2-1~), python-oq-engine (= ${binary:Version})
+Replaces: python-oq-risklib, python-oq-hazardlib
+# See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
+Breaks: python-oq-risklib, python-oq-hazardlib
+Recommends: ${dist:Recommends}
 Description: computes seismic hazard and physical risk
  based on the hazard and risk libraries developed by the GEM foundation
  (http://www.globalquakemodel.org/)
