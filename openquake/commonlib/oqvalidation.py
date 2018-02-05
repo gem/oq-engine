@@ -203,7 +203,10 @@ class OqParam(valid.ParamSet):
             self.check_gsims([self.gsim])
 
         self.check_source_model()
-        self.check_site_model()
+        if self.hazard_precomputed():
+            self.check_missing('site_model')
+            self.check_missing('gsim_logic_tree')
+            self.check_missing('source_model_logic_tree')
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -638,9 +641,18 @@ class OqParam(valid.ParamSet):
                              'or missing --hc option' %
                              self.inputs.get('job_ini', 'job_ini'))
 
-    def check_site_model(self):
-        if (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs or
-            'hazard_curves' in self.inputs) and 'site_model' in self.inputs:
+    def check_missing(self, param):
+        """
+        Make sure the given parameter is missing in the job.ini file
+        """
+        if param in self.inputs:
             raise InvalidFile(
-                'Please remove site_model_file from %s, it makes no sense '
-                'in %s' % (self.inputs['job_ini'], self.calculation_mode))
+                'Please remove %s_file from %s, it makes no sense in %s' %
+                (param, self.inputs['job_ini'], self.calculation_mode))
+
+    def hazard_precomputed(self):
+        """
+        :returns: True if the hazard is precomputed
+        """
+        return (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs
+                or 'hazard_curves' in self.inputs)
