@@ -646,9 +646,9 @@ class OqParam(valid.ParamSet):
         Make sure the given parameter is missing in the job.ini file
         """
         if param in self.inputs:
-            raise InvalidFile(
-                'Please remove %s_file from %s, it makes no sense in %s' %
-                (param, self.inputs['job_ini'], self.calculation_mode))
+            logging.warn(
+                'Please remove %s_file from %s, it makes no sense in %s',
+                param, self.inputs['job_ini'], self.calculation_mode)
 
     def hazard_precomputed(self):
         """
