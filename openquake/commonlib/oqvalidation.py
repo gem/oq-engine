@@ -179,8 +179,14 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         self._file_type, self._risk_files = get_risk_files(self.inputs)
 
+        self.check_source_model()
+        if self.hazard_precomputed():
+            self.check_missing('site_model', 'error')
+            self.check_missing('gsim_logic_tree', 'error')
+            self.check_missing('source_model_logic_tree', 'error')
+
         # check the gsim_logic_tree
-        if 'gsim_logic_tree' in self.inputs:
+        if self.inputs.get('gsim_logic_tree'):
             if self.gsim:
                 raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
                                   ' must be no `gsim` key' % job_ini)
@@ -201,12 +207,6 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
-
-        self.check_source_model()
-        if self.hazard_precomputed():
-            self.check_missing('site_model', 'error')
-            self.check_missing('gsim_logic_tree', 'warn')
-            self.check_missing('source_model_logic_tree', 'warn')
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -507,7 +507,8 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if 'source_model_logic_tree' not in self.inputs:
+        if (not self.inputs.get('source_model_logic_tree') or not
+                self.inputs.get('gsim_logic_tree')):
             return True  # don't apply validation
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
@@ -646,7 +647,7 @@ class OqParam(valid.ParamSet):
         Make sure the given parameter is missing in the job.ini file
         """
         assert action in ('warn', 'error'), action
-        if param in self.inputs:
+        if self.inputs.get(param):
             msg = 'Please remove %s_file from %s, it makes no sense in %s' % (
                 param, self.inputs['job_ini'], self.calculation_mode)
             if action == 'error':
