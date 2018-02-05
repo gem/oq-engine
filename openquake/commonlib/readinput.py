@@ -110,12 +110,14 @@ def extract_from_zip(path, candidates):
             if os.path.basename(f) in candidates]
 
 
-def get_params(job_inis):
+def get_params(job_inis, **inputs):
     """
     Parse one or more INI-style config files.
 
     :param job_inis:
         List of configuration files (or list containing a single zip archive)
+    :param inputs:
+        Optionally override some parameters in params['inputs']
     :returns:
         A dictionary of parameters
     """
@@ -145,6 +147,7 @@ def get_params(job_inis):
                 params['inputs'][input_type] = path
             else:
                 params[key] = value
+    params['inputs'].update(inputs)  # override on demand
 
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
@@ -1208,7 +1211,9 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if key == 'source':  # list of fnames and/or strings
+        if not fname:
+            continue
+        elif key == 'source':  # list of fnames and/or strings
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff
