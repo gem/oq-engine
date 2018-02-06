@@ -865,12 +865,11 @@ class Exposure(object):
         for cost in costs:
             with context(param['fname'], cost):
                 cost_type = cost['type']
+                if cost_type == 'structural':
+                    # retrofitted is defined only for structural
+                    retrofitted = cost.get('retrofitted')
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = cost['value']
-                    retrofitted = cost.get('retrofitted')
-                    if retrofitted is not None:
-                        # retrofitted is defined only for structural
-                        assert cost_type == 'structural', cost_type
                     if param['insured_losses']:
                         deductibles[cost_type] = cost['deductible']
                         insurance_limits[cost_type] = cost['insuranceLimit']
