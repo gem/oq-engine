@@ -36,7 +36,7 @@ class YuEtAl2013TibetTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013Tibet
 
     def test_mean(self):
-        self.check('YU2013/yu_2013_mean_tibet.csv',
+        self.check('YU2013/yu_2013_mean_tibetan.csv',
                    max_discrep_percentage=0.4)
 
 
@@ -52,5 +52,5 @@ class YuEtAl2013StableTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013Stable
 
     def test_mean(self):
-        self.check('YU2013/yu_2013_mean_eastern.csv',
+        self.check('YU2013/yu_2013_mean_stable.csv',
                    max_discrep_percentage=0.4)
