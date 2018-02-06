@@ -81,6 +81,15 @@ class ProbabilityCurve(object):
     def __nonzero__(self):
         return bool(self.array.any())
 
+    def __getstate__(self):
+        idxs = self.array.nonzero()
+        return idxs, self.array[idxs], self.array.shape
+
+    def __setstate__(self, state):
+        idxs, values, shape = state
+        self.array = numpy.zeros(shape)
+        self.array[idxs] = values
+
     def __repr__(self):
         return '<ProbabilityCurve\n%s>' % self.array
 
