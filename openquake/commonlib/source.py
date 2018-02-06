@@ -702,7 +702,7 @@ class CompositeSourceModel(collections.Sequence):
                          for src in sg.sources)
         return new
 
-    def filter(self, src_filter):
+    def filter(self, src_filter):  # called once per tile
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
@@ -719,7 +719,8 @@ class CompositeSourceModel(collections.Sequence):
                 self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
-                    if hasattr(src, '__iter__'):  # MultiPointSource
+                    if hasattr(src, '__iter__'):  # MultiPoint, AreaSource
+                        # NB: source.split_source is cached
                         sources.extend(source.split_source(src))
                     else:
                         sources.append(src)

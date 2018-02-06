@@ -56,7 +56,7 @@ the engine manages all the realizations at once.
 from __future__ import division
 import time
 import operator
-
+import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, groupby, AccumDict
@@ -90,7 +90,8 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
         ctx_mon = monitor('make_contexts', measuremem=False)
         poe_mon = monitor('get_poes', measuremem=False)
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        calc_times = []  # pairs (src_id, delta_t)
+        # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
+        calc_times = AccumDict(accum=numpy.zeros(4))
         for src, s_sites in src_filter(srcs):
             t0 = time.time()
             poemap = cmaker.poe_map(
@@ -100,8 +101,9 @@ def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
             for sid in poemap:
                 pcurve = pmap.setdefault(sid, 0)
                 pcurve += poemap[sid] * weight
-            calc_times.append(
-                (src.source_id, src.weight, len(s_sites), time.time() - t0))
+            src_id = src.source_id.split(':', 1)[0]
+            calc_times[src_id] += numpy.array(
+                [src.weight, len(s_sites), time.time() - t0, 1])
         if group.grp_probability is not None:
             pmap *= group.grp_probability
         acc = AccumDict({group.id: pmap})
@@ -134,7 +136,8 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
         poe_mon = monitor('get_poes', measuremem=False)
         pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                           for grp_id in grp_ids})
-        pmap.calc_times = []  # pairs (src_id, delta_t)
+        # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
+        pmap.calc_times = AccumDict(accum=numpy.zeros(4))
         pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
         for src, s_sites in src_filter(srcs):  # filter now
             t0 = time.time()
@@ -143,8 +146,9 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
             if poemap:
                 for grp_id in src.src_group_ids:
                     pmap[grp_id] |= poemap
-            pmap.calc_times.append(
-                (src.source_id, src.weight, len(s_sites), time.time() - t0))
+            src_id = src.source_id.split(':', 1)[0]
+            pmap.calc_times[src_id] += numpy.array(
+                [src.weight, len(s_sites), time.time() - t0, 1])
             # storing the number of contributing ruptures too
             pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
                                   for grp_id in src.src_group_ids}
