@@ -65,7 +65,7 @@ export_dir = %s
         """ % (site_model_input, TMP))
         with self.assertRaises(ValueError) as ctx:
             readinput.get_params([job_config])
-        self.assertIn('not a relative path', str(ctx.exception))
+        self.assertIn('is an absolute path', str(ctx.exception))
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
@@ -401,8 +401,8 @@ class ExposureTestCase(unittest.TestCase):
         exp, _assets = readinput._get_exposure(
             self.exposure, ['structural'], stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
-        self.assertTrue(exp.insurance_limit_is_absolute)
-        self.assertTrue(exp.deductible_is_absolute)
+        self.assertIsNone(exp.insurance_limit_is_absolute)
+        self.assertIsNone(exp.deductible_is_absolute)
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
                          [('structural', 'per_asset', 'USD')])
 
