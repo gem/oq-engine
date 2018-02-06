@@ -110,26 +110,26 @@ def extract_from_zip(path, candidates):
             if os.path.basename(f) in candidates]
 
 
-def _update(params, items, job_ini):
-    base_path = decode(os.path.dirname(job_ini))
+def _update(params, items, base_path):
     for key, value in items:
         if key.endswith(('_file', '_csv')):
-            assert_relpath(value, job_ini)
+            if os.path.isabs(value):
+                raise ValueError('%s=%s is an absolute path' % (key, value))
             input_type, _ext = key.rsplit('_', 1)
-            path = os.path.join(base_path, value)
-            params['inputs'][input_type] = path
+            params['inputs'][input_type] = (
+                os.path.join(base_path, value) if value else '')
         else:
             params[key] = value
 
 
-def get_params(job_inis, **inputs):
+def get_params(job_inis, **kw):
     """
     Parse one or more INI-style config files.
 
     :param job_inis:
         List of configuration files (or list containing a single zip archive)
-    :param inputs:
-        Optionally override some parameters in params['inputs']
+    :param kw:
+        Optionally override some parameters
     :returns:
         A dictionary of parameters
     """
@@ -151,8 +151,8 @@ def get_params(job_inis, **inputs):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
-        _update(params, cp.items(sect), job_ini)
-    _update(params, inputs.items(), job_ini)  # override on demand
+        _update(params, cp.items(sect), base_path)
+    _update(params, kw.items(), base_path)  # override on demand
 
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
