@@ -293,7 +293,6 @@ class ClassicalBCR(RiskModel):
                 self.interest_rate, self.asset_life_expectancy,
                 asset.value(loss_type), asset.retrofitted())
             for i, asset in enumerate(assets)]
-
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
 

@@ -541,7 +541,7 @@ class AssetCollection(object):
                     elif field == 'occupants':
                         value = asset.values[the_occupants]
                     elif field == 'retrofitted':
-                        value = asset.retrofitted()
+                        value = asset._retrofitted
                     elif field in tagnames:
                         value = asset.tagidxs[tagi[field]]
                     else:
