@@ -19,6 +19,7 @@
 
 import os
 import csv
+import codecs
 from openquake.baselib import sap, performance
 from openquake.hazardlib import nrml
 from openquake.commonlib import readinput
@@ -32,33 +33,47 @@ def expo2csv(job_ini):
     oq = readinput.get_oqparam(job_ini)
     exposure = readinput.get_exposure(oq)
     rows = []
-    header = ['asset_ref', 'number', 'area', 'taxonomy', 'lon', 'lat']
+    header = ['id', 'lon', 'lat', 'number']
+    area = exposure.area['type'] != '?'
+    if area:
+        header.append('area')
     for costname in exposure.cost_types['name']:
         if costname != 'occupants':
             header.append(costname)
-            header.append(costname + '-deductible')
-            header.append(costname + '-insured_limit')
+            if exposure.deductible_is_absolute is not None:
+                header.append(costname + '-deductible')
+            if exposure.insurance_limit_is_absolute is not None:
+                header.append(costname + '-insured_limit')
+    if exposure.retrofitted:
+        header.append('retrofitted')
     header.extend(exposure.occupancy_periods)
-    header.extend(exposure.tagnames)
+    header.extend(exposure.tagcol.tagnames)
     for asset, asset_ref in zip(exposure.assets, exposure.asset_refs):
-        row = [asset_ref.decode('utf8'), asset.number, asset.area,
-               asset.taxonomy, asset.location[0], asset.location[1]]
+        row = [asset_ref.decode('utf8'), asset.location[0], asset.location[1],
+               asset.number]
+        if area:
+            row.append(asset.area)
         for costname in exposure.cost_types['name']:
             if costname != 'occupants':
                 row.append(asset.values[costname])
-                row.append(asset.deductibles.get(costname, '?'))
-                row.append(asset.insurance_limits.get(costname, '?'))
+                if exposure.deductible_is_absolute is not None:
+                    row.append(asset.deductibles[costname])
+                if exposure.insurance_limit_is_absolute is not None:
+                    row.append(asset.insurance_limits[costname])
+        if exposure.retrofitted:
+            row.append(asset._retrofitted)
         for time_event in exposure.occupancy_periods:
             row.append(asset.value(time_event))
-        for tagname, tagidx in zip(exposure.tagnames, asset.tagidxs):
-            row.append(tagidx)
+        for tagname, tagidx in zip(exposure.tagcol.tagnames, asset.tagidxs):
+            tags = getattr(exposure.tagcol, tagname)
+            row.append(tags[tagidx])
         rows.append(row)
 
     with performance.Monitor('expo2csv') as mon:
         # save exposure data as csv
         csvname = oq.inputs['exposure'].replace('.xml', '.csv')
         print('Saving %s' % csvname)
-        with open(csvname, 'w') as f:
+        with codecs.open(csvname, 'wb', encoding='utf8') as f:
             writer = csv.writer(f)
             writer.writerow(header)
             for row in rows:
