@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2016 GEM Foundation, Chung-Han Chan
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 """
 Module exports :class:`yu2013`.
 """
-
 from __future__ import division
 from __future__ import print_function
 
@@ -31,12 +30,10 @@ from scipy.optimize import minimize
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.geo import geodetic
 
 
 def rbf(ra, C, mag):
-    """
-    Compute equivalent distance
-    """
 
     if mag > 6.5:
         a1ca = C['ua']
@@ -60,7 +57,7 @@ def rbf(ra, C, mag):
         a2cc = C['mc']
         a2cd = C['md']
         a2ce = C['me']
-    #
+
     term1 = a1ca + a1cb * mag + a1cc * np.log(ra + a1cd*np.exp(a1ce*mag))
     term2 = a2ca + a2cb * mag
     term3 = a2cd*np.exp(a2ce*mag)
@@ -69,12 +66,13 @@ def rbf(ra, C, mag):
 
 def fnc(ra, *args):
     """
-    Compute equivalent distance
     """
     repi = args[0]
     theta = args[1]
     mag = args[2]
+    imt = args[3]
     C = args[4]
+
     rb = rbf(ra, C, mag)
     t1 = ra**2 * (np.sin(np.radians(theta)))**2
     t2 = rb**2 * (np.cos(np.radians(theta)))**2
@@ -87,32 +85,41 @@ class YuEtAl2013(GMPE):
     Add description
     """
 
-    #: Supported tectonic region type is active shallow crust
+    #: Supported tectonic region type is subduction interface along the
+    #: Sumatra subduction zone.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
-    #: Supported intensity measure types are peak ground velocity and
-    #: peak ground acceleration
+    #: Supported intensity measure types are spectral acceleration,
+    #: peak ground velocity and peak ground acceleration, see table IV
+    #: pag. 837
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
-        PGV
+        PGV,
+        SA
     ])
 
     #: Supported intensity measure component is geometric mean
-    # TODO
+    #: of two horizontal components,
+    #####: PLEASE CONFIRM!!!!! 140709
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    #: Supported standard deviation types is total
+    #: Supported standard deviation types is total, see equation IV page 837.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL
     ])
 
-    #: No site parameters required
+    #: Required site parameter is only Vs30 (used to distinguish rock
+    #: and deep soil).
+    #: This GMPE is for very hard rock site condition,
+    #: see the abstract page 827.
     REQUIRES_SITES_PARAMETERS = set(())
 
-    #: Required rupture parameter is magnitude
+    #: Required rupture parameters are magnitude, and focal depth, see
+    #: equation 10 page 226.
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
-    #: Required distance measure is epicentral distance and azimuth
+    #: Required distance measure is epicentral distance,
+    #: see equation 1 page 834.
     REQUIRES_DISTANCES = set(('repi', 'azimuth'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -150,9 +157,10 @@ class YuEtAl2013(GMPE):
                 a2ce = C['me']
 
             # Compute the mean value (i.e. natural logarithm of ground motion)
-            mag = rup.mag
+            mag = rup.mag                     
             epi = dists.repi
             theta = dists.azimuth
+            #imt = PGA()
             #
             #
             ras = []
@@ -160,19 +168,28 @@ class YuEtAl2013(GMPE):
                 res = minimize(fnc, epi, args=(epi, theta, mag, imt, C),
                                method='Nelder-Mead', tol=0.1)
                 ras.append(res.x[0])
+            #imt = PGA()
+            #
+            #
             ras = np.array(ras)
             rbs = rbf(ras, C, mag)
-            #
-            #
-            tmp = np.log((ras**2+225.)**0.5 + a1cd * np.exp(a1ce * mag))
-            mean1 = a1ca + a1cb * mag + a1cc * tmp
-            tmp = np.log((ras**2+225.)**0.5 + a2cd * np.exp(a2ce * mag))
-            mean2 = a2ca + a2cb * mag + a2cc * tmp
+
+            # Convert acceleration from gals into fraction of g
+            #idx = np.nonzero(ras < 15)
+            #mean = np.zeros_like(rbs)
+            #if len(idx):
+            #    mean[idx] = a1ca + a1cb * mag + a1cc * np.log10(15 + a1cd * np.exp(a1ce * mag))
+            #idx = np.nonzero(ras >= 15)
+            #if len(idx):
+            #    mean[idx] = a1ca + a1cb * mag + a1cc * np.log10(ras[idx] + a1cd * np.exp(a1ce * mag))
+
+            mean1 = a1ca + a1cb * mag + a1cc * np.log((ras**2+225)**0.5+ a1cd * np.exp(a1ce * mag))
+            mean2 = a2ca + a2cb * mag + a2cc * np.log((rbs**2+225)**0.5+ a2cd * np.exp(a2ce * mag))
             x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
             y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
             mean = mean1 * mean2 / np.sqrt(x+y)
-            if isinstance(imt, (PGA, SA)):
-                mean = np.exp(mean)/g/100.
+            if isinstance(imt, (PGA, PGV)):
+                mean = np.exp(mean)/g/100
             #
             # Get the standard deviation
             stddevs = self._compute_std(C, stddev_types, len(dists.repi))
@@ -187,32 +204,40 @@ class YuEtAl2013(GMPE):
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 4.1193 1.656 -2.389 1.772 0.424 7.8269 1.0856 -2.389 1.772 0.424 2.2609 1.6399 -2.118 0.825 0.465 6.003 1.0649 -2.118 0.825 0.465 0.5428
 PGV -1.2581 1.932 -2.181 1.772 0.424 3.013 1.2742 -2.181 1.772 0.424 -3.1073 1.9389 -1.945 0.825 0.465 1.3087 1.2627 -1.945 0.825 0.465 0.6233
+
+
         """)
 
-
 class YuEtAl2013Tibet(YuEtAl2013):
+
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-IMT	a	b	c	d	e	ua	ub	uc	ud	ue	ma	mb	mc	md	me	ia	ib	ic	id	ie	sigma
-PGA	5.4901	1.4835	-2.416	2.647	0.366	8.7561	0.9453	-2.416	2.647	0.366	2.3069	1.4007	-1.854	0.612	0.457	5.6511	0.8924	-1.854	0.612	0.457	0.5428
-PGV	-0.1472	1.7618	-2.205	2.647	0.366	3.9422	1.1293	-2.205	2.647	0.366	-2.9923	1.7043	-1.696	0.612	0.457	1.0189	1.0902	-1.696	0.612	0.457	0.6233
+IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
+PGA 5.4901 1.4835 -2.416 2.647 0.366 8.7561 0.9453 -2.416 2.647 0.366 2.3069 1.4007 -1.854 0.612 0.457 5.6511 0.8924 -1.854 0.612 0.457 0.5428
+PGV -0.1472 1.7618 -2.205 2.647 0.366 3.9422 1.1293 -2.205 2.647 0.366 -2.9923 1.7043 -1.696 0.612 0.457 1.0189 1.0902 -1.696 0.612 0.457 0.6233
+
+
      """)
 
 
 class YuEtAl2013Eastern(YuEtAl2013):
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-    COEFFS = CoeffsTable(sa_damping=5, table="""\
-IMT	a	b	c	d	e	ua	ub	uc	ud	ue	ma	mb	mc	md	me	ia	ib	ic	id	ie	sigma
-PGA	4.5517	1.5433	-2.315	2.088	0.399	8.1259	0.9936	-2.315	2.088	0.399	2.7048	1.518	-2.004	0.944	0.447	6.3319	0.9614	-2.004	0.944	0.447	0.5428
-PGV	-0.8349	1.8193	-2.103	2.088	0.399	3.3051	1.1799	-2.103	2.088	0.399	-2.6381	1.8124	-1.825	0.944	0.447	1.6376	1.1546	-1.825	0.944	0.447	0.6233
+     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+     COEFFS = CoeffsTable(sa_damping=5, table="""\
+IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
+PGA 4.5517 1.5433 -2.315 2.088 0.399 8.1259 0.9936 -2.315 2.088 0.399 2.7048 1.518 -2.004 0.944 0.447 6.3319 0.9614 -2.004 0.944 0.447 0.5428
+PGV -0.8349 1.8193 -2.103 2.088 0.399 3.3051 1.1799 -2.103 2.088 0.399 -2.6381 1.8124 -1.825 0.944 0.447 1.6376 1.1546 -1.825 0.944 0.447 0.6233
+
+
      """)
 
 
 class YuEtAl2013Stable(YuEtAl2013):
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
-    #: Coefficient table for rock sites, see table 3 page 227.
-    COEFFS = CoeffsTable(sa_damping=5, table="""\
+     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
+     #: Coefficient table for rock sites, see table 3 page 227.
+     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 5.5591 1.1454 -2.079 2.802 0.295 8.5238 0.6854 -2.079 2.802 0.295 3.9445 1.0833 -1.723 1.295 0.331 6.187 0.7383 -1.723 1.295 0.331 0.5428
 PGV 0.2139 1.4283 -1.889 2.802 0.295 3.772 0.8786 -1.889 2.802 0.295 -1.3547 1.3823 -1.559 1.295 0.331 1.5433 0.9361 -1.559 1.295 0.331 0.6233
+
+
      """)
