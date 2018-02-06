@@ -118,6 +118,7 @@ python-oq-engine (2.8.0-0~precise01) precise; urgency=low
   * Implemented subclasses for ZhaoEtAl2006Asc and AtkinsonBoore2006 to account
     for the distance filter used by SGS in their PSHA model for Saudi Arabia.
     Distance threshold is hard coded to 5km in this implementation.
+
   [Michele Simionato]
   * Added a warning if the aggregated probability of exceedence (poe_agg) in
     a disaggregation output is very dissimilar from poes_disagg
