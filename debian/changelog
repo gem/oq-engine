@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Improved the task distribution by splitting the AreaSources upfront
+    and by improving the weighting algorithm
+
   [Daniele Viganò]
   * Updated dependencies compatibility in setup.py
 
