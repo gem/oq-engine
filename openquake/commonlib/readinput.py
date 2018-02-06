@@ -824,7 +824,7 @@ class Exposure(object):
         values = {}
         deductibles = {}
         insurance_limits = {}
-        retrofitteds = {}
+        retrofitted = None
         asset_id = asset_node['id'].encode('utf8')
         with context(param['fname'], asset_node):
             self.asset_refs.append(asset_id)
@@ -867,9 +867,10 @@ class Exposure(object):
                 cost_type = cost['type']
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = cost['value']
-                    retrovalue = cost.get('retrofitted')
-                    if retrovalue is not None:
-                        retrofitteds[cost_type] = retrovalue
+                    retrofitted = cost.get('retrofitted')
+                    if retrofitted is not None:
+                        # retrofitted is defined only for structural
+                        assert cost_type == 'structural', cost_type
                     if param['insured_losses']:
                         deductibles[cost_type] = cost['deductible']
                         insurance_limits[cost_type] = cost['insuranceLimit']
@@ -898,7 +899,7 @@ class Exposure(object):
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset_node.get('area', 1))
         ass = asset.Asset(idx, idxs, number, location, values, area,
-                          deductibles, insurance_limits, retrofitteds,
+                          deductibles, insurance_limits, retrofitted,
                           self.cost_calculator)
         self.assets.append(ass)
 
