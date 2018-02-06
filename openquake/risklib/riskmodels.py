@@ -267,6 +267,8 @@ class ClassicalBCR(RiskModel):
         :param _eids: dummy parameter, unused
         :returns: a list of triples (eal_orig, eal_retro, bcr_result)
         """
+        if loss_type != 'structural':
+            raise NotImplemented('retrofitted is not defined for ' + loss_type)
         n = len(assets)
         self.assets = assets
         vf = self.risk_functions[loss_type]
@@ -289,7 +291,7 @@ class ClassicalBCR(RiskModel):
             scientific.bcr(
                 eal_original[i], eal_retrofitted[i],
                 self.interest_rate, self.asset_life_expectancy,
-                asset.value(loss_type), asset.retrofitted(loss_type))
+                asset.value(loss_type), asset.retrofitted())
             for i, asset in enumerate(assets)]
 
         return list(zip(eal_original, eal_retrofitted, bcr_results))
