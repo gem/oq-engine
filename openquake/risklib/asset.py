@@ -143,7 +143,7 @@ class Asset(object):
         :param dict insurance_limits:
             insured limits values (expressed as a percentage relative to
             the value of the asset) keyed by loss types
-        :param dict retrofitted:
+        :param retrofitted:
             asset retrofitted value
         :param calc:
             cost calculator instance
