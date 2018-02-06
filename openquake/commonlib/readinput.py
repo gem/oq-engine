@@ -110,6 +110,18 @@ def extract_from_zip(path, candidates):
             if os.path.basename(f) in candidates]
 
 
+def _update(params, items, job_ini):
+    base_path = decode(os.path.dirname(job_ini))
+    for key, value in items:
+        if key.endswith(('_file', '_csv')):
+            assert_relpath(value, job_ini)
+            input_type, _ext = key.rsplit('_', 1)
+            path = os.path.join(base_path, value)
+            params['inputs'][input_type] = path
+        else:
+            params[key] = value
+
+
 def get_params(job_inis, **inputs):
     """
     Parse one or more INI-style config files.
@@ -139,15 +151,8 @@ def get_params(job_inis, **inputs):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
-        for key, value in cp.items(sect):
-            if key.endswith(('_file', '_csv')):
-                assert_relpath(value, job_ini)
-                input_type, _ext = key.rsplit('_', 1)
-                path = os.path.join(base_path, value)
-                params['inputs'][input_type] = path
-            else:
-                params[key] = value
-    params['inputs'].update(inputs)  # override on demand
+        _update(params, cp.items(sect), job_ini)
+    _update(params, inputs.items(), job_ini)  # override on demand
 
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
@@ -653,20 +658,35 @@ def _get_exposure(fname, ok_cost_types, stop=None):
 
     # read the cost types and make some check
     cost_types = []
+    retrofitted = False
     for ct in conversions.costTypes:
         if not ok_cost_types or ct['name'] in ok_cost_types:
             with context(fname, ct):
+                ctname = ct['name']
+                if ctname == 'structural' and 'retrofittedType' in ct.attrib:
+                    if ct['retrofittedType'] != ct['type']:
+                        raise ValueError(
+                            'The retrofittedType %s is different from the type'
+                            '%s' % (ct['retrofittedType'], ct['type']))
+                    if ct['retrofittedUnit'] != ct['unit']:
+                        raise ValueError(
+                            'The retrofittedUnit %s is different from the unit'
+                            '%s' % (ct['retrofittedUnit'], ct['unit']))
+                    retrofitted = True
                 cost_types.append(
-                    (ct['name'], valid.cost_type_type(ct['type']), ct['unit']))
+                    (ctname, valid.cost_type_type(ct['type']), ct['unit']))
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
-    insurance_limit_is_absolute = inslimit.get('isAbsolute', True)
-    deductible_is_absolute = deductible.get('isAbsolute', True)
-    tagi = {name: i for i, name in enumerate(tagnames)}
+    insurance_limit_is_absolute = il = inslimit.get('isAbsolute')
+    deductible_is_absolute = de = deductible.get('isAbsolute')
     cc = asset.CostCalculator(
-        {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute, tagi)
+        {}, {}, {},
+        True if de is None else de,
+        True if il is None else il,
+        {name: i for i, name in enumerate(tagnames)},
+    )
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
@@ -677,7 +697,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, occupancy_periods.split(),
-        insurance_limit_is_absolute, deductible_is_absolute,
+        insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
         area.attrib, assets, asset_refs, cc, asset.TagCollection(tagnames))
     return exp, exposure.assets
 
@@ -713,7 +733,8 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'insurance_limit_is_absolute',
-              'deductible_is_absolute', 'area', 'assets', 'asset_refs',
+              'deductible_is_absolute', 'retrofitted',
+              'area', 'assets', 'asset_refs',
               'cost_calculator', 'tagcol']
 
     @classmethod

@@ -508,7 +508,7 @@ class AssetCollection(object):
         limit_d = first_asset.insurance_limits or {}
         deductibles = ['deductible-%s' % name for name in deductible_d]
         limits = ['insurance_limit-%s' % name for name in limit_d]
-        retro = ['retrofitted'] if first_asset.retrofitted else []
+        retro = ['retrofitted'] if first_asset._retrofitted else []
         float_fields = loss_types + deductibles + limits + retro
         int_fields = [(str(name), U16) for name in tagnames]
         tagi = {str(name): i for i, name in enumerate(tagnames)}
