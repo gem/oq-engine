@@ -18,6 +18,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <costType name="structural" retrofittedType="per_asset" retrofittedUnit="USD" type="per_asset" unit="USD"/>
             </costTypes>
         </conversions>
+        <occupancyPeriods/>
         <assets>
             
             <asset
