@@ -320,6 +320,12 @@ hazard_uhs-mean.csv
         [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
+        # extracting hmaps
+        hmaps = dict(extract(self.calc.datastore, 'hmaps'))['all']['mean']
+        self.assertEqual(
+            hmaps.dtype.names,
+            ('PGA-0.002105', 'SA(0.2)-0.002105', 'SA(1.0)-0.002105'))
+
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
         self.assert_curves_ok([
