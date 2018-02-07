@@ -27,7 +27,7 @@ import sys
 import mock
 import time
 import operator
-
+import numpy
 from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
@@ -49,16 +49,17 @@ def count_ruptures(sources, srcfilter, gsims, param, monitor):
     dic = groupby(sources, operator.attrgetter('src_group_id'))
     acc = AccumDict({grp_id: {} for grp_id in dic})
     acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = []
+    acc.calc_times = AccumDict(accum=numpy.zeros(4))
     for grp_id in dic:
         for src in sources:
             t0 = time.time()
+            src_id = src.source_id.split(':')[0]
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 acc.eff_ruptures[grp_id] += src.num_ruptures
                 dt = time.time() - t0
-                acc.calc_times.append(
-                    (src.source_id, len(sites), src.weight, dt))
+                acc.calc_times[src_id] += numpy.array(
+                    [src.weight, len(sites), dt, 1])
     return acc
 
 

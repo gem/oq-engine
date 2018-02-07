@@ -208,7 +208,7 @@ class PSHACalculator(base.HazardCalculator):
             for trt, sources in csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
                 for block in csm.split_in_blocks(maxweight, sources):
-                    yield block, csm.src_filter, gsims, param, monitor
+                    yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)

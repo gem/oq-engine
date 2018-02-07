@@ -128,9 +128,11 @@ node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
+default = sourceconverter.SourceConverter()
+
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
-def get_source_model_04(node, fname, converter):
+def get_source_model_04(node, fname, converter=default):
     sources = []
     source_ids = set()
     converter.fname = fname
@@ -150,7 +152,7 @@ def get_source_model_04(node, fname, converter):
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
-def get_source_model_05(node, fname, converter):
+def get_source_model_05(node, fname, converter=default):
     converter.fname = fname
     groups = []  # expect a sequence of sourceGroup nodes
     for src_group in node:
