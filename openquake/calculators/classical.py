@@ -26,7 +26,7 @@ from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import (
-    pmap_from_grp, pmap_from_trt, ProbabilityMap)
+    pmap_from, pmap_from, ProbabilityMap)
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -91,9 +91,9 @@ def classical(sources, src_filter, gsims, param, monitor):
     :returns: a dictionary grp_id -> ProbabilityMap
     """
     if getattr(sources, 'src_interdep', None) == 'mutex':
-        return pmap_from_grp(sources, src_filter, gsims, param, monitor)
+        return pmap_from(sources, src_filter, gsims, param, monitor)
     else:
-        return pmap_from_trt(sources, src_filter, gsims, param, monitor)
+        return pmap_from(sources, src_filter, gsims, param, monitor)
 
 
 @base.calculators.add('psha')
