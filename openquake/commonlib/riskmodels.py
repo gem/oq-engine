@@ -100,7 +100,7 @@ def get_risk_models(oqparam, kind=None):
         if mo:
             key_type = mo.group(1)  # the cost_type in the key
             # can be occupants, structural, nonstructural, ...
-            rmodel = nrml.convert(oqparam.inputs[key])
+            rmodel = nrml.to_python(oqparam.inputs[key])
             rmodels[key_type] = rmodel
             if rmodel.lossCategory is None:  # NRML 0.4
                 continue
