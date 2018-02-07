@@ -83,14 +83,20 @@ class ProbabilityCurve(object):
 
     def __getstate__(self):
         array = self.array.reshape(-1)
-        idxs = array.nonzero()
-        return idxs, array[idxs], self.array.shape
+        idxs, = array.nonzero()
+        if idxs.any():
+            return idxs, array[idxs], self.array.shape
+        else:
+            return None, self.array, None
 
     def __setstate__(self, state):
         idxs, values, shape = state
-        array = numpy.zeros(numpy.prod(shape))
-        array[idxs] = values
-        self.array = array.reshape(shape)
+        if idxs is None:  # got the full array
+            self.array = values
+        else:  # got indices, values and shape
+            array = numpy.zeros(numpy.prod(shape))
+            array[idxs] = values
+            self.array = array.reshape(shape)
 
     def __repr__(self):
         return '<ProbabilityCurve\n%s>' % self.array
