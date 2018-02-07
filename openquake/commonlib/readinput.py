@@ -110,12 +110,14 @@ def extract_from_zip(path, candidates):
             if os.path.basename(f) in candidates]
 
 
-def get_params(job_inis):
+def get_params(job_inis, **inputs):
     """
     Parse one or more INI-style config files.
 
     :param job_inis:
         List of configuration files (or list containing a single zip archive)
+    :param inputs:
+        Optionally override some parameters in params['inputs']
     :returns:
         A dictionary of parameters
     """
@@ -145,6 +147,7 @@ def get_params(job_inis):
                 params['inputs'][input_type] = path
             else:
                 params[key] = value
+    params['inputs'].update(inputs)  # override on demand
 
     # populate the 'source' list
     inputs = params['inputs']
@@ -854,8 +857,6 @@ class Exposure(object):
                 return
             tagnode = getattr(asset_node, 'tags', None)
             dic = {} if tagnode is None else tagnode.attrib.copy()
-            # fill missing tagvalues with "?" and raise an error for
-            # unknown tagnames
             with context(param['fname'], tagnode):
                 dic['taxonomy'] = taxonomy
                 idxs = self.tagcol.add_tags(dic)
@@ -905,8 +906,6 @@ class Exposure(object):
         ass = asset.Asset(idx, idxs, number, location, values, area,
                           deductibles, insurance_limits, retrofitteds,
                           self.cost_calculator)
-        if not idxs:
-            import pdb; pdb.set_trace()
         self.assets.append(ass)
 
 
@@ -1218,7 +1217,9 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if key == 'source':  # list of fnames and/or strings
+        if not fname:
+            continue
+        elif key == 'source':  # list of fnames and/or strings
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff
