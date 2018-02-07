@@ -431,7 +431,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     # consider only the effective realizations
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
-        for name in sm.name.split():
+        for name in sm.names.split():
             fname = os.path.abspath(os.path.join(oqparam.base_path, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
