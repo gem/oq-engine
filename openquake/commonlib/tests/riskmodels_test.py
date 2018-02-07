@@ -66,7 +66,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>
 """)
-        vfs = nrml.convert(vuln_content)
+        vfs = nrml.to_python(vuln_content)
         assert_almost_equal(vfs['PGA', 'RC/A'].imls,
                             numpy.array([0.005, 0.007, 0.0098, 0.0137]))
         assert_almost_equal(vfs['PGA', 'RC/B'].imls,
@@ -108,7 +108,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(InvalidFile) as ar:
-            nrml.convert(vuln_content)
+            nrml.to_python(vuln_content)
         self.assertIn('Duplicated vulnerabilityFunctionID: A',
                       str(ar.exception))
 
@@ -135,7 +135,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(ValueError) as ar:
-            nrml.convert(vuln_content)
+            nrml.to_python(vuln_content)
         self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
                       'corresponding coeff. of variation > 0.0',
                       str(ar.exception))
@@ -161,7 +161,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
     </fragilityModel>
 </nrml>""")
         with self.assertRaises(KeyError) as ar:
-            nrml.convert(vuln_content)
+            nrml.to_python(vuln_content)
         self.assertIn("node IML: 'minIML', line 9", str(ar.exception))
 
     def test_missing_maxIML(self):
@@ -185,7 +185,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
     </fragilityModel>
 </nrml>""")
         with self.assertRaises(KeyError) as ar:
-            nrml.convert(vuln_content)
+            nrml.to_python(vuln_content)
         self.assertIn("node IML: 'maxIML', line 9", str(ar.exception))
 
 
@@ -245,7 +245,7 @@ lossCategory="contents">
 
     def test_ok(self):
         fname = os.path.join(EXAMPLES_DIR, 'consequence-model.xml')
-        cmodel = nrml.convert(fname)
+        cmodel = nrml.to_python(fname)
         self.assertEqual(
             repr(cmodel),
             "<ConsequenceModel structural ds1, ds2, ds3, ds4 tax1>")
@@ -278,18 +278,18 @@ lossCategory="contents">
     def test_wrong_files(self):
         # missing lossCategory
         with self.assertRaises(KeyError) as ctx:
-            nrml.convert(self.wrong_csq_model_1)
+            nrml.to_python(self.wrong_csq_model_1)
         self.assertIn("node consequenceModel: 'lossCategory', line 3",
                       str(ctx.exception))
 
         # missing loss state
         with self.assertRaises(ValueError) as ctx:
-            nrml.convert(self.wrong_csq_model_2)
+            nrml.to_python(self.wrong_csq_model_2)
         self.assertIn("node consequenceFunction: Expected 4 limit"
                       " states, got 3, line 9", str(ctx.exception))
 
         # inverted loss states
         with self.assertRaises(ValueError) as ctx:
-            nrml.convert(self.wrong_csq_model_3)
+            nrml.to_python(self.wrong_csq_model_3)
         self.assertIn("node params: Expected 'ds3', got 'ds4', line 12",
                       str(ctx.exception))
