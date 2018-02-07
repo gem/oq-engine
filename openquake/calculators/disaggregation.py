@@ -201,6 +201,8 @@ producing too small PoEs.'''
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
                                   use_rtree=False)
         csm = self.csm.filter(src_filter)  # fine filtering
+        if not csm.get_sources():
+            raise RuntimeError('All sources were filtered away!')
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
 

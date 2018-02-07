@@ -60,7 +60,13 @@ class SourceModel(object):
     """
     def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
                  samples):
-        self.name = name
+        names = name.split()  # space separated sequence of xml file names
+        if len(names) == 1:
+            self.name = names[0]
+        elif len(names) == 2:
+            self.name = ' '.join(names)
+        else:
+            self.name = ' '.join([names[0], '...', names[-1]])
         self.weight = weight
         self.path = path
         self.src_groups = src_groups
