@@ -149,7 +149,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                                          data)
         src.src_group_id = [0]
         group = SourceGroup(
-            src.tectonic_region_type, [src], 'test', 'indep', 'mutex')
+            src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
         param = dict(imtls=self.imtls)
         crv = classical(group, self.sites, gsim_by_trt, param)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
