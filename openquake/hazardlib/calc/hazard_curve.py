@@ -69,7 +69,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 
 
-def pmap_from(group, src_filter, gsims, param, monitor=Monitor()):
+def classical(group, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -80,7 +80,7 @@ def pmap_from(group, src_filter, gsims, param, monitor=Monitor()):
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
         .eff_ruptures
     """
-    if hasattr(group, 'srcs_weights'):
+    if getattr(group, 'src_interdep', None) == 'mutex':
         mutex_weight = {src.source_id: weight for src, weight in
                         zip(group.sources, group.srcs_weights)}
     else:
@@ -182,10 +182,10 @@ def calc_hazard_curves(
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     for group in groups:
         if group.src_interdep == 'mutex':  # do not split the group
-            it = [pmap_from(group, ss_filter, [gsim], param)]
-        else:  # split the group and apply `pmap_from` in parallel
+            it = [classical(group, ss_filter, [gsim], param)]
+        else:  # split the group and apply `classical` in parallel
             it = apply(
-                pmap_from, (group, ss_filter, [gsim], param),
+                classical, (group, ss_filter, [gsim], param),
                 weight=operator.attrgetter('weight'))
         for res in it:
             for grp_id in res:
