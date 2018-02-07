@@ -1035,15 +1035,15 @@ def get_pmap(oqparam):
     """
     fname = oqparam.inputs['hazard_curves']
     if fname.endswith('.csv'):
-        return get_pmap_from_csv(oqparam, fname)
+        return get_classical_csv(oqparam, fname)
     elif fname.endswith('.xml'):
-        return get_pmap_from_nrml(oqparam, fname)
+        return get_classical_nrml(oqparam, fname)
     else:
         raise NotImplementedError('Reading from %s' % fname)
 
 
 @deprecated('Reading hazard curves from CSV may change in the future')
-def get_pmap_from_csv(oqparam, fname):
+def get_classical_csv(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -1069,7 +1069,7 @@ def get_pmap_from_csv(oqparam, fname):
     return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
 
 
-def get_pmap_from_nrml(oqparam, fname):
+def get_classical_nrml(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
