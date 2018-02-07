@@ -97,7 +97,7 @@ def upgrade_file(path, multipoint):
             nodes=[obj_to_node(val) for val in vf_dict.values()])
         gml = False
     elif tag == 'fragilityModel':
-        node0 = read_nrml.convert_fragility_model_04(
+        node0 = read_nrml.to_python_fragility_model_04(
             nrml.read(path)[0], path)
         gml = False
     elif tag == 'sourceModel':
