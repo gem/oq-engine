@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.yu_2013 import (YuEtAl2013, YuEtAl2013Tibet,
-                                              YuEtAl2013Eastern,
-                                              YuEtAl2013Stable)
+from openquake.hazardlib.gsim.yu_2013 import (YuEtAl2013Ms, YuEtAl2013MsTibet,
+                                              YuEtAl2013MsEastern,
+                                              YuEtAl2013MsStable)
 
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class YuEtAl2013ActiveTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = YuEtAl2013
+    GSIM_CLASS = YuEtAl2013Ms
 
     def test_mean(self):
         self.check('YU2013/yu_2013_mean_active.csv',
@@ -37,7 +37,7 @@ class YuEtAl2013ActiveTestCase(BaseGSIMTestCase):
 
 
 class YuEtAl2013TibetTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = YuEtAl2013Tibet
+    GSIM_CLASS = YuEtAl2013MsTibet
 
     def test_mean(self):
         self.check('YU2013/yu_2013_mean_tibetan.csv',
@@ -49,7 +49,7 @@ class YuEtAl2013TibetTestCase(BaseGSIMTestCase):
 
 
 class YuEtAl2013EasternTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = YuEtAl2013Eastern
+    GSIM_CLASS = YuEtAl2013MsEastern
 
     def test_mean(self):
         self.check('YU2013/yu_2013_mean_eastern.csv',
@@ -61,7 +61,7 @@ class YuEtAl2013EasternTestCase(BaseGSIMTestCase):
 
 
 class YuEtAl2013StableTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = YuEtAl2013Stable
+    GSIM_CLASS = YuEtAl2013MsStable
 
     def test_mean(self):
         self.check('YU2013/yu_2013_mean_stable.csv',
