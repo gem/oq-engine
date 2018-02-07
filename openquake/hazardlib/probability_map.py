@@ -15,8 +15,9 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib.python3compat import zip
+import math
 import numpy
+from openquake.baselib.python3compat import zip
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -84,9 +85,11 @@ class ProbabilityCurve(object):
     def __getstate__(self):
         array = self.array.reshape(-1)
         idxs, = array.nonzero()
-        if idxs.any():
+        if len(idxs) < math.ceil(len(array) / 2):
+            # use the compression only if most elements are zero
             return idxs, array[idxs], self.array.shape
         else:
+            # return the full array
             return None, self.array, None
 
     def __setstate__(self, state):
