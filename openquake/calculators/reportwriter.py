@@ -26,7 +26,6 @@ import os
 import sys
 import mock
 import time
-import operator
 import numpy
 from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
@@ -46,7 +45,7 @@ def count_ruptures(sources, srcfilter, gsims, param, monitor):
     src_group_id -> {}.
     All sources must belong to the same tectonic region type.
     """
-    dic = groupby(sources, operator.attrgetter('src_group_id'))
+    dic = groupby(sources, lambda src: src.src_group_ids[0])
     acc = AccumDict({grp_id: {} for grp_id in dic})
     acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
     acc.calc_times = AccumDict(accum=numpy.zeros(4))
