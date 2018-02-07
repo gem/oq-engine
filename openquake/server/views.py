@@ -255,7 +255,7 @@ def validate_nrml(request):
             'Please provide the "xml_text" parameter')
     xml_file = writetmp(xml_text, suffix='.xml')
     try:
-        nrml.convert(xml_file)
+        nrml.to_python(xml_file)
     except ExpatError as exc:
         return _make_response(error_msg=str(exc),
                               error_line=exc.lineno,
