@@ -116,7 +116,7 @@ class Asset(object):
     """
     def __init__(self,
                  asset_id,
-                 tagvalues,
+                 tagidxs,
                  number,
                  location,
                  values,
@@ -129,7 +129,7 @@ class Asset(object):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
-        :param tagvalues:
+        :param tagidxs:
             a list of indices for the taxonomy and other tags
         :param number:
             number of apartments of number of people in the given asset
@@ -151,7 +151,7 @@ class Asset(object):
             asset collection ordinal
         """
         self.idx = asset_id
-        self.tagvalues = tagvalues
+        self.tagidxs = tagidxs
         self.number = number
         self.location = location
         self.values = values
@@ -184,7 +184,7 @@ class Asset(object):
         """
         :returns: the tagvalue associated to the given tagname
         """
-        return self.tagvalues[self.calc.tagi[tagname]]
+        return self.tagidxs[self.calc.tagi[tagname]]
 
     def deductible(self, loss_type):
         """
@@ -247,8 +247,19 @@ by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class TagCollection(object):
+    """
+    An iterable collection of tags in the form "tagname=tagvalue".
+
+    :param tagnames: a list of tagnames starting with 'taxonomy'
+
+    The collection has a couple of attributes for each tagname,
+    starting with .taxonomy (a list of taxonomies) and .taxonomy_idx
+    (a dictionary taxonomy -> integer index).
+    """
     def __init__(self, tagnames):
         assert tagnames[0] == 'taxonomy', tagnames
+        assert len(tagnames) == len(set(tagnames)), (
+            'The tagnames %s contain duplicates' % tagnames)
         self.tagnames = tagnames
         for tagname in self.tagnames:
             setattr(self, tagname + '_idx', {'?': 0})
@@ -268,6 +279,11 @@ class TagCollection(object):
             return idx
 
     def add_tags(self, dic):
+        """
+        :param dic: a dictionary tagname -> tagvalue
+        :returns: a list of tag indices, one per tagname
+        """
+        # fill missing tagvalues with "?", raise an error for unknown tagnames
         idxs = []
         for tagname in self.tagnames:
             try:
@@ -285,18 +301,18 @@ class TagCollection(object):
                 'specified in the exposure' % ', '.join(dic))
         return idxs
 
-    def get_tag(self, tagname, idx):
-        return '%s=%s' % (tagname, decode(getattr(self, tagname)[idx]))
+    def get_tag(self, tagname, tagidx):
+        """
+        :returns: the tag associated to the given tagname and tag index
+        """
+        return '%s=%s' % (tagname, decode(getattr(self, tagname)[tagidx]))
 
     def gen_tags(self, tagname):
+        """
+        :yields: the tags associated to the given tagname
+        """
         for tagvalue in getattr(self, tagname):
             yield '%s=%s' % (tagname, decode(tagvalue))
-
-    def taxonomies(self):
-        lst = [None] * len(self.taxonomy_idx)
-        for taxo, idx in self.taxonomy_idx.items():
-            lst[idx] = taxo
-        return lst
 
     def __toh5__(self):
         dic = {}
@@ -360,7 +376,7 @@ class AssetCollection(object):
         ordinal = dict(zip(self.array['idx'], range(len(self.array))))
         aids_by_tag = general.AccumDict(accum=set())
         for ass in self:
-            for tagname, tagidx in zip(self.tagnames, ass.tagvalues):
+            for tagname, tagidx in zip(self.tagnames, ass.tagidxs):
                 tag = self.tagcol.get_tag(tagname, tagidx)
                 aids_by_tag[tag].add(ordinal[ass.idx])
         return aids_by_tag
@@ -528,7 +544,7 @@ class AssetCollection(object):
                     elif field == 'occupants':
                         value = asset.values[the_occupants]
                     elif field in tagnames:
-                        value = asset.tagvalues[tagi[field]]
+                        value = asset.tagidxs[tagi[field]]
                     else:
                         try:
                             name, lt = field.split('-')
