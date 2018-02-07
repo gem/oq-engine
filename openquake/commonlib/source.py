@@ -32,6 +32,7 @@ from openquake.baselib.general import (
     groupby, group_array, block_splitter, writetmp, AccumDict)
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
+from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.commonlib import logictree
 
 
@@ -450,20 +451,11 @@ class CompositionInfo(object):
         vars(self).update(attrs)
         self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
+            # otherwise it would look in the current directory
+            GMPETable.GMPE_DIR = os.path.dirname(self.gsim_fname)
             trts = sorted(self.trts)
-            if 'gmpe_table' in self.gsim_lt_xml:
-                # the canadian gsims depends on external files which are not
-                # in the datastore; I am storing the path to the original
-                # file so that the external files can be found; unfortunately,
-                # this means that copying the datastore on a different machine
-                # and exporting from there works only if the gsim_fname and all
-                # the external files are copied in the exact same place
-                self.gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
-            else:
-                # regular case: read the logic tree from self.gsim_lt_xml,
-                # so that you do not need to copy anything except the datastore
-                tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
-                self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
+            tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
+            self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
         else:  # fake file with the name of the GSIM
             self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
         self.source_models = []
