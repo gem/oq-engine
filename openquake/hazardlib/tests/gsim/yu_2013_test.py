@@ -31,6 +31,10 @@ class YuEtAl2013ActiveTestCase(BaseGSIMTestCase):
         self.check('YU2013/yu_2013_mean_active.csv',
                    max_discrep_percentage=0.4)
 
+    def test_std_total(self):
+        self.check('YU2013/yu_2013_stddev_active.csv',
+                   max_discrep_percentage=0.1)
+
 
 class YuEtAl2013TibetTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013Tibet
@@ -38,6 +42,10 @@ class YuEtAl2013TibetTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('YU2013/yu_2013_mean_tibetan.csv',
                    max_discrep_percentage=0.4)
+
+    def test_std_total(self):
+        self.check('YU2013/yu_2013_stddev_tibetan.csv',
+                   max_discrep_percentage=0.1)
 
 
 class YuEtAl2013EasternTestCase(BaseGSIMTestCase):
@@ -47,6 +55,10 @@ class YuEtAl2013EasternTestCase(BaseGSIMTestCase):
         self.check('YU2013/yu_2013_mean_eastern.csv',
                    max_discrep_percentage=0.4)
 
+    def test_std_total(self):
+        self.check('YU2013/yu_2013_stddev_eastern.csv',
+                   max_discrep_percentage=0.1)
+
 
 class YuEtAl2013StableTestCase(BaseGSIMTestCase):
     GSIM_CLASS = YuEtAl2013Stable
@@ -54,3 +66,7 @@ class YuEtAl2013StableTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('YU2013/yu_2013_mean_stable.csv',
                    max_discrep_percentage=0.4)
+
+    def test_std_total(self):
+        self.check('YU2013/yu_2013_stddev_stable.csv',
+                   max_discrep_percentage=0.1)
