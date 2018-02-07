@@ -36,7 +36,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 def rbf(ra, coeff, mag):
     """
-    Set the coefficients depending on the magnitude of the modelled rupture
+    Calculate ground motion
     """
     if mag > 6.5:
         a1ca = coeff['ua']
@@ -70,10 +70,20 @@ def fnc(ra, *args):
     """
     Find the rupture to site distance
     """
+    #
+    # epicentral distance
     repi = args[0]
+    #
+    # azimuth
     theta = args[1]
+    #
+    # magnitude
     mag = args[2]
+    #
+    # coefficients
     coeff = args[3]
+    #
+    #
     rb = rbf(ra, coeff, mag)
     t1 = ra**2 * (np.sin(np.radians(theta)))**2
     t2 = rb**2 * (np.cos(np.radians(theta)))**2
@@ -182,8 +192,12 @@ class YuEtAl2013(GMPE):
             x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
             y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
             mean = mean1 * mean2 / np.sqrt(x+y)
-            if isinstance(imt, (PGA, PGV)):
+            if isinstance(imt, (PGA)):
                 mean = np.exp(mean)/g/100
+            elif isinstance(imt, (PGV)):
+                mean = np.exp(mean)
+            else:
+                raise ValueError('Unsupported IMT')
             #
             # Get the standard deviation
             stddevs = self._compute_std(C, stddev_types, len(dists.repi))
@@ -208,8 +222,6 @@ class YuEtAl2013Tibet(YuEtAl2013):
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 5.4901 1.4835 -2.416 2.647 0.366 8.7561 0.9453 -2.416 2.647 0.366 2.3069 1.4007 -1.854 0.612 0.457 5.6511 0.8924 -1.854 0.612 0.457 0.5428
 PGV -0.1472 1.7618 -2.205 2.647 0.366 3.9422 1.1293 -2.205 2.647 0.366 -2.9923 1.7043 -1.696 0.612 0.457 1.0189 1.0902 -1.696 0.612 0.457 0.6233
-
-
      """)
 
 
@@ -219,8 +231,6 @@ class YuEtAl2013Eastern(YuEtAl2013):
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 4.5517 1.5433 -2.315 2.088 0.399 8.1259 0.9936 -2.315 2.088 0.399 2.7048 1.518 -2.004 0.944 0.447 6.3319 0.9614 -2.004 0.944 0.447 0.5428
 PGV -0.8349 1.8193 -2.103 2.088 0.399 3.3051 1.1799 -2.103 2.088 0.399 -2.6381 1.8124 -1.825 0.944 0.447 1.6376 1.1546 -1.825 0.944 0.447 0.6233
-
-
      """)
 
 
@@ -231,6 +241,4 @@ class YuEtAl2013Stable(YuEtAl2013):
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 5.5591 1.1454 -2.079 2.802 0.295 8.5238 0.6854 -2.079 2.802 0.295 3.9445 1.0833 -1.723 1.295 0.331 6.187 0.7383 -1.723 1.295 0.331 0.5428
 PGV 0.2139 1.4283 -1.889 2.802 0.295 3.772 0.8786 -1.889 2.802 0.295 -1.3547 1.3823 -1.559 1.295 0.331 1.5433 0.9361 -1.559 1.295 0.331 0.6233
-
-
      """)
