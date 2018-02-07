@@ -91,46 +91,39 @@ def fnc(ra, *args):
     return abs(repi-xx)
 
 
-class YuEtAl2013(GMPE):
+class YuEtAl2013Ms(GMPE):
     """
-    Add description
+    Implements the Yu et al. (2013) GMPE used for the calculation of the 2015
+    version of the national seismic hazard maps for China. Note that magnitude
+    supported for the original version is Ms
     """
 
-    #: Supported tectonic region type is subduction interface along the
-    #: Sumatra subduction zone.
+    #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
-    #: Supported intensity measure types are spectral acceleration,
-    #: peak ground velocity and peak ground acceleration, see table IV
-    #: pag. 837
+    #: Supported intensity measure types are peak ground velocity and
+    #: peak ground acceleration
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
         SA
     ])
 
-    #: Supported intensity measure component is geometric mean
-    #: of two horizontal components,
-    #####: PLEASE CONFIRM!!!!! 140709
+    #: Supported intensity measure component is geometric mean (supposed)
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    #: Supported standard deviation types is total, see equation IV page 837.
+    #: Supported standard deviation types is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL
     ])
 
-    #: Required site parameter is only Vs30 (used to distinguish rock
-    #: and deep soil).
-    #: This GMPE is for very hard rock site condition,
-    #: see the abstract page 827.
+    #: No site parameters required
     REQUIRES_SITES_PARAMETERS = set(())
 
-    #: Required rupture parameters are magnitude, and focal depth, see
-    #: equation 10 page 226.
+    #: Required rupture parameter is magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
-    #: Required distance measure is epicentral distance,
-    #: see equation 1 page 834.
+    #: Required distance measures are epicentral distance and azimuth
     REQUIRES_DISTANCES = set(('repi', 'azimuth'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -208,16 +201,18 @@ class YuEtAl2013(GMPE):
     def _compute_std(self, C, stddev_types, num_sites):
         return [np.ones(num_sites)*C['sigma']]
 
-    #: Coefficient table for rock sites, see table 3 page 227.
+    #: Coefficient table
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 4.1193 1.656 -2.389 1.772 0.424 7.8269 1.0856 -2.389 1.772 0.424 2.2609 1.6399 -2.118 0.825 0.465 6.003 1.0649 -2.118 0.825 0.465 0.5428
 PGV -1.2581 1.932 -2.181 1.772 0.424 3.013 1.2742 -2.181 1.772 0.424 -3.1073 1.9389 -1.945 0.825 0.465 1.3087 1.2627 -1.945 0.825 0.465 0.6233
         """)
 
-class YuEtAl2013Tibet(YuEtAl2013):
 
+class YuEtAl2013MsTibet(YuEtAl2013Ms):
+    #: Supported tectonic region type is Tibetan plateau
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+    #: Coefficient table
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 5.4901 1.4835 -2.416 2.647 0.366 8.7561 0.9453 -2.416 2.647 0.366 2.3069 1.4007 -1.854 0.612 0.457 5.6511 0.8924 -1.854 0.612 0.457 0.5428
@@ -225,19 +220,22 @@ PGV -0.1472 1.7618 -2.205 2.647 0.366 3.9422 1.1293 -2.205 2.647 0.366 -2.9923 1
      """)
 
 
-class YuEtAl2013Eastern(YuEtAl2013):
-     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-     COEFFS = CoeffsTable(sa_damping=5, table="""\
+class YuEtAl2013MsEastern(YuEtAl2013Ms):
+    #: Supported tectonic region type is eastern part of China
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
+    #: Coefficient table
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 4.5517 1.5433 -2.315 2.088 0.399 8.1259 0.9936 -2.315 2.088 0.399 2.7048 1.518 -2.004 0.944 0.447 6.3319 0.9614 -2.004 0.944 0.447 0.5428
 PGV -0.8349 1.8193 -2.103 2.088 0.399 3.3051 1.1799 -2.103 2.088 0.399 -2.6381 1.8124 -1.825 0.944 0.447 1.6376 1.1546 -1.825 0.944 0.447 0.6233
      """)
 
 
-class YuEtAl2013Stable(YuEtAl2013):
-     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
-     #: Coefficient table for rock sites, see table 3 page 227.
-     COEFFS = CoeffsTable(sa_damping=5, table="""\
+class YuEtAl2013MsStable(YuEtAl2013Ms):
+    #: Supported tectonic region type is stable part of China
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
+    #: Coefficient table
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT a b c d e ua ub uc ud ue ma mb mc md me ia ib ic id ie sigma
 PGA 5.5591 1.1454 -2.079 2.802 0.295 8.5238 0.6854 -2.079 2.802 0.295 3.9445 1.0833 -1.723 1.295 0.331 6.187 0.7383 -1.723 1.295 0.331 0.5428
 PGV 0.2139 1.4283 -1.889 2.802 0.295 3.772 0.8786 -1.889 2.802 0.295 -1.3547 1.3823 -1.559 1.295 0.331 1.5433 0.9361 -1.559 1.295 0.331 0.6233
