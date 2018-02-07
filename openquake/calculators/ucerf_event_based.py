@@ -749,7 +749,7 @@ def get_composite_source_model(oq):
         sg = copy.copy(src_group)
         sg.id = sm.ordinal
         sm.src_groups = [sg]
-        sg.sources = [sg[0].new(sm.ordinal, sm.name)]
+        sg.sources = [sg[0].new(sm.ordinal, sm.names)]
         source_models.append(sm)
     return source.CompositeSourceModel(gsim_lt, smlt, source_models)
 
