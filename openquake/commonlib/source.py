@@ -451,7 +451,7 @@ class CompositionInfo(object):
         vars(self).update(attrs)
         self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
-            # really hackish
+            # otherwise it would look in the current directory
             GMPETable.GMPE_DIR = os.path.dirname(self.gsim_fname)
             trts = sorted(self.trts)
             tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
