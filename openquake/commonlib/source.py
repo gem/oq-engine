@@ -32,6 +32,7 @@ from openquake.baselib.general import (
     groupby, group_array, block_splitter, writetmp, AccumDict)
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
+from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.commonlib import logictree
 
 
@@ -450,6 +451,8 @@ class CompositionInfo(object):
         vars(self).update(attrs)
         self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
+            # really hackish
+            GMPETable.GMPE_DIR = os.path.dirname(self.gsim_fname)
             trts = sorted(self.trts)
             tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
             self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
