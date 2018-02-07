@@ -20,19 +20,19 @@ import time
 import logging
 from datetime import datetime
 import numpy
-import h5py
 
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc.hazard_curve import pmap_from
+from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import valid
 from openquake.commonlib import source, readinput, util
 from openquake.hazardlib.sourceconverter import SourceConverter
 
-from openquake.calculators import base, classical
+from openquake.calculators import base
+from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 from openquake.calculators.ucerf_event_based import (
     UCERFSource, get_composite_source_model)
 # FIXME: the counting of effective ruptures has to be revised
@@ -129,7 +129,7 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
 
 
 @base.calculators.add('ucerf_psha')
-class UcerfPSHACalculator(classical.PSHACalculator):
+class UcerfPSHACalculator(PSHACalculator):
     """
     UCERF classical calculator.
     """
@@ -185,7 +185,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.src_filter, gsims, param, monitor)
             bg_res = parallel.Starmap.apply(
-                pmap_from, args, name='background_sources_%d' % grp_id,
+                classical, args, name='background_sources_%d' % grp_id,
                 concurrent_tasks=ct2).submit_all()
 
             # parallelize by rupture subsets
@@ -207,5 +207,5 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
 
 @base.calculators.add('ucerf_classical')
-class UCERFClassicalCalculator(classical.ClassicalCalculator):
+class UCERFClassicalCalculator(ClassicalCalculator):
     pre_calculator = 'ucerf_psha'
