@@ -635,8 +635,7 @@ def view_task(token, dstore):
     i = int(token.split(':')[1])
     taskno, weight, duration = data[i]
     arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
-    st = [stats('nsites', arr['nsites']),
-          stats('weight', arr['weight'])]
+    st = [stats('nsites', arr['nsites']), stats('weight', arr['weight'])]
     sources = dstore['task_info/task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
     res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (

@@ -724,8 +724,9 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         serial += 1
     res.num_events = event_based.set_eids(ebruptures)
     res[src.src_group_id] = ebruptures
-    res.calc_times[src.src_group_id] = (
-        src.source_id, len(sitecol), time.time() - t0)
+    res.calc_times[src.src_group_id] = {
+        src.source_id:
+        numpy.array([src.weight, len(sitecol), time.time() - t0, 1])}
     if not param['save_ruptures']:
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
@@ -897,7 +898,7 @@ class UCERFRiskCalculator(EbriskCalculator):
                        correl_model, min_iml, monitor)
 
     def execute(self):
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm_info.grp_by("trt")
         res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
