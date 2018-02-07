@@ -83,7 +83,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import CallableDict, groupby
+from openquake.baselib.general import CallableDict, groupby, deprecated
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -110,13 +110,15 @@ def get_tag_version(nrml_node):
     return tag, version
 
 
-def parse(fname, *args):
+def convert(fname, *args):
     """
     Parse a NRML file and return an associated Python object. It works by
     calling nrml.read() and node_to_obj() in sequence.
     """
     [node] = read(fname)
     return node_to_obj(node, fname, *args)
+
+parse = deprecated('Use nrml.convert instead')(convert)
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
@@ -295,7 +297,7 @@ class SourceModelParser(object):
             the full pathname of the source model file
         """
         try:
-            return parse(fname, self.converter)
+            return convert(fname, self.converter)
         except ValueError as e:
             err = str(e)
             e1 = 'Surface does not conform with Aki & Richards convention'
@@ -357,7 +359,7 @@ def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None):
         read(output)  # validate the written file
 
 
-def convert(node):
+def to_nrml(node):
     """
     Convert a node into a string in NRML format
     """

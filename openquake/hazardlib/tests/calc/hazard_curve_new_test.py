@@ -191,7 +191,7 @@ class NankaiTestCase(unittest.TestCase):
     # use a source model for the Nankai region provided by M. Pagani
     def test(self):
         source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
-        groups = nrml.parse(source_model, SourceConverter(
+        groups = nrml.convert(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(135.68, 35.68), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
@@ -207,7 +207,7 @@ class MultiPointTestCase(unittest.TestCase):
     def test(self):
         d = os.path.dirname(os.path.dirname(__file__))
         source_model = os.path.join(d, 'source_model/multi-point-source.xml')
-        groups = nrml.parse(source_model, SourceConverter(
+        groups = nrml.convert(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(0.1, 0.1), 800, True, z1pt0=100., z2pt5=1.)
         sitecol = SiteCollection([site])

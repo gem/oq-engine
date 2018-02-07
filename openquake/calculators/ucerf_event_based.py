@@ -739,7 +739,7 @@ def get_composite_source_model(oq):
     :param oq: :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns: a `class:`openquake.commonlib.source.CompositeSourceModel`
     """
-    [src_group] = nrml.parse(
+    [src_group] = nrml.convert(
         oq.inputs["source_model"],
         SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
     source_models = []
