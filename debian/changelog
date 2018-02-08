@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Deprecated `nrml.parse`, it is now called `nrml.to_python`
   * Improved the task distribution by splitting the AreaSources upfront
     and by improving the weighting algorithm
 
