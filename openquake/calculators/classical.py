@@ -22,7 +22,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import (
@@ -39,7 +39,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
 
-
+grp_name_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr)])
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
@@ -223,16 +223,20 @@ class PSHACalculator(base.HazardCalculator):
         """
         grp_trt = self.csm.info.grp_by("trt")
         grp_name = self.csm.info.grp_by("name")
+        data = []
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     fix_ones(pmap)  # avoid saving PoEs == 1
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=grp_trt[grp_id],
-                                             name=str(grp_name[grp_id]))
+                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
+                    data.append((grp_id, grp_name[grp_id]))
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
+                if self.oqparam.disagg_by_src:
+                    self.datastore['disagg_by_src/assoc'] = numpy.array(
+                        data, grp_name_dt)
 
 
 def fix_ones(pmap):
