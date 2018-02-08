@@ -64,16 +64,6 @@ class DuplicatedPoint(Exception):
     """
 
 
-def assert_relpath(name, fname):
-    """
-    Make sure the given name is a relative path.
-
-    :param name: a path name
-    :param fname: the file where the path is listed
-    """
-    if os.path.relpath(name) != os.path.normpath(name):
-        raise ValueError('%s is not a relative path [in %s]' % (name, fname))
-
 
 def collect_files(dirpath, cond=lambda fullname: True):
     """
@@ -141,7 +131,9 @@ def get_params(job_inis, **inputs):
     for sect in cp.sections():
         for key, value in cp.items(sect):
             if key.endswith(('_file', '_csv')):
-                assert_relpath(value, job_ini)
+                if os.path.isabs(value):
+                    raise InvalidFile('%s: %s must be a relative path' %
+                                      (job_ini, value))
                 input_type, _ext = key.rsplit('_', 1)
                 path = os.path.join(base_path, value)
                 params['inputs'][input_type] = path
@@ -161,7 +153,9 @@ def _get_paths(base_path, smlt):
     # extract the path names for the source models listed in the smlt file
     for model in source.collect_source_model_paths(smlt):
         for name in model.split():
-            assert_relpath(name, smlt)
+            if os.path.isabs(name):
+                raise InvalidFile('%s: %s must be a relative path' %
+                                  (smlt, name))
             fname = os.path.abspath(os.path.join(base_path, name))
             if os.path.exists(fname):  # consider only real paths
                 yield fname
