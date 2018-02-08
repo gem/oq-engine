@@ -39,7 +39,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
 
-grp_name_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr)])
+grp_name_dt = numpy.dtype([('grp_id', U16), ('source_name', hdf5.vstr)])
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
@@ -235,7 +235,7 @@ class PSHACalculator(base.HazardCalculator):
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
                 if self.oqparam.disagg_by_src:
-                    self.datastore['disagg_by_src/assoc'] = numpy.array(
+                    self.datastore['disagg_by_src/source_name'] = numpy.array(
                         data, grp_name_dt)
 
 
