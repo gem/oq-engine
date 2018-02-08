@@ -64,7 +64,6 @@ class DuplicatedPoint(Exception):
     """
 
 
-
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -144,13 +143,14 @@ def get_params(job_inis, **inputs):
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = sorted(_get_paths(base_path, smlt))
+        params['inputs']['source'] = sorted(_get_paths(smlt))
 
     return params
 
 
-def _get_paths(base_path, smlt):
+def _get_paths(smlt):
     # extract the path names for the source models listed in the smlt file
+    base_path = os.path.dirname(smlt)
     for model in source.collect_source_model_paths(smlt):
         for name in model.split():
             if os.path.isabs(name):
@@ -423,10 +423,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     psr = nrml.SourceModelParser(converter)
 
     # consider only the effective realizations
+    smlt_dir = os.path.dirname(source_model_lt.filename)
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
-            fname = os.path.abspath(os.path.join(oqparam.base_path, name))
+            fname = os.path.abspath(os.path.join(smlt_dir, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 logging.info('Parsing %s', fname)
