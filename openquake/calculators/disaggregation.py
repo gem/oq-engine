@@ -115,7 +115,7 @@ producing too small PoEs.'''
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
-            set_disagg_by_src(self.datastore, oq.imtls, oq.poes_disagg)
+            build_disagg_by_src(self.datastore)
         return self.full_disaggregation(curves)
 
     def agg_result(self, acc, result):
@@ -383,14 +383,18 @@ producing too small PoEs.'''
                              ' levels is too small?', poe_agg, poe)
 
 
-def set_disagg_by_src(dstore, imtls, poes_disagg):
+def build_disagg_by_src(dstore):
+    """
+    :param dstore: a datastore
+    """
+    oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    pdic = {imt: poes_disagg for imt in imtls}
+    pdic = {imt: oq.poes_disagg for imt in oq.imtls}
     data = []
     grp_ids = []
     for grp in dstore['poes']:
         grp_ids.append(int(grp[4:]))
-        hmap = calc.make_hmap(dstore['poes/' + grp], imtls, poes_disagg)
+        hmap = calc.make_hmap(dstore['poes/' + grp], oq.imtls, oq.poes_disagg)
         data.append(calc.convert_to_array(hmap, len(sitecol), pdic))
     data = numpy.array(data)  # shape (num_sources, num_sites)
     for i, site in enumerate(sitecol):

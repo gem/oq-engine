@@ -675,7 +675,7 @@ class CompositeSourceModel(collections.Sequence):
                     src.src_group_id = grp_id
                     src_groups.append(
                         sourceconverter.SourceGroup(
-                            sg.trt, [src], name=src.source_id, id=grp_id))
+                            sg.trt, [src], name=src.name, id=grp_id))
                     grp_id += 1
             smodels.append(smodel)
         return self.__class__(self.gsim_lt, self.source_model_lt, smodels)
