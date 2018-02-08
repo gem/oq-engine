@@ -25,8 +25,7 @@ import numpy
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib.calc.hazard_curve import (
-    pmap_from_grp, pmap_from_trt, ProbabilityMap)
+from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -44,6 +43,23 @@ source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
 
+def get_src_ids(sources):
+    """
+    :returns:
+       a string with the source IDs of the given sources, stripping the
+       extension after the colon, if any
+    """
+    src_ids = []
+    for src in sources:
+        long_src_id = src.source_id
+        try:
+            src_id, ext = long_src_id.rsplit(':', 1)
+        except ValueError:
+            src_id = long_src_id
+        src_ids.append(src_id)
+    return ' '.join(set(src_ids))
+
+
 def saving_sources_by_task(iterargs, dstore):
     """
     Yield the iterargs again by populating 'task_info/source_data'
@@ -51,32 +67,12 @@ def saving_sources_by_task(iterargs, dstore):
     source_ids = []
     data = []
     for i, args in enumerate(iterargs, 1):
-        source_ids.append(' ' .join(src.source_id for src in args[0]))
+        source_ids.append(get_src_ids(args[0]))
         for src in args[0]:  # collect source data
             data.append((i, src.nsites, src.num_ruptures, src.weight))
         yield args
     dstore['task_info/task_sources'] = encode(source_ids)
     dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
-
-
-def classical(sources, src_filter, gsims, param, monitor):
-    """
-    :param sources:
-        a list of independent sources or a SourceGroup with mutex sources
-    :param src_filter:
-        a SourceFilter instance
-    :param gsims:
-        a list of GSIMs
-    :param param:
-        a dictionary with parameters imtls and truncation_level
-    :param monitor:
-        a Monitor instance
-    :returns: a dictionary grp_id -> ProbabilityMap
-    """
-    if getattr(sources, 'src_interdep', None) == 'mutex':
-        return pmap_from_grp(sources, src_filter, gsims, param, monitor)
-    else:
-        return pmap_from_trt(sources, src_filter, gsims, param, monitor)
 
 
 @base.calculators.add('psha')
@@ -86,25 +82,25 @@ class PSHACalculator(base.HazardCalculator):
     """
     core_task = classical
 
-    def agg_dicts(self, acc, pmap):
+    def agg_dicts(self, acc, pmap_by_grp):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param pmap: dictionary grp_id -> ProbabilityMap
+        :param pmap_by_grp: dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            acc.eff_ruptures += pmap.eff_ruptures
-            for grp_id in pmap:
-                if pmap[grp_id]:
-                    acc[grp_id] |= pmap[grp_id]
-                self.nsites.append(len(pmap[grp_id]))
-            for src_id, srcweight, nsites, calc_time in pmap.calc_times:
-                srcid = src_id.split(':', 1)[0]
+            acc.eff_ruptures += pmap_by_grp.eff_ruptures
+            for grp_id in pmap_by_grp:
+                if pmap_by_grp[grp_id]:
+                    acc[grp_id] |= pmap_by_grp[grp_id]
+                self.nsites.append(len(pmap_by_grp[grp_id]))
+            for srcid, (srcweight, nsites, calc_time, split) in \
+                    pmap_by_grp.calc_times.items():
                 info = self.csm.infos[srcid]
                 info.calc_time += calc_time
-                info.num_sites = max(info.num_sites, nsites or 0)
-                info.num_split += 1
+                info.num_sites += nsites
+                info.num_split += split
         return acc
 
     def zerodict(self):
@@ -145,7 +141,9 @@ class PSHACalculator(base.HazardCalculator):
                 self.core_task.__func__, iterargs).submit_all()
         self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
-        logging.info('effective sites per task: %d', numpy.mean(self.nsites))
+        if not self.nsites:
+            raise RuntimeError('All sources were filtered out!')
+        logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc
@@ -160,7 +158,7 @@ class PSHACalculator(base.HazardCalculator):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
         num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-        tasks_per_tile = oq.concurrent_tasks / math.sqrt(num_tiles)
+        tasks_per_tile = math.ceil(oq.concurrent_tasks / math.sqrt(num_tiles))
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
@@ -173,10 +171,9 @@ class PSHACalculator(base.HazardCalculator):
                 logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
                 src_filter = SourceFilter(tile, oq.maximum_distance)
                 csm = self.csm.filter(src_filter)
-            maxweight = csm.get_maxweight(tasks_per_tile)
-            numheavy = len(csm.get_sources('heavy', maxweight))
-            logging.info('Using maxweight=%d, numheavy=%d',
-                         maxweight, numheavy)
+            if tile_i == 1:  # set it only on the first tile
+                maxweight = csm.get_maxweight(tasks_per_tile)
+                logging.info('Using maxweight=%d', maxweight)
             if csm.has_dupl_sources and not opt:
                 logging.warn('Found %d duplicated sources, use oq info',
                              csm.has_dupl_sources)
@@ -190,7 +187,7 @@ class PSHACalculator(base.HazardCalculator):
             for trt, sources in csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
                 for block in csm.split_in_blocks(maxweight, sources):
-                    yield block, csm.src_filter, gsims, param, monitor
+                    yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
