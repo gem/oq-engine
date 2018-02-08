@@ -83,7 +83,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import CallableDict, groupby
+from openquake.baselib.general import CallableDict, groupby, deprecated
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -110,13 +110,15 @@ def get_tag_version(nrml_node):
     return tag, version
 
 
-def parse(fname, *args):
+def to_python(fname, *args):
     """
     Parse a NRML file and return an associated Python object. It works by
     calling nrml.read() and node_to_obj() in sequence.
     """
     [node] = read(fname)
     return node_to_obj(node, fname, *args)
+
+parse = deprecated('Use nrml.to_python instead')(to_python)
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
@@ -126,9 +128,11 @@ node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
+default = sourceconverter.SourceConverter()
+
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
-def get_source_model_04(node, fname, converter):
+def get_source_model_04(node, fname, converter=default):
     sources = []
     source_ids = set()
     converter.fname = fname
@@ -148,7 +152,7 @@ def get_source_model_04(node, fname, converter):
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
-def get_source_model_05(node, fname, converter):
+def get_source_model_05(node, fname, converter=default):
     converter.fname = fname
     groups = []  # expect a sequence of sourceGroup nodes
     for src_group in node:
@@ -295,7 +299,7 @@ class SourceModelParser(object):
             the full pathname of the source model file
         """
         try:
-            return parse(fname, self.converter)
+            return to_python(fname, self.converter)
         except ValueError as e:
             err = str(e)
             e1 = 'Surface does not conform with Aki & Richards convention'
@@ -357,7 +361,7 @@ def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None):
         read(output)  # validate the written file
 
 
-def convert(node):
+def to_string(node):
     """
     Convert a node into a string in NRML format
     """
