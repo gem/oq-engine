@@ -79,4 +79,4 @@ class SourceFilterTestCase(unittest.TestCase):
         bb1, bb2 = srcfilter.get_bounding_boxes(mag=4.5)
         # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
         aae(bb1, (173.8210225, 79.10068, 184.1789775, 80.89932))
-        aae(bb2, (175.8210225, 79.10068, 186.1789775, 80.89932))
+        aae(bb2, (-184.1789775, 79.10068, -173.8210225, 80.89932))
