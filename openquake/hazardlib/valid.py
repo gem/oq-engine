@@ -31,6 +31,7 @@ from openquake.baselib.python3compat import with_metaclass
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
+from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
@@ -71,14 +72,17 @@ def gsim(value, **kwargs):
     'BooreAtkinson2011()'
     """
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
+    if value.endswith('()'):
+        value = value[:-2]  # strip parenthesis
     if value == 'FromFile':
         return FromFile()
-    elif value.endswith('()'):
-        value = value[:-2]  # strip parenthesis
-    try:
-        gsim_class = GSIM[value]
-    except KeyError:
-        raise ValueError('Unknown GSIM: %s' % value)
+    elif value.startswith('GMPETable'):
+        gsim_class = GMPETable
+    else:
+        try:
+            gsim_class = GSIM[value]
+        except KeyError:
+            raise ValueError('Unknown GSIM: %s' % value)
     try:
         gs = gsim_class(**kwargs)
     except TypeError:
