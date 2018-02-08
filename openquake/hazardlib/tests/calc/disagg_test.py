@@ -52,7 +52,7 @@ class DisaggregateTestCase(unittest.TestCase):
     def setUp(self):
         d = os.path.dirname(os.path.dirname(__file__))
         source_model = os.path.join(d, 'source_model/multi-point-source.xml')
-        [self.sources] = nrml.parse(source_model, SourceConverter(
+        [self.sources] = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         self.site = Site(Point(0.1, 0.1), 800, True, z1pt0=100., z2pt5=1.)
         self.imt = PGA()

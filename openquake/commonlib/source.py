@@ -32,6 +32,7 @@ from openquake.baselib.general import (
     groupby, group_array, block_splitter, writetmp, AccumDict)
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
+from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.commonlib import logictree
 
 
@@ -431,7 +432,7 @@ class CompositionInfo(object):
                 data.append((src_group.id, trti[src_group.trt],
                              src_group.eff_ruptures, src_group.tot_ruptures,
                              sm.ordinal))
-        lst = [(sm.name, sm.weight, '_'.join(sm.path),
+        lst = [(sm.names, sm.weight, '_'.join(sm.path),
                 sm.num_gsim_paths, sm.samples)
                for i, sm in enumerate(self.source_models)]
         return (dict(
@@ -450,20 +451,11 @@ class CompositionInfo(object):
         vars(self).update(attrs)
         self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
+            # otherwise it would look in the current directory
+            GMPETable.GMPE_DIR = os.path.dirname(self.gsim_fname)
             trts = sorted(self.trts)
-            if 'gmpe_table' in self.gsim_lt_xml:
-                # the canadian gsims depends on external files which are not
-                # in the datastore; I am storing the path to the original
-                # file so that the external files can be found; unfortunately,
-                # this means that copying the datastore on a different machine
-                # and exporting from there works only if the gsim_fname and all
-                # the external files are copied in the exact same place
-                self.gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
-            else:
-                # regular case: read the logic tree from self.gsim_lt_xml,
-                # so that you do not need to copy anything except the datastore
-                tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
-                self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
+            tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
+            self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
         else:  # fake file with the name of the GSIM
             self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
         self.source_models = []
@@ -586,7 +578,7 @@ class CompositionInfo(object):
         for sm in self.source_models:
             for rlz in realizations:
                 if rlz.sm_lt_path == sm.path:
-                    dic[rlz] = sm.name
+                    dic[rlz] = sm.names
         return dic
 
     def get_sm_by_grp(self):
@@ -619,7 +611,7 @@ class CompositionInfo(object):
         if len(rlzs) > TWO16:
             raise ValueError(
                 'The source model %s has %d realizations, the maximum '
-                'is %d' % (smodel.name, len(rlzs), TWO16))
+                'is %d' % (smodel.names, len(rlzs), TWO16))
         return rlzs
 
     def __repr__(self):
@@ -627,7 +619,7 @@ class CompositionInfo(object):
         for sm in self.source_models:
             info_by_model[sm.path] = (
                 '_'.join(map(decode, sm.path)),
-                decode(sm.name),
+                decode(sm.names),
                 [sg.id for sg in sm.src_groups],
                 sm.weight,
                 self.get_num_rlzs(sm))
@@ -676,7 +668,7 @@ class CompositeSourceModel(collections.Sequence):
         grp_id = 0
         for sm in self.source_models:
             src_groups = []
-            smodel = sm.__class__(sm.name, sm.weight, sm.path, src_groups,
+            smodel = sm.__class__(sm.names, sm.weight, sm.path, src_groups,
                                   sm.num_gsim_paths, sm.ordinal, sm.samples)
             for sg in sm.src_groups:
                 for src in sg.sources:
@@ -702,7 +694,7 @@ class CompositeSourceModel(collections.Sequence):
                          for src in sg.sources)
         return new
 
-    def filter(self, src_filter):
+    def filter(self, src_filter):  # called once per tile
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
@@ -719,7 +711,8 @@ class CompositeSourceModel(collections.Sequence):
                 self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
-                    if hasattr(src, '__iter__'):  # MultiPointSource
+                    if hasattr(src, '__iter__'):  # MultiPoint, AreaSource
+                        # NB: source.split_source is cached
                         sources.extend(source.split_source(src))
                     else:
                         sources.append(src)
@@ -731,7 +724,7 @@ class CompositeSourceModel(collections.Sequence):
                     weight += src.weight
                 src_groups.append(sg)
             newsm = logictree.SourceModel(
-                sm.name, sm.weight, sm.path, src_groups,
+                sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
