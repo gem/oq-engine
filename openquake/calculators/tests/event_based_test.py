@@ -293,7 +293,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ses.xml', fname)
 
         # check that the exported file is parseable
-        rupcoll = nrml.parse(fname, RuptureConverter(1))
+        rupcoll = nrml.to_python(fname, RuptureConverter(1))
         self.assertEqual(list(rupcoll), [1])  # one group
         self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
 

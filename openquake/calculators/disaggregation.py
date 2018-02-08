@@ -186,7 +186,7 @@ producing too small PoEs.'''
                         min_poe = max_poe[rlzi][imt]
                         if poe > min_poe:
                             raise ValueError(self.POE_TOO_BIG % (
-                                poe, sm_id, smodel.name, min_poe, rlzi, imt))
+                                poe, sm_id, smodel.names, min_poe, rlzi, imt))
 
     def full_disaggregation(self, curves):
         """
