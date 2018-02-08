@@ -20,6 +20,8 @@ import numpy
 from openquake.baselib.general import AccumDict, group_array, get_array
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import calc, probability_map, stats
+from openquake.commonlib import util
+from openquake.commonlib.calc import make_hmap, convert_to_array
 
 U16 = numpy.uint16
 U32 = numpy.uint32

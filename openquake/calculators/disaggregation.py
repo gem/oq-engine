@@ -24,12 +24,13 @@ import logging
 import operator
 import numpy
 
+from openquake.baselib import parallel
 from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.baselib import parallel
+from openquake.commonlib import calc, util
 from openquake.calculators import getters
 from openquake.calculators import base, classical
 
@@ -109,12 +110,12 @@ producing too small PoEs.'''
             # the hazard curves, hence the need to run a PSHACalculator here
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
-            cl.grp_by_src = oq.disagg_by_src
             cl.csm = self.csm
             cl.run(pre_execute=False)  # avoid reading again the source model
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
+            set_disagg_by_src(self.datastore, oq.imtls, oq.poes_disagg)
         return self.full_disaggregation(curves)
 
     def agg_result(self, acc, result):
@@ -380,3 +381,22 @@ producing too small PoEs.'''
                 logging.warn('poe_agg=%s is quite different from the expected'
                              ' poe=%s; perhaps the number of intensity measure'
                              ' levels is too small?', poe_agg, poe)
+
+
+def set_disagg_by_src(dstore, imtls, poes_disagg):
+    sitecol = dstore['sitecol']
+    pdic = {imt: poes_disagg for imt in imtls}
+    data = []
+    grp_ids = []
+    for grp in dstore['poes']:
+        grp_ids.append(int(grp[4:]))
+        hmap = calc.make_hmap(dstore['poes/' + grp], imtls, poes_disagg)
+        data.append(calc.convert_to_array(hmap, len(sitecol), pdic))
+    data = numpy.array(data)  # shape (num_sources, num_sites)
+    for i, site in enumerate(sitecol):
+        loc = site.location
+        array = data[:, i]
+        if any(array[field].sum() for field in array.dtype.names):
+            name = 'disagg_by_src/rlz-0-%s-%s' % (loc.longitude, loc.latitude)
+            dstore[name] = util.compose_arrays(
+                numpy.uint16(grp_ids), array, 'grp_id')
