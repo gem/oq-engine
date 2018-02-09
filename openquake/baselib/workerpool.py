@@ -205,10 +205,11 @@ class WorkerPool(object):
         :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
         """
         setproctitle('oq-zworker')
-        for cmd, args in sock:
-            backurl = args[-1].backurl  # attached to the monitor
-            with z.Socket(backurl, z.zmq.PUSH, 'connect') as s:
-                s.send(safely_call(cmd, args))
+        with sock:
+            for cmd, args in sock:
+                backurl = args[-1].backurl  # attached to the monitor
+                with z.Socket(backurl, z.zmq.PUSH, 'connect') as s:
+                    s.send(safely_call(cmd, args))
 
     def start(self):
         """
@@ -225,16 +226,16 @@ class WorkerPool(object):
             self.workers.append(sock)
 
         # start control loop accepting the commands stop and kill
-        ctrlsock = z.Socket(self.ctrl_url, z.zmq.REP, 'bind')
-        for cmd in ctrlsock:
-            if cmd in ('stop', 'kill'):
-                msg = getattr(self, cmd)()
-                ctrlsock.send(msg)
-                break
-            elif cmd == 'getpid':
-                ctrlsock.send(self.pid)
-            elif cmd == 'get_num_workers':
-                ctrlsock.send(self.num_workers)
+        with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
+            for cmd in ctrlsock:
+                if cmd in ('stop', 'kill'):
+                    msg = getattr(self, cmd)()
+                    ctrlsock.send(msg)
+                    break
+                elif cmd == 'getpid':
+                    ctrlsock.send(self.pid)
+                elif cmd == 'get_num_workers':
+                    ctrlsock.send(self.num_workers)
 
     def stop(self):
         """
