@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Fixed an international date line bug when using rtree for prefiltering
+  * Deprecated `nrml.parse`, it is now called `nrml.to_python`
+  * Improved the task distribution by splitting the AreaSources upfront
+    and by improving the weighting algorithm
+
+  [Daniele Viganò]
+  * Updated dependencies compatibility in setup.py
+
+  [Michele Simionato]
+  * If the hazard is precomputed, setting the `site_model_file`,
+    `gsim_logic_tree_file` or `source_model_logic_tree_file` is an error
   * Removed the obsolete API `/extract/qgis-` and added `extract/hcurves`,
     `extract/hmaps`, `extract/uhs` for use with the QGIS plugin
   * Removed the deprecated GeoJSON exporters
@@ -113,6 +124,7 @@ python-oq-engine (2.8.0-0~precise01) precise; urgency=low
   * Implemented subclasses for ZhaoEtAl2006Asc and AtkinsonBoore2006 to account
     for the distance filter used by SGS in their PSHA model for Saudi Arabia.
     Distance threshold is hard coded to 5km in this implementation.
+
   [Michele Simionato]
   * Added a warning if the aggregated probability of exceedence (poe_agg) in
     a disaggregation output is very dissimilar from poes_disagg
@@ -202,7 +214,6 @@ python-oq-engine (2.7.0-0~precise01) precise; urgency=low
     of the damage states
   * Extended the FragilityFunctions to accept sequences/arrays of intensity
     levels, as requested by Hyeuk Ryu
->>>>>>> master
 
   [Daniele Viganò]
   * Added support for groups in the WebUI/API server

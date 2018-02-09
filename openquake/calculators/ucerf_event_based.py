@@ -724,8 +724,9 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         serial += 1
     res.num_events = event_based.set_eids(ebruptures)
     res[src.src_group_id] = ebruptures
-    res.calc_times[src.src_group_id] = (
-        src.source_id, len(sitecol), time.time() - t0)
+    res.calc_times[src.src_group_id] = {
+        src.source_id:
+        numpy.array([src.weight, len(sitecol), time.time() - t0, 1])}
     if not param['save_ruptures']:
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
@@ -738,7 +739,7 @@ def get_composite_source_model(oq):
     :param oq: :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns: a `class:`openquake.commonlib.source.CompositeSourceModel`
     """
-    [src_group] = nrml.parse(
+    [src_group] = nrml.to_python(
         oq.inputs["source_model"],
         SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
     source_models = []
@@ -748,7 +749,7 @@ def get_composite_source_model(oq):
         sg = copy.copy(src_group)
         sg.id = sm.ordinal
         sm.src_groups = [sg]
-        sg.sources = [sg[0].new(sm.ordinal, sm.name)]
+        sg.sources = [sg[0].new(sm.ordinal, sm.names)]
         source_models.append(sm)
     return source.CompositeSourceModel(gsim_lt, smlt, source_models)
 
@@ -897,7 +898,7 @@ class UCERFRiskCalculator(EbriskCalculator):
                        correl_model, min_iml, monitor)
 
     def execute(self):
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomies()
+        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm_info.grp_by("trt")
         res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
