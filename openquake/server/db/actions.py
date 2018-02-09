@@ -185,16 +185,16 @@ def list_calculations(db, job_type, user_name):
     jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
               'AND job_type=?x ORDER BY start_time' % JOB_TYPE,
               user_name, job_type)
-    out = ''
+    out = []
     if len(jobs) == 0:
-        out += 'None'
+        out.append('None')
     else:
-        out += ('job_id |     status |          start_time | '
-                '        description')
+        out.append('job_id |     status |          start_time | '
+                   '        description')
         for job in jobs:
             descr = job.description
             start_time = job.start_time
-            out += ('%6d | %10s | %s | %s' % (
+            out.append('%6d | %10s | %s | %s' % (
                 job.id, job.status, start_time, descr))
     return out
 
@@ -212,20 +212,20 @@ def list_outputs(db, job_id, full=True):
         If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs(db, job_id)
-    out = ''
+    out = []
     if len(outputs) > 0:
         truncated = False
-        out += '  id | name'
+        out.append('  id | name')
         outs = sorted(outputs, key=operator.attrgetter('display_name'))
         for i, o in enumerate(outs):
             if not full and i >= 10:
-                out += ' ... | %d additional output(s)' % (len(outs) - 10)
+                out.append(' ... | %d additional output(s)' % (len(outs) - 10))
                 truncated = True
                 break
-            out += '%4d | %s' % (o.id, o.display_name)
+            out.append('%4d | %s' % (o.id, o.display_name))
         if truncated:
-            out += ('Some outputs where not shown. You can see the full list '
-                    'with the command\n`oq engine --list-outputs`')
+            out.append('Some outputs where not shown. You can see the full '
+                       'list with the command\n`oq engine --list-outputs`')
     return out
 
 
@@ -244,8 +244,8 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'dmg_by_asset': 'Average Asset Damages',
-    #'damages_by_asset': 'Average Asset Damages',
-    #'damages_by_event': 'Aggregate Event Damages',
+    # 'damages_by_asset': 'Average Asset Damages',
+    # 'damages_by_event': 'Aggregate Event Damages',
     'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
     'damages-rlzs': 'Asset Damage Distribution',
@@ -374,10 +374,10 @@ def get_log(db, job_id):
     :param job_id: a job ID
     """
     logs = db('SELECT * FROM log WHERE job_id=?x ORDER BY id', job_id)
-    out = ''
+    out = []
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
-        out += '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
+        out.append('[%s #%d %s] %s' % (time, job_id, log.level, log.message))
     return out
 
 
