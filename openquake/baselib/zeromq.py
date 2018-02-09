@@ -59,9 +59,9 @@ class Socket(object):
     A Socket class to be used with code like the following::
 
      # server
-     sock = Socket('tcp://127.0.0.1:9000', zmq.REP, 'bind')
-     for tup in sock:
-         sock.send(tup)
+     with Socket('tcp://127.0.0.1:9000', zmq.REP, 'bind') as sock:
+         for tup in sock:
+             sock.send(tup)
 
      # client
      with Socket('tcp://127.0.0.1:9000', zmq.REQ, 'connect') as sock:
@@ -98,6 +98,7 @@ class Socket(object):
             self.backurl = '%s:%d' % (end_point, port)
         elif self.mode == 'bind':
             self.zsocket = bind(self.end_point, self.socket_type)
+            self.backurl = self.end_point
         else:  # connect
             self.zsocket = connect(self.end_point, self.socket_type)
         port = re.search(r':(\d+)$', self.end_point)
@@ -120,23 +121,22 @@ class Socket(object):
         4. SIGTERM is sent
         """
         # works with zmq.REP and zmq.PULL sockets
-        with self:
-            self.running = True
-            while self.running:
-                try:
-                    if self.zsocket.poll(self.timeout):
-                        args = self.zsocket.recv_pyobj()
-                    else:
-                        continue
-                except (KeyboardInterrupt, zmq.ZMQError):
-                    # sending SIGTERM raises ZMQError
-                    break
-                if args[0] == 'stop':
-                    if self.socket_type == zmq.REP:
-                        self.send((None, None, None))
-                    break
+        self.running = True
+        while self.running:
+            try:
+                if self.zsocket.poll(self.timeout):
+                    args = self.zsocket.recv_pyobj()
                 else:
-                    yield args
+                    continue
+            except (KeyboardInterrupt, zmq.ZMQError):
+                # sending SIGTERM raises ZMQError
+                break
+            if args[0] == 'stop':
+                if self.socket_type == zmq.REP:
+                    self.send((None, None, None))
+                break
+            else:
+                yield args
 
     def send(self, obj):
         """
