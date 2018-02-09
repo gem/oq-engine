@@ -114,8 +114,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 return
         weights = self.datastore['csm_info'].rlzs['weight']
         self.R = len(weights)
-        with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs('poe')
+        self.riskinputs = self.build_riskinputs('poe')
         self.param = dict(stats=oq.risk_stats(), weights=weights)
         self.A = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)

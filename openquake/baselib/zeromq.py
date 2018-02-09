@@ -117,7 +117,7 @@ class Socket(object):
         3. SIGINT is sent
         4. SIGTERM is sent
         """
-        # works zmq.REP and zmq.PULL sockets
+        # works with zmq.REP and zmq.PULL sockets
         with self:
             self.running = True
             while self.running:
