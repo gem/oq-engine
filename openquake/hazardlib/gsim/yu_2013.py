@@ -95,7 +95,7 @@ class YuEtAl2013Ms(GMPE):
     """
     Implements the Yu et al. (2013) GMPE used for the calculation of the 2015
     version of the national seismic hazard maps for China. Note that magnitude
-    supported for the original version is Ms
+    supported is Ms.
     """
 
     #: Supported tectonic region type is active shallow crust
