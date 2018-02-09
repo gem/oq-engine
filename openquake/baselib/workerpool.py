@@ -1,5 +1,6 @@
 import os
 import sys
+import mock
 import signal
 import logging
 import inspect
@@ -15,7 +16,7 @@ except ImportError:
         "Do nothing"
 
 
-def safely_call(func, args):
+def safely_call(func, args, backurl=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -43,18 +44,29 @@ def safely_call(func, args):
         # check_mem_usage(mon)  # check if too much memory is used
         # FIXME: this approach does not work with the Threadmap
         mon._flush = False
+        zsocket = (z.Socket(backurl, z.zmq.PUSH, 'connect') if backurl
+                   else mock.MagicMock())  # do nothing if not backurl
         try:
-            got = func(*args)
-            if inspect.isgenerator(got):
-                got = list(got)
-            res = got, None, mon
+            with zsocket:
+                got = func(*args)
+                if inspect.isgenerator(got):
+                    res = []
+                    for val in got:
+                        zsocket.send((val, None, mon))
+                        res.append((val, None, mon))
+                else:
+                    res = (got, None, mon)
+                    zsocket.send(res)
         except:
             etype, exc, tb = sys.exc_info()
             tb_str = ''.join(traceback.format_tb(tb))
             res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
                    etype, mon)
+            zsocket.send(res)
         finally:
             mon._flush = True
+    if backurl:
+        return zsocket.num_sent
     return res
 
 

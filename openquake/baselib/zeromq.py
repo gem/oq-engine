@@ -105,6 +105,7 @@ class Socket(object):
         if port:
             self.port = int(port.group(1))
         self.zsocket.__enter__()
+        self.num_sent = 0
         return self
 
     def __exit__(self, *args):
@@ -147,6 +148,7 @@ class Socket(object):
             the Python object to send
         """
         self.zsocket.send_pyobj(obj)
+        self.num_sent += 1
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj()
 
