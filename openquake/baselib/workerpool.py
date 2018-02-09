@@ -79,12 +79,11 @@ def _starmap(func, iterargs, host, task_in_port, receiver_ports):
     task_in_url = 'tcp://%s:%s' % (host, task_in_port)
     with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver:
         logging.info('Receiver port for %s=%s', func.__name__, receiver.port)
-        receiver_host = receiver.end_point.rsplit(':', 1)[0]
-        backurl = '%s:%s' % (receiver_host, receiver.port)
         with z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
             n = 0
             for args in iterargs:
-                args[-1].backurl = backurl  # args[-1] is a Monitor instance
+                # args[-1] is a Monitor instance
+                args[-1].backurl = receiver.backurl
                 sender.send((func, args))
                 n += 1
         yield n

@@ -60,12 +60,12 @@ class Socket(object):
 
      # server
      sock = Socket('tcp://127.0.0.1:9000', zmq.REP, 'bind')
-     for obj in sock:
-         sock.send(obj)
+     for tup in sock:
+         sock.send(tup)
 
      # client
      with Socket('tcp://127.0.0.1:9000', zmq.REQ, 'connect') as sock:
-        sock.send(obj)
+        sock.send(tup)
 
     It also support zmq.PULL/zmq.PUSH sockets, which are asynchronous.
 
@@ -75,6 +75,7 @@ class Socket(object):
     :param timeout: default 1000 ms, used when polling the underlying socket
     """
     def __init__(self, end_point, socket_type, mode, timeout=1000):
+        assert 'localhost' not in end_point, 'Use 127.0.0.1 instead'
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
         self.end_point = end_point
@@ -94,6 +95,7 @@ class Socket(object):
             self.zsocket = context.socket(self.socket_type)
             port = self.zsocket.bind_to_random_port(end_point, p1, p2)
             self.port = port
+            self.backurl = '%s:%d' % (end_point, port)
         elif self.mode == 'bind':
             self.zsocket = bind(self.end_point, self.socket_type)
         else:  # connect
