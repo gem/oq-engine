@@ -158,7 +158,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import hdf5, config, zeromq as z
+from openquake.baselib import hdf5, config
 from openquake.baselib.workerpool import safely_call, _starmap
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -318,7 +318,7 @@ class IterResult(object):
          ('duration', numpy.float32)])
 
     def __init__(self, futures, taskname, num_tasks,
-                 progress=logging.info, sent=0, zsocket=None):
+                 progress=logging.info, sent=0):
         self.futures = futures
         self.name = taskname
         self.num_tasks = num_tasks
@@ -327,7 +327,6 @@ class IterResult(object):
         else:
             self.progress = progress
         self.sent = sent
-        self.zsocket = zsocket
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
@@ -374,8 +373,6 @@ class IterResult(object):
             if not self.name.startswith('_'):  # no info for private tasks
                 self.save_task_data(mon)
             yield val
-        if self.zsocket:
-            self.zsocket.__exit__(None, None, None)
 
         if self.received:
             tot = sum(self.received)
@@ -588,11 +585,6 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
-        host = 'tcp://%(master_host)s:%(receiver_ports)s' % config.zworkers
-        zsocket = z.Socket(host, z.zmq.PULL, 'bind')
-        zsocket.__enter__()
-        safely_call.__defaults__ = (zsocket.backurl,)
-
         if self.num_tasks == 1:
             [args] = self.add_task_no(self.task_args, pickle=False)
             self.progress('Executing "%s" in process', self.name)
@@ -606,15 +598,14 @@ class Starmap(object):
                 self.task_func, allargs,
                 w.master_host, w.task_in_port, w.receiver_ports)
             ntasks = next(it)
-            return IterResult(it, self.name, ntasks, self.progress,
-                              self.sent, zsocket)
+            return IterResult(it, self.name, ntasks, self.progress, self.sent)
 
         elif self.distribute == 'qsub':  # experimental
             allargs = list(self.add_task_no(self.task_args, pickle=False))
             logging.warn('Sending %d tasks to the grid engine', len(allargs))
             return IterResult(qsub(self.task_func, allargs),
                               self.name, len(allargs),
-                              self.progress, self.sent, zsocket)
+                              self.progress, self.sent)
 
         task_no = 0
         for args in self.add_task_no(self.task_args):
@@ -624,7 +615,7 @@ class Starmap(object):
             self.progress('No %s tasks were submitted', self.name)
         # NB: keep self._iterfutures() an iterator, especially with celery!
         ir = IterResult(self._iterfutures(), self.name, task_no,
-                        self.progress, self.sent, zsocket)
+                        self.progress, self.sent)
         return ir
 
     def __iter__(self):
