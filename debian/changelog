@@ -1,3 +1,6 @@
+  [Marco Pagani, Changlong Li]
+  * Adds the Yu et al. (2013) GMEPs
+
   [Michele Simionato]
   * Fixed an international date line bug when using rtree for prefiltering
   * Deprecated `nrml.parse`, it is now called `nrml.to_python`
