@@ -59,12 +59,13 @@ class Socket(object):
     A Socket class to be used with code like the following::
 
      # server
-     sock = Socket('tcp://127.0.0.1:9000', zmq.REP)
-     for cmd, *args in sock:
-         sock.send(cmd(*args))
+     sock = Socket('tcp://127.0.0.1:9000', zmq.REP, 'bind')
+     for obj in sock:
+         sock.send(obj)
 
      # client
-     Socket('tcp://127.0.0.1:9000', zmq.REQ).req(cmd, *args)
+     with Socket('tcp://127.0.0.1:9000', zmq.REQ, 'connect') as sock:
+        sock.send(obj)
 
     It also support zmq.PULL/zmq.PUSH sockets, which are asynchronous.
 
