@@ -35,7 +35,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput, asset
 from openquake.commonlib import readinput, source, calc, riskmodels, writers
-from openquake.baselib.parallel import Starmap, wakeup_pool
+from openquake.baselib.parallel2 import Starmap, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
 from openquake.calculators.getters import GmfDataGetter, PmapGetter
