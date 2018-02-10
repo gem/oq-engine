@@ -99,8 +99,11 @@ class CalculatorTestCase(unittest.TestCase):
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
+            # run the second job.ini with zero tasks to avoid fork issues
             with self.calc._monitor:
-                result.update(self.calc.run(export_dir=self.edir))
+                exported = self.calc.run(export_dir=self.edir,
+                                         concurrent_tasks=0)
+                result.update(exported)
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
