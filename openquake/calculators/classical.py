@@ -165,7 +165,7 @@ class PSHACalculator(base.HazardCalculator):
             tiles = [self.sitecol]
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         maxweight = None
-        minweight = source.MINWEIGHT * math.sqrt(oq.sites_per_tile)
+        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
