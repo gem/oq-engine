@@ -63,7 +63,7 @@ method has sensible defaults:
    :class:`openquake.baselib.AccumDict`) working as a `Counter`, so there
    is no need to specify it.
 
-You can of course ovverride the defaults, so if you really want to
+You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
 >>> res3 = Starmap(Counter, arglist).reduce(acc=Counter())
@@ -84,14 +84,24 @@ available at the moment:
   disable the parallelization, useful for debugging
 `OQ_DISTRIBUTE` set to "celery":
    use celery, useful if you have multiple machines in a cluster
-`OQ_DISTRIBUTE` set tp "ipython"
-   use the ipyparallel concurrency mechanism (experimental)
+`OQ_DISTRIBUTE` set tp "zmq"
+   use the zmq concurrency mechanism (experimental)
 
 There is also an `OQ_DISTRIBUTE` = "threadpool"; however the
 performance of using threads instead of processes is normally bad for the
 kind of applications we are interested in (CPU-dominated, which large
 tasks such that the time to spawn a new process is negligible with
 respect to the time to perform the task), so it is not recommended.
+
+If you are using a pool, is always a good idea to cleanup resources at the end
+with
+
+>>> Starmap.shutdown()
+
+`Starmap.shutdown` is always defined. It does nothing if there is
+no pool, but it is still better to call it: in the future, you may change
+idea and use another parallelization strategy requiring cleanup. In this
+way you are future-proof.
 
 The Starmap.apply API
 ====================================
@@ -143,7 +153,6 @@ import inspect
 import logging
 import operator
 import functools
-import itertools
 import multiprocessing.dummy
 import numpy
 try:
@@ -413,30 +422,21 @@ def _wakeup(sec):
     return os.getpid()
 
 
-def wakeup_pool():
-    """
-    This is used at startup, only when the ProcessPoolExecutor is used,
-    to fork the processes before loading any big data structure. It is
-    called once once, and adds the list of PIDs spawned to the executor.
-    """
-    if oq_distribute() == 'futures':
-        Starmap.init()
-        pids = Starmap(_wakeup, ((.2,) for _ in range(cpu_count * 3)))
-        Starmap.pool.pids = list(pids)
-
-
 class Starmap(object):
 
     @classmethod
     def init(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'futures':
+        if OQ_DISTRIBUTE == 'futures' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
+            self = cls(_wakeup, ((.2,) for _ in range(cls.pool._processes)))
+            cls.pool.pids = list(self)
 
     @classmethod
     def shutdown(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'futures':
+        if OQ_DISTRIBUTE == 'futures' and hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.join()
+            delattr(cls, 'pool')
 
     @classmethod
     def apply(cls, task, task_args, concurrent_tasks=cpu_count * 3,
@@ -468,6 +468,7 @@ class Starmap(object):
         return cls(task, task_args, name, distribute).submit_all()
 
     def __init__(self, task_func, task_args, name=None, distribute=None):
+        self.__class__.init()  # if not already
         self.task_func = task_func
         self.name = name or task_func.__name__
         self.task_args = task_args
@@ -528,7 +529,7 @@ class Starmap(object):
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
-        if num_tasks:
+        if num_tasks == 0:
             self.progress('No %s tasks were submitted', self.name)
         ires = IterResult(it, self.name, num_tasks, self.progress, self.sent)
         return ires
