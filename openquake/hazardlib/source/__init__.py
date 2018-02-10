@@ -30,7 +30,7 @@ from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 from openquake.hazardlib.source.multi import MultiPointSource
 
 
-MINWEIGHT = 200  # tuned by M. Simionato
+MINWEIGHT = 2000  # tuned by M. Simionato
 
 
 def _split_start_stop(n, chunksize):
