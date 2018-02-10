@@ -22,7 +22,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel2 as parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
