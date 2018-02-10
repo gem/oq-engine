@@ -21,7 +21,7 @@ import collections
 import logging
 import numpy
 
-from openquake.baselib import hdf5, parallel, performance
+from openquake.baselib import hdf5, parallel2 as parallel, performance
 from openquake.baselib.python3compat import decode, encode
 from openquake.baselib.general import (
     group_array, split_in_blocks, deprecated as depr)
