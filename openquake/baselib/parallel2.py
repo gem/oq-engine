@@ -514,25 +514,23 @@ class Starmap(object):
                 self.progress('Submitting %s "%s" tasks', self.num_tasks,
                               self.name)
             yield args
-        self._num_tasks = task_no
 
     def submit_all(self):
         """
         :returns: an IterResult object
         """
         if self.num_tasks == 1 or self.distribute == 'no':
-            it = list(self._iter_sequential())
+            it = self._iter_sequential()
         elif self.distribute == 'futures':
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
-
-        if not self._num_tasks:
+        num_tasks = next(it)
+        if num_tasks:
             self.progress('No %s tasks were submitted', self.name)
-        ires = IterResult(it, self.name, self._num_tasks,
-                          self.progress, self.sent)
+        ires = IterResult(it, self.name, num_tasks, self.progress, self.sent)
         return ires
 
     def reduce(self, agg=operator.add, acc=None):
@@ -546,26 +544,26 @@ class Starmap(object):
 
     def _iter_sequential(self):
         self.progress('Executing "%s" in process', self.name)
-        for args in self._genargs(pickle=False):
+        allargs = list(self._genargs(pickle=False))
+        yield len(allargs)
+        for args in allargs:
             yield safely_call(self.task_func, args)
 
     def _iter_processes(self):
         allargs = list(self._genargs(pickle=False))
+        yield len(allargs)
         ires = self.pool.imap_unordered(
             functools.partial(safely_call, self.task_func), allargs)
-        return ires
+        for res in ires:
+            yield res
 
     def _iter_celery(self):
         results = []
-        task_ids = []
         for piks in self._genargs(pickle=True):
-            res = safe_task.delay(self.task_func, piks)
             results.append(safe_task.delay(self.task_func, piks))
-            task_ids.append(res.task_id)
+        yield len(results)
         rset = ResultSet(results)
         for task_id, result_dict in rset.iter_native():
-            idx = task_ids.index(task_id)
-            task_ids.pop(idx)
             if CELERY_RESULT_BACKEND.startswith('rpc:'):
                 # work around a celery/rabbitmq bug
                 del app.backend._cache[task_id]
@@ -577,5 +575,4 @@ class Starmap(object):
         it = _starmap(
             self.task_func, iterargs,
             w.master_host, w.task_in_port, w.receiver_ports)
-        self._num_tasks = next(it)
         return it
