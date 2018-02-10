@@ -165,6 +165,7 @@ class PSHACalculator(base.HazardCalculator):
             tiles = [self.sitecol]
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         maxweight = None
+        minweight = source.MINWEIGHT * math.sqrt(oq.sites_per_tile)
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
@@ -175,8 +176,7 @@ class PSHACalculator(base.HazardCalculator):
                 if csm.weight == 0:  # the tile was completely filtered out
                     continue
             if maxweight is None:  # set maxweight only once
-                maxweight = csm.get_maxweight(
-                    tasks_per_tile, source.MINWEIGHT * num_tasks)
+                maxweight = csm.get_maxweight(tasks_per_tile, minweight)
                 logging.info('Using maxweight=%d', maxweight)
             if csm.has_dupl_sources and not opt:
                 logging.warn('Found %d duplicated sources, use oq info',
