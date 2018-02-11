@@ -575,12 +575,19 @@ class Starmap(object):
                     yield res
 
     def _iter_zmq(self):
-        iterargs = self._genargs()
-        w = config.zworkers
-        it = _starmap(
-            self.task_func, iterargs,
-            w.master_host, w.task_in_port, w.receiver_ports)
-        return it
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
+                           config.zworkers)
+            with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
+                n = 0
+                for args in self._genargs(socket.backurl):
+                    sender.send((safely_call, self.task_func, args))
+                    n += 1
+            yield n
+            for _ in range(n):
+                obj = socket.zsocket.recv_pyobj()
+                # receive n responses for the n requests sent
+                yield obj
 
 
 def sequential_apply(task, args):
