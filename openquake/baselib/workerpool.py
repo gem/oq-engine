@@ -89,7 +89,7 @@ def streamer(host, task_in_port, task_out_port):
 
 
 def _starmap(func, iterargs, host, task_in_port, receiver_ports):
-    # called by parallel.Starmap.submit_all; should not be used directly
+    # called by the tests only
     receiver_url = 'tcp://%s:%s' % (host, receiver_ports)
     task_in_url = 'tcp://%s:%s' % (host, task_in_port)
     with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver:
