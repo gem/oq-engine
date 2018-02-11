@@ -35,7 +35,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput, asset
 from openquake.commonlib import readinput, source, calc, riskmodels, writers
-from openquake.baselib.parallel2 import Starmap
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
 from openquake.calculators.getters import GmfDataGetter, PmapGetter
@@ -207,7 +207,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                     del os.environ['OQ_DISTRIBUTE']
                 else:
                     os.environ['OQ_DISTRIBUTE'] = oq_distribute
-            Starmap.shutdown()  # stop the process pool if any
         return getattr(self, 'exported', {})
 
     def core_task(*args):

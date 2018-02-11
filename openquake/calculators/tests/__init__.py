@@ -27,7 +27,7 @@ import platform
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import performance, datastore, parallel2 as parallel
+from openquake.baselib import performance, datastore, parallel
 from openquake.commonlib import readinput, oqvalidation
 
 

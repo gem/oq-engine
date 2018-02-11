@@ -59,8 +59,8 @@ import operator
 import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
+from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
-from openquake.baselib.parallel import Sequential
 from openquake.hazardlib.source import split_source
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -127,7 +127,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
 def calc_hazard_curves(
         groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
-        apply=Sequential.apply):
+        apply=sequential_apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per

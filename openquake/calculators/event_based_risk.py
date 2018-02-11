@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
-from openquake.baselib import parallel2 as parallel
+from openquake.baselib import parallel
 from openquake.risklib import riskinput
 from openquake.commonlib import calc
 from openquake.calculators import base, event_based, getters

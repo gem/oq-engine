@@ -18,7 +18,7 @@
 
 import unittest
 import numpy
-from openquake.baselib import parallel2 as parallel
+from openquake.baselib import parallel
 
 try:
     import celery
