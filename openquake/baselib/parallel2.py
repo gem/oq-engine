@@ -501,10 +501,10 @@ class Starmap(object):
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
-    def _genargs(self, pickle, backurl=None):
+    def _genargs(self, backurl=None):
         """
         Add .task_no and .weight to the monitor and yield back
-        the arguments by pickling them if pickle is True.
+        the arguments by pickling them.
         """
         for task_no, args in enumerate(self.task_args, 1):
             if isinstance(args[-1], Monitor):
@@ -512,9 +512,8 @@ class Starmap(object):
                 args[-1].task_no = task_no
                 args[-1].weight = getattr(args[0], 'weight', 1.)
                 args[-1].backurl = backurl
-            if pickle:
-                args = pickle_sequence(args)
-                self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
+            args = pickle_sequence(args)
+            self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', self.num_tasks,
                               self.name)
@@ -546,7 +545,7 @@ class Starmap(object):
 
     def _iter_sequential(self):
         self.progress('Executing "%s" in process', self.name)
-        allargs = list(self._genargs(pickle=False))
+        allargs = list(self.task_args)
         yield len(allargs)
         for args in allargs:
             yield safely_call(self.task_func, args)
@@ -555,7 +554,7 @@ class Starmap(object):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             safefunc = functools.partial(
                 safely_call, self.task_func, backurl=socket.backurl)
-            allargs = list(self._genargs(pickle=True, backurl=socket.backurl))
+            allargs = list(self._genargs(backurl=socket.backurl))
             yield len(allargs)
             for nresults in self.pool.imap_unordered(safefunc, allargs):
                 for res in itertools.islice(socket, nresults):
@@ -565,7 +564,7 @@ class Starmap(object):
         safetask = task(safely_call, queue='celery')
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             results = []
-            for piks in self._genargs(pickle=True, backurl=socket.backurl):
+            for piks in self._genargs(backurl=socket.backurl):
                 results.append(safetask.delay(self.task_func, piks))
             yield len(results)
             for task_id, result_dict in ResultSet(results).iter_native():
@@ -576,7 +575,7 @@ class Starmap(object):
                     yield res
 
     def _iter_zmq(self):
-        iterargs = self._genargs(pickle=False)
+        iterargs = self._genargs()
         w = config.zworkers
         it = _starmap(
             self.task_func, iterargs,
