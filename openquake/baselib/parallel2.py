@@ -316,6 +316,8 @@ class IterResult(object):
         if self.num_tasks:
             self.log_percent = self._log_percent()
             next(self.log_percent)
+        else:
+            self.progress('No %s tasks were submitted', self.taskname)
         if sent:
             self.progress('Sent %s of data in %s task(s)',
                           humansize(sum(sent.values())), num_tasks)
@@ -521,16 +523,18 @@ class Starmap(object):
         :returns: an IterResult object
         """
         if self.num_tasks == 1 or self.distribute == 'no':
-            it = self._iter_sequential()
-        elif self.distribute == 'futures':
+            self.progress('Executing "%s" in process', self.name)
+            r = [safely_call(self.task_func, args)
+                 for args in self._genargs(pickle=False)]
+            return IterResult(r, self.name, len(r), self.progress)
+
+        if self.distribute == 'futures':
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
-        if num_tasks == 0:
-            self.progress('No %s tasks were submitted', self.name)
         ires = IterResult(it, self.name, num_tasks, self.progress, self.sent)
         return ires
 
@@ -542,13 +546,6 @@ class Starmap(object):
 
     def __iter__(self):
         return iter(self.submit_all())
-
-    def _iter_sequential(self):
-        self.progress('Executing "%s" in process', self.name)
-        allargs = list(self._genargs(pickle=False))
-        yield len(allargs)
-        for args in allargs:
-            yield safely_call(self.task_func, args)
 
     def _iter_processes(self):
         allargs = list(self._genargs(pickle=False))
