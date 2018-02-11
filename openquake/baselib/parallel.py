@@ -424,6 +424,7 @@ def _wakeup(sec):
 
 
 class Starmap(object):
+    pids = ()
 
     @classmethod
     def init(cls, poolsize=None):
@@ -551,28 +552,23 @@ class Starmap(object):
             yield safely_call(self.task_func, args)
 
     def _iter_processes(self):
-        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            safefunc = functools.partial(
-                safely_call, self.task_func, backurl=socket.backurl)
-            allargs = list(self._genargs(backurl=socket.backurl))
-            yield len(allargs)
-            for nresults in self.pool.imap_unordered(safefunc, allargs):
-                for res in itertools.islice(socket, nresults):
-                    yield res
+        safefunc = functools.partial(safely_call, self.task_func)
+        allargs = list(self._genargs())
+        yield len(allargs)
+        for res in self.pool.imap_unordered(safefunc, allargs):
+            yield res
 
     def _iter_celery(self):
         safetask = task(safely_call, queue='celery')
-        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            results = []
-            for piks in self._genargs(backurl=socket.backurl):
-                results.append(safetask.delay(self.task_func, piks))
-            yield len(results)
-            for task_id, result_dict in ResultSet(results).iter_native():
-                if CELERY_RESULT_BACKEND.startswith('rpc:'):
-                    # work around a celery/rabbitmq bug
-                    del app.backend._cache[task_id]
-                for res in itertools.islice(socket, result_dict['result']):
-                    yield res
+        results = []
+        for piks in self._genargs():
+            results.append(safetask.delay(self.task_func, piks))
+        yield len(results)
+        for task_id, result_dict in ResultSet(results).iter_native():
+            if CELERY_RESULT_BACKEND.startswith('rpc:'):
+                # work around a celery/rabbitmq bug
+                del app.backend._cache[task_id]
+            yield result_dict['result']
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
