@@ -43,17 +43,20 @@ def safely_call(func, args, backurl=None):
         # further investigation is needed
         # check_mem_usage(mon)  # check if too much memory is used
         # FIXME: this approach does not work with the Threadmap
-        mon._flush = False
-        zsocket = (z.Socket(backurl, z.zmq.PUSH, 'connect') if backurl
-                   else mock.MagicMock())  # do nothing if not backurl
+        #mon._flush = False
+        backurl = getattr(mon, 'backurl', backurl)
+        if backurl:
+            zsocket = z.Socket(backurl, z.zmq.PUSH, 'connect')
+        else:
+            zsocket = mock.MagicMock()  # do nothing if not backurl
         try:
             with zsocket:
                 got = func(*args)
                 if inspect.isgenerator(got):
                     res = []
                     for val in got:
-                        zsocket.send((val, None, mon))
                         res.append((val, None, mon))
+                        zsocket.send((val, None, mon))
                 else:
                     res = (got, None, mon)
                     zsocket.send(res)

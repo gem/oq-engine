@@ -134,7 +134,7 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
     """
     Run a calculation with multiprocessing
     """
-    os.environ['OQ_DISTRIBUTE'] = 'futures'
+    #os.environ['OQ_DISTRIBUTE'] = 'futures'
     params = oqvalidation.OqParam.check(
         dict(p.split('=', 1) for p in param or ()))
     if slowest:
