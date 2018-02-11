@@ -34,7 +34,7 @@ except ImportError:
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
-    parallel, general, config, datastore, __version__, zeromq as z)
+    parallel2 as parallel, general, config, datastore, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
@@ -162,7 +162,7 @@ def raiseMasterKilled(signum, _stack):
         msg = 'Received a signal %d' % signum
     if sys.version_info >= (3, 5, 0):
         # Python 2 is buggy and this code would hang
-        for pid in parallel.executor.pids:  # when using futures
+        for pid in parallel.Starmap.pids:  # when using processes
             try:
                 os.kill(pid, signal.SIGKILL)  # SIGTERM is not enough :-(
             except OSError:  # pid not found
