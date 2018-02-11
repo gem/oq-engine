@@ -29,7 +29,7 @@ from openquake.baselib.python3compat import encode
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.baselib import parallel2 as parallel
+from openquake.baselib import parallel
 from openquake.calculators import getters
 from openquake.calculators import base, classical
 
