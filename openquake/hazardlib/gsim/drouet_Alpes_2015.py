@@ -43,6 +43,7 @@ import numpy as np
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from scipy.constants import g
 
 
 class DrouetAlpes2015Rjb(GMPE):
@@ -101,7 +102,7 @@ class DrouetAlpes2015Rjb(GMPE):
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rjb)
         if isinstance(imt, SA) or isinstance(imt, PGA): # Convert from m/s**2 to g
-            mean=mean-np.log(9.81)
+            mean=mean-np.log(g)
         elif isinstance(imt, PGV): # Convert from m/s to cm/s
             mean=mean+np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
@@ -180,7 +181,9 @@ class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
     Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
     Valid for vs30=800 m/s
     """
-    
+    #: Required distance measure is rupture distance, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('rrup', ))
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -193,7 +196,7 @@ class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rrup)
         if isinstance(imt, SA) or isinstance(imt, PGA): # Convert from m/s**2 to g
-            mean=mean-np.log(9.81)
+            mean=mean-np.log(g)
         elif isinstance(imt, PGV): # Convert from m/s to cm/s
             mean=mean+np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
@@ -234,6 +237,9 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
     Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
     Valid for vs30=800 m/s
     """
+    #: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('repi', ))
     
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -247,7 +253,7 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.repi)
         if isinstance(imt, SA) or isinstance(imt, PGA): # Convert from m/s**2 to g
-            mean=mean-np.log(9.81)
+            mean=mean-np.log(g)
         elif isinstance(imt, PGV): # Convert from m/s to cm/s
             mean=mean+np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
@@ -289,6 +295,10 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
     Valid for vs30=800 m/s
     """
     
+    #: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('rhyp', ))
+    
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -301,7 +311,7 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rhyp)
         if isinstance(imt, SA) or isinstance(imt, PGA): # Convert from m/s**2 to g
-            mean=mean-np.log(9.81)
+            mean=mean-np.log(g)
         elif isinstance(imt, PGV): # Convert from m/s to cm/s
             mean=mean+np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
@@ -378,7 +388,10 @@ class DrouetAlpes2015RrupHR(DrouetAlpes2015Rrup):
 	This version is for a large magnitude stress parameters of 100 bars (recommended by the authors)
     Valid for vs30=2000 m/s
     """
-
+    #: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('rrup', ))
+    
     #: Coefficient tables are constructed from the electronic suplements of
     #: the erratum to the original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -413,7 +426,10 @@ class DrouetAlpes2015RepiHR(DrouetAlpes2015Repi):
 	This version is for a large magnitude stress parameters of 100 bars (recommended by the authors)
     Valid for vs30=2000 m/s
     """
-    	
+    	#: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('repi', ))
+    
     #: Coefficient tables are constructed from the electronic suplements of
     #: the erratum to the original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -448,7 +464,10 @@ class DrouetAlpes2015RhypHR(DrouetAlpes2015Rhyp):
 	This version is for a large magnitude stress parameters of 100 bars (recommended by the authors)
     Valid for vs30=2000 m/s
     """
-    	
+    #: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('rhyp', ))	
+    
     #: Coefficient tables are constructed from the electronic suplements of
     #: the erratum to the original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -517,7 +536,10 @@ class DrouetAlpes2015Rrup_50bars(DrouetAlpes2015Rrup):
 	This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=800 m/s
     """
-    	
+    	#: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('rrup', ))
+    
     #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
@@ -551,7 +573,10 @@ class DrouetAlpes2015Repi_50bars(DrouetAlpes2015Repi):
 	This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=800 m/s
     """
-    	
+    	#: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('repi', ))
+    
     #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
@@ -585,7 +610,10 @@ class DrouetAlpes2015Rhyp_50bars(DrouetAlpes2015Rhyp):
 	This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=800 m/s
     """
-    	
+    	#: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('rhyp', ))
+    
     #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
@@ -653,6 +681,10 @@ class DrouetAlpes2015RrupHR_50bars(DrouetAlpes2015Rrup):
 	This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=2000 m/s
     """
+    #: Required distance measure is closest distance to rupture, see equation
+    #: 30 page 1021.
+    REQUIRES_DISTANCES = set(('rrup', ))
+    
 	#: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
