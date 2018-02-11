@@ -34,7 +34,7 @@ except ImportError:
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
-    parallel2 as parallel, general, config, datastore, __version__, zeromq as z)
+    parallel, general, config, datastore, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, views, export

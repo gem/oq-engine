@@ -28,7 +28,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
-from openquake.baselib import parallel2 as parallel
+from openquake.baselib import parallel
 from openquake.hazardlib import nrml
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, util
