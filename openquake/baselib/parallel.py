@@ -319,7 +319,7 @@ class IterResult(object):
             self.log_percent = self._log_percent()
             next(self.log_percent)
         else:
-            self.progress('No %s tasks were submitted', self.taskname)
+            self.progress('No %s tasks were submitted', self.name)
         if sent:
             self.progress('Sent %s of data in %s task(s)',
                           humansize(sum(sent.values())), num_tasks)
@@ -571,13 +571,14 @@ class Starmap(object):
             yield result_dict['result']
 
     def _iter_zmq(self):
+        safefunc = functools.partial(safely_call, self.task_func)
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
                            config.zworkers)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
                 n = 0
                 for args in self._genargs(socket.backurl):
-                    sender.send((safely_call, self.task_func, args))
+                    sender.send((safefunc, args))
                     n += 1
             yield n
             for _ in range(n):

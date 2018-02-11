@@ -43,7 +43,7 @@ def safely_call(func, args, backurl=None):
         # further investigation is needed
         # check_mem_usage(mon)  # check if too much memory is used
         # FIXME: this approach does not work with the Threadmap
-        #mon._flush = False
+        mon._flush = False
         backurl = getattr(mon, 'backurl', backurl)
         if backurl:
             zsocket = z.Socket(backurl, z.zmq.PUSH, 'connect')
