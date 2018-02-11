@@ -207,6 +207,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                     del os.environ['OQ_DISTRIBUTE']
                 else:
                     os.environ['OQ_DISTRIBUTE'] = oq_distribute
+            Starmap.shutdown()  # stop the process pool if any
         return getattr(self, 'exported', {})
 
     def core_task(*args):
