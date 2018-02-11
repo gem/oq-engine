@@ -153,6 +153,7 @@ import inspect
 import logging
 import operator
 import functools
+import itertools
 import multiprocessing.dummy
 import numpy
 try:
@@ -162,6 +163,7 @@ except ImportError:
         "Do nothing"
 
 from openquake.baselib import hdf5, config
+from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.workerpool import safely_call, _starmap
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -338,10 +340,12 @@ class IterResult(object):
 
     def __iter__(self):
         self.received = []
+        if self.num_tasks == 0:
+            return
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
             if isinstance(result, BaseException):
-                # this happens for instance with WorkerLostError with celery
+                # this happens with WorkerLostError with celery
                 raise result
             elif hasattr(result, 'unpickle'):
                 self.received.append(len(result))
@@ -351,8 +355,7 @@ class IterResult(object):
                 self.received.append(len(Pickled(result)))
             if etype:
                 raise RuntimeError(val)
-            if self.num_tasks:
-                next(self.log_percent)
+            next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
                 self.save_task_data(mon)
             yield val
@@ -401,10 +404,6 @@ class IterResult(object):
         return res
 
 
-if OQ_DISTRIBUTE == 'celery':
-    safe_task = task(safely_call, queue='celery')
-
-
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
@@ -430,7 +429,7 @@ class Starmap(object):
     def init(cls, poolsize=None):
         if OQ_DISTRIBUTE == 'futures' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
-            self = cls(_wakeup, ((.2,) for _ in range(cls.pool._processes)))
+            self = cls(_wakeup, [(.2,) for _ in range(cls.pool._processes)])
             cls.pool.pids = list(self)
 
     @classmethod
@@ -487,6 +486,8 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
+        self.receiver = ('tcp://%(master_host)s:%(receiver_ports)s' %
+                         config.zworkers)
 
     @property
     def num_tasks(self):
@@ -500,7 +501,7 @@ class Starmap(object):
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
-    def _genargs(self, pickle):
+    def _genargs(self, pickle, backurl=None):
         """
         Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them if pickle is True.
@@ -510,6 +511,7 @@ class Starmap(object):
                 # add incremental task number and task weight
                 args[-1].task_no = task_no
                 args[-1].weight = getattr(args[0], 'weight', 1.)
+                args[-1].backurl = backurl
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
@@ -523,20 +525,15 @@ class Starmap(object):
         :returns: an IterResult object
         """
         if self.num_tasks == 1 or self.distribute == 'no':
-            self.progress('Executing "%s" in process', self.name)
-            r = [safely_call(self.task_func, args)
-                 for args in self._genargs(pickle=False)]
-            return IterResult(r, self.name, len(r), self.progress)
-
-        if self.distribute == 'futures':
+            it = self._iter_sequential()
+        elif self.distribute == 'futures':
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
-        ires = IterResult(it, self.name, num_tasks, self.progress, self.sent)
-        return ires
+        return IterResult(it, self.name, num_tasks, self.progress, self.sent)
 
     def reduce(self, agg=operator.add, acc=None):
         """
@@ -547,25 +544,36 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-    def _iter_processes(self):
+    def _iter_sequential(self):
+        self.progress('Executing "%s" in process', self.name)
         allargs = list(self._genargs(pickle=False))
         yield len(allargs)
-        ires = self.pool.imap_unordered(
-            functools.partial(safely_call, self.task_func), allargs)
-        for res in ires:
-            yield res
+        for args in allargs:
+            yield safely_call(self.task_func, args)
+
+    def _iter_processes(self):
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            safefunc = functools.partial(
+                safely_call, self.task_func, backurl=socket.backurl)
+            allargs = list(self._genargs(pickle=True, backurl=socket.backurl))
+            yield len(allargs)
+            for nresults in self.pool.imap_unordered(safefunc, allargs):
+                for res in itertools.islice(socket, nresults):
+                    yield res
 
     def _iter_celery(self):
-        results = []
-        for piks in self._genargs(pickle=True):
-            results.append(safe_task.delay(self.task_func, piks))
-        yield len(results)
-        rset = ResultSet(results)
-        for task_id, result_dict in rset.iter_native():
-            if CELERY_RESULT_BACKEND.startswith('rpc:'):
-                # work around a celery/rabbitmq bug
-                del app.backend._cache[task_id]
-            yield result_dict['result']
+        safetask = task(safely_call, queue='celery')
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            results = []
+            for piks in self._genargs(pickle=True, backurl=socket.backurl):
+                results.append(safetask.delay(self.task_func, piks))
+            yield len(results)
+            for task_id, result_dict in ResultSet(results).iter_native():
+                if CELERY_RESULT_BACKEND.startswith('rpc:'):
+                    # work around a celery/rabbitmq bug
+                    del app.backend._cache[task_id]
+                for res in itertools.islice(socket, result_dict['result']):
+                    yield res
 
     def _iter_zmq(self):
         iterargs = self._genargs(pickle=False)

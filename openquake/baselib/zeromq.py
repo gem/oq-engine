@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import zmq
+import logging
 
 context = zmq.Context()
 
@@ -128,6 +129,7 @@ class Socket(object):
                 if self.zsocket.poll(self.timeout):
                     args = self.zsocket.recv_pyobj()
                 else:
+                    logging.info('Timeout in %s', self)
                     continue
             except (KeyboardInterrupt, zmq.ZMQError):
                 # sending SIGTERM raises ZMQError
@@ -153,5 +155,6 @@ class Socket(object):
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):
-        return '<%s %s %s %s>' % (self.__class__.__name__, self.end_point,
+        end_point = getattr(self, 'backurl', self.end_point)
+        return '<%s %s %s %s>' % (self.__class__.__name__, end_point,
                                   SOCKTYPE[self.socket_type], self.mode)
