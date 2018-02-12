@@ -43,7 +43,6 @@ def safely_call(func, args, backurl=None):
         # further investigation is needed
         # check_mem_usage(mon)  # check if too much memory is used
         # FIXME: this approach does not work with the Threadmap
-        mon._flush = False
         backurl = getattr(mon, 'backurl', backurl)
         if backurl:
             zsocket = z.Socket(backurl, z.zmq.PUSH, 'connect')
@@ -66,8 +65,6 @@ def safely_call(func, args, backurl=None):
             res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
                    etype, mon)
             zsocket.send(res)
-        finally:
-            mon._flush = True
     if backurl:
         return zsocket.num_sent
     return res
