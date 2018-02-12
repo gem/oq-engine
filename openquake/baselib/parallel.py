@@ -575,8 +575,7 @@ class Starmap(object):
             results.append(res)
         yield len(results)
         for task_id, result_dict in ResultSet(results).iter_native():
-            idx = self.task_ids.index(task_id)
-            self.task_ids.pop(idx)
+            self.task_ids.remove(task_id)
             if CELERY_RESULT_BACKEND.startswith('rpc:'):
                 # work around a celery/rabbitmq bug
                 del app.backend._cache[task_id]
