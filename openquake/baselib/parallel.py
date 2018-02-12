@@ -575,15 +575,13 @@ class Starmap(object):
             yield result_dict['result']
 
     def _iter_zmq(self):
-        safefunc = functools.partial(safely_call, self.task_func)
-        safefunc.__name__ = self.name
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
                            config.zworkers)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
                 n = 0
                 for args in self._genargs(socket.backurl):
-                    sender.send((safefunc, args))
+                    sender.send((self.task_func, args))
                     n += 1
             yield n
             for _ in range(n):
