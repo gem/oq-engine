@@ -54,7 +54,7 @@ Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
 
-Obsoletes: python-oq-risklib python-oq-hazardlib
+Obsoletes: python-oq-risklib python-oq-hazardlib python-oq-engine python2-oq-engine
 Provides: python-oq-risklib python-oq-hazardlib python-oq-engine
 
 %description
