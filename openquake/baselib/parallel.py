@@ -164,7 +164,7 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.workerpool import safely_call, _starmap
+from openquake.baselib.workerpool import safely_call
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
@@ -590,9 +590,11 @@ class Starmap(object):
                 yield obj
 
 
-def sequential_apply(task, args):
+def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
+                     weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks
     """
-    task_args = [(a,) + args[1:] for a in args[0]]
-    return IterResult(map(task, task_args), task.__name__, len(task_args))
+    chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
+    task_args = [(ch,) + args[1:] for ch in chunks]
+    return itertools.starmap(task, task_args)
