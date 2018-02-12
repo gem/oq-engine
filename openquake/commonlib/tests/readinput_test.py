@@ -63,9 +63,9 @@ intensity_measure_types = PGA
 investigation_time = 50
 export_dir = %s
         """ % (site_model_input, TMP))
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             readinput.get_params([job_config])
-        self.assertIn('not a relative path', str(ctx.exception))
+        self.assertIn('must be a relative path', str(ctx.exception))
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
