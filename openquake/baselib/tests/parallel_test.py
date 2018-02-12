@@ -77,14 +77,6 @@ class StarmapTestCase(unittest.TestCase):
             res[key] = val.reduce()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})
 
-    def test_no_flush(self):
-        mon = parallel.Monitor('test')
-        res = parallel.safely_call(get_len, ('ab', mon))
-        self.assertIn(
-            'Monitor(\'test\').flush() must not be called in a worker', res[0])
-        self.assertEqual(res[1], RuntimeError)
-        self.assertEqual(res[2].operation, mon.operation)
-
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()
