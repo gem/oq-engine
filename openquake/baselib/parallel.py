@@ -576,6 +576,7 @@ class Starmap(object):
 
     def _iter_zmq(self):
         safefunc = functools.partial(safely_call, self.task_func)
+        safefunc.__name__ = self.name
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
                            config.zworkers)
