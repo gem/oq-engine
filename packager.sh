@@ -42,7 +42,7 @@ set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
 # GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub"
-GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
+GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
@@ -352,9 +352,9 @@ _devtest_innervm_run () {
             # cd _jenkins_deps/$dep
 
             add_local_pkg_repo "$dep"
-            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         elif [ "$dep_type" = "sub" ]; then
-            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -586,7 +586,7 @@ _pkgtest_innervm_run () {
         cd /usr/share/openquake/engine/demos
         OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
 
-        sudo apt-get install -y python-oq-engine-master python-oq-engine-worker
+        sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 # FIXME: the big sleep below is a temporary workaround to avoid races.
@@ -1374,7 +1374,7 @@ mksafedir "$GEM_BUILD_EXTR"
 cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
     ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
-for pkg in python-oq-engine python-oq-engine-master python-oq-engine-worker; do
+for pkg in python3-oq-engine python3-oq-engine-master python3-oq-engine-worker; do
     mksafedir "$pkg"
     cd "$pkg"
     dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .
