@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation, Chung-Han Chan
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,9 +34,17 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-def rbf(ra, coeff, mag):
+def gc(coeff, mag):
     """
-    Calculate ground motion
+    Returns the set of coefficients to be used for the calculation of GM
+    as a function of earthquake magnitude
+
+    :param coeff:
+        A dictionary of parameters for the selected IMT
+    :param mag:
+        Magnitude value
+    :return:
+        The set of coefficient to be used
     """
     if mag > 6.5:
         a1ca = coeff['ua']
@@ -60,6 +68,21 @@ def rbf(ra, coeff, mag):
         a2cc = coeff['mc']
         a2cd = coeff['md']
         a2ce = coeff['me']
+    return a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce
+
+
+def rbf(ra, coeff, mag):
+    """
+    Calculate ground motion
+
+    :param ra:
+
+    :param coeff:
+        A dictionary of parameters for the
+    :param mag:
+        Magnitude value
+    """
+    a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = gc(coeff, mag)
     term1 = a1ca + a1cb * mag + a1cc * np.log(ra + a1cd*np.exp(a1ce*mag))
     term2 = a2ca + a2cb * mag
     term3 = a2cd*np.exp(a2ce*mag)
@@ -136,50 +159,32 @@ class YuEtAl2013Ms(GMPE):
             assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                        for stddev_type in stddev_types)
             #
-            # Set coefficients
-            C = self.COEFFS[imt]
-            if rup.mag > 6.5:
-                a1ca = C['ua']
-                a1cb = C['ub']
-                a1cc = C['uc']
-                a1cd = C['ud']
-                a1ce = C['ue']
-                a2ca = C['ia']
-                a2cb = C['ib']
-                a2cc = C['ic']
-                a2cd = C['id']
-                a2ce = C['ie']
-            else:
-                a1ca = C['a']
-                a1cb = C['b']
-                a1cc = C['c']
-                a1cd = C['d']
-                a1ce = C['e']
-                a2ca = C['ma']
-                a2cb = C['mb']
-                a2cc = C['mc']
-                a2cd = C['md']
-                a2ce = C['me']
-            #
-            # Compute the mean value (i.e. natural logarithm of ground motion)
+            # Set parameters
             mag = rup.mag
             epi = dists.repi
             theta = dists.azimuth
             #
+            # Set coefficients
+            coeff = self.COEFFS[imt]
+            a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = \
+                gc(coeff, mag)
+            #
             # Get correction coefficients
             ras = []
             for epi, theta in zip(dists.repi, dists.azimuth):
-                res = minimize(fnc, epi, args=(epi, theta, mag, C),
+                res = minimize(fnc, epi, args=(epi, theta, mag, coeff),
                                method='Nelder-Mead', tol=0.1)
                 ras.append(res.x[0])
             ras = np.array(ras)
-            rbs = rbf(ras, C, mag)
+            rbs = rbf(ras, coeff, mag)
             #
             # Compute values of ground motion for the two cases
-            mean1 = (a1ca + a1cb * mag + a1cc *
-                     np.log((ras**2+225)**0.5 + a1cd * np.exp(a1ce * mag)))
-            mean2 = (a2ca + a2cb * mag + a2cc *
-                     np.log((rbs**2+225)**0.5 + a2cd * np.exp(a2ce * mag)))
+            mean1 = (a1ca + a1cb * mag +
+                     a1cc * np.log((ras**2+225)**0.5 +
+                                   a1cd * np.exp(a1ce * mag)))
+            mean2 = (a2ca + a2cb * mag +
+                     a2cc * np.log((rbs**2+225)**0.5 +
+                                   a2cd * np.exp(a2ce * mag)))
             #
             # Get distances
             x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
@@ -193,7 +198,7 @@ class YuEtAl2013Ms(GMPE):
                 raise ValueError('Unsupported IMT')
             #
             # Get the standard deviation
-            stddevs = self._compute_std(C, stddev_types, len(dists.repi))
+            stddevs = self._compute_std(coeff, stddev_types, len(dists.repi))
             #
             # Return results
             return np.log(mean), stddevs
