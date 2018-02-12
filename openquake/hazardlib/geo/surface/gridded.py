@@ -106,7 +106,7 @@ class GriddedSurface(BaseSurface):
             :class:`~openquake.hazardlib.geo.mesh.Mesh` of the same shape as
             ``mesh`` with closest surface's points on respective indices.
         """
-        raise NotImplementedError
+        raise self.mesh.get_closest_points(mesh)
 
     def get_joyner_boore_distance(self, mesh):
         """
