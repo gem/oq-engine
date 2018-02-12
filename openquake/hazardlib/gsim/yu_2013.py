@@ -73,14 +73,16 @@ def gc(coeff, mag):
 
 def rbf(ra, coeff, mag):
     """
-    Calculate ground motion
+    Calculate the meadian ground motion for a given magnitude and distance
 
     :param ra:
-
+        Distance value [km]
     :param coeff:
         A dictionary of parameters for the
     :param mag:
         Magnitude value
+    :return:
+
     """
     a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = gc(coeff, mag)
     term1 = a1ca + a1cb * mag + a1cc * np.log(ra + a1cd*np.exp(a1ce*mag))
@@ -91,7 +93,13 @@ def rbf(ra, coeff, mag):
 
 def fnc(ra, *args):
     """
-    Find the rupture to site distance
+    Function used in the minimisation problem.
+
+    :param ra:
+        Semi-axis of the ellipses used in the Yu et al.
+    :return:
+        The absolute difference between the epicentral distance and the
+        adjusted distance
     """
     #
     # epicentral distance
@@ -150,58 +158,61 @@ class YuEtAl2013Ms(GMPE):
     REQUIRES_DISTANCES = set(('repi', 'azimuth'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-            """
-            See :meth:`superclass method
-            <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-            for spec of input and result values.
-            """
-            # Check that the requested standard deviation type is available
-            assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                       for stddev_type in stddev_types)
-            #
-            # Set parameters
-            mag = rup.mag
-            epi = dists.repi
-            theta = dists.azimuth
-            #
-            # Set coefficients
-            coeff = self.COEFFS[imt]
-            a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = \
-                gc(coeff, mag)
-            #
-            # Get correction coefficients
-            ras = []
-            for epi, theta in zip(dists.repi, dists.azimuth):
-                res = minimize(fnc, epi, args=(epi, theta, mag, coeff),
-                               method='Nelder-Mead', tol=0.1)
-                ras.append(res.x[0])
-            ras = np.array(ras)
-            rbs = rbf(ras, coeff, mag)
-            #
-            # Compute values of ground motion for the two cases
-            mean1 = (a1ca + a1cb * mag +
-                     a1cc * np.log((ras**2+225)**0.5 +
-                                   a1cd * np.exp(a1ce * mag)))
-            mean2 = (a2ca + a2cb * mag +
-                     a2cc * np.log((rbs**2+225)**0.5 +
-                                   a2cd * np.exp(a2ce * mag)))
-            #
-            # Get distances
-            x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
-            y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
-            mean = mean1 * mean2 / np.sqrt(x+y)
-            if isinstance(imt, (PGA)):
-                mean = np.exp(mean)/g/100
-            elif isinstance(imt, (PGV)):
-                mean = np.exp(mean)
-            else:
-                raise ValueError('Unsupported IMT')
-            #
-            # Get the standard deviation
-            stddevs = self._compute_std(coeff, stddev_types, len(dists.repi))
-            #
-            # Return results
-            return np.log(mean), stddevs
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # Check that the requested standard deviation type is available
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                    for stddev_type in stddev_types)
+        #
+        # Set parameters
+        mag = rup.mag
+        epi = dists.repi
+        theta = dists.azimuth
+        #
+        # Set coefficients
+        coeff = self.COEFFS[imt]
+        a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = \
+            gc(coeff, mag)
+        #
+        # Get correction coefficients. Here for each site we find the
+        # the geometry of the ellipses
+        ras = []
+        for epi, theta in zip(dists.repi, dists.azimuth):
+            res = minimize(fnc, epi, args=(epi, theta, mag, coeff),
+                            method='Nelder-Mead', tol=0.1)
+            ras.append(res.x[0])
+        ras = np.array(ras)
+        rbs = rbf(ras, coeff, mag)
+        #
+        # Compute values of ground motion for the two cases. The value of
+        # 225 is hardcoded under the assumption that the hypocentral depth
+        # corresponds to 15 km (i.e. 15**2)
+        mean1 = (a1ca + a1cb * mag +
+                    a1cc * np.log((ras**2+225)**0.5 +
+                                a1cd * np.exp(a1ce * mag)))
+        mean2 = (a2ca + a2cb * mag +
+                    a2cc * np.log((rbs**2+225)**0.5 +
+                                a2cd * np.exp(a2ce * mag)))
+        #
+        # Get distances
+        x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
+        y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
+        mean = mean1 * mean2 / np.sqrt(x+y)
+        if isinstance(imt, (PGA)):
+            mean = np.exp(mean)/g/100
+        elif isinstance(imt, (PGV)):
+            mean = np.exp(mean)
+        else:
+            raise ValueError('Unsupported IMT')
+        #
+        # Get the standard deviation
+        stddevs = self._compute_std(coeff, stddev_types, len(dists.repi))
+        #
+        # Return results
+        return np.log(mean), stddevs
 
     def _compute_std(self, C, stddev_types, num_sites):
         return [np.ones(num_sites)*C['sigma']]
