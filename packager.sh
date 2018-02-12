@@ -358,6 +358,8 @@ _devtest_innervm_run () {
     done
     IFS="$old_ifs"
 
+    ssh $lxc_ip "sleep 500000 || true"
+
     # extract dependencies for this package
     pkgs_list="$(deps_list "all" debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
