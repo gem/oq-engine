@@ -546,7 +546,10 @@ class Starmap(object):
 
     def _iter_sequential(self):
         self.progress('Executing "%s" in process', self.name)
-        allargs = list(self.task_args)
+        allargs = []
+        for task_no, args in enumerate(self.task_args):
+            args[-1].task_no = task_no
+            allargs.append(args)
         yield len(allargs)
         for args in allargs:
             yield safely_call(self.task_func, args)
