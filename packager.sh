@@ -277,8 +277,11 @@ _pkgbuild_innervm_run () {
     ssh $lxc_ip sudo apt-get update
     ssh $lxc_ip sudo apt-get -y upgrade
     ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
-    # FIXME: MN just for devel
-    ssh $lxc_ip "sleep 800000 || true"
+
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
+    ssh $lxc_ip "sudo apt-get update"
+
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
     ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
