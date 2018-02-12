@@ -43,8 +43,8 @@ override_dh_auto_install:
 
 override_dh_install:
 	sed -i 's@#.*env python@#!/opt/openquake/bin/python3@g' \
-	  $$(grep -l 'env python' $$(find /opt/openquake/engine -name '*.py') $$(find /opt/openquake/bin -type f))
-	$$(grep -l 'env python' `find $(PWD)/debian/python-oq-engine/opt/openquake -name '*.py'` `find utils -type f` `find bin -type f`)
+	  $$(grep -l 'env python' $$(find $(PWD)/debian/python-oq-engine$(PREFIX)/engine -name '*.py') \
+          $$(find $(PWD)/debian/python-oq-engine$(PREFIX)//bin -type f))
 	/opt/openquake/bin/python3 -m compileall $(PWD)/debian/python-oq-engine$(PREFIX) || true
 	dh_install
 	# Make a zipped copy of each demo
