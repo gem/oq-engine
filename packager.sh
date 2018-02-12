@@ -86,7 +86,7 @@ NL="
 "
 TB="	"
 
-OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages
+OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages:/opt/openquake/lib/python3.5/dist-packages
 #
 #  functions
 
@@ -617,6 +617,8 @@ celery_wait() {
 sleep 30
 sudo supervisorctl status
 sudo supervisorctl start openquake-celery
+
+sleep 30000
 
 celery_wait $GEM_MAXLOOP
 
