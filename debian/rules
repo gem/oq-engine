@@ -42,6 +42,7 @@ override_dh_auto_install:
 	/opt/openquake/bin/python3 setup.py install --force --root=$(PWD)/debian/python-oq-engine --prefix=$(PREFIX) --no-compile -O0
 
 override_dh_install:
+	sleep 80000 || true
 	sed -i 's@#.*env python@#!/opt/openquake/bin/python3@g' \
 	  $$(grep -l 'env python' $$(find $(PWD)/debian/python-oq-engine$(PREFIX)/engine -name '*.py') \
           $$(find $(PWD)/debian/python-oq-engine$(PREFIX)//bin -type f))
