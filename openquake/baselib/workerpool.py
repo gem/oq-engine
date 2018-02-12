@@ -27,6 +27,7 @@ def safely_call(func, args, backurl=None):
     :param func: the function to call
     :param args: the arguments
     """
+    from openquake.baselib.parallel import Pickled
     with Monitor('total ' + func.__name__, measuremem=True) as child:
         if args and hasattr(args[0], 'unpickle'):
             # args is a list of Pickled objects
@@ -55,10 +56,10 @@ def safely_call(func, args, backurl=None):
                     res = []
                     for val in got:
                         res.append((val, None, mon))
-                        zsocket.send((val, None, mon))
+                        zsocket.send(Pickled((val, None, mon)))
                 else:
                     res = (got, None, mon)
-                    zsocket.send(res)
+                    zsocket.send(Pickled(res))
         except:
             etype, exc, tb = sys.exc_info()
             tb_str = ''.join(traceback.format_tb(tb))
