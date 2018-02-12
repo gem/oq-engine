@@ -37,7 +37,6 @@ from openquake.commonlib import logictree
 
 
 MINWEIGHT = source.MINWEIGHT
-MAXWEIGHT = 1E7  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
 U16 = numpy.uint16
@@ -836,17 +835,13 @@ class CompositeSourceModel(collections.Sequence):
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
-    def get_maxweight(self, concurrent_tasks):
+    def get_maxweight(self, concurrent_tasks, minweight=MINWEIGHT):
         """
         Return an appropriate maxweight for use in the block_splitter
         """
         ct = concurrent_tasks or 1
         mw = math.ceil(self.weight / ct)
-        if mw < MINWEIGHT:
-            mw = MINWEIGHT
-        elif mw > MAXWEIGHT:
-            mw = MAXWEIGHT
-        return mw
+        return max(mw, minweight)
 
     def add_infos(self, sources):
         """
