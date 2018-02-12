@@ -179,6 +179,7 @@ if OQ_DISTRIBUTE.startswith('celery'):
     from celery.task import task
     from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
     app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+    safetask = task(safely_call, queue='celery')  # has to be global
 
 
 def oq_distribute(task=None):
@@ -565,7 +566,6 @@ class Starmap(object):
             yield res
 
     def _iter_celery(self, backurl=None):
-        safetask = task(safely_call, queue='celery')
         results = []
         for piks in self._genargs(backurl):
             results.append(safetask.delay(self.task_func, piks))
