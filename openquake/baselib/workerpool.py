@@ -222,9 +222,7 @@ class WorkerPool(object):
         setproctitle('oq-zworker')
         with sock:
             for cmd, args in sock:
-                backurl = args[-1].backurl  # attached to the monitor
-                with z.Socket(backurl, z.zmq.PUSH, 'connect') as s:
-                    s.send(safely_call(cmd, args))
+                safely_call(cmd, args)
 
     def start(self):
         """
