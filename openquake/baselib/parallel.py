@@ -173,7 +173,7 @@ from openquake.baselib.general import (
 cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
-if OQ_DISTRIBUTE == 'celery':
+if OQ_DISTRIBUTE.startswith('celery'):
     from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
@@ -187,7 +187,7 @@ def oq_distribute(task=None):
     """
     dist = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
     read_access = getattr(task, 'read_access', True)
-    if dist == 'celery' and not read_access:
+    if dist.startswith('celery') and not read_access:
         raise ValueError('You must configure the shared_dir in openquake.cfg '
                          'in order to be able to run %s with celery' %
                          task.__name__)
@@ -530,6 +530,8 @@ class Starmap(object):
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
+        elif self.distribute == 'celery_zmq':
+            it = self._iter_celery_zmq()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
@@ -562,10 +564,10 @@ class Starmap(object):
         for res in self.pool.imap_unordered(safefunc, allargs):
             yield res
 
-    def _iter_celery(self):
+    def _iter_celery(self, backurl=None):
         safetask = task(safely_call, queue='celery')
         results = []
-        for piks in self._genargs():
+        for piks in self._genargs(backurl):
             results.append(safetask.delay(self.task_func, piks))
         yield len(results)
         for task_id, result_dict in ResultSet(results).iter_native():
@@ -573,6 +575,12 @@ class Starmap(object):
                 # work around a celery/rabbitmq bug
                 del app.backend._cache[task_id]
             yield result_dict['result']
+
+    def _iter_celery_zmq(self):
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            isocket = iter(socket)
+            for _ in self._iter_celery(socket.backurl):
+                yield next(isocket)
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
