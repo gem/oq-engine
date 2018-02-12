@@ -35,11 +35,16 @@ def abort(job_id):
     elif job.status not in ('executing', 'running'):
         print('Job %d is %s' % (job.id, job.status))
         return
-    logs.dbcmd('set_status', job.id, 'aborted')
     name = 'oq-job-%d' % job.id
     for p in psutil.process_iter():
         if p.name() == name:
-            os.kill(p.pid, signal.SIGTERM)
-    print('%d aborted' % job.id)
+            try:
+                os.kill(p.pid, signal.SIGTERM)
+                logs.dbcmd('set_status', job.id, 'aborted')
+            except Exception as exc:
+                print(exc)
+            break
+    else:
+        print('%d aborted' % job.id)
 
 abort.arg('job_id', 'job ID', type=int)
