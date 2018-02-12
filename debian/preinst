@@ -8,7 +8,7 @@ if [ $GEM_SET_DEBUG ]; then
 fi
 set -e
 
-GEM_DEB_PACKAGE="python-oq-engine"
+GEM_DEB_PACKAGE="python3-oq-engine"
 
 for dir in /opt/openquake/lib/python2.7/site-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /opt/openquake/lib/python2.7/site-packages/openquake.engine-*egg-info
 do

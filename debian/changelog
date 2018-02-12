@@ -104,7 +104,7 @@
   * Minor modification of check_gsim functions to permit instantiated classes
     to be passed
 
-python-oq-engine (2.8.0-0~precise01) precise; urgency=low
+python3-oq-engine (2.8.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
   * `iml_disagg` and `poes_disagg` cannot coexist in the job.ini file
