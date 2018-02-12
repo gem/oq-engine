@@ -426,6 +426,7 @@ def _wakeup(sec):
 
 class Starmap(object):
     pids = ()
+    task_ids = []
 
     @classmethod
     def init(cls, poolsize=None):
@@ -566,9 +567,14 @@ class Starmap(object):
     def _iter_celery(self):
         results = []
         for piks in self._genargs():
-            results.append(safetask.delay(self.task_func, piks))
+            res = safetask.delay(self.task_func, piks)
+            # populating Starmap.task_ids, used in celery_cleanup
+            self.task_ids.append(res.task_id)
+            results.append(res)
         yield len(results)
         for task_id, result_dict in ResultSet(results).iter_native():
+            idx = self.task_ids.index(task_id)
+            self.task_ids.pop(idx)
             if CELERY_RESULT_BACKEND.startswith('rpc:'):
                 # work around a celery/rabbitmq bug
                 del app.backend._cache[task_id]
