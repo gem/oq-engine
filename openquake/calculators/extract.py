@@ -283,7 +283,7 @@ def _filter_agg(assetcol, losses, selected):
     tagnames = []
     for tag in selected:
         tagname, tagvalue = tag.split('=', 1)
-        if tagvalue == '%2A':  # this is urlencoded "*"
+        if tagvalue == '*':
             tagnames.append(tagname)
         else:
             idxs &= aids_by_tag[tag]
