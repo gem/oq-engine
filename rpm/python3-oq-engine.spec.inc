@@ -54,8 +54,8 @@ Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
 
-Obsoletes: python-oq-risklib python-oq-hazardlib python-oq-engine python2-oq-engine
-Provides: python-oq-risklib python-oq-hazardlib python-oq-engine
+Obsoletes: python-oq-hazardlib python-oq-engine python2-oq-engine
+Provides: python-oq-hazardlib python-oq-engine
 
 %description
 OpenQuake is an open source application that allows users to
