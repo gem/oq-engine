@@ -1,4 +1,4 @@
-Source: python-oq-engine
+Source: python3-oq-engine
 Section: python
 Priority: extra
 Maintainer: Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>
@@ -6,23 +6,24 @@ Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, python (>=2.7), pytho
 Standards-Version: 3.9.3
 Homepage: http://github.com/gem/oq-engine
 
-Package: python-oq-engine
+Package: python3-oq-engine
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}, python3-oq-libs (>=1.5.0~), supervisor (>=3.0b2-1~)
-Conflicts: python-noq, python-oq, python-nhlib
-Replaces: python-oq-risklib, python-oq-hazardlib
+Conflicts: python-noq, python-oq, python-nhlib, python-oq-engine
+Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
-Breaks: python-oq-risklib, python-oq-hazardlib
+Breaks: python-oq-risklib, python-oq-hazardlib, python-oq-engine
 Recommends: ${dist:Recommends}
-Suggests: python-oq-libs-extra (>= 1.5.0~)
+Suggests: python3-oq-libs-extra (>= 1.5.0~)
 Description: computes seismic hazard and physical risk
  based on the hazard and risk libraries developed by the GEM foundation
  (http://www.globalquakemodel.org/)
 
-Package: python-oq-engine-master
+Package: python3-oq-engine-master
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, rabbitmq-server (>=2.8.0-2~gem02), python-oq-engine (= ${binary:Version})
-Replaces: python-oq-risklib, python-oq-hazardlib
+Depends: ${shlibs:Depends}, ${misc:Depends}, rabbitmq-server (>=2.8.0-2~gem02), python3-oq-engine (= ${binary:Version})
+Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine-master
+Conflicts: python-oq-engine-master
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
 Breaks: python-oq-risklib, python-oq-hazardlib
 Recommends: ${dist:Recommends}
@@ -30,10 +31,11 @@ Description: computes seismic hazard and physical risk
  based on the hazard and risk libraries developed by the GEM foundation
  (http://www.globalquakemodel.org/)
 
-Package: python-oq-engine-worker
+Package: python3-oq-engine-worker
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, supervisor (>=3.0b2-1~), python-oq-engine (= ${binary:Version})
-Replaces: python-oq-risklib, python-oq-hazardlib
+Depends: ${shlibs:Depends}, ${misc:Depends}, supervisor (>=3.0b2-1~), python3-oq-engine (= ${binary:Version})
+Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine-worker
+Conflicts: python-oq-engine-worker
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
 Breaks: python-oq-risklib, python-oq-hazardlib
 Recommends: ${dist:Recommends}
