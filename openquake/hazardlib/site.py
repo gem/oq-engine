@@ -318,10 +318,7 @@ class SiteCollection(object):
             idx = slice(None)
         else:
             idx = self.indices
-        try:
-            return self.array[idx][name]
-        except:
-            import pdb; pdb.set_trace()
+        return self.array[idx][name]
 
     def __len__(self):
         """
