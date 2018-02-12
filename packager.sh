@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub"
+# GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -358,7 +358,8 @@ _devtest_innervm_run () {
     done
     IFS="$old_ifs"
 
-    ssh $lxc_ip "sleep 500000 || true"
+    # FIXME: Just for devel.
+    # ssh $lxc_ip "sleep 500000 || true"
 
     # extract dependencies for this package
     pkgs_list="$(deps_list "all" debian)"
