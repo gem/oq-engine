@@ -5,6 +5,7 @@
     and by improving the weighting algorithm
 
   [Daniele Viganò]
+  * TMPDIR can be customized via the `openquake.cfg`
   * Updated dependencies compatibility in setup.py
 
   [Michele Simionato]
