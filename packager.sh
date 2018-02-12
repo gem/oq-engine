@@ -260,6 +260,8 @@ add_local_pkg_repo () {
         fi
     done
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    # FIXME - MN: just to test
+    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
     ssh $lxc_ip "sudo apt-get update"
 }
 
@@ -317,6 +319,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip mkdir -p "repo"
     scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
@@ -513,6 +516,7 @@ _pkgtest_innervm_run () {
         ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
         ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources*  ${GEM_BUILD_ROOT}/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
+    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
 
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
@@ -537,6 +541,7 @@ _pkgtest_innervm_run () {
     # add custom packages
     scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
