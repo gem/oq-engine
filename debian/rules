@@ -39,7 +39,7 @@ else
 endif
 
 override_dh_auto_install:
-	/opt/openquake/bin/python3 setup.py install --force --root=$(PWD)/debian/python-oq-engine --prefix=$(PREFIX) --no-compile -O0
+	/opt/openquake/bin/python3 setup.py install --force --install_layout=deb --root=$(PWD)/debian/python-oq-engine --prefix=$(PREFIX) --no-compile -O0
 
 override_dh_install:
 	sleep 80000 || true
