@@ -8,7 +8,7 @@ Homepage: http://github.com/gem/oq-engine
 
 Package: python-oq-engine
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-oq-libs (>=1.5.0~), supervisor (>=3.0b2-1~)
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3-oq-libs (>=1.5.0~), supervisor (>=3.0b2-1~) oq-python3.5
 Conflicts: python-noq, python-oq, python-nhlib
 Replaces: python-oq-risklib, python-oq-hazardlib
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
