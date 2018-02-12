@@ -44,7 +44,7 @@ def abort(job_id):
             except Exception as exc:
                 print(exc)
             break
-    else:
+    else:  # no break
         print('%d aborted' % job.id)
 
 abort.arg('job_id', 'job ID', type=int)
