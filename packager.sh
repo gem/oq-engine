@@ -86,7 +86,7 @@ NL="
 "
 TB="	"
 
-OPT_LIBS_PATH=/opt/openquake/lib/python2.7/site-packages
+OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages
 #
 #  functions
 
