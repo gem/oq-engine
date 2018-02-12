@@ -38,8 +38,9 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_closest_points(self):
-        self.assertRaises(NotImplementedError, self.surf.get_closest_points,
-                          self.mesh)
+        res = self.surf.get_closest_points(self.mesh)
+        self.assertEqual(res.lons, [1.0])
+        self.assertEqual(res.lats, [1.0])
 
     def test_get_joyner_boore_distance(self):
         dists = self.surf.get_joyner_boore_distance(self.mesh)
