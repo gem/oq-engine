@@ -2,13 +2,13 @@ Source: python-oq-engine
 Section: python
 Priority: extra
 Maintainer: Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>
-Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, python (>=2.7), python-setuptools, python-coverage, python-sphinx, zip
+Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, python (>=2.7), python-setuptools, python-coverage, python-sphinx, zip, oq-python3.5
 Standards-Version: 3.9.3
 Homepage: http://github.com/gem/oq-engine
 
 Package: python-oq-engine
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python3-oq-libs (>=1.5.0~), supervisor (>=3.0b2-1~) oq-python3.5
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3-oq-libs (>=1.5.0~), supervisor (>=3.0b2-1~)
 Conflicts: python-noq, python-oq, python-nhlib
 Replaces: python-oq-risklib, python-oq-hazardlib
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
