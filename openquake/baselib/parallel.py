@@ -548,7 +548,8 @@ class Starmap(object):
         self.progress('Executing "%s" in process', self.name)
         allargs = []
         for task_no, args in enumerate(self.task_args):
-            args[-1].task_no = task_no
+            if isinstance(args[-1], Monitor):  # not the case for wakeup
+                args[-1].task_no = task_no
             allargs.append(args)
         yield len(allargs)
         for args in allargs:
