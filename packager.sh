@@ -408,6 +408,7 @@ _devtest_innervm_run () {
 
                  export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib openquake/hazardlib
 
+                 sleep 30000 || true
                  /opt/openquake/bin/coverage xml --include=\"openquake/*\"
         bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
