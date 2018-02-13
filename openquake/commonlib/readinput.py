@@ -731,13 +731,11 @@ class Exposure(object):
         nodes = assets if assets else exposure._read_csv(
             ~assets, os.path.dirname(param['fname']))
         exposure._populate_from(nodes, param)
-        if param['region']:
-            logging.info('Read %d assets within the region_constraint '
-                         'and discarded %d assets outside the region',
-                         len(exposure.assets), param['out_of_region'])
-            if len(exposure.assets) == 0:
-                raise RuntimeError(
-                    'Could not find any asset within the region!')
+        if param['region'] and param['out_of_region']:
+            logging.info('Discarded %d assets outside the region',
+                         param['out_of_region'])
+        if len(exposure.assets) == 0:
+            raise RuntimeError('Could not find any asset within the region!')
         # sanity checks
         values = any(len(ass.values) + ass.number for ass in exposure.assets)
         assert values, 'Could not find any value??'
