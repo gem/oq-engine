@@ -371,9 +371,13 @@ def calc_abort(request, calc_id):
                             status=403)
 
     if job.pid:  # is a spawned job
-        os.kill(job.pid, signal.SIGTERM)
-        logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
-        logs.dbcmd('set_status', job.id, 'aborted')
+        try:
+            os.kill(job.pid, signal.SIGTERM)
+        except Exception as exc:
+            logging.error(exc)
+        else:
+            logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
+            logs.dbcmd('set_status', job.id, 'aborted')
         message = {'success': 'Killing job %d' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
