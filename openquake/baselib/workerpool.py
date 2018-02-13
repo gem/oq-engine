@@ -3,7 +3,7 @@ import sys
 import signal
 import subprocess
 import multiprocessing
-from openquake.baselib import zeromq as z, general
+from openquake.baselib import zeromq as z, general, parallel
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -140,7 +140,7 @@ class WorkerPool(object):
         setproctitle('oq-zworker')
         with sock:
             for cmd, args in sock:
-                safely_call(cmd, args)
+                parallel.safely_call(cmd, args)
 
     def start(self):
         """
