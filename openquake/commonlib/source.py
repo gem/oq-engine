@@ -707,13 +707,16 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
+                mutex = getattr(src_group, 'src_interdep', None) == 'mutex'
                 self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
-                    if hasattr(src, '__iter__'):  # MultiPoint, AreaSource
+                    if hasattr(src, '__iter__') and not mutex:
+                        # MultiPoint, AreaSource, NonParametric
                         # NB: source.split_source is cached
                         sources.extend(source.split_source(src))
                     else:
+                        # mutex sources cannot be split
                         sources.append(src)
                 sg = copy.copy(src_group)
                 sg.sources = []
