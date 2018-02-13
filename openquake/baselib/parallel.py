@@ -348,12 +348,14 @@ class IterResult(object):
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
-            elif hasattr(result, 'unpickle'):
-                self.received.append(len(result))
-                val, etype, mon = result.unpickle()
             else:
                 val, etype, mon = result
-                self.received.append(len(Pickled(result)))
+                if hasattr(val, 'unpickle'):
+                    self.received.append(len(val))
+                    with mon('unpickling %s' % mon.operation):
+                        val = val.unpickle()
+                else:
+                    self.received.append(len(Pickled(val)))
             if etype:
                 raise RuntimeError(val)
             next(self.log_percent)
