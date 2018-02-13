@@ -488,7 +488,8 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\" ; cd oq-engine/doc/sphinx ; MPLBACKEND=Agg make html"
+    sleep 30000
+    ssh $lxc_ip "set -e ; cd oq-engine/doc/sphinx ; MPLBACKEND=Agg make html"
     scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
