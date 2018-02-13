@@ -408,7 +408,7 @@ _devtest_innervm_run () {
 
                  sudo /opt/openquake/bin/pip install coverage
 
-                 /opt/openquake/bin/python-coverage xml --include=\"openquake/*\"
+                 /opt/openquake/bin/coverage xml --include=\"openquake/*\"
         bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
