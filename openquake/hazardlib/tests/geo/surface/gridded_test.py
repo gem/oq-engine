@@ -39,9 +39,6 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_closest_points(self):
         res = self.surf.get_closest_points(self.mesh)
-        print(self.surf.mesh.lons)
-        print(self.surf.mesh.lats)
-        print(self.surf.mesh.depths)
         self.assertEqual(res.lons, [1.0])
         self.assertEqual(res.lats, [1.0])
         self.assertEqual(res.depths, [0.1])
