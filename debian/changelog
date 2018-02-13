@@ -1,5 +1,8 @@
+  [Michele Simionato]
+  * Implemented splitting of nonparametric sources
+
   [Marco Pagani]
-  * Fixed the 'get_closest_points' method for the 
+  * Fixed the 'get_closest_points' method for the
     `openquake.hazardlib.geo.surface.gridded.GriddedSurface` class
 
   [Michele Simionato]
