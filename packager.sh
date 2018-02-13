@@ -436,6 +436,12 @@ _builddoc_innervm_run () {
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
+
+    # FIXME - MN: just to test
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
+    ssh $lxc_ip "sudo apt-get update"
+
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
     # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
