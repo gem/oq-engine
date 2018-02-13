@@ -146,6 +146,8 @@ fast sources.
 """
 from __future__ import print_function
 import os
+import sys
+import mock
 import time
 import socket
 import signal
@@ -154,6 +156,7 @@ import logging
 import operator
 import functools
 import itertools
+import traceback
 import multiprocessing.dummy
 import numpy
 try:
@@ -164,7 +167,6 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.workerpool import safely_call
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
@@ -172,15 +174,6 @@ from openquake.baselib.general import (
 
 cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-
-if OQ_DISTRIBUTE.startswith('celery'):
-    from celery.result import ResultSet
-    from celery import Celery
-    from celery.task import task
-    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
-    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
-    safetask = task(safely_call, queue='celery')  # has to be global
-
 
 def oq_distribute(task=None):
     """
@@ -291,6 +284,85 @@ def pickle_sequence(objects):
     return out
 
 
+class Result(object):
+    """
+    :param val: value to return (None if there was an exception)
+    :param msg: traceback string (empty if there was no exception)
+    :param mon: Monitor instance
+    :param tb_str: traceback string (empty if there was no exception)
+    """
+    def __init__(self, val, tb_str, mon):
+        self.pik = Pickled(val)
+        self.tb_str = tb_str
+        self.mon = mon
+
+    def get(self):
+        """
+        Returns the underlying value or raise the underlying exception
+        """
+        if self.tb_str:
+            raise RuntimeError(self.tb_str)
+        with self.mon('unpickling %s' % self.mon.operation):
+            return self.pik.unpickle()
+
+
+def safely_call(func, args, backurl=None):
+    """
+    Call the given function with the given arguments safely, i.e.
+    by trapping the exceptions. Return a pair (result, exc_type)
+    where exc_type is None if no exceptions occur, otherwise it
+    is the exception class and the result is a string containing
+    error message and traceback.
+
+    :param func: the function to call
+    :param args: the arguments
+    """
+    with Monitor('total ' + func.__name__, measuremem=True) as child:
+        if args and hasattr(args[0], 'unpickle'):
+            # args is a list of Pickled objects
+            args = [a.unpickle() for a in args]
+        if args and isinstance(args[-1], Monitor):
+            mon = args[-1]
+            mon.children.append(child)  # child is a child of mon
+            child.hdf5path = mon.hdf5path
+        else:
+            mon = child
+        # FIXME check_mem_usage is disabled here because it's causing
+        # dead locks in threads when log messages are raised.
+        # Check is done anyway in other parts of the code (submit and iter);
+        # further investigation is needed
+        # check_mem_usage(mon)  # check if too much memory is used
+        # FIXME: this approach does not work with the Threadmap
+        backurl = getattr(mon, 'backurl', backurl)
+        if backurl:
+            zsocket = Socket(backurl, zmq.PUSH, 'connect')
+        else:
+            zsocket = mock.MagicMock()  # do nothing if not backurl
+        try:
+            with zsocket:
+                got = func(*args)
+                res = Result(got, '', mon)
+                zsocket.send(res)
+        except:
+            etype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            res = Result(None, '\n%s%s: %s' % (tb_str, etype.__name__, exc),
+                         mon)
+            zsocket.send(res)
+    if backurl:
+        return zsocket.num_sent
+    return res
+
+
+if OQ_DISTRIBUTE.startswith('celery'):
+    from celery.result import ResultSet
+    from celery import Celery
+    from celery.task import task
+    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
+    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+    safetask = task(safely_call, queue='celery')  # has to be global
+
+
 class IterResult(object):
     """
     :param futures:
@@ -348,19 +420,14 @@ class IterResult(object):
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
-            else:
-                val, etype, mon = result
-                if hasattr(val, 'unpickle'):
-                    self.received.append(len(val))
-                    with mon('unpickling %s' % mon.operation):
-                        val = val.unpickle()
-                else:
-                    self.received.append(len(Pickled(val)))
-            if etype:
-                raise RuntimeError(val)
+            elif isinstance(result, Result):
+                val = result.get()
+                self.received.append(len(result.pik))
+            else:  # this should never happen
+                raise ValueError(result)
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_data(mon)
+                self.save_task_data(result.mon)
             yield val
 
         if self.received:
@@ -371,7 +438,7 @@ class IterResult(object):
             received = {'max_per_task': max_per_task, 'tot': tot}
             tname = self.name
             dic = {tname: {'sent': self.sent, 'received': received}}
-            mon.save_info(dic)
+            result.mon.save_info(dic)
 
     def save_task_data(self, mon):
         if mon.hdf5path and hasattr(mon, 'weight'):

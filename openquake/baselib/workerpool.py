@@ -1,75 +1,14 @@
 import os
 import sys
-import mock
 import signal
-import logging
-import inspect
 import subprocess
-import traceback
 import multiprocessing
 from openquake.baselib import zeromq as z, general
-from openquake.baselib.performance import Monitor
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         "Do nothing"
-
-
-def safely_call(func, args, backurl=None):
-    """
-    Call the given function with the given arguments safely, i.e.
-    by trapping the exceptions. Return a pair (result, exc_type)
-    where exc_type is None if no exceptions occur, otherwise it
-    is the exception class and the result is a string containing
-    error message and traceback.
-
-    :param func: the function to call
-    :param args: the arguments
-    """
-    from openquake.baselib.parallel import Pickled
-    with Monitor('total ' + func.__name__, measuremem=True) as child:
-        if args and hasattr(args[0], 'unpickle'):
-            # args is a list of Pickled objects
-            args = [a.unpickle() for a in args]
-        if args and isinstance(args[-1], Monitor):
-            mon = args[-1]
-            mon.children.append(child)  # child is a child of mon
-            child.hdf5path = mon.hdf5path
-        else:
-            mon = child
-        # FIXME check_mem_usage is disabled here because it's causing
-        # dead locks in threads when log messages are raised.
-        # Check is done anyway in other parts of the code (submit and iter);
-        # further investigation is needed
-        # check_mem_usage(mon)  # check if too much memory is used
-        # FIXME: this approach does not work with the Threadmap
-        backurl = getattr(mon, 'backurl', backurl)
-        if backurl:
-            zsocket = z.Socket(backurl, z.zmq.PUSH, 'connect')
-        else:
-            zsocket = mock.MagicMock()  # do nothing if not backurl
-        try:
-            with zsocket:
-                got = func(*args)
-                if inspect.isgenerator(got):
-                    res = []
-                    for val in got:
-                        r = (Pickled(val), None, mon)
-                        res.append(r)
-                        zsocket.send(r)
-                else:
-                    res = (Pickled(got), None, mon)
-                    zsocket.send(res)
-        except:
-            etype, exc, tb = sys.exc_info()
-            tb_str = ''.join(traceback.format_tb(tb))
-            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
-                   etype, mon)
-            zsocket.send(res)
-    if backurl:
-        return zsocket.num_sent
-    return res
 
 
 def streamer(host, task_in_port, task_out_port):
