@@ -28,6 +28,11 @@ def double(x, mon):
     return 2 * x
 
 
+def unpickle(smap):
+    for res, exc, mon in smap:
+        yield res.unpickle()
+
+
 class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -51,7 +56,7 @@ class WorkerPoolTestCase(unittest.TestCase):
                        self.receiver_ports)
         num_tasks = next(res)
         self.assertEqual(num_tasks, 10)
-        self.assertEqual(sum(r[0] for r in res), 90)
+        self.assertEqual(sum(r for r in unpickle(res)), 90)
         # sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
 
     def test_status(self):
