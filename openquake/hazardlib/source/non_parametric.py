@@ -68,6 +68,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 rup.surface, rup.source_typology, pmf)
 
     def __iter__(self):
+        if len(self.data) == 1:  # there is nothing to split
+            yield self
+            return
         for i, rup_pmf in enumerate(self.data):
             source_id = '%s:%d' % (self.source_id, i)
             src = self.__class__(source_id, self.name,
