@@ -391,6 +391,8 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
+                 sudo /opt/openquake/bin/pip install coverage
+
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine
@@ -405,8 +407,6 @@ _devtest_innervm_run () {
                  /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
 
                  export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib openquake/hazardlib
-
-                 sudo /opt/openquake/bin/pip install coverage
 
                  /opt/openquake/bin/coverage xml --include=\"openquake/*\"
         bin/oq dbserver stop"
