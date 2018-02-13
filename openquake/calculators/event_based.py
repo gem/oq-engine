@@ -260,8 +260,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm.filter(src_filter)
-        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
-        maxweight = csm.get_maxweight(oq.concurrent_tasks, minweight)
+        maxweight = csm.get_maxweight(oq.concurrent_tasks, source.MINWEIGHT)
         logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
