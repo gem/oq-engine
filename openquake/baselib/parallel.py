@@ -286,24 +286,26 @@ def pickle_sequence(objects):
 
 class Result(object):
     """
-    :param val: value to return (None if there was an exception)
+    :param val: value to return or exception instance
     :param msg: traceback string (empty if there was no exception)
     :param mon: Monitor instance
     :param tb_str: traceback string (empty if there was no exception)
     """
-    def __init__(self, val, tb_str, mon):
+    def __init__(self, val, mon, tb_str=''):
         self.pik = Pickled(val)
-        self.tb_str = tb_str
         self.mon = mon
+        self.tb_str = tb_str
 
     def get(self):
         """
         Returns the underlying value or raise the underlying exception
         """
-        if self.tb_str:
-            raise RuntimeError(self.tb_str)
         with self.mon('unpickling %s' % self.mon.operation):
-            return self.pik.unpickle()
+            val = self.pik.unpickle()
+        if self.tb_str:
+            etype = val.__class__
+            raise etype('\n%s%s: %s' % (self.tb_str, etype.__name__, val))
+        return val
 
 
 def safely_call(func, args, backurl=None):
@@ -341,13 +343,11 @@ def safely_call(func, args, backurl=None):
         try:
             with zsocket:
                 got = func(*args)
-                res = Result(got, '', mon)
+                res = Result(got, mon)
                 zsocket.send(res)
         except:
             etype, exc, tb = sys.exc_info()
-            tb_str = ''.join(traceback.format_tb(tb))
-            res = Result(None, '\n%s%s: %s' % (tb_str, etype.__name__, exc),
-                         mon)
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
             zsocket.send(res)
     if backurl:
         return zsocket.num_sent
