@@ -340,14 +340,13 @@ def safely_call(func, args, backurl=None):
             zsocket = Socket(backurl, zmq.PUSH, 'connect')
         else:
             zsocket = mock.MagicMock()  # do nothing if not backurl
-        try:
-            with zsocket:
+        with zsocket:
+            try:
                 got = func(*args)
                 res = Result(got, mon)
-                zsocket.send(res)
-        except:
-            etype, exc, tb = sys.exc_info()
-            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+            except:
+                etype, exc, tb = sys.exc_info()
+                res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
             zsocket.send(res)
     if backurl:
         return zsocket.num_sent
