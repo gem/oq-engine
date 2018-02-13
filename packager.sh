@@ -236,10 +236,10 @@ add_local_pkg_repo () {
     else
         GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
     fi
-    from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}.${!var_commit:0:7}"
+    from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python3-${dep}.${!var_commit:0:7}"
     time_start="$(date +%s)"
     while true; do
-        if scp -r "$from_dir" $lxc_ip:repo/python-${dep}; then
+        if scp -r "$from_dir" $lxc_ip:repo/python3-${dep}; then
             break
         fi
         if [ "$dep_branch" = "$branch" ]; then
@@ -254,12 +254,12 @@ add_local_pkg_repo () {
             # NOTE: in the other case dep branch is 'master' and package branch isn't
             #       so we try to get the correct commit package and if it isn't yet built
             #       it fallback to the latest builded
-            from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}* | tail -n 1)"
-            scp -r "$from_dir" $lxc_ip:repo/python-${dep}
+            from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python3-${dep}* | tail -n 1)"
+            scp -r "$from_dir" $lxc_ip:repo/python3-${dep}
             break
         fi
     done
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python3-${dep} ./\""
     # FIXME - MN: just to test
     ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
     ssh $lxc_ip "sudo apt-get update"
@@ -471,9 +471,9 @@ _builddoc_innervm_run () {
             # cd _jenkins_deps/$dep
 
             add_local_pkg_repo "$dep"
-            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         elif [ "$dep_type" = "sub" ]; then
-            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -710,7 +710,7 @@ deps_list() {
             if [ "$d_type" != "src" ]; then
                 continue
             fi
-            if [ "$pkg_name" = "python-${d}" ]; then
+            if [ "$pkg_name" = "python3-${d}" ]; then
                 skip=1
                 break
             fi
@@ -1280,9 +1280,9 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         if [ "$dep" = "oq-libs" ]; then
-            sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
+            sed -i "s/\(python3-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
         else
-            sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
+            sed -i "s/\(python3-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
         fi
     done
 
