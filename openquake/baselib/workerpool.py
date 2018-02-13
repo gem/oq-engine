@@ -55,11 +55,12 @@ def safely_call(func, args, backurl=None):
                 if inspect.isgenerator(got):
                     res = []
                     for val in got:
-                        res.append((val, None, mon))
-                        zsocket.send(Pickled((val, None, mon)))
+                        r = (Pickled(val), None, mon)
+                        res.append(r)
+                        zsocket.send(r)
                 else:
-                    res = (got, None, mon)
-                    zsocket.send(Pickled(res))
+                    res = (Pickled(got), None, mon)
+                    zsocket.send(res)
         except:
             etype, exc, tb = sys.exc_info()
             tb_str = ''.join(traceback.format_tb(tb))
