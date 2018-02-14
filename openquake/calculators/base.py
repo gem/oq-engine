@@ -723,7 +723,9 @@ class RiskCalculator(HazardCalculator):
         return res
 
     def combine(self, acc, res):
-        return acc + res
+        with self.monitor(
+                'accumulating %s' % self.core_task.__func__.__name__):
+            return acc + res
 
 
 U16 = numpy.uint16
