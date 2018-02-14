@@ -818,7 +818,7 @@ class Exposure(object):
                         tags = Node('tags')
                         for tagname in self.tagcol.tagnames:
                             if tagname != 'taxonomy':
-                                tags[tagname] = dic[tagname]
+                                tags.attrib[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
                         if i % 100000 == 0:
                             logging.info('Read %d assets', i)
@@ -914,6 +914,10 @@ class Exposure(object):
                           deductibles, insurance_limits, retrofitted,
                           self.cost_calculator)
         self.assets.append(ass)
+
+    def __repr__(self):
+        return '<%s with %s assets>' % (self.__class__.__name__,
+                                        len(self.assets))
 
 
 def get_sitecol_assetcol(oqparam, exposure):
