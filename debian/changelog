@@ -1,3 +1,6 @@
+  [Marco Pagani, Changlong Li]
+  * Adds the Yu et al. (2013) GMEPs
+
   [Michele Simionato]
   * Honored concurrent_tasks again in the event based hazard calculator
   * Fixed a bug in the hazard outputs: they were displayed in the WebUI even
