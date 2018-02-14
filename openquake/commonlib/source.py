@@ -37,7 +37,6 @@ from openquake.commonlib import logictree
 
 
 MINWEIGHT = source.MINWEIGHT
-MAXWEIGHT = 1E7  # heuristic, set by M. Simionato
 MAX_INT = 2 ** 31 - 1
 TWO16 = 2 ** 16
 U16 = numpy.uint16
@@ -432,7 +431,7 @@ class CompositionInfo(object):
                 data.append((src_group.id, trti[src_group.trt],
                              src_group.eff_ruptures, src_group.tot_ruptures,
                              sm.ordinal))
-        lst = [(sm.name, sm.weight, '_'.join(sm.path),
+        lst = [(sm.names, sm.weight, '_'.join(sm.path),
                 sm.num_gsim_paths, sm.samples)
                for i, sm in enumerate(self.source_models)]
         return (dict(
@@ -578,7 +577,7 @@ class CompositionInfo(object):
         for sm in self.source_models:
             for rlz in realizations:
                 if rlz.sm_lt_path == sm.path:
-                    dic[rlz] = sm.name
+                    dic[rlz] = sm.names
         return dic
 
     def get_sm_by_grp(self):
@@ -611,7 +610,7 @@ class CompositionInfo(object):
         if len(rlzs) > TWO16:
             raise ValueError(
                 'The source model %s has %d realizations, the maximum '
-                'is %d' % (smodel.name, len(rlzs), TWO16))
+                'is %d' % (smodel.names, len(rlzs), TWO16))
         return rlzs
 
     def __repr__(self):
@@ -619,7 +618,7 @@ class CompositionInfo(object):
         for sm in self.source_models:
             info_by_model[sm.path] = (
                 '_'.join(map(decode, sm.path)),
-                decode(sm.name),
+                decode(sm.names),
                 [sg.id for sg in sm.src_groups],
                 sm.weight,
                 self.get_num_rlzs(sm))
@@ -668,7 +667,7 @@ class CompositeSourceModel(collections.Sequence):
         grp_id = 0
         for sm in self.source_models:
             src_groups = []
-            smodel = sm.__class__(sm.name, sm.weight, sm.path, src_groups,
+            smodel = sm.__class__(sm.names, sm.weight, sm.path, src_groups,
                                   sm.num_gsim_paths, sm.ordinal, sm.samples)
             for sg in sm.src_groups:
                 for src in sg.sources:
@@ -708,13 +707,16 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
+                mutex = getattr(src_group, 'src_interdep', None) == 'mutex'
                 self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
-                    if hasattr(src, '__iter__'):  # MultiPoint, AreaSource
+                    if hasattr(src, '__iter__') and not mutex:
+                        # MultiPoint, AreaSource, NonParametric
                         # NB: source.split_source is cached
                         sources.extend(source.split_source(src))
                     else:
+                        # mutex sources cannot be split
                         sources.append(src)
                 sg = copy.copy(src_group)
                 sg.sources = []
@@ -724,7 +726,7 @@ class CompositeSourceModel(collections.Sequence):
                     weight += src.weight
                 src_groups.append(sg)
             newsm = logictree.SourceModel(
-                sm.name, sm.weight, sm.path, src_groups,
+                sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
@@ -836,17 +838,13 @@ class CompositeSourceModel(collections.Sequence):
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
-    def get_maxweight(self, concurrent_tasks):
+    def get_maxweight(self, concurrent_tasks, minweight=MINWEIGHT):
         """
         Return an appropriate maxweight for use in the block_splitter
         """
         ct = concurrent_tasks or 1
         mw = math.ceil(self.weight / ct)
-        if mw < MINWEIGHT:
-            mw = MINWEIGHT
-        elif mw > MAXWEIGHT:
-            mw = MAXWEIGHT
-        return mw
+        return max(mw, minweight)
 
     def add_infos(self, sources):
         """

@@ -1,8 +1,21 @@
   [Michele Simionato]
+  * Fixed a bug in the hazard outputs: they were displayed in the WebUI even
+    missing
+  * Implemented splitting of nonparametric sources
+
+  [Marco Pagani]
+  * Fixed the 'get_closest_points' method for the
+    `openquake.hazardlib.geo.surface.gridded.GriddedSurface` class
+
+  [Michele Simionato]
+  * Now the source model paths are relative to the source model logic tree file
+  * Fixed an international date line bug when using rtree for prefiltering
+  * Deprecated `nrml.parse`, it is now called `nrml.to_python`
   * Improved the task distribution by splitting the AreaSources upfront
     and by improving the weighting algorithm
 
   [Daniele Viganò]
+  * TMPDIR can be customized via the `openquake.cfg`
   * Updated dependencies compatibility in setup.py
 
   [Michele Simionato]
