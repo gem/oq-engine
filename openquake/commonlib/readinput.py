@@ -143,7 +143,6 @@ def get_params(job_inis, **kw):
         _update(params, cp.items(sect), base_path)
     _update(params, kw.items(), base_path)  # override on demand
 
-
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
@@ -749,11 +748,11 @@ class Exposure(object):
         param['ignore_missing_costs'] = set(ignore_missing_costs)
         exposure, assets = _get_exposure(
             param['fname'], param['all_cost_types'])
-        nodes = assets if assets else exposure._read_csv(
+        _nodes = assets if assets else exposure._read_csv(
             ~assets, os.path.dirname(param['fname']))
         if nodes:  # this is useful for Paul Henshaw
             return nodes
-        exposure._populate_from(nodes, param)
+        exposure._populate_from(_nodes, param)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
