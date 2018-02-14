@@ -43,7 +43,7 @@ def classical_bcr(riskinput, riskmodel, param, monitor):
     result = {}  # (N, R) -> data
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         assets = outputs.assets
-        for l, out in enumerate(outputs):
+        for out in outputs:
             for asset, (eal_orig, eal_retro, bcr) in zip(assets, out):
                 aval = asset.value('structural')
                 result[asset.ordinal, outputs.rlzi] = numpy.array([
