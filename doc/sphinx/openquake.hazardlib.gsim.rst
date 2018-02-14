@@ -763,6 +763,14 @@ youngs_1997
     :undoc-members:
     :show-inheritance:
 
+yu_2013
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.yu_2013
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 zhao_2006
 -----------------------------------------
 
