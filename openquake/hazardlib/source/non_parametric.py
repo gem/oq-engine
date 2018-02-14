@@ -67,6 +67,18 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 rup.mag, rup.rake, self.tectonic_region_type, rup.hypocenter,
                 rup.surface, rup.source_typology, pmf)
 
+    def __iter__(self):
+        if len(self.data) == 1:  # there is nothing to split
+            yield self
+            return
+        for i, rup_pmf in enumerate(self.data):
+            source_id = '%s:%d' % (self.source_id, i)
+            src = self.__class__(source_id, self.name,
+                                 self.tectonic_region_type, [rup_pmf])
+            src.num_ruptures = 1
+            src.src_group_id = self.src_group_id
+            yield src
+
     def count_ruptures(self):
         """
         See :meth:
