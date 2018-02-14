@@ -734,6 +734,12 @@ class Exposure(object):
     def read(cls, fname, calculation_mode='', insured_losses=False,
              region_constraint='', all_cost_types=(), ignore_missing_costs=(),
              asset_nodes=False):
+        """
+        Call `Exposure.read(fname)` to get an :class:`Exposure` instance
+        keeping all the assets in memory or
+        `Exposure.read(fname, asset_nodes=True)` to get an iterator over
+        Node objects (one Node for each asset).
+        """
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
         param['insured_losses'] = insured_losses
