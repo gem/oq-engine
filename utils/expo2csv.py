@@ -63,7 +63,7 @@ def expo2csv(job_ini):
         if exposure.retrofitted:
             row.append(asset._retrofitted)
         for time_event in exposure.occupancy_periods:
-            row.append(asset.value(time_event))
+            row.append(asset.values['occupants_' + time_event])
         for tagname, tagidx in zip(exposure.tagcol.tagnames, asset.tagidxs):
             tags = getattr(exposure.tagcol, tagname)
             row.append(tags[tagidx])
