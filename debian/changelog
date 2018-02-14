@@ -1,5 +1,10 @@
   [Michele Simionato]
   * Extended the exposure CSV importer to manage the `retrofitted` field
+
+  [Marco Pagani, Changlong Li]
+  * Adds the Yu et al. (2013) GMEPs
+
+  [Michele Simionato]
   * Fixed a bug in the hazard outputs: they were displayed in the WebUI even
     missing
   * Implemented splitting of nonparametric sources
