@@ -174,7 +174,10 @@ class PSHACalculator(base.HazardCalculator):
                 csm = self.csm.filter(src_filter)
             if tile_i == 1:  # set it only on the first tile
                 maxweight = csm.get_maxweight(tasks_per_tile, minweight)
-                logging.info('Using maxweight=%d', maxweight)
+                if maxweight == minweight:
+                    logging.info('Using minweight=%d', minweight)
+                else:
+                    logging.info('Using maxweight=%d', maxweight)
             if csm.has_dupl_sources and not opt:
                 logging.warn('Found %d duplicated sources, use oq info',
                              csm.has_dupl_sources)
