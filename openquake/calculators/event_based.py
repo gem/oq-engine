@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import time
+import math
 import os.path
 import operator
 import itertools
@@ -34,7 +35,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, readinput
+from openquake.commonlib import calc, util, readinput, source
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter
 from openquake.calculators.classical import (
@@ -259,9 +260,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm.filter(src_filter)
-        maxweight = csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
+        maxweight = csm.get_maxweight(oq.concurrent_tasks, source.MINWEIGHT)
+        logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, seed=oq.ses_seed,

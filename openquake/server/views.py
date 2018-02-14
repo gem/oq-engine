@@ -34,7 +34,12 @@ except ImportError:
 import re
 import numpy
 import psutil
-
+try:
+    # Python 3
+    from urllib.parse import unquote_plus
+except ImportError:
+    # Python 2
+    from urllib import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
@@ -371,9 +376,13 @@ def calc_abort(request, calc_id):
                             status=403)
 
     if job.pid:  # is a spawned job
-        os.kill(job.pid, signal.SIGTERM)
-        logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
-        logs.dbcmd('set_status', job.id, 'aborted')
+        try:
+            os.kill(job.pid, signal.SIGTERM)
+        except Exception as exc:
+            logging.error(exc)
+        else:
+            logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
+            logs.dbcmd('set_status', job.id, 'aborted')
         message = {'success': 'Killing job %d' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
@@ -677,7 +686,7 @@ def extract(request, calc_id, what):
             prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
         n = len(request.path_info)
-        query_string = request.get_full_path()[n:]
+        query_string = unquote_plus(request.get_full_path()[n:])
         obj = _extract(ds, what + query_string)
         if inspect.isgenerator(obj):
             array, attrs = 0, {k: _array(v) for k, v in obj}

@@ -64,17 +64,6 @@ class DuplicatedPoint(Exception):
     """
 
 
-def assert_relpath(name, fname):
-    """
-    Make sure the given name is a relative path.
-
-    :param name: a path name
-    :param fname: the file where the path is listed
-    """
-    if os.path.relpath(name) != os.path.normpath(name):
-        raise ValueError('%s is not a relative path [in %s]' % (name, fname))
-
-
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -154,19 +143,23 @@ def get_params(job_inis, **kw):
         _update(params, cp.items(sect), base_path)
     _update(params, kw.items(), base_path)  # override on demand
 
+
     # populate the 'source' list
     smlt = params['inputs'].get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = sorted(_get_paths(base_path, smlt))
+        params['inputs']['source'] = sorted(_get_paths(smlt))
 
     return params
 
 
-def _get_paths(base_path, smlt):
+def _get_paths(smlt):
     # extract the path names for the source models listed in the smlt file
+    base_path = os.path.dirname(smlt)
     for model in source.collect_source_model_paths(smlt):
         for name in model.split():
-            assert_relpath(name, smlt)
+            if os.path.isabs(name):
+                raise InvalidFile('%s: %s must be a relative path' %
+                                  (smlt, name))
             fname = os.path.abspath(os.path.join(base_path, name))
             if os.path.exists(fname):  # consider only real paths
                 yield fname
@@ -434,10 +427,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     psr = nrml.SourceModelParser(converter)
 
     # consider only the effective realizations
+    smlt_dir = os.path.dirname(source_model_lt.filename)
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
-            fname = os.path.abspath(os.path.join(oqparam.base_path, name))
+            fname = os.path.abspath(os.path.join(smlt_dir, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 logging.info('Parsing %s', fname)
@@ -757,13 +751,11 @@ class Exposure(object):
         nodes = assets if assets else exposure._read_csv(
             ~assets, os.path.dirname(param['fname']))
         exposure._populate_from(nodes, param)
-        if param['region']:
-            logging.info('Read %d assets within the region_constraint '
-                         'and discarded %d assets outside the region',
-                         len(exposure.assets), param['out_of_region'])
-            if len(exposure.assets) == 0:
-                raise RuntimeError(
-                    'Could not find any asset within the region!')
+        if param['region'] and param['out_of_region']:
+            logging.info('Discarded %d assets outside the region',
+                         param['out_of_region'])
+        if len(exposure.assets) == 0:
+            raise RuntimeError('Could not find any asset within the region!')
         # sanity checks
         values = any(len(ass.values) + ass.number for ass in exposure.assets)
         assert values, 'Could not find any value??'
