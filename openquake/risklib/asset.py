@@ -18,6 +18,7 @@
 
 from __future__ import division
 import operator
+import logging
 import numpy
 
 from openquake.baselib import hdf5, general
@@ -506,6 +507,9 @@ class AssetCollection(object):
                 loss_types.append('value-' + candidate)
         deductible_d = first_asset.deductibles or {}
         limit_d = first_asset.insurance_limits or {}
+        if deductible_d or limit_d:
+            logging.warn('Exposures with insuranceLimit/deductible fields are '
+                         'deprecated and may be removed in the future')
         deductibles = ['deductible-%s' % name for name in deductible_d]
         limits = ['insurance_limit-%s' % name for name in limit_d]
         retro = ['retrofitted'] if first_asset._retrofitted else []
