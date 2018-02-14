@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Honored concurrent_tasks again in the event based hazard calculator
   * Fixed a bug in the hazard outputs: they were displayed in the WebUI even
     missing
   * Implemented splitting of nonparametric sources
