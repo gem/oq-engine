@@ -69,65 +69,28 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 
 
-# this is used by the engine
-def pmap_from_grp(group, src_filter, gsims, param, monitor=Monitor()):
+def classical(group, src_filter, gsims, param, monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
     The arguments are the same as in :func:`calc_hazard_curves`, except
     for ``gsims``, which is a list of GSIM instances.
 
-    :returns: a dictionary {grp_id: ProbabilityMap instance}
-    """
-    mutex_weight = {src.source_id: weight for src, weight in
-                    zip(group.sources, group.srcs_weights)}
-    maxdist = src_filter.integration_distance
-    srcs = sum([split_source(src) for src in group.sources], [])
-    with GroundShakingIntensityModel.forbid_instantiation():
-        imtls = param['imtls']
-        trunclevel = param.get('truncation_level')
-        cmaker = ContextMaker(gsims, maxdist)
-        ctx_mon = monitor('make_contexts', measuremem=False)
-        poe_mon = monitor('get_poes', measuremem=False)
-        pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
-        calc_times = AccumDict(accum=numpy.zeros(4))
-        for src, s_sites in src_filter(srcs):
-            t0 = time.time()
-            poemap = cmaker.poe_map(
-                src, s_sites, imtls, trunclevel, ctx_mon, poe_mon,
-                group.rup_interdep == 'indep')
-            weight = mutex_weight[src.source_id]
-            for sid in poemap:
-                pcurve = pmap.setdefault(sid, 0)
-                pcurve += poemap[sid] * weight
-            src_id = src.source_id.split(':', 1)[0]
-            calc_times[src_id] += numpy.array(
-                [src.weight, len(s_sites), time.time() - t0, 1])
-        if group.grp_probability is not None:
-            pmap *= group.grp_probability
-        acc = AccumDict({group.id: pmap})
-        # adding the number of contributing ruptures too
-        acc.eff_ruptures = {group.id: ctx_mon.counts}
-        acc.calc_times = calc_times
-        return acc
-
-
-# this is used by the engine
-def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
-    """
-    Compute the hazard curves for a set of sources belonging to the same
-    tectonic region type for all the GSIMs associated to that TRT.
-
     :returns:
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
         .eff_ruptures
     """
+    if getattr(group, 'src_interdep', None) == 'mutex':
+        mutex_weight = {src.source_id: weight for src, weight in
+                        zip(group.sources, group.srcs_weights)}
+        srcs = group.sources
+    else:
+        mutex_weight = None
+        srcs = sum([split_source(src) for src in group], [])
     grp_ids = set()
-    for src in sources:
+    for src in group:
         grp_ids.update(src.src_group_ids)
     maxdist = src_filter.integration_distance
-    srcs = sum([split_source(src) for src in sources], [])  # split first
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = param['imtls']
         trunclevel = param.get('truncation_level')
@@ -141,9 +104,15 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
         pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
         for src, s_sites in src_filter(srcs):  # filter now
             t0 = time.time()
+            indep = group.rup_interdep == 'indep' if mutex_weight else True
             poemap = cmaker.poe_map(
-                src, s_sites, imtls, trunclevel, ctx_mon, poe_mon)
-            if poemap:
+                src, s_sites, imtls, trunclevel, ctx_mon, poe_mon, indep)
+            if mutex_weight:  # mutex sources
+                weight = mutex_weight[src.source_id]
+                for sid in poemap:
+                    pcurve = pmap[group.id].setdefault(sid, 0)
+                    pcurve += poemap[sid] * weight
+            elif poemap:
                 for grp_id in src.src_group_ids:
                     pmap[grp_id] |= poemap
             src_id = src.source_id.split(':', 1)[0]
@@ -152,6 +121,8 @@ def pmap_from_trt(sources, src_filter, gsims, param, monitor=Monitor()):
             # storing the number of contributing ruptures too
             pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
                                   for grp_id in src.src_group_ids}
+        if mutex_weight and group.grp_probability is not None:
+            pmap[group.id] *= group.grp_probability
         return pmap
 
 
@@ -212,10 +183,10 @@ def calc_hazard_curves(
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
     for group in groups:
         if group.src_interdep == 'mutex':  # do not split the group
-            it = [pmap_from_grp(group, ss_filter, [gsim], param)]
-        else:  # split the group and apply `pmap_from_grp` in parallel
+            it = [classical(group, ss_filter, [gsim], param)]
+        else:  # split the group and apply `classical` in parallel
             it = apply(
-                pmap_from_trt, (group, ss_filter, [gsim], param),
+                classical, (group, ss_filter, [gsim], param),
                 weight=operator.attrgetter('weight'))
         for res in it:
             for grp_id in res:
