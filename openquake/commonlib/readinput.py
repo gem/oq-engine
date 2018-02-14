@@ -749,7 +749,7 @@ class Exposure(object):
         exposure, assets = _get_exposure(
             param['fname'], param['all_cost_types'])
         _nodes = assets if assets else exposure._read_csv(
-            ~assets, os.path.dirname(param['fname']))
+            assets.text, os.path.dirname(param['fname']))
         if nodes:  # this is useful for Paul Henshaw
             return nodes
         exposure._populate_from(_nodes, param)
