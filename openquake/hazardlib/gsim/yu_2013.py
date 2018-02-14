@@ -43,8 +43,8 @@ def gc(coeff, mag):
         A dictionary of parameters for the selected IMT
     :param mag:
         Magnitude value
-    :return:
-        The set of coefficient to be used
+    :returns:
+        The set of coefficients
     """
     if mag > 6.5:
         a1ca = coeff['ua']
@@ -78,10 +78,10 @@ def rbf(ra, coeff, mag):
     :param ra:
         Distance value [km]
     :param coeff:
-        A dictionary of parameters for the
+        The set of coefficients
     :param mag:
         Magnitude value
-    :return:
+    :returns:
 
     """
     a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = gc(coeff, mag)
@@ -97,7 +97,7 @@ def fnc(ra, *args):
 
     :param ra:
         Semi-axis of the ellipses used in the Yu et al.
-    :return:
+    :returns:
         The absolute difference between the epicentral distance and the
         adjusted distance
     """
