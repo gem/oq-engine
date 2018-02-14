@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import time
 import math
 import os.path
@@ -499,7 +499,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         for grp_id in samples_by_grp}
         if self.precalc:
             num_ruptures = sum(len(rs) for rs in self.precalc.result.values())
-            block_size = math.ceil(num_ruptures, oq.concurrent_tasks or 1)
+            block_size = math.ceil(num_ruptures / (oq.concurrent_tasks or 1))
             for grp_id, ruptures in self.precalc.result.items():
                 if not ruptures:
                     continue
