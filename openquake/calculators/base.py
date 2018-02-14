@@ -692,7 +692,7 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
                 if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = PmapGetter(dstore, sids)
+                    getter = PmapGetter(dstore, sids, self.rlzs_assoc)
                     getter.num_rlzs = self.R
                 else:  # gmf
                     getter = GmfDataGetter(dstore, sids, self.R, eids)
@@ -700,6 +700,9 @@ class RiskCalculator(HazardCalculator):
                     # read the hazard data in the controller node
                     logging.info('Reading hazard')
                     getter.init()
+                else:
+                    # the datastore must be closed to avoid the HDF5 fork bug
+                    assert dstore.hdf5 == (), '%s is not closed!' % dstore
                 ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
