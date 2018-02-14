@@ -58,21 +58,28 @@ class SourceModel(object):
     A container of SourceGroup instances with some additional attributes
     describing the source model in the logic tree.
     """
-    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
-                 samples):
-        names = name.split()  # space separated sequence of xml file names
-        if len(names) == 1:
-            self.name = names[0]
-        elif len(names) == 2:
-            self.name = ' '.join(names)
-        else:
-            self.name = ' '.join([names[0], '...', names[-1]])
+    def __init__(self, names, weight, path, src_groups, num_gsim_paths,
+                 ordinal, samples):
+        self.names = names
         self.weight = weight
         self.path = path
         self.src_groups = src_groups
         self.num_gsim_paths = num_gsim_paths
         self.ordinal = ordinal
         self.samples = samples
+
+    @property
+    def name(self):
+        """
+	Compact representation for the names
+	"""
+        names = self.names.split()
+        if len(names) == 1:
+            return names[0]
+        elif len(names) == 2:
+            return ' '.join(names)
+        else:
+            return ' '.join([names[0], '...', names[-1]])
 
     @property
     def num_sources(self):
@@ -88,13 +95,13 @@ class SourceModel(object):
             sg = copy.copy(grp)
             sg.sources = []
             src_groups.append(sg)
-        return self.__class__(self.name, self.weight, self.path, src_groups,
+        return self.__class__(self.names, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
 
     def __repr__(self):
         samples = ', samples=%d' % self.samples if self.samples > 1 else ''
         return '<%s #%d %s, path=%s, weight=%s%s>' % (
-            self.__class__.__name__, self.ordinal, self.name,
+            self.__class__.__name__, self.ordinal, self.names,
             '_'.join(self.path), self.weight, samples)
 
 Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
@@ -1210,7 +1217,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return nrml.convert(self._ltnode)
+        return nrml.to_string(self._ltnode)
 
     def reduce(self, trts):
         """

@@ -25,8 +25,7 @@ import numpy
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib.calc.hazard_curve import (
-    pmap_from_grp, pmap_from_trt, ProbabilityMap)
+from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -74,26 +73,6 @@ def saving_sources_by_task(iterargs, dstore):
         yield args
     dstore['task_info/task_sources'] = encode(source_ids)
     dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
-
-
-def classical(sources, src_filter, gsims, param, monitor):
-    """
-    :param sources:
-        a list of independent sources or a SourceGroup with mutex sources
-    :param src_filter:
-        a SourceFilter instance
-    :param gsims:
-        a list of GSIMs
-    :param param:
-        a dictionary with parameters imtls and truncation_level
-    :param monitor:
-        a Monitor instance
-    :returns: a dictionary grp_id -> ProbabilityMap
-    """
-    if getattr(sources, 'src_interdep', None) == 'mutex':
-        return pmap_from_grp(sources, src_filter, gsims, param, monitor)
-    else:
-        return pmap_from_trt(sources, src_filter, gsims, param, monitor)
 
 
 @base.calculators.add('psha')
@@ -185,6 +164,7 @@ class PSHACalculator(base.HazardCalculator):
         else:
             tiles = [self.sitecol]
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
+        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
@@ -193,8 +173,11 @@ class PSHACalculator(base.HazardCalculator):
                 src_filter = SourceFilter(tile, oq.maximum_distance)
                 csm = self.csm.filter(src_filter)
             if tile_i == 1:  # set it only on the first tile
-                maxweight = csm.get_maxweight(tasks_per_tile)
-                logging.info('Using maxweight=%d', maxweight)
+                maxweight = csm.get_maxweight(tasks_per_tile, minweight)
+                if maxweight == minweight:
+                    logging.info('Using minweight=%d', minweight)
+                else:
+                    logging.info('Using maxweight=%d', maxweight)
             if csm.has_dupl_sources and not opt:
                 logging.warn('Found %d duplicated sources, use oq info',
                              csm.has_dupl_sources)
@@ -208,7 +191,7 @@ class PSHACalculator(base.HazardCalculator):
             for trt, sources in csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
                 for block in csm.split_in_blocks(maxweight, sources):
-                    yield block, csm.src_filter, gsims, param, monitor
+                    yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
