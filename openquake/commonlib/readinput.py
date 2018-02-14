@@ -733,7 +733,8 @@ class Exposure(object):
 
     @classmethod
     def read(cls, fname, calculation_mode='', insured_losses=False,
-             region_constraint='', all_cost_types=(), ignore_missing_costs=()):
+             region_constraint='', all_cost_types=(), ignore_missing_costs=(),
+             nodes=False):
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
         param['insured_losses'] = insured_losses
@@ -750,6 +751,8 @@ class Exposure(object):
             param['fname'], param['all_cost_types'])
         nodes = assets if assets else exposure._read_csv(
             ~assets, os.path.dirname(param['fname']))
+        if nodes:  # this is useful for Paul Henshaw
+            return nodes
         exposure._populate_from(nodes, param)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
