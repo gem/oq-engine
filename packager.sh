@@ -218,7 +218,8 @@ add_custom_pkg_repo () {
     ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
     # add custom packages
-    if ssh $lxc_ip mkdir "repo" >/dev/null 2>&1; then
+    if ! ssh $lxc_ip ls repo/custom_pkgs >/dev/null ; then
+        ssh $lxc_ip mkdir "repo"
         scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     fi
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
