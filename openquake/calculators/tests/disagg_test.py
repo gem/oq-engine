@@ -27,7 +27,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_master)
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -102,6 +102,11 @@ producing too small PoEs.''')
         # this is case with number of lon/lat bins different for site 0/site 1
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
+
+    @attr('qa', 'hazard', 'disagg')
+    def test_case_5(self):
+        # this exercise gridded nonparametric sources
+        self.run_calc(case_5.__file__, 'job.ini')
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_master(self):
