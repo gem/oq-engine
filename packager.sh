@@ -220,8 +220,8 @@ add_custom_pkg_repo () {
     # add custom packages
     if ssh $lxc_ip mkdir "repo" >/dev/null 2>&1; then
         scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
-        ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
     fi
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
 }
 
 add_local_pkg_repo () {
