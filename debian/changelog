@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the classical_bcr calculator for the case of many realizations
   * Extended the exposure CSV importer to manage the `retrofitted` field
 
   [Marco Pagani, Changlong Li]
