@@ -326,6 +326,17 @@ def accept_path(path, ref_path):
     return True
 
 
+def get_totrup(data):
+    """
+    :param data: a record with a field `totrup`, possibily missing
+    """
+    try:
+        totrup = data['totrup']
+    except ValueError:  # engine older than 2.9
+        totrup = 0
+    return totrup
+
+
 class CompositionInfo(object):
     """
     An object to collect information about the composition of
@@ -462,9 +473,9 @@ class CompositionInfo(object):
             tdata = sg_data[sm_id]
             srcgroups = [
                 sourceconverter.SourceGroup(
-                    self.trts[trti], id=grp_id, eff_ruptures=effrup,
-                    tot_ruptures=totrup)
-                for grp_id, trti, effrup, totrup, sm_id in tdata if effrup]
+                    self.trts[data['trti']], id=data['grp_id'],
+                    eff_ruptures=data['effrup'], tot_ruptures=get_totrup(data))
+                for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
