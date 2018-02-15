@@ -144,10 +144,12 @@ def get_params(job_inis, **kw):
     _update(params, kw.items(), base_path)  # override on demand
 
     # populate the 'source' list
-    smlt = params['inputs'].get('source_model_logic_tree')
+    inputs = params['inputs']
+    smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = sorted(_get_paths(smlt))
-
+        inputs['source'] = sorted(_get_paths(smlt))
+    elif 'source_model' in inputs:
+        inputs['source'] = [inputs['source_model']]
     return params
 
 
@@ -394,11 +396,15 @@ def get_source_model_lt(oqparam):
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
         instance
     """
-    fname = oqparam.inputs['source_model_logic_tree']
-    # NB: converting the random_seed into an integer is needed on Windows
-    return logictree.SourceModelLogicTree(
-        fname, validate=False, seed=int(oqparam.random_seed),
-        num_samples=oqparam.number_of_logic_tree_samples)
+    fname = oqparam.inputs.get('source_model_logic_tree')
+    if fname:
+        # NB: converting the random_seed into an integer is needed on Windows
+        return logictree.SourceModelLogicTree(
+            fname, validate=False, seed=int(oqparam.random_seed),
+            num_samples=oqparam.number_of_logic_tree_samples)
+    return logictree.FakeSmlt(oqparam.inputs['source_model'],
+                              int(oqparam.random_seed),
+                              oqparam.number_of_logic_tree_samples)
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
