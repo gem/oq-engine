@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-# GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub"
+GEM_DEPENDS="oq-libs|cust oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -213,6 +213,17 @@ _wait_ssh () {
     fi
 }
 
+add_custom_pkg_repo () {
+    # install package to manage repository properly
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+
+    # add custom packages
+    if ssh $lxc_ip mkdir "repo" >/dev/null 2>&1; then
+        scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+        ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    fi
+}
+
 add_local_pkg_repo () {
     local dep="$1"
 
@@ -341,9 +352,10 @@ _devtest_innervm_run () {
             git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
             cd -
         elif [ "$dep_type" = "deb" ]; then
-            # cd _jenkins_deps/$dep
-
             add_local_pkg_repo "$dep"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
+        elif [ "$dep_type" = "cust" ]; then
+            add_custom_pkg_repo
             ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         elif [ "$dep_type" = "sub" ]; then
             ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
@@ -453,9 +465,10 @@ _builddoc_innervm_run () {
             git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
             cd -
         elif [ "$dep_type" = "deb" ]; then
-            # cd _jenkins_deps/$dep
-
             add_local_pkg_repo "$dep"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
+        elif [ "$dep_type" = "cust" ]; then
+            add_custom_pkg_repo
             ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         elif [ "$dep_type" = "sub" ]; then
             ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
@@ -529,11 +542,11 @@ _pkgtest_innervm_run () {
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
         # if the deb is a subpackage we skip source check
-        if [ "$dep_type" == "sub" ]; then
+        if [ "$dep_type" == "cust" -o "$dep_type" == "sub" ]; then
             continue
+        else
+            add_local_pkg_repo "$dep"
         fi
-
-        add_local_pkg_repo "$dep"
     done
     IFS="$old_ifs"
 
