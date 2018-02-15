@@ -223,6 +223,7 @@ add_custom_pkg_repo () {
         scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     fi
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    ssh $lxc_ip "sudo apt-get update"
 }
 
 add_local_pkg_repo () {
