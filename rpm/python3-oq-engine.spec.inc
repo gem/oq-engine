@@ -16,18 +16,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+# Provide a custom prefix for oq
+%define _oqprefix /opt/openquake
+%define _oqbindir %{_oqprefix}/bin
+%define _oqlibdir %{_oqprefix}/lib
+
+# Make sure that the proper installation of python is used by macros
+%define __python3 %{_oqbindir}/python3
+%define __python %{__python3}
+
 %define oqstable ##_stable_##
 %define oqrepo ##_repo_##
 %define oqversion ##_version_##
 %define oqrelease ##_release_##
 %define oqname python3-%{oqrepo}
 %define oqtimestamp ##_timestamp_##
-%define oqprefix /opt/openquake
 %define oquser openquake
-
-# Make sure that the proper installation of python is used by macros
-%define __python3 /opt/openquake/bin/python3
-%define __python %{__python3}
 
 %if %{oqstable} == 1
 %define oqformat %{oqrepo}-%{oqversion}
@@ -113,11 +117,11 @@ getent passwd %{oquser} >/dev/null || \
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
-install -p -m 755 -d %{buildroot}%{oqprefix}/bin
-%{__python3} setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
+install -p -m 755 -d %{buildroot}%{_oqbindir}
+%{__python3} setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{_oqprefix} --install-scripts=%{_oqbindir}
 # FIXME To be removed after python3 switch is completed
-sed -i "s|/usr/bin/env python|%{__python3}|" %{buildroot}%{oqprefix}/bin/oq
-ln -sf %{oqprefix}/bin/oq %{buildroot}%{_bindir}/oq
+sed -i "s|/usr/bin/env python|%{__python3}|" %{buildroot}%{_oqbindir}/oq
+ln -sf %{_oqbindir}/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_localstatedir}/lib/openquake
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
@@ -165,8 +169,8 @@ rm -rf %{buildroot}
 %doc doc/running/*
 %doc doc/upgrading/*
 %config(noreplace) %{_sysconfdir}/openquake/openquake.cfg
-%{oqprefix}/bin/oq
-%{oqprefix}/lib/python3*/site-packages/openquake*
+%{_oqbindir}/oq
+%{_oqlibdir}/python3*/site-packages/openquake*
 %{_bindir}/oq
 %{_datadir}/openquake/engine
 %{_datadir}/applications/oq-engine-webui.desktop
