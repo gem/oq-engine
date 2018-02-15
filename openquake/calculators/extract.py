@@ -249,8 +249,7 @@ def extract_hmaps(dstore, what):
     for kind, hcurves in getters.PmapGetter(dstore).items(what):
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
         dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
-    return hazard_items(dic, mesh, ('vs30', F32, sitecol.vs30),
-                        investigation_time=oq.investigation_time)
+    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
 @extract.add('uhs')
