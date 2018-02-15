@@ -287,6 +287,9 @@ _pkgbuild_innervm_run () {
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     ssh $lxc_ip sudo apt-get update
     ssh $lxc_ip sudo apt-get -y upgrade
+
+    add_custom_pkg_repo
+
     ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
@@ -411,7 +414,6 @@ _devtest_innervm_run () {
 
                  export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib openquake/hazardlib
 
-                 sleep 30000 || true
                  /opt/openquake/bin/coverage xml --include=\"openquake/*\"
                  /opt/openquake/bin/python3 bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
@@ -553,8 +555,7 @@ _pkgtest_innervm_run () {
     IFS="$old_ifs"
 
     # add custom packages
-    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    add_custom_pkg_repo
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
