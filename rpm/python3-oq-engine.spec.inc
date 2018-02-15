@@ -25,6 +25,10 @@
 %define oqprefix /opt/openquake
 %define oquser openquake
 
+# Make sure that the proper installation of python is used by macros
+%define __python3 /opt/openquake/bin/python3
+%define __python %{__python3}
+
 %if %{oqstable} == 1
 %define oqformat %{oqrepo}-%{oqversion}
 Release: %{oqrelease}
@@ -95,7 +99,7 @@ Copyright (C) 2010-2018 GEM Foundation
 %patch1 -p1
 
 %build
-/opt/openquake/bin/python3 setup.py build
+%{__python3} setup.py build
 
 %check
 #nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.engine
@@ -110,9 +114,9 @@ getent passwd %{oquser} >/dev/null || \
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
 install -p -m 755 -d %{buildroot}%{oqprefix}/bin
-/opt/openquake/bin/python3 setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
+%{__python3} setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
 # FIXME To be removed after python3 switch is completed
-sed -i "s|/usr/bin/env python|/opt/openquake/bin/python3|" %{buildroot}%{oqprefix}/bin/oq
+sed -i "s|/usr/bin/env python|%{__python3}|" %{buildroot}%{oqprefix}/bin/oq
 ln -sf %{oqprefix}/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_localstatedir}/lib/openquake
@@ -132,7 +136,7 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 # FIXME To be removed after python3 switch is completed
-sed -i "s|/usr/bin/env python|/opt/openquake/bin/python3|" %{buildroot}/%{_datadir}/openquake/engine/utils/celery-status
+sed -i "s|/usr/bin/env python|%{__python3}|" %{buildroot}/%{_datadir}/openquake/engine/utils/celery-status
 
 %post
 %systemd_post openquake-dbserver.service
