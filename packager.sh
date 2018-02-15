@@ -260,8 +260,6 @@ add_local_pkg_repo () {
         fi
     done
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python3-${dep} ./\""
-    # FIXME - MN: just to test
-    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
     ssh $lxc_ip "sudo apt-get update"
 }
 
@@ -277,11 +275,6 @@ _pkgbuild_innervm_run () {
     ssh $lxc_ip sudo apt-get update
     ssh $lxc_ip sudo apt-get -y upgrade
     ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
-
-    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
-    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
-    ssh $lxc_ip "sudo apt-get update"
-
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
     ssh $lxc_ip "cd build-deb && dpkg-buildpackage $DPBP_FLAG"
@@ -324,7 +317,6 @@ _devtest_innervm_run () {
     ssh $lxc_ip mkdir -p "repo"
     scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
-    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
@@ -362,9 +354,6 @@ _devtest_innervm_run () {
 
     done
     IFS="$old_ifs"
-
-    # FIXME: Just for devel.
-    # ssh $lxc_ip "sleep 500000 || true"
 
     # extract dependencies for this package
     pkgs_list="$(deps_list "all" debian)"
@@ -437,11 +426,6 @@ _builddoc_innervm_run () {
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
-
-    # FIXME - MN: just to test
-    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
-    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
-    ssh $lxc_ip "sudo apt-get update"
 
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
@@ -532,7 +516,6 @@ _pkgtest_innervm_run () {
         ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
         ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources*  ${GEM_BUILD_ROOT}/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
-    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
 
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
@@ -557,7 +540,6 @@ _pkgtest_innervm_run () {
     # add custom packages
     scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
-    ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
