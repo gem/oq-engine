@@ -733,7 +733,13 @@ class Exposure(object):
     @classmethod
     def read(cls, fname, calculation_mode='', insured_losses=False,
              region_constraint='', all_cost_types=(), ignore_missing_costs=(),
-             nodes=False):
+             asset_nodes=False):
+        """
+        Call `Exposure.read(fname)` to get an :class:`Exposure` instance
+        keeping all the assets in memory or
+        `Exposure.read(fname, asset_nodes=True)` to get an iterator over
+        Node objects (one Node for each asset).
+        """
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
         param['insured_losses'] = insured_losses
@@ -748,11 +754,11 @@ class Exposure(object):
         param['ignore_missing_costs'] = set(ignore_missing_costs)
         exposure, assets = _get_exposure(
             param['fname'], param['all_cost_types'])
-        _nodes = assets if assets else exposure._read_csv(
+        nodes = assets if assets else exposure._read_csv(
             assets.text, os.path.dirname(param['fname']))
-        if nodes:  # this is useful for Paul Henshaw
+        if asset_nodes:  # this is useful for the GED4ALL import script
             return nodes
-        exposure._populate_from(_nodes, param)
+        exposure._populate_from(nodes, param)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
