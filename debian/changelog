@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * Debian package moved to Python 3.5
+
   [Michele Simionato]
   * Improved error message for source model files declared as nrml/0.5 when
     they actually are nrml/0.4
