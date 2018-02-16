@@ -229,7 +229,7 @@ class EbriskCalculator(base.RiskCalculator):
                     event_based.save_gmdata(self, self.R)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
-        self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)
+        self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['gmf_ebrisk'] = True
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
