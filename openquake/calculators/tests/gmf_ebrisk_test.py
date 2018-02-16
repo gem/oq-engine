@@ -89,37 +89,29 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_4.__file__, 'job_haz.ini')
         calc0 = self.calc.datastore  # event_based
         self.run_calc(case_4.__file__, 'job_risk.ini',
-                      calculation_mode='event_based_risk',
+                      concurrent_tasks='0',  # avoid for bug
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
-        self.run_calc(case_4.__file__, 'job_risk.ini',
-                      concurrent_tasks='0',  # avoid numeric issues
-                      hazard_calculation_id=str(calc0.calc_id))
-        calc2 = self.calc.datastore  # event_based_risk
         [fname] = export(('agg_loss_table', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
-        [fname] = export(('agg_loss_table', 'csv'), calc2)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-4)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('macOS')
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
-        calc0 = self.calc.datastore  # event_based_risk
+        calc0 = self.calc.datastore  # single file event_based_risk
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       calculation_mode='event_based',
                       concurrent_tasks='0')
         calc1 = self.calc.datastore  # event_based
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
-                      calculation_mode='event_based_risk',
                       hazard_calculation_id=str(calc1.calc_id),
                       source_model_logic_tree_file='',
                       gsim_logic_tree_file='',
-                      concurrent_tasks='0')  # to avoid numeric issues
-        calc2 = self.calc.datastore  # event_based_risk
+                      concurrent_tasks='0')  # to avoid fork bug
+        calc2 = self.calc.datastore  # two files event_based_risk
 
         check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
 
@@ -138,9 +130,3 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/elt.txt', f0, delta=1E-5)
         f2 = writetmp(view('elt', calc2))
         self.assertEqualFiles('expected/elt.txt', f2, delta=1E-5)
-
-        # test invalid job_risk
-        with self.assertRaises(InvalidFile):
-            self.run_calc(case_master.__file__, 'job.ini',
-                          calculation_mode='event_based_risk',
-                          hazard_calculation_id=str(calc1.calc_id))
