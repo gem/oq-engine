@@ -5,8 +5,9 @@ if [ $GEM_SET_DEBUG ]; then
 fi
 set -e
 
-version="$(cat openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
-sed -i "s/Version [0-9]\.[0-9]\.[0-9]/Version $version/" oq_manual_cover.svg
+CURPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+VERSION="$(cat $CURPATH/../../openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
+sed -i "s/Version [0-9]\.[0-9]\.[0-9]/Version $VERSION/" oq_manual_cover.svg
 
 inkscape -A figures/oq_manual_cover.pdf figures/oq_manual_cover.svg
 
