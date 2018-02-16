@@ -10,10 +10,10 @@ Package: python3-oq-engine
 Architecture: all
 X-Python-Version: >= 3.2
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, python3-oq-libs (>=1.5.0~), supervisor (>=3.0b2-1~)
-Conflicts: python-noq, python-oq, python-nhlib, python-oq-engine
-Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine
+Conflicts: python-noq, python-oq, python-nhlib
+Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine (<< ${binary:Version})
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
-Breaks: python-oq-risklib, python-oq-hazardlib, python-oq-engine
+Breaks: python-oq-risklib, python-oq-hazardlib, python-oq-engine (<< ${binary:Version})
 Recommends: ${dist:Recommends}
 Suggests: python3-oq-libs-extra (>= 1.5.0~)
 Description: computes seismic hazard and physical risk
@@ -24,10 +24,9 @@ Package: python3-oq-engine-master
 Architecture: all
 X-Python-Version: >= 3.2
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, rabbitmq-server (>=2.8.0-2~gem02), python3-oq-engine (= ${binary:Version})
-Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine-master
-Conflicts: python-oq-engine-master
+Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine-master (<< ${binary:Version})
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
-Breaks: python-oq-risklib, python-oq-hazardlib
+Breaks: python-oq-risklib, python-oq-hazardlib, python-oq-engine-master (<< ${binary:Version})
 Recommends: ${dist:Recommends}
 Description: computes seismic hazard and physical risk
  based on the hazard and risk libraries developed by the GEM foundation
@@ -37,11 +36,34 @@ Package: python3-oq-engine-worker
 Architecture: all
 X-Python-Version: >= 3.2
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, supervisor (>=3.0b2-1~), python3-oq-engine (= ${binary:Version})
-Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine-worker
-Conflicts: python-oq-engine-worker
+Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine-worker (<< ${binary:Version})
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
-Breaks: python-oq-risklib, python-oq-hazardlib
+Breaks: python-oq-risklib, python-oq-hazardlib, python-oq-engine-worker (<< ${binary:Version})
 Recommends: ${dist:Recommends}
 Description: computes seismic hazard and physical risk
  based on the hazard and risk libraries developed by the GEM foundation
  (http://www.globalquakemodel.org/)
+
+Package: python-oq-engine
+Depends: python3-oq-engine, ${misc:Depends}
+Architecture: all
+Priority: optional
+Section: oldlibs
+Description: transitional package
+ This is a transitional package. It can safely be removed.
+
+Package: python-oq-engine-master
+Depends: python3-oq-engine-master, ${misc:Depends}
+Architecture: all
+Priority: optional
+Section: oldlibs
+Description: transitional package
+ This is a transitional package. It can safely be removed.
+
+Package: python-oq-engine-worker
+Depends: python3-oq-engine-worker, ${misc:Depends}
+Architecture: all
+Priority: optional
+Section: oldlibs
+Description: transitional package
+ This is a transitional package. It can safely be removed.
