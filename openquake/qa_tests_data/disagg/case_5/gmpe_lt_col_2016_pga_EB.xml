@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"  
+      xmlns="http://openquake.org/xmlns/nrml/0.4">    
+    <logicTree logicTreeID="lt1"> 
+		
+<!-- 1.0 Logic Tree for Active Shallow Crust -->
+
+        <logicTreeBranchingLevel branchingLevelID="_bl01">
+            <logicTreeBranchSet branchSetID="_bs01" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Active Shallow Crust">
+ 
+                 <logicTreeBranch branchID="b11">
+                    <uncertaintyModel>AkkarCagnan2010</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+                
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel> 
+
+<!-- 2.0 Logic Tree for Bucaramanga, only for Buca0-->
+        <logicTreeBranchingLevel branchingLevelID="_bl02">
+            <logicTreeBranchSet branchSetID="_bs02" uncertaintyType="gmpeModel"  
+                     applyToTectonicRegionType="Deep Seismicity">
+
+                <logicTreeBranch branchID="b21"> 
+                <uncertaintyModel>MontalvaEtAl2016SSlab</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+
+<!-- 3.0 Logic Tree for Interface Zone -->
+
+        <logicTreeBranchingLevel branchingLevelID="_bl03">
+			
+            <logicTreeBranchSet branchSetID="_bs03" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Subduction Interface">
+                 
+                <logicTreeBranch branchID="b31">
+                    <uncertaintyModel>AbrahamsonEtAl2015SInter</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+
+            
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel> 
+
+<!-- 4.0 Logic Tree for Benioff Zone -->
+
+        <logicTreeBranchingLevel branchingLevelID="_bl04">
+            <logicTreeBranchSet branchSetID="_bs04" uncertaintyType="gmpeModel"
+                    applyToTectonicRegionType="Subduction IntraSlab">
+
+                <logicTreeBranch branchID="b44">
+                    <uncertaintyModel>AbrahamsonEtAl2015SSlab</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+
+            
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel> 
+    </logicTree>
+</nrml>

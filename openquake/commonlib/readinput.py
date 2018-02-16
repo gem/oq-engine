@@ -99,14 +99,26 @@ def extract_from_zip(path, candidates):
             if os.path.basename(f) in candidates]
 
 
-def get_params(job_inis, **inputs):
+def _update(params, items, base_path):
+    for key, value in items:
+        if key.endswith(('_file', '_csv')):
+            if os.path.isabs(value):
+                raise ValueError('%s=%s is an absolute path' % (key, value))
+            input_type, _ext = key.rsplit('_', 1)
+            params['inputs'][input_type] = (
+                os.path.join(base_path, value) if value else '')
+        else:
+            params[key] = value
+
+
+def get_params(job_inis, **kw):
     """
     Parse one or more INI-style config files.
 
     :param job_inis:
         List of configuration files (or list containing a single zip archive)
-    :param inputs:
-        Optionally override some parameters in params['inputs']
+    :param kw:
+        Optionally override some parameters
     :returns:
         A dictionary of parameters
     """
@@ -128,23 +140,16 @@ def get_params(job_inis, **inputs):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
-        for key, value in cp.items(sect):
-            if key.endswith(('_file', '_csv')):
-                if os.path.isabs(value):
-                    raise InvalidFile('%s: %s must be a relative path' %
-                                      (job_ini, value))
-                input_type, _ext = key.rsplit('_', 1)
-                path = os.path.join(base_path, value)
-                params['inputs'][input_type] = path
-            else:
-                params[key] = value
-    params['inputs'].update(inputs)  # override on demand
+        _update(params, cp.items(sect), base_path)
+    _update(params, kw.items(), base_path)  # override on demand
 
     # populate the 'source' list
-    smlt = params['inputs'].get('source_model_logic_tree')
+    inputs = params['inputs']
+    smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        params['inputs']['source'] = sorted(_get_paths(smlt))
-
+        inputs['source'] = sorted(_get_paths(smlt))
+    elif 'source_model' in inputs:
+        inputs['source'] = [inputs['source_model']]
     return params
 
 
@@ -391,11 +396,15 @@ def get_source_model_lt(oqparam):
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
         instance
     """
-    fname = oqparam.inputs['source_model_logic_tree']
-    # NB: converting the random_seed into an integer is needed on Windows
-    return logictree.SourceModelLogicTree(
-        fname, validate=False, seed=int(oqparam.random_seed),
-        num_samples=oqparam.number_of_logic_tree_samples)
+    fname = oqparam.inputs.get('source_model_logic_tree')
+    if fname:
+        # NB: converting the random_seed into an integer is needed on Windows
+        return logictree.SourceModelLogicTree(
+            fname, validate=False, seed=int(oqparam.random_seed),
+            num_samples=oqparam.number_of_logic_tree_samples)
+    return logictree.FakeSmlt(oqparam.inputs['source_model'],
+                              int(oqparam.random_seed),
+                              oqparam.number_of_logic_tree_samples)
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
@@ -648,20 +657,35 @@ def _get_exposure(fname, ok_cost_types, stop=None):
 
     # read the cost types and make some check
     cost_types = []
+    retrofitted = False
     for ct in conversions.costTypes:
         if not ok_cost_types or ct['name'] in ok_cost_types:
             with context(fname, ct):
+                ctname = ct['name']
+                if ctname == 'structural' and 'retrofittedType' in ct.attrib:
+                    if ct['retrofittedType'] != ct['type']:
+                        raise ValueError(
+                            'The retrofittedType %s is different from the type'
+                            '%s' % (ct['retrofittedType'], ct['type']))
+                    if ct['retrofittedUnit'] != ct['unit']:
+                        raise ValueError(
+                            'The retrofittedUnit %s is different from the unit'
+                            '%s' % (ct['retrofittedUnit'], ct['unit']))
+                    retrofitted = True
                 cost_types.append(
-                    (ct['name'], valid.cost_type_type(ct['type']), ct['unit']))
+                    (ctname, valid.cost_type_type(ct['type']), ct['unit']))
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
-    insurance_limit_is_absolute = inslimit.get('isAbsolute', True)
-    deductible_is_absolute = deductible.get('isAbsolute', True)
-    tagi = {name: i for i, name in enumerate(tagnames)}
+    insurance_limit_is_absolute = il = inslimit.get('isAbsolute')
+    deductible_is_absolute = de = deductible.get('isAbsolute')
     cc = asset.CostCalculator(
-        {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute, tagi)
+        {}, {}, {},
+        True if de is None else de,
+        True if il is None else il,
+        {name: i for i, name in enumerate(tagnames)},
+    )
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
@@ -672,7 +696,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, cost_types, occupancy_periods.split(),
-        insurance_limit_is_absolute, deductible_is_absolute,
+        insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
         area.attrib, assets, asset_refs, cc, asset.TagCollection(tagnames))
     return exp, exposure.assets
 
@@ -708,12 +732,20 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'insurance_limit_is_absolute',
-              'deductible_is_absolute', 'area', 'assets', 'asset_refs',
+              'deductible_is_absolute', 'retrofitted',
+              'area', 'assets', 'asset_refs',
               'cost_calculator', 'tagcol']
 
     @classmethod
     def read(cls, fname, calculation_mode='', insured_losses=False,
-             region_constraint='', all_cost_types=(), ignore_missing_costs=()):
+             region_constraint='', all_cost_types=(), ignore_missing_costs=(),
+             asset_nodes=False):
+        """
+        Call `Exposure.read(fname)` to get an :class:`Exposure` instance
+        keeping all the assets in memory or
+        `Exposure.read(fname, asset_nodes=True)` to get an iterator over
+        Node objects (one Node for each asset).
+        """
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
         param['insured_losses'] = insured_losses
@@ -729,15 +761,15 @@ class Exposure(object):
         exposure, assets = _get_exposure(
             param['fname'], param['all_cost_types'])
         nodes = assets if assets else exposure._read_csv(
-            ~assets, os.path.dirname(param['fname']))
+            assets.text, os.path.dirname(param['fname']))
+        if asset_nodes:  # this is useful for the GED4ALL import script
+            return nodes
         exposure._populate_from(nodes, param)
-        if param['region']:
-            logging.info('Read %d assets within the region_constraint '
-                         'and discarded %d assets outside the region',
-                         len(exposure.assets), param['out_of_region'])
-            if len(exposure.assets) == 0:
-                raise RuntimeError(
-                    'Could not find any asset within the region!')
+        if param['region'] and param['out_of_region']:
+            logging.info('Discarded %d assets outside the region',
+                         param['out_of_region'])
+        if len(exposure.assets) == 0:
+            raise RuntimeError('Could not find any asset within the region!')
         # sanity checks
         values = any(len(ass.values) + ass.number for ass in exposure.assets)
         assert values, 'Could not find any value??'
@@ -800,7 +832,7 @@ class Exposure(object):
                         tags = Node('tags')
                         for tagname in self.tagcol.tagnames:
                             if tagname != 'taxonomy':
-                                tags[tagname] = dic[tagname]
+                                tags.attrib[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
                         if i % 100000 == 0:
                             logging.info('Read %d assets', i)
@@ -819,7 +851,7 @@ class Exposure(object):
         values = {}
         deductibles = {}
         insurance_limits = {}
-        retrofitteds = {}
+        retrofitted = None
         asset_id = asset_node['id'].encode('utf8')
         with context(param['fname'], asset_node):
             self.asset_refs.append(asset_id)
@@ -860,11 +892,11 @@ class Exposure(object):
         for cost in costs:
             with context(param['fname'], cost):
                 cost_type = cost['type']
+                if cost_type == 'structural':
+                    # retrofitted is defined only for structural
+                    retrofitted = cost.get('retrofitted')
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = cost['value']
-                    retrovalue = cost.get('retrofitted')
-                    if retrovalue is not None:
-                        retrofitteds[cost_type] = retrovalue
                     if param['insured_losses']:
                         deductibles[cost_type] = cost['deductible']
                         insurance_limits[cost_type] = cost['insuranceLimit']
@@ -893,9 +925,13 @@ class Exposure(object):
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset_node.get('area', 1))
         ass = asset.Asset(idx, idxs, number, location, values, area,
-                          deductibles, insurance_limits, retrofitteds,
+                          deductibles, insurance_limits, retrofitted,
                           self.cost_calculator)
         self.assets.append(ass)
+
+    def __repr__(self):
+        return '<%s with %s assets>' % (self.__class__.__name__,
+                                        len(self.assets))
 
 
 def get_sitecol_assetcol(oqparam, exposure):
