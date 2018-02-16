@@ -1298,7 +1298,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
         pkg_bfx="$ini_bfx"
-        pkg_deb="-0"
+        pkg_deb="-1"
     fi
 
     (
