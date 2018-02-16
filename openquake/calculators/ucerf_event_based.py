@@ -780,6 +780,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.rupser = calc.RuptureSerializer(self.datastore)
+        self.precomputed_gmfs = False
 
     def gen_args(self, csm, monitor):
         """

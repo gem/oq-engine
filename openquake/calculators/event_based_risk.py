@@ -180,8 +180,76 @@ class EbriskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the total losses by taxonomy
     """
+    core_task = event_based_risk
     pre_calculator = 'event_based_rupture'
     is_stochastic = True
+
+    def pre_execute(self):
+        oq = self.oqparam
+        if 'gmfs' in oq.inputs:
+            self.pre_calculator = None
+        base.RiskCalculator.pre_execute(self)
+        if not hasattr(self, 'assetcol'):
+            self.assetcol = self.datastore['assetcol']
+        self.L = len(self.riskmodel.lti)
+        self.T = len(self.assetcol.tagcol)
+        self.A = len(self.assetcol)
+        self.I = oq.insured_losses + 1
+        parent = self.datastore.parent
+        self.precomputed_gmfs = 'gmf_data' in parent or 'gmfs' in oq.inputs
+        if not self.precomputed_gmfs:
+            return
+        if 'gmf_data' in parent:
+            # read the GMFs from a previous calc
+            assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
+            oqp = parent['oqparam']
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.minimum_intensity != oq.minimum_intensity:
+                raise ValueError(
+                    'The parent calculation was using minimum_intensity=%s'
+                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
+            self.eids = parent['events']['eid']
+            self.datastore['csm_info'] = parent['csm_info']
+            self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
+            self.R = len(self.rlzs_assoc.realizations)
+        elif 'gmfs' in oq.inputs:  # read the GMFs from a file
+            with self.monitor('reading GMFs', measuremem=True):
+                fname = oq.inputs['gmfs']
+                sids = self.sitecol.complete.sids
+                if fname.endswith('.xml'):  # old approach
+                    self.eids, self.R = base.get_gmfs(self)
+                else:  # import csv
+                    self.eids, self.R, self.gmdata = base.import_gmfs(
+                        self.datastore, fname, sids)
+                    event_based.save_gmdata(self, self.R)
+        self.E = len(self.eids)
+        eps = riskinput.make_epsilon_getter(
+            len(self.assetcol), self.E, oq.asset_correlation,
+            oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
+        self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)
+        self.param['gmf_ebrisk'] = True
+        self.param['insured_losses'] = oq.insured_losses
+        self.param['avg_losses'] = oq.avg_losses
+        self.param['ses_ratio'] = oq.ses_ratio
+        self.param['asset_loss_table'] = oq.asset_loss_table
+        self.param['elt_dt'] = numpy.dtype(
+            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
+        self.taskno = 0
+        self.start = 0
+        avg_losses = self.oqparam.avg_losses
+        if avg_losses:
+            self.dset = self.datastore.create_dset(
+                'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
+        self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
+        self.vals = self.assetcol.values()
+        self.num_losses = numpy.zeros((self.A, self.R), U32)
+        if oq.asset_loss_table:
+            # save all_loss_ratios
+            self.alr_nbytes = 0
+            self.indices = collections.defaultdict(list)  # sid -> pairs
 
     # TODO: if the number of source models is larger than concurrent_tasks
     # a different strategy should be used; the one used here is good when
@@ -284,6 +352,9 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Run the calculator and aggregate the results
         """
+        if self.precomputed_gmfs:
+            return base.RiskCalculator.execute(self)
+
         if self.oqparam.number_of_logic_tree_samples:
             logging.warn('The event based risk calculator with sampling is '
                          'EXPERIMENTAL, UNTESTED and SLOW')
@@ -314,8 +385,6 @@ class EbriskCalculator(base.RiskCalculator):
         source_models = self.csm_info.source_models
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
         num_events = len(self.datastore['events'])
-        if not hasattr(self, 'assetcol'):
-            self.assetcol = self.datastore['assetcol']
         self.get_eps = riskinput.make_epsilon_getter(
             len(self.assetcol), num_events,
             self.oqparam.asset_correlation,
@@ -397,15 +466,13 @@ class EbriskCalculator(base.RiskCalculator):
         assratios = dic.pop('assratios')
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
-        ebr = self.oqparam.calculation_mode in (
-            'event_based_risk', 'ucerf_risk')
         with self.monitor('saving event loss table', autoflush=True):
-            if ebr:  # event_based_risk
-                agglosses['rlzi'] += offset
-                self.datastore.extend('agg_loss_table', agglosses)
-            else:  # gmf_ebrisk
+            if self.precomputed_gmfs:
                 idx, agg = agglosses
                 self.agglosses[idx] += agg
+            else:  # event_based_risk
+                agglosses['rlzi'] += offset
+                self.datastore.extend('agg_loss_table', agglosses)
         if self.oqparam.asset_loss_table:
             with self.monitor('saving loss ratios', autoflush=True):
                 for (a, r), num in dic.pop('num_losses').items():
@@ -423,32 +490,53 @@ class EbriskCalculator(base.RiskCalculator):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                if ebr:  # event_based_risk, all assets
-                    self.dset[:, r + offset, li] += ratios * vs
-                else:  # gmf_ebrisk, there is no offset
+                if self.precomputed_gmfs:  # there is no offset
                     self.dset[aids, r, li] += numpy.array(
                         [ratios.get(aid, 0) * vs[aid] for aid in aids])
+                else:  # all assets
+                    self.dset[:, r + offset, li] += ratios * vs
         self.taskno += 1
 
-    def post_execute(self, num_events):
+    def combine(self, dummy, res):
+        """
+        :param dummy: unused parameter
+        :param res: a result dictionary
+        """
+        self.save_losses(res, offset=0)
+        return 1
+
+    def post_execute(self, result):
         """
         Save risk data and possibly execute the EbrPostCalculator
         """
-        # gmv[:-2] are the total gmv per each IMT
-        gmv = sum(gm[:-2].sum() for gm in self.gmdata.values())
-        if not gmv:
-            raise RuntimeError('No GMFs were generated, perhaps they were '
-                               'all below the minimum_intensity threshold')
-
-        if 'agg_loss_table' not in self.datastore:
-            logging.warning(
-                'No losses were generated: most likely there is an error in y'
-                'our input files or the GMFs were below the minimum intensity')
+        if self.precomputed_gmfs:
+            logging.info('Saving event loss table')
+            with self.monitor('saving event loss table', measuremem=True):
+                # saving zeros is a lot faster than adding an `if loss.sum()`
+                agglosses = numpy.fromiter(
+                    ((e, r, loss)
+                     for e, losses in zip(self.eids, self.agglosses)
+                     for r, loss in enumerate(losses) if loss.sum()),
+                    self.param['elt_dt'])
+                self.datastore['agg_loss_table'] = agglosses
         else:
-            self.datastore.set_nbytes('agg_loss_table')
-            E = sum(num_events.values())
-            agglt = self.datastore['agg_loss_table']
-            agglt.attrs['nonzero_fraction'] = len(agglt) / E
+            num_events = result
+            # gmv[:-2] are the total gmv per each IMT
+            gmv = sum(gm[:-2].sum() for gm in self.gmdata.values())
+            if not gmv:
+                raise RuntimeError('No GMFs were generated, perhaps they were '
+                                   'all below the minimum_intensity threshold')
+
+            if 'agg_loss_table' not in self.datastore:
+                logging.warning(
+                    'No losses were generated: most likely there is an error '
+                    'in y our input files or the GMFs were below the minimum '
+                    'intensity')
+            else:
+                self.datastore.set_nbytes('agg_loss_table')
+                E = sum(num_events.values())
+                agglt = self.datastore['agg_loss_table']
+                agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
         self.postproc()
 
