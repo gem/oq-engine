@@ -226,10 +226,8 @@ class EbriskCalculator(base.RiskCalculator):
                         self.datastore, fname, sids)
                     event_based.save_gmdata(self, self.R)
         self.E = len(self.eids)
-        eps = riskinput.make_epsilon_getter(
-            len(self.assetcol), self.E, oq.asset_correlation,
-            oq.master_seed, oq.ignore_covs or not self.riskmodel.covs)()
-        self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)
+        eps = self.epsilon_getter()()
+        self.riskinputs = self.build_riskinputs('gmf', eps, sorted(self.eids))
         self.param['gmf_ebrisk'] = True
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
@@ -348,6 +346,16 @@ class EbriskCalculator(base.RiskCalculator):
                    param, self.riskmodel, imtls, oq.truncation_level,
                    correl_model, min_iml, mon)
 
+    def epsilon_getter(self):
+        """
+        :returns: a callable (start, stop) producing a slice of epsilons
+        """
+        return riskinput.make_epsilon_getter(
+            len(self.assetcol), self.E,
+            self.oqparam.asset_correlation,
+            self.oqparam.master_seed,
+            self.oqparam.ignore_covs or not self.riskmodel.covs)
+
     def execute(self):
         """
         Run the calculator and aggregate the results
@@ -384,14 +392,10 @@ class EbriskCalculator(base.RiskCalculator):
         allres = []
         source_models = self.csm_info.source_models
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
-        num_events = len(self.datastore['events'])
-        self.get_eps = riskinput.make_epsilon_getter(
-            len(self.assetcol), num_events,
-            self.oqparam.asset_correlation,
-            self.oqparam.master_seed,
-            self.oqparam.ignore_covs or not self.riskmodel.covs)
+        self.E = num_events = len(self.datastore['events'])
         self.assets_by_site = self.assetcol.assets_by_site()
         self.start = 0
+        self.get_eps = self.epsilon_getter()
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         for i, args in enumerate(self.gen_args()):
             ires = self.start_tasks(*args)
