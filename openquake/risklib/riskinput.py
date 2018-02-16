@@ -354,10 +354,10 @@ class EpsilonMatrix0(object):
             eps[:, i] = numpy.random.normal(size=self.num_assets)
         return eps
 
-    def __getitem__(self, item):
+    def __getitem__(self, aid):
         if self.eps is None:
             self.eps = self.make_eps()
-        return self.eps[item]
+        return self.eps[aid]
 
     def __len__(self):
         return self.num_assets
@@ -406,6 +406,7 @@ def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
     return get_eps
 
 
+# used in scenario_risk
 def make_eps(assetcol, num_samples, seed, correlation):
     """
     :param assetcol: an AssetCollection instance
