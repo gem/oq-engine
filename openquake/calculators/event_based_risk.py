@@ -211,6 +211,8 @@ class EbriskCalculator(base.RiskCalculator):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
+            # sorting the eids is essential to get the epsilons in the right
+            # order (i.e. consistent with the one used in ebr from ruptures)
             self.eids = sorted(parent['events']['eid'])
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
