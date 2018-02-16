@@ -211,7 +211,7 @@ class EbriskCalculator(base.RiskCalculator):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
-            self.eids = parent['events']['eid']
+            self.eids = sorted(parent['events']['eid'])
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.R = len(self.rlzs_assoc.realizations)
@@ -227,7 +227,7 @@ class EbriskCalculator(base.RiskCalculator):
                     event_based.save_gmdata(self, self.R)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
-        self.riskinputs = self.build_riskinputs('gmf', eps, sorted(self.eids))
+        self.riskinputs = self.build_riskinputs('gmf', eps, self.eids)
         self.param['gmf_ebrisk'] = True
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
