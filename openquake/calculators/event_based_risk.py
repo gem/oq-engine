@@ -215,7 +215,7 @@ class EbriskCalculator(base.RiskCalculator):
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.R = len(self.rlzs_assoc.realizations)
-        elif 'gmfs' in oq.inputs:  # read the GMFs from a file
+        else:  # read the GMFs from a file
             with self.monitor('reading GMFs', measuremem=True):
                 fname = oq.inputs['gmfs']
                 sids = self.sitecol.complete.sids

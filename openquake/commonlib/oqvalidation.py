@@ -670,5 +670,4 @@ class OqParam(valid.ParamSet):
         """
         :returns: True if the hazard is precomputed
         """
-        return (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs
-                or 'hazard_curves' in self.inputs)
+        return 'gmfs' in self.inputs or 'hazard_curves' in self.inputs
