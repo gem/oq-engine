@@ -320,9 +320,9 @@ class RiskInput(object):
             return
         eid2idx = self.hazard_getter.eid2idx
         idx = [eid2idx[eid] for eid in eids]
-        try:
+        try:  # from ruptures
             return self.eps[aid, idx]
-        except TypeError:  # for gmf_ebrisk
+        except TypeError:  # from GMFs
             return self.eps[aid][idx]
 
     def __repr__(self):
