@@ -326,6 +326,17 @@ def accept_path(path, ref_path):
     return True
 
 
+def get_totrup(data):
+    """
+    :param data: a record with a field `totrup`, possibily missing
+    """
+    try:
+        totrup = data['totrup']
+    except ValueError:  # engine older than 2.9
+        totrup = 0
+    return totrup
+
+
 class CompositionInfo(object):
     """
     An object to collect information about the composition of
@@ -462,9 +473,9 @@ class CompositionInfo(object):
             tdata = sg_data[sm_id]
             srcgroups = [
                 sourceconverter.SourceGroup(
-                    self.trts[trti], id=grp_id, eff_ruptures=effrup,
-                    tot_ruptures=totrup)
-                for grp_id, trti, effrup, totrup, sm_id in tdata if effrup]
+                    self.trts[data['trti']], id=data['grp_id'],
+                    eff_ruptures=data['effrup'], tot_ruptures=get_totrup(data))
+                for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
@@ -707,13 +718,16 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
+                mutex = getattr(src_group, 'src_interdep', None) == 'mutex'
                 self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
-                    if hasattr(src, '__iter__'):  # MultiPoint, AreaSource
+                    if hasattr(src, '__iter__') and not mutex:
+                        # MultiPoint, AreaSource, NonParametric
                         # NB: source.split_source is cached
                         sources.extend(source.split_source(src))
                     else:
+                        # mutex sources cannot be split
                         sources.append(src)
                 sg = copy.copy(src_group)
                 sg.sources = []
