@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Integrated the gmf_ebrisk calculator in the event_based_risk calculator
   * Improved error message for source model files declared as nrml/0.5 when
     they actually are nrml/0.4
   * Optimized the classical_bcr calculator for the case of many realizations
