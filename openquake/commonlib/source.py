@@ -652,7 +652,6 @@ class CompositeSourceModel(collections.Sequence):
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()
-        self.split_map = {}
         self.weight = 0
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
@@ -680,7 +679,7 @@ class CompositeSourceModel(collections.Sequence):
                 sources = []
                 for src in src_group:
                     if not mutex:
-                        # NB: source.split_source is cached
+                        # set .serial if needed
                         sources.extend(source.split_source(src))
                     else:
                         # mutex sources cannot be split
