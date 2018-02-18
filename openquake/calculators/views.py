@@ -452,24 +452,6 @@ def view_exposure_info(token, dstore):
     return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 
-@view.add('assetcol')
-def view_assetcol(token, dstore):
-    """
-    Display the exposure in CSV format
-    """
-    1 / 0
-    assetcol = dstore['assetcol']
-    taxonomies = assetcol.taxonomies
-    header = list(assetcol.array.dtype.names)
-    columns = [None] * len(header)
-    for i, field in enumerate(header):
-        if field == 'taxonomy':
-            columns[i] = taxonomies[assetcol.array[field]]
-        else:
-            columns[i] = assetcol.array[field]
-    return write_csv(io.BytesIO(), [header] + list(zip(*columns)))
-
-
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
