@@ -47,7 +47,7 @@ class MultiPointTestCase(unittest.TestCase):
         mps.src_group_id = 1
 
         # test the splitting
-        splits = list(split_source(mps))
+        splits = split_source(mps)
         self.assertEqual(len(splits), 2)
         for split in splits:
             self.assertEqual(split.src_group_id, mps.src_group_id)

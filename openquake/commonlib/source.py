@@ -722,8 +722,7 @@ class CompositeSourceModel(collections.Sequence):
                 self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
-                    if hasattr(src, '__iter__') and not mutex:
-                        # MultiPoint, AreaSource, NonParametric
+                    if not mutex:
                         # NB: source.split_source is cached
                         sources.extend(source.split_source(src))
                     else:
@@ -874,19 +873,8 @@ class CompositeSourceModel(collections.Sequence):
         :yields: blocks of sources of weight around maxweight
         """
         sources.sort(key=weight)
-
-        # yield light sources in blocks
-        light = [src for src in sources if src.weight <= maxweight]
-        for block in block_splitter(light, maxweight, weight):
+        for block in block_splitter(sources, maxweight, weight):
             yield block
-
-        # yield heavy sources in blocks
-        heavy = [src for src in sources if src.weight > maxweight]
-        for src in heavy:
-            srcs = [s for s in source.split_source(src)
-                    if self.src_filter.get_close_sites(s) is not None]
-            for block in block_splitter(srcs, maxweight, weight):
-                yield block
 
     def __repr__(self):
         """
