@@ -670,6 +670,23 @@ class CompositeSourceModel(collections.Sequence):
         else:
             self.has_dupl_sources = len(dupl_sources)
 
+    def split_all(self):
+        """
+        Split all sources in the composite source model
+        """
+        for sm in self.source_models:
+            for src_group in sm.src_groups:
+                mutex = getattr(src_group, 'src_interdep', None) == 'mutex'
+                sources = []
+                for src in src_group:
+                    if not mutex:
+                        # NB: source.split_source is cached
+                        sources.extend(source.split_source(src))
+                    else:
+                        # mutex sources cannot be split
+                        sources.append(src)
+                src_group.sources = sources
+
     def grp_by_src(self):
         """
         :returns: a new CompositeSourceModel with one group per source
@@ -718,19 +735,10 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
-                mutex = getattr(src_group, 'src_interdep', None) == 'mutex'
-                self.add_infos(src_group.sources)  # unsplit sources
-                sources = []
-                for src in src_group.sources:
-                    if not mutex:
-                        # NB: source.split_source is cached
-                        sources.extend(source.split_source(src))
-                    else:
-                        # mutex sources cannot be split
-                        sources.append(src)
+                self.add_infos(src_group.sources)
                 sg = copy.copy(src_group)
                 sg.sources = []
-                for src, _sites in src_filter(sources):
+                for src, _sites in src_filter(src_group.sources):
                     sg.sources.append(src)
                     src.ngsims = ngsims[src.tectonic_region_type]
                     weight += src.weight
@@ -858,10 +866,11 @@ class CompositeSourceModel(collections.Sequence):
 
     def add_infos(self, sources):
         """
-        Populate the .infos dictionary (grp_id, src_id) -> <SourceInfo>
+        Populate the .infos dictionary src_id -> <SourceInfo>
         """
         for src in sources:
-            self.infos[src.source_id] = SourceInfo(src)
+            srcid = src.source_id.rsplit(':', 1)[0]
+            self.infos[srcid] = SourceInfo(src)
 
     def split_in_blocks(self, maxweight, sources):
         """
