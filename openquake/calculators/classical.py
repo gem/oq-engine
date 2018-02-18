@@ -195,7 +195,6 @@ class PSHACalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
-        source.split_map.clear()
 
     def post_execute(self, pmap_by_grp_id):
         """
