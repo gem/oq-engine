@@ -18,8 +18,10 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 :class:`SimpleFaultSource`.
 """
 from __future__ import division
+import copy
 import math
 from openquake.baselib.python3compat import range, round
+from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -328,3 +330,16 @@ class SimpleFaultSource(ParametricSeismicSource):
             self.lower_seismogenic_depth, dip, self.rupture_mesh_spacing
         )
         self.dip = dip
+
+    def __iter__(self):
+        mag_rates = [(mag, rate) for (mag, rate) in
+                     self.mfd.get_annual_occurrence_rates() if rate]
+        if len(mag_rates) == 1:  # not splittable
+            yield self
+            return
+        for i, (mag, rate) in enumerate(mag_rates):
+            src = copy.copy(self)
+            src.source_id = '%s:%s' % (self.source_id, i)
+            src.mfd = mfd.ArbitraryMFD([mag], [rate])
+            src.src_group_id = self.src_group_id
+            yield src
