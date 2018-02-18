@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.complex_fault`
 defines :class:`ComplexFaultSource`.
 """
+import copy
 import numpy
 
 from openquake.baselib.python3compat import range
@@ -25,6 +26,16 @@ from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
+
+MINWEIGHT = 100
+
+
+def _split_start_stop(n, chunksize):
+    start = 0
+    while start < n:
+        stop = start + chunksize
+        yield start, min(stop, n)
+        start = stop
 
 
 @with_slots
@@ -241,8 +252,8 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
                         # try to extend along length
                         areas_acc = numpy.sum(cell_area[:, col:], axis=0)
                         areas_acc = numpy.add.accumulate(areas_acc, axis=0)
-                        rup_cols = numpy.argmin(numpy.abs(areas_acc
-                                                          - rupture_area))
+                        rup_cols = numpy.argmin(
+                            numpy.abs(areas_acc - rupture_area))
                         last_col = rup_cols + col + 1
                         if last_col == ncols \
                                 and areas_acc[rup_cols] < rupture_area:
@@ -262,3 +273,19 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
             rupture_slices.append((slice(row, last_row + 1),
                                    slice(col, last_col + 1)))
     return rupture_slices
+
+    def __iter__(self):
+        if self.num_ruptures <= MINWEIGHT:
+            yield self  # not splittable
+            return
+        i = 0
+        # split by slice of ruptures, see ClassicalTestCase.test_case_20
+        for start, stop in _split_start_stop(self.num_ruptures, MINWEIGHT):
+            src = copy.copy(self)
+            src.start = start
+            src.stop = stop
+            src.num_ruptures = stop - start
+            src.source_id = '%s:%s' % (self.source_id, i)
+            src.src_group_id = self.src_group_id
+            i += 1
+            yield src
