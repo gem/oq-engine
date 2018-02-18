@@ -31,27 +31,21 @@ from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 from openquake.hazardlib.source.multi import MultiPointSource
 
 
-split_map = {}  # cache
-
-
 def split_source(src):
     """
     :param src: a source to split
     :returns: a list of split sources
     """
-    try:
-        splits = split_map[src]  # read from the cache
-    except KeyError:  # fill the cache
-        splits = split_map[src] = list(src)
-        if len(splits) > 1:
-            has_serial = hasattr(src, 'serial')
-            start = 0
-            for split in splits:
-                split.src_group_id = src.src_group_id
-                split.num_ruptures = split.count_ruptures()
-                split.ngsims = src.ngsims
-                if has_serial:
-                    nr = split.num_ruptures
-                    split.serial = src.serial[start:start + nr]
-                    start += nr
+    splits = list(src)
+    if len(splits) > 1:
+        has_serial = hasattr(src, 'serial')
+        start = 0
+        for split in splits:
+            split.src_group_id = src.src_group_id
+            split.num_ruptures = split.count_ruptures()
+            split.ngsims = src.ngsims
+            if has_serial:
+                nr = split.num_ruptures
+                split.serial = src.serial[start:start + nr]
+                start += nr
     return splits

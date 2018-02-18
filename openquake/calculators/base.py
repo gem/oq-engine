@@ -411,7 +411,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
-            with self.monitor('splitting sources', autoflush=1):
+            with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 self.csm.split_all()
             if self.grp_by_src:  # set in disaggregation
                 self.csm = self.csm.grp_by_src()
