@@ -90,6 +90,12 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
+    def __iter__(self):
+        """
+        Override to implement source splitting
+        """
+        yield self
+
     @abc.abstractmethod
     def count_ruptures(self):
         """

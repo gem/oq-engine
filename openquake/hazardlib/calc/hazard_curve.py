@@ -61,7 +61,6 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.baselib.parallel import Sequential
-from openquake.hazardlib.source import split_source
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
@@ -86,7 +85,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         srcs = group.sources
     else:
         mutex_weight = None
-        srcs = sum([split_source(src) for src in group], [])
+        srcs = sum([list(src) for src in group], [])
     grp_ids = set()
     for src in group:
         grp_ids.update(src.src_group_ids)
