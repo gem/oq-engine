@@ -250,7 +250,7 @@ def view_ruptures_per_trt(token, dstore):
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures
+            er = src_group.eff_ruptures / num_tiles
             if er:
                 num_trts += 1
                 eff_ruptures += er
