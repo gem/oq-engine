@@ -457,6 +457,7 @@ def view_assetcol(token, dstore):
     """
     Display the exposure in CSV format
     """
+    1 / 0
     assetcol = dstore['assetcol']
     taxonomies = assetcol.taxonomies
     header = list(assetcol.array.dtype.names)
@@ -548,6 +549,7 @@ def view_assets_by_site(token, dstore):
     """
     Display statistical information about the distribution of the assets
     """
+    taxonomies = dstore['assetcol/tagcol/taxonomy'].value
     assets_by_site = dstore['assetcol'].assets_by_site()
     data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
     num_assets = AccumDict()
@@ -556,7 +558,7 @@ def view_assets_by_site(token, dstore):
             assets, operator.attrgetter('taxonomy')).items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
-        data.append(stats(taxo, val, val.sum()))
+        data.append(stats(taxonomies[taxo], val, val.sum()))
     if len(num_assets) > 1:  # more than one taxonomy, add a summary
         n_assets = numpy.array([len(assets) for assets in assets_by_site])
         data.append(stats('*ALL*', n_assets, n_assets.sum()))
