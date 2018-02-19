@@ -371,7 +371,8 @@ class EpsilonMatrix1(object):
     :param num_events: number of events
     :param seed: seed used to generate E epsilons
     """
-    def __init__(self, num_events, seed):
+    def __init__(self, num_assets, num_events, seed):
+        self.num_assets = num_assets
         self.num_events = num_events
         self.seed = seed
         numpy.random.seed(seed)
@@ -381,6 +382,9 @@ class EpsilonMatrix1(object):
         # item[0] is the asset index, item[1] the event index
         # the epsilons are equal for all assets since asset_correlation=1
         return self.eps[item[1]]
+
+    def __len__(self):
+        return self.num_assets
 
 
 def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
@@ -398,7 +402,7 @@ def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
         if no_eps:
             eps = None
         elif correlation:
-            eps = EpsilonMatrix1(stop - start, master_seed)
+            eps = EpsilonMatrix1(n_assets, stop - start, master_seed)
         else:
             eps = EpsilonMatrix0(n_assets, seeds[start:stop])
         return eps
