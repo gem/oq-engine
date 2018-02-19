@@ -37,7 +37,7 @@ from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
-from openquake.calculators.getters import GmfGetter, EBRupture
+from openquake.calculators.getters import GmfGetter, EBRupture, RuptureGetter
 from openquake.calculators.classical import (
     ClassicalCalculator, saving_sources_by_task)
 
@@ -523,7 +523,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for slc in split_in_slices(U, oq.concurrent_tasks or 1):
             getters = []
             for grp_id in rlzs_by_gsim:
-                ruptures = getters.RuptureGetter(parent, slc, grp_id)
+                ruptures =RuptureGetter(parent, slc, grp_id)
                 if parent is self.datastore:  # not accessible parent
                     ruptures = list(ruptures)
                     if not ruptures:
