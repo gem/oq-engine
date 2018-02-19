@@ -650,14 +650,14 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, eps=None, eids=None):
+    def build_riskinputs(self, kind, eps=None, num_events=0):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
         :param eps:
             a matrix of epsilons (or None)
-        :param eids:
-            an array of event IDs (or None)
+        :param num_events:
+            how many events there are
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -695,7 +695,7 @@ class RiskCalculator(HazardCalculator):
                     getter = PmapGetter(dstore, sids, self.rlzs_assoc)
                     getter.num_rlzs = self.R
                 else:  # gmf
-                    getter = GmfDataGetter(dstore, sids, self.R, eids)
+                    getter = GmfDataGetter(dstore, sids, self.R, num_events)
                 if dstore is self.datastore:
                     # read the hazard data in the controller node
                     logging.info('Reading hazard')
