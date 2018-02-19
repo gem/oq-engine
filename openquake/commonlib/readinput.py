@@ -223,7 +223,7 @@ def get_mesh(oqparam):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         oqparam.inputs['sites'], i, sid))
                 data.append(' '.join(row[1:]))
-        elif oqparam.calculation_mode == 'gmf_ebrisk':
+        elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
             data = [line.replace(',', ' ') for line in csv_data]
