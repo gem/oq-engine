@@ -871,6 +871,7 @@ class CompositeSourceModel(collections.Sequence):
             srcid = src.source_id.rsplit(':', 1)[0]
             self.infos[srcid] = SourceInfo(src)
 
+
     def __repr__(self):
         """
         Return a string representation of the composite model
