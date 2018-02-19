@@ -35,10 +35,10 @@ class WorkerPoolTestCase(unittest.TestCase):
         cls.task_in_port = _get_free_port()
         task_out_port = _get_free_port()
         cls.receiver_ports = _get_free_port()
-        ctrl_port = _get_free_port()
+        cls.ctrl_port = _get_free_port()
         host_cores = '127.0.0.1 4'
         cls.master = WorkerMaster(cls.host, cls.task_in_port, task_out_port,
-                                  ctrl_port, host_cores)
+                                  cls.ctrl_port, host_cores)
         cls.proc = multiprocessing.Process(
             target=streamer, args=(cls.host, cls.task_in_port, task_out_port))
         cls.proc.start()
@@ -47,7 +47,9 @@ class WorkerPoolTestCase(unittest.TestCase):
     def test(self):
         mon = Monitor()
         iterargs = ((i, mon) for i in range(10))
-        res = _starmap(double, iterargs, self.host, self.task_in_port,
+        res = _starmap(double, iterargs, self.host,
+                       self.ctrl_port,
+                       self.task_in_port,
                        self.receiver_ports)
         num_tasks = next(res)
         self.assertEqual(num_tasks, 10)

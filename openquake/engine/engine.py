@@ -23,6 +23,7 @@ import os
 import re
 import sys
 import json
+import time
 import signal
 import traceback
 import platform
@@ -34,7 +35,8 @@ except ImportError:
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import urlopen, Request, decode
 from openquake.baselib import (
-    parallel, general, config, datastore, __version__, zeromq as z)
+    parallel, general, config, datastore, __version__, zeromq as z, workerpool)
+from openquake.baselib.workerpool import register_abort
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
@@ -43,6 +45,8 @@ from openquake.commonlib import logs
 OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
+ZMQ = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
 if parallel.oq_distribute() == 'zmq':
 
@@ -57,7 +61,7 @@ if parallel.oq_distribute() == 'zmq':
             url = 'tcp://%s:%s' % (host, w.ctrl_port)
             with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                 if not general.socket_ready(url):
-                    logs.LOG.warn('%s is not running', host)
+                    logs.LOG.warn('%s is not running', url)
                     continue
                 num_workers += sock.send('get_num_workers')
         OqParam.concurrent_tasks.default = num_workers * 3
@@ -167,18 +171,10 @@ def raiseMasterKilled(signum, _stack):
                 os.kill(pid, signal.SIGKILL)  # SIGTERM is not enough :-(
             except OSError:  # pid not found
                 pass
+    if ZMQ:
+        workerpool.WorkerMaster(**config.zworkers).stop('abort')
+        logs.LOG.warn('Sending abort signal to the workers...')
     raise MasterKilled(msg)
-
-
-# register the raiseMasterKilled callback for SIGTERM
-# when using the Django development server this module is imported by a thread,
-# so one gets a `ValueError: signal only works in main thread` that
-# can be safely ignored
-try:
-    signal.signal(signal.SIGTERM, raiseMasterKilled)
-    signal.signal(signal.SIGINT, raiseMasterKilled)
-except ValueError:
-    pass
 
 
 def job_from_file(cfg_file, username, hazard_calculation_id=None):
@@ -221,6 +217,9 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     :param exports:
         A comma-separated string of export types.
     """
+    # register the raiseMasterKilled callback for SIGTERM
+    signal.signal(signal.SIGTERM, raiseMasterKilled)
+    signal.signal(signal.SIGINT, raiseMasterKilled)
     setproctitle('oq-job-%d' % job_id)
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
@@ -235,6 +234,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         tb = 'None\n'
         try:
             logs.dbcmd('set_status', job_id, 'executing')
+            register_abort(job_id, config.dbserver_url)
             _do_run_calc(calc, exports, hazard_calculation_id, **kw)
             duration = monitor.duration
             expose_outputs(calc.datastore)
@@ -245,11 +245,12 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, duration)
             logs.dbcmd('finish', job_id, 'complete')
-        except:
+        except BaseException as exc:
+            msg = 'aborted' if isinstance(exc, z.Aborted) else 'failed'
             tb = traceback.format_exc()
             try:
                 logs.LOG.critical(tb)
-                logs.dbcmd('finish', job_id, 'failed')
+                logs.dbcmd('finish', job_id, msg)
             except:  # an OperationalError may always happen
                 sys.stderr.write(tb)
             raise

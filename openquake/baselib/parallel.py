@@ -595,8 +595,8 @@ class Starmap(object):
             allargs = self.add_task_no(self.task_args)
             w = config.zworkers
             it = _starmap(
-                self.task_func, allargs,
-                w.master_host, w.task_in_port, w.receiver_ports)
+                self.task_func, allargs, w.master_host,
+                w.ctrl_port, w.task_in_port, w.receiver_ports)
             ntasks = next(it)
             return IterResult(it, self.name, ntasks, self.progress, self.sent)
 
@@ -627,10 +627,11 @@ class Starmap(object):
         the arguments by pickling them if pickle is True.
         """
         for task_no, args in enumerate(iterargs, 1):
-            if isinstance(args[-1], Monitor):
+            mon = args[-1]
+            if isinstance(mon, Monitor):
                 # add incremental task number and task weight
-                args[-1].task_no = task_no
-                args[-1].weight = getattr(args[0], 'weight', 1.)
+                mon.task_no = task_no
+                mon.weight = getattr(args[0], 'weight', 1.)
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}

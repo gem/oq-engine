@@ -44,7 +44,7 @@ U32 = numpy.uint32
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
 There are a lot of ground motion fields; the export will be slow.
-Consider canceling the operation and accessing directly %s.'''
+Consider aborting the operation and accessing directly %s.'''
 
 # with compression you can save 60% of space by losing only 10% of saving time
 savez = numpy.savez_compressed

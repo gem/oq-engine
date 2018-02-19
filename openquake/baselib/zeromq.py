@@ -26,6 +26,13 @@ SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
             zmq.ROUTER: 'ROUTER', zmq.DEALER: 'DEALER'}
 
 
+class Aborted(Exception):
+    """
+    Raised when a worker receives a SIGTERM and the currently running job
+    has status 'aborted'.
+    """
+
+
 def bind(end_point, socket_type):
     """
     Bind to a zmq URL; raise a proper error if the URL is invalid; return
@@ -52,6 +59,17 @@ def connect(end_point, socket_type):
         sock.close()
         raise exc.__class__('%s: %s' % (exc, end_point))
     return sock
+
+
+def send(end_point, cmd, *args):
+    """
+    Send a command with arguments to a zmq REP server returning triples
+    """
+    with Socket(end_point, zmq.REQ, 'connect') as sock:
+        res, etype, _mon = sock.send((cmd,) + args)
+    if etype:
+        raise etype(res)
+    return res
 
 
 class Socket(object):
@@ -145,7 +163,10 @@ class Socket(object):
         """
         self.zsocket.send_pyobj(obj)
         if self.socket_type == zmq.REQ:
-            return self.zsocket.recv_pyobj()
+            try:
+                return self.zsocket.recv_pyobj()
+            except (KeyboardInterrupt, zmq.ZMQError) as exc:
+                return (exc, exc.__class__, None)
 
     def __repr__(self):
         return '<%s %s %s %s>' % (self.__class__.__name__, self.end_point,

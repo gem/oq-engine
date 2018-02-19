@@ -83,8 +83,6 @@ def read(*paths, **validators):
         config[section] = sec = DotDict(parser.items(section))
         for k, v in sec.items():
             sec[k] = validators.get(k, lambda x: x)(v)
-
-
 config.read = read
 
 
@@ -107,3 +105,6 @@ if config.directory.custom_tmp:
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
+
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+config.dbserver_url = 'tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT)
