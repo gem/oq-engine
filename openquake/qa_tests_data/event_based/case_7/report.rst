@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     3,756,725,912      
-date           2018-02-02T16:03:58
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T09:59:50
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 3, num_levels = 38
@@ -88,8 +88,8 @@ source_model2.xml 1      Active Shallow Crust 2,456        2,456
 Informational data
 ------------------
 ========================= ======================================================================================
-compute_ruptures.received tot 3.19 MB, max_per_task 510.43 KB                                                   
-compute_ruptures.sent     sources 177.75 KB, param 12.84 KB, src_filter 11.35 KB, monitor 4.42 KB, gsims 4.38 KB
+compute_ruptures.received tot 3.29 MB, max_per_task 95.32 KB                                                    
+compute_ruptures.sent     sources 226.6 KB, param 51.35 KB, src_filter 45.39 KB, gsims 17.5 KB, monitor 17.45 KB
 hazard.input_weight       2456.0                                                                                
 hazard.n_imts             2                                                                                     
 hazard.n_levels           38                                                                                    
@@ -125,7 +125,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.377 0.122  0.211 0.673 14       
+compute_ruptures   0.129 0.052  0.066 0.231 56       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -133,12 +133,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         5.280     0.254     14    
-making contexts                2.106     0.0       2,667 
-managing sources               1.181     0.0       1     
-reading composite source model 0.231     0.0       1     
-saving ruptures                0.164     0.0       14    
-setting event years            0.042     0.0       1     
-store source_info              0.004     0.0       1     
-reading site collection        6.986E-05 0.0       1     
+total compute_ruptures         7.223     0.086     56    
+making contexts                2.839     0.0       2,667 
+managing sources               1.212     0.0       1     
+saving ruptures                0.282     0.0       56    
+reading composite source model 0.222     0.0       1     
+setting event years            0.031     0.0       1     
+store source_info              0.003     0.0       1     
+reading site collection        6.700E-05 0.0       1     
 ============================== ========= ========= ======
