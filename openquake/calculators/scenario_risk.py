@@ -104,7 +104,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             eps = self.make_eps(E)
-        self.riskinputs = self.build_riskinputs('gmf', eps, eids)
+        self.riskinputs = self.build_riskinputs('gmf', eps, E)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
         self.param['asset_loss_table'] = self.oqparam.asset_loss_table
