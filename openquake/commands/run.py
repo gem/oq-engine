@@ -66,7 +66,7 @@ def get_pstats(pstatfile, n):
     # 1      25.166  calculators/classical.py:115(execute)
     # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
-    # 1      25.099  hazardlib/calc/hazard_curve.py:164(pmap_from_grp)
+    # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
@@ -82,7 +82,8 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq)
     with rcalc._monitor:
-        rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
+        # disable concurrency in the second calculation to avoid fork issues
+        rcalc.run(concurrent_tasks=0, pdb=pdb, exports=exports,
                   hazard_calculation_id=hc_id, **params)
     return rcalc
 

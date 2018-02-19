@@ -53,7 +53,6 @@ from builtins import range
 import collections
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
 from matplotlib.colors import Normalize
 from openquake.hmtk.sources.area_source import mtkAreaSource
 from openquake.hmtk.sources.point_source import mtkPointSource
@@ -96,6 +95,7 @@ class HMTKBaseMap(object):
     Class to plot the spatial distribution of events based in the Catalogue
     imported from openquake.hmtk.
     '''
+
     def __init__(self, config,
                  title=None, dpi=300, ax=None, lat_lon_spacing=2.):
         """
@@ -158,6 +158,9 @@ class HMTKBaseMap(object):
         meridians = np.arange(0., 360., self.lat_lon_spacing)
 
         # Build Map
+        # Do not import Basemap at top level since it's an optional feature
+        # and it would break doctests
+        from mpl_toolkits.basemap import Basemap
         self.m = Basemap(
             llcrnrlon=lowcrnrlon, llcrnrlat=lowcrnrlat,
             urcrnrlon=uppcrnrlon, urcrnrlat=uppcrnrlat,

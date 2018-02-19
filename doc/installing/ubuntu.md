@@ -64,11 +64,9 @@ sudo supervisorctl status openquake-dbserver openquake-webui
 
 Continue on [How to run the OpenQuake Engine](../running/unix.md)
 
-
 ## Test the installation
 
 To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
-
 
 ## Uninstall the OpenQuake Engine
 

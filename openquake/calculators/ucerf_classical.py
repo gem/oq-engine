@@ -20,22 +20,22 @@ import time
 import logging
 from datetime import datetime
 import numpy
-import h5py
 
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc.hazard_curve import pmap_from_trt
+from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import valid
 from openquake.commonlib import source, readinput, util
 from openquake.hazardlib.sourceconverter import SourceConverter
 
-from openquake.calculators import base, classical
+from openquake.calculators import base
+from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 from openquake.calculators.ucerf_event_based import (
     UCERFSource, get_composite_source_model)
-# FIXME: the counting of effective ruptures has to be revised completely
+# FIXME: the counting of effective ruptures has to be revised
 
 
 def convert_UCERFSource(self, node):
@@ -106,8 +106,9 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     if s_sites is None:  # return an empty probability map
         pm = ProbabilityMap(len(imtls.array), len(gsims))
         acc = AccumDict({grp_id: pm})
-        acc.calc_times = [(ucerf_source.source_id, nruptures,
-                           None, time.time() - t0)]
+        acc.calc_times = {
+            ucerf_source.source_id:
+            numpy.array([nruptures, 0, time.time() - t0, 1])}
         acc.eff_ruptures = {grp_id: 0}
         return acc
 
@@ -120,14 +121,15 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
                           truncation_level, ctx_mon, poe_mon)
     nsites = len(s_sites)
     acc = AccumDict({grp_id: pmap})
-    acc.calc_times = [
-        (ucerf_source.source_id, nruptures * nsites, nsites, time.time() - t0)]
+    acc.calc_times = {
+        ucerf_source.source_id:
+        numpy.array([nruptures * nsites, nsites, time.time() - t0, 1])}
     acc.eff_ruptures = {grp_id: ucerf_source.num_ruptures}
     return acc
 
 
 @base.calculators.add('ucerf_psha')
-class UcerfPSHACalculator(classical.PSHACalculator):
+class UcerfPSHACalculator(PSHACalculator):
     """
     UCERF classical calculator.
     """
@@ -155,10 +157,11 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq = self.oqparam
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        self.nsites = []
         acc = AccumDict({
             grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
             for grp_id, gsims in self.gsims_by_grp.items()})
-        acc.calc_times = []
+        acc.calc_times = {}
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level)
@@ -182,7 +185,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.src_filter, gsims, param, monitor)
             bg_res = parallel.Starmap.apply(
-                pmap_from_trt, args, name='background_sources_%d' % grp_id,
+                classical, args, name='background_sources_%d' % grp_id,
                 concurrent_tasks=ct2).submit_all()
 
             # parallelize by rupture subsets
@@ -204,5 +207,5 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
 
 @base.calculators.add('ucerf_classical')
-class UCERFClassicalCalculator(classical.ClassicalCalculator):
+class UCERFClassicalCalculator(ClassicalCalculator):
     pre_calculator = 'ucerf_psha'
