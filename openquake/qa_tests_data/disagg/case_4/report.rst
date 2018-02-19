@@ -3,8 +3,8 @@ Disaggregation with sampling
 
 ============== ===================
 checksum32     1,553,247,118      
-date           2018-02-02T16:04:45
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T10:00:43
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 2, num_levels = 38
@@ -67,6 +67,6 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.054     0.0       1     
-reading site collection        4.148E-05 0.0       1     
+reading composite source model 0.052     0.0       1     
+reading site collection        4.649E-05 0.0       1     
 ============================== ========= ========= ======
