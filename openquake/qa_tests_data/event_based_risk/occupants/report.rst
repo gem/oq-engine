@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     852,550,231        
-date           2018-02-02T16:02:42
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T09:58:16
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -76,8 +76,8 @@ source_model.xml 0      Active Shallow Crust 482          482
 Informational data
 ------------------
 ========================= ===================================================================================
-compute_ruptures.received tot 306.57 KB, max_per_task 39.34 KB                                               
-compute_ruptures.sent     sources 17.89 KB, src_filter 13.32 KB, param 7.15 KB, monitor 4.1 KB, gsims 1.66 KB
+compute_ruptures.received tot 308.47 KB, max_per_task 39.33 KB                                               
+compute_ruptures.sent     sources 18.89 KB, src_filter 14.34 KB, param 7.7 KB, monitor 4.36 KB, gsims 1.79 KB
 hazard.input_weight       482.0                                                                              
 hazard.n_imts             1                                                                                  
 hazard.n_levels           1                                                                                  
@@ -91,7 +91,7 @@ require_epsilons          True
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 1.09 KB
+7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 3.28 KB
 
 Exposure model
 --------------
@@ -104,7 +104,7 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   7         7         
+tax1     1.000 0.0    1   1   7         7         
 ======== ===== ====== === === ========= ==========
 
 Slowest sources
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.063 0.020  0.029 0.097 13       
+compute_ruptures   0.079 0.026  0.042 0.134 14       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,13 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.815     0.836     13    
-making contexts                0.638     0.0       259   
-managing sources               0.247     0.0       1     
-saving ruptures                0.043     0.0       13    
-reading composite source model 0.007     0.0       1     
-reading exposure               0.005     0.0       1     
-store source_info              0.004     0.0       1     
+total compute_ruptures         1.109     0.949     14    
+making contexts                0.844     0.0       259   
+managing sources               0.215     0.0       1     
+saving ruptures                0.033     0.0       14    
+reading composite source model 0.006     0.0       1     
+reading exposure               0.004     0.0       1     
+store source_info              0.003     0.0       1     
 setting event years            0.003     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        7.391E-06 0.0       1     
 ============================== ========= ========= ======
