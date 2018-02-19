@@ -32,7 +32,7 @@ from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
 from openquake.calculators.getters import (
-    GmfGetter, PmapGetter, get_ruptures_by_grp)
+    GmfGetter, PmapGetter, RuptureGetter, get_ruptures_by_grp)
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -655,7 +655,7 @@ def export_gmf_scenario_csv(ekey, dstore):
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
-    ruptures = list(calc.RuptureGetter(dstore, slice(ridx, ridx + 1)))
+    ruptures = list(RuptureGetter(dstore, slice(ridx, ridx + 1)))
     [ebr] = ruptures
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
     samples = samples[ebr.grp_id]
