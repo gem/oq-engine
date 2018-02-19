@@ -871,19 +871,6 @@ class CompositeSourceModel(collections.Sequence):
             srcid = src.source_id.rsplit(':', 1)[0]
             self.infos[srcid] = SourceInfo(src)
 
-    def split_in_blocks(self, maxweight, sources):
-        """
-        Split a set of sources in blocks of weight up to maxweight; heavy
-        sources (i.e. with weight > maxweight) are split.
-
-        :param maxweight: maximum weight of a block
-        :param sources: sources of the same source group
-        :yields: blocks of sources of weight around maxweight
-        """
-        sources.sort(key=weight)
-        for block in block_splitter(sources, maxweight, weight):
-            yield block
-
     def __repr__(self):
         """
         Return a string representation of the composite model
