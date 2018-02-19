@@ -83,13 +83,14 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     if getattr(group, 'src_interdep', None) == 'mutex':
         mutex_weight = {src.source_id: weight for src, weight in
                         zip(group.sources, group.srcs_weights)}
+        srcs = group.sources
     else:
         mutex_weight = None
+        srcs = sum([split_source(src) for src in group], [])
     grp_ids = set()
     for src in group:
         grp_ids.update(src.src_group_ids)
     maxdist = src_filter.integration_distance
-    srcs = sum([split_source(src) for src in group], [])  # split first
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = param['imtls']
         trunclevel = param.get('truncation_level')
