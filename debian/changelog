@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Reduced the data transfer in the event based risk calculator by
+    reading the event IDs directly from the workers
+  * Integrated the gmf_ebrisk calculator inside the event based calculator
+  * Improved the weighting algorithm for the sources in the event based
+    rupture calculator
+  * Integrated the gmf_ebrisk calculator in the event_based_risk calculator
   * Improved error message for source model files declared as nrml/0.5 when
     they actually are nrml/0.4
   * Optimized the classical_bcr calculator for the case of many realizations
