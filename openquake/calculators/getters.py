@@ -187,17 +187,18 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, eids=None):
+    def __init__(self, dstore, sids, num_rlzs, num_events=0):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
-        self.eids = eids
-        self.E = 0 if eids is None else len(eids)
+        self.E = num_events
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open()  # if not already open
+        self.eids = self.dstore['events']['eid']
+        self.eids.sort()
         self.data = collections.OrderedDict()
         for sid in self.sids:
             self.data[sid] = data = self[sid]

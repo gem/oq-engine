@@ -260,7 +260,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm.filter(src_filter)
-        maxweight = csm.get_maxweight(oq.concurrent_tasks, source.MINWEIGHT)
+
+        def weight(src):
+            return src.num_ruptures * src.RUPTURE_WEIGHT
+        maxweight = math.ceil(
+            sum(weight(src) for src in self.csm.get_sources()) /
+            (oq.concurrent_tasks or 1))
         logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
@@ -274,7 +279,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                for block in csm.split_in_blocks(maxweight, sg.sources):
+                for block in csm.split_in_blocks(
+                        maxweight, sg.sources, weight):
                     block.samples = sm.samples
                     yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
