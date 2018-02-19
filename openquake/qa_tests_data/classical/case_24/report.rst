@@ -3,11 +3,11 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2018-01-11T04:54:26
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T09:59:01
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 1, num_imts = 9
+num_sites = 1, num_levels = 197
 
 Parameters
 ----------
@@ -72,26 +72,26 @@ source_model.xml 0      Active Shallow Crust 260          260
 
 Informational data
 ------------------
-======================= ===========================================================================
-count_ruptures.received max_per_task 592 B, tot 592 B                                              
-count_ruptures.sent     param 2.49 KB, sources 1.89 KB, srcfilter 722 B, monitor 319 B, gsims 102 B
-hazard.input_weight     26.0                                                                       
-hazard.n_imts           9                                                                          
-hazard.n_levels         197                                                                        
-hazard.n_realizations   1                                                                          
-hazard.n_sites          1                                                                          
-hazard.n_sources        1                                                                          
-hazard.output_weight    197.0                                                                      
-hostname                tstation.gem.lan                                                           
-require_epsilons        False                                                                      
-======================= ===========================================================================
+======================= ============================================================================
+count_ruptures.received max_per_task 812 B, tot 812 B                                               
+count_ruptures.sent     sources 11.41 KB, param 2.49 KB, srcfilter 722 B, monitor 319 B, gsims 131 B
+hazard.input_weight     26.0                                                                        
+hazard.n_imts           9                                                                           
+hazard.n_levels         197                                                                         
+hazard.n_realizations   1                                                                           
+hazard.n_sites          1                                                                           
+hazard.n_sources        1                                                                           
+hazard.output_weight    197.0                                                                       
+hostname                tstation.gem.lan                                                            
+require_epsilons        False                                                                       
+======================= ============================================================================
 
 Slowest sources
 ---------------
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         AreaSource   260          0.002     1         1        
+1         AreaSource   260          0.007     53        52       
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -99,7 +99,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.002     1     
+AreaSource   0.007     1     
 ============ ========= ======
 
 Duplicated sources
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.003 NaN    0.003 0.003 1        
+count_ruptures     0.009 NaN    0.009 0.009 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -119,10 +119,10 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.026     0.0       1     
+managing sources               0.022     0.0       1     
+total count_ruptures           0.009     0.0       1     
 store source_info              0.004     0.0       1     
-managing sources               0.003     0.0       1     
-total count_ruptures           0.003     0.488     1     
-reading site collection        5.603E-05 0.0       1     
-saving probability maps        2.885E-05 0.0       1     
-aggregate curves               1.574E-05 0.0       1     
+reading site collection        5.794E-05 0.0       1     
+saving probability maps        3.171E-05 0.0       1     
+aggregate curves               2.217E-05 0.0       1     
 ============================== ========= ========= ======

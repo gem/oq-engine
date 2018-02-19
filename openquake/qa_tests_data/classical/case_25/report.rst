@@ -3,11 +3,11 @@ Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 
 ============== ===================
 checksum32     3,398,720,512      
-date           2018-01-11T04:54:23
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T09:58:57
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 6, num_imts = 1
+num_sites = 6, num_levels = 3
 
 Parameters
 ----------
@@ -73,26 +73,26 @@ source_model.xml 0      Volcanic 440          440
 
 Informational data
 ------------------
-======================= ===========================================================================
-count_ruptures.received tot 1.68 KB, max_per_task 1006 B                                           
-count_ruptures.sent     sources 6.05 KB, srcfilter 1.94 KB, param 836 B, monitor 638 B, gsims 202 B
-hazard.input_weight     44.0                                                                       
-hazard.n_imts           1                                                                          
-hazard.n_levels         3                                                                          
-hazard.n_realizations   1                                                                          
-hazard.n_sites          6                                                                          
-hazard.n_sources        1                                                                          
-hazard.output_weight    18.0                                                                       
-hostname                tstation.gem.lan                                                           
-require_epsilons        False                                                                      
-======================= ===========================================================================
+======================= =========================================================================
+count_ruptures.received max_per_task 812 B, tot 812 B                                            
+count_ruptures.sent     sources 4.99 KB, srcfilter 995 B, param 418 B, monitor 319 B, gsims 130 B
+hazard.input_weight     44.0                                                                     
+hazard.n_imts           1                                                                        
+hazard.n_levels         3                                                                        
+hazard.n_realizations   1                                                                        
+hazard.n_sites          6                                                                        
+hazard.n_sources        1                                                                        
+hazard.output_weight    18.0                                                                     
+hostname                tstation.gem.lan                                                         
+require_epsilons        False                                                                    
+======================= =========================================================================
 
 Slowest sources
 ---------------
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         AreaSource   440          0.003     6         20       
+1         AreaSource   440          0.003     121       20       
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -109,10 +109,10 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.003 6.290E-04 0.003 0.004 2        
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_ruptures     0.005 NaN    0.005 0.005 1        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
@@ -120,10 +120,10 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.013     0.0       1     
-managing sources               0.012     0.0       1     
-total count_ruptures           0.006     1.590     2     
+managing sources               0.010     0.0       1     
+total count_ruptures           0.005     0.0       1     
 store source_info              0.003     0.0       1     
-reading site collection        1.633E-04 0.0       1     
-aggregate curves               3.815E-05 0.0       2     
-saving probability maps        2.337E-05 0.0       1     
+reading site collection        1.626E-04 0.0       1     
+saving probability maps        2.408E-05 0.0       1     
+aggregate curves               1.693E-05 0.0       1     
 ============================== ========= ========= ======

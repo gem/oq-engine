@@ -3,11 +3,11 @@ event based two source models
 
 ============== ===================
 checksum32     2,633,907,336      
-date           2018-01-11T04:30:28
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T09:59:39
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 11
 
 Parameters
 ----------
@@ -78,9 +78,9 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 482          482         
-source_model_1.xml 1      Stable Shallow Crust 4            4           
+source_model_1.xml 1      Stable Shallow Crust 4.000        4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
-source_model_2.xml 3      Stable Shallow Crust 1            1           
+source_model_2.xml 3      Stable Shallow Crust 1.000        1           
 ================== ====== ==================== ============ ============
 
 ============= ===
@@ -92,19 +92,19 @@ source_model_2.xml 3      Stable Shallow Crust 1            1
 
 Informational data
 ------------------
-========================= =================================================================================
-compute_ruptures.received tot 9.54 KB, max_per_task 2.63 KB                                                
-compute_ruptures.sent     sources 27.88 KB, src_filter 5.64 KB, param 5.04 KB, monitor 2.52 KB, gsims 808 B
-hazard.input_weight       969.0                                                                            
-hazard.n_imts             1                                                                                
-hazard.n_levels           11                                                                               
-hazard.n_realizations     2                                                                                
-hazard.n_sites            1                                                                                
-hazard.n_sources          4                                                                                
-hazard.output_weight      0.08                                                                             
-hostname                  tstation.gem.lan                                                                 
-require_epsilons          True                                                                             
-========================= =================================================================================
+========================= ====================================================================================
+compute_ruptures.received tot 24.18 KB, max_per_task 2.6 KB                                                   
+compute_ruptures.sent     sources 49.88 KB, src_filter 21.15 KB, param 18.9 KB, monitor 9.35 KB, gsims 3.83 KB
+hazard.input_weight       969.0                                                                               
+hazard.n_imts             1                                                                                   
+hazard.n_levels           11                                                                                  
+hazard.n_realizations     2                                                                                   
+hazard.n_sites            1                                                                                   
+hazard.n_sources          4                                                                                   
+hazard.output_weight      0.08                                                                                
+hostname                  tstation.gem.lan                                                                    
+require_epsilons          True                                                                                
+========================= ====================================================================================
 
 Exposure model
 --------------
@@ -146,7 +146,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.039 0.024  0.003 0.072 8        
+compute_ruptures   0.014 0.008  0.002 0.040 30       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -154,13 +154,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.311     0.0       8     
-managing sources               0.172     0.0       1     
-reading composite source model 0.018     0.0       1     
-reading exposure               0.005     0.0       1     
-saving ruptures                0.004     0.0       8     
-making contexts                0.004     0.0       2     
-store source_info              0.003     0.0       1     
+total compute_ruptures         0.431     0.0       30    
+managing sources               0.288     0.0       1     
+reading composite source model 0.023     0.0       1     
+saving ruptures                0.005     0.0       30    
+store source_info              0.004     0.0       1     
+making contexts                0.003     0.0       2     
+reading exposure               0.002     0.0       1     
 setting event years            0.001     0.0       1     
-reading site collection        5.484E-06 0.0       1     
+reading site collection        7.391E-06 0.0       1     
 ============================== ========= ========= ======
