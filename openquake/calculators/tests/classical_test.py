@@ -178,7 +178,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(
             case_13.__file__, 'job.ini', exports='csv', poes='0.2',
             hazard_calculation_id=str(self.calc.datastore.calc_id),
-            concurrent_tasks='0')
+            concurrent_tasks='0', gsim_logic_tree_file='',
+            source_model_logic_tree_file='')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
