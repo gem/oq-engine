@@ -368,6 +368,7 @@ class EpsilonMatrix1(object):
     Mock-up for a matrix of epsilons of size N x E,
     used when asset_correlation=1.
 
+    :param num_assets: number of assets
     :param num_events: number of events
     :param seed: seed used to generate E epsilons
     """
