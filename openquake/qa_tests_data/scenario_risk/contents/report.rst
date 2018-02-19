@@ -3,11 +3,11 @@ Scenario QA Test for contents
 
 ============== ===================
 checksum32     253,980,831        
-date           2018-01-11T04:31:22
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T10:00:41
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 3, num_imts = 3
+num_sites = 3, num_levels = 15
 
 Parameters
 ----------
@@ -65,8 +65,8 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-RC       1.000 NaN    1   1   1         1         
 RM       1.000 NaN    1   1   1         1         
+RC       1.000 NaN    1   1   1         1         
 W        1.000 NaN    1   1   1         1         
 *ALL*    1.000 0.0    1   1   3         3         
 ======== ===== ====== === === ========= ==========
@@ -76,6 +76,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
-reading site collection 6.676E-06 0.0       1     
+reading exposure        0.003     0.0       1     
+reading site collection 6.437E-06 0.0       1     
 ======================= ========= ========= ======

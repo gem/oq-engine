@@ -105,6 +105,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
     '''
     Class to implement non-parametric Gaussian methodology of Kijko (2004)
     '''
+
     def get_mmax(self, catalogue, config):
         '''
         Calculates maximum magnitude
@@ -131,7 +132,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         obsmax = catalogue.data['magnitude'][max_loc]
         if not(isinstance(catalogue.data['sigmaMagnitude'], np.ndarray)) or\
             (len(catalogue.data['sigmaMagnitude']) == 0) or\
-            np.all(np.isnan(catalogue.data['sigmaMagnitude'])):
+                np.all(np.isnan(catalogue.data['sigmaMagnitude'])):
             obsmaxsig = 0.
         else:
             obsmaxsig = catalogue.data['sigmaMagnitude'][max_loc]
@@ -259,7 +260,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
                               (np.sum(p_max) - np.sum(p_min))) ** neq
         # Now to perform integration via mid-point rule
         intfunc = 0.5 * cdf_func[0] * (mval[1] - mval[0])
-        for iloc in range(1,  nmval-1):
+        for iloc in range(1,  nmval - 1):
             intfunc = intfunc + (0.5 * cdf_func[iloc] * (mval[iloc + 1] -
                                                          mval[iloc - 1]))
 

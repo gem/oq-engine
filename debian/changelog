@@ -1,4 +1,83 @@
   [Michele Simionato]
+  * Improved the .rst reports for classical calculations with tiling
+  * Reduced the data transfer in the event based risk calculator by
+    reading the event IDs directly from the workers
+  * Integrated the gmf_ebrisk calculator inside the event based calculator
+  * Improved the weighting algorithm for the sources in the event based
+    rupture calculator
+  * Integrated the gmf_ebrisk calculator in the event_based_risk calculator
+  * Improved error message for source model files declared as nrml/0.5 when
+    they actually are nrml/0.4
+  * Optimized the classical_bcr calculator for the case of many realizations
+  * Extended the exposure CSV importer to manage the `retrofitted` field
+
+  [Marco Pagani, Changlong Li]
+  * Adds the Yu et al. (2013) GMEPs
+
+  [Michele Simionato]
+  * Fixed a bug in the hazard outputs: they were displayed in the WebUI even
+    missing
+  * Implemented splitting of nonparametric sources
+
+  [Marco Pagani]
+  * Fixed the 'get_closest_points' method for the
+    `openquake.hazardlib.geo.surface.gridded.GriddedSurface` class
+
+  [Michele Simionato]
+  * Now the source model paths are relative to the source model logic tree file
+  * Fixed an international date line bug when using rtree for prefiltering
+  * Deprecated `nrml.parse`, it is now called `nrml.to_python`
+  * Improved the task distribution by splitting the AreaSources upfront
+    and by improving the weighting algorithm
+
+  [Daniele Viganò]
+  * TMPDIR can be customized via the `openquake.cfg`
+  * Updated dependencies compatibility in setup.py
+
+  [Michele Simionato]
+  * If the hazard is precomputed, setting the `site_model_file`,
+    `gsim_logic_tree_file` or `source_model_logic_tree_file` is an error
+  * Removed the obsolete API `/extract/qgis-` and added `extract/hcurves`,
+    `extract/hmaps`, `extract/uhs` for use with the QGIS plugin
+  * Removed the deprecated GeoJSON exporters
+  * Fixed a bug with `oq engine --run job.ini --exports npz`
+  * Fixed the ordering of the IMTs in hazardlib
+  * `oq engine --delete-calculation` now aborts the calculation first
+  * Added some documentation about how to access the datastore
+  * Introduced a minimum_distance for the GSIMs
+  * Fixed several small issues with the UCERF calculators; now ucerf_hazard
+    can be used as a precalculator of gmf_ebrisk
+  * Initial support for disaggregation by source
+  * Added the ability to import large exposures as CSV (experimental)
+  * Changed the source weights to be proportional to the number of GSIMs
+    relevant for the tectonic region type, improving the task distribution
+
+  [Daniele Viganò]
+  * The RPM python3-oq-engine package replaced python-oq-engine
+  * RPM packages moved to Python 3.5
+
+  [Michele Simionato]
+  * Added the ability to dump a specific calculation
+  * Changed the signature of the extract command to `oq extract what calc_id`,
+    where `what` is a path info plus query string;
+
+  [Graeme Weatherill]
+  * Implements significant duration GMPEs of Bommer et al. (2009) and Afshari &
+    Stewart (2016)
+  * Adds significant duraction IMT definitions to support IMTs
+
+  [Michele Simionato]
+  * Run the DbServer as a detached process
+  * Improved the test coverage for event based with GMF correlation
+  * Optimized the event based risk calculator from ruptures: now the ruptures
+    are instantiated in the workers and not in the controller if possible
+  * Exported the parameter ses_per_logic_tree_path in the ruptures.csv file
+  * Improved the display names for the risk outputs
+  * Added a /v1/:calc_id/abort route to the engine server and Abort buttons
+    to the WebUI
+  * Fixed the seeds properly in the case of vulnerability functions with PMFs:
+    now even if the ground motion fields are all equal, the risk numbers
+    will be different since there is a different seed per each field
   * Stored a rupture loss table in event based risk calculations
   * Made sure that the number of effective ruptures is stored in csm_info
   * Fixed the HMTK tests to work with numpy from 1.11 to 1.14
@@ -6,8 +85,10 @@
   * Turned the 'realizations' output into a dynamic output
 
   [Matteo Nastasi]
+  * Split package from python-oq-engine to python-oq-engine,
+    python-oq-engine-master and python-oq-engine-worker
   * Implemented an API `/v1/on_same_fs` to check filesystem accessibility
-    between engine and a client application.
+    between engine and a client application
 
   [Michele Simionato]
   * Reduced the data transfer when computing the hazard curves in postprocessing
@@ -71,6 +152,7 @@ python-oq-engine (2.8.0-0~precise01) precise; urgency=low
   * Implemented subclasses for ZhaoEtAl2006Asc and AtkinsonBoore2006 to account
     for the distance filter used by SGS in their PSHA model for Saudi Arabia.
     Distance threshold is hard coded to 5km in this implementation.
+
   [Michele Simionato]
   * Added a warning if the aggregated probability of exceedence (poe_agg) in
     a disaggregation output is very dissimilar from poes_disagg
@@ -160,7 +242,6 @@ python-oq-engine (2.7.0-0~precise01) precise; urgency=low
     of the damage states
   * Extended the FragilityFunctions to accept sequences/arrays of intensity
     levels, as requested by Hyeuk Ryu
->>>>>>> master
 
   [Daniele Viganò]
   * Added support for groups in the WebUI/API server

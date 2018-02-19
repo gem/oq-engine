@@ -122,7 +122,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
                 attribute_array = np.hstack([attribute_array, np.nan])
         except:
             print(irow, key)
-            msg = 'Input file format error at line: %d' % (irow+2)
+            msg = 'Input file format error at line: %d' % (irow + 2)
             msg += ' key: %s' % (key)
             raise ValueError(msg)
         return attribute_array
@@ -137,7 +137,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
             else:
                 attribute_array = np.hstack([attribute_array, np.nan])
         except:
-            msg = 'Input file format error at line: %d' % (irow+2)
+            msg = 'Input file format error at line: %d' % (irow + 2)
             msg += ' key: %s' % (key)
             raise ValueError(msg)
         return attribute_array
@@ -147,6 +147,7 @@ class GCMTCsvCatalogueParser(CsvCatalogueParser):
     """
 
     """
+
     def _setup_catalogue(self):
         """
         """

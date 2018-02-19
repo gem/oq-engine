@@ -3,11 +3,11 @@ Scenario QA Test with AtkinsonBoore2003SInter
 
 ============== ===================
 checksum32     157,390,023        
-date           2018-01-11T04:29:23
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T09:58:11
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 2, num_imts = 1
+num_sites = 2, num_levels = 1
 
 Parameters
 ----------
@@ -57,5 +57,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 5.269E-05 0.0       1     
+reading site collection 5.031E-05 0.0       1     
 ======================= ========= ========= ======

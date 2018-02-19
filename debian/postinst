@@ -33,16 +33,6 @@ fi
 
 ENGINE_USER=openquake
 
-(if ! rabbitmqctl status &>/dev/null; then
-    if ! rabbitmqctl list_users | grep $ENGINE_USER; then
-        rabbitmqctl add_user $ENGINE_USER $ENGINE_USER
-    fi
-    if ! rabbitmqctl list_vhosts | grep $ENGINE_USER; then
-        rabbitmqctl add_vhost $ENGINE_USER
-        rabbitmqctl set_permissions -p $ENGINE_USER $ENGINE_USER ".*" ".*" ".*"
-    fi
-fi) >/dev/null || true # Do not hard fail if something went wrong
-
 if ! getent group $ENGINE_USER >/dev/null; then
     addgroup --system $ENGINE_USER
 fi

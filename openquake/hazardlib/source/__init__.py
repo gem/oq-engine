@@ -18,8 +18,7 @@ Package :mod:`openquake.hazardlib.source` deals with various types
 of seismic sources.
 """
 import copy
-import math
-from openquake.hazardlib import geo, mfd
+from openquake.hazardlib import mfd
 from openquake.hazardlib.source.rupture import BaseRupture, \
 ParametricProbabilisticRupture, NonParametricProbabilisticRupture
 from openquake.hazardlib.source.point import PointSource
@@ -31,67 +30,7 @@ from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 from openquake.hazardlib.source.multi import MultiPointSource
 
 
-MINWEIGHT = 200  # tuned by M. Simionato
-
-
-def area_to_point_sources(area_src):
-    """
-    Split an area source into a generator of point sources.
-
-    MFDs will be rescaled appropriately for the number of points in the area
-    mesh.
-
-    :param area_src:
-        :class:`openquake.hazardlib.source.AreaSource`
-    """
-    mesh = area_src.polygon.discretize(area_src.area_discretization)
-    num_points = len(mesh)
-    area_mfd = area_src.mfd
-
-    if isinstance(area_mfd, mfd.TruncatedGRMFD):
-        new_mfd = mfd.TruncatedGRMFD(
-            a_val=area_mfd.a_val - math.log10(num_points),
-            b_val=area_mfd.b_val,
-            bin_width=area_mfd.bin_width,
-            min_mag=area_mfd.min_mag,
-            max_mag=area_mfd.max_mag)
-    elif isinstance(area_mfd, mfd.EvenlyDiscretizedMFD):
-        new_occur_rates = [x / num_points for x in area_mfd.occurrence_rates]
-        new_mfd = mfd.EvenlyDiscretizedMFD(
-            min_mag=area_mfd.min_mag,
-            bin_width=area_mfd.bin_width,
-            occurrence_rates=new_occur_rates)
-    elif isinstance(area_mfd, mfd.ArbitraryMFD):
-        new_occur_rates = [x / num_points for x in area_mfd.occurrence_rates]
-        new_mfd = mfd.ArbitraryMFD(
-            magnitudes=area_mfd.magnitudes,
-            occurrence_rates=new_occur_rates)
-    elif isinstance(area_mfd, mfd.YoungsCoppersmith1985MFD):
-        new_mfd = mfd.YoungsCoppersmith1985MFD.from_characteristic_rate(
-            area_mfd.min_mag, area_mfd.b_val, area_mfd.char_mag,
-            area_mfd.char_rate / num_points, area_mfd.bin_width)
-    else:
-        raise TypeError('Unknown MFD: %s' % area_mfd)
-
-    for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
-        pt = PointSource(
-            # Generate a new ID and name
-            source_id='%s:%s' % (area_src.source_id, i),
-            name='%s:%s' % (area_src.name, i),
-            tectonic_region_type=area_src.tectonic_region_type,
-            mfd=new_mfd,
-            rupture_mesh_spacing=area_src.rupture_mesh_spacing,
-            magnitude_scaling_relationship=
-            area_src.magnitude_scaling_relationship,
-            rupture_aspect_ratio=area_src.rupture_aspect_ratio,
-            upper_seismogenic_depth=area_src.upper_seismogenic_depth,
-            lower_seismogenic_depth=area_src.lower_seismogenic_depth,
-            location=geo.Point(lon, lat),
-            nodal_plane_distribution=area_src.nodal_plane_distribution,
-            hypocenter_distribution=area_src.hypocenter_distribution,
-            temporal_occurrence_model=area_src.temporal_occurrence_model)
-        pt.num_ruptures = pt.count_ruptures()
-        yield pt
+MINWEIGHT = 100  # tuned by M. Simionato
 
 
 def _split_start_stop(n, chunksize):
@@ -125,8 +64,9 @@ def split_fault_source(src):
             new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
             i += 1
             splitlist.append(new_src)
-    elif hasattr(src, 'start'):  # split by slice of ruptures
-        # for instance ClassicalTestCase.test_case_20
+    elif hasattr(src, 'start'):
+        # ComplexFaultSource, split by slice of ruptures
+        # see for instance ClassicalTestCase.test_case_20
         for start, stop in _split_start_stop(src.num_ruptures, MINWEIGHT):
             new_src = copy.copy(src)
             new_src.start = start
@@ -142,11 +82,8 @@ def split_fault_source(src):
 
 def _split_source(src):
     # helper for split_source
-    if hasattr(src, '__iter__'):  # multipoint source
+    if hasattr(src, '__iter__'):  # multipoint, area source
         for s in src:
-            yield s
-    elif isinstance(src, AreaSource):
-        for s in area_to_point_sources(src):
             yield s
     elif isinstance(
             src, (SimpleFaultSource, ComplexFaultSource)):
