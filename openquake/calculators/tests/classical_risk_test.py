@@ -121,7 +121,3 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         for kind in ('rlzs', 'stats'):
             [fname] = export(('loss_maps-' + kind, 'npz'), self.calc.datastore)
             print('Generated ' + fname)
-
-        # check assetcol view
-        fname = writetmp(view('assetcol', self.calc.datastore))
-        self.assertEqualFiles('expected/assetcol.csv', fname)
