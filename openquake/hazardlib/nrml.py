@@ -157,7 +157,10 @@ def get_source_model_05(node, fname, converter=default):
     groups = []  # expect a sequence of sourceGroup nodes
     for src_group in node:
         if 'sourceGroup' not in src_group.tag:
-            raise ValueError('expected sourceGroup')
+            raise InvalidFile(
+                '%s: you have an incorrect declaration '
+                'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
+                'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         groups.append(converter.convert_node(src_group))
     return sorted(groups)
 

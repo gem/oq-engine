@@ -77,8 +77,7 @@ PRECALC_MAP = dict(
     event_based=['event_based', 'event_based_rupture', 'ebrisk',
                  'event_based_risk', 'ucerf_rupture'],
     event_based_risk=['event_based', 'event_based_rupture', 'ucerf_rupture',
-                      'event_based_risk'],
-    gmf_ebrisk=['event_based', 'ucerf_hazard'],
+                      'event_based_risk', 'ucerf_hazard'],
     ucerf_classical=['ucerf_psha'],
     ucerf_hazard=['ucerf_rupture'])
 
@@ -650,17 +649,18 @@ class RiskCalculator(HazardCalculator):
                 self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, kind, eps=None, eids=None):
+    def build_riskinputs(self, kind, eps=None, num_events=0):
         """
         :param kind:
             kind of hazard getter, can be 'poe' or 'gmf'
         :param eps:
             a matrix of epsilons (or None)
-        :param eids:
-            an array of event IDs (or None)
+        :param num_events:
+            how many events there are
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        logging.info('There are %d realizations', self.R)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -691,14 +691,17 @@ class RiskCalculator(HazardCalculator):
                             reduced_eps[ass.ordinal] = eps[ass.ordinal]
                 # build the riskinputs
                 if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = PmapGetter(dstore, sids)
+                    getter = PmapGetter(dstore, sids, self.rlzs_assoc)
                     getter.num_rlzs = self.R
                 else:  # gmf
-                    getter = GmfDataGetter(dstore, sids, self.R, eids)
+                    getter = GmfDataGetter(dstore, sids, self.R, num_events)
                 if dstore is self.datastore:
                     # read the hazard data in the controller node
                     logging.info('Reading hazard')
                     getter.init()
+                else:
+                    # the datastore must be closed to avoid the HDF5 fork bug
+                    assert dstore.hdf5 == (), '%s is not closed!' % dstore
                 ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
@@ -746,7 +749,7 @@ def get_gmv_data(sids, gmfs):
 
 def get_gmfs(calculator):
     """
-    :param calculator: a scenario_risk/damage or gmf_ebrisk calculator
+    :param calculator: a scenario_risk/damage or event_based_risk calculator
     :returns: a pair (eids, R) where R is the number of realizations
     """
     dstore = calculator.datastore

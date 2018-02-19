@@ -1,4 +1,29 @@
   [Michele Simionato]
+  * Improved the .rst reports for classical calculations with tiling
+  * Reduced the data transfer in the event based risk calculator by
+    reading the event IDs directly from the workers
+  * Integrated the gmf_ebrisk calculator inside the event based calculator
+  * Improved the weighting algorithm for the sources in the event based
+    rupture calculator
+  * Integrated the gmf_ebrisk calculator in the event_based_risk calculator
+  * Improved error message for source model files declared as nrml/0.5 when
+    they actually are nrml/0.4
+  * Optimized the classical_bcr calculator for the case of many realizations
+  * Extended the exposure CSV importer to manage the `retrofitted` field
+
+  [Marco Pagani, Changlong Li]
+  * Adds the Yu et al. (2013) GMEPs
+
+  [Michele Simionato]
+  * Fixed a bug in the hazard outputs: they were displayed in the WebUI even
+    missing
+  * Implemented splitting of nonparametric sources
+
+  [Marco Pagani]
+  * Fixed the 'get_closest_points' method for the
+    `openquake.hazardlib.geo.surface.gridded.GriddedSurface` class
+
+  [Michele Simionato]
   * Now the source model paths are relative to the source model logic tree file
   * Fixed an international date line bug when using rtree for prefiltering
   * Deprecated `nrml.parse`, it is now called `nrml.to_python`
@@ -28,6 +53,7 @@
     relevant for the tectonic region type, improving the task distribution
 
   [Daniele Viganò]
+  * The RPM python3-oq-engine package replaced python-oq-engine
   * RPM packages moved to Python 3.5
 
   [Michele Simionato]
