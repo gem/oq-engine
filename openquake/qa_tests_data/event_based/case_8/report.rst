@@ -3,8 +3,8 @@ Event Based from NonParametric source
 
 ============== ===================
 checksum32     2,117,452,566      
-date           2018-02-02T16:03:53
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T09:59:46
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 3, num_levels = 7
@@ -43,6 +43,6 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.041     0.0       1     
-reading site collection        4.840E-05 0.0       1     
+reading composite source model 0.048     0.0       1     
+reading site collection        6.700E-05 0.0       1     
 ============================== ========= ========= ======

@@ -320,9 +320,9 @@ class RiskInput(object):
             return
         eid2idx = self.hazard_getter.eid2idx
         idx = [eid2idx[eid] for eid in eids]
-        try:
+        try:  # from ruptures
             return self.eps[aid, idx]
-        except TypeError:  # for gmf_ebrisk
+        except TypeError:  # from GMFs
             return self.eps[aid][idx]
 
     def __repr__(self):
@@ -354,10 +354,10 @@ class EpsilonMatrix0(object):
             eps[:, i] = numpy.random.normal(size=self.num_assets)
         return eps
 
-    def __getitem__(self, item):
+    def __getitem__(self, aid):
         if self.eps is None:
             self.eps = self.make_eps()
-        return self.eps[item]
+        return self.eps[aid]
 
     def __len__(self):
         return self.num_assets
@@ -368,10 +368,12 @@ class EpsilonMatrix1(object):
     Mock-up for a matrix of epsilons of size N x E,
     used when asset_correlation=1.
 
+    :param num_assets: number of assets
     :param num_events: number of events
     :param seed: seed used to generate E epsilons
     """
-    def __init__(self, num_events, seed):
+    def __init__(self, num_assets, num_events, seed):
+        self.num_assets = num_assets
         self.num_events = num_events
         self.seed = seed
         numpy.random.seed(seed)
@@ -381,6 +383,9 @@ class EpsilonMatrix1(object):
         # item[0] is the asset index, item[1] the event index
         # the epsilons are equal for all assets since asset_correlation=1
         return self.eps[item[1]]
+
+    def __len__(self):
+        return self.num_assets
 
 
 def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
@@ -398,7 +403,7 @@ def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
         if no_eps:
             eps = None
         elif correlation:
-            eps = EpsilonMatrix1(stop - start, master_seed)
+            eps = EpsilonMatrix1(n_assets, stop - start, master_seed)
         else:
             eps = EpsilonMatrix0(n_assets, seeds[start:stop])
         return eps
@@ -406,6 +411,7 @@ def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
     return get_eps
 
 
+# used in scenario_risk
 def make_eps(assetcol, num_samples, seed, correlation):
     """
     :param assetcol: an AssetCollection instance

@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     583,572,055        
-date           2018-02-02T16:04:45
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T10:00:43
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 1, num_levels = 200
@@ -14,7 +14,7 @@ Parameters
 =============================== ============================================================================================================================================
 calculation_mode                'disaggregation'                                                                                                                            
 number_of_logic_tree_samples    0                                                                                                                                           
-maximum_distance                {'Active Shallow Crust': 200.0, 'Volcanic': 100.0, 'Stable Shallow Crust': 200.0, 'Subduction Interface': 200.0, 'Subduction Inslab': 200.0}
+maximum_distance                {'Stable Shallow Crust': 200.0, 'Subduction Interface': 200.0, 'Active Shallow Crust': 200.0, 'Volcanic': 100.0, 'Subduction Inslab': 200.0}
 investigation_time              50.0                                                                                                                                        
 ses_per_logic_tree_path         1                                                                                                                                           
 truncation_level                3.0                                                                                                                                         
@@ -44,8 +44,8 @@ Composite source model
 ========= ====== ================= ================
 smlt_path weight gsim_logic_tree   num_realizations
 ========= ====== ================= ================
-complex   0.330  simple(0,0,0,0,3) 3/3             
-point     0.670  simple(0,0,0,0,3) 3/3             
+complex   0.330  simple(3,0,0,0,0) 3/3             
+point     0.670  simple(3,0,0,0,0) 3/3             
 ========= ====== ================= ================
 
 Required parameters per tectonic region type
@@ -75,6 +75,6 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.142     0.0       1     
-reading site collection        5.484E-05 0.0       1     
+reading composite source model 0.130     0.0       1     
+reading site collection        4.125E-05 0.0       1     
 ============================== ========= ========= ======

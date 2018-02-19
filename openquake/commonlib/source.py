@@ -326,6 +326,17 @@ def accept_path(path, ref_path):
     return True
 
 
+def get_totrup(data):
+    """
+    :param data: a record with a field `totrup`, possibily missing
+    """
+    try:
+        totrup = data['totrup']
+    except ValueError:  # engine older than 2.9
+        totrup = 0
+    return totrup
+
+
 class CompositionInfo(object):
     """
     An object to collect information about the composition of
@@ -462,9 +473,9 @@ class CompositionInfo(object):
             tdata = sg_data[sm_id]
             srcgroups = [
                 sourceconverter.SourceGroup(
-                    self.trts[trti], id=grp_id, eff_ruptures=effrup,
-                    tot_ruptures=totrup)
-                for grp_id, trti, effrup, totrup, sm_id in tdata if effrup]
+                    self.trts[data['trti']], id=data['grp_id'],
+                    eff_ruptures=data['effrup'], tot_ruptures=get_totrup(data))
+                for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
@@ -707,13 +718,16 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
+                mutex = getattr(src_group, 'src_interdep', None) == 'mutex'
                 self.add_infos(src_group.sources)  # unsplit sources
                 sources = []
                 for src in src_group.sources:
-                    if hasattr(src, '__iter__'):  # MultiPoint, AreaSource
+                    if hasattr(src, '__iter__') and not mutex:
+                        # MultiPoint, AreaSource, NonParametric
                         # NB: source.split_source is cached
                         sources.extend(source.split_source(src))
                     else:
+                        # mutex sources cannot be split
                         sources.append(src)
                 sg = copy.copy(src_group)
                 sg.sources = []
@@ -727,7 +741,7 @@ class CompositeSourceModel(collections.Sequence):
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
-        new.weight = weight
+        new.weight = new.info.tot_weight = weight
         new.src_filter = src_filter
         return new
 
@@ -850,13 +864,14 @@ class CompositeSourceModel(collections.Sequence):
         for src in sources:
             self.infos[src.source_id] = SourceInfo(src)
 
-    def split_in_blocks(self, maxweight, sources):
+    def split_in_blocks(self, maxweight, sources, weight=weight):
         """
         Split a set of sources in blocks of weight up to maxweight; heavy
         sources (i.e. with weight > maxweight) are split.
 
         :param maxweight: maximum weight of a block
         :param sources: sources of the same source group
+        :param weight: source weight function
         :yields: blocks of sources of weight around maxweight
         """
         sources.sort(key=weight)
