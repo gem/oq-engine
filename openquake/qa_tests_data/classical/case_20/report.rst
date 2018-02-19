@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 20
 
 ============== ===================
 checksum32     3,909,444,611      
-date           2018-02-02T16:03:32
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T09:59:18
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -100,32 +100,32 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 209          86          
-source_model.xml 1      Active Shallow Crust 209          86          
-source_model.xml 2      Active Shallow Crust 209          86          
-source_model.xml 3      Active Shallow Crust 410          86          
-source_model.xml 4      Active Shallow Crust 410          86          
-source_model.xml 5      Active Shallow Crust 410          86          
-source_model.xml 6      Active Shallow Crust 383          86          
-source_model.xml 7      Active Shallow Crust 383          86          
-source_model.xml 8      Active Shallow Crust 383          86          
-source_model.xml 9      Active Shallow Crust 416          86          
-source_model.xml 10     Active Shallow Crust 416          86          
-source_model.xml 11     Active Shallow Crust 416          86          
+source_model.xml 0      Active Shallow Crust 97           86          
+source_model.xml 1      Active Shallow Crust 153          86          
+source_model.xml 2      Active Shallow Crust 153          86          
+source_model.xml 3      Active Shallow Crust 186          86          
+source_model.xml 4      Active Shallow Crust 186          86          
+source_model.xml 5      Active Shallow Crust 186          86          
+source_model.xml 6      Active Shallow Crust 155          86          
+source_model.xml 7      Active Shallow Crust 155          86          
+source_model.xml 8      Active Shallow Crust 155          86          
+source_model.xml 9      Active Shallow Crust 188          86          
+source_model.xml 10     Active Shallow Crust 188          86          
+source_model.xml 11     Active Shallow Crust 188          86          
 ================ ====== ==================== ============ ============
 
 ============= =====
 #TRT models   12   
-#eff_ruptures 4,254
+#eff_ruptures 1,990
 #tot_ruptures 1,032
-#tot_weight   0    
+#tot_weight   2,880
 ============= =====
 
 Informational data
 ------------------
 ======================= ===================================================================================
-count_ruptures.received tot 14.39 KB, max_per_task 5.04 KB                                                 
-count_ruptures.sent     sources 38.72 KB, srcfilter 11.28 KB, param 6.66 KB, monitor 4.98 KB, gsims 1.88 KB
+count_ruptures.received tot 19.29 KB, max_per_task 976 B                                                   
+count_ruptures.sent     sources 45.71 KB, srcfilter 16.92 KB, param 9.98 KB, monitor 7.48 KB, gsims 2.81 KB
 hazard.input_weight     2880.0                                                                             
 hazard.n_imts           1                                                                                  
 hazard.n_levels         4                                                                                  
@@ -142,9 +142,9 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-CHAR1     CharacteristicFaultSource 1            0.218     1         144      
-SFLT1     SimpleFaultSource         58           0.133     58        63       
-COMFLT1   ComplexFaultSource        62           0.028     248       12       
+CHAR1     CharacteristicFaultSource 1            0.216     145       144      
+SFLT1     SimpleFaultSource         58           0.061     24        23       
+COMFLT1   ComplexFaultSource        62           0.029     13        12       
 ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -152,9 +152,9 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.218     1     
-ComplexFaultSource        0.028     1     
-SimpleFaultSource         0.133     1     
+CharacteristicFaultSource 0.216     1     
+ComplexFaultSource        0.029     1     
+SimpleFaultSource         0.061     1     
 ========================= ========= ======
 
 Duplicated sources
@@ -165,7 +165,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.025 0.069  0.001 0.281 16       
+count_ruptures     0.014 0.048  0.002 0.240 24       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -173,11 +173,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.658     0.0       1     
-total count_ruptures           0.392     0.0       16    
-managing sources               0.073     0.0       1     
+reading composite source model 0.641     0.0       1     
+total count_ruptures           0.328     0.246     24    
+managing sources               0.084     0.0       1     
 store source_info              0.009     0.0       1     
-aggregate curves               7.977E-04 0.0       16    
-saving probability maps        5.555E-05 0.0       1     
-reading site collection        4.625E-05 0.0       1     
+aggregate curves               4.063E-04 0.0       24    
+saving probability maps        5.531E-05 0.0       1     
+reading site collection        4.554E-05 0.0       1     
 ============================== ========= ========= ======
