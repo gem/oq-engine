@@ -307,4 +307,4 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_6c.__file__, 'job_r.ini', exports='csv',
                             hazard_calculation_id=hc, concurrent_tasks='0')
         [fname] = out['avg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/avg_losses.csv', fname)
+        self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)
