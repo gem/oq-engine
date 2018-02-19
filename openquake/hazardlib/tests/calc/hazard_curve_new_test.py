@@ -29,7 +29,7 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import point_at
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.hazard_curve import pmap_from_grp
+from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
@@ -96,7 +96,9 @@ class HazardCurvesTestCase01(unittest.TestCase):
         s_filter = SourceFilter(SiteCollection([site]), {})
         self.sites = s_filter
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
-        self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        gsim = SadighEtAl1997()
+        gsim.minimum_distance = 12  # test minimum_distance
+        self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
 
     def test_hazard_curve_X(self):
         # Test the former calculator
@@ -117,7 +119,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        npt.assert_almost_equal(numpy.array([0.30000, 0.27855, 0.08912]),
+        npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
                                 crv, decimal=4)
 
     def test_hazard_curve_B(self):
@@ -130,7 +132,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.imtls,
                                     self.gsim_by_trt,
                                     truncation_level=None)
-        npt.assert_almost_equal(numpy.array([0.30000, 0.27855, 0.08912]),
+        npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
                                 curves[0][0], decimal=4)
 
 
@@ -145,10 +147,11 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
+        src.src_group_id = [0]
         group = SourceGroup(
-            src.tectonic_region_type, [src], 'test', 'indep', 'mutex')
+            src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
         param = dict(imtls=self.imtls)
-        crv = pmap_from_grp(group, self.sites, gsim_by_trt, param)[0]
+        crv = classical(group, self.sites, gsim_by_trt, param)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv[0].array[:, 0], decimal=4)
 
@@ -181,7 +184,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        npt.assert_almost_equal(numpy.array([0.58000, 0.53891, 0.15929]),
+        npt.assert_almost_equal(numpy.array([0.58000, 0.53, 0.1347]),
                                 crv, decimal=4)
 
 
@@ -189,7 +192,7 @@ class NankaiTestCase(unittest.TestCase):
     # use a source model for the Nankai region provided by M. Pagani
     def test(self):
         source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
-        groups = nrml.parse(source_model, SourceConverter(
+        groups = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(135.68, 35.68), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
@@ -205,7 +208,7 @@ class MultiPointTestCase(unittest.TestCase):
     def test(self):
         d = os.path.dirname(os.path.dirname(__file__))
         source_model = os.path.join(d, 'source_model/multi-point-source.xml')
-        groups = nrml.parse(source_model, SourceConverter())
+        groups = nrml.to_python(source_model, SourceConverter())
         site = Site(Point(0.1, 0.1), 800, True, z1pt0=100., z2pt5=1.)
         sitecol = SiteCollection([site])
         imtls = DictArray({'PGA': [0.01, 0.02, 0.04, 0.08, 0.16]})

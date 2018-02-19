@@ -102,5 +102,8 @@ def boolean(flag):
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=boolean)
 
+if config.directory.custom_tmp:
+    os.environ['TMPDIR'] = config.directory.custom_tmp
+
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute

@@ -22,10 +22,8 @@ from openquake.qa_tests_data.classical_damage import (
     case_1, case_2, case_1a, case_1b, case_1c, case_2a, case_2b, case_3a,
     case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
     case_7c, case_8a)
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.calculators.classical_damage import ClassicalDamageCalculator
 
 import numpy
 
@@ -85,7 +83,8 @@ class ClassicalDamageTestCase(CalculatorTestCase):
 
     def check(self, case):
         out = self.run_calc(
-            case.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
+            case.__file__, 'job_haz.ini,job_risk.ini', exports='csv',
+            concurrent_tasks='0')  # avoid the usual fork issue
         [fname] = out['damages-rlzs', 'csv']
         self.assertEqualFiles('expected/damages.csv', fname)
 

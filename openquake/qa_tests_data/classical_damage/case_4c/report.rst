@@ -3,11 +3,11 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     1,268,665,131      
-date           2018-01-11T04:29:25
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T09:58:13
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 20
 
 Parameters
 ----------
@@ -74,19 +74,19 @@ source_model.xml 0      Active Shallow Crust 1,694        1,694
 
 Informational data
 ------------------
-======================= ================================================================================
-count_ruptures.received tot 5.91 KB, max_per_task 712 B                                                 
-count_ruptures.sent     sources 11.26 KB, srcfilter 7.05 KB, param 5.43 KB, monitor 3.12 KB, gsims 910 B
-hazard.input_weight     1694.0                                                                          
-hazard.n_imts           1                                                                               
-hazard.n_levels         20                                                                              
-hazard.n_realizations   1                                                                               
-hazard.n_sites          1                                                                               
-hazard.n_sources        1                                                                               
-hazard.output_weight    20.0                                                                            
-hostname                tstation.gem.lan                                                                
-require_epsilons        False                                                                           
-======================= ================================================================================
+======================= ==================================================================================
+count_ruptures.received tot 10.3 KB, max_per_task 811 B                                                   
+count_ruptures.sent     sources 13.88 KB, srcfilter 9.17 KB, param 7.06 KB, monitor 4.05 KB, gsims 1.52 KB
+hazard.input_weight     1694.0                                                                            
+hazard.n_imts           1                                                                                 
+hazard.n_levels         20                                                                                
+hazard.n_realizations   1                                                                                 
+hazard.n_sites          1                                                                                 
+hazard.n_sources        1                                                                                 
+hazard.output_weight    20.0                                                                              
+hostname                tstation.gem.lan                                                                  
+require_epsilons        False                                                                             
+======================= ==================================================================================
 
 Exposure model
 --------------
@@ -107,7 +107,7 @@ Slowest sources
 ========= ================= ============ ========= ========= =========
 source_id source_class      num_ruptures calc_time num_sites num_split
 ========= ================= ============ ========= ========= =========
-1         SimpleFaultSource 1,694        0.043     1         15       
+1         SimpleFaultSource 1,694        0.043     16        15       
 ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -126,7 +126,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.005 0.003  0.003 0.015 10       
+count_ruptures     0.004 0.002  0.003 0.010 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -134,12 +134,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.100     0.0       1     
-total count_ruptures           0.051     0.0       10    
-reading composite source model 0.011     0.0       1     
-reading exposure               0.006     0.0       1     
-store source_info              0.005     0.0       1     
-aggregate curves               2.801E-04 0.0       10    
-saving probability maps        4.554E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+managing sources               0.114     0.0       1     
+total count_ruptures           0.054     0.0       13    
+reading composite source model 0.015     0.0       1     
+store source_info              0.004     0.0       1     
+reading exposure               0.003     0.0       1     
+aggregate curves               2.100E-04 0.0       13    
+saving probability maps        3.242E-05 0.0       1     
+reading site collection        9.298E-06 0.0       1     
 ============================== ========= ========= ======

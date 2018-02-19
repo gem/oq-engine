@@ -51,14 +51,16 @@ class DisaggregateTestCase(unittest.TestCase):
     def setUp(self):
         d = os.path.dirname(os.path.dirname(__file__))
         source_model = os.path.join(d, 'source_model/multi-point-source.xml')
-        [self.sources] = nrml.parse(source_model, SourceConverter(
+        [self.sources] = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         self.site = Site(Point(0.1, 0.1), 800, True, z1pt0=100., z2pt5=1.)
         self.imt = PGA()
         self.iml = 0.1
         self.truncation_level = 1
         self.trt = 'Stable Continental Crust'
-        self.gsims = {self.trt: Campbell2003()}
+        gsim = Campbell2003()
+        gsim.minimum_distance = 10  # test minimum_distance
+        self.gsims = {self.trt: gsim}
 
     def test(self):
         bin_edges, matrix = disagg.disaggregation(
@@ -68,14 +70,14 @@ class DisaggregateTestCase(unittest.TestCase):
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
         aaae = numpy.testing.assert_array_almost_equal
         aaae(mag_bins, [3, 6, 9])
-        aaae(dist_bins, [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48,
+        aaae(dist_bins, [8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48,
                          52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100,
                          104, 108, 112])
         aaae(lon_bins, [[0, 2.4]])
         aaae(lat_bins, [[0, 2.4]])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
         self.assertEqual(trt_bins, [self.trt])
-        aaae(matrix.shape, (2, 28, 1, 1, 3, 1))
+        aaae(matrix.shape, (2, 26, 1, 1, 3, 1))
         aaae(matrix.sum(), 6.14179818e-11)
 
 

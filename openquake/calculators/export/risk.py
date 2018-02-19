@@ -27,7 +27,7 @@ from openquake.baselib.general import (
     group_array, split_in_blocks, deprecated as depr)
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
@@ -427,7 +427,7 @@ def export_dmg_by_asset_npz(ekey, dstore):
 @depr('This output will be removed soon')
 def export_dmg_by_tag_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    tags = add_quotes(dstore['assetcol'].tags())
+    tags = add_quotes(dstore['assetcol'].tagcol)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
@@ -547,23 +547,21 @@ def export_bcr_map(ekey, dstore):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
         tags = ['rlz-%03d' % r for r in range(R)]
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for t, tag in enumerate(tags):
-        for l, loss_type in enumerate(loss_types):
-            rlz_data = bcr_data[loss_type][:, t]
-            path = dstore.build_fname('bcr-%s' % loss_type, tag, 'csv')
-            data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
-                     'average_annual_loss_retrofitted', 'bcr']]
-            for ass, value in zip(assetcol, rlz_data):
-                data.append((ass['lon'], ass['lat'],
-                             decode(aref[ass['idx']]),
-                             value['annual_loss_orig'],
-                             value['annual_loss_retro'],
-                             value['bcr']))
-            writer.save(data, path)
-            fnames.append(path)
+        rlz_data = bcr_data[:, t]
+        path = dstore.build_fname('bcr', tag, 'csv')
+        data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
+                 'average_annual_loss_retrofitted', 'bcr']]
+        for ass, value in zip(assetcol, rlz_data):
+            data.append((ass['lon'], ass['lat'],
+                         decode(aref[ass['idx']]),
+                         value['annual_loss_orig'],
+                         value['annual_loss_retro'],
+                         value['bcr']))
+        writer.save(data, path)
+        fnames.append(path)
     return writer.getsaved()
 
 

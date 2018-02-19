@@ -119,6 +119,7 @@ producing too small PoEs.'''
             # the hazard curves, hence the need to run a PSHACalculator here
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
+            cl.grp_by_src = oq.disagg_by_src
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
@@ -151,7 +152,6 @@ producing too small PoEs.'''
         dic = {}
         imtls = self.oqparam.imtls
         pgetter = getters.PmapGetter(self.datastore, sids=numpy.array([sid]))
-        pgetter.init()
         for rlz in self.rlzs_assoc.realizations:
             try:
                 pmap = pgetter.get(rlz.ordinal)
@@ -196,7 +196,7 @@ producing too small PoEs.'''
                         min_poe = max_poe[rlzi][imt]
                         if poe > min_poe:
                             raise ValueError(self.POE_TOO_BIG % (
-                                poe, sm_id, smodel.name, min_poe, rlzi, imt))
+                                poe, sm_id, smodel.names, min_poe, rlzi, imt))
 
     def full_disaggregation(self, curves):
         """
@@ -211,6 +211,8 @@ producing too small PoEs.'''
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
                                   use_rtree=False)
         csm = self.csm.filter(src_filter)  # fine filtering
+        if not csm.get_sources():
+            raise RuntimeError('All sources were filtered away!')
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
 

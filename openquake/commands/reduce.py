@@ -18,6 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import csv
 import random
 import shutil
 from openquake.hazardlib import valid, nrml, InvalidFile
@@ -40,6 +41,14 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
+def _save_csv(fname, lines, header):
+    with open(fname, 'wb') as f:
+        if header:
+            f.write(encode(header))
+        for line in lines:
+            f.write(encode(line))
+
+
 @sap.Script
 def reduce(fname, reduction_factor):
     """
@@ -50,13 +59,18 @@ def reduce(fname, reduction_factor):
     """
     if fname.endswith('.csv'):
         with open(fname) as f:
-            all_lines = f.readlines()
+            line = f.readline()  # read the first line
+            if csv.Sniffer().has_header(line):
+                header = line
+                all_lines = f.readlines()
+            else:
+                header = None
+                f.seek(0)
+                all_lines = f.readlines()
         lines = random_filter(all_lines, reduction_factor)
         shutil.copy(fname, fname + '.bak')
         print('Copied the original file in %s.bak' % fname)
-        with open(fname, 'wb') as f:
-            for line in lines:
-                f.write(encode(line))
+        _save_csv(fname, lines, header)
         print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
         return
     node = nrml.read(fname)

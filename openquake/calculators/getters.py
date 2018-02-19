@@ -39,11 +39,9 @@ class PmapGetter(object):
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
     def __init__(self, dstore, sids=None, rlzs_assoc=None):
-        dstore.open()  # if not
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.dstore = dstore
         self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        self.num_levels = len(self.dstore['oqparam'].imtls.array)
         self.sids = sids
         self.eids = None
         self.nbytes = 0
@@ -51,9 +49,32 @@ class PmapGetter(object):
             self.sids = dstore['sitecol'].complete.sids
 
     def init(self):
+        """
+        Read the poes and set the .data attribute with the hazard curves
+        """
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open()  # if not
+        self.imtls = self.dstore['oqparam'].imtls
+        self.data = collections.OrderedDict()
+        try:
+            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
+        except IndexError:  # no data
+            return
+        for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
+            self.data[sid] = datadict = {}
+            for rlzi, hcurve in enumerate(hcurve_by_rlz):
+                datadict[rlzi] = lst = [None for imt in self.imtls]
+                for imti, imt in enumerate(self.imtls):
+                    lst[imti] = hcurve[imt]  # imls
+
+    @property
+    def pmap_by_grp(self):
+        """
+        :returns: dictionary "grp-XXX" -> ProbabilityMap instance
+        """
+        if hasattr(self, '_pmap_by_grp'):  # already called
+            return self._pmap_by_grp
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
@@ -71,19 +92,7 @@ class PmapGetter(object):
                         pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
-
-        self.imtls = self.dstore['oqparam'].imtls
-        self.data = collections.OrderedDict()
-        try:
-            hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
-        except IndexError:  # no data
-            return
-        for sid, hcurve_by_rlz in zip(self.sids, hcurves.T):
-            self.data[sid] = datadict = {}
-            for rlzi, hcurve in enumerate(hcurve_by_rlz):
-                datadict[rlzi] = lst = [None for imt in self.imtls]
-                for imti, imt in enumerate(self.imtls):
-                    lst[imti] = hcurve[imt]  # imls
+        return self._pmap_by_grp
 
     def get_hazard(self, gsim=None):
         """
@@ -98,15 +107,16 @@ class PmapGetter(object):
         :param grp: None (all groups) or a string of the form "grp-XX"
         :returns: the hazard curves for the given realization
         """
+        self.init()
         assert self.sids is not None
-        pmap = probability_map.ProbabilityMap(self.num_levels, 1)
-        grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
+        pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
+        grps = [grp] if grp is not None else sorted(self.pmap_by_grp)
         array = self.rlzs_assoc.by_grp()
         for grp in grps:
             for gsim_idx, rlzis in array[grp]:
                 for r in rlzis:
                     if r == rlzi:
-                        pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
+                        pmap |= self.pmap_by_grp[grp].extract(gsim_idx)
                         break
         return pmap
 
@@ -115,7 +125,7 @@ class PmapGetter(object):
         :param sids: an array of S site IDs
         :returns: a list of R probability maps
         """
-        return self.rlzs_assoc.combine_pmaps(self._pmap_by_grp)
+        return self.rlzs_assoc.combine_pmaps(self.pmap_by_grp)
 
     def get_hcurves(self, imtls):
         """
@@ -137,7 +147,6 @@ class PmapGetter(object):
             the kind of PoEs to extract; if not given, returns the realization
             if there is only one or the statistics otherwise.
         """
-        self.init()  # if not already initialized
         num_rlzs = len(self.weights)
         if not kind:  # use default
             if 'hcurves' in self.dstore:
@@ -178,17 +187,18 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, eids=None):
+    def __init__(self, dstore, sids, num_rlzs, num_events=0):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
-        self.eids = eids
-        self.E = 0 if eids is None else len(eids)
+        self.E = num_events
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open()  # if not already open
+        self.eids = self.dstore['events']['eid']
+        self.eids.sort()
         self.data = collections.OrderedDict()
         for sid in self.sids:
             self.data[sid] = data = self[sid]

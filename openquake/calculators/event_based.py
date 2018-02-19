@@ -15,8 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import time
+import math
 import os.path
 import operator
 import itertools
@@ -34,7 +35,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, readinput
+from openquake.commonlib import calc, util, readinput, source
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter
 from openquake.calculators.classical import (
@@ -214,7 +215,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.grp_trt = self.csm.info.grp_trt()
+        self.grp_trt = self.csm.info.grp_by("trt")
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -259,9 +260,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm.filter(src_filter)
-        maxweight = csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
+
+        def weight(src):
+            return src.num_ruptures * src.RUPTURE_WEIGHT
+        maxweight = math.ceil(
+            sum(weight(src) for src in self.csm.get_sources()) /
+            (oq.concurrent_tasks or 1))
+        logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, seed=oq.ses_seed,
@@ -274,7 +279,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                for block in csm.split_in_blocks(maxweight, sg.sources):
+                for block in csm.split_in_blocks(
+                        maxweight, sg.sources, weight):
                     block.samples = sm.samples
                     yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
@@ -285,7 +291,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         mutex_groups = list(self.csm.gen_mutex_groups())
         assert not mutex_groups, 'Mutex sources are not implemented!'
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.csm, self.monitor('pmap_from_trt'))
+            allargs = self.gen_args(self.csm, self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
@@ -498,10 +504,12 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs_by_gsim = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
                         for grp_id in samples_by_grp}
         if self.precalc:
+            num_ruptures = sum(len(rs) for rs in self.precalc.result.values())
+            block_size = math.ceil(num_ruptures / (oq.concurrent_tasks or 1))
             for grp_id, ruptures in self.precalc.result.items():
                 if not ruptures:
                     continue
-                for block in block_splitter(ruptures, oq.ruptures_per_block):
+                for block in block_splitter(ruptures, block_size):
                     getter = GmfGetter(
                         rlzs_by_gsim[grp_id], block, self.sitecol,
                         imts, min_iml, oq.maximum_distance,
