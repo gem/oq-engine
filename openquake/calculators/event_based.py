@@ -523,7 +523,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for slc in split_in_slices(U, oq.concurrent_tasks or 1):
             getters = []
             for grp_id in rlzs_by_gsim:
-                ruptures = calc.RuptureGetter(parent, slc, grp_id)
+                ruptures = getters.RuptureGetter(parent, slc, grp_id)
                 if parent is self.datastore:  # not accessible parent
                     ruptures = list(ruptures)
                     if not ruptures:
