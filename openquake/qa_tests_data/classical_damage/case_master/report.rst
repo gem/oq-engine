@@ -3,11 +3,11 @@ classical damage
 
 ============== ===================
 checksum32     1,277,613,563      
-date           2018-01-11T04:29:25
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T09:58:13
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 7, num_imts = 3
+num_sites = 7, num_levels = 79
 
 Parameters
 ----------
@@ -84,23 +84,23 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 482          482         
-source_model_1.xml 1      Stable Shallow Crust 5            4           
+source_model_1.xml 1      Stable Shallow Crust 5.000        4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
-source_model_2.xml 3      Stable Shallow Crust 5            1           
+source_model_2.xml 3      Stable Shallow Crust 5.000        1           
 ================== ====== ==================== ============ ============
 
-============= ===
-#TRT models   4  
-#eff_ruptures 974
-#tot_ruptures 969
-#tot_weight   0  
-============= ===
+============= =====
+#TRT models   4    
+#eff_ruptures 974  
+#tot_ruptures 969  
+#tot_weight   5,127
+============= =====
 
 Informational data
 ------------------
 ======================= ====================================================================================
-count_ruptures.received tot 13.57 KB, max_per_task 682 B                                                    
-count_ruptures.sent     sources 35.64 KB, param 26.44 KB, srcfilter 23.56 KB, monitor 7.17 KB, gsims 4.02 KB
+count_ruptures.received tot 18.23 KB, max_per_task 821 B                                                    
+count_ruptures.sent     sources 35.64 KB, param 26.44 KB, srcfilter 23.56 KB, monitor 7.17 KB, gsims 4.94 KB
 hazard.input_weight     969.0                                                                               
 hazard.n_imts           3                                                                                   
 hazard.n_levels         79                                                                                  
@@ -134,8 +134,8 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-1         SimpleFaultSource         482          0.081     7         30       
-2         CharacteristicFaultSource 1            0.012     7         4        
+1         SimpleFaultSource         482          0.082     211       30       
+2         CharacteristicFaultSource 1            0.012     29        4        
 ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -144,7 +144,7 @@ Computation times by source typology
 source_class              calc_time counts
 ========================= ========= ======
 CharacteristicFaultSource 0.012     1     
-SimpleFaultSource         0.081     1     
+SimpleFaultSource         0.082     1     
 ========================= ========= ======
 
 Duplicated sources
@@ -163,12 +163,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.164     0.0       1     
-total count_ruptures           0.107     0.0       23    
-reading composite source model 0.022     0.0       1     
-reading exposure               0.009     0.0       1     
+managing sources               0.129     0.0       1     
+total count_ruptures           0.112     0.0       23    
+reading composite source model 0.019     0.0       1     
+reading exposure               0.004     0.0       1     
 store source_info              0.004     0.0       1     
-aggregate curves               3.262E-04 0.0       23    
-saving probability maps        3.219E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+aggregate curves               3.259E-04 0.0       23    
+saving probability maps        2.623E-05 0.0       1     
+reading site collection        6.199E-06 0.0       1     
 ============================== ========= ========= ======

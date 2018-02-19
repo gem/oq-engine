@@ -22,12 +22,13 @@ from openquake.server import views
 
 # each url is prefixed with /v1/calc/
 urlpatterns = [
-    url(r'^list$', views.calc),
+    url(r'^list$', views.calc_list),
+    url(r'^(\d+)/status$', views.calc_list),
     url(r'^(\d+)$', views.calc_info),
+    url(r'^(\d+)/abort$', views.calc_abort),
     url(r'^(\d+)/datastore$', views.get_datastore),
     url(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
     url(r'^(\d+)/oqparam$', views.get_oqparam),
-    url(r'^(\d+)/status$', views.calc),
     url(r'^(\d+)/results$', views.calc_results),
     url(r'^(\d+)/traceback$', views.get_traceback),
     url(r'^(\d+)/log/size$', views.get_log_size),

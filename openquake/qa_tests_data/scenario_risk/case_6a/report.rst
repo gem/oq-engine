@@ -3,11 +3,11 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     1,923,070,683      
-date           2018-01-11T04:31:22
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T10:00:41
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 1
 
 Parameters
 ----------
@@ -59,5 +59,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 4.840E-05 0.0       1     
+reading site collection 4.792E-05 0.0       1     
 ======================= ========= ========= ======

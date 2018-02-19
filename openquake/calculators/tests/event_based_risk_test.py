@@ -32,7 +32,7 @@ from openquake.calculators.tests import (
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
+    case_1, case_2, case_3, case_4, case_4a, case_6c, case_master, case_miriam,
     occupants, case_1g, case_7a)
 
 
@@ -172,11 +172,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1272)
+        self.assertEqual(nbytes, 1296)
 
+        # test postprocessing
+        self.calc.datastore.close()
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
-                      exports='csv', hazard_calculation_id=str(hc_id))
+                      exports='csv', hazard_calculation_id=str(hc_id),
+                      concurrent_tasks='0')  # avoid hdf5 fork issues
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -231,8 +234,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                       fname, delta=1E-5)
 
         # extract curves by tag
-        tags = ['taxonomy=tax1', 'state=01', 'cresta=0.11']
-        a = extract(self.calc.datastore, 'aggcurves/structural', *tags)
+        tags = 'taxonomy=tax1&state=01&cresta=0.11'
+        a = extract(self.calc.datastore, 'aggcurves/structural?' + tags)
         self.assertEqual(a.array.shape, (4, 2))  # 4 stats, 2 return periods
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
@@ -295,3 +298,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             exports='csv')
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
+
+    @attr('qa', 'hazard', 'event_based_risk')
+    def test_case_6c(self):
+        # case with asset_correlation=1
+        self.run_calc(case_6c.__file__, 'job_h.ini')
+        hc = str(self.calc.datastore.calc_id)
+        out = self.run_calc(case_6c.__file__, 'job_r.ini', exports='csv',
+                            hazard_calculation_id=hc, concurrent_tasks='0')
+        [fname] = out['avg_losses-rlzs', 'csv']
+        self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)

@@ -52,9 +52,9 @@
           <td><%= calc.get('description') %></td>
           <td>
             <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('is_running') == true) { %>
-            <%= calc.get('status') %>
+              <%= calc.get('status') %>
             <% } else { %>
-            failed<br>( <%= calc.get('status') %> )
+              failed<br>( <%= calc.get('status') %> )
             <% } %>
           </td>
           <td>
@@ -68,19 +68,19 @@
                 <div class="modal-dialog">
                   <div class="modal-content">
                     <div class="modal-header">
-                      <h4 class="modal-title">Removing calculation</h4>
+                      <h4 class="modal-title">Remove calculation</h4>
                     </div>
                     <div class="modal-body" style="font-size: 12px;">
-                        <pre style="font-size: 12px;" class="modal-body-pre">Are you sure to remove the calculation:<br><b>(<%= calc.get('id') %>) <%= calc.get('description') %></b> ?</pre>
+                        <pre style="font-size: 12px;" class="modal-body-pre">Are you sure to remove calculation:<br><b>(<%= calc.get('id') %>) <%= calc.get('description') %></b> ?</pre>
                     </div>
                     <div class="modal-footer">
                       <button type="button" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-show-remove">Yes</button>
-                      <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-default btn-hide-remove">No</button>
+                      <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-default btn-hide-no">No</button>
                     </div>
                   </div>
                 </div>
                 </div>
-<!-- end confirm_modal -->
+                <!-- end confirm_modal -->
                 <% if (calc.get('status') == 'complete') { %>
                   <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Outputs</a>
                   <form class="calc-form" enctype="multipart/form-data"
@@ -95,11 +95,32 @@
                 <% } else { %>
                   <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
-              <% } %>
+              <% } else if (calc.get('abortable')) { %>
+              <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Abort</a>
+              <!-- confirm_modal -->
+              <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
+              <div id="confirmDialog<%= calc.get('id') %>" class="modal hide" data-keyboard="true" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h4 class="modal-title">Abort calculation</h4>
+                  </div>
+                  <div class="modal-body" style="font-size: 12px;">
+                      <pre style="font-size: 12px;" class="modal-body-pre">Are you sure to abort calculation:<br><b>(<%= calc.get('id') %>) <%= calc.get('description') %></b> ?</pre>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-show-abort">Yes</button>
+                    <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-default btn-hide-no">No</button>
+                  </div>
+                </div>
+              </div>
+              </div>
+              <!-- end confirm_modal -->
             <% } %>
+          <% } %>
           </td>
         </tr>
-        <% }); %>
+      <% }); %>
       </tbody>
     </table>
   </script>

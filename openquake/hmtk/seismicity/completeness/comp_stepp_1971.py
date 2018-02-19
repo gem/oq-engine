@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #
 # LICENSE
 #
@@ -46,7 +45,7 @@
 # liability for use of the software.
 
 """
-Module :mod: 'openquake.hmtk.seismicity.completeness.comp_stepp_1972' defines
+Module :mod:`openquake.hmtk.seismicity.completeness.comp_stepp_1972` defines
 the openquake.hmtk implementation of the Stepp (1972) algorithm for analysing
 the completeness of an earthquake catalogue
 """
@@ -99,10 +98,10 @@ class Stepp1971(BaseCatalogueCompleteness):
     Implements the completeness analysis methodology of Stepp (1972)
     Stepp, J. C. (1972) Analysis of Completeness of the Earhquake Sample in
     the Puget Sound Area and Its Effect on Statistical Estimates of Earthquake
-    Hazard. NOAA Environmental Research Laboratories
+    Hazard, NOAA Environmental Research Laboratories.
 
     The original methodology of J. C. Stepp (1972) implements a graphical
-    method in which the devation of the observed rate from the expected
+    method in which the deviation of the observed rate from the expected
     Poisson rate is assessed by judgement. To implement the selection
     in an automated fashion this implementation uses optimisation of a
     2-segment piecewise linear fit to each magnitude bin, using the
@@ -136,20 +135,21 @@ class Stepp1971(BaseCatalogueCompleteness):
         self.end_year = None
 
     def completeness(self, catalogue, config):
-        '''Gets the completeness table
+        '''
+        Gets the completeness table.
 
         :param catalogue:
             Earthquake catalogue as instance of
-            :class: openquake.hmtk.seismicity.catalogue.Catalogue
+            :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
 
         :param dict config:
             Configuration parameters of the algorithm, containing the
             following information:
-                'magnitude_bin' Size of magnitude bin (non-negative float)
-                'time_bin' Size (in dec. years) of the time window
-                (non-negative float)
-                'increment_lock' Boolean to indicate whether to ensure
-                completeness magnitudes always decrease with more recent bins
+            'magnitude_bin' Size of magnitude bin (non-negative float)
+            'time_bin' Size (in dec. years) of the time window
+            (non-negative float)
+            'increment_lock' Boolean to indicate whether to ensure
+            completeness magnitudes always decrease with more recent bins
 
         :returns:
             2-column table indicating year of completeness and corresponding
@@ -209,7 +209,7 @@ class Stepp1971(BaseCatalogueCompleteness):
 
         years = self.completeness_table[:, 0]
         mags = self.completeness_table[:, 1]
-        keep = np.array([True]*years.shape[0])
+        keep = np.array([True] * years.shape[0])
 
         if deduplicate:
             keep[1:] = years[1:] != years[:-1]
