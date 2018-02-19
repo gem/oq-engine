@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2018-02-02T16:03:34
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T09:59:20
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -75,26 +75,26 @@ vancouver_area_source.xml 0      Active Shallow Crust 2,430        2,430
 
 Informational data
 ------------------
-======================= ====================================================================================
-count_ruptures.received tot 9.19 KB, max_per_task 629 B                                                     
-count_ruptures.sent     gsims 2.29 MB, sources 23.67 KB, srcfilter 12.16 KB, param 12.11 KB, monitor 4.67 KB
-hazard.input_weight     243.0                                                                               
-hazard.n_imts           3                                                                                   
-hazard.n_levels         36                                                                                  
-hazard.n_realizations   3                                                                                   
-hazard.n_sites          3                                                                                   
-hazard.n_sources        1                                                                                   
-hazard.output_weight    108.0                                                                               
-hostname                tstation.gem.lan                                                                    
-require_epsilons        False                                                                               
-======================= ====================================================================================
+======================= ==================================================================================
+count_ruptures.received tot 6.37 KB, max_per_task 815 B                                                   
+count_ruptures.sent     gsims 1.22 MB, sources 15.87 KB, srcfilter 6.48 KB, param 6.46 KB, monitor 2.49 KB
+hazard.input_weight     243.0                                                                             
+hazard.n_imts           3                                                                                 
+hazard.n_levels         36                                                                                
+hazard.n_realizations   3                                                                                 
+hazard.n_sites          3                                                                                 
+hazard.n_sources        1                                                                                 
+hazard.output_weight    108.0                                                                             
+hostname                tstation.gem.lan                                                                  
+require_epsilons        False                                                                             
+======================= ==================================================================================
 
 Slowest sources
 ---------------
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-VICM      AreaSource   2,430        0.006     72        30       
+VICM      AreaSource   2,430        0.005     91        30       
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -102,7 +102,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.006     1     
+AreaSource   0.005     1     
 ============ ========= ======
 
 Duplicated sources
@@ -111,21 +111,21 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ========= ===== =========
-operation-duration mean  stddev    min       max   num_tasks
-count_ruptures     0.001 2.476E-04 8.559E-04 0.002 15       
-================== ===== ========= ========= ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_ruptures     0.002 2.358E-04 0.001 0.002 8        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.031     0.0       1     
-reading composite source model 0.029     0.0       1     
-total count_ruptures           0.020     0.199     15    
-store source_info              0.006     0.0       1     
-aggregate curves               2.890E-04 0.0       15    
-reading site collection        1.965E-04 0.0       1     
-saving probability maps        4.363E-05 0.0       1     
+reading composite source model 0.023     0.0       1     
+managing sources               0.020     0.0       1     
+total count_ruptures           0.014     0.0       8     
+store source_info              0.003     0.0       1     
+reading site collection        1.533E-04 0.0       1     
+aggregate curves               1.135E-04 0.0       8     
+saving probability maps        2.456E-05 0.0       1     
 ============================== ========= ========= ======
