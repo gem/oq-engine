@@ -31,7 +31,8 @@ from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
-from openquake.calculators.getters import GmfGetter, PmapGetter
+from openquake.calculators.getters import (
+    GmfGetter, PmapGetter, get_ruptures_by_grp)
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -60,7 +61,7 @@ def export_ruptures_xml(ekey, dstore):
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
     ruptures_by_grp = {}
-    for grp_id, ruptures in calc.get_ruptures_by_grp(dstore).items():
+    for grp_id, ruptures in get_ruptures_by_grp(dstore).items():
         ruptures_by_grp[grp_id] = [ebr.export(mesh) for ebr in ruptures]
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
@@ -83,7 +84,7 @@ def export_ruptures_csv(ekey, dstore):
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_by("trt")
     rows = []
-    ruptures_by_grp = calc.get_ruptures_by_grp(dstore)
+    ruptures_by_grp = get_ruptures_by_grp(dstore)
     for grp_id, trt in sorted(grp_trt.items()):
         rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id))
         for r in rup_data.to_array(ruptures_by_grp.get(grp_id, [])):
