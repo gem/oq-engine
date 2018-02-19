@@ -380,9 +380,12 @@ class EpsilonMatrix1(object):
         self.eps = numpy.random.normal(size=num_events)
 
     def __getitem__(self, item):
-        # item[0] is the asset index, item[1] the event index
-        # the epsilons are equal for all assets since asset_correlation=1
-        return self.eps[item[1]]
+        if isinstance(item, tuple):
+            # item[0] is the asset index, item[1] the event index
+            # the epsilons are equal for all assets since asset_correlation=1
+            return self.eps[item[1]]
+        else:  # item is an asset index
+            return self.eps
 
     def __len__(self):
         return self.num_assets
