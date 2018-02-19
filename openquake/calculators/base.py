@@ -412,6 +412,7 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
+                logging.info('Splitting sources')
                 self.csm.split_all()
             if self.grp_by_src:  # set in disaggregation
                 self.csm = self.csm.grp_by_src()
