@@ -32,6 +32,7 @@ class OQ(object):
         self.read_exposure = readinput.Exposure.read
         self.get_oqparam = readinput.get_oqparam
         self.get_site_collection = readinput.get_site_collection
+        self.get_composite_source_model = readinput.get_composite_source_model
         self.get_exposure = readinput.get_exposure
         self.make_hmap = calc.make_hmap
         # TODO: more utilities when be added when deemed useful
