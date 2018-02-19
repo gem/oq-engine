@@ -65,7 +65,7 @@ export_dir = %s
         """ % (site_model_input, TMP))
         with self.assertRaises(ValueError) as ctx:
             readinput.get_params([job_config])
-        self.assertIn('not a relative path', str(ctx.exception))
+        self.assertIn('is an absolute path', str(ctx.exception))
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
@@ -73,8 +73,6 @@ export_dir = %s
         job_config = general.writetmp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
-[foo]
-bar = baz
 [site]
 sites = 0 0
 site_model_file = %s
@@ -114,8 +112,8 @@ export_dir = %s
                 self.assertEqual((job_config, site_model_input), values)
 
                 # checking that warnings work
-                self.assertEqual(warn.call_args[0][0],
-                                 "The parameter 'bar' is unknown, ignoring")
+                self.assertIn('Please remove site_model_file from',
+                              warn.call_args[0][0])
         finally:
             shutil.rmtree(temp_dir)
 
@@ -401,8 +399,8 @@ class ExposureTestCase(unittest.TestCase):
         exp, _assets = readinput._get_exposure(
             self.exposure, ['structural'], stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
-        self.assertTrue(exp.insurance_limit_is_absolute)
-        self.assertTrue(exp.deductible_is_absolute)
+        self.assertIsNone(exp.insurance_limit_is_absolute)
+        self.assertIsNone(exp.deductible_is_absolute)
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
                          [('structural', 'per_asset', 'USD')])
 
@@ -492,6 +490,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
+        oqparam.ignore_missing_costs = []
         oqparam.region_constraint = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': self.exposure2,

@@ -3,11 +3,11 @@ Event Based QA Test, Case 12
 
 ============== ===================
 checksum32     2,564,275,427      
-date           2018-01-11T04:31:21
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T10:00:40
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 3
 
 Parameters
 ----------
@@ -69,22 +69,22 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1            1           
-source_model.xml 1      Stable Continental   1            1           
+source_model.xml 0      Active Shallow Crust 1.000        1           
+source_model.xml 1      Stable Continental   1.000        1           
 ================ ====== ==================== ============ ============
 
-============= =
-#TRT models   2
-#eff_ruptures 2
-#tot_ruptures 2
-#tot_weight   0
-============= =
+============= =====
+#TRT models   2    
+#eff_ruptures 2.000
+#tot_ruptures 2    
+#tot_weight   0    
+============= =====
 
 Informational data
 ------------------
 ========================= ==============================================================================
 compute_ruptures.received tot 127.06 KB, max_per_task 65.03 KB                                          
-compute_ruptures.sent     sources 2.63 KB, src_filter 1.41 KB, param 1.14 KB, monitor 646 B, gsims 193 B
+compute_ruptures.sent     sources 2.63 KB, src_filter 1.41 KB, param 1.14 KB, monitor 638 B, gsims 251 B
 hazard.input_weight       0.2                                                                           
 hazard.n_imts             1                                                                             
 hazard.n_levels           3                                                                             
@@ -121,7 +121,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-compute_ruptures   0.030 7.071E-04 0.030 0.031 2        
+compute_ruptures   0.054 2.954E-04 0.054 0.055 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -129,12 +129,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.097     0.0       1     
-total compute_ruptures         0.060     0.0       2     
-saving ruptures                0.049     0.0       2     
-setting event years            0.037     0.0       1     
-store source_info              0.005     0.0       1     
+managing sources               0.109     0.0       1     
+total compute_ruptures         0.109     0.129     2     
+saving ruptures                0.038     0.0       2     
+setting event years            0.029     0.0       1     
+store source_info              0.004     0.0       1     
+making contexts                0.003     0.0       2     
 reading composite source model 0.002     0.0       1     
-making contexts                0.002     0.0       2     
 reading site collection        5.841E-05 0.0       1     
 ============================== ========= ========= ======

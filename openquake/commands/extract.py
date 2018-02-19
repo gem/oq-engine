@@ -17,17 +17,20 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import io
 import inspect
 import logging
 try:
     # Python 3
     from urllib.parse import quote_plus
+    from urllib.request import urlopen
 except ImportError:
     # Python 2
     from urllib import quote_plus
+    from urllib2 import urlopen
 
+import numpy
 from openquake.baselib import performance, sap, hdf5, datastore
-
 from openquake.commonlib.logs import dbcmd
 from openquake.calculators.extract import extract as extract_
 from openquake.server import dbserver
@@ -47,24 +50,30 @@ def quote(url_like):
 
 # `oq extract` is tested in the demos
 @sap.Script
-def extract(what, calc_id=-1):
+def extract(what, calc_id=-1, hostport=None):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     """
     logging.basicConfig(level=logging.INFO)
     if calc_id < 0:
         calc_id = datastore.get_calc_ids()[calc_id]
+    hdf5path = None
     if dbserver.get_status() == 'running':
         job = dbcmd('get_job', calc_id)
         if job is not None:
-            calc_id = job.ds_calc_dir + '.hdf5'
-    dstore = datastore.read(calc_id)
+            hdf5path = job.ds_calc_dir + '.hdf5'
+    dstore = datastore.read(hdf5path or calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.parent = datastore.read(parent_id)
-    print('Emulating call to /v1/calc/%d/extract/%s' % (calc_id, quote(what)))
+    urlpath = '/v1/calc/%d/extract/%s' % (calc_id, quote(what))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
-        items = extract_(dstore, what)
+        if hostport:
+            data = urlopen('http://%s%s' % (hostport, urlpath)).read()
+            items = (item for item in numpy.load(io.BytesIO(data)).items())
+        else:
+            print('Emulating call to %s' % urlpath)
+            items = extract_(dstore, what)
         if not inspect.isgenerator(items):
             items = [(items.__class__.__name__, items)]
         fname = '%s_%d.hdf5' % (what.replace('/', '-').replace('?', '-'),
@@ -77,3 +86,4 @@ def extract(what, calc_id=-1):
 
 extract.arg('what', 'string specifying what to export')
 extract.arg('calc_id', 'number of the calculation', type=int)
+extract.opt('hostport', 'host:port of the webui', '-w')

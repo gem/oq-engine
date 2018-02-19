@@ -27,7 +27,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_master)
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -63,7 +63,6 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # disaggregation by source group
         pgetter = getters.PmapGetter(self.calc.datastore)
-        pgetter.init()
         pmaps = []
         for grp in sorted(pgetter.dstore['poes']):
             pmaps.append(pgetter.get_mean(grp))
@@ -115,6 +114,11 @@ producing too small PoEs.''')
         # check stats
         fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
+
+    @attr('qa', 'hazard', 'disagg')
+    def test_case_5(self):
+        # this exercise gridded nonparametric sources
+        self.run_calc(case_5.__file__, 'job.ini')
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_master(self):

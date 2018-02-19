@@ -58,9 +58,9 @@ class SourceModel(object):
     A container of SourceGroup instances with some additional attributes
     describing the source model in the logic tree.
     """
-    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
-                 samples):
-        self.name = name
+    def __init__(self, names, weight, path, src_groups, num_gsim_paths,
+                 ordinal, samples):
+        self.names = names
         self.weight = weight
         self.path = path
         self.src_groups = src_groups
@@ -69,7 +69,23 @@ class SourceModel(object):
         self.samples = samples
 
     @property
+    def name(self):
+        """
+        Compact representation for the names
+        """
+        names = self.names.split()
+        if len(names) == 1:
+            return names[0]
+        elif len(names) == 2:
+            return ' '.join(names)
+        else:
+            return ' '.join([names[0], '...', names[-1]])
+
+    @property
     def num_sources(self):
+        """
+        Number of sources contained in the source model
+        """
         return sum(len(sg) for sg in self.src_groups)
 
     def get_skeleton(self):
@@ -82,13 +98,13 @@ class SourceModel(object):
             sg = copy.copy(grp)
             sg.sources = []
             src_groups.append(sg)
-        return self.__class__(self.name, self.weight, self.path, src_groups,
+        return self.__class__(self.names, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
 
     def __repr__(self):
         samples = ', samples=%d' % self.samples if self.samples > 1 else ''
         return '<%s #%d %s, path=%s, weight=%s%s>' % (
-            self.__class__.__name__, self.ordinal, self.name,
+            self.__class__.__name__, self.ordinal, self.names,
             '_'.join(self.path), self.weight, samples)
 
 Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
@@ -429,6 +445,46 @@ class BranchSet(object):
                                        occurrence_rates=occur_rates))
 
 
+class FakeSmlt(object):
+    """
+    A replacement for the SourceModelLogicTree class, to be used when
+    there is a trivial source model logic tree. In practice, when
+    `source_model_logic_tree_file` is missing but there is a
+    `source_model_file` in the job.ini file.
+    """
+    def __init__(self, filename, seed=0, num_samples=0):
+        self.filename = filename
+        self.basepath = os.path.dirname(filename)
+        self.seed = seed
+        self.num_samples = num_samples
+        self.tectonic_region_types = set()
+
+    def gen_source_models(self, gsim_lt):
+        """
+        Yield the underlying SourceModel, multiple times if there is sampling
+        """
+        num_gsim_paths = 1 if self.num_samples else gsim_lt.get_num_paths()
+        for i, rlz in enumerate(self):
+            yield SourceModel(
+                rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
+
+    def make_apply_uncertainties(self, branch_ids):
+        """
+        :returns: a do nothing function
+        """
+        return lambda source: None
+
+    def __iter__(self):
+        name = os.path.basename(self.filename)
+        smlt_path = ('b1',)
+        if self.num_samples:  # many realizations of equal weight
+            weight = 1. / self.num_samples
+            for i in range(self.num_samples):
+                yield Realization(name, weight, smlt_path, None, smlt_path)
+        else:  # there is a single realization
+            yield Realization(name, 1.0, smlt_path, 0, smlt_path)
+
+
 class SourceModelLogicTree(object):
     """
     Source model logic tree parser.
@@ -627,11 +683,13 @@ class SourceModelLogicTree(object):
                 yield Realization(name, weight, tuple(sm_lt_path), None,
                                   tuple(sm_lt_path))
         else:  # full enumeration
+            ordinal = 0
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield Realization(name, weight, tuple(smlt_branch_ids), None,
-                                  tuple(smlt_branch_ids))
+                yield Realization(name, weight, tuple(smlt_branch_ids),
+                                  ordinal, tuple(smlt_branch_ids))
+                ordinal += 1
 
     def parse_uncertainty_value(self, node, branchset):
         """
@@ -1162,7 +1220,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return nrml.convert(self._ltnode)
+        return nrml.to_string(self._ltnode)
 
     def reduce(self, trts):
         """

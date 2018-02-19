@@ -19,6 +19,7 @@
 import os
 import sys
 import ast
+import logging
 import operator
 import tempfile
 import importlib
@@ -398,7 +399,11 @@ def save(path, items, **extra):
     """
     with File(path, 'w') as f:
         for key, val in items:
-            f[key] = val
+            try:
+                f[key] = val
+            except ValueError as err:
+                if 'Object header message is too large' in str(err):
+                    logging.error(str(err))
         for k, v in extra.items():
             f.attrs[k] = v
 
