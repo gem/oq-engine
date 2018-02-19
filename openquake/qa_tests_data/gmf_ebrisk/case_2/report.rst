@@ -2,31 +2,31 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     3,574,592,625      
-date           2018-02-02T16:03:46
-engine_version 2.9.0-gitd6a3184   
+checksum32     3,482,777,328      
+date           2018-02-16T05:47:29
+engine_version 2.9.0-git1a21ce0   
 ============== ===================
 
 num_sites = 3, num_levels = 10
 
 Parameters
 ----------
-=============================== ============
-calculation_mode                'gmf_ebrisk'
-number_of_logic_tree_samples    0           
-maximum_distance                None        
-investigation_time              1.0         
-ses_per_logic_tree_path         1           
-truncation_level                None        
-rupture_mesh_spacing            None        
-complex_fault_mesh_spacing      None        
-width_of_mfd_bin                None        
-area_source_discretization      None        
-ground_motion_correlation_model None        
-random_seed                     42          
-master_seed                     0           
-avg_losses                      True        
-=============================== ============
+=============================== ==================
+calculation_mode                'event_based_risk'
+number_of_logic_tree_samples    0                 
+maximum_distance                None              
+investigation_time              1.0               
+ses_per_logic_tree_path         1                 
+truncation_level                None              
+rupture_mesh_spacing            None              
+complex_fault_mesh_spacing      None              
+width_of_mfd_bin                None              
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     42                
+master_seed                     0                 
+avg_losses                      True              
+=============================== ==================
 
 Input files
 -----------
@@ -56,6 +56,10 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,FromFile: [0]>
 
+Estimated data transfer for the avglosses
+-----------------------------------------
+3 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 1.41 KB
+
 Exposure model
 --------------
 =============== ========
@@ -77,8 +81,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.007     0.0       1     
-reading exposure        0.003     0.0       1     
-assoc_assets_sites      0.002     0.0       1     
-reading site collection 1.981E-04 0.0       1     
+building riskinputs     0.009     0.0       1     
+reading exposure        0.007     0.0       1     
+assoc_assets_sites      0.004     0.0       1     
+reading site collection 9.031E-04 0.0       1     
 ======================= ========= ========= ======
