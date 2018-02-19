@@ -24,7 +24,7 @@ xmlns:gml="http://www.opengis.net/gml"
         type="Mag"
         >
             <prob index="0" value="3.997999E-04"/>
-            <prob index="1" value="4.114726E-04"/>
+            <prob index="1" value="4.114727E-04"/>
             <prob index="2" value="4.195277E-04"/>
             <prob index="3" value="4.236433E-04"/>
             <prob index="4" value="4.240861E-04"/>

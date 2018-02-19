@@ -2,12 +2,12 @@ event based risk
 ================
 
 ============== ===================
-checksum32     920,563,383        
-date           2018-01-11T04:29:49
-engine_version 2.9.0-git3c583c4   
+checksum32     733,853,885        
+date           2018-02-19T09:58:51
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 7, num_imts = 4
+num_sites = 7, num_levels = 46
 
 Parameters
 ----------
@@ -87,9 +87,9 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 482          482         
-source_model_1.xml 1      Stable Shallow Crust 4            4           
+source_model_1.xml 1      Stable Shallow Crust 4.000        4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
-source_model_2.xml 3      Stable Shallow Crust 1            1           
+source_model_2.xml 3      Stable Shallow Crust 1.000        1           
 ================== ====== ==================== ============ ============
 
 ============= ===
@@ -102,8 +102,8 @@ source_model_2.xml 3      Stable Shallow Crust 1            1
 Informational data
 ------------------
 ========================= =====================================================================================
-compute_ruptures.received tot 21.51 KB, max_per_task 3.22 KB                                                   
-compute_ruptures.sent     sources 43.88 KB, param 26.77 KB, src_filter 24.59 KB, monitor 7.57 KB, gsims 4.19 KB
+compute_ruptures.received tot 25.42 KB, max_per_task 3.22 KB                                                   
+compute_ruptures.sent     sources 49.88 KB, param 33.46 KB, src_filter 30.73 KB, monitor 9.35 KB, gsims 6.44 KB
 hazard.input_weight       969.0                                                                                
 hazard.n_imts             4                                                                                    
 hazard.n_levels           46                                                                                   
@@ -117,7 +117,7 @@ require_epsilons          True
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 8 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 20 tasks = 87.5 KB
+7 asset(s) x 8 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 60 tasks = 262.5 KB
 
 Exposure model
 --------------
@@ -162,7 +162,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.015 0.007  0.003 0.032 24       
+compute_ruptures   0.015 0.008  0.005 0.035 30       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -170,13 +170,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.352     0.027     24    
-managing sources               0.246     0.0       1     
-reading composite source model 0.017     0.0       1     
-reading exposure               0.008     0.0       1     
-making contexts                0.007     0.0       2     
-saving ruptures                0.007     0.0       24    
+total compute_ruptures         0.452     0.125     30    
+managing sources               0.270     0.0       1     
+reading composite source model 0.022     0.0       1     
+making contexts                0.008     0.0       2     
+saving ruptures                0.007     0.0       30    
 store source_info              0.005     0.0       1     
+reading exposure               0.005     0.0       1     
 setting event years            0.002     0.0       1     
-reading site collection        5.722E-06 0.0       1     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

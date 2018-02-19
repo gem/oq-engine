@@ -3,11 +3,11 @@ Event Based Risk QA Test 2
 
 ============== ===================
 checksum32     3,754,416,453      
-date           2018-01-11T04:29:27
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T09:58:15
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 3, num_imts = 3
+num_sites = 3, num_levels = 15
 
 Parameters
 ----------
@@ -75,23 +75,23 @@ source_model.xml 0      Active Shallow Crust 18           18
 
 Informational data
 ------------------
-========================= =========================================================================
-compute_ruptures.received max_per_task 12.05 KB, tot 12.05 KB                                      
-compute_ruptures.sent     sources 2.17 KB, src_filter 830 B, param 818 B, monitor 323 B, gsims 98 B
-hazard.input_weight       1.8000000000000003                                                       
-hazard.n_imts             3                                                                        
-hazard.n_levels           15                                                                       
-hazard.n_realizations     1                                                                        
-hazard.n_sites            3                                                                        
-hazard.n_sources          3                                                                        
-hazard.output_weight      45.0                                                                     
-hostname                  tstation.gem.lan                                                         
-require_epsilons          True                                                                     
-========================= =========================================================================
+========================= =============================================================================
+compute_ruptures.received tot 16.05 KB, max_per_task 5.37 KB                                           
+compute_ruptures.sent     sources 4.04 KB, src_filter 2.43 KB, param 2.4 KB, monitor 957 B, gsims 381 B
+hazard.input_weight       1.8000000000000003                                                           
+hazard.n_imts             3                                                                            
+hazard.n_levels           15                                                                           
+hazard.n_realizations     1                                                                            
+hazard.n_sites            3                                                                            
+hazard.n_sources          3                                                                            
+hazard.output_weight      45.0                                                                         
+hostname                  tstation.gem.lan                                                             
+require_epsilons          True                                                                         
+========================= =============================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-4 asset(s) x 1 realization(s) x 1 loss type(s) x 2 losses x 8 bytes x 20 tasks = 1.25 KB
+4 asset(s) x 1 realization(s) x 1 loss type(s) x 2 losses x 8 bytes x 60 tasks = 3.75 KB
 
 Exposure model
 --------------
@@ -104,8 +104,8 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-RC+      1.000 NaN    1   1   1         1         
 RM       1.000 0.0    1   1   2         2         
+RC+      1.000 NaN    1   1   1         1         
 W/1      1.000 NaN    1   1   1         1         
 *ALL*    1.333 0.577  1   2   3         4         
 ======== ===== ====== === === ========= ==========
@@ -136,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.014 NaN    0.014 0.014 1        
+compute_ruptures   0.009 0.002  0.006 0.011 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -144,14 +144,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.028     0.0       1     
-total compute_ruptures         0.014     0.738     1     
-reading exposure               0.008     0.0       1     
-making contexts                0.006     0.0       9     
-assoc_assets_sites             0.006     0.0       1     
+total compute_ruptures         0.027     0.938     3     
+managing sources               0.027     0.0       1     
+making contexts                0.011     0.0       9     
+saving ruptures                0.006     0.0       3     
+reading exposure               0.003     0.0       1     
 store source_info              0.003     0.0       1     
-saving ruptures                0.003     0.0       1     
 reading composite source model 0.003     0.0       1     
+assoc_assets_sites             0.002     0.0       1     
 setting event years            0.001     0.0       1     
-reading site collection        5.889E-05 0.0       1     
+reading site collection        5.674E-05 0.0       1     
 ============================== ========= ========= ======

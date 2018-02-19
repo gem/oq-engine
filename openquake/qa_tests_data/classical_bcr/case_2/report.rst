@@ -2,12 +2,12 @@ Classical BCR test
 ==================
 
 ============== ===================
-checksum32     233,068,017        
-date           2018-01-11T04:29:54
-engine_version 2.9.0-git3c583c4   
+checksum32     3,011,595,185      
+date           2018-02-19T09:58:57
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 11, num_imts = 1
+num_sites = 11, num_levels = 8
 
 Parameters
 ----------
@@ -77,19 +77,19 @@ source_model.xml 0      Active Shallow Crust 792          828
 
 Informational data
 ------------------
-======================= ==================================================================================
-count_ruptures.received tot 6.1 KB, max_per_task 1.73 KB                                                  
-count_ruptures.sent     sources 28.11 KB, srcfilter 6.18 KB, param 2.24 KB, monitor 1.56 KB, gsims 1.25 KB
-hazard.input_weight     82.80000000000001                                                                 
-hazard.n_imts           1                                                                                 
-hazard.n_levels         8                                                                                 
-hazard.n_realizations   3                                                                                 
-hazard.n_sites          11                                                                                
-hazard.n_sources        3                                                                                 
-hazard.output_weight    88.0                                                                              
-hostname                tstation.gem.lan                                                                  
-require_epsilons        True                                                                              
-======================= ==================================================================================
+======================= ==============================================================================
+count_ruptures.received tot 2.52 KB, max_per_task 951 B                                               
+count_ruptures.sent     sources 31.98 KB, srcfilter 3.71 KB, param 1.34 KB, monitor 957 B, gsims 924 B
+hazard.input_weight     82.80000000000001                                                             
+hazard.n_imts           1                                                                             
+hazard.n_levels         8                                                                             
+hazard.n_realizations   3                                                                             
+hazard.n_sites          11                                                                            
+hazard.n_sources        3                                                                             
+hazard.output_weight    88.0                                                                          
+hostname                tstation.gem.lan                                                              
+require_epsilons        True                                                                          
+======================= ==============================================================================
 
 Exposure model
 --------------
@@ -114,9 +114,9 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-231       AreaSource   414          0.008     11        69       
-229       AreaSource   264          0.005     8         38       
-232       AreaSource   150          0.002     11        1        
+231       AreaSource   414          0.010     663       69       
+229       AreaSource   264          0.003     186       38       
+232       AreaSource   150          0.002     258       30       
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -124,7 +124,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.015     3     
+AreaSource   0.014     3     
 ============ ========= ======
 
 Duplicated sources
@@ -135,7 +135,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.004 0.002  0.001 0.007 5        
+count_ruptures     0.007 0.005  0.001 0.012 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -143,12 +143,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.075     0.0       1     
-managing sources               0.055     0.0       1     
-total count_ruptures           0.021     0.0       5     
-reading exposure               0.009     0.0       1     
-store source_info              0.006     0.0       1     
-aggregate curves               2.532E-04 0.0       5     
-saving probability maps        4.601E-05 0.0       1     
-reading site collection        8.106E-06 0.0       1     
+managing sources               0.073     0.0       1     
+reading composite source model 0.064     0.0       1     
+total count_ruptures           0.020     0.0       3     
+reading exposure               0.003     0.0       1     
+store source_info              0.003     0.0       1     
+aggregate curves               5.198E-05 0.0       3     
+saving probability maps        2.623E-05 0.0       1     
+reading site collection        6.914E-06 0.0       1     
 ============================== ========= ========= ======

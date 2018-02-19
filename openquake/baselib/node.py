@@ -493,6 +493,12 @@ class Node(object):
         else:  # assume an integer or a slice
             return self.nodes[i]
 
+    def get(self, attr, value=None):
+        """
+        Get the given `attr`; if missing, returns `value` or `None`.
+        """
+        return self.attrib.get(attr, value)
+
     def __setitem__(self, i, value):
         """
         Update a subnode, if i is an integer, or an attribute, if i
@@ -758,7 +764,7 @@ def context(fname, node):
     except:
         etype, exc, tb = sys.exc_info()
         msg = 'node %s: %s, line %s of %s' % (
-            striptag(node.tag), exc, node.lineno, fname)
+            striptag(node.tag), exc, getattr(node, 'lineno', '?'), fname)
         raise_(etype, msg, tb)
 
 
