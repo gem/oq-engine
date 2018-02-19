@@ -80,11 +80,12 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
             c_model = c_models.get(loss_type)
             for a, fraction in enumerate(damages):
                 asset = outputs.assets[a]
+                taxo = riskmodel.taxonomy[asset.taxonomy]
                 damages = fraction * asset.number
-                t = asset.tagmask
+                t = asset.tagmask(param['tags'])
                 result['d_tag'][t, r, l] += damages  # shape (E, D)
                 if c_model:  # compute consequences
-                    means = [par[0] for par in c_model[asset.taxonomy].params]
+                    means = [par[0] for par in c_model[taxo].params]
                     # NB: we add a 0 in front for nodamage state
                     c_ratio = numpy.dot(fraction, [0] + means)
                     consequences = c_ratio * asset.value(loss_type)
@@ -117,8 +118,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.riskinputs = self.build_riskinputs('gmf', eids=eids)
-        self.param['tags'] = self.assetcol.tags()
+        self.riskinputs = self.build_riskinputs('gmf', num_events=len(eids))
+        self.param['tags'] = list(self.assetcol.tagcol)
 
     def post_execute(self, result):
         """

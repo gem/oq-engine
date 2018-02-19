@@ -32,6 +32,11 @@ class ClassicalBCRTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_bcr')
     def test_case_2(self):
+        # test with the exposure in CSV format
+        self.run_calc(case_2.__file__, 'job.ini',
+                      exposure_file='exposure_model-header.xml')
+
+        # test with the exposure in XML format
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
         fnames = out['bcr-stats', 'csv']
         assert fnames

@@ -59,8 +59,10 @@ import unittest
 import numpy as np
 from openquake.hmtk.seismicity import utils
 
+
 class TestSeismicityUtilities(unittest.TestCase):
     '''Class for testing seismicity utilities'''
+
     def setUp(self):
         '''Sets up the test class'''
         self.year = []
@@ -104,7 +106,7 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.second = np.array([0.0, 30.0, 59.0])
         self.assertTrue(np.allclose(
             utils.decimal_time(self.year, self.month, self.day, self.hour,
-            self.minute, self.second),
+                               self.minute, self.second),
             np.array([1990., 1995.49457858, 2000.99999997])))
 
     def test_decimal_time1(self):
@@ -117,7 +119,7 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.second = np.array([0.0, 30.0, 59.0])
         self.assertTrue(np.allclose(
             utils.decimal_time(self.year, self.month, self.day, self.hour,
-            self.minute, self.second),
+                               self.minute, self.second),
             np.array([1990.])))
 
     def test_decimal_time2(self):
@@ -156,8 +158,8 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.longitude = np.array([30., 35., 40.])
         self.latitude = np.array([30., 35., 40.])
         distance = utils.haversine(self.longitude, self.latitude,
-                                    self.longitude, self.latitude)
-        expected_distance = np.array([[ 0., 727.09474718, 1435.38402047],
+                                   self.longitude, self.latitude)
+        expected_distance = np.array([[0., 727.09474718, 1435.38402047],
                                       [727.09474718, 0., 709.44452948],
                                       [1435.38402047, 709.44452948, 0.]])
         self.assertTrue(np.allclose(distance, expected_distance))
@@ -194,7 +196,6 @@ class TestSeismicityUtilities(unittest.TestCase):
             self.assertAlmostEqual(expected[iloc],
                                    utils.piecewise_linear_scalar(params, xval))
 
-
     def _tester_for_truncated_gaussian(self, data, uncertainties, low_limit,
                                        high_limit, number_samples=1000):
         """
@@ -214,7 +215,6 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.assertTrue(np.max(np.array(xhigh)) <= high_limit)
         self.assertTrue(np.min(np.array(xlow)) >= low_limit)
 
-
     def test_sample_truncated_gaussian_distribution_with_bounds(self):
         """
         Tests the function to sample a truncated Gaussian distribution
@@ -231,14 +231,13 @@ class TestSeismicityUtilities(unittest.TestCase):
                                             np.inf)
 
 
-
-
 class TestBootstrapHistograms(unittest.TestCase):
     """
     Class to test bootstrapped histogram functions
     openquake.hmtk.seismicity.utils.bootstrap_histogram_1D
     openquake.hmtk.seismicity.utils.bootstrap_histogram_2D
     """
+
     def setUp(self):
         """
         """
@@ -262,7 +261,7 @@ class TestBootstrapHistograms(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             utils.hmtk_histogram_1D(xdata, xbins),
             np.histogram(xdata, bins=xbins)[0].astype(float))
-    
+
     def test_hmtk_histogram_1D_edgecase(self):
         """
         Tests the 1D hmtk histogram with edge cases
@@ -271,13 +270,12 @@ class TestBootstrapHistograms(unittest.TestCase):
         xdata = np.array([3.1, 4.1, 4.56, 4.8, 5.2])
         xbins = np.arange(3.0, 5.35, 0.1)
         expected_counter = np.array([0., 1., 0., 0., 0., 0., 0., 0., 0., 0.,
-                                      0., 1., 0., 0., 0., 1., 0., 0., 1., 0.,
-                                      0., 0., 1.])
+                                     0., 1., 0., 0., 0., 1., 0., 0., 1., 0.,
+                                     0., 0., 1.])
         np.testing.assert_array_almost_equal(
             utils.hmtk_histogram_1D(xdata, xbins),
             expected_counter)
-    
-    
+
     def test_hmtk_histogram_2D_general(self):
         """
         Tests the 2D hmtk histogram with the general case (i.e. no edge-cases)
@@ -301,33 +299,33 @@ class TestBootstrapHistograms(unittest.TestCase):
 
         xbins = np.arange(3.0, 5.35, 0.1)
         ybins = np.arange(1990., 2001.5, 1.)
-        
+
         expected_counter = np.array(
-        #     90   91   92   93   94   95   96   97    98  99    00    
-            [[0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.0-3.1 
-             [1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.1-3.2 
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.2-3.3 
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.3-3.4
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.4-3.5
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.5-3.6
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.6-3.7
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.7-3.8
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.8-3.9
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.9-4.0
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.0-4.1
-             [0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.1-4.2
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.2-4.3
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.3-4.4
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.4-4.5
-             [0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.], #4.5-4.6
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.6-4.7
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.7-4.8
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.], #4.8-4.9
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.9-5.0
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #5.0-5.1
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #5.1-5.2
-             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.]])#5.2-5.3
-        
+            #     90   91   92   93   94   95   96   97    98  99    00
+            [[0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.0-3.1
+             [1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.1-3.2
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.2-3.3
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.3-3.4
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.4-3.5
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.5-3.6
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.6-3.7
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.7-3.8
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.8-3.9
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 3.9-4.0
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.0-4.1
+             [0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.1-4.2
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.2-4.3
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.3-4.4
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.4-4.5
+             [0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.5-4.6
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.6-4.7
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.7-4.8
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.],  # 4.8-4.9
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 4.9-5.0
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 5.0-5.1
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],  # 5.1-5.2
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.]])  # 5.2-5.3
+
         np.testing.assert_array_almost_equal(
             utils.hmtk_histogram_2D(xdata, ydata, bins=(xbins, ybins)),
             expected_counter)
@@ -346,8 +344,7 @@ class TestBootstrapHistograms(unittest.TestCase):
         # Now with normalisaton
         expected_array = expected_array / np.sum(expected_array)
         np.testing.assert_array_almost_equal(expected_array,
-            utils.bootstrap_histogram_1D(self.x, x_range, normalisation=True))
-
+                                             utils.bootstrap_histogram_1D(self.x, x_range, normalisation=True))
 
     def test_1D_bootstrap_with_uncertainty(self):
         """
@@ -365,8 +362,6 @@ class TestBootstrapHistograms(unittest.TestCase):
         np.testing.assert_array_almost_equal(np.round(hist_values, 2),
                                              expected_array)
 
-
-
     def test_2D_bootstrap_no_uncertainty(self):
         """
         Tests the bootstrap 1D histrogram function with no uncertainties
@@ -380,12 +375,12 @@ class TestBootstrapHistograms(unittest.TestCase):
                                    [2., 4., 4., 4.],
                                    [2., 4., 4., 4.]])
         np.testing.assert_array_almost_equal(expected_array,
-            utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range))
+                                             utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range))
         # With normalisation
         expected_array = expected_array / np.sum(expected_array)
         np.testing.assert_array_almost_equal(expected_array,
-            utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range,
-                                         normalisation=True))
+                                             utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range,
+                                                                          normalisation=True))
 
     def test_2D_bootstrap_with_uncertainty(self):
         """
@@ -416,10 +411,10 @@ class TestBootstrapHistograms(unittest.TestCase):
         self.assertTrue(np.all(np.fabs(array_diff) < 0.2))
         # With normalisation
         expected_array = np.array([[0.04, 0.05, 0.05, 0.04],
-                                  [0.05, 0.06, 0.06, 0.05],
-                                  [0.05, 0.06, 0.06, 0.05],
-                                  [0.05, 0.06, 0.06, 0.05],
-                                  [0.04, 0.05, 0.05, 0.04]])
+                                   [0.05, 0.06, 0.06, 0.05],
+                                   [0.05, 0.06, 0.06, 0.05],
+                                   [0.05, 0.06, 0.06, 0.05],
+                                   [0.04, 0.05, 0.05, 0.04]])
 
         hist_values = utils.bootstrap_histogram_2D(
             self.x,
@@ -433,11 +428,13 @@ class TestBootstrapHistograms(unittest.TestCase):
         array_diff = expected_array - hist_values
         self.assertTrue(np.all(np.fabs(array_diff) < 0.02))
 
+
 class Testlonlat2laea(unittest.TestCase):
     """
     Tests the converter from longitude and latitude to lambert azimuthal
     equal area coordinates
     """
+
     def test_conversion(self):
         """
         Tests lonlat to lambert equal area
@@ -447,4 +444,3 @@ class Testlonlat2laea(unittest.TestCase):
         calc_x, calc_y = utils.lonlat_to_laea(5.0, 50.0, 9.0, 53.0)
         self.assertAlmostEqual(calc_x, expected_x / 1000.0)
         self.assertAlmostEqual(calc_y, expected_y / 1000.0)
-

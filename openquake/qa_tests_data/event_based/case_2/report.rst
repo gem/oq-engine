@@ -3,11 +3,11 @@ Event-Based Hazard QA Test, Case 2
 
 ============== ===================
 checksum32     2,642,290,083      
-date           2018-01-11T04:30:28
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T09:59:39
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 4
 
 Parameters
 ----------
@@ -72,19 +72,19 @@ source_model.xml 0      Active Shallow Crust 3,000        3,000
 
 Informational data
 ------------------
-========================= ==========================================================================
-compute_ruptures.received max_per_task 4.8 KB, tot 4.8 KB                                           
-compute_ruptures.sent     sources 13.05 KB, src_filter 722 B, param 591 B, monitor 323 B, gsims 91 B
-hazard.input_weight       300.0                                                                     
-hazard.n_imts             1                                                                         
-hazard.n_levels           4                                                                         
-hazard.n_realizations     1                                                                         
-hazard.n_sites            1                                                                         
-hazard.n_sources          1                                                                         
-hazard.output_weight      6.0                                                                       
-hostname                  tstation.gem.lan                                                          
-require_epsilons          False                                                                     
-========================= ==========================================================================
+========================= ===========================================================================
+compute_ruptures.received max_per_task 4.8 KB, tot 4.8 KB                                            
+compute_ruptures.sent     sources 13.05 KB, src_filter 722 B, param 591 B, monitor 319 B, gsims 120 B
+hazard.input_weight       300.0                                                                      
+hazard.n_imts             1                                                                          
+hazard.n_levels           4                                                                          
+hazard.n_realizations     1                                                                          
+hazard.n_sites            1                                                                          
+hazard.n_sources          1                                                                          
+hazard.output_weight      6.0                                                                        
+hostname                  tstation.gem.lan                                                           
+require_epsilons          False                                                                      
+========================= ===========================================================================
 
 Slowest sources
 ---------------
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   2.833 NaN    2.833 2.833 1        
+compute_ruptures   2.681 NaN    2.681 2.681 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               2.854     0.0       1     
-total compute_ruptures         2.833     0.0       1     
-reading composite source model 0.010     0.0       1     
-store source_info              0.006     0.0       1     
-saving ruptures                0.005     0.0       1     
-setting event years            0.002     0.0       1     
-making contexts                0.001     0.0       3     
-reading site collection        4.435E-05 0.0       1     
+managing sources               2.700     0.0       1     
+total compute_ruptures         2.681     0.062     1     
+reading composite source model 0.011     0.0       1     
+store source_info              0.005     0.0       1     
+saving ruptures                0.004     0.0       1     
+making contexts                0.002     0.0       3     
+setting event years            0.001     0.0       1     
+reading site collection        5.770E-05 0.0       1     
 ============================== ========= ========= ======

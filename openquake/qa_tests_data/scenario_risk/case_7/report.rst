@@ -3,11 +3,11 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2018-01-11T04:31:23
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T10:00:43
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 27, num_imts = 1
+num_sites = 27, num_levels = 8
 
 Parameters
 ----------
@@ -66,10 +66,10 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   2         2         
 2        1.000 0.0    1   1   4         4         
-3        1.000 0.0    1   1   5         5         
 4        1.000 0.0    1   1   16        16        
+3        1.000 0.0    1   1   5         5         
+1        1.000 0.0    1   1   2         2         
 *ALL*    1.000 0.0    1   1   27        27        
 ======== ===== ====== === === ========= ==========
 
@@ -78,9 +78,9 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.036     0.0       1     
-assoc_assets_sites      0.016     0.0       2     
-reading exposure        0.008     0.0       1     
-building epsilons       4.756E-04 0.0       1     
-reading site collection 4.864E-05 0.0       1     
+building riskinputs     0.066     0.0       1     
+assoc_assets_sites      0.009     0.0       2     
+reading exposure        0.005     0.0       1     
+building epsilons       5.453E-04 0.0       1     
+reading site collection 5.293E-05 0.0       1     
 ======================= ========= ========= ======

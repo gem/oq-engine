@@ -18,6 +18,7 @@
 from __future__ import division
 import io
 import ast
+import math
 import os.path
 import numbers
 import operator
@@ -38,6 +39,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
+from openquake.calculators import getters
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
@@ -242,20 +244,25 @@ def view_ruptures_per_trt(token, dstore):
     eff_ruptures = 0
     tot_ruptures = 0
     csm_info = dstore['csm_info']
+    oq = dstore['oqparam']
+    num_sites = len(dstore['sitecol'])
+    num_tiles = math.ceil(num_sites / oq.sites_per_tile)
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures
+            er = src_group.eff_ruptures / num_tiles
             if er:
                 num_trts += 1
                 eff_ruptures += er
                 tbl.append(
-                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
+                    (sm.names, src_group.id, trt, er, src_group.tot_ruptures))
             tot_ruptures += src_group.tot_ruptures
     rows = [('#TRT models', num_trts),
             ('#eff_ruptures', eff_ruptures),
             ('#tot_ruptures', tot_ruptures),
             ('#tot_weight', csm_info.tot_weight)]
+    if num_tiles > 1:
+        rows.insert(0, ('#tiles', num_tiles))
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -445,23 +452,6 @@ def view_exposure_info(token, dstore):
     return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 
-@view.add('assetcol')
-def view_assetcol(token, dstore):
-    """
-    Display the exposure in CSV format
-    """
-    assetcol = dstore['assetcol']
-    taxonomies = assetcol.taxonomies
-    header = list(assetcol.array.dtype.names)
-    columns = [None] * len(header)
-    for i, field in enumerate(header):
-        if field == 'taxonomy':
-            columns[i] = taxonomies[assetcol.array[field]]
-        else:
-            columns[i] = assetcol.array[field]
-    return write_csv(io.BytesIO(), [header] + list(zip(*columns)))
-
-
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
@@ -517,7 +507,8 @@ def stats(name, array, *extras):
     :param name: a descriptive string
     :returns: (name, mean, std, min, max, len)
     """
-    return (name, numpy.mean(array), numpy.std(array, ddof=1),
+    std = numpy.nan if len(array) == 1 else numpy.std(array, ddof=1)
+    return (name, numpy.mean(array), std,
             numpy.min(array), numpy.max(array), len(array)) + extras
 
 
@@ -526,9 +517,10 @@ def view_num_units(token, dstore):
     """
     Display the number of units by taxonomy
     """
+    taxo = dstore['assetcol/tagcol/taxonomy'].value
     counts = collections.Counter()
     for asset in dstore['assetcol']:
-        counts[asset.taxonomy] += asset.number
+        counts[taxo[asset.taxonomy]] += asset.number
     data = sorted(counts.items())
     data.append(('*ALL*', sum(d[1] for d in data)))
     return rst_table(data, header=['taxonomy', 'num_units'])
@@ -539,6 +531,7 @@ def view_assets_by_site(token, dstore):
     """
     Display statistical information about the distribution of the assets
     """
+    taxonomies = dstore['assetcol/tagcol/taxonomy'].value
     assets_by_site = dstore['assetcol'].assets_by_site()
     data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
     num_assets = AccumDict()
@@ -547,7 +540,7 @@ def view_assets_by_site(token, dstore):
             assets, operator.attrgetter('taxonomy')).items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
-        data.append(stats(taxo, val, val.sum()))
+        data.append(stats(taxonomies[taxo], val, val.sum()))
     if len(num_assets) > 1:  # more than one taxonomy, add a summary
         n_assets = numpy.array([len(assets) for assets in assets_by_site])
         data.append(stats('*ALL*', n_assets, n_assets.sum()))
@@ -561,7 +554,7 @@ def view_required_params_per_trt(token, dstore):
     """
     csm_info = dstore['csm_info']
     tbl = []
-    for grp_id, trt in sorted(csm_info.grp_trt().items()):
+    for grp_id, trt in sorted(csm_info.grp_by("trt").items()):
         gsims = csm_info.gsim_lt.get_gsims(trt)
         maker = ContextMaker(gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
@@ -626,8 +619,7 @@ def view_task(token, dstore):
     i = int(token.split(':')[1])
     taskno, weight, duration = data[i]
     arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
-    st = [stats('nsites', arr['nsites']),
-          stats('weight', arr['weight'])]
+    st = [stats('nsites', arr['nsites']), stats('weight', arr['weight'])]
     sources = dstore['task_info/task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
     res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
@@ -669,7 +661,7 @@ def view_flat_hcurves(token, dstore):
     """
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
-    mean = calc.PmapGetter(dstore).get_mean()
+    mean = getters.PmapGetter(dstore).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
@@ -689,7 +681,7 @@ def view_flat_hmaps(token, dstore):
     assert oq.poes
     nsites = len(dstore['sitecol'])
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    mean = calc.PmapGetter(dstore).get_mean()
+    mean = getters.PmapGetter(dstore).get_mean()
     hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
     array = calc.convert_to_array(hmaps, nsites, pdic)
     res = numpy.zeros(1, array.dtype)
@@ -770,3 +762,18 @@ def view_elt(token, dstore):
         else:
             tbl.append([0.] * len(header))
     return rst_table(tbl, header)
+
+
+@view.add('pmap')
+def view_pmap(token, dstore):
+    """
+    Display the mean ProbabilityMap associated to a given source group name
+    """
+    name = token.split(':')[1]  # called as pmap:name
+    pmap = {}
+    pgetter = getters.PmapGetter(dstore)
+    for grp, dset in dstore['poes'].items():
+        if dset.attrs['name'] == name:
+            pmap = pgetter.get_mean(grp)
+            break
+    return str(pmap)

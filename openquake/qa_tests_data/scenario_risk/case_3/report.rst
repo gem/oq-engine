@@ -3,11 +3,11 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     3,085,599,105      
-date           2018-01-11T04:31:22
-engine_version 2.9.0-git3c583c4   
+date           2018-02-19T10:00:41
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
-num_sites = 4, num_imts = 3
+num_sites = 4, num_levels = 15
 
 Parameters
 ----------
@@ -73,8 +73,8 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-RC       1.000 NaN    1   1   1         1         
 RM       1.000 NaN    1   1   1         1         
+RC       1.000 NaN    1   1   1         1         
 W        1.000 0.0    1   1   2         2         
 *ALL*    1.000 0.0    1   1   4         4         
 ======== ===== ====== === === ========= ==========
@@ -85,9 +85,9 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 saving gmfs             0.031     0.0       1     
-building riskinputs     0.020     0.0       1     
-reading exposure        0.007     0.0       1     
-computing gmfs          0.006     0.0       1     
-building epsilons       6.943E-04 0.0       1     
+building riskinputs     0.023     0.0       1     
+computing gmfs          0.005     0.0       1     
+reading exposure        0.003     0.0       1     
+building epsilons       6.871E-04 0.0       1     
 reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

@@ -6,18 +6,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -48,13 +48,14 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface import complex_fault, simple_fault
 from openquake.hmtk.faults.fault_models import (SimpleFaultGeometry,
-                                      ComplexFaultGeometry)
+                                                ComplexFaultGeometry)
 
 
 class TestSimpleGeometry(unittest.TestCase):
     '''
     Tests the :class: openquake.hmtk.fault.fault_geometries.SimpleFaultGeometry
     '''
+
     def setUp(self):
         '''
         Create a simple fault of known length and downdip width
@@ -114,6 +115,7 @@ class TestComplexFaultGeometry(unittest.TestCase):
     Tests the:w implementation of the :class:
     openquake.hmtk.faults.fault_geometries.ComplexFaultGeometry
     '''
+
     def setUp(self):
         '''
         Creates a complex fault typology

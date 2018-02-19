@@ -146,7 +146,8 @@ class Type2RecurrenceModel(BaseRecurrenceModel):
         """
         return ((dbar - bbar) / bbar) * (slip / beta) *\
             np.exp(-(dbar / 2.) * mmax)
-        
+
+
 class Type3RecurrenceModel(BaseRecurrenceModel):
     '''
     Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as
@@ -219,6 +220,7 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
         Activity rates for magnitude in the range mmin to mmax in steps of
         bin_width
     '''
+
     def setUp(self, mfd_conf):
         '''
         Input core configuration parameters as specified in the

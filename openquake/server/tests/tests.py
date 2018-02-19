@@ -38,7 +38,6 @@ from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
-from openquake.commands.abort import abort
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -157,12 +156,27 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(len(got['array']), 0)  # there are 0 assets on site 0
         self.assertEqual(resp.status_code, 200)
 
+        # check asset_tags
+        resp = self.c.get(extract_url + 'asset_tags')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertEqual(len(got['taxonomy']), 7)
+
         # check avg_losses-rlzs
         resp = self.c.get(
             extract_url + 'agglosses/structural?taxonomy=W-SLFB-1')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
+        self.assertEqual(resp.status_code, 200)
+
+        # check *-aggregation
+        resp = self.c.get(
+            extract_url + 'agglosses/structural?taxonomy=*')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertEqual(len(got['tags']), 6)  # expected 6 taxonomies
+        self.assertEqual(len(got['array']), 6)  # expected 6 aggregates
         self.assertEqual(resp.status_code, 200)
 
         # TODO: check aggcurves
@@ -179,10 +193,10 @@ class EngineServerTestCase(unittest.TestCase):
         job_id = self.postzip('classical.zip')
         self.wait()
 
-        # check that we get the expected outputs
+        # check that we get the expected 5 outputs
+        # fullreport, hcurves, hmaps, realizations, sourcegroups
         results = self.get('%s/results' % job_id)
-        self.assertEqual(['fullreport', 'hcurves', 'hmaps', 'realizations',
-                          'sourcegroups'], [r['name'] for r in results])
+        self.assertEqual(len(results), 5)
 
         # check the filename of the hmaps
         hmaps_id = results[2]['id']
@@ -202,11 +216,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_abort(self):
-        raise unittest.SkipTest('abort does not work with zmq')
-        job_id = self.postzip('archive_ok.zip')
-        time.sleep(1)  # give time
-        abort(job_id)
-        self.wait()
+        resp = self.c.post('/v1/calc/0/abort')  # 0 is a non-existing job
+        print(resp.content.decode('utf8'))
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
