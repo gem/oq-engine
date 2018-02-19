@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Improved the .rst reports for classical calculations with tiling
   * Reduced the data transfer in the event based risk calculator by
     reading the event IDs directly from the workers
   * Integrated the gmf_ebrisk calculator inside the event based calculator
