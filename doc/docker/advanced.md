@@ -1,10 +1,8 @@
 # Docker advanced options
 
-
 ## Authentication support
 
 Authentication support for the WebUI/API can be enabled passing the `LOCKDOWN` environment variable to the Docker container; it can be set to any value:
-
 
 ### Single container 
 
