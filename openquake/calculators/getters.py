@@ -412,7 +412,10 @@ class LossRatiosGetter(object):
 
 def get_ruptures_by_grp(dstore, slice_=slice(None)):
     """
-    Extracts the ruptures of the given grp_id
+    Extracts the ruptures corresponding to the given slice. If missing,
+    extract all ruptures.
+
+    :returns: a dictionary grp_id -> list of EBRuptures
     """
     if slice_.stop is None:
         n = len(dstore['ruptures']) - (slice_.start or 0)
