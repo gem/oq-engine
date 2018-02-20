@@ -11,28 +11,28 @@ Hazard
 
 The problem of slow tasks has been an issue with the engine from the
 very beginning. This release does not solve the problem, but features
-the biggest improvement we ever made. The task distribution has been
+the biggest improvement ever made. The task distribution has been
 improved so much that we can affort to generate 40% less tasks
 than in the previous release and still have less slow tasks than
 before. This is important in large scale computations, where data
-transfer is an issue and producing less tasks helps a lot.
+transfer is an issue and producing less tasks improves the performance.
 
 Moreover, we solved the issue of the engine producing not enough tasks
 in some situations (for instance classical calculation with few sites,
 or event based hazard calculations with few sources). The "few tasks"
-issue means wasting of computation power, i.e. not using all of the
+issue meant wasting of computation power, i.e. not using all of the
 available cores.
 
-The improvement was possible by refining the source
+The improvement of the task distribution was possible by refining the source
 weighting algorithm and by splitting the area sources before the
 prefiltering, thus getting better upfront estimates of the
 computational size of a task.
 
 The prefiltering mechanism itself has been improved and we fixed a bug
 affecting sites around the international date line: the prefiltering
-with rtree with incorrectly discarding relevant sources. The bug was
-introduced several releases ago and discovered by our users from
-New Zealand.
+with (rtree)[http://toblerity.org/rtree/] was incorrectly discarding
+relevant sources. The bug was introduced several releases ago and
+discovered by our users from New Zealand.
 
 We reduced substantially (in a SHARE calculation by a factor of 170!)
 the data transfer when performing hazard statistics in postprocessing.
@@ -51,13 +51,13 @@ still not complete, for instance you cannot export ruptures with gridded
 surfaces, but we are working on it.
 
 We introduced a minimum distance concept for Ground Motion Prediction
-Equation. The issue is the GMPEs have a range of validity, and in
-particular you cannot trust them on sites too close to the seismic
-source. By specifying the minimum distance it is possible to cut off
-the value of the generated ground motion field: for sites below the
-minimum distance the GMF is cut off at the maximum value. It is
-possible to specify a minimum distance for each GSIM by updating the
-gsim logic tree file. Here is an example of how it would look like:
+Equation. The GMPEs have a range of validity, and you cannot trust
+them on sites too close to the seismic source. By specifying the
+minimum distance it is possible to cut off the value of the generated
+ground motion field: for sites below the minimum distance the GMF is
+cut off at the maximum value. It is possible to specify a minimum
+distance (in km) for each GSIM by updating the gsim logic tree file. Here is
+an example of how it would look like:
 
 ```xml
               <logicTreeBranch branchID="b1">
@@ -82,8 +82,9 @@ Graeme Weatherill contributed the GMPEs of Bommer et al. (2009) and
 Afshari & Stewart (2016) as well as a fix to the ASK14 GMPE, which was failing
 in the case of small magnitudes (< 4.4) and long periods (> 5).
 The fix is the same used by the original authors of the GMPE.
-Graeme also controbuted a comprehensive suite of NGA East ground motion models
-for central and eastern United States
+
+Graeme also contributed a comprehensive suite of NGA East ground motion models
+for central and eastern United States.
 
 We added the Yu et al. (2013) GMPEs together with Changlong Li.
 
@@ -104,7 +105,7 @@ Risk
 The biggest improvement on the risk side is in the event based
 calculator, which is now able to use precomputed ground motion fields,
 a feature that before was available only in the experimental
-gmf_ebrisk calculator. The net effect is a huge improvement in the
+`gmf_ebrisk` calculator. The net effect is a huge improvement in the
 performance of the calculator, so much that now the suggested strategy
 to run large event based risk calculation is to precompute the ground
 motion fields, provided you have enough disk space. There were also a
@@ -127,8 +128,8 @@ plugin. We will make any effort to maintain this feature even in
 future releases.
 
 The other big improvement on the risk side was the support for CSV
-exposures. The support is not complete and we are not supporting all
-the features of XML exposures yet, however we already support the most
+exposures. The support is not complete yet, and we are not supporting all
+the features of XML exposures, however we already support the most
 common cases. The performance is of course better than for XML and we
 were able to import 2 million of assets for California in just 4
 minutes. We had to change the internal storage of the exposure to work
@@ -162,9 +163,9 @@ calculation.
 We fixed a small issue: now when the WebUI is stopped all the calculations
 started by it are automatically killed.
 
-The integration between the plugin and the web tools (taxonomy glossary,
-IPT and TaxTweb has been improved as well); for the new features of the
-plugin please read its release notes.
+The integration between the plugin and the web tools (in particular
+the Input Preparation Toolkit) has been improved as well; for the new
+features of the plugin please read its release notes.
 
 Bug fixes/additional checks
 ------------------------------
@@ -226,7 +227,10 @@ a single calculation, if so desired.
 IT
 ---
 
-We have now specialized packages for clusters.
+We have specialized packages for clusters. The packages meant for the controller
+node includes rabbitmq and celery, which are missing in the packages meant for
+the worker nodes. Before we were installing rabbitmq and celery even when not
+needed.
 
 It is possible to specify a `custom_tmp` variable in the openquake.cfg file
 to configure a custom path for the temporary directory. This is useful in
@@ -248,15 +252,15 @@ Deprecations/removals
 ---------------------
 
 Since the GMF-reading feature has been implemented in
-the core calculator, the gmf_ebrisk calculator is gone.
+the core calculator, the `gmf_ebrisk` calculator is gone.
 
 The obsolete hazard GeoJSON exporters, deprecated months ago,
-have been finally removed. The right way to convert hazard outputs
+have been removed. The right way to convert hazard outputs
 into geospatial data is to use the QGIS plugin.
 
 We deprecated the function `openquake.hazardlib.nrml.parse`, now superseded
 by the function `openquake.hazardlib.nrml.to_python`. This is of interest
-only to people using hazardlib from Python.
+only to people using `hazardlib` from Python.
 
 The ability to run two .ini files together (with the command
 `oq engine --run job_h.ini,job_r.ini`) has been removed, since it could
@@ -266,16 +270,17 @@ Python 3 migration
 ------------------
 
 All the installers provided by GEM (for Linux, Windows, macOS), all
-the virtual machines and all the Linux packages (CentOS, Ubuntu) are
-now based on Python 3.5. Python 2.7 has been already dismissed
-internally at GEM. Still you can install manually the engine with
-Python 2.7 and it will work, but this is the last version to guarantee
-compatibility with Python 2. Starting with the next version (3.0) the
-engine will require at least Python 3.5 to work. The change has no
-effect on people using the engine as a tool since the right Python is
-already included in our installers/packages, but power users
-developing their own tools/libraries based on the engine will have to
-migrate their scripts to Python 3. If your scripts do not import engine
-libraries directly but they only perform calls to the WebAPI they will
-keep working of course. This is way the QGIS plugin is still working with
-engine, even if the plugin itself is using Python 2.7.
+the virtual machines, all the Linux packages (CentOS, Ubuntu) and the
+docker containers are now based on Python 3.5. Python 2.7 has been
+already dismissed internally at GEM. Still, you can install manually
+the engine with Python 2.7 and it will work, but this is the last
+version to guarantee compatibility with Python 2. Starting with the
+next version (3.0) the engine will require at least Python 3.5 to
+work. The change has no effect on people using the engine as a tool
+since the right Python is already included in our installers/packages,
+but power users developing their own tools/libraries based on the
+engine will have to migrate their scripts to Python 3. If your scripts
+do not import engine libraries directly but they only perform calls to
+the WebAPI they will keep working of course. This is why the QGIS
+plugin is still working with engine, even if the plugin itself is
+using Python 2.7.
