@@ -727,7 +727,10 @@ deps_list() {
     done
     IFS="$old_ifs"
 
-    echo "$out_list" | sed "s/\b$GEM_DEB_PACKAGE\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g"
+    echo "$out_list" | \
+        sed "s/\b${GEM_DEB_PACKAGE}-master\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g" | \
+        sed "s/\b${GEM_DEB_PACKAGE}-worker\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g" | \
+        sed "s/\b${GEM_DEB_PACKAGE}\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g"
 
     return 0
 }
