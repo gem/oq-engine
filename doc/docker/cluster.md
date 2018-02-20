@@ -1,9 +1,5 @@
 # Docker cluster deployment
 
-- [Introduction](../installing/docker.md)
-- [Single node deployment](single.md)
-- [Advanced options](advanced.md)
-
 ## Cluster deployment
 
 For a clustered multi node deployment an orchestrator like [Kubernetes](https://kubernetes.io/) or [Swarm](https://docs.docker.com/engine/swarm/) is recommended.
@@ -47,6 +43,13 @@ $ docker run -d --network=oq-cluster-net --name oq-cluster-master -p8800:8800 op
 ```bash
 $ docker run -d --network=oq-cluster-net --name oq-cluster-worker_1 openquake/engine-worker
 ```
+
+### Docker
+
+- [Introduction](../installing/docker.md)
+- [Single node deployment](single.md)
+- [Advanced options](advanced.md)
+- [Build from sources](https://github.com/gem/oq-builders/tree/master/oq-docker#build-openquake-docker-images)
 
 ***
 
