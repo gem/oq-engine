@@ -19,8 +19,8 @@ transfer is an issue and producing fewer tasks improves the performance.
 
 Moreover, we solved the issue of the engine not producing adequate tasks
 in some situations, for instance classical PSHA calculations with few sites,
-or event based hazard calculations with few sources. The "inadequate tasks"
-issue meant wasting of computation power, i.e. not using all of the
+or event based hazard calculations with few sources. The "inadequate number of
+tasks" issue meant wasting of computation power, i.e. not using all of the
 available cores.
 
 The improvement of the task distribution was made possible by refining 
