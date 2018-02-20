@@ -79,16 +79,21 @@ Hazardlib/HMTK
 ---------------
 
 [Graeme Weatherill](https://github.com/g-weatherill) contributed the GMPEs of 
-[Bommer et al. (2009) and Afshari & Stewart (2016)](https://github.com/gem/oq-engine/pull/3379)
-as well as a [fix to the ASK14 GMPE](https://github.com/gem/oq-engine/pull/3316),
-which was failing in the case of small magnitudes (< 4.4) and long periods (> 5).
-The fix is the same used by the original authors of the GMPE.
+[Bommer et al. (2009) and Afshari & Stewart (2016)]
+(https://github.com/gem/oq-engine/pull/3379)
+as well as a [fix to the ASK14 GMPE]
+(https://github.com/gem/oq-engine/pull/3316),
+which was failing in the case of small magnitudes (< 4.4) and long periods
+(> 5). The fix is the same used by the original authors of the GMPE.
 
 Graeme also contributed a comprehensive suite of 
 [NGA East ground motion models](https://github.com/gem/oq-engine/pull/3130)
 for central and eastern United States.
 
-We added the [Yu et al. (2013) GMPEs](https://github.com/gem/oq-engine/pull/3428)
+There is a small fix for the Derras 2014 GMPR, for distances below 0.1 km.
+
+We added the [Yu et al. (2013) GMPEs]
+(https://github.com/gem/oq-engine/pull/3428) for China
 together with Changlong Li.
 
 The visualization capabilities of the Hazard Modeller Toolkit (HMTK) have
