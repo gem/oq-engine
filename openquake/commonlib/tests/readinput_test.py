@@ -73,8 +73,6 @@ export_dir = %s
         job_config = general.writetmp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
-[foo]
-bar = baz
 [site]
 sites = 0 0
 site_model_file = %s
@@ -114,8 +112,8 @@ export_dir = %s
                 self.assertEqual((job_config, site_model_input), values)
 
                 # checking that warnings work
-                self.assertEqual(warn.call_args[0][0],
-                                 "The parameter 'bar' is unknown, ignoring")
+                self.assertIn('Please remove site_model_file from',
+                              warn.call_args[0][0])
         finally:
             shutil.rmtree(temp_dir)
 

@@ -21,7 +21,7 @@ import logging
 import functools
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, datastore
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats
@@ -181,9 +181,9 @@ class OqParam(valid.ParamSet):
 
         self.check_source_model()
         if self.hazard_precomputed():
-            self.check_missing('site_model', 'error')
-            self.check_missing('gsim_logic_tree', 'error')
-            self.check_missing('source_model_logic_tree', 'error')
+            self.check_missing('site_model', 'warn')
+            self.check_missing('gsim_logic_tree', 'warn')
+            self.check_missing('source_model_logic_tree', 'warn')
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
@@ -670,5 +670,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: True if the hazard is precomputed
         """
-        return (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs
-                or 'hazard_curves' in self.inputs)
+        if 'gmfs' in self.inputs or 'hazard_curves' in self.inputs:
+            return True
+        elif self.hazard_calculation_id:
+            parent = list(datastore.read(self.hazard_calculation_id))
+            return 'gmf_data' in parent or 'poes' in parent
