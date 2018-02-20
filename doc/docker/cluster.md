@@ -16,7 +16,7 @@ More workers can be started via
 ```bash
 $ docker-compose up --scale worker=N
 ```
-
+where `N` is the number of expected worker containers.
 
 ## Deploy an OpenQuake Engine cluster manually
 
