@@ -19,9 +19,9 @@ sudo apt-get update
 
 ### Coming from OpenQuake Engine 1.x
 
-If you are upgrading from OpenQuake Engine release 1.x, before you can process you have to run this command:
+If you are upgrading from OpenQuake Engine release 1.x, before you can proceed you have to run this command:
 ```bash
-sudo apt-get remove --purge python-oq.* python3-oq.*
+sudo apt-get remove --purge python-oq.*
 sudo rm -Rf /usr/openquake
 ```
 
