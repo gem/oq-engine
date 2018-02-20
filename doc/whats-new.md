@@ -229,10 +229,14 @@ a single calculation, if so desired.
 IT
 ---
 
-We have specialized packages for clusters. The packages meant for the controller
-node includes rabbitmq and celery, which are missing in the packages meant for
-the worker nodes. Previously, we were installing rabbitmq and celery even when not
-needed.
+We have specialized packages for clusters even for Ubuntu. The
+packages meant for the controller node includes rabbitmq and celery,
+which are missing in the packages meant for the worker
+nodes. Previously, we were installing rabbitmq and celery even when
+not needed.
+
+Docker containers can be used to deploy a multi-node installation of
+the Engine on a Docker cluster with dynamic scaling.
 
 It is possible to specify a `custom_tmp` variable in the openquake.cfg file
 to configure a custom path for the temporary directory. This is useful in
