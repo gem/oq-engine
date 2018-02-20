@@ -10,7 +10,7 @@ The software and its libraries will be installed under `/opt/openquake`. Data wi
 
 The following command adds the official stable builds package repository:
 ```bash
-dnf copr enable gem/openquake-stable 
+sudo dnf copr enable gem/openquake-stable 
 ```
 
 Then to install the OpenQuake Engine and its libraries run
