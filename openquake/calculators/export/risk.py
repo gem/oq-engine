@@ -31,7 +31,7 @@ from openquake.risklib import scientific
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
-from openquake.commonlib import writers, calc, hazard_writers
+from openquake.commonlib import writers, hazard_writers
 from openquake.commonlib.util import (
     get_assets, compose_arrays, reader)
 
@@ -212,7 +212,7 @@ def export_maxloss_ruptures(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     fnames = []
     for loss_type in oq.loss_dt().names:
-        ebr = calc.get_maxloss_rupture(dstore, loss_type)
+        ebr = getters.get_maxloss_rupture(dstore, loss_type)
         root = hazard_writers.rupture_to_element(ebr.export(mesh))
         dest = dstore.export_path('rupture-%s.xml' % loss_type)
         with open(dest, 'wb') as fh:
@@ -251,7 +251,7 @@ def export_agg_losses_ebr(ekey, dstore):
     rup_data = {}
     event_by_eid = {}  # eid -> event
     # populate rup_data and event_by_eid
-    ruptures_by_grp = calc.get_ruptures_by_grp(dstore)
+    ruptures_by_grp = getters.get_ruptures_by_grp(dstore)
     # TODO: avoid reading the events twice
     for grp_id, events in all_events.items():
         for event in events:
