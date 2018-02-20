@@ -741,7 +741,7 @@ class CompositeSourceModel(collections.Sequence):
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
-        new.weight = weight
+        new.weight = new.info.tot_weight = weight
         new.src_filter = src_filter
         return new
 
@@ -864,13 +864,14 @@ class CompositeSourceModel(collections.Sequence):
         for src in sources:
             self.infos[src.source_id] = SourceInfo(src)
 
-    def split_in_blocks(self, maxweight, sources):
+    def split_in_blocks(self, maxweight, sources, weight=weight):
         """
         Split a set of sources in blocks of weight up to maxweight; heavy
         sources (i.e. with weight > maxweight) are split.
 
         :param maxweight: maximum weight of a block
         :param sources: sources of the same source group
+        :param weight: source weight function
         :yields: blocks of sources of weight around maxweight
         """
         sources.sort(key=weight)

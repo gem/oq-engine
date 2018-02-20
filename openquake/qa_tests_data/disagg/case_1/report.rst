@@ -3,8 +3,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 
 ============== ===================
 checksum32     165,656,583        
-date           2018-02-02T16:04:45
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T10:00:44
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 2, num_levels = 38
@@ -73,6 +73,6 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.055     0.0       1     
-reading site collection        4.125E-05 0.0       1     
+reading composite source model 0.053     0.0       1     
+reading site collection        4.721E-05 0.0       1     
 ============================== ========= ========= ======
