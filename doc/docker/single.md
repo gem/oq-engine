@@ -1,9 +1,5 @@
 # Docker single node deployment
 
-- [Introduction](../installing/docker.md)
-- [Cluster deployment](cluster.md)
-- [Advanced options](advanced.md)
-
 Pull an image from Docker Hub (see [available-tags](#available-tags)):
 
 ```bash
@@ -68,6 +64,13 @@ $ docker rmi openquake/<imagename>[:TAG]
 ```
 
 You can print the list of containers and images using `$ docker ps -a` and `$ docker images`. For more details please refer to the [official Docker documentation](https://docs.docker.com/engine/).
+
+### Docker
+
+- [Introduction](../installing/docker.md)
+- [Cluster deployment](cluster.md)
+- [Advanced options](advanced.md)
+- [Build from sources](https://github.com/gem/oq-builders/tree/master/oq-docker#build-openquake-docker-images)
 
 ***
 
