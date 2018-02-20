@@ -3,8 +3,8 @@ Scenario Damage
 
 ============== ===================
 checksum32     272,505,614        
-date           2018-02-02T16:02:35
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T09:58:10
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 1, num_levels = 26
@@ -73,7 +73,7 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 NaN    1   1   1         1         
+Wood     1.000 NaN    1   1   1         1         
 ======== ===== ====== === === ========= ==========
 
 Slowest operations
@@ -81,10 +81,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-saving gmfs             0.007     0.0       1     
-building riskinputs     0.003     0.0       1     
+saving gmfs             0.006     0.0       1     
+building riskinputs     0.004     0.0       1     
 reading exposure        0.002     0.0       1     
 computing gmfs          0.002     0.0       1     
 assoc_assets_sites      0.002     0.0       1     
-reading site collection 2.153E-04 0.0       1     
+reading site collection 1.774E-04 0.0       1     
 ======================= ========= ========= ======

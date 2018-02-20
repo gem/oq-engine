@@ -3,8 +3,8 @@ scenario hazard
 
 ============== ===================
 checksum32     2,482,429,138      
-date           2018-02-02T16:02:36
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T09:58:10
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -66,9 +66,9 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   4         4         
-2        1.000 0.0    1   1   2         2         
-3        1.000 NaN    1   1   1         1         
+tax1     1.000 0.0    1   1   4         4         
+tax2     1.000 0.0    1   1   2         2         
+tax3     1.000 NaN    1   1   1         1         
 *ALL*    1.000 0.0    1   1   7         7         
 ======== ===== ====== === === ========= ==========
 

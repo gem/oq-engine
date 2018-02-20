@@ -35,9 +35,9 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, readinput, source
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
-from openquake.calculators.getters import GmfGetter
+from openquake.calculators.getters import GmfGetter, EBRupture, RuptureGetter
 from openquake.calculators.classical import (
     ClassicalCalculator, saving_sources_by_task)
 
@@ -173,8 +173,8 @@ def _build_eb_ruptures(
                 # set a bit later, in set_eids
                 events.append((0, src.src_group_id, ses_idx, sampleid))
         if events:
-            yield calc.EBRupture(
-                rup, indices, numpy.array(events, calc.event_dt), serial)
+            yield EBRupture(rup, indices, numpy.array(events, calc.event_dt),
+                            serial)
 
 
 def get_events(ebruptures):
@@ -260,7 +260,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm.filter(src_filter)
-        maxweight = csm.get_maxweight(oq.concurrent_tasks, source.MINWEIGHT)
+
+        def weight(src):
+            return src.num_ruptures * src.RUPTURE_WEIGHT
+        maxweight = math.ceil(
+            sum(weight(src) for src in self.csm.get_sources()) /
+            (oq.concurrent_tasks or 1))
         logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
@@ -274,7 +279,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                for block in csm.split_in_blocks(maxweight, sg.sources):
+                for block in csm.split_in_blocks(
+                        maxweight, sg.sources, weight):
                     block.samples = sm.samples
                     yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
@@ -517,7 +523,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for slc in split_in_slices(U, oq.concurrent_tasks or 1):
             getters = []
             for grp_id in rlzs_by_gsim:
-                ruptures = calc.RuptureGetter(parent, slc, grp_id)
+                ruptures = RuptureGetter(parent, slc, grp_id)
                 if parent is self.datastore:  # not accessible parent
                     ruptures = list(ruptures)
                     if not ruptures:
