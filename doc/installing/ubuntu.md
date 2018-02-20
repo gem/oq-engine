@@ -22,7 +22,7 @@ If you want to install a **nightly build** please read the guide about installin
 
 Then to install the OpenQuake Engine and its libraries run
 ```bash
-sudo apt-get install python-oq-engine
+sudo apt-get install python3-oq-engine
 ```
 
 ### Upgrade from a previous release
@@ -31,7 +31,7 @@ As soon as a new version of the OpenQuake Engine and libraries are released you 
 
 ```bash
 sudo apt update
-sudo apt install python-oq-engine
+sudo apt install python3-oq-engine
 ```
 
 If a full upgrade is performed on the system, the OpenQuake software is upgraded to the latest version too:

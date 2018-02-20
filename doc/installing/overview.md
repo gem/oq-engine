@@ -40,7 +40,7 @@ Multi-user is not supported on Windows.
 
 ## Cloud
 
-A [Docker container](docker.md) is available.
+A set [Docker containers](docker.md) is available.
 
 ***
 
