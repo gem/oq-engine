@@ -15,7 +15,7 @@
 
   [Michele Simionato]
   * Fixed a bug in the hazard outputs: they were displayed in the WebUI even
-    they were missing
+    if they were missing
   * Implemented splitting of nonparametric sources
 
   [Marco Pagani]
