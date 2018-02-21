@@ -434,7 +434,8 @@ _builddoc_innervm_run () {
 
     ssh $lxc_ip "rm -f ssh.log"
 
-    ssh $lxc_ip "sudo apt-get update"
+    add_custom_pkg_repo
+
     ssh $lxc_ip "sudo apt-get -y upgrade"
 
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
