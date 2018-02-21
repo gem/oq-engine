@@ -215,7 +215,7 @@ _wait_ssh () {
 
 add_custom_pkg_repo () {
     # install package to manage repository properly
-    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties software-properties-common"
 
     # add custom packages
     if ! ssh $lxc_ip ls repo/custom_pkgs >/dev/null ; then
@@ -326,15 +326,9 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
-    # install package to manage repository properly
-    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
-    # add custom packages
-    ssh $lxc_ip mkdir -p "repo"
-    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    add_custom_pkg_repo
 
-    ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
     if [ -f _jenkins_deps_info ]; then
