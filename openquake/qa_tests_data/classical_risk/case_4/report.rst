@@ -3,8 +3,8 @@ Classical Hazard-Risk QA test 4
 
 ============== ===================
 checksum32     2,439,591,035      
-date           2018-02-02T16:02:30
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-19T09:58:02
+engine_version 2.9.0-gitb536198   
 ============== ===================
 
 num_sites = 6, num_levels = 19
@@ -75,19 +75,19 @@ source_model.xml 0      Active Shallow Crust 4,195        91,021
 
 Informational data
 ------------------
-======================= ===================================================================================
-count_ruptures.received tot 14.98 KB, max_per_task 1.87 KB                                                 
-count_ruptures.sent     sources 69.56 KB, srcfilter 10.69 KB, param 5.89 KB, monitor 3.43 KB, gsims 2.32 KB
-hazard.input_weight     9102.1                                                                             
-hazard.n_imts           1                                                                                  
-hazard.n_levels         19                                                                                 
-hazard.n_realizations   2                                                                                  
-hazard.n_sites          6                                                                                  
-hazard.n_sources        39                                                                                 
-hazard.output_weight    114.0                                                                              
-hostname                tstation.gem.lan                                                                   
-require_epsilons        True                                                                               
-======================= ===================================================================================
+======================= ================================================================================
+count_ruptures.received tot 7.24 KB, max_per_task 886 B                                                 
+count_ruptures.sent     sources 75.32 KB, srcfilter 8.75 KB, param 4.82 KB, monitor 2.8 KB, gsims 1.9 KB
+hazard.input_weight     9102.1                                                                          
+hazard.n_imts           1                                                                               
+hazard.n_levels         19                                                                              
+hazard.n_realizations   2                                                                               
+hazard.n_sites          6                                                                               
+hazard.n_sources        39                                                                              
+hazard.output_weight    114.0                                                                           
+hostname                tstation.gem.lan                                                                
+require_epsilons        True                                                                            
+======================= ================================================================================
 
 Exposure model
 --------------
@@ -100,8 +100,8 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   5         5         
-2        1.000 NaN    1   1   1         1         
+W        1.000 0.0    1   1   5         5         
+A        1.000 NaN    1   1   1         1         
 *ALL*    1.000 0.0    1   1   6         6         
 ======== ===== ====== === === ========= ==========
 
@@ -110,25 +110,25 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-231       AreaSource   4,185        0.043     18        279      
-376       AreaSource   2,220        9.077E-04 2         1        
+231       AreaSource   4,185        0.036     1,091     279      
+376       AreaSource   2,220        1.531E-04 2         1        
 95        AreaSource   1,176        0.0       1         0        
-27        AreaSource   1,482        0.0       1         0        
-369       AreaSource   826          0.0       1         0        
-198       AreaSource   760          0.0       1         0        
-10        AreaSource   1,920        0.0       1         0        
-13        AreaSource   1,824        0.0       1         0        
-343       AreaSource   2,926        0.0       1         0        
-298       AreaSource   2,744        0.0       1         0        
-161       AreaSource   552          0.0       1         0        
-299       AreaSource   710          0.0       1         0        
-270       AreaSource   7,837        0.0       1         0        
-291       AreaSource   2,350        0.0       1         0        
-137       AreaSource   2,072        0.0       1         0        
+166       AreaSource   559          0.0       1         0        
 125       AreaSource   8,274        0.0       1         0        
-253       AreaSource   3,058        0.0       1         0        
-257       AreaSource   2,850        0.0       1         0        
-325       AreaSource   3,934        0.0       1         0        
+198       AreaSource   760          0.0       1         0        
+132       AreaSource   4,131        0.0       1         0        
+45        AreaSource   960          0.0       1         0        
+299       AreaSource   710          0.0       1         0        
+369       AreaSource   826          0.0       1         0        
+177       AreaSource   846          0.0       1         0        
+184       AreaSource   780          0.0       1         0        
+270       AreaSource   7,837        0.0       1         0        
+288       AreaSource   2,430        0.0       1         0        
+343       AreaSource   2,926        0.0       1         0        
+90        AreaSource   285          0.0       1         0        
+20        AreaSource   1,256        0.0       1         0        
+127       AreaSource   2,940        0.0       1         0        
+298       AreaSource   2,744        0.0       1         0        
 8         AreaSource   4,832        0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
@@ -137,7 +137,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.044     39    
+AreaSource   0.037     39    
 ============ ========= ======
 
 Duplicated sources
@@ -148,7 +148,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.006 0.001  0.003 0.007 11       
+count_ruptures     0.007 0.004  0.003 0.014 9        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -156,12 +156,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.060     0.0       1     
-managing sources               0.193     0.0       1     
-total count_ruptures           0.067     1.625     11    
-store source_info              0.004     0.0       1     
+reading composite source model 4.054     0.0       1     
+managing sources               3.099     0.0       1     
+total count_ruptures           0.066     2.270     9     
+store source_info              0.006     0.0       1     
 reading exposure               0.002     0.0       1     
-aggregate curves               3.834E-04 0.0       11    
-saving probability maps        2.670E-05 0.0       1     
-reading site collection        5.722E-06 0.0       1     
+aggregate curves               2.265E-04 0.0       9     
+saving probability maps        4.029E-05 0.0       1     
+reading site collection        6.199E-06 0.0       1     
 ============================== ========= ========= ======

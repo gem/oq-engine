@@ -71,8 +71,8 @@ class SourceModel(object):
     @property
     def name(self):
         """
-	Compact representation for the names
-	"""
+        Compact representation for the names
+        """
         names = self.names.split()
         if len(names) == 1:
             return names[0]
@@ -83,6 +83,9 @@ class SourceModel(object):
 
     @property
     def num_sources(self):
+        """
+        Number of sources contained in the source model
+        """
         return sum(len(sg) for sg in self.src_groups)
 
     def get_skeleton(self):

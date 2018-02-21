@@ -747,7 +747,7 @@ class CompositeSourceModel(collections.Sequence):
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
-        new.weight = weight
+        new.weight = new.info.tot_weight = weight
         new.src_filter = src_filter
         return new
 
