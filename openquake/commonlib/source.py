@@ -28,8 +28,7 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import (
-    groupby, group_array, block_splitter, writetmp, AccumDict)
+from openquake.baselib.general import groupby, group_array, writetmp, AccumDict
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.hazardlib.gsim.gsim_table import GMPETable
@@ -46,6 +45,29 @@ F32 = numpy.float32
 weight = operator.attrgetter('weight')
 rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
                       ('gsims', 'S100'), ('weight', F32)])
+
+
+def split_sources(srcs):
+    """
+    :param srcs: sources
+    :returns: a list of split sources
+    """
+    sources = []
+    for src in srcs:
+        splits = list(src)
+        sources.extend(splits)
+        if len(splits) > 1:
+            has_serial = hasattr(src, 'serial')
+            start = 0
+            for split in splits:
+                split.src_group_id = src.src_group_id
+                split.num_ruptures = split.count_ruptures()
+                split.ngsims = src.ngsims
+                if has_serial:
+                    nr = split.num_ruptures
+                    split.serial = src.serial[start:start + nr]
+                    start += nr
+    return sources
 
 
 def gsim_names(rlz):
@@ -675,16 +697,9 @@ class CompositeSourceModel(collections.Sequence):
         """
         for sm in self.source_models:
             for src_group in sm.src_groups:
-                mutex = getattr(src_group, 'src_interdep', None) == 'mutex'
-                sources = []
-                for src in src_group:
-                    if not mutex:
-                        # set .serial if needed
-                        sources.extend(source.split_source(src))
-                    else:
-                        # mutex sources cannot be split
-                        sources.append(src)
-                src_group.sources = sources
+                if getattr(src_group, 'src_interdep', None) != 'mutex':
+                    # mutex sources cannot be split
+                    src_group.sources = split_sources(src_group)
 
     def grp_by_src(self):
         """
