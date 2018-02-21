@@ -72,7 +72,7 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 
 To uninstall the OpenQuake Engine and all its components run
 ```bash
-sudo apt-get remove python-oq-*
+sudo apt-get remove python-oq-* python3-oq-*
 ```
 If you want to remove all the dependencies installed by the OpenQuake Engine you may then use the apt `autoremove` function and run
 

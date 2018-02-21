@@ -1,3 +1,9 @@
+  [Matteo Nastasi]
+  * Debian package moved to Python 3.5
+
+  [Graeme Weatherill]
+  * Small bug fix for Derras et al (2014) GMPE when Rjb = 0.0
+
   [Michele Simionato]
   * Improved the .rst reports for classical calculations with tiling
   * Reduced the data transfer in the event based risk calculator by
@@ -131,7 +137,7 @@
   * Minor modification of check_gsim functions to permit instantiated classes
     to be passed
 
-python-oq-engine (2.8.0-0~precise01) precise; urgency=low
+python3-oq-engine (2.8.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
   * `iml_disagg` and `poes_disagg` cannot coexist in the job.ini file
