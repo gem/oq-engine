@@ -1144,6 +1144,7 @@ def _extract_eids_sitecounts(gmfset):
     return numpy.array(sorted(eids), numpy.uint64), counter
 
 
+@deprecated('Use the .csv format for the GMFs instead')
 def get_scenario_from_nrml(oqparam, fname):
     """
     :param oqparam:
