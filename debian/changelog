@@ -1,6 +1,9 @@
   [Matteo Nastasi]
   * Debian package moved to Python 3.5
 
+  [Graeme Weatherill]
+  * Small bug fix for Derras et al (2014) GMPE when Rjb = 0.0
+
   [Michele Simionato]
   * Improved the .rst reports for classical calculations with tiling
   * Reduced the data transfer in the event based risk calculator by
