@@ -388,7 +388,7 @@ class EbriskCalculator(base.RiskCalculator):
                 self.ruptures_by_grp[grp].sort(
                     key=operator.attrgetter('serial'))
         else:  # there is a parent calculation
-            self.ruptures_by_grp = calc.RuptureGetter.from_(
+            self.ruptures_by_grp = getters.RuptureGetter.from_(
                 self.datastore.parent)
         num_rlzs = 0
         allres = []
