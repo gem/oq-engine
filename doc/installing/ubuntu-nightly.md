@@ -19,7 +19,7 @@ sudo apt-get update
 
 Then to install the OpenQuake Engine and its libraries first remove stable packages and then install nightly build packages
 ```bash
-sudo apt-get remove --purge python3-oq-.*
+sudo apt-get remove --purge python-oq-.* python3-oq-.*
 sudo apt-get install python3-oq-engine
 ```
 
