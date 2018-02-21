@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  Deprecated the NRML format for the GMFs
+
   [Matteo Nastasi]
   * Debian package moved to Python 3.5
 
