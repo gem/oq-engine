@@ -165,6 +165,7 @@ class PSHACalculator(base.HazardCalculator):
             tiles = [self.sitecol]
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
+        totweight = 0
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
@@ -172,6 +173,7 @@ class PSHACalculator(base.HazardCalculator):
                 logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
                 src_filter = SourceFilter(tile, oq.maximum_distance)
                 csm = self.csm.filter(src_filter)
+                totweight += csm.weight
             if tile_i == 1:  # set it only on the first tile
                 maxweight = csm.get_maxweight(tasks_per_tile, minweight)
                 if maxweight == minweight:
@@ -195,6 +197,7 @@ class PSHACalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+        self.csm.info.tot_weight = totweight
 
     def post_execute(self, pmap_by_grp_id):
         """
