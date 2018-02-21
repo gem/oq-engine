@@ -29,23 +29,3 @@ from openquake.hazardlib.source.complex_fault import (
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 from openquake.hazardlib.source.multi import MultiPointSource
-
-
-def split_source(src):
-    """
-    :param src: a source to split
-    :returns: a list of split sources
-    """
-    splits = list(src)
-    if len(splits) > 1:
-        has_serial = hasattr(src, 'serial')
-        start = 0
-        for split in splits:
-            split.src_group_id = src.src_group_id
-            split.num_ruptures = split.count_ruptures()
-            split.ngsims = src.ngsims
-            if has_serial:
-                nr = split.num_ruptures
-                split.serial = src.serial[start:start + nr]
-                start += nr
-    return splits
