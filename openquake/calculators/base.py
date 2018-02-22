@@ -340,8 +340,11 @@ class HazardCalculator(BaseCalculator):
         if some assets were discarded or if there were missing assets
         for some sites.
         """
-        if 'assetcol' in self.datastore.parent:
-            sitecol = sitecol.within(wkt.loads(self.oqparam.region_constraint))
+        if ('assetcol' in self.datastore.parent and
+                not hasattr(self, 'assetcol')):
+            self.assetcol = self.datastore.parent['assetcol']
+            region = wkt.loads(self.oqparam.region_constraint)
+            sitecol = sitecol.within(region)
         all_sids = sitecol.complete.sids
         sids = set(sitecol.sids)
         asset_hazard_distance = self.oqparam.asset_hazard_distance
@@ -362,20 +365,24 @@ class HazardCalculator(BaseCalculator):
                 'asset_hazard_distance of %s km' % asset_hazard_distance)
         mask = numpy.array([sid in assets_by_sid for sid in all_sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in all_sids]
-        return sitecol.complete.filter(mask), asset.AssetCollection(
+        assetcol = asset.AssetCollection(
             self.assetcol.asset_refs,
             assets_by_site,
-            self.exposure.tagcol,
-            self.exposure.cost_calculator,
+            self.assetcol.tagcol,
+            self.assetcol.cost_calculator,
             self.oqparam.time_event,
             occupancy_periods=hdf5.array_of_vstr(
-                sorted(self.exposure.occupancy_periods)))
+                sorted(self.assetcol.occupancy_periods)))
+        return sitecol.complete.filter(mask), assetcol
 
     def count_assets(self):
         """
         Count how many assets are taken into consideration by the calculator
         """
-        return len(self.assetcol)
+        try:
+            return len(self.assetcol)
+        except AttributeError:
+            return len(self.datastore['assetcol/array'])
 
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
@@ -524,7 +531,7 @@ class HazardCalculator(BaseCalculator):
         Associate the exposure assets to the hazard sites and redefine
         the .sitecol and .assetcol attributes.
         """
-        if haz_sitecol is not None and haz_sitecol != self.sitecol:
+        if haz_sitecol is not None:
             num_assets = self.count_assets()
             with self.monitor('assoc_assets_sites', autoflush=True):
                 self.sitecol, self.assetcol = \
@@ -553,9 +560,9 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol = self.datastore.parent['sitecol']
             self.assoc_assets(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
-        elif oq.job_type == 'risk':
-            raise RuntimeError(
-                'Missing exposure_file in %(job_ini)s' % oq.inputs)
+        elif 'assetcol' in self.datastore.parent:
+            self.load_riskmodel()
+            self.assoc_assets(self.datastore.parent['sitecol'])
         else:  # no exposure
             self.load_riskmodel()
             self.sitecol = haz_sitecol
