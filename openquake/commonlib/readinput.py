@@ -25,12 +25,13 @@ import logging
 import operator
 import tempfile
 import collections
+from urllib.request import urlopen
 import numpy
 from shapely import wkt, geometry
 
 from openquake.baselib.general import groupby, AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
-from openquake.baselib.node import Node, context
+from openquake.baselib.node import Node, context, node_from_xml
 from openquake.baselib import hdf5
 from openquake.hazardlib import (
     calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -43,7 +44,6 @@ from openquake.commonlib import logictree, source, writers
 from openquake.commonlib.riskmodels import get_risk_models
 
 read_nrml.update_validators()
-
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
@@ -1254,3 +1254,109 @@ def get_checksum32(oqparam):
         else:
             raise ValueError('%s does not exist or is not a file' % fname)
     return checksum
+
+
+# ########################## get shakemap ############################## #
+
+SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/grid.xml'
+URL2 = 'http://shakemap.rm.ingv.it/shake/{}/download/uncertainty.xml'
+SHAKEMAP_FIELDS = set(
+    'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSHA10 STDPSA30'
+    .split())
+
+
+def get_m(values, stddevs):
+    m = values / 100.
+    return numpy.log(
+        m ** 2 / numpy.sqrt((m**2 * (numpy.exp(stddevs ** 2) - 1)) + m ** 2))
+
+
+def extract_data(grid_node):
+    """
+    :param grid_node: a Node for an USGS shakemap file
+    :returns: a dictionary shakemap_field -> vector of values
+    """
+    fields = grid_node.getnodes('grid_field')
+    lines = grid_node.grid_data.text.strip().splitlines()
+    rows = [line.split() for line in lines]
+
+    # the indices start from 1, hence the -1 below
+    idx = {f['name']: int(f['index']) - 1 for f in fields
+           if f['name'] in SHAKEMAP_FIELDS}
+    print(idx)
+    out = {name: [] for name in idx}
+    has_sa = False
+    for name in idx:
+        i = idx[name]
+        if name.startswith('PSA'):
+            has_sa = True
+        out[name].append([float(row[i]) for row in rows])
+    if has_sa:
+        dt = numpy.dtype([('PGA', F32), ('SA(0.3)', F32), ('SA(1.0)', F32),
+                          ('SA(3.0)', F32)])
+    else:
+        dt = numpy.dtype([('PGA', F32)])
+    dtlist = [('lon', F32), ('lat', F32), ('val', dt), ('std', dt)]
+    data = numpy.zeros(len(rows), dtlist)
+    data['lon'] = F32(out['LON'])
+    data['lat'] = F32(out['LAT'])
+    data['val']['PGA'] = F32(out['PGA'])
+    data['std']['PGA'] = F32(out['STDPGA'])
+    if has_sa:
+        data['val']['SA(0.3)'] = F32(out['PSA03'])
+        data['val']['SA(1.0)'] = F32(out['PSA10'])
+        data['val']['SA(3.0)'] = F32(out['PSA30'])
+        data['std']['SA(0.3)'] = F32(out['STDPSA03'])
+        data['std']['SA(1.0)'] = F32(out['STDPSA10'])
+        data['std']['SA(3.0)'] = F32(out['STDPSA30'])
+    return data
+
+
+def apply_uncertainty(data, grid_node):
+    fields = list(grid_node.getnodes('grid_field'))
+    assert fields[0]['name'] == 'LON', fields[0]
+    assert fields[1]['name'] == 'LAT', fields[1]
+    assert fields[2]['name'] == 'STDPGA', fields[2]
+    return get_m(data, stddevs)
+
+
+def get_shakemap(shakemap_id):
+    with urlopen(URL1.format(shakemap_id)) as f1:
+        data1 = extract_data(node_from_xml(f1))
+
+    #with urlopen(URL2.format(shakemap_id)) as f2:
+    #    data2 = extract_data(node_from_xml(f2))
+
+
+"""\
+See https://earthquake.usgs.gov/scenario/product/shakemap-scenario/sclegacyshakeout2full_se/us/1465655085705/about_formats.html
+Here is an example of the format
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="us20002926" shakemap_id="us20002926" shakemap_version="9" code_version="3.5.1440" process_timestamp="2015-07-02T22:50:42Z" shakemap_originator="us" map_status="RELEASED" shakemap_event_type="ACTUAL">
+<event event_id="us20002926" magnitude="7.8" depth="8.22" lat="28.230500" lon="84.731400" event_timestamp="2015-04-25T06:11:25UTC" event_network="us" event_description="NEPAL" />
+<grid_specification lon_min="81.731400" lat_min="25.587500" lon_max="87.731400" lat_max="30.873500" nominal_lon_spacing="0.016667" nominal_lat_spacing="0.016675" nlon="361" nlat="318" />
+<event_specific_uncertainty name="pga" value="0.000000" numsta="" />
+<event_specific_uncertainty name="pgv" value="0.000000" numsta="" />
+<event_specific_uncertainty name="mi" value="0.000000" numsta="" />
+<event_specific_uncertainty name="psa03" value="0.000000" numsta="" />
+<event_specific_uncertainty name="psa10" value="0.000000" numsta="" />
+<event_specific_uncertainty name="psa30" value="0.000000" numsta="" />
+<grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="PGA" units="pctg" />
+<grid_field index="4" name="PGV" units="cms" />
+<grid_field index="5" name="MMI" units="intensity" />
+<grid_field index="6" name="PSA03" units="pctg" />
+<grid_field index="7" name="PSA10" units="pctg" />
+<grid_field index="8" name="PSA30" units="pctg" />
+<grid_field index="9" name="STDPGA" units="ln(pctg)" />
+<grid_field index="10" name="URAT" units="" />
+<grid_field index="11" name="SVEL" units="ms" />
+<grid_data>
+81.7314 30.8735 0.44 2.21 3.83 1.82 2.8 1.26 0.53 1 400.758
+81.7481 30.8735 0.47 2.45 3.88 1.99 3.09 1.41 0.52 1 352.659
+81.7647 30.8735 0.47 2.4 3.88 1.97 3.04 1.38 0.52 1 363.687
+81.7814 30.8735 0.52 2.78 3.96 2.23 3.51 1.64 0.5 1 301.17
+</grid_data>
+</shakemap_grid>
+"""
