@@ -728,7 +728,6 @@ def get_exposure(oqparam):
             region = wkt.loads(oqparam.region_constraint)
             sitecol = parent['sitecol'].within(region)
             assetcol = parent['assetcol'].reduce(sitecol.sids)
-            assetcol.asset_refs = parent['asset_refs'].value[sitecol.sids]
             return assetcol
     '''
     return Exposure.read(
@@ -940,6 +939,9 @@ class Exposure(object):
                           self.cost_calculator)
         self.assets.append(ass)
 
+    def __iter__(self):
+        return iter(self.assets)
+
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
                                         len(self.assets))
@@ -952,7 +954,7 @@ def get_sitecol_assetcol(oqparam, exposure):
     :returns:
         the site collection and the asset collection
     """
-    assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
+    assets_by_loc = groupby(exposure, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
