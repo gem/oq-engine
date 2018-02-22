@@ -601,6 +601,7 @@ def get_risk_model(oqparam):
         retro = {}
     return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
 
+
 # ########################### exposure ############################ #
 
 cost_type_dt = numpy.dtype([('name', hdf5.vstr),
@@ -718,8 +719,16 @@ def get_exposure(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        an :class:`Exposure` instance
+        an :class:`Exposure` instance or a compatible AssetCollection
     """
+    if oqparam.hazard_calculation_id:
+        parent = datastore.read(oqparam.hazard_calculation_id)
+        if 'assetcol' in parent:
+            region = wkt.loads(oqparam.region_constraint)
+            sitecol = parent['sitecol'].within(region)
+            assetcol = parent['assetcol'].reduce(sitecol.sids)
+            assetcol.asset_refs = parent['asset_refs'].value[sitecol.sids]
+            return assetcol
     return Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.insured_losses, oqparam.region_constraint,
