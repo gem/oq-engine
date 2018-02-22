@@ -27,6 +27,7 @@ import traceback
 import collections
 from functools import partial
 from datetime import datetime
+from shapely import wkt
 import numpy
 
 from openquake.baselib import (
@@ -339,6 +340,10 @@ class HazardCalculator(BaseCalculator):
         if some assets were discarded or if there were missing assets
         for some sites.
         """
+        if 'assetcol' in self.datastore.parent:
+            sitecol = sitecol.within(wkt.loads(self.oqparam.region_constraint))
+        all_sids = sitecol.complete.sids
+        sids = set(sitecol.sids)
         asset_hazard_distance = self.oqparam.asset_hazard_distance
         siteobjects = geo.utils.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
@@ -348,16 +353,16 @@ class HazardCalculator(BaseCalculator):
             if len(assets):
                 lon, lat = assets[0].location
                 site, distance = siteobjects.get_closest(lon, lat)
-                if distance <= asset_hazard_distance:
+                if site.sid in sids and distance <= asset_hazard_distance:
                     # keep the assets, otherwise discard them
                     assets_by_sid += {site.sid: list(assets)}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % asset_hazard_distance)
-        mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
-        assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        return sitecol.filter(mask), asset.AssetCollection(
+        mask = numpy.array([sid in assets_by_sid for sid in all_sids])
+        assets_by_site = [assets_by_sid.get(sid, []) for sid in all_sids]
+        return sitecol.complete.filter(mask), asset.AssetCollection(
             self.assetcol.asset_refs,
             assets_by_site,
             self.exposure.tagcol,
@@ -523,7 +528,7 @@ class HazardCalculator(BaseCalculator):
             num_assets = self.count_assets()
             with self.monitor('assoc_assets_sites', autoflush=True):
                 self.sitecol, self.assetcol = \
-                    self.assoc_assets_sites(haz_sitecol.complete)
+                    self.assoc_assets_sites(haz_sitecol)
             ok_assets = self.count_assets()
             num_sites = len(self.sitecol)
             logging.warn('Associated %d assets to %d sites, %d discarded',
