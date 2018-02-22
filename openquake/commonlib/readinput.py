@@ -960,10 +960,11 @@ def get_sitecol_assetcol(oqparam, exposure):
     for lonlat in zip(sitecol.lons, sitecol.lats):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
+    operiods = sorted(exposure.occupancy_periods)
     assetcol = asset.AssetCollection(
-        assets_by_site, exposure.tagcol, exposure.cost_calculator,
-        oqparam.time_event, occupancy_periods=hdf5.array_of_vstr(
-            sorted(exposure.occupancy_periods)))
+        exposure.asset_refs, assets_by_site, exposure.tagcol,
+        exposure.cost_calculator, oqparam.time_event,
+        occupancy_periods=hdf5.array_of_vstr(operiods))
     return sitecol, assetcol
 
 
@@ -1155,6 +1156,7 @@ def _extract_eids_sitecounts(gmfset):
     return numpy.array(sorted(eids), numpy.uint64), counter
 
 
+@deprecated('Use the .csv format for the GMFs instead')
 def get_scenario_from_nrml(oqparam, fname):
     """
     :param oqparam:

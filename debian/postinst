@@ -23,11 +23,11 @@ set -e
 # load debconf suite
 . /usr/share/debconf/confmodule
 
-GEM_DEB_PACKAGE="python-oq-engine"
+GEM_DEB_PACKAGE="python3-oq-engine"
 
 LSB_RELEASE=$(lsb_release --codename --short)
 if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" -a "$LSB_RELEASE" != "xenial" ]; then
-    db_input high python-oq-engine/distro_alert || true
+    db_input high python3-oq-engine/distro_alert || true
     db_go
 fi
 
