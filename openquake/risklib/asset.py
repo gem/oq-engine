@@ -367,6 +367,16 @@ class AssetCollection(object):
     def tagnames(self):
         return self.tagcol.tagnames
 
+    def reduce(self, sids):
+        """
+        :returns: a reduced AssetCollection on the given sids
+        """
+        assetcol = object.__new__(self.__class__)
+        vars(assetcol).update(vars(self))
+        assetcol.array = self.array[sids]
+        assetcol.sids = sids
+        return assetcol
+
     def get_aids_by_tag(self):
         """
         :returns: dict tag -> asset ordinals
