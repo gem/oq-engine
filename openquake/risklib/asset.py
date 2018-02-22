@@ -409,6 +409,20 @@ class AssetCollection(object):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
+    def reduce(self, sids):
+        """
+        :returns: a reduced AssetCollection on the given sids
+        """
+        aref = self.asset_refs
+        assets_by_site = self.assets_by_site()[sids]
+        asset_refs = numpy.concatenate(
+            [[aref[a.idx] for a in assets] for assets in assets_by_site])
+        assetcol = self.__class__(asset_refs, assets_by_site, self.tagcol,
+                                  self.cost_calculator, self.time_event,
+                                  self.occupancy_periods)
+        assetcol.sids = sids
+        return assetcol
+
     def values(self, aids=None):
         """
         :param aids: asset indices where to compute the values (None means all)
@@ -481,6 +495,9 @@ class AssetCollection(object):
         self.asset_refs = dic['asset_refs'].value
         self.cost_calculator.tagi = {
             decode(tagname): i for i, tagname in enumerate(self.tagnames)}
+
+    def __repr__(self):
+        return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
     @staticmethod
     def build_asset_array(assets_by_site, tagnames=(), time_event=None):
