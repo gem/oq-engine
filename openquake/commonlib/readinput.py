@@ -721,6 +721,7 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
+    '''
     if oqparam.hazard_calculation_id:
         parent = datastore.read(oqparam.hazard_calculation_id)
         if 'assetcol' in parent:
@@ -729,6 +730,7 @@ def get_exposure(oqparam):
             assetcol = parent['assetcol'].reduce(sitecol.sids)
             assetcol.asset_refs = parent['asset_refs'].value[sitecol.sids]
             return assetcol
+    '''
     return Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.insured_losses, oqparam.region_constraint,
