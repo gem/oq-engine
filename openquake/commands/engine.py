@@ -100,8 +100,7 @@ def del_calculation(job_id, confirmed=False):
 
 @sap.Script
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
-           upgrade_db, db_version, what_if_I_upgrade,
-           run_hazard, run_risk, run,
+           upgrade_db, db_version, what_if_I_upgrade, run,
            list_hazard_calculations, list_risk_calculations,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
@@ -110,7 +109,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     """
     Run a calculation using the traditional command line API
     """
-    if run or run_hazard or run_risk:
+    if run:
         # the logging will be configured in engine.py
         pass
     else:
