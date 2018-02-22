@@ -173,30 +173,12 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         for line in logs.dbcmd(
                 'list_calculations', 'hazard', getpass.getuser()):
             safeprint(line)
-    elif run_hazard is not None:
-        safeprint('WARN: --rh/--run-hazard are deprecated, use --run instead',
-                  file=sys.stderr)
-        log_file = os.path.expanduser(log_file) \
-            if log_file is not None else None
-        run_job(os.path.expanduser(run_hazard), log_level,
-                log_file, exports)
     elif delete_calculation is not None:
         del_calculation(delete_calculation, yes)
     # risk
     elif list_risk_calculations:
         for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):
             safeprint(line)
-    elif run_risk is not None:
-        safeprint('WARN: --rr/--run-risk are deprecated, use --run instead',
-                  file=sys.stderr)
-        if hazard_calculation_id is None:
-            sys.exit(MISSING_HAZARD_MSG)
-        log_file = os.path.expanduser(log_file) \
-            if log_file is not None else None
-        run_job(
-            os.path.expanduser(run_risk),
-            log_level, log_file, exports,
-            hazard_calculation_id=hc_id)
 
     # export
     elif make_html_report:
@@ -252,10 +234,6 @@ engine.flg('upgrade_db', 'Upgrade the openquake database')
 engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
-engine._add('run_hazard', '--run-hazard', '--rh', help='Run a hazard job with '
-            'the specified config file', metavar='CONFIG_FILE')
-engine._add('run_risk', '--run-risk', '--rr', help='Run a risk job with the '
-            'specified config file', metavar='CONFIG_FILE')
 engine._add('run', '--run', help='Run a job with the specified config file',
             metavar='CONFIG_FILE')
 engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
