@@ -411,12 +411,12 @@ class AssetCollection(object):
 
     def reduce(self, sids):
         """
-        :returns: a reduced AssetCollection on the given sids
+        :returns: a reduced AssetCollection on the given site IDs
         """
-        ok_indices = numpy.sum([self.array['sid'] == sid for sid in sids],
+        ok_indices = numpy.sum([self.array['site_id'] == sid for sid in sids],
                                axis=0, dtype=bool)
         new = object.__new__(self.__class__)
-        vars(new).update(self)
+        vars(new).update(vars(self))
         new.array = self.array[ok_indices]
         return new
 
