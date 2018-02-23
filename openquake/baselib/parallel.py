@@ -425,7 +425,7 @@ def _wakeup(sec):
 
 
 class Starmap(object):
-    pids = ()
+    pids = ()  # FIXME: we can probably remove the pids now
     task_ids = []
 
     @classmethod
@@ -439,6 +439,7 @@ class Starmap(object):
     def shutdown(cls, poolsize=None):
         if OQ_DISTRIBUTE == 'futures' and hasattr(cls, 'pool'):
             cls.pool.close()
+            cls.pool.terminate()
             cls.pool.join()
             delattr(cls, 'pool')
 
