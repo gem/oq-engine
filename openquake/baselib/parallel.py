@@ -101,7 +101,7 @@ with
 `Starmap.shutdown` is always defined. It does nothing if there is
 no pool, but it is still better to call it: in the future, you may change
 idea and use another parallelization strategy requiring cleanup. In this
-way you are future-proof.
+way your code is future-proof.
 
 The Starmap.apply API
 ====================================
@@ -476,6 +476,11 @@ class IterResult(object):
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
+    # unregister raiseMasterKilled in oq-workers to avoid deadlock
+    # since processes are terminated via pool.terminate()
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    # prctl is still useful (on Linux) to terminate all spawned processes
+    # when master is killed via SIGKILL
     try:
         import prctl
     except ImportError:
@@ -493,7 +498,7 @@ def _wakeup(sec):
 
 
 class Starmap(object):
-    pids = ()
+    pids = ()  # FIXME: we can probably remove the pids now
     task_ids = []
 
     @classmethod
@@ -507,6 +512,7 @@ class Starmap(object):
     def shutdown(cls, poolsize=None):
         if OQ_DISTRIBUTE == 'futures' and hasattr(cls, 'pool'):
             cls.pool.close()
+            cls.pool.terminate()
             cls.pool.join()
             delattr(cls, 'pool')
 

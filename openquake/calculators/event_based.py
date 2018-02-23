@@ -35,9 +35,9 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, readinput, source
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
-from openquake.calculators.getters import GmfGetter
+from openquake.calculators.getters import GmfGetter, EBRupture, RuptureGetter
 from openquake.calculators.classical import (
     ClassicalCalculator, saving_sources_by_task)
 
@@ -173,8 +173,8 @@ def _build_eb_ruptures(
                 # set a bit later, in set_eids
                 events.append((0, src.src_group_id, ses_idx, sampleid))
         if events:
-            yield calc.EBRupture(
-                rup, indices, numpy.array(events, calc.event_dt), serial)
+            yield EBRupture(rup, indices, numpy.array(events, calc.event_dt),
+                            serial)
 
 
 def get_events(ebruptures):
@@ -523,7 +523,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for slc in split_in_slices(U, oq.concurrent_tasks or 1):
             getters = []
             for grp_id in rlzs_by_gsim:
-                ruptures = calc.RuptureGetter(parent, slc, grp_id)
+                ruptures = RuptureGetter(parent, slc, grp_id)
                 if parent is self.datastore:  # not accessible parent
                     ruptures = list(ruptures)
                     if not ruptures:
