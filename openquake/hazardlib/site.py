@@ -315,7 +315,7 @@ class SiteCollection(object):
         mask = numpy.array([
             geometry.Point(rec['lons'], rec['lats']).within(region)
             for rec in self.array])
-        return self.filter(mask)
+        return self.complete.filter(mask)
 
     def __getstate__(self):
         return dict(array=self.array, indices=self.indices)
