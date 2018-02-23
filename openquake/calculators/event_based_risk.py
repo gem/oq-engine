@@ -27,7 +27,6 @@ from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
 from openquake.baselib import parallel
 from openquake.risklib import riskinput
-from openquake.commonlib import calc
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -388,7 +387,7 @@ class EbriskCalculator(base.RiskCalculator):
                 self.ruptures_by_grp[grp].sort(
                     key=operator.attrgetter('serial'))
         else:  # there is a parent calculation
-            self.ruptures_by_grp = calc.RuptureGetter.from_(
+            self.ruptures_by_grp = getters.RuptureGetter.from_(
                 self.datastore.parent)
         num_rlzs = 0
         allres = []
