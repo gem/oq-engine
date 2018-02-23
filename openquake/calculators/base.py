@@ -330,42 +330,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
-    def assoc_assets_sites(self, sitecol):
-        """
-        :param sitecol: a sequence of sites
-        :returns: a pair (filtered sites, asset collection)
-
-        The new site collection is different from the original one
-        if some assets were discarded or if there were missing assets
-        for some sites.
-        """
-        asset_hazard_distance = self.oqparam.asset_hazard_distance
-        siteobjects = geo.utils.GeographicObjects(
-            Site(sid, lon, lat) for sid, lon, lat in
-            zip(sitecol.sids, sitecol.lons, sitecol.lats))
-        assets_by_sid = general.AccumDict()
-        for assets in self.assetcol.assets_by_site():
-            if len(assets):
-                lon, lat = assets[0].location
-                site, distance = siteobjects.get_closest(lon, lat)
-                if distance <= asset_hazard_distance:
-                    # keep the assets, otherwise discard them
-                    assets_by_sid += {site.sid: list(assets)}
-        if not assets_by_sid:
-            raise AssetSiteAssociationError(
-                'Could not associate any site to any assets within the '
-                'asset_hazard_distance of %s km' % asset_hazard_distance)
-        mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
-        assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        return sitecol.filter(mask), asset.AssetCollection(
-            self.assetcol.asset_refs,
-            assets_by_site,
-            self.exposure.tagcol,
-            self.exposure.cost_calculator,
-            self.oqparam.time_event,
-            occupancy_periods=hdf5.array_of_vstr(
-                sorted(self.exposure.occupancy_periods)))
-
     def count_assets(self):
         """
         Count how many assets are taken into consideration by the calculator
@@ -466,18 +430,52 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
 
-    def read_exposure(self):
+    def read_exposure(self, haz_sitecol=None):
         """
         Read the exposure, the riskmodel and update the attributes .exposure,
-        .sitecol, .assets_by_site
+        .sitecol, .assetcol
         """
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, self.assetcol = (
-                readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
-            logging.info('Read %d assets on %d sites',
-                         len(self.assetcol), len(self.sitecol))
+            mesh, assets_by_site = (
+                readinput.get_mesh_assets_by_site(self.oqparam, self.exposure))
+        if haz_sitecol:
+            all_sids = haz_sitecol.complete.sids
+            sids = set(haz_sitecol.sids)
+            # associate the assets to the hazard sites
+            asset_hazard_distance = self.oqparam.asset_hazard_distance
+            siteobjects = geo.utils.GeographicObjects(
+                Site(sid, lon, lat) for sid, lon, lat in
+                zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
+            assets_by_sid = general.AccumDict(accum=[])
+            for assets in assets_by_site:
+                if len(assets):
+                    lon, lat = assets[0].location
+                    site, distance = siteobjects.get_closest(lon, lat)
+                    if site.sid in sids and distance <= asset_hazard_distance:
+                        # keep the assets, otherwise discard them
+                        assets_by_sid += {site.sid: list(assets)}
+            if not assets_by_sid:
+                raise AssetSiteAssociationError(
+                    'Could not associate any site to any assets within the '
+                    'asset_hazard_distance of %s km' % asset_hazard_distance)
+            mask = numpy.array(
+                [sid in assets_by_sid for sid in all_sids])
+            assets_by_site = [assets_by_sid[sid] for sid in all_sids]
+            self.sitecol = haz_sitecol.complete.filter(mask)
+        else:  # use the exposure sites as hazard sites
+            self.sitecol = readinput.get_site_collection(self.oqparam, mesh)
+        self.assetcol = asset.AssetCollection(
+            self.exposure.asset_refs,
+            assets_by_site,
+            self.exposure.tagcol,
+            self.exposure.cost_calculator,
+            self.oqparam.time_event,
+            occupancy_periods=hdf5.array_of_vstr(
+                sorted(self.exposure.occupancy_periods)))
+        logging.info('Considering %d assets on %d sites',
+                     len(self.assetcol), len(self.sitecol))
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
@@ -514,21 +512,6 @@ class HazardCalculator(BaseCalculator):
         self.datastore.set_nbytes('composite_risk_model')
         self.datastore.hdf5.flush()
 
-    def assoc_assets(self, haz_sitecol):
-        """
-        Associate the exposure assets to the hazard sites and redefine
-        the .sitecol and .assetcol attributes.
-        """
-        if haz_sitecol is not None and haz_sitecol != self.sitecol:
-            num_assets = self.count_assets()
-            with self.monitor('assoc_assets_sites', autoflush=True):
-                self.sitecol, self.assetcol = \
-                    self.assoc_assets_sites(haz_sitecol.complete)
-            ok_assets = self.count_assets()
-            num_sites = len(self.sitecol)
-            logging.warn('Associated %d assets to %d sites, %d discarded',
-                         ok_assets, num_sites, num_assets - ok_assets)
-
     def read_risk_data(self):
         """
         Read the exposure (if any), the risk model (if any) and then the
@@ -538,15 +521,12 @@ class HazardCalculator(BaseCalculator):
         with self.monitor('reading site collection', autoflush=True):
             haz_sitecol = readinput.get_site_collection(oq)
         if haz_sitecol is not None:
-            logging.info('Read %d hazard site(s)', len(haz_sitecol))
+            logging.info('There are %d hazard site(s)', len(haz_sitecol))
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
-            self.read_exposure()
+            self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
-            if self.datastore.parent:
-                haz_sitecol = self.datastore.parent['sitecol']
-            self.assoc_assets(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
         elif oq.job_type == 'risk':
             raise RuntimeError(
@@ -770,7 +750,6 @@ def get_gmfs(calculator):
             oq.number_of_ground_motion_fields = E
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
         haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
-        calculator.assoc_assets(haz_sitecol)
         R, N, E, I = gmfs.shape
         idx = (slice(None) if haz_sitecol.indices is None
                else haz_sitecol.indices)

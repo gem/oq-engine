@@ -101,9 +101,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.datastore['poes/grp-00'] = readinput.pmap
             self.save_params()
-            self.read_exposure()  # define .assets_by_site
+            self.read_exposure(haz_sitecol)  # define .assets_by_site
             self.load_riskmodel()
-            self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
