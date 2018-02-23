@@ -466,18 +466,51 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
 
-    def read_exposure(self):
+    def read_exposure(self, haz_sitecol=None):
         """
         Read the exposure, the riskmodel and update the attributes .exposure,
-        .sitecol, .assets_by_site
+        .sitecol, .assetcol
         """
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
-            self.sitecol, self.assetcol = (
-                readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
-            logging.info('Read %d assets on %d sites',
-                         len(self.assetcol), len(self.sitecol))
+            mesh, assets_by_site = (
+                readinput.get_mesh_assets_by_site(self.oqparam, self.exposure))
+        if haz_sitecol:
+            # associate the assets to the hazard sites
+            asset_hazard_distance = self.oqparam.asset_hazard_distance
+            siteobjects = geo.utils.GeographicObjects(
+                Site(sid, lon, lat) for sid, lon, lat in
+                zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
+            assets_by_sid = general.AccumDict()
+            for assets in assets_by_site:
+                if len(assets):
+                    lon, lat = assets[0].location
+                    site, distance = siteobjects.get_closest(lon, lat)
+                    if distance <= asset_hazard_distance:
+                        # keep the assets, otherwise discard them
+                        assets_by_sid += {site.sid: list(assets)}
+            if not assets_by_sid:
+                raise AssetSiteAssociationError(
+                    'Could not associate any site to any assets within the '
+                    'asset_hazard_distance of %s km' % asset_hazard_distance)
+            mask = numpy.array(
+                [sid in assets_by_sid for sid in haz_sitecol.sids])
+            assets_by_site = [assets_by_sid.get(sid, [])
+                              for sid in haz_sitecol.sids]
+            self.sitecol = haz_sitecol.filter(mask)
+        else:  # use the exposure sites as hazard sites
+            self.sitecol = readinput.get_site_collection(self.oqparam, mesh)
+        self.assetcol = asset.AssetCollection(
+            self.exposure.asset_refs,
+            assets_by_site,
+            self.exposure.tagcol,
+            self.exposure.cost_calculator,
+            self.oqparam.time_event,
+            occupancy_periods=hdf5.array_of_vstr(
+                sorted(self.exposure.occupancy_periods)))
+        logging.info('Considering %d assets on %d sites',
+                     len(self.assetcol), len(self.sitecol))
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
@@ -542,7 +575,7 @@ class HazardCalculator(BaseCalculator):
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
-            self.read_exposure()
+            self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
