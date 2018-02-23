@@ -134,7 +134,7 @@ class Socket(object):
             except (KeyboardInterrupt, zmq.ZMQError):
                 # sending SIGTERM raises ZMQError
                 break
-            if args[0] == 'stop':
+            if args == 'stop':
                 if self.socket_type == zmq.REP:
                     self.send((None, None, None))
                 break
