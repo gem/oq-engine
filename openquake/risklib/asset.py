@@ -413,15 +413,12 @@ class AssetCollection(object):
         """
         :returns: a reduced AssetCollection on the given sids
         """
-        aref = self.asset_refs
-        assets_by_site = self.assets_by_site()[sids]
-        asset_refs = numpy.concatenate(
-            [[aref[a.idx] for a in assets] for assets in assets_by_site])
-        assetcol = self.__class__(asset_refs, assets_by_site, self.tagcol,
-                                  self.cost_calculator, self.time_event,
-                                  self.occupancy_periods)
-        assetcol.sids = sids
-        return assetcol
+        ok_indices = numpy.sum([self.array['sid'] == sid for sid in sids],
+                               axis=0, dtype=bool)
+        new = object.__new__(self.__class__)
+        vars(new).update(self)
+        new.array = self.array[ok_indices]
+        return new
 
     def values(self, aids=None):
         """
