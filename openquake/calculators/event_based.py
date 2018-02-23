@@ -492,6 +492,7 @@ class EventBasedCalculator(base.HazardCalculator):
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
+        sitecol = self.sitecol.complete
         monitor = self.monitor(self.core_task.__name__)
         imts = list(oq.imtls)
         min_iml = self.get_min_iml(oq)
@@ -511,7 +512,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     continue
                 for block in block_splitter(ruptures, block_size):
                     getter = GmfGetter(
-                        rlzs_by_gsim[grp_id], block, self.sitecol,
+                        rlzs_by_gsim[grp_id], block, sitecol,
                         imts, min_iml, oq.maximum_distance,
                         oq.truncation_level, correl_model,
                         samples_by_grp[grp_id])
@@ -529,7 +530,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     if not ruptures:
                         continue
                 getters.append(GmfGetter(
-                    rlzs_by_gsim[grp_id], ruptures, self.sitecol,
+                    rlzs_by_gsim[grp_id], ruptures, sitecol,
                     imts, min_iml, oq.maximum_distance, oq.truncation_level,
                     correl_model, samples_by_grp[grp_id]))
             yield getters, oq, monitor
