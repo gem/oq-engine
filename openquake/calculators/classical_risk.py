@@ -98,12 +98,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             raise ValueError(
                 'insured_losses are not supported for classical_risk')
         if 'hazard_curves' in oq.inputs:  # read hazard from file
-            haz_sitecol, pmap = readinput.get_pmap(oq)
-            self.datastore['poes/grp-00'] = pmap
+            haz_sitecol = readinput.get_site_collection(oq)
+            self.datastore['poes/grp-00'] = readinput.pmap
             self.save_params()
-            self.read_exposure()  # define .assets_by_site
+            self.read_exposure(haz_sitecol)  # define .assets_by_site
             self.load_riskmodel()
-            self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
