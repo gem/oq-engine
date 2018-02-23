@@ -57,7 +57,7 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: oq-python3 python3-oq-libs >= 1.5.0
+Requires: oq-python3 python3-oq-libs >= 1.6.0
 Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
