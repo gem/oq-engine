@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import zmq
+import logging
 
 context = zmq.Context()
 
@@ -59,12 +60,13 @@ class Socket(object):
     A Socket class to be used with code like the following::
 
      # server
-     sock = Socket('tcp://127.0.0.1:9000', zmq.REP)
-     for cmd, *args in sock:
-         sock.send(cmd(*args))
+     with Socket('tcp://127.0.0.1:9000', zmq.REP, 'bind') as sock:
+         for tup in sock:
+             sock.send(tup)
 
      # client
-     Socket('tcp://127.0.0.1:9000', zmq.REQ).req(cmd, *args)
+     with Socket('tcp://127.0.0.1:9000', zmq.REQ, 'connect') as sock:
+        sock.send(tup)
 
     It also support zmq.PULL/zmq.PUSH sockets, which are asynchronous.
 
@@ -73,7 +75,8 @@ class Socket(object):
     :param mode: default 'bind', accepts also 'connect'
     :param timeout: default 1000 ms, used when polling the underlying socket
     """
-    def __init__(self, end_point, socket_type, mode='bind', timeout=1000):
+    def __init__(self, end_point, socket_type, mode, timeout=1000):
+        assert 'localhost' not in end_point, 'Use 127.0.0.1 instead'
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
         self.end_point = end_point
@@ -93,14 +96,17 @@ class Socket(object):
             self.zsocket = context.socket(self.socket_type)
             port = self.zsocket.bind_to_random_port(end_point, p1, p2)
             self.port = port
+            self.backurl = '%s:%d' % (end_point, port)
         elif self.mode == 'bind':
             self.zsocket = bind(self.end_point, self.socket_type)
+            self.backurl = self.end_point
         else:  # connect
             self.zsocket = connect(self.end_point, self.socket_type)
         port = re.search(r':(\d+)$', self.end_point)
         if port:
             self.port = int(port.group(1))
         self.zsocket.__enter__()
+        self.num_sent = 0
         return self
 
     def __exit__(self, *args):
@@ -116,24 +122,24 @@ class Socket(object):
         3. SIGINT is sent
         4. SIGTERM is sent
         """
-        # works zmq.REP and zmq.PULL sockets
-        with self:
-            self.running = True
-            while self.running:
-                try:
-                    if self.zsocket.poll(self.timeout):
-                        args = self.zsocket.recv_pyobj()
-                    else:
-                        continue
-                except (KeyboardInterrupt, zmq.ZMQError):
-                    # sending SIGTERM raises ZMQError
-                    break
-                if args[0] == 'stop':
-                    if self.socket_type == zmq.REP:
-                        self.send((None, None, None))
-                    break
+        # works with zmq.REP and zmq.PULL sockets
+        self.running = True
+        while self.running:
+            try:
+                if self.zsocket.poll(self.timeout):
+                    args = self.zsocket.recv_pyobj()
                 else:
-                    yield args
+                    logging.info('Timeout in %s', self)
+                    continue
+            except (KeyboardInterrupt, zmq.ZMQError):
+                # sending SIGTERM raises ZMQError
+                break
+            if args[0] == 'stop':
+                if self.socket_type == zmq.REP:
+                    self.send((None, None, None))
+                break
+            else:
+                yield args
 
     def send(self, obj):
         """
@@ -144,9 +150,11 @@ class Socket(object):
             the Python object to send
         """
         self.zsocket.send_pyobj(obj)
+        self.num_sent += 1
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):
-        return '<%s %s %s %s>' % (self.__class__.__name__, self.end_point,
+        end_point = getattr(self, 'backurl', self.end_point)
+        return '<%s %s %s %s>' % (self.__class__.__name__, end_point,
                                   SOCKTYPE[self.socket_type], self.mode)

@@ -50,7 +50,7 @@ def quote(url_like):
 
 # `oq extract` is tested in the demos
 @sap.Script
-def extract(what, calc_id=-1, hostport=None):
+def extract(what, calc_id=-1, server_url=None):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     """
@@ -68,8 +68,8 @@ def extract(what, calc_id=-1, hostport=None):
         dstore.parent = datastore.read(parent_id)
     urlpath = '/v1/calc/%d/extract/%s' % (calc_id, quote(what))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
-        if hostport:
-            data = urlopen('http://%s%s' % (hostport, urlpath)).read()
+        if server_url:
+            data = urlopen(server_url.rstrip('/') + urlpath).read()
             items = (item for item in numpy.load(io.BytesIO(data)).items())
         else:
             print('Emulating call to %s' % urlpath)
@@ -86,4 +86,4 @@ def extract(what, calc_id=-1, hostport=None):
 
 extract.arg('what', 'string specifying what to export')
 extract.arg('calc_id', 'number of the calculation', type=int)
-extract.opt('hostport', 'host:port of the webui', '-w')
+extract.opt('server_url', 'URL of the webui', '-u')

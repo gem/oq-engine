@@ -345,14 +345,15 @@ class AssetCollection(object):
     # numbers to each tagvalue, which is possible
     D, I = len('deductible-'), len('insurance_limit-')
 
-    def __init__(self, assets_by_site, tagcol, cost_calculator,
+    def __init__(self, asset_refs, assets_by_site, tagcol, cost_calculator,
                  time_event, occupancy_periods=''):
+        self.asset_refs = asset_refs
         self.tagcol = tagcol
         self.cc = cost_calculator
         self.time_event = time_event
         self.occupancy_periods = occupancy_periods
         self.tot_sites = len(assets_by_site)
-        self.array = self.build_asset_collection(
+        self.array = self.build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
@@ -464,8 +465,8 @@ class AssetCollection(object):
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(
-            array=self.array, cost_calculator=self.cc, tagcol=self.tagcol
-        ), attrs
+            array=self.array, cost_calculator=self.cc, tagcol=self.tagcol,
+            asset_refs=self.asset_refs), attrs
 
     def __fromh5__(self, dic, attrs):
         for name in ('occupancy_periods', 'loss_types', 'deduc', 'i_lim',
@@ -476,12 +477,13 @@ class AssetCollection(object):
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
+        self.asset_refs = dic['asset_refs'].value
         self.cc = dic['cost_calculator']
         self.cc.tagi = {decode(tagname): i
                         for i, tagname in enumerate(self.tagnames)}
 
     @staticmethod
-    def build_asset_collection(assets_by_site, tagnames=(), time_event=None):
+    def build_asset_array(assets_by_site, tagnames=(), time_event=None):
         """
         :param assets_by_site: a list of lists of assets
         :param tagnames: a list of tag names
