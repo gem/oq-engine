@@ -959,6 +959,8 @@ def get_mesh_assets_by_site(oqparam, exposure):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param exposure:
+        an Exposure instance
     :returns:
         the exposure `mesh` and a list `assets_by_site` with the same length
     """
