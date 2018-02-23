@@ -101,7 +101,7 @@ with
 `Starmap.shutdown` is always defined. It does nothing if there is
 no pool, but it is still better to call it: in the future, you may change
 idea and use another parallelization strategy requiring cleanup. In this
-way you are future-proof.
+way your code is future-proof.
 
 The Starmap.apply API
 ====================================
