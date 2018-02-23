@@ -64,9 +64,9 @@ class LossCurveExporter(object):
         except KeyError:  # no 'agg_loss_table' for non event_based_risk
             pass
         self.assetcol = dstore['assetcol']
-        arefs = [decode(aref) for aref in self.dstore['asset_refs']]
+        arefs = [decode(aref) for aref in self.assetcol.asset_refs]
         self.str2asset = {arefs[asset.idx]: asset for asset in self.assetcol}
-        self.asset_refs = self.dstore['asset_refs'].value
+        self.asset_refs = arefs
         self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
         self.R = dstore['csm_info'].get_num_rlzs()
 
