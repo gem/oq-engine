@@ -112,7 +112,9 @@ RM       4,000
     def test_case_5(self):
         # this is a test for the rupture filtering
         # NB: the exposure file is imported twice on purpose, to make
-        # sure that nothing changes; TODO: document the issue (MS)
+        # sure that nothing changes; the case is very tricky since the
+        # hazard site collection is filtered by the maximum_distance,
+        # there is no region_constraint in hazard and there is in risk
         self.assert_ok(case_5, 'job_haz.ini,job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')
