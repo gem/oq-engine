@@ -260,7 +260,8 @@ def get_mesh(oqparam):
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif oqparam.hazard_calculation_id:
-        sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
+        with datastore.read(oqparam.hazard_calculation_id) as dstore:
+            sitecol = dstore['sitecol'].complete
         return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
     elif 'exposure' in oqparam.inputs:
         # the mesh will be extracted from the exposure later
