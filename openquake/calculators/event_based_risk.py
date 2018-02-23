@@ -27,7 +27,6 @@ from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
 from openquake.baselib import parallel
 from openquake.risklib import riskinput
-from openquake.commonlib import calc
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
