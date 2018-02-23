@@ -1081,7 +1081,7 @@ def get_pmap_from_csv(oqparam, fname):
     :param fname:
         a .txt file with format `IMT lon lat poe1 ... poeN`
     :returns:
-        the site collection and the hazard curves read by the .txt file
+        the site mesh and the hazard curves read by the .txt file
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
@@ -1106,7 +1106,7 @@ def get_pmap_from_nrml(oqparam, fname):
     :param fname:
         an XML file containing hazard curves
     :returns:
-        sitecol, curve array
+        site mesh, curve array
     """
     hcurves_by_imt = {}
     oqparam.hazard_imtls = imtls = collections.OrderedDict()
