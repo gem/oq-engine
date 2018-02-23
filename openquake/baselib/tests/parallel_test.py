@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import mock
 import unittest
 import numpy
 from openquake.baselib import parallel
@@ -40,6 +39,10 @@ def get_len(data, monitor):
 
 class StarmapTestCase(unittest.TestCase):
     monitor = parallel.Monitor()
+
+    @classmethod
+    def setUpClass(cls):
+        parallel.Starmap.init()  # initialize the pool
 
     def test_apply(self):
         res = parallel.Starmap.apply(
@@ -68,17 +71,12 @@ class StarmapTestCase(unittest.TestCase):
         all_data = [
             ('a', list(range(10))), ('b', list(range(20))),
             ('c', list(range(15)))]
-        res = {key: parallel.Starmap(get_length, [(data,)])
+        res = {key: parallel.Starmap(get_length, [(data,)]).submit_all()
                for key, data in all_data}
         for key, val in res.items():
             res[key] = val.reduce()
-        parallel.Starmap.restart()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})
 
-    def test_no_flush(self):
-        mon = parallel.Monitor('test')
-        res = parallel.safely_call(get_len, ('ab', mon))
-        self.assertIn(
-            'Monitor(\'test\').flush() must not be called in a worker', res[0])
-        self.assertEqual(res[1], RuntimeError)
-        self.assertEqual(res[2].operation, mon.operation)
+    @classmethod
+    def tearDownClass(cls):
+        parallel.Starmap.shutdown()
