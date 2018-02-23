@@ -1,7 +1,7 @@
 python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
 
   [Michele Simionato]
-  Deprecated the NRML format for the GMFs
+  * Deprecated the NRML format for the GMFs
 
   [Matteo Nastasi]
   * Debian package moved to Python 3.5
