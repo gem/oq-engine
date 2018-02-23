@@ -765,12 +765,12 @@ class TestLoadCurvesTestCase(unittest.TestCase):
 ''', suffix='.xml')
         oqparam = object.__new__(oqvalidation.OqParam)
         oqparam.inputs = dict(hazard_curves=fname)
-        sitecol, pmap = readinput.get_pmap(oqparam)
+        sitecol = readinput.get_site_collection(oqparam)
         self.assertEqual(len(sitecol), 2)
         self.assertEqual(sorted(oqparam.hazard_imtls.items()),
                          [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
                           ('SA(0.025)', [0.005, 0.007, 0.0137])])
-        hcurves = pmap.convert(oqparam.imtls, 2)
+        hcurves = readinput.pmap.convert(oqparam.imtls, 2)
         assert_allclose(hcurves['PGA'], numpy.array(
             [[0.098728, 0.098216, 0.094945, 0.092947],
              [0.98728, 0.98226, 0.94947, 0.92947]]))

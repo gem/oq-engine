@@ -27,7 +27,7 @@ import platform
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import performance, datastore
+from openquake.baselib import performance, datastore, parallel
 from openquake.commonlib import readinput, oqvalidation
 
 
@@ -87,21 +87,28 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Return the outputs of the calculation as a dictionary
         """
-        inis = job_ini.split(',')
-        assert len(inis) in (1, 2), inis
-        self.calc = self.get_calc(testfile, inis[0], **kw)
-        self.edir = tempfile.mkdtemp()
-        with self.calc._monitor:
-            result = self.calc.run(export_dir=self.edir)
-        if len(inis) == 2:
-            hc_id = self.calc.datastore.calc_id
-            self.calc = self.get_calc(
-                testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
+        parallel.Starmap.init()
+        try:
+            inis = job_ini.split(',')
+            assert len(inis) in (1, 2), inis
+            self.calc = self.get_calc(testfile, inis[0], **kw)
+            self.edir = tempfile.mkdtemp()
             with self.calc._monitor:
-                result.update(self.calc.run(export_dir=self.edir))
-        # reopen datastore, since some tests need to export from it
-        dstore = datastore.read(self.calc.datastore.calc_id)
-        self.calc.datastore = dstore
+                result = self.calc.run(export_dir=self.edir)
+            if len(inis) == 2:
+                hc_id = self.calc.datastore.calc_id
+                self.calc = self.get_calc(
+                    testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
+                # run the second job.ini with zero tasks to avoid fork issues
+                with self.calc._monitor:
+                    exported = self.calc.run(export_dir=self.edir,
+                                             concurrent_tasks=0)
+                    result.update(exported)
+            # reopen datastore, since some tests need to export from it
+            dstore = datastore.read(self.calc.datastore.calc_id)
+            self.calc.datastore = dstore
+        finally:
+            parallel.Starmap.shutdown()
         return result
 
     def execute(self, testfile, job_ini):
