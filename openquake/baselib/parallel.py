@@ -408,9 +408,11 @@ class IterResult(object):
 def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
-    # Unregister raiseMasterKilled in oq-workers to avoid deadlock
+    # unregister raiseMasterKilled in oq-workers to avoid deadlock
     # since processes are terminated via pool.terminate()
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    # prctl is still useful (on Linux) to terminate all spawned processes
+    # when master is killed via SIGKILL
     try:
         import prctl
     except ImportError:
