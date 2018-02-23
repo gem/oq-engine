@@ -521,12 +521,10 @@ class HazardCalculator(BaseCalculator):
         with self.monitor('reading site collection', autoflush=True):
             haz_sitecol = readinput.get_site_collection(oq)
         if haz_sitecol is not None:
-            logging.info('Read %d hazard site(s)', len(haz_sitecol))
+            logging.info('There are %d hazard site(s)', len(haz_sitecol))
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
-            if not haz_sitecol and self.datastore.parent:
-                haz_sitecol = self.datastore.parent['sitecol']
             self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
