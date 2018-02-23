@@ -1,5 +1,5 @@
 #!/bin/sh
-# postinst script for openquake (worker)
+# postinst script for openquake
 #
 # see: dh_installdeb(1)
 
@@ -23,26 +23,18 @@ set -e
 # load debconf suite
 . /usr/share/debconf/confmodule
 
-GEM_DEB_PACKAGE="python-oq-engine-worker"
+GEM_DEB_PACKAGE="python3-oq-engine"
 
-# setup supervisord
-# - if supervisord is running:
-#   - reload config and start the dbserver and the webui
-# - if supervisord is NOT running:
-#   - make sure it's started during boot
-#   - start it
+ENGINE_USER=openquake
 
-echo "Setup supervisord"
-
-if pgrep supervisord 2>&1 > /dev/null; then
-    supervisorctl reload
-else
-    if command -v systemctl 2>&1 > /dev/null; then
-        systemctl enable supervisor.service
-        systemctl start supervisor.service
-    else
-        update-rc.d supervisor defaults || true
-        /etc/init.d/supervisor start
+(if ! rabbitmqctl status &>/dev/null; then
+    if ! rabbitmqctl list_users | grep $ENGINE_USER; then
+        rabbitmqctl add_user $ENGINE_USER $ENGINE_USER
     fi
-fi
+    if ! rabbitmqctl list_vhosts | grep $ENGINE_USER; then
+        rabbitmqctl add_vhost $ENGINE_USER
+        rabbitmqctl set_permissions -p $ENGINE_USER $ENGINE_USER ".*" ".*" ".*"
+    fi
+fi) >/dev/null || true # Do not hard fail if something went wrong
 
+exit 0
