@@ -1,3 +1,5 @@
+python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
+
   [Michele Simionato]
   Deprecated the NRML format for the GMFs
 
@@ -139,6 +141,8 @@
     central and eastern United States
   * Minor modification of check_gsim functions to permit instantiated classes
     to be passed
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 26 Feb 2018 08:53:58 +0100
 
 python3-oq-engine (2.8.0-0~precise01) precise; urgency=low
 
