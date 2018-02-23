@@ -358,6 +358,7 @@ class HazardCalculator(BaseCalculator):
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
         return sitecol.filter(mask), asset.AssetCollection(
+            self.assetcol.asset_refs,
             assets_by_site,
             self.exposure.tagcol,
             self.exposure.cost_calculator,
@@ -477,12 +478,6 @@ class HazardCalculator(BaseCalculator):
                 readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
             logging.info('Read %d assets on %d sites',
                          len(self.assetcol), len(self.sitecol))
-            # NB: using hdf5.vstr would fail for large exposures;
-            # the datastore could become corrupt, and also ultra-strange things
-            # may happen (i.e. having the sitecol saved inside asset_refs!!)
-            arefs = numpy.array(self.exposure.asset_refs)
-            self.datastore['asset_refs'] = arefs
-            self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
