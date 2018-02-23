@@ -175,6 +175,7 @@ from openquake.baselib.general import (
 cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
+
 def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or 'futures'
