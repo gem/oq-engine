@@ -200,6 +200,11 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     oqparam.validate()
     return oqparam
 
+pmap = None  # set as side effect when the user reads hazard_curves from a file
+# the hazard curves format does not split the site locations from the data (an
+# unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
+# this hack is necessary, otherwise we would have to parse the file twice
+
 
 def get_mesh(oqparam):
     """
@@ -209,6 +214,7 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    global pmap
     if oqparam.sites:
         return geo.Mesh.from_coords(sorted(oqparam.sites))
     elif 'sites' in oqparam.inputs:
@@ -231,6 +237,15 @@ def get_mesh(oqparam):
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
         return geo.Mesh.from_coords(c)
+    elif 'hazard_curves' in oqparam.inputs:
+        fname = oqparam.inputs['hazard_curves']
+        if fname.endswith('.csv'):
+            mesh, pmap = get_pmap_from_csv(oqparam, fname)
+        elif fname.endswith('.xml'):
+            mesh, pmap = get_pmap_from_nrml(oqparam, fname)
+        else:
+            raise NotImplementedError('Reading from %s' % fname)
+        return mesh
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -949,10 +964,11 @@ def get_sitecol_assetcol(oqparam, exposure):
     for lonlat in zip(sitecol.lons, sitecol.lats):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
+    operiods = sorted(exposure.occupancy_periods)
     assetcol = asset.AssetCollection(
-        assets_by_site, exposure.tagcol, exposure.cost_calculator,
-        oqparam.time_event, occupancy_periods=hdf5.array_of_vstr(
-            sorted(exposure.occupancy_periods)))
+        exposure.asset_refs, assets_by_site, exposure.tagcol,
+        exposure.cost_calculator, oqparam.time_event,
+        occupancy_periods=hdf5.array_of_vstr(operiods))
     return sitecol, assetcol
 
 
@@ -1057,22 +1073,6 @@ def get_gmfs(oqparam):
     return eids, gmfs
 
 
-def get_pmap(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        sitecol, probability map
-    """
-    fname = oqparam.inputs['hazard_curves']
-    if fname.endswith('.csv'):
-        return get_pmap_from_csv(oqparam, fname)
-    elif fname.endswith('.xml'):
-        return get_pmap_from_nrml(oqparam, fname)
-    else:
-        raise NotImplementedError('Reading from %s' % fname)
-
-
 @deprecated('Reading hazard curves from CSV may change in the future')
 def get_pmap_from_csv(oqparam, fname):
     """
@@ -1081,7 +1081,7 @@ def get_pmap_from_csv(oqparam, fname):
     :param fname:
         a .txt file with format `IMT lon lat poe1 ... poeN`
     :returns:
-        the site collection and the hazard curves read by the .txt file
+        the site mesh and the hazard curves read by the .txt file
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
@@ -1093,11 +1093,10 @@ def get_pmap_from_csv(oqparam, fname):
         mesh, hcurves = get_mesh_csvdata(
             csvfile, list(oqparam.imtls), num_values,
             valid.decreasing_probabilities)
-    sitecol = get_site_collection(oqparam, mesh)
-    array = numpy.zeros((len(sitecol), sum(num_values)))
+    array = numpy.zeros((len(mesh), sum(num_values)))
     for imt_ in hcurves:
         array[:, oqparam.imtls.slicedic[imt_]] = hcurves[imt_]
-    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
+    return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
 def get_pmap_from_nrml(oqparam, fname):
@@ -1107,7 +1106,7 @@ def get_pmap_from_nrml(oqparam, fname):
     :param fname:
         an XML file containing hazard curves
     :returns:
-        sitecol, curve array
+        site mesh, curve array
     """
     hcurves_by_imt = {}
     oqparam.hazard_imtls = imtls = collections.OrderedDict()
@@ -1124,13 +1123,12 @@ def get_pmap_from_nrml(oqparam, fname):
         lons.append(xy[0])
         lats.append(xy[1])
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    sitecol = get_site_collection(oqparam, mesh)
     num_levels = sum(len(v) for v in imtls.values())
-    array = numpy.zeros((len(sitecol), num_levels))
+    array = numpy.zeros((len(mesh), num_levels))
     imtls = DictArray(imtls)
     for imt_ in hcurves_by_imt:
         array[:, imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
-    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
+    return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
 # used in get_scenario_from_nrml
@@ -1144,6 +1142,7 @@ def _extract_eids_sitecounts(gmfset):
     return numpy.array(sorted(eids), numpy.uint64), counter
 
 
+@deprecated('Use the .csv format for the GMFs instead')
 def get_scenario_from_nrml(oqparam, fname):
     """
     :param oqparam:

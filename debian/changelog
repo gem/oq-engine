@@ -1,3 +1,14 @@
+python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Deprecated the NRML format for the GMFs
+
+  [Matteo Nastasi]
+  * Debian package moved to Python 3.5
+
+  [Graeme Weatherill]
+  * Small bug fix for Derras et al (2014) GMPE when Rjb = 0.0
+
   [Michele Simionato]
   * Improved the .rst reports for classical calculations with tiling
   * Reduced the data transfer in the event based risk calculator by
@@ -5,18 +16,17 @@
   * Integrated the gmf_ebrisk calculator inside the event based calculator
   * Improved the weighting algorithm for the sources in the event based
     rupture calculator
-  * Integrated the gmf_ebrisk calculator in the event_based_risk calculator
   * Improved error message for source model files declared as nrml/0.5 when
     they actually are nrml/0.4
   * Optimized the classical_bcr calculator for the case of many realizations
   * Extended the exposure CSV importer to manage the `retrofitted` field
 
   [Marco Pagani, Changlong Li]
-  * Adds the Yu et al. (2013) GMEPs
+  * Adds the Yu et al. (2013) GMPEs
 
   [Michele Simionato]
   * Fixed a bug in the hazard outputs: they were displayed in the WebUI even
-    missing
+    if they were missing
   * Implemented splitting of nonparametric sources
 
   [Marco Pagani]
@@ -31,12 +41,12 @@
     and by improving the weighting algorithm
 
   [Daniele Viganò]
-  * TMPDIR can be customized via the `openquake.cfg`
+  * TMPDIR can be customized via the `openquake.cfg` file
   * Updated dependencies compatibility in setup.py
 
   [Michele Simionato]
   * If the hazard is precomputed, setting the `site_model_file`,
-    `gsim_logic_tree_file` or `source_model_logic_tree_file` is an error
+    `gsim_logic_tree_file` or `source_model_logic_tree_file` gives a warning
   * Removed the obsolete API `/extract/qgis-` and added `extract/hcurves`,
     `extract/hmaps`, `extract/uhs` for use with the QGIS plugin
   * Removed the deprecated GeoJSON exporters
@@ -50,7 +60,7 @@
   * Initial support for disaggregation by source
   * Added the ability to import large exposures as CSV (experimental)
   * Changed the source weights to be proportional to the number of GSIMs
-    relevant for the tectonic region type, improving the task distribution
+    relevant for the tectonic region type, thus improving the task distribution
 
   [Daniele Viganò]
   * The RPM python3-oq-engine package replaced python-oq-engine
@@ -64,14 +74,14 @@
   [Graeme Weatherill]
   * Implements significant duration GMPEs of Bommer et al. (2009) and Afshari &
     Stewart (2016)
-  * Adds significant duraction IMT definitions to support IMTs
+  * Adds significant duration IMT definitions to support IMTs
 
   [Michele Simionato]
   * Run the DbServer as a detached process
   * Improved the test coverage for event based with GMF correlation
   * Optimized the event based risk calculator from ruptures: now the ruptures
     are instantiated in the workers and not in the controller if possible
-  * Exported the parameter ses_per_logic_tree_path in the ruptures.csv file
+  * Exported the parameter `ses_per_logic_tree_path` in the ruptures.csv file
   * Improved the display names for the risk outputs
   * Added a /v1/:calc_id/abort route to the engine server and Abort buttons
     to the WebUI
@@ -103,14 +113,14 @@
   * When the option `--hc` is given the ruptures can now be read directly
     from the workers, thus saving some startup time
   * Optimized the storage of the ruptures: the site IDs are not saved anymore
-  * Added a check for missing risk_investigation_time
+  * Added a check for missing `risk_investigation_time`
   * Reduced the data transfer in the gmf_ebrisk calculator
   * Now the gmf_ebrisk calculator builds the aggregate loss curves too
   * Extended the gmf_ebrisk calculator to use the GMFs produced by an event
     based hazard calculation, both via CSV and via the --hc option
   * Fixed a performance bug in the computations of the aggregate loss curves
     by reading the full event loss table at once
-  * Fixed oq zip to work with gmf_ebrisk calculations
+  * Fixed `oq zip` to work with gmf_ebrisk calculations
   * Fixed a serious bug in the gmf_ebrisk calculator: the results were in most
     cases wrong and dependent on the number of spawned tasks
   * Now the `master_seed` controls the generation of the epsilons in all
@@ -132,7 +142,9 @@
   * Minor modification of check_gsim functions to permit instantiated classes
     to be passed
 
-python-oq-engine (2.8.0-0~precise01) precise; urgency=low
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 26 Feb 2018 08:53:58 +0100
+
+python3-oq-engine (2.8.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
   * `iml_disagg` and `poes_disagg` cannot coexist in the job.ini file

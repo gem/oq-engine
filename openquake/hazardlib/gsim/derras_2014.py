@@ -146,7 +146,10 @@ class DerrasEtAl2014(GMPE):
         # List must be in following order
         p_n = []
         # Rjb
-        p_n.append(self._get_normalised_term(np.log10(dists.rjb),
+        # Note that Rjb must be clipped at 0.1 km
+        rjb = np.copy(dists.rjb)
+        rjb[rjb < 0.1] = 0.1
+        p_n.append(self._get_normalised_term(np.log10(rjb),
                                              self.CONSTANTS["logMaxR"],
                                              self.CONSTANTS["logMinR"]))
         # Magnitude
