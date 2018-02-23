@@ -27,8 +27,8 @@ from openquake import commands
 
 # force cluster users to use `oq engine` so that we have centralized logs
 if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
-    sys.exit('You are on a cluster and you are using oq run?? '
-             'Use oq engine --run instead!')
+    print('You are on a cluster and you are using oq run?? '
+          'Use oq engine --run instead!')
 
 
 def oq():
