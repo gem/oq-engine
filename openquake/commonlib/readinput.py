@@ -263,7 +263,7 @@ def get_mesh(oqparam):
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
         return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
     elif 'exposure' in oqparam.inputs:
-        # the mesh is extracted from get_sitecol_assetcol
+        # the mesh will be extracted from the exposure later
         return
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
@@ -949,27 +949,21 @@ class Exposure(object):
                                         len(self.assets))
 
 
-def get_sitecol_assetcol(oqparam, exposure):
+def get_mesh_assets_by_site(oqparam, exposure):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        the site collection and the asset collection
+        the exposure `mesh` and a list `assets_by_site` with the same length
     """
     assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    sitecol = get_site_collection(oqparam, mesh)
     assets_by_site = []
-    for lonlat in zip(sitecol.lons, sitecol.lats):
+    for lonlat in zip(mesh.lons, mesh.lats):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
-    operiods = sorted(exposure.occupancy_periods)
-    assetcol = asset.AssetCollection(
-        exposure.asset_refs, assets_by_site, exposure.tagcol,
-        exposure.cost_calculator, oqparam.time_event,
-        occupancy_periods=hdf5.array_of_vstr(operiods))
-    return sitecol, assetcol
+    return mesh, assets_by_site
 
 
 def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
