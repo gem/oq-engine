@@ -111,8 +111,8 @@ def extract_asset_values(dstore, sid):
     """
     if sid:
         return extract(dstore, 'asset_values')[int(sid)]
-    asset_refs = extract(dstore, 'asset_refs')
     assetcol = extract(dstore, 'assetcol')
+    asset_refs = assetcol.asset_refs
     assets_by_site = assetcol.assets_by_site()
     lts = assetcol.loss_types
     time_event = assetcol.time_event
