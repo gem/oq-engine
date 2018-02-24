@@ -1,5 +1,6 @@
 import os
 import sys
+import mock
 import signal
 import logging
 import inspect
@@ -15,7 +16,7 @@ except ImportError:
         "Do nothing"
 
 
-def safely_call(func, args):
+def safely_call(func, args, backurl=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -42,19 +43,30 @@ def safely_call(func, args):
         # further investigation is needed
         # check_mem_usage(mon)  # check if too much memory is used
         # FIXME: this approach does not work with the Threadmap
-        mon._flush = False
+        backurl = getattr(mon, 'backurl', backurl)
+        if backurl:
+            zsocket = z.Socket(backurl, z.zmq.PUSH, 'connect')
+        else:
+            zsocket = mock.MagicMock()  # do nothing if not backurl
         try:
-            got = func(*args)
-            if inspect.isgenerator(got):
-                got = list(got)
-            res = got, None, mon
+            with zsocket:
+                got = func(*args)
+                if inspect.isgenerator(got):
+                    res = []
+                    for val in got:
+                        res.append((val, None, mon))
+                        zsocket.send((val, None, mon))
+                else:
+                    res = (got, None, mon)
+                    zsocket.send(res)
         except:
             etype, exc, tb = sys.exc_info()
             tb_str = ''.join(traceback.format_tb(tb))
             res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc),
                    etype, mon)
-        finally:
-            mon._flush = True
+            zsocket.send(res)
+    if backurl:
+        return zsocket.num_sent
     return res
 
 
@@ -74,17 +86,16 @@ def streamer(host, task_in_port, task_out_port):
 
 
 def _starmap(func, iterargs, host, task_in_port, receiver_ports):
-    # called by parallel.Starmap.submit_all; should not be used directly
+    # called by the tests only
     receiver_url = 'tcp://%s:%s' % (host, receiver_ports)
     task_in_url = 'tcp://%s:%s' % (host, task_in_port)
     with z.Socket(receiver_url, z.zmq.PULL, 'bind') as receiver:
         logging.info('Receiver port for %s=%s', func.__name__, receiver.port)
-        receiver_host = receiver.end_point.rsplit(':', 1)[0]
-        backurl = '%s:%s' % (receiver_host, receiver.port)
         with z.Socket(task_in_url, z.zmq.PUSH, 'connect') as sender:
             n = 0
             for args in iterargs:
-                args[-1].backurl = backurl  # args[-1] is a Monitor instance
+                # args[-1] is a Monitor instance
+                args[-1].backurl = receiver.backurl
                 sender.send((func, args))
                 n += 1
         yield n
@@ -206,10 +217,9 @@ class WorkerPool(object):
         :param sock: a zeromq.Socket of kind PULL receiving (cmd, args)
         """
         setproctitle('oq-zworker')
-        for cmd, args in sock:
-            backurl = args[-1].backurl  # attached to the monitor
-            with z.Socket(backurl, z.zmq.PUSH, 'connect') as s:
-                s.send(safely_call(cmd, args))
+        with sock:
+            for cmd, args in sock:
+                safely_call(cmd, args)
 
     def start(self):
         """
@@ -226,16 +236,16 @@ class WorkerPool(object):
             self.workers.append(sock)
 
         # start control loop accepting the commands stop and kill
-        ctrlsock = z.Socket(self.ctrl_url, z.zmq.REP, 'bind')
-        for cmd in ctrlsock:
-            if cmd in ('stop', 'kill'):
-                msg = getattr(self, cmd)()
-                ctrlsock.send(msg)
-                break
-            elif cmd == 'getpid':
-                ctrlsock.send(self.pid)
-            elif cmd == 'get_num_workers':
-                ctrlsock.send(self.num_workers)
+        with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
+            for cmd in ctrlsock:
+                if cmd in ('stop', 'kill'):
+                    msg = getattr(self, cmd)()
+                    ctrlsock.send(msg)
+                    break
+                elif cmd == 'getpid':
+                    ctrlsock.send(self.pid)
+                elif cmd == 'get_num_workers':
+                    ctrlsock.send(self.num_workers)
 
     def stop(self):
         """
