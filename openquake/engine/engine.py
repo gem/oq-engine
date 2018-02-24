@@ -42,7 +42,8 @@ from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
-USE_CELERY = os.environ.get('OQ_DISTRIBUTE').startswith('celery')
+USE_CELERY = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute).startswith('celery')
 
 if parallel.oq_distribute() == 'zmq':
 
