@@ -288,7 +288,6 @@ def pickle_sequence(objects):
 class Result(object):
     """
     :param val: value to return or exception instance
-    :param msg: traceback string (empty if there was no exception)
     :param mon: Monitor instance
     :param tb_str: traceback string (empty if there was no exception)
     """
@@ -326,6 +325,7 @@ def safely_call(func, args):
             args = [a.unpickle() for a in args]
         if args and isinstance(args[-1], Monitor):
             mon = args[-1]
+            mon.operation = func.__name__
             mon.children.append(child)  # child is a child of mon
             child.hdf5path = mon.hdf5path
         else:
