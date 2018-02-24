@@ -309,7 +309,7 @@ class Result(object):
         return val
 
 
-def safely_call(func, args, backurl=None):
+def safely_call(func, args):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -336,7 +336,7 @@ def safely_call(func, args, backurl=None):
         # further investigation is needed
         # check_mem_usage(mon)  # check if too much memory is used
         # FIXME: this approach does not work with the Threadmap
-        backurl = getattr(mon, 'backurl', backurl)
+        backurl = getattr(mon, 'backurl', None)
         if backurl:
             zsocket = Socket(backurl, zmq.PUSH, 'connect')
         else:
@@ -632,6 +632,7 @@ class Starmap(object):
             allargs.append(args)
         yield len(allargs)
         for args in allargs:
+            args[-1].backurl = None  # no zmq in sequential
             yield safely_call(self.task_func, args)
 
     def _iter_processes(self):
