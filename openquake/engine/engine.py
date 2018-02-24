@@ -218,7 +218,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     setproctitle('oq-job-%d' % job_id)
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if os.environ.get('OQ_DISTRIBUTE') in ('zmq', 'celery'):
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
             set_concurrent_tasks_default()
         msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
