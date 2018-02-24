@@ -75,7 +75,7 @@ class Socket(object):
     :param mode: default 'bind', accepts also 'connect'
     :param timeout: default 1000 ms, used when polling the underlying socket
     """
-    def __init__(self, end_point, socket_type, mode, timeout=1000):
+    def __init__(self, end_point, socket_type, mode, timeout=5000):
         assert 'localhost' not in end_point, 'Use 127.0.0.1 instead'
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
@@ -129,7 +129,7 @@ class Socket(object):
                 if self.zsocket.poll(self.timeout):
                     args = self.zsocket.recv_pyobj()
                 else:
-                    logging.info('Timeout in %s', self)
+                    logging.warn('Timeout in %s', self)
                     continue
             except (KeyboardInterrupt, zmq.ZMQError):
                 # sending SIGTERM raises ZMQError
