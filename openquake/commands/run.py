@@ -132,9 +132,8 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
 def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
         loglevel='info', pdb=None):
     """
-    Run a calculation with multiprocessing
+    Run a calculation bypassing the database layer
     """
-    os.environ['OQ_DISTRIBUTE'] = 'futures'
     params = oqvalidation.OqParam.check(
         dict(p.split('=', 1) for p in param or ()))
     if slowest:

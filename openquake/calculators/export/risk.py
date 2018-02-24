@@ -540,7 +540,7 @@ def get_paths(rlz):
 def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
     assetcol = dstore['assetcol/array'].value
-    aref = dstore['asset_refs'].value
+    aref = dstore['assetcol/asset_refs'].value
     bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
@@ -588,7 +588,7 @@ def export_asset_loss_table(ekey, dstore):
     key, fmt = ekey
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    arefs = dstore['asset_refs'].value
+    arefs = assetcol.asset_refs
     avals = assetcol.values()
     loss_types = dstore.get_attr('all_loss_ratios', 'loss_types').split()
     dtlist = [(lt, F32) for lt in loss_types]
