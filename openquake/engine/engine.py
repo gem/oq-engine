@@ -42,10 +42,9 @@ from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
-USE_CELERY = os.environ.get(
-    'OQ_DISTRIBUTE', config.distribution.oq_distribute).startswith('celery')
+OQ_DISTRIBUTE = parallel.oq_distribute()
 
-if parallel.oq_distribute() == 'zmq':
+if OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default():
         """
@@ -64,7 +63,7 @@ if parallel.oq_distribute() == 'zmq':
         OqParam.concurrent_tasks.default = num_workers * 3
         logs.LOG.info('Using %d zmq workers', num_workers)
 
-elif USE_CELERY:
+elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control
 
     def set_concurrent_tasks_default():
