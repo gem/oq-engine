@@ -657,8 +657,8 @@ class Starmap(object):
             yield result_dict['result']
 
     def _iter_celery_zmq(self):
-        logging.info('Using receiver %s', self.receiver)
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            logging.info('Using receiver %s', socket.backurl)
             it = self._iter_celery(socket.backurl)
             yield next(it)  # number of results
             isocket = iter(socket)
