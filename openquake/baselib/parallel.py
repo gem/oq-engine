@@ -564,8 +564,8 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
-        self.receiver = ('tcp://%(master_host)s:%(receiver_ports)s' %
-                         config.zworkers)
+        self.receiver = 'tcp://%s:%s' % (
+            config.dbserver.host, config.zworkers.receiver_ports)
 
     @property
     def num_tasks(self):
