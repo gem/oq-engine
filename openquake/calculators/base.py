@@ -331,15 +331,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
-    def count_assets(self):
-        """
-        Count how many assets are taken into consideration by the calculator
-        """
-        try:
-            return len(self.assetcol)
-        except AttributeError:
-            return len(self.datastore['assetcol/array'])
-
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
@@ -444,6 +435,7 @@ class HazardCalculator(BaseCalculator):
             mesh, assets_by_site = (
                 readinput.get_mesh_assets_by_site(self.oqparam, self.exposure))
         if haz_sitecol:
+            tot_assets = sum(len(assets) for assets in assets_by_site)
             all_sids = haz_sitecol.complete.sids
             sids = set(haz_sitecol.sids)
             # associate the assets to the hazard sites
@@ -466,6 +458,9 @@ class HazardCalculator(BaseCalculator):
             mask = numpy.array(
                 [sid in assets_by_sid for sid in all_sids])
             assets_by_site = [assets_by_sid[sid] for sid in all_sids]
+            num_assets = sum(len(assets) for assets in assets_by_site)
+            logging.info('Associated %d/%d assets to the hazard sites',
+                         num_assets, tot_assets)
             self.sitecol = haz_sitecol.complete.filter(mask)
         else:  # use the exposure sites as hazard sites
             self.sitecol = readinput.get_site_collection(self.oqparam, mesh)
