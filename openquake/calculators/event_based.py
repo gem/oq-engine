@@ -554,9 +554,10 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
-        acc = parallel.Starmap(
-            self.core_task.__func__, self.gen_args()
-        ).reduce(self.combine_pmaps_and_save_gmfs, {
+        ires = parallel.Starmap(
+            self.core_task.__func__, self.gen_args()).submit_all()
+        self.precalc.result.clear()  # save memory
+        acc = ires.reduce(self.combine_pmaps_and_save_gmfs, {
             r: ProbabilityMap(L) for r in range(R)})
         save_gmdata(self, R)
         if self.indices:
