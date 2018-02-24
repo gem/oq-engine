@@ -26,15 +26,8 @@ except ImportError:
     celery = None
 
 
-def get_length(data):
+def get_length(data, monitor):
     return {'n': len(data)}
-
-
-def get_len(data, monitor):
-    with monitor:
-        result = {'n': len(data)}
-    monitor.flush()
-    return result
 
 
 class StarmapTestCase(unittest.TestCase):
@@ -46,22 +39,23 @@ class StarmapTestCase(unittest.TestCase):
 
     def test_apply(self):
         res = parallel.Starmap.apply(
-            get_length, (numpy.arange(10),), concurrent_tasks=3).reduce()
+            get_length, (numpy.arange(10), self.monitor),
+            concurrent_tasks=3).reduce()
         self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
 
     # this case is non-trivial since there is a key, so two groups are
     # generated even if everything is run in a single core
     def test_apply_no_tasks(self):
         res = parallel.Starmap.apply(
-            get_length, ('aaabb',), concurrent_tasks=0,
-            key=lambda char: char)
+            get_length, ('aaabb', self.monitor),
+            concurrent_tasks=0, key=lambda char: char)
         # chunks [['a', 'a', 'a'], ['b', 'b']]
         partial_sums = sorted(dic['n'] for dic in res)
         self.assertEqual(partial_sums, [2, 3])
 
     def test_apply_maxweight(self):
         res = parallel.Starmap.apply(
-            get_length, ('aaabb',), maxweight=2,
+            get_length, ('aaabb', self.monitor), maxweight=2,
             key=lambda char: char)
         # chunks ['aa', 'ab', 'b']
         partial_sums = sorted(dic['n'] for dic in res)
@@ -71,8 +65,10 @@ class StarmapTestCase(unittest.TestCase):
         all_data = [
             ('a', list(range(10))), ('b', list(range(20))),
             ('c', list(range(15)))]
-        res = {key: parallel.Starmap(get_length, [(data,)]).submit_all()
-               for key, data in all_data}
+        res = {}
+        for key, data in all_data:
+            res[key] = parallel.Starmap(
+                get_length, [(data, self.monitor)]).submit_all()
         for key, val in res.items():
             res[key] = val.reduce()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})
