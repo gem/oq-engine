@@ -36,7 +36,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo
 from openquake.risklib import riskinput, asset
 from openquake.commonlib import readinput, source, calc, riskmodels, writers
-from openquake.baselib.parallel import Starmap, wakeup_pool
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
 from openquake.calculators.getters import GmfDataGetter, PmapGetter
@@ -374,7 +374,6 @@ class HazardCalculator(BaseCalculator):
         Read risk data and sources if any
         """
         oq = self.oqparam
-        wakeup_pool()  # fork before reading the data
         self.read_risk_data()
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
