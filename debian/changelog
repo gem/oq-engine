@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Added a distribution mode celery_zmq
   * Substantial cleanup of the parallelization framework
+  * Fixed a bug with nonparametric sources producing negative probabilities
 
 python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
 
