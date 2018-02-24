@@ -556,7 +556,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.indices = collections.defaultdict(list)  # sid -> indices
         ires = parallel.Starmap(
             self.core_task.__func__, self.gen_args()).submit_all()
-        if self.precalc.result:
+        if self.precalc and self.precalc.result:
             # remove the ruptures in memory to save memory
             self.precalc.result.clear()
         acc = ires.reduce(self.combine_pmaps_and_save_gmfs, {
