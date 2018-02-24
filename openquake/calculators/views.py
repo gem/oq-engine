@@ -38,7 +38,7 @@ from openquake.hazardlib import valid, stats as hstats
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv, FIVEDIGITS)
+    build_header, scientificformat, FIVEDIGITS)
 from openquake.calculators import getters
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
