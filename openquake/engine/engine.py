@@ -252,7 +252,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             # in such a situation, we simply log the cleanup error without
             # taking further action, so that the real error can propagate
             try:
-                if USE_CELERY:
+                if OQ_DISTRIBUTE.startswith('celery'):
                     celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
             except:
                 # log the finalization error only if there is no real error
