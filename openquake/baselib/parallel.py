@@ -630,9 +630,6 @@ class Starmap(object):
         allargs = list(self.task_args)
         yield len(allargs)
         for task_no, args in enumerate(allargs):
-            if isinstance(args[-1], Monitor):  # not the case for wakeup
-                args[-1].task_no = task_no
-                args[-1].backurl = None
             yield safely_call(self.task_func, args)
 
     def _iter_processes(self):
