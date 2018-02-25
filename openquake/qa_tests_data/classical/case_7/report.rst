@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 7
 
 ============== ===================
 checksum32     359,954,679        
-date           2018-02-19T09:59:20
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:43:08
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      0.1
 width_of_mfd_bin                1.0               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     1066              
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -75,8 +77,8 @@ source_model_1.xml 0      Active Shallow Crust 140          140
 Informational data
 ------------------
 ======================= ===========================================================================
-count_ruptures.received tot 1.58 KB, max_per_task 811 B                                            
-count_ruptures.sent     sources 2.22 KB, srcfilter 1.41 KB, param 836 B, monitor 638 B, gsims 240 B
+count_ruptures.received tot 1.61 KB, max_per_task 822 B                                            
+count_ruptures.sent     sources 2.22 KB, srcfilter 1.41 KB, param 836 B, monitor 660 B, gsims 240 B
 hazard.input_weight     378.0                                                                      
 hazard.n_imts           1                                                                          
 hazard.n_levels         3                                                                          
@@ -114,7 +116,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.004 1.598E-04 0.004 0.004 2        
+count_ruptures     0.007 5.813E-04 0.006 0.007 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -122,11 +124,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.201     0.0       1     
-total count_ruptures           0.007     0.0       2     
-managing sources               0.007     0.0       1     
+reading composite source model 0.198     0.0       1     
+total count_ruptures           0.014     0.0       2     
+managing sources               0.006     0.0       1     
 store source_info              0.003     0.0       1     
-reading site collection        4.482E-05 0.0       1     
-aggregate curves               3.171E-05 0.0       2     
-saving probability maps        2.718E-05 0.0       1     
+reading site collection        4.435E-05 0.0       1     
+aggregate curves               3.099E-05 0.0       2     
+saving probability maps        2.384E-05 0.0       1     
 ============================== ========= ========= ======
