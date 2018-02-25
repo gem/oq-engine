@@ -73,7 +73,7 @@ class Socket(object):
     :param end_point: zmq end point string
     :param socket_type: zmq socket type (integer)
     :param mode: default 'bind', accepts also 'connect'
-    :param timeout: default 1000 ms, used when polling the underlying socket
+    :param timeout: default 5000 ms, used when polling the underlying socket
     """
     def __init__(self, end_point, socket_type, mode, timeout=5000):
         assert 'localhost' not in end_point, 'Use 127.0.0.1 instead'
@@ -86,7 +86,7 @@ class Socket(object):
         self.running = False
 
     def __enter__(self):
-        """Instantiate the undelying zmq socket"""
+        """Instantiate the underlying zmq socket"""
         # first check if the end_point ends in :<min_port>-<max_port>
         port_range = re.search(r':(\d+)-(\d+)$', self.end_point)
         if port_range:
@@ -95,6 +95,7 @@ class Socket(object):
             end_point = self.end_point.rsplit(':', 1)[0]  # strip port range
             self.zsocket = context.socket(self.socket_type)
             port = self.zsocket.bind_to_random_port(end_point, p1, p2)
+            # NB: will raise a ZMQBindError if no port is available
             self.port = port
             self.backurl = '%s:%d' % (end_point, port)
         elif self.mode == 'bind':
