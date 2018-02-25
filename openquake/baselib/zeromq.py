@@ -130,7 +130,9 @@ class Socket(object):
                 if self.zsocket.poll(self.timeout):
                     args = self.zsocket.recv_pyobj()
                 else:
-                    logging.warn('Timeout in %s', self)
+                    # wait a bit more; print a warning for PULL sockets
+                    if self.socket_type == 'PULL':
+                        logging.warn('Timeout in %s', self)
                     continue
             except (KeyboardInterrupt, zmq.ZMQError):
                 # sending SIGTERM raises ZMQError
