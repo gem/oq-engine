@@ -3,8 +3,8 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     1,603,095,237      
-date           2018-02-19T10:00:43
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:44:28
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 11, num_levels = 106
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -87,9 +89,9 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 building riskinputs     0.042     0.0       1     
-reading exposure        0.026     0.0       1     
 saving gmfs             0.008     0.0       1     
 computing gmfs          0.004     0.0       1     
-building epsilons       5.908E-04 0.0       1     
-reading site collection 6.437E-06 0.0       1     
+reading exposure        0.002     0.0       1     
+building epsilons       6.185E-04 0.0       1     
+reading site collection 4.768E-06 0.0       1     
 ======================= ========= ========= ======
