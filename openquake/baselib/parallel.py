@@ -174,6 +174,8 @@ from openquake.baselib.general import (
 
 cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq',  'celery_zmq'):
+    raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
 def oq_distribute(task=None):
