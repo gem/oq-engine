@@ -403,7 +403,6 @@ def compute_gmfs_and_curves(getters, oq, monitor):
         else:
             gmfdata = None
         res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
-                   taskno=monitor.task_no,
                    indices=numpy.array(indices, (U32, 3)))
         if len(getter.gmdata):
             results.append(res)
