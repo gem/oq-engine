@@ -30,11 +30,6 @@ def double(x, mon):
     return 2 * x
 
 
-def unpickle(smap):
-    for res, exc, mon in smap:
-        yield res.unpickle()
-
-
 class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
