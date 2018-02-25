@@ -3,8 +3,8 @@ Event Based Hazard
 
 ============== ===================
 checksum32     117,701,076        
-date           2018-02-19T09:58:23
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:42:12
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 11
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     24                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -75,19 +77,19 @@ source_model.xml 0      Active Shallow Crust 483          483
 
 Informational data
 ------------------
-========================= ====================================================================================
-compute_ruptures.received tot 21.96 KB, max_per_task 3.4 KB                                                   
-compute_ruptures.sent     sources 29.78 KB, src_filter 10.58 KB, param 9.45 KB, monitor 4.67 KB, gsims 1.76 KB
-hazard.input_weight       483.0                                                                               
-hazard.n_imts             1                                                                                   
-hazard.n_levels           11                                                                                  
-hazard.n_realizations     1                                                                                   
-hazard.n_sites            1                                                                                   
-hazard.n_sources          2                                                                                   
-hazard.output_weight      1.0                                                                                 
-hostname                  tstation.gem.lan                                                                    
-require_epsilons          True                                                                                
-========================= ====================================================================================
+========================= ===================================================================================
+compute_ruptures.received tot 21.49 KB, max_per_task 3.42 KB                                                 
+compute_ruptures.sent     sources 28.78 KB, src_filter 9.87 KB, param 8.82 KB, monitor 4.51 KB, gsims 1.64 KB
+hazard.input_weight       483.0                                                                              
+hazard.n_imts             1                                                                                  
+hazard.n_levels           11                                                                                 
+hazard.n_realizations     1                                                                                  
+hazard.n_sites            1                                                                                  
+hazard.n_sources          2                                                                                  
+hazard.output_weight      1.0                                                                                
+hostname                  tstation.gem.lan                                                                   
+require_epsilons          True                                                                               
+========================= ===================================================================================
 
 Exposure model
 --------------
@@ -108,8 +110,8 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-1         CharacteristicFaultSource 1            0.0       1         0        
 3         SimpleFaultSource         482          0.0       1         0        
+1         CharacteristicFaultSource 1            0.0       1         0        
 ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -129,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.024 0.011  0.002 0.040 15       
+compute_ruptures   0.028 0.019  0.003 0.063 14       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -137,13 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.364     0.531     15    
-managing sources               0.119     0.0       1     
-making contexts                0.017     0.0       5     
-reading composite source model 0.011     0.0       1     
-saving ruptures                0.010     0.0       15    
-store source_info              0.003     0.0       1     
-reading exposure               0.003     0.0       1     
+total compute_ruptures         0.395     0.539     14    
+managing sources               0.129     0.0       1     
+making contexts                0.020     0.0       5     
+reading composite source model 0.014     0.0       1     
+saving ruptures                0.011     0.0       14    
+store source_info              0.004     0.0       1     
 setting event years            0.001     0.0       1     
-reading site collection        7.391E-06 0.0       1     
+reading exposure               5.510E-04 0.0       1     
+reading site collection        6.437E-06 0.0       1     
 ============================== ========= ========= ======
