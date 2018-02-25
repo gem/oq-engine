@@ -337,12 +337,9 @@ def safely_call(func, args):
         # Check is done anyway in other parts of the code (submit and iter);
         # further investigation is needed
         # check_mem_usage(mon)  # check if too much memory is used
-        # FIXME: this approach does not work with the Threadmap
         backurl = getattr(mon, 'backurl', None)
-        if backurl:
-            zsocket = Socket(backurl, zmq.PUSH, 'connect')
-        else:
-            zsocket = mock.MagicMock()  # do nothing if not backurl
+        zsocket = (Socket(backurl, zmq.PUSH, 'connect') if backurl
+                   else mock.MagicMock())  # do nothing
         with zsocket:
             try:
                 got = func(*args)
@@ -351,9 +348,7 @@ def safely_call(func, args):
                 etype, exc, tb = sys.exc_info()
                 res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
             zsocket.send(res)
-    if backurl:
-        return zsocket.num_sent
-    return res
+    return zsocket.num_sent if backurl else res
 
 
 if OQ_DISTRIBUTE.startswith('celery'):
@@ -443,7 +438,7 @@ class IterResult(object):
             result.mon.save_info(dic)
 
     def save_task_data(self, mon):
-        if mon.hdf5path and hasattr(mon, 'weight'):
+        if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration)
             data = numpy.array([tup], self.task_data_dt)
@@ -581,7 +576,7 @@ class Starmap(object):
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
-    def _genargs(self, backurl=None):
+    def _genargs(self, backurl=None, pickle=True):
         """
         Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them.
@@ -592,8 +587,9 @@ class Starmap(object):
                 args[-1].task_no = task_no
                 args[-1].weight = getattr(args[0], 'weight', 1.)
                 args[-1].backurl = backurl
-            args = pickle_sequence(args)
-            self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
+            if pickle:
+                args = pickle_sequence(args)
+                self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', self.num_tasks,
                               self.name)
@@ -627,7 +623,7 @@ class Starmap(object):
 
     def _iter_sequential(self):
         self.progress('Executing "%s" in process', self.name)
-        allargs = list(self.task_args)
+        allargs = list(self._genargs(pickle=False))
         yield len(allargs)
         for task_no, args in enumerate(allargs):
             yield safely_call(self.task_func, args)
