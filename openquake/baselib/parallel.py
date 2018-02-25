@@ -332,22 +332,21 @@ def safely_call(func, args):
             child.hdf5path = mon.hdf5path
         else:
             mon = child
-        # FIXME check_mem_usage is disabled here because it's causing
-        # dead locks in threads when log messages are raised.
-        # Check is done anyway in other parts of the code (submit and iter);
-        # further investigation is needed
-        # check_mem_usage(mon)  # check if too much memory is used
-        backurl = getattr(mon, 'backurl', None)
-        zsocket = (Socket(backurl, zmq.PUSH, 'connect') if backurl
-                   else mock.MagicMock())  # do nothing
-        with zsocket:
-            try:
-                got = func(*args)
-                res = Result(got, mon)
-            except:
-                etype, exc, tb = sys.exc_info()
-                res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-            zsocket.send(res)
+        try:
+            res = Result(func(*args), mon)
+        except:
+            _etype, exc, tb = sys.exc_info()
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+    # FIXME: check_mem_usage is disabled here because it's causing
+    # dead locks in threads when log messages are raised.
+    # Check is done anyway in other parts of the code
+    # further investigation is needed
+    # check_mem_usage(mon)  # check if too much memory is used
+    backurl = getattr(mon, 'backurl', None)
+    zsocket = (Socket(backurl, zmq.PUSH, 'connect') if backurl
+               else mock.MagicMock())  # do nothing
+    with zsocket:
+        zsocket.send(res)
     return zsocket.num_sent if backurl else res
 
 
