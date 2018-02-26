@@ -19,6 +19,7 @@ import unittest
 import tempfile
 
 import numpy
+from shapely import wkt
 
 from openquake.baselib import hdf5
 from openquake.hazardlib.site import Site, SiteCollection
@@ -217,6 +218,14 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered2.indices, [2])
         filtered2 = filtered.filter(numpy.array([True, False, True]))
         arreq(filtered2.indices, [0, 3])
+
+    def test_within_region(self):
+        region = wkt.loads('POLYGON((0 0, 9 0, 9 9, 0 9, 0 0))')
+        col = SiteCollection(self.SITES)
+        reducedcol = col.within(region)
+        # point (10, 20) is out, point (11, 12) is out, point (0, 2)
+        # is on the boundary i.e. out, (1, 1) is in
+        self.assertEqual(len(reducedcol), 1)
 
 
 class SiteCollectionIterTestCase(unittest.TestCase):

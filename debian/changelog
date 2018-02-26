@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Added a distribution mode celery_zmq
+  * Added the ability to use a preimported exposure in risk calculations
   * Substantial cleanup of the parallelization framework
   * Fixed a bug with nonparametric sources producing negative probabilities
 
