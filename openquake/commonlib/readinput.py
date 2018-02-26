@@ -260,6 +260,7 @@ def get_mesh(oqparam):
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif oqparam.hazard_calculation_id:
+        # return the mesh corresponding to the complete site collection
         with datastore.read(oqparam.hazard_calculation_id) as dstore:
             sitecol = dstore['sitecol'].complete
         return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
@@ -617,6 +618,7 @@ def get_risk_model(oqparam):
         retro = {}
     return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
 
+
 # ########################### exposure ############################ #
 
 cost_type_dt = numpy.dtype([('name', hdf5.vstr),
@@ -734,7 +736,7 @@ def get_exposure(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        an :class:`Exposure` instance
+        an :class:`Exposure` instance or a compatible AssetCollection
     """
     return Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
@@ -945,6 +947,9 @@ class Exposure(object):
                           self.cost_calculator)
         self.assets.append(ass)
 
+    def __iter__(self):
+        return iter(self.assets)
+
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
                                         len(self.assets))
@@ -954,10 +959,12 @@ def get_mesh_assets_by_site(oqparam, exposure):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param exposure:
+        an Exposure instance
     :returns:
         the exposure `mesh` and a list `assets_by_site` with the same length
     """
-    assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
+    assets_by_loc = groupby(exposure, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     assets_by_site = []
