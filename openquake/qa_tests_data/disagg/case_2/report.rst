@@ -3,8 +3,8 @@ QA test for disaggregation case_2
 
 ============== ===================
 checksum32     542,802,391        
-date           2018-02-19T10:00:43
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:44:29
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      4.0
 width_of_mfd_bin                0.1              
 area_source_discretization      10.0             
 ground_motion_correlation_model None             
+minimum_intensity               {}               
 random_seed                     23               
 master_seed                     0                
+ses_seed                        42               
 =============================== =================
 
 Input files
@@ -76,5 +78,5 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.076     0.0       1     
-reading site collection        4.387E-05 0.0       1     
+reading site collection        4.220E-05 0.0       1     
 ============================== ========= ========= ======
