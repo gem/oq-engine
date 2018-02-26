@@ -420,6 +420,7 @@ class AssetCollection(object):
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.array = self.array[ok_indices]
+        new.asset_refs = self.asset_refs[ok_indices]
         return new
 
     def values(self, aids=None):
