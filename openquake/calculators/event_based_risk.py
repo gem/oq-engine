@@ -27,7 +27,6 @@ from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
 from openquake.baselib import parallel
 from openquake.risklib import riskinput
-from openquake.commonlib import calc
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 
@@ -255,7 +254,7 @@ class EbriskCalculator(base.RiskCalculator):
     # a different strategy should be used; the one used here is good when
     # there are few source models, so that we cannot parallelize on those
     def start_tasks(self, sm_id, sitecol, assetcol, riskmodel, imtls,
-                    trunc_level, correl_model, min_iml, monitor):
+                    trunc_level, correl_model, min_iml):
         """
         :param sm_id: source model ordinal
         :param sitecol: a SiteCollection instance
@@ -265,7 +264,6 @@ class EbriskCalculator(base.RiskCalculator):
         :param trunc_level: truncation level
         :param correl_model: correlation model
         :param min_iml: vector of minimum intensities, one per IMT
-        :param monitor: a Monitor instance
         :returns: an IterResult instance
         """
         sm_info = self.csm_info.get_info(sm_id)
@@ -281,6 +279,8 @@ class EbriskCalculator(base.RiskCalculator):
         samples_by_grp = csm_info.get_samples_by_grp()
         num_events = 0
         num_ruptures = {}
+        taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
+        monitor = self.monitor(taskname)
         for grp_id in grp_ids:
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
@@ -307,7 +307,6 @@ class EbriskCalculator(base.RiskCalculator):
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
         self.vals = self.assetcol.values()
-        taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
         if self.datastore.parent:  # avoid hdf5 fork issues
             self.datastore.parent.close()
         ires = parallel.Starmap(
@@ -332,7 +331,6 @@ class EbriskCalculator(base.RiskCalculator):
         elt_dt = numpy.dtype(
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         csm_info = self.datastore['csm_info']
-        mon = self.monitor('risk')
         for sm in csm_info.source_models:
             param = dict(
                 ses_ratio=oq.ses_ratio,
@@ -346,7 +344,7 @@ class EbriskCalculator(base.RiskCalculator):
                 seed=self.oqparam.random_seed)
             yield (sm.ordinal, self.sitecol.complete,
                    param, self.riskmodel, imtls, oq.truncation_level,
-                   correl_model, min_iml, mon)
+                   correl_model, min_iml)
 
     def epsilon_getter(self):
         """
