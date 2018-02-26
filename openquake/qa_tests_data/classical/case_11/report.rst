@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 11
 
 ============== ===================
 checksum32     3,151,174,296      
-date           2018-02-19T09:59:20
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:43:08
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      0.01
 width_of_mfd_bin                0.001             
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     1066              
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -88,8 +90,8 @@ source_model.xml 2      Active Shallow Crust 2,500        3,000
 Informational data
 ------------------
 ======================= =============================================================================
-count_ruptures.received tot 2.38 KB, max_per_task 812 B                                              
-count_ruptures.sent     sources 3.49 KB, srcfilter 2.12 KB, param 1.25 KB, monitor 957 B, gsims 360 B
+count_ruptures.received tot 2.41 KB, max_per_task 823 B                                              
+count_ruptures.sent     sources 3.49 KB, srcfilter 2.12 KB, param 1.25 KB, monitor 990 B, gsims 360 B
 hazard.input_weight     900.0                                                                        
 hazard.n_imts           1                                                                            
 hazard.n_levels         4                                                                            
@@ -106,7 +108,7 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         PointSource  2,500        6.731E-04 4         3        
+1         PointSource  2,500        7.412E-04 4         3        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -114,7 +116,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  6.731E-04 1     
+PointSource  7.412E-04 1     
 ============ ========= ======
 
 Duplicated sources
@@ -123,21 +125,21 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ===== =========
-operation-duration mean      stddev    min       max   num_tasks
-count_ruptures     9.952E-04 1.681E-04 8.042E-04 0.001 3        
-================== ========= ========= ========= ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_ruptures     0.003 2.129E-05 0.003 0.003 3        
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.018     0.0       1     
-managing sources               0.016     0.0       1     
+reading composite source model 0.017     0.0       1     
+managing sources               0.014     0.0       1     
+total count_ruptures           0.010     0.0       3     
 store source_info              0.003     0.0       1     
-total count_ruptures           0.003     0.0       3     
-aggregate curves               4.959E-05 0.0       3     
-reading site collection        4.601E-05 0.0       1     
-saving probability maps        2.480E-05 0.0       1     
+aggregate curves               4.792E-05 0.0       3     
+reading site collection        4.244E-05 0.0       1     
+saving probability maps        2.456E-05 0.0       1     
 ============================== ========= ========= ======

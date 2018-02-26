@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     420,579,279        
-date           2018-02-19T10:00:44
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:44:29
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 19
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      5.0               
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     1024              
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -44,7 +46,7 @@ Composite source model
 ========= ====== ================ ================
 smlt_path weight gsim_logic_tree  num_realizations
 ========= ====== ================ ================
-b1        1.000  trivial(1,0,0,0) 1/1             
+b1        1.000  trivial(0,0,1,0) 1/1             
 ========= ====== ================ ================
 
 Required parameters per tectonic region type
@@ -71,5 +73,5 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.008     0.0       1     
-reading site collection        7.486E-05 0.0       1     
+reading site collection        3.862E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     796,188,147        
-date           2018-02-19T09:59:18
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:43:06
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      0.1
 width_of_mfd_bin                1.0               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     1066              
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -73,8 +75,8 @@ source_model.xml 0      Active Shallow Crust 91           91
 Informational data
 ------------------
 ======================= =========================================================================
-count_ruptures.received max_per_task 811 B, tot 811 B                                            
-count_ruptures.sent     sources 1.06 KB, srcfilter 722 B, param 418 B, monitor 319 B, gsims 120 B
+count_ruptures.received max_per_task 822 B, tot 822 B                                            
+count_ruptures.sent     sources 1.06 KB, srcfilter 722 B, param 418 B, monitor 330 B, gsims 120 B
 hazard.input_weight     91.0                                                                     
 hazard.n_imts           1                                                                        
 hazard.n_levels         3                                                                        
@@ -91,7 +93,7 @@ Slowest sources
 ========= ================= ============ ========= ========= =========
 source_id source_class      num_ruptures calc_time num_sites num_split
 ========= ================= ============ ========= ========= =========
-1         SimpleFaultSource 91           0.002     2         1        
+1         SimpleFaultSource 91           0.003     2         1        
 ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -99,7 +101,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.002     1     
+SimpleFaultSource 0.003     1     
 ================= ========= ======
 
 Duplicated sources
@@ -110,7 +112,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.003 NaN    0.003 0.003 1        
+count_ruptures     0.006 NaN    0.006 0.006 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,11 +120,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.034     0.0       1     
-managing sources               0.003     0.0       1     
+reading composite source model 0.029     0.0       1     
+total count_ruptures           0.006     0.0       1     
 store source_info              0.003     0.0       1     
-total count_ruptures           0.003     0.0       1     
-reading site collection        5.388E-05 0.0       1     
-saving probability maps        2.599E-05 0.0       1     
-aggregate curves               1.884E-05 0.0       1     
+managing sources               0.003     0.0       1     
+reading site collection        4.411E-05 0.0       1     
+saving probability maps        2.456E-05 0.0       1     
+aggregate curves               1.836E-05 0.0       1     
 ============================== ========= ========= ======
