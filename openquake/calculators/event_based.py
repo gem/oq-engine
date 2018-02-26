@@ -402,7 +402,6 @@ def compute_gmfs_and_curves(getters, oq, monitor):
         else:
             gmfdata = None
         res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
-                   taskno=monitor.task_no,
                    indices=numpy.array(indices, (U32, 3)))
         if len(getter.gmdata):
             results.append(res)
@@ -553,9 +552,12 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
-        acc = parallel.Starmap(
-            self.core_task.__func__, self.gen_args()
-        ).reduce(self.combine_pmaps_and_save_gmfs, {
+        ires = parallel.Starmap(
+            self.core_task.__func__, self.gen_args()).submit_all()
+        if self.precalc and self.precalc.result:
+            # remove the ruptures in memory to save memory
+            self.precalc.result.clear()
+        acc = ires.reduce(self.combine_pmaps_and_save_gmfs, {
             r: ProbabilityMap(L) for r in range(R)})
         save_gmdata(self, R)
         if self.indices:

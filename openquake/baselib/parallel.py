@@ -146,6 +146,8 @@ fast sources.
 """
 from __future__ import print_function
 import os
+import sys
+import mock
 import time
 import socket
 import signal
@@ -154,6 +156,7 @@ import logging
 import operator
 import functools
 import itertools
+import traceback
 import multiprocessing.dummy
 import numpy
 try:
@@ -164,7 +167,6 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.workerpool import safely_call
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
@@ -172,14 +174,8 @@ from openquake.baselib.general import (
 
 cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-
-if OQ_DISTRIBUTE == 'celery':
-    from celery.result import ResultSet
-    from celery import Celery
-    from celery.task import task
-    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
-    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
-    safetask = task(safely_call, queue='celery')  # has to be global
+if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq',  'celery_zmq'):
+    raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
 def oq_distribute(task=None):
@@ -188,7 +184,7 @@ def oq_distribute(task=None):
     """
     dist = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
     read_access = getattr(task, 'read_access', True)
-    if dist == 'celery' and not read_access:
+    if dist.startswith('celery') and not read_access:
         raise ValueError('You must configure the shared_dir in openquake.cfg '
                          'in order to be able to run %s with celery' %
                          task.__name__)
@@ -291,6 +287,78 @@ def pickle_sequence(objects):
     return out
 
 
+class Result(object):
+    """
+    :param val: value to return or exception instance
+    :param mon: Monitor instance
+    :param tb_str: traceback string (empty if there was no exception)
+    """
+    def __init__(self, val, mon, tb_str=''):
+        self.pik = Pickled(val)
+        self.mon = mon
+        self.tb_str = tb_str
+
+    def get(self):
+        """
+        Returns the underlying value or raise the underlying exception
+        """
+        with self.mon('unpickling %s' % self.mon.operation):
+            val = self.pik.unpickle()
+        if self.tb_str:
+            etype = val.__class__
+            raise etype('\n%s%s: %s' % (self.tb_str, etype.__name__, val))
+        return val
+
+
+def safely_call(func, args):
+    """
+    Call the given function with the given arguments safely, i.e.
+    by trapping the exceptions. Return a pair (result, exc_type)
+    where exc_type is None if no exceptions occur, otherwise it
+    is the exception class and the result is a string containing
+    error message and traceback.
+
+    :param func: the function to call
+    :param args: the arguments
+    """
+    with Monitor('total ' + func.__name__, measuremem=True) as child:
+        if args and hasattr(args[0], 'unpickle'):
+            # args is a list of Pickled objects
+            args = [a.unpickle() for a in args]
+        if args and isinstance(args[-1], Monitor):
+            mon = args[-1]
+            mon.operation = func.__name__
+            mon.children.append(child)  # child is a child of mon
+            child.hdf5path = mon.hdf5path
+        else:
+            mon = child
+        try:
+            res = Result(func(*args), mon)
+        except:
+            _etype, exc, tb = sys.exc_info()
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+    # FIXME: check_mem_usage is disabled here because it's causing
+    # dead locks in threads when log messages are raised.
+    # Check is done anyway in other parts of the code
+    # further investigation is needed
+    # check_mem_usage(mon)  # check if too much memory is used
+    backurl = getattr(mon, 'backurl', None)
+    zsocket = (Socket(backurl, zmq.PUSH, 'connect') if backurl
+               else mock.MagicMock())  # do nothing
+    with zsocket:
+        zsocket.send(res)
+    return zsocket.num_sent if backurl else res
+
+
+if OQ_DISTRIBUTE.startswith('celery'):
+    from celery.result import ResultSet
+    from celery import Celery
+    from celery.task import task
+    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
+    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+    safetask = task(safely_call, queue='celery')  # has to be global
+
+
 class IterResult(object):
     """
     :param futures:
@@ -348,17 +416,14 @@ class IterResult(object):
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
-            elif hasattr(result, 'unpickle'):
-                self.received.append(len(result))
-                val, etype, mon = result.unpickle()
-            else:
-                val, etype, mon = result
-                self.received.append(len(Pickled(result)))
-            if etype:
-                raise RuntimeError(val)
+            elif isinstance(result, Result):
+                val = result.get()
+                self.received.append(len(result.pik))
+            else:  # this should never happen
+                raise ValueError(result)
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_data(mon)
+                self.save_task_data(result.mon)
             yield val
 
         if self.received:
@@ -369,10 +434,10 @@ class IterResult(object):
             received = {'max_per_task': max_per_task, 'tot': tot}
             tname = self.name
             dic = {tname: {'sent': self.sent, 'received': received}}
-            mon.save_info(dic)
+            result.mon.save_info(dic)
 
     def save_task_data(self, mon):
-        if mon.hdf5path and hasattr(mon, 'weight'):
+        if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration)
             data = numpy.array([tup], self.task_data_dt)
@@ -495,8 +560,8 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
-        self.receiver = ('tcp://%(master_host)s:%(receiver_ports)s' %
-                         config.zworkers)
+        self.receiver = 'tcp://%s:%s' % (
+            config.dbserver.host, config.zworkers.receiver_ports)
 
     @property
     def num_tasks(self):
@@ -510,7 +575,7 @@ class Starmap(object):
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
-    def _genargs(self, backurl=None):
+    def _genargs(self, backurl=None, pickle=True):
         """
         Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them.
@@ -521,8 +586,9 @@ class Starmap(object):
                 args[-1].task_no = task_no
                 args[-1].weight = getattr(args[0], 'weight', 1.)
                 args[-1].backurl = backurl
-            args = pickle_sequence(args)
-            self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
+            if pickle:
+                args = pickle_sequence(args)
+                self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', self.num_tasks,
                               self.name)
@@ -538,6 +604,8 @@ class Starmap(object):
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
+        elif self.distribute == 'celery_zmq':
+            it = self._iter_celery_zmq()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
@@ -554,13 +622,9 @@ class Starmap(object):
 
     def _iter_sequential(self):
         self.progress('Executing "%s" in process', self.name)
-        allargs = []
-        for task_no, args in enumerate(self.task_args):
-            if isinstance(args[-1], Monitor):  # not the case for wakeup
-                args[-1].task_no = task_no
-            allargs.append(args)
+        allargs = list(self._genargs(pickle=False))
         yield len(allargs)
-        for args in allargs:
+        for task_no, args in enumerate(allargs):
             yield safely_call(self.task_func, args)
 
     def _iter_processes(self):
@@ -570,21 +634,29 @@ class Starmap(object):
         for res in self.pool.imap_unordered(safefunc, allargs):
             yield res
 
-    def _iter_celery(self):
+    def _iter_celery(self, backurl=None):
         results = []
-        for piks in self._genargs():
+        for piks in self._genargs(backurl):
             res = safetask.delay(self.task_func, piks)
             # populating Starmap.task_ids, used in celery_cleanup
             self.task_ids.append(res.task_id)
             results.append(res)
         yield len(results)
         for task_id, result_dict in ResultSet(results).iter_native():
-            idx = self.task_ids.index(task_id)
-            self.task_ids.pop(idx)
+            self.task_ids.remove(task_id)
             if CELERY_RESULT_BACKEND.startswith('rpc:'):
                 # work around a celery/rabbitmq bug
                 del app.backend._cache[task_id]
             yield result_dict['result']
+
+    def _iter_celery_zmq(self):
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            logging.info('Using receiver %s', socket.backurl)
+            it = self._iter_celery(socket.backurl)
+            yield next(it)  # number of results
+            isocket = iter(socket)
+            for _ in it:
+                yield next(isocket)
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
