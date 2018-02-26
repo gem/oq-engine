@@ -31,7 +31,7 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 ### Current stable
 
 Current stable version is the **OpenQuake Engine 2.9** 'Jeffreys'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine.
-* [What's new](https://github.com/gem/oq-engine/blob/engine-2.8/doc/whats-new.md)
+* [What's new](https://github.com/gem/oq-engine/blob/engine-2.9/doc/whats-new.md)
 
 ## Documentation (master tree)
 
