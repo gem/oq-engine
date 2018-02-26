@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     1,697,824,437      
-date           2018-02-19T10:00:42
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:44:28
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     42                
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -90,10 +92,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.019     0.0       1     
+building riskinputs     0.018     0.0       1     
 computing gmfs          0.012     0.0       1     
 saving gmfs             0.007     0.0       1     
-reading exposure        0.004     0.0       1     
-building epsilons       3.908E-04 0.0       1     
-reading site collection 5.245E-06 0.0       1     
+reading exposure        0.002     0.0       1     
+building epsilons       3.786E-04 0.0       1     
+reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======
