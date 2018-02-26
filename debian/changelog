@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the long time deprecated commands
+    `oq engine --run-hazard` and `oq engine --run-risk`
   * Added a distribution mode celery_zmq
   * Added the ability to use a preimported exposure in risk calculations
   * Substantial cleanup of the parallelization framework
