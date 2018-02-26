@@ -373,14 +373,13 @@ class AssetCollection(object):
 
     def get_aids_by_tag(self):
         """
-        :returns: dict tag -> asset ordinals
+        :returns: dict idx -> aid
         """
-        ordinal = dict(zip(self.array['idx'], range(len(self.array))))
         aids_by_tag = general.AccumDict(accum=set())
-        for ass in self:
+        for aid, ass in enumerate(self):
             for tagname, tagidx in zip(self.tagnames, ass.tagidxs):
                 tag = self.tagcol.get_tag(tagname, tagidx)
-                aids_by_tag[tag].add(ordinal[ass.idx])
+                aids_by_tag[tag].add(aid)
         return aids_by_tag
 
     @property
