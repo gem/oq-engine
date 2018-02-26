@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     426,920,066        
-date           2018-02-19T09:59:17
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:43:05
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 6
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      1.0
 width_of_mfd_bin                1.0               
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     1066              
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -73,8 +75,8 @@ source_model.xml 0      Subduction Interface 19           19
 Informational data
 ------------------
 ======================= =========================================================================
-count_ruptures.received max_per_task 1.78 KB, tot 1.78 KB                                        
-count_ruptures.sent     sources 1.08 MB, srcfilter 722 B, param 434 B, monitor 319 B, gsims 135 B
+count_ruptures.received max_per_task 1.79 KB, tot 1.79 KB                                        
+count_ruptures.sent     sources 1.08 MB, srcfilter 722 B, param 434 B, monitor 330 B, gsims 135 B
 hazard.input_weight     19.0                                                                     
 hazard.n_imts           1                                                                        
 hazard.n_levels         6                                                                        
@@ -92,19 +94,19 @@ Slowest sources
 source_id source_class               num_ruptures calc_time num_sites num_split
 ========= ========================== ============ ========= ========= =========
 case_01   NonParametricSeismicSource 1            0.003     2         1        
-case_02   NonParametricSeismicSource 1            0.002     2         1        
-case_05   NonParametricSeismicSource 1            0.002     2         1        
-case_04   NonParametricSeismicSource 1            0.002     2         1        
-case_06   NonParametricSeismicSource 1            0.002     2         1        
 case_03   NonParametricSeismicSource 1            0.002     2         1        
+case_02   NonParametricSeismicSource 1            0.002     2         1        
+case_04   NonParametricSeismicSource 1            0.002     2         1        
+case_05   NonParametricSeismicSource 1            0.002     2         1        
+case_06   NonParametricSeismicSource 1            0.002     2         1        
 case_07   NonParametricSeismicSource 1            0.002     2         1        
-case_12   NonParametricSeismicSource 2            0.002     2         1        
 case_08   NonParametricSeismicSource 1            0.002     2         1        
-case_10   NonParametricSeismicSource 1            0.002     2         1        
+case_12   NonParametricSeismicSource 2            0.002     2         1        
 case_13   NonParametricSeismicSource 2            0.002     2         1        
-case_14   NonParametricSeismicSource 2            0.002     2         1        
-case_09   NonParametricSeismicSource 1            0.002     2         1        
+case_10   NonParametricSeismicSource 1            0.002     2         1        
 case_11   NonParametricSeismicSource 1            0.002     2         1        
+case_09   NonParametricSeismicSource 1            0.002     2         1        
+case_14   NonParametricSeismicSource 2            0.002     2         1        
 case_15   NonParametricSeismicSource 2            0.002     2         1        
 ========= ========================== ============ ========= ========= =========
 
@@ -113,7 +115,7 @@ Computation times by source typology
 ========================== ========= ======
 source_class               calc_time counts
 ========================== ========= ======
-NonParametricSeismicSource 0.031     15    
+NonParametricSeismicSource 0.034     15    
 ========================== ========= ======
 
 Duplicated sources
@@ -124,7 +126,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.033 NaN    0.033 0.033 1        
+count_ruptures     0.038 NaN    0.038 0.038 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -132,11 +134,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.296     0.0       1     
-total count_ruptures           0.033     0.0       1     
-managing sources               0.018     0.0       1     
-store source_info              0.005     0.0       1     
-reading site collection        5.722E-05 0.0       1     
-aggregate curves               5.293E-05 0.0       1     
-saving probability maps        3.719E-05 0.0       1     
+reading composite source model 0.269     0.0       1     
+total count_ruptures           0.038     0.0       1     
+managing sources               0.017     0.0       1     
+store source_info              0.003     0.0       1     
+aggregate curves               4.530E-05 0.0       1     
+reading site collection        4.530E-05 0.0       1     
+saving probability maps        2.599E-05 0.0       1     
 ============================== ========= ========= ======

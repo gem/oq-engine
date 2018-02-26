@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     2,872,781,101      
-date           2018-02-19T09:59:46
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:43:33
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      1.0
 width_of_mfd_bin                1.0               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        1066              
 =============================== ==================
 
 Input files
@@ -73,8 +75,8 @@ source_model.xml 0      Active Shallow Crust 10           10
 Informational data
 ------------------
 ========================= ==========================================================================
-compute_ruptures.received max_per_task 9.36 KB, tot 9.36 KB                                         
-compute_ruptures.sent     sources 1.26 KB, src_filter 722 B, param 582 B, monitor 319 B, gsims 120 B
+compute_ruptures.received max_per_task 9.37 KB, tot 9.37 KB                                         
+compute_ruptures.sent     sources 1.26 KB, src_filter 722 B, param 582 B, monitor 330 B, gsims 120 B
 hazard.input_weight       10.0                                                                      
 hazard.n_imts             1                                                                         
 hazard.n_levels           3                                                                         
@@ -110,7 +112,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.020 NaN    0.020 0.020 1        
+compute_ruptures   0.029 NaN    0.029 0.029 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -118,12 +120,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.034     0.0       1     
-total compute_ruptures         0.020     0.0       1     
-making contexts                0.011     0.0       10    
+managing sources               0.042     0.0       1     
+total compute_ruptures         0.029     0.0       1     
+making contexts                0.015     0.0       10    
 reading composite source model 0.004     0.0       1     
 store source_info              0.003     0.0       1     
 saving ruptures                0.003     0.0       1     
 setting event years            0.001     0.0       1     
-reading site collection        4.673E-05 0.0       1     
+reading site collection        5.102E-05 0.0       1     
 ============================== ========= ========= ======
