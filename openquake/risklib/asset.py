@@ -347,7 +347,6 @@ class AssetCollection(object):
 
     def __init__(self, asset_refs, assets_by_site, tagcol, cost_calculator,
                  time_event, occupancy_periods=''):
-        self.asset_refs = asset_refs
         self.tagcol = tagcol
         self.cost_calculator = cost_calculator
         self.time_event = time_event
@@ -355,6 +354,7 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
+        self.asset_refs = [asset_refs[rec['idx']] for rec in self.array]
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
