@@ -142,7 +142,7 @@ python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
   * Minor modification of check_gsim functions to permit instantiated classes
     to be passed
 
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 26 Feb 2018 08:53:58 +0100
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 26 Feb 2018 14:53:58 +0100
 
 python3-oq-engine (2.8.0-0~precise01) precise; urgency=low
 
