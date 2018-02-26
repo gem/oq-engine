@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 10
 
 ============== ===================
 checksum32     873,192,949        
-date           2018-02-19T09:58:58
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:42:46
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      0.01
 width_of_mfd_bin                0.001             
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     1066              
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -84,8 +86,8 @@ source_model.xml 1      Active Shallow Crust 3,000        3,000
 Informational data
 ------------------
 ======================= ===========================================================================
-count_ruptures.received tot 1.59 KB, max_per_task 812 B                                            
-count_ruptures.sent     sources 2.33 KB, srcfilter 1.41 KB, param 852 B, monitor 638 B, gsims 240 B
+count_ruptures.received tot 1.61 KB, max_per_task 823 B                                            
+count_ruptures.sent     sources 2.33 KB, srcfilter 1.41 KB, param 852 B, monitor 660 B, gsims 240 B
 hazard.input_weight     600.0                                                                      
 hazard.n_imts           1                                                                          
 hazard.n_levels         4                                                                          
@@ -102,7 +104,7 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         PointSource  3,000        3.855E-04 3         2        
+1         PointSource  3,000        5.114E-04 3         2        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -110,7 +112,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  3.855E-04 1     
+PointSource  5.114E-04 1     
 ============ ========= ======
 
 Duplicated sources
@@ -119,10 +121,10 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ===== =========
-operation-duration mean      stddev    min       max   num_tasks
-count_ruptures     8.811E-04 3.805E-04 6.120E-04 0.001 2        
-================== ========= ========= ========= ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_ruptures     0.005 0.002  0.004 0.006 2        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
@@ -130,10 +132,10 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.013     0.0       1     
-managing sources               0.011     0.0       1     
+managing sources               0.010     0.0       1     
+total count_ruptures           0.010     0.0       2     
 store source_info              0.003     0.0       1     
-total count_ruptures           0.002     0.0       2     
-reading site collection        5.221E-05 0.0       1     
-aggregate curves               3.362E-05 0.0       2     
-saving probability maps        2.384E-05 0.0       1     
+reading site collection        4.196E-05 0.0       1     
+aggregate curves               3.338E-05 0.0       2     
+saving probability maps        2.742E-05 0.0       1     
 ============================== ========= ========= ======

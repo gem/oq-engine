@@ -345,14 +345,15 @@ class AssetCollection(object):
     # numbers to each tagvalue, which is possible
     D, I = len('deductible-'), len('insurance_limit-')
 
-    def __init__(self, assets_by_site, tagcol, cost_calculator,
+    def __init__(self, asset_refs, assets_by_site, tagcol, cost_calculator,
                  time_event, occupancy_periods=''):
+        self.asset_refs = asset_refs
         self.tagcol = tagcol
-        self.cc = cost_calculator
+        self.cost_calculator = cost_calculator
         self.time_event = time_event
         self.occupancy_periods = occupancy_periods
         self.tot_sites = len(assets_by_site)
-        self.array = self.build_asset_collection(
+        self.array = self.build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
@@ -391,7 +392,7 @@ class AssetCollection(object):
         :param: a list of loss types
         :returns: an array of units as byte strings, suitable for HDF5
         """
-        units = self.cc.units
+        units = self.cost_calculator.units
         lst = []
         for lt in loss_types:
             if lt.endswith('_ins'):
@@ -407,6 +408,17 @@ class AssetCollection(object):
         for i, ass in enumerate(self.array):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
+
+    def reduce(self, sids):
+        """
+        :returns: a reduced AssetCollection on the given site IDs
+        """
+        ok_indices = numpy.sum([self.array['site_id'] == sid for sid in sids],
+                               axis=0, dtype=bool)
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self))
+        new.array = self.array[ok_indices]
+        return new
 
     def values(self, aids=None):
         """
@@ -444,7 +456,7 @@ class AssetCollection(object):
             deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
             insurance_limits={lt[self.I:]: a[lt] for lt in self.i_lim},
             retrofitted=a['retrofitted'] if self.retro else None,
-            calc=self.cc,
+            calc=self.cost_calculator,
             ordinal=aid)
 
     def __len__(self):
@@ -464,8 +476,8 @@ class AssetCollection(object):
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(
-            array=self.array, cost_calculator=self.cc, tagcol=self.tagcol
-        ), attrs
+            array=self.array, cost_calculator=self.cost_calculator,
+            tagcol=self.tagcol, asset_refs=self.asset_refs), attrs
 
     def __fromh5__(self, dic, attrs):
         for name in ('occupancy_periods', 'loss_types', 'deduc', 'i_lim',
@@ -476,12 +488,16 @@ class AssetCollection(object):
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
-        self.cc = dic['cost_calculator']
-        self.cc.tagi = {decode(tagname): i
-                        for i, tagname in enumerate(self.tagnames)}
+        self.cost_calculator = dic['cost_calculator']
+        self.asset_refs = dic['asset_refs'].value
+        self.cost_calculator.tagi = {
+            decode(tagname): i for i, tagname in enumerate(self.tagnames)}
+
+    def __repr__(self):
+        return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
     @staticmethod
-    def build_asset_collection(assets_by_site, tagnames=(), time_event=None):
+    def build_asset_array(assets_by_site, tagnames=(), time_event=None):
         """
         :param assets_by_site: a list of lists of assets
         :param tagnames: a list of tag names

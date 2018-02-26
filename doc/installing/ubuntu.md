@@ -22,7 +22,7 @@ If you want to install a **nightly build** please read the guide about installin
 
 Then to install the OpenQuake Engine and its libraries run
 ```bash
-sudo apt-get install python-oq-engine
+sudo apt-get install python3-oq-engine
 ```
 
 ### Upgrade from a previous release
@@ -31,7 +31,7 @@ As soon as a new version of the OpenQuake Engine and libraries are released you 
 
 ```bash
 sudo apt update
-sudo apt install python-oq-engine
+sudo apt install python3-oq-engine
 ```
 
 If a full upgrade is performed on the system, the OpenQuake software is upgraded to the latest version too:
@@ -72,7 +72,7 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 
 To uninstall the OpenQuake Engine and all its components run
 ```bash
-sudo apt-get remove python-oq-*
+sudo apt-get remove python-oq-* python3-oq-*
 ```
 If you want to remove all the dependencies installed by the OpenQuake Engine you may then use the apt `autoremove` function and run
 

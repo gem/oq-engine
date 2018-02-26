@@ -266,6 +266,9 @@ Since the GMF-reading feature has been incorporated into
 the core `event_based_risk` calculator, the experimental `gmf_ebrisk`
 calculator is gone.
 
+Reading the GMFs from a NRML file has been deprecated. The suggested
+approach is to use the CSV format, as documented in the manual.
+
 The obsolete hazard GeoJSON exporters, deprecated months ago,
 have been removed. The right way to convert hazard outputs
 into geospatial data is to use the QGIS plugin.

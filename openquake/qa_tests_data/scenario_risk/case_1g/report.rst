@@ -3,8 +3,8 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     2,386,609,726      
-date           2018-02-19T10:00:43
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:44:29
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 7, num_levels = 3
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -58,5 +60,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 1.657E-04 0.0       1     
+reading site collection 1.876E-04 0.0       1     
 ======================= ========= ========= ======
