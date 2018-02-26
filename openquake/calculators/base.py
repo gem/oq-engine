@@ -27,6 +27,7 @@ import traceback
 import collections
 from functools import partial
 from datetime import datetime
+from shapely import wkt
 import numpy
 
 from openquake.baselib import (
@@ -330,12 +331,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
-    def count_assets(self):
-        """
-        Count how many assets are taken into consideration by the calculator
-        """
-        return len(self.assetcol)
-
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
@@ -443,6 +438,7 @@ class HazardCalculator(BaseCalculator):
             mesh, assets_by_site = (
                 readinput.get_mesh_assets_by_site(self.oqparam, self.exposure))
         if haz_sitecol:
+            tot_assets = sum(len(assets) for assets in assets_by_site)
             all_sids = haz_sitecol.complete.sids
             sids = set(haz_sitecol.sids)
             # associate the assets to the hazard sites
@@ -465,6 +461,9 @@ class HazardCalculator(BaseCalculator):
             mask = numpy.array(
                 [sid in assets_by_sid for sid in all_sids])
             assets_by_site = [assets_by_sid[sid] for sid in all_sids]
+            num_assets = sum(len(assets) for assets in assets_by_site)
+            logging.info('Associated %d/%d assets to the hazard sites',
+                         num_assets, tot_assets)
             self.sitecol = haz_sitecol.complete.filter(mask)
         else:  # use the exposure sites as hazard sites
             self.sitecol = readinput.get_site_collection(self.oqparam, mesh)
@@ -530,9 +529,15 @@ class HazardCalculator(BaseCalculator):
             self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
-        elif oq.job_type == 'risk':
-            raise RuntimeError(
-                'Missing exposure_file in %(job_ini)s' % oq.inputs)
+        elif 'assetcol' in self.datastore.parent:
+            region = wkt.loads(self.oqparam.region_constraint)
+            self.sitecol = haz_sitecol.within(region)
+            assetcol = self.datastore.parent['assetcol']
+            self.assetcol = assetcol.reduce(self.sitecol.sids)
+            self.datastore['assetcol'] = self.assetcol
+            logging.info('There are %d/%d assets in the region',
+                         len(self.assetcol), len(assetcol))
+            self.load_riskmodel()
         else:  # no exposure
             self.load_riskmodel()
             self.sitecol = haz_sitecol
