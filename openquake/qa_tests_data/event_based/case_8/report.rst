@@ -3,8 +3,8 @@ Event Based from NonParametric source
 
 ============== ===================
 checksum32     2,117,452,566      
-date           2018-02-19T09:59:46
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:43:33
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 3, num_levels = 7
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      5.0
 width_of_mfd_bin                0.3                  
 area_source_discretization      10.0                 
 ground_motion_correlation_model None                 
+minimum_intensity               {}                   
 random_seed                     23                   
 master_seed                     0                    
+ses_seed                        42                   
 =============================== =====================
 
 Input files
@@ -43,6 +45,6 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.048     0.0       1     
-reading site collection        6.700E-05 0.0       1     
+reading composite source model 0.045     0.0       1     
+reading site collection        5.913E-05 0.0       1     
 ============================== ========= ========= ======
