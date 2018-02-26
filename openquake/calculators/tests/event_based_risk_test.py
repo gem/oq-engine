@@ -267,6 +267,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):
         # case with  <insuranceLimit isAbsolute="false"/>
+        # this is also a case with preimported exposure
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))

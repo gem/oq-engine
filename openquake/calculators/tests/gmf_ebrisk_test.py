@@ -21,7 +21,6 @@ import unittest
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
-from openquake.hazardlib import InvalidFile
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -86,6 +85,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # a simple test with 1 asset and two source models
+        # this is also a test with preimported exposure
         self.run_calc(case_4.__file__, 'job_haz.ini')
         calc0 = self.calc.datastore  # event_based
         self.run_calc(case_4.__file__, 'job_risk.ini',
