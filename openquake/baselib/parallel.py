@@ -624,7 +624,7 @@ class Starmap(object):
         self.progress('Executing "%s" in process', self.name)
         allargs = list(self._genargs(pickle=False))
         yield len(allargs)
-        for task_no, args in enumerate(allargs):
+        for args in allargs:
             yield safely_call(self.task_func, args)
 
     def _iter_processes(self):
