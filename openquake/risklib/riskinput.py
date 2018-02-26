@@ -328,7 +328,7 @@ class RiskInput(object):
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__,
-            ', '.join(self.taxonomies), len(self.aids))
+            ' '.join(map(str, self.taxonomies)), len(self.aids))
 
 
 class EpsilonMatrix0(object):
