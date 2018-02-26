@@ -3,8 +3,8 @@ scenario hazard
 
 ============== ===================
 checksum32     3,204,585,490      
-date           2018-02-19T09:58:10
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:41:58
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 1
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -72,6 +74,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.002     0.0       1     
-reading site collection 6.676E-06 0.0       1     
+reading exposure        6.173E-04 0.0       1     
+reading site collection 5.007E-06 0.0       1     
 ======================= ========= ========= ======

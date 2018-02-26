@@ -60,17 +60,18 @@ class DbServer(object):
 
     def dworker(self, sock):
         # a database worker responding to commands
-        for cmd_ in sock:
-            cmd, args = cmd_[0], cmd_[1:]
-            if cmd == 'getpid':
-                sock.send((self.pid, None, None))
-                continue
-            try:
-                func = getattr(actions, cmd)
-            except AttributeError:
-                sock.send(('Invalid command ' + cmd, ValueError, None))
-            else:
-                sock.send(safely_call(func, (self.db,) + args))
+        with sock:
+            for cmd_ in sock:
+                cmd, args = cmd_[0], cmd_[1:]
+                if cmd == 'getpid':
+                    sock.send(self.pid)
+                    continue
+                try:
+                    func = getattr(actions, cmd)
+                except AttributeError:
+                    sock.send('Invalid command ' + cmd)
+                else:
+                    sock.send(safely_call(func, (self.db,) + args))
 
     def start(self):
         """
