@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     733,853,885        
-date           2018-02-19T09:58:51
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:42:39
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     24                
 master_seed                     0                 
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -102,8 +104,8 @@ source_model_2.xml 3      Stable Shallow Crust 1.000        1
 Informational data
 ------------------
 ========================= =====================================================================================
-compute_ruptures.received tot 25.42 KB, max_per_task 3.22 KB                                                   
-compute_ruptures.sent     sources 49.88 KB, param 33.46 KB, src_filter 30.73 KB, monitor 9.35 KB, gsims 6.44 KB
+compute_ruptures.received tot 21.75 KB, max_per_task 3.23 KB                                                   
+compute_ruptures.sent     sources 43.88 KB, param 26.77 KB, src_filter 24.59 KB, monitor 7.73 KB, gsims 5.15 KB
 hazard.input_weight       969.0                                                                                
 hazard.n_imts             4                                                                                    
 hazard.n_levels           46                                                                                   
@@ -117,7 +119,7 @@ require_epsilons          True
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 8 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 60 tasks = 262.5 KB
+7 asset(s) x 8 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 20 tasks = 87.5 KB
 
 Exposure model
 --------------
@@ -162,7 +164,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.015 0.008  0.005 0.035 30       
+compute_ruptures   0.030 0.014  0.007 0.057 24       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -170,13 +172,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.452     0.125     30    
-managing sources               0.270     0.0       1     
-reading composite source model 0.022     0.0       1     
-making contexts                0.008     0.0       2     
-saving ruptures                0.007     0.0       30    
-store source_info              0.005     0.0       1     
-reading exposure               0.005     0.0       1     
-setting event years            0.002     0.0       1     
-reading site collection        8.106E-06 0.0       1     
+total compute_ruptures         0.729     0.129     24    
+managing sources               0.212     0.0       1     
+reading composite source model 0.023     0.0       1     
+making contexts                0.010     0.0       2     
+saving ruptures                0.005     0.0       24    
+store source_info              0.004     0.0       1     
+reading exposure               0.003     0.0       1     
+setting event years            0.001     0.0       1     
+reading site collection        7.629E-06 0.0       1     
 ============================== ========= ========= ======

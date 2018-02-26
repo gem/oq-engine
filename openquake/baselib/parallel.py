@@ -19,15 +19,15 @@
 The Starmap API
 ====================================
 
-There are several good libraries to manage parallel programming,
-both in the standard library and in third party packages. Since we are
-not interested in reinventing the wheel, OpenQuake does not offer any
-new parallel library; however, it does offer some glue code so that
-you can use your library of choice. Currently multiprocessing,
-concurrent.futures, celery and ipython-parallel are
-supported. Moreover, :mod:`openquake.baselib.parallel` offers some
-additional facilities that make it easier to parallelize
-scientific computations, i.e. embarrassing parallel problems.
+There are several good libraries to manage parallel programming, both
+in the standard library and in third party packages. Since we are not
+interested in reinventing the wheel, OpenQuake does not offer any new
+parallel library; however, it does offer some glue code so that you
+can use your library of choice. Currently threading, multiprocessing,
+zmq and celery are supported. Moreover,
+:mod:`openquake.baselib.parallel` offers some additional facilities
+that make it easier to parallelize scientific computations,
+i.e. embarrassing parallel problems.
 
 Typically one wants to apply a callable to a list of arguments in
 parallel rather then sequentially, and then combine together the
@@ -63,7 +63,7 @@ method has sensible defaults:
    :class:`openquake.baselib.AccumDict`) working as a `Counter`, so there
    is no need to specify it.
 
-You can of course ovverride the defaults, so if you really want to
+You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
 >>> res3 = Starmap(Counter, arglist).reduce(acc=Counter())
@@ -84,14 +84,24 @@ available at the moment:
   disable the parallelization, useful for debugging
 `OQ_DISTRIBUTE` set to "celery":
    use celery, useful if you have multiple machines in a cluster
-`OQ_DISTRIBUTE` set tp "ipython"
-   use the ipyparallel concurrency mechanism (experimental)
+`OQ_DISTRIBUTE` set tp "zmq"
+   use the zmq concurrency mechanism (experimental)
 
 There is also an `OQ_DISTRIBUTE` = "threadpool"; however the
 performance of using threads instead of processes is normally bad for the
 kind of applications we are interested in (CPU-dominated, which large
 tasks such that the time to spawn a new process is negligible with
 respect to the time to perform the task), so it is not recommended.
+
+If you are using a pool, is always a good idea to cleanup resources at the end
+with
+
+>>> Starmap.shutdown()
+
+`Starmap.shutdown` is always defined. It does nothing if there is
+no pool, but it is still better to call it: in the future, you may change
+idea and use another parallelization strategy requiring cleanup. In this
+way your code is future-proof.
 
 The Starmap.apply API
 ====================================
@@ -133,24 +143,21 @@ having finished all the short tasks, but you have to wait for days for
 the single core processing the slow task). The OpenQuake engine does
 a great deal of work trying to split slow sources in more manageable
 fast sources.
-
 """
 from __future__ import print_function
 import os
 import sys
+import mock
 import time
-import signal
 import socket
+import signal
 import inspect
 import logging
 import operator
 import functools
-import subprocess
+import itertools
+import traceback
 import multiprocessing.dummy
-from multiprocessing.connection import Client, Listener
-from concurrent.futures import (
-    as_completed, ThreadPoolExecutor, ProcessPoolExecutor, Future)
-
 import numpy
 try:
     from setproctitle import setproctitle
@@ -159,30 +166,16 @@ except ImportError:
         "Do nothing"
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.workerpool import safely_call, _starmap
+from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, AccumDict, humansize)
+    split_in_blocks, block_splitter, AccumDict, humansize)
 
-executor = ProcessPoolExecutor()
-executor.pids = ()  # set by wakeup_pool
-# the num_tasks_hint is chosen to be 3 times bigger than the name of
-# cores; it is a heuristic number to get a good distribution;
-# it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 3
-
+cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-
-if OQ_DISTRIBUTE == 'celery':
-    from celery.result import ResultSet
-    from celery import Celery
-    from celery.task import task
-    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
-    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
-
-elif OQ_DISTRIBUTE == 'ipython':
-    import ipyparallel as ipp
+if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq',  'celery_zmq'):
+    raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
 def oq_distribute(task=None):
@@ -191,7 +184,7 @@ def oq_distribute(task=None):
     """
     dist = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
     read_access = getattr(task, 'read_access', True)
-    if dist == 'celery' and not read_access:
+    if dist.startswith('celery') and not read_access:
         raise ValueError('You must configure the shared_dir in openquake.cfg '
                          'in order to be able to run %s with celery' %
                          task.__name__)
@@ -216,12 +209,6 @@ def check_mem_usage(monitor=Monitor(),
         hostname = socket.gethostname()
         logging.warn('Using over %d%% of the memory in %s!',
                      used_mem_percent, hostname)
-
-
-def mkfuture(result):
-    fut = Future()
-    fut.set_result(result)
-    return fut
 
 
 class Pickled(object):
@@ -300,6 +287,78 @@ def pickle_sequence(objects):
     return out
 
 
+class Result(object):
+    """
+    :param val: value to return or exception instance
+    :param mon: Monitor instance
+    :param tb_str: traceback string (empty if there was no exception)
+    """
+    def __init__(self, val, mon, tb_str=''):
+        self.pik = Pickled(val)
+        self.mon = mon
+        self.tb_str = tb_str
+
+    def get(self):
+        """
+        Returns the underlying value or raise the underlying exception
+        """
+        with self.mon('unpickling %s' % self.mon.operation):
+            val = self.pik.unpickle()
+        if self.tb_str:
+            etype = val.__class__
+            raise etype('\n%s%s: %s' % (self.tb_str, etype.__name__, val))
+        return val
+
+
+def safely_call(func, args):
+    """
+    Call the given function with the given arguments safely, i.e.
+    by trapping the exceptions. Return a pair (result, exc_type)
+    where exc_type is None if no exceptions occur, otherwise it
+    is the exception class and the result is a string containing
+    error message and traceback.
+
+    :param func: the function to call
+    :param args: the arguments
+    """
+    with Monitor('total ' + func.__name__, measuremem=True) as child:
+        if args and hasattr(args[0], 'unpickle'):
+            # args is a list of Pickled objects
+            args = [a.unpickle() for a in args]
+        if args and isinstance(args[-1], Monitor):
+            mon = args[-1]
+            mon.operation = func.__name__
+            mon.children.append(child)  # child is a child of mon
+            child.hdf5path = mon.hdf5path
+        else:
+            mon = child
+        try:
+            res = Result(func(*args), mon)
+        except:
+            _etype, exc, tb = sys.exc_info()
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+    # FIXME: check_mem_usage is disabled here because it's causing
+    # dead locks in threads when log messages are raised.
+    # Check is done anyway in other parts of the code
+    # further investigation is needed
+    # check_mem_usage(mon)  # check if too much memory is used
+    backurl = getattr(mon, 'backurl', None)
+    zsocket = (Socket(backurl, zmq.PUSH, 'connect') if backurl
+               else mock.MagicMock())  # do nothing
+    with zsocket:
+        zsocket.send(res)
+    return zsocket.num_sent if backurl else res
+
+
+if OQ_DISTRIBUTE.startswith('celery'):
+    from celery.result import ResultSet
+    from celery import Celery
+    from celery.task import task
+    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
+    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+    safetask = task(safely_call, queue='celery')  # has to be global
+
+
 class IterResult(object):
     """
     :param futures:
@@ -317,20 +376,19 @@ class IterResult(object):
         [('taskno', numpy.uint32), ('weight', numpy.float32),
          ('duration', numpy.float32)])
 
-    def __init__(self, futures, taskname, num_tasks,
+    def __init__(self, iresults, taskname, num_tasks,
                  progress=logging.info, sent=0):
-        self.futures = futures
+        self.iresults = iresults
         self.name = taskname
         self.num_tasks = num_tasks
-        if self.name.startswith("_"):  # private task, log only in debug
-            self.progress = logging.debug
-        else:
-            self.progress = progress
+        self.progress = progress
         self.sent = sent
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
             next(self.log_percent)
+        else:
+            self.progress('No %s tasks were submitted', self.name)
         if sent:
             self.progress('Sent %s of data in %s task(s)',
                           humansize(sum(sent.values())), num_tasks)
@@ -351,27 +409,21 @@ class IterResult(object):
 
     def __iter__(self):
         self.received = []
-        for fut in self.futures:
+        if self.num_tasks == 0:
+            return
+        for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
-            if hasattr(fut, 'result'):
-                result = fut.result()
-            else:
-                result = fut
             if isinstance(result, BaseException):
-                # this happens for instance with WorkerLostError with celery
+                # this happens with WorkerLostError with celery
                 raise result
-            elif hasattr(result, 'unpickle'):
-                self.received.append(len(result))
-                val, etype, mon = result.unpickle()
-            else:
-                val, etype, mon = result
-                self.received.append(len(Pickled(result)))
-            if etype:
-                raise RuntimeError(val)
-            if self.num_tasks:
-                next(self.log_percent)
+            elif isinstance(result, Result):
+                val = result.get()
+                self.received.append(len(result.pik))
+            else:  # this should never happen
+                raise ValueError(result)
+            next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_data(mon)
+                self.save_task_data(result.mon)
             yield val
 
         if self.received:
@@ -382,10 +434,10 @@ class IterResult(object):
             received = {'max_per_task': max_per_task, 'tot': tot}
             tname = self.name
             dic = {tname: {'sent': self.sent, 'received': received}}
-            mon.save_info(dic)
+            result.mon.save_info(dic)
 
     def save_task_data(self, mon):
-        if mon.hdf5path and hasattr(mon, 'weight'):
+        if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration)
             data = numpy.array([tup], self.task_data_dt)
@@ -418,33 +470,53 @@ class IterResult(object):
         return res
 
 
+def init_workers():
+    """Waiting function, used to wake up the process pool"""
+    setproctitle('oq-worker')
+    # unregister raiseMasterKilled in oq-workers to avoid deadlock
+    # since processes are terminated via pool.terminate()
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+    # prctl is still useful (on Linux) to terminate all spawned processes
+    # when master is killed via SIGKILL
+    try:
+        import prctl
+    except ImportError:
+        pass
+    else:
+        # if the parent dies, the children die
+        prctl.set_pdeathsig(signal.SIGKILL)
+    return os.getpid()
+
+
+def _wakeup(sec):
+    """Waiting function, used to wake up the process pool"""
+    time.sleep(sec)
+    return os.getpid()
+
+
 class Starmap(object):
-    """
-    A manager to submit several tasks of the same type.
-    The usage is::
-
-      tm = Starmap(do_something, logging.info)
-      tm.send(arg1, arg2)
-      tm.send(arg3, arg4)
-      print(tm.reduce())
-
-    Progress report is built-in.
-    """
-    executor = executor
+    pids = ()  # FIXME: we can probably remove the pids now
     task_ids = []
 
     @classmethod
-    def restart(cls):
-        cls.executor.shutdown()
-        cls.executor = ProcessPoolExecutor()
+    def init(cls, poolsize=None):
+        if OQ_DISTRIBUTE == 'futures' and not hasattr(cls, 'pool'):
+            cls.pool = multiprocessing.Pool(poolsize, init_workers)
+            self = cls(_wakeup, [(.2,) for _ in range(cls.pool._processes)])
+            cls.pids = list(self)
 
     @classmethod
-    def apply(cls, task, task_args,
-              concurrent_tasks=executor.num_tasks_hint,
-              maxweight=None,
-              weight=lambda item: 1,
-              key=lambda item: 'Unspecified',
-              name=None):
+    def shutdown(cls, poolsize=None):
+        if OQ_DISTRIBUTE == 'futures' and hasattr(cls, 'pool'):
+            cls.pool.close()
+            cls.pool.terminate()
+            cls.pool.join()
+            delattr(cls, 'pool')
+
+    @classmethod
+    def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
+              maxweight=None, weight=lambda item: 1,
+              key=lambda item: 'Unspecified', name=None, distribute=None):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -452,122 +524,44 @@ class Starmap(object):
         `openquake.baselib.general.split_in_blocks`).
 
         :param task: a task to run in parallel
-        :param task_args: the arguments to be passed to the task function
-        :param agg: the aggregation function
-        :param acc: initial value of the accumulator (default empty AccumDict)
+        :param args: the arguments to be passed to the task function
         :param concurrent_tasks: hint about how many tasks to generate
         :param maxweight: if not None, used to split the tasks
         :param weight: function to extract the weight of an item in arg0
         :param key: function to extract the kind of an item in arg0
+        :param name: name of the task to be used in the log
+        :param distribute: if not given, inferred from OQ_DISTRIBUTE
+        :returns: an :class:`IterResult` object
         """
-        arg0 = task_args[0]  # this is assumed to be a sequence
-        args = task_args[1:]
+        arg0 = args[0]  # this is assumed to be a sequence
+        args = args[1:]
         if maxweight:
             chunks = block_splitter(arg0, maxweight, weight, key)
         else:
             chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
-        return cls(task, [(chunk,) + args for chunk in chunks], name)
+        task_args = [(ch,) + args for ch in chunks]
+        return cls(task, task_args, name, distribute).submit_all()
 
-    def __init__(self, oqtask, task_args, name=None):
-        self.task_func = oqtask
+    def __init__(self, task_func, task_args, name=None, distribute=None):
+        self.__class__.init()  # if not already
+        self.task_func = task_func
+        self.name = name or task_func.__name__
         self.task_args = task_args
-        self.name = name or oqtask.__name__
-        self.init(oqtask)
-        self.results = []
-        self.distribute = oq_distribute(oqtask)
-        if self.distribute == 'threadpool':
-            self.executor = ThreadPoolExecutor(executor.num_tasks_hint)
-        if self.distribute == 'ipython' and isinstance(
-                self.executor, ProcessPoolExecutor):
-            client = ipp.Client()
-            self.__class__.executor = client.executor()
-
-    def init(self, oqtask):
+        if self.name.startswith('_'):  # secret task
+            self.progress = lambda *args: None
+        else:
+            self.progress = logging.info
+        self.distribute = distribute or oq_distribute(task_func)
         self.sent = AccumDict()
         # a task can be a function, a class or an instance with a __call__
-        if inspect.isfunction(oqtask):
-            self.argnames = inspect.getargspec(oqtask).args
-        elif inspect.isclass(oqtask):
-            self.argnames = inspect.getargspec(oqtask.__init__).args[1:]
+        if inspect.isfunction(task_func):
+            self.argnames = inspect.getargspec(task_func).args
+        elif inspect.isclass(task_func):
+            self.argnames = inspect.getargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
-            self.argnames = inspect.getargspec(oqtask.__call__).args[1:]
-
-    def progress(self, *args):
-        """
-        Log in INFO mode regular tasks and in DEBUG private tasks
-        """
-        if self.name.startswith('_'):
-            logging.debug(*args)
-        else:
-            logging.info(*args)
-
-    def submit(self, *args):
-        """
-        Submit a function with the given arguments to the process pool
-        and add a Future to the list `.results`. If the attribute
-        distribute is set, the function is run in process and the
-        result is returned.
-        """
-        check_mem_usage()
-        # log a warning if too much memory is used
-        if self.distribute == 'no':
-            res = safely_call(self.task_func, args)
-        else:
-            res = self._submit(args)
-        self.results.append(res)
-
-    def _submit(self, piks):
-        if self.distribute == 'celery':
-            res = safe_task.delay(self.task_func, piks)
-            self.task_ids.append(res.task_id)
-            return res
-        else:  # submit tasks by using the ProcessPoolExecutor or ipyparallel
-            return self.executor.submit(
-                safely_call, self.task_func, piks)
-
-    def _iterfutures(self):
-        # compatibility wrapper for different concurrency frameworks
-
-        if self.distribute == 'no':
-            for result in self.results:
-                yield mkfuture(result)
-
-        elif self.distribute == 'celery':
-            rset = ResultSet(self.results)
-            for task_id, result_dict in rset.iter_native():
-                idx = self.task_ids.index(task_id)
-                self.task_ids.pop(idx)
-                fut = mkfuture(result_dict['result'])
-                # work around a celery/rabbitmq bug
-                if CELERY_RESULT_BACKEND.startswith('rpc:'):
-                    del app.backend._cache[task_id]
-                yield fut
-
-        else:  # future interface
-            for fut in as_completed(self.results):
-                yield fut
-
-    def reduce(self, agg=operator.add, acc=None):
-        """
-        Loop on a set of results and update the accumulator
-        by using the aggregation function.
-
-        :param agg: the aggregation function, (acc, val) -> new acc
-        :param acc: the initial value of the accumulator
-        :returns: the final value of the accumulator
-        """
-        acc = AccumDict() if acc is None else acc
-        acc = self.submit_all().reduce(agg, acc)
-        self.results = []
-        return acc
-
-    def wait(self):
-        """
-        Wait until all the task terminate. Discard the results.
-
-        :returns: the total number of tasks that were spawned
-        """
-        return self.reduce(self, lambda acc, res: acc + 1, 0)
+            self.argnames = inspect.getargspec(task_func.__call__).args[1:]
+        self.receiver = 'tcp://%s:%s' % (
+            config.dbserver.host, config.zworkers.receiver_ports)
 
     @property
     def num_tasks(self):
@@ -581,56 +575,17 @@ class Starmap(object):
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
-    def submit_all(self):
-        """
-        :returns: an IterResult object
-        """
-        if self.num_tasks == 1:
-            [args] = self.add_task_no(self.task_args, pickle=False)
-            self.progress('Executing "%s" in process', self.name)
-            fut = mkfuture(safely_call(self.task_func, args))
-            return IterResult([fut], self.name, self.num_tasks)
-
-        elif self.distribute == 'zmq':  # experimental
-            allargs = self.add_task_no(self.task_args)
-            w = config.zworkers
-            it = _starmap(
-                self.task_func, allargs,
-                w.master_host, w.task_in_port, w.receiver_ports)
-            ntasks = next(it)
-            return IterResult(it, self.name, ntasks, self.progress, self.sent)
-
-        elif self.distribute == 'qsub':  # experimental
-            allargs = list(self.add_task_no(self.task_args, pickle=False))
-            logging.warn('Sending %d tasks to the grid engine', len(allargs))
-            return IterResult(qsub(self.task_func, allargs),
-                              self.name, len(allargs),
-                              self.progress, self.sent)
-
-        task_no = 0
-        for args in self.add_task_no(self.task_args):
-            task_no += 1
-            self.submit(*args)
-        if not task_no:
-            self.progress('No %s tasks were submitted', self.name)
-        # NB: keep self._iterfutures() an iterator, especially with celery!
-        ir = IterResult(self._iterfutures(), self.name, task_no,
-                        self.progress, self.sent)
-        return ir
-
-    def __iter__(self):
-        return iter(self.submit_all())
-
-    def add_task_no(self, iterargs, pickle=True):
+    def _genargs(self, backurl=None, pickle=True):
         """
         Add .task_no and .weight to the monitor and yield back
-        the arguments by pickling them if pickle is True.
+        the arguments by pickling them.
         """
-        for task_no, args in enumerate(iterargs, 1):
+        for task_no, args in enumerate(self.task_args, 1):
             if isinstance(args[-1], Monitor):
                 # add incremental task number and task weight
                 args[-1].task_no = task_no
                 args[-1].weight = getattr(args[0], 'weight', 1.)
+                args[-1].backurl = backurl
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
@@ -639,219 +594,91 @@ class Starmap(object):
                               self.name)
             yield args
 
-
-def do_not_aggregate(acc, value):
-    """
-    Do nothing aggregation function.
-
-    :param acc: the accumulator
-    :param value: the value to accumulate
-    :returns: the accumulator unchanged
-    """
-    return acc
-
-
-if OQ_DISTRIBUTE == 'celery':
-    safe_task = task(safely_call,  queue='celery')
-
-
-def _wakeup(sec):
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-    try:
-        import prctl
-    except ImportError:
-        pass
-    else:
-        # if the parent dies, the children die
-        prctl.set_pdeathsig(signal.SIGKILL)
-    time.sleep(sec)
-    return os.getpid()
-
-
-def wakeup_pool():
-    """
-    This is used at startup, only when the ProcessPoolExecutor is used,
-    to fork the processes before loading any big data structure. It is
-    called once once, and adds the list of PIDs spawned to the executor.
-    """
-    if not executor.pids and oq_distribute() == 'futures':
-        # when using the ProcessPoolExecutor
-        pids = Starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
-        executor.pids = list(pids)
-
-
-# it would be nice to remove this in the future, but it is not easy: the
-# subclasses Sequential and Processmap are used
-class BaseStarmap(object):
-    poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
-    add_task_no = Starmap.__dict__['add_task_no']
-    init = Starmap.__dict__['init']
-    num_tasks = Starmap.__dict__['num_tasks']
-
-    @classmethod
-    def apply(cls, func, args, concurrent_tasks=executor._max_workers * 3,
-              weight=lambda item: 1, key=lambda item: 'Unspecified'):
-        chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
-        if concurrent_tasks == 0:
-            cls = Sequential
-        return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
-
-    def __init__(self, func, iterargs, poolsize=None, progress=logging.info):
-        self.pool = self.poolfactory(poolsize)
-        self.func = func
-        self.name = func.__name__
-        self.task_args = iterargs
-        self.progress = progress
-        self.init(func)
-        allargs = list(self.add_task_no(iterargs))
-        progress('Starting %s tasks', self.num_tasks)
-        self.imap = self.pool.imap_unordered(
-            functools.partial(safely_call, func), allargs)
-
     def submit_all(self):
         """
-        :returns: an :class:`IterResult` instance
+        :returns: an IterResult object
         """
-        futs = (mkfuture(res) for res in self.imap)
-        return IterResult(futs, self.func.__name__, self.num_tasks,
-                          self.progress, self.sent)
-
-    def __iter__(self):
-        try:
-            for res in self.submit_all():
-                yield res
-        finally:
-            if self.pool:
-                self.pool.close()
-                self.pool.join()
+        if self.num_tasks == 1 or self.distribute == 'no':
+            it = self._iter_sequential()
+        elif self.distribute == 'futures':
+            it = self._iter_processes()
+        elif self.distribute == 'celery':
+            it = self._iter_celery()
+        elif self.distribute == 'celery_zmq':
+            it = self._iter_celery_zmq()
+        elif self.distribute == 'zmq':
+            it = self._iter_zmq()
+        num_tasks = next(it)
+        return IterResult(it, self.name, num_tasks, self.progress, self.sent)
 
     def reduce(self, agg=operator.add, acc=None):
-        if acc is None:
-            acc = AccumDict()
-        for res in self.submit_all():
-            acc = agg(acc, res)
-        if self.pool:
-            self.pool.close()
-            self.pool.join()
-        return acc
+        """
+        Submit all tasks and reduce the results
+        """
+        return self.submit_all().reduce(agg, acc)
+
+    def __iter__(self):
+        return iter(self.submit_all())
+
+    def _iter_sequential(self):
+        self.progress('Executing "%s" in process', self.name)
+        allargs = list(self._genargs(pickle=False))
+        yield len(allargs)
+        for args in allargs:
+            yield safely_call(self.task_func, args)
+
+    def _iter_processes(self):
+        safefunc = functools.partial(safely_call, self.task_func)
+        allargs = list(self._genargs())
+        yield len(allargs)
+        for res in self.pool.imap_unordered(safefunc, allargs):
+            yield res
+
+    def _iter_celery(self, backurl=None):
+        results = []
+        for piks in self._genargs(backurl):
+            res = safetask.delay(self.task_func, piks)
+            # populating Starmap.task_ids, used in celery_cleanup
+            self.task_ids.append(res.task_id)
+            results.append(res)
+        yield len(results)
+        for task_id, result_dict in ResultSet(results).iter_native():
+            self.task_ids.remove(task_id)
+            if CELERY_RESULT_BACKEND.startswith('rpc:'):
+                # work around a celery/rabbitmq bug
+                del app.backend._cache[task_id]
+            yield result_dict['result']
+
+    def _iter_celery_zmq(self):
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            logging.info('Using receiver %s', socket.backurl)
+            it = self._iter_celery(socket.backurl)
+            yield next(it)  # number of results
+            isocket = iter(socket)
+            for _ in it:
+                yield next(isocket)
+
+    def _iter_zmq(self):
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
+                           config.zworkers)
+            with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
+                n = 0
+                for args in self._genargs(socket.backurl):
+                    sender.send((self.task_func, args))
+                    n += 1
+            yield n
+            for _ in range(n):
+                obj = socket.zsocket.recv_pyobj()
+                # receive n responses for the n requests sent
+                yield obj
 
 
-class Sequential(BaseStarmap):
+def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
+                     weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
-    A sequential Starmap, useful for debugging purpose.
+    Apply sequentially task to args by splitting args[0] in blocks
     """
-    def __init__(self, func, iterargs, poolsize=None, progress=logging.info):
-        self.pool = None
-        self.func = func
-        self.name = func.__name__
-        self.task_args = iterargs
-        self.progress = progress
-        self.sent = AccumDict()
-        self.argnames = inspect.getargspec(func).args
-        allargs = list(self.add_task_no(iterargs))
-        progress('Starting %s sequential tasks', self.num_tasks)
-        self.imap = [safely_call(func, args) for args in allargs]
-
-
-class Threadmap(BaseStarmap):
-    """
-    MapReduce implementation based on threads. For instance
-
-    >>> from collections import Counter
-    >>> c = Threadmap(Counter, [('hello',), ('world',)], poolsize=4).reduce()
-    >>> sorted(c.items())
-    [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
-    """
-    poolfactory = staticmethod(
-        lambda size: multiprocessing.dummy.Pool(size))
-
-
-class Processmap(BaseStarmap):
-    """
-    MapReduce implementation based on processes. For instance
-
-    >>> from collections import Counter
-    >>> c = Processmap(Counter, [('hello',), ('world',)], poolsize=4).reduce()
-    >>> sorted(c.items())
-    [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
-    """
-
-# ######################## support for grid engine ######################## #
-
-
-def qsub(func, allargs, authkey=None):
-    """
-    Map functions to arguments by means of the Grid Engine.
-
-    :param func: a pickleable callable object
-    :param allargs: a list of tuples of arguments
-    :param authkey: authentication token used to send back the results
-    :returns: an iterable over results of the form (res, etype, mon)
-    """
-    thisfile = os.path.abspath(__file__)
-    host = socket.gethostbyname(socket.gethostname())
-    listener = Listener((host, 0), backlog=5, authkey=authkey)
-    try:
-        hostport = listener._listener._socket.getsockname()
-        subprocess.call(
-            ['qsub', '-b', 'y', '-t', '1-%d' % len(allargs), '-N',
-             func.__name__, sys.executable, thisfile, '%s:%d' % hostport])
-        conndict = {}
-        for i, args in enumerate(allargs, 1):
-            monitor = args[-1]
-            monitor.task_no = i
-            monitor.weight = getattr(args[0], 'weight', 1.)
-            conn = _getconn(listener)  # get the first connected task
-            conn.send((func, args))  # send its arguments
-            for data, task_no in _getdata(conndict):
-                yield data  # yield the data received by other tasks, if any
-                del conndict[task_no]
-            conndict[i] = conn
-        # yield the rest of the data
-        for task_no in sorted(conndict):
-            conn = conndict[task_no]
-            try:
-                data = conn.recv()
-            finally:
-                conn.close()
-            yield data
-    finally:
-        listener.close()
-
-
-def _getdata(conndict):
-    for task_no in sorted(conndict):
-        conn = conndict[task_no]
-        if conn.poll():
-            try:
-                data = conn.recv()
-            finally:
-                conn.close()
-            yield data, task_no
-
-
-def _getconn(listener):
-    while True:
-        try:
-            conn = listener.accept()
-        except KeyboardInterrupt:
-            return
-        except:
-            # unauthenticated connection, for instance by a port scanner
-            continue
-        return conn
-
-
-def main(hostport):
-    host, port = hostport.split(':')
-    conn = Client((host, int(port)))
-    func, args = conn.recv()
-    res = safely_call(func, args)
-    try:
-        conn.send(res)
-    finally:
-        conn.close()
-
-if __name__ == '__main__':
-    main(sys.argv[1])
+    chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
+    task_args = [(ch,) + args[1:] for ch in chunks]
+    return itertools.starmap(task, task_args)

@@ -42,9 +42,9 @@ from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
-USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
+OQ_DISTRIBUTE = parallel.oq_distribute()
 
-if parallel.oq_distribute() == 'zmq':
+if OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default():
         """
@@ -63,7 +63,7 @@ if parallel.oq_distribute() == 'zmq':
         OqParam.concurrent_tasks.default = num_workers * 3
         logs.LOG.info('Using %d zmq workers', num_workers)
 
-elif USE_CELERY:
+elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control
 
     def set_concurrent_tasks_default():
@@ -156,17 +156,11 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
+    parallel.Starmap.shutdown()
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
     else:
         msg = 'Received a signal %d' % signum
-    if sys.version_info >= (3, 5, 0):
-        # Python 2 is buggy and this code would hang
-        for pid in parallel.executor.pids:  # when using futures
-            try:
-                os.kill(pid, signal.SIGKILL)  # SIGTERM is not enough :-(
-            except OSError:  # pid not found
-                pass
     raise MasterKilled(msg)
 
 
@@ -224,7 +218,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     setproctitle('oq-job-%d' % job_id)
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if os.environ.get('OQ_DISTRIBUTE') in ('zmq', 'celery'):
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
             set_concurrent_tasks_default()
         msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
@@ -258,7 +252,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             # in such a situation, we simply log the cleanup error without
             # taking further action, so that the real error can propagate
             try:
-                if USE_CELERY:
+                if OQ_DISTRIBUTE.startswith('celery'):
                     celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
             except:
                 # log the finalization error only if there is no real error
