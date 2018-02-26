@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     4,221,156,752      
-date           2018-02-19T09:58:52
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:42:40
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 281, num_levels = 50
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      10.0
 width_of_mfd_bin                0.2               
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     1024              
 master_seed                     100               
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -87,7 +89,7 @@ Informational data
 ------------------
 ========================= ====================================================================================
 compute_ruptures.received tot 3.42 MB, max_per_task 1.19 MB                                                   
-compute_ruptures.sent     src_filter 1.05 MB, sources 43.01 KB, param 10.36 KB, monitor 3.43 KB, gsims 1.43 KB
+compute_ruptures.sent     src_filter 1.05 MB, sources 43.01 KB, param 10.36 KB, monitor 3.54 KB, gsims 1.43 KB
 hazard.input_weight       26012.0                                                                             
 hazard.n_imts             1                                                                                   
 hazard.n_levels           50                                                                                  
@@ -133,8 +135,8 @@ Slowest sources
 ========= ================== ============ ========= ========= =========
 source_id source_class       num_ruptures calc_time num_sites num_split
 ========= ================== ============ ========= ========= =========
-F         ComplexFaultSource 2,558        0.0       1         0        
 D         ComplexFaultSource 3,945        0.0       1         0        
+F         ComplexFaultSource 2,558        0.0       1         0        
 ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -153,7 +155,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.000 0.512  0.673 2.421 11       
+compute_ruptures   1.068 0.469  0.684 2.305 11       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,14 +163,13 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         11       4.062     11    
-managing sources               3.871    0.0       1     
-making contexts                0.733    0.0       489   
-reading composite source model 0.299    0.0       1     
-reading site collection        0.214    0.0       1     
-assoc_assets_sites             0.161    0.0       1     
-reading exposure               0.096    0.0       1     
-saving ruptures                0.046    0.0       11    
+total compute_ruptures         11       4.125     11    
+managing sources               3.644    0.0       1     
+making contexts                0.900    0.0       489   
+reading composite source model 0.330    0.0       1     
+reading site collection        0.166    0.0       1     
+reading exposure               0.069    0.0       1     
+saving ruptures                0.057    0.0       11    
 store source_info              0.007    0.0       1     
-setting event years            0.007    0.0       1     
+setting event years            0.006    0.0       1     
 ============================== ======== ========= ======
