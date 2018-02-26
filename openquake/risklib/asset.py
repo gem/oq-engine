@@ -355,7 +355,6 @@ class AssetCollection(object):
         self.array = self.build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
         self.asset_refs = [asset_refs[rec['idx']] for rec in self.array]
-        import pdb; pdb.set_trace()
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
