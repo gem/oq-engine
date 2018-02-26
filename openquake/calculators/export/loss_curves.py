@@ -86,7 +86,7 @@ class LossCurveExporter(object):
             arefs = []
             for aid, rec in enumerate(self.assetcol.array):
                 aids.append(aid)
-                arefs.append(self.asset_refs[rec['idx']])
+                arefs.append(self.asset_refs[aid])
         elif spec.startswith('sid-'):  # passed the site ID
             sid = int(spec[4:])
             aids = []
@@ -94,7 +94,7 @@ class LossCurveExporter(object):
             for aid, rec in enumerate(self.assetcol.array):
                 if rec['site_id'] == sid:
                     aids.append(aid)
-                    arefs.append(self.asset_refs[rec['idx']])
+                    arefs.append(self.asset_refs[aid])
         elif spec.startswith('ref-'):  # passed the asset name
             arefs = [spec[4:]]
             aids = [self.str2asset[arefs[0]].ordinal]
