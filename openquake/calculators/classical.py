@@ -158,7 +158,7 @@ class PSHACalculator(base.HazardCalculator):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
         num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-        tasks_per_tile = math.ceil(oq.concurrent_tasks / math.sqrt(num_tiles))
+        tasks_per_tile = math.ceil(oq.concurrent_tasks / num_tiles)
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
@@ -192,7 +192,7 @@ class PSHACalculator(base.HazardCalculator):
             # NB: csm.get_sources_by_trt discards the mutex sources
             for trt, sources in csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
-                for block in block_splitter(sources, maxweight):
+                for block in block_splitter(sources, maxweight, weight):
                     yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
