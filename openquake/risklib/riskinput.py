@@ -32,16 +32,7 @@ class ValidationError(Exception):
 U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
-aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
-
-
-def get_refs(assets, hdf5path):
-    """
-    Debugging method returning the string IDs of the assets from the datastore
-    """
-    with hdf5.File(hdf5path, 'r') as f:
-        return f['asset_refs'][[a.idx for a in assets]]
 
 
 def read_composite_risk_model(dstore):
@@ -328,7 +319,7 @@ class RiskInput(object):
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__,
-            ', '.join(self.taxonomies), len(self.aids))
+            ' '.join(map(str, self.taxonomies)), len(self.aids))
 
 
 class EpsilonMatrix0(object):
