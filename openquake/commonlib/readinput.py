@@ -740,8 +740,8 @@ def get_exposure(oqparam):
     """
     return Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.insured_losses, oqparam.region_constraint,
-        oqparam.all_cost_types, oqparam.ignore_missing_costs)
+        oqparam.region_constraint, oqparam.all_cost_types,
+        oqparam.ignore_missing_costs)
 
 
 class Exposure(object):
@@ -755,9 +755,8 @@ class Exposure(object):
               'cost_calculator', 'tagcol']
 
     @classmethod
-    def read(cls, fname, calculation_mode='', insured_losses=False,
-             region_constraint='', all_cost_types=(), ignore_missing_costs=(),
-             asset_nodes=False):
+    def read(cls, fname, calculation_mode='', region_constraint='',
+             all_cost_types=(), ignore_missing_costs=(), asset_nodes=False):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
@@ -766,7 +765,6 @@ class Exposure(object):
         """
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
-        param['insured_losses'] = insured_losses
         if region_constraint:
             param['region'] = wkt.loads(region_constraint)
         else:
@@ -915,9 +913,14 @@ class Exposure(object):
                     retrofitted = cost.get('retrofitted')
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = cost['value']
-                    if param['insured_losses']:
+                    try:
                         deductibles[cost_type] = cost['deductible']
+                    except KeyError:
+                        pass
+                    try:
                         insurance_limits[cost_type] = cost['insuranceLimit']
+                    except KeyError:
+                        pass
 
         # check we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
