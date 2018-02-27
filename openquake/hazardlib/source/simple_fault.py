@@ -342,4 +342,5 @@ class SimpleFaultSource(ParametricSeismicSource):
             src.source_id = '%s:%s' % (self.source_id, i)
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.src_group_id = self.src_group_id
+            src.num_ruptures = src.count_ruptures()
             yield src
