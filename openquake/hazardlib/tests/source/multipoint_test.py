@@ -43,8 +43,6 @@ class MultiPointTestCase(unittest.TestCase):
                                'Active Shallow Crust',
                                mmfd, 2.0, PeerMSR(), 1.0,
                                tom, 10, 20, npd, hd, mesh)
-        mps.src_group_id = 1
-
         # test the splitting
         splits = list(mps)
         self.assertEqual(len(splits), 2)
