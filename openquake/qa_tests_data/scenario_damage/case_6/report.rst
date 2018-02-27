@@ -3,8 +3,8 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     3,074,586,051      
-date           2018-02-19T09:58:10
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:41:58
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 40
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      0.1
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     3                 
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -78,6 +80,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.002     0.0       1     
-reading site collection 7.391E-06 0.0       1     
+reading exposure        0.001     0.0       1     
+reading site collection 7.868E-06 0.0       1     
 ======================= ========= ========= ======
