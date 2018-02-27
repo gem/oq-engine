@@ -65,7 +65,7 @@ export_dir = %s
         """ % (site_model_input, TMP))
         with self.assertRaises(ValueError) as ctx:
             readinput.get_params([job_config])
-        self.assertIn('not a relative path', str(ctx.exception))
+        self.assertIn('is an absolute path', str(ctx.exception))
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
@@ -73,8 +73,6 @@ export_dir = %s
         job_config = general.writetmp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
-[foo]
-bar = baz
 [site]
 sites = 0 0
 site_model_file = %s
@@ -114,8 +112,8 @@ export_dir = %s
                 self.assertEqual((job_config, site_model_input), values)
 
                 # checking that warnings work
-                self.assertEqual(warn.call_args[0][0],
-                                 "The parameter 'bar' is unknown, ignoring")
+                self.assertIn('Please remove site_model_file from',
+                              warn.call_args[0][0])
         finally:
             shutil.rmtree(temp_dir)
 
@@ -401,8 +399,8 @@ class ExposureTestCase(unittest.TestCase):
         exp, _assets = readinput._get_exposure(
             self.exposure, ['structural'], stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
-        self.assertTrue(exp.insurance_limit_is_absolute)
-        self.assertTrue(exp.deductible_is_absolute)
+        self.assertIsNone(exp.insurance_limit_is_absolute)
+        self.assertIsNone(exp.deductible_is_absolute)
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
                          [('structural', 'per_asset', 'USD')])
 
@@ -453,22 +451,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
                       "a-zA-Z0-9_-, line 11", str(ctx.exception))
-
-    def test_no_insured_data(self):
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.calculation_mode = 'scenario_risk'
-        oqparam.all_cost_types = ['structural']
-        oqparam.insured_losses = True
-        oqparam.inputs = {'exposure': self.exposure,
-                          'structural_vulnerability': None}
-        oqparam.region_constraint = '''\
-POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
-        oqparam.time_event = None
-        oqparam.ignore_missing_costs = []
-        with self.assertRaises(KeyError) as ctx:
-            readinput.get_exposure(oqparam)
-        self.assertIn("node cost: 'deductible', line 14", str(ctx.exception))
 
     def test_no_assets(self):
         oqparam = mock.Mock()
@@ -767,12 +749,12 @@ class TestLoadCurvesTestCase(unittest.TestCase):
 ''', suffix='.xml')
         oqparam = object.__new__(oqvalidation.OqParam)
         oqparam.inputs = dict(hazard_curves=fname)
-        sitecol, pmap = readinput.get_pmap(oqparam)
+        sitecol = readinput.get_site_collection(oqparam)
         self.assertEqual(len(sitecol), 2)
         self.assertEqual(sorted(oqparam.hazard_imtls.items()),
                          [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
                           ('SA(0.025)', [0.005, 0.007, 0.0137])])
-        hcurves = pmap.convert(oqparam.imtls, 2)
+        hcurves = readinput.pmap.convert(oqparam.imtls, 2)
         assert_allclose(hcurves['PGA'], numpy.array(
             [[0.098728, 0.098216, 0.094945, 0.092947],
              [0.98728, 0.98226, 0.94947, 0.92947]]))

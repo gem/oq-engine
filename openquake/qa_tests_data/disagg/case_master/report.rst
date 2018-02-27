@@ -3,8 +3,8 @@ disaggregation with a complex logic tree
 
 ============== ===================
 checksum32     3,362,416,243      
-date           2018-02-02T16:04:45
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-25T06:44:29
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 2, num_levels = 102
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1              
 area_source_discretization      10.0             
 ground_motion_correlation_model None             
+minimum_intensity               {}               
 random_seed                     24               
 master_seed                     0                
+ses_seed                        42               
 =============================== =================
 
 Input files
@@ -79,6 +81,6 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.019     0.0       1     
-reading site collection        4.101E-05 0.0       1     
+reading composite source model 0.018     0.0       1     
+reading site collection        4.196E-05 0.0       1     
 ============================== ========= ========= ======

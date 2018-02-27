@@ -66,7 +66,7 @@ def get_pstats(pstatfile, n):
     # 1      25.166  calculators/classical.py:115(execute)
     # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
-    # 1      25.099  hazardlib/calc/hazard_curve.py:164(pmap_from_grp)
+    # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
@@ -132,9 +132,8 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
 def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
         loglevel='info', pdb=None):
     """
-    Run a calculation with multiprocessing
+    Run a calculation bypassing the database layer
     """
-    os.environ['OQ_DISTRIBUTE'] = 'futures'
     params = oqvalidation.OqParam.check(
         dict(p.split('=', 1) for p in param or ()))
     if slowest:

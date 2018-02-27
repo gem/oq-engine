@@ -19,7 +19,9 @@
 import time
 import unittest
 import multiprocessing
-from openquake.baselib.workerpool import WorkerMaster, _starmap, streamer
+from openquake.baselib import config
+from openquake.baselib.workerpool import WorkerMaster, streamer
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import _get_free_port
 from openquake.baselib.performance import Monitor
 
@@ -31,27 +33,28 @@ def double(x, mon):
 class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.host = '127.0.0.1'
-        cls.task_in_port = _get_free_port()
-        task_out_port = _get_free_port()
-        cls.receiver_ports = _get_free_port()
+        cls.z = config.zworkers.copy()
+        dic = dict(master_host='127.0.0.1',
+                   task_in_port=_get_free_port(),
+                   task_out_port=_get_free_port(),
+                   receiver_ports=_get_free_port())
+        config.zworkers.update(dic)
         ctrl_port = _get_free_port()
         host_cores = '127.0.0.1 4'
-        cls.master = WorkerMaster(cls.host, cls.task_in_port, task_out_port,
-                                  ctrl_port, host_cores)
+        cls.master = WorkerMaster(
+            dic['master_host'], dic['task_in_port'], dic['task_out_port'],
+            ctrl_port, host_cores)
         cls.proc = multiprocessing.Process(
-            target=streamer, args=(cls.host, cls.task_in_port, task_out_port))
+            target=streamer, args=(dic['master_host'], dic['task_in_port'],
+                                   dic['task_out_port']))
         cls.proc.start()
         cls.master.start()
 
     def test(self):
         mon = Monitor()
         iterargs = ((i, mon) for i in range(10))
-        res = _starmap(double, iterargs, self.host, self.task_in_port,
-                       self.receiver_ports)
-        num_tasks = next(res)
-        self.assertEqual(num_tasks, 10)
-        self.assertEqual(sum(r[0] for r in res), 90)
+        smap = Starmap(double, iterargs, distribute='zmq')
+        self.assertEqual(sum(res for res in smap), 90)
         # sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
 
     def test_status(self):
@@ -62,3 +65,4 @@ class WorkerPoolTestCase(unittest.TestCase):
     def tearDownClass(cls):
         cls.master.stop()
         cls.proc.terminate()
+        config.zworkers = cls.z

@@ -38,7 +38,7 @@ from openquake.hazardlib import valid, stats as hstats
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv, FIVEDIGITS)
+    build_header, scientificformat, FIVEDIGITS)
 from openquake.calculators import getters
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
@@ -250,7 +250,7 @@ def view_ruptures_per_trt(token, dstore):
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures
+            er = src_group.eff_ruptures / num_tiles
             if er:
                 num_trts += 1
                 eff_ruptures += er
@@ -283,7 +283,8 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'ground_motion_correlation_model', 'random_seed', 'master_seed']
+              'ground_motion_correlation_model', 'minimum_intensity',
+              'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
     return rst_table([(param, repr(getattr(oq, param, None)))
@@ -452,23 +453,6 @@ def view_exposure_info(token, dstore):
     return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 
-@view.add('assetcol')
-def view_assetcol(token, dstore):
-    """
-    Display the exposure in CSV format
-    """
-    assetcol = dstore['assetcol']
-    taxonomies = assetcol.taxonomies
-    header = list(assetcol.array.dtype.names)
-    columns = [None] * len(header)
-    for i, field in enumerate(header):
-        if field == 'taxonomy':
-            columns[i] = taxonomies[assetcol.array[field]]
-        else:
-            columns[i] = assetcol.array[field]
-    return write_csv(io.BytesIO(), [header] + list(zip(*columns)))
-
-
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
@@ -548,6 +532,7 @@ def view_assets_by_site(token, dstore):
     """
     Display statistical information about the distribution of the assets
     """
+    taxonomies = dstore['assetcol/tagcol/taxonomy'].value
     assets_by_site = dstore['assetcol'].assets_by_site()
     data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
     num_assets = AccumDict()
@@ -556,7 +541,7 @@ def view_assets_by_site(token, dstore):
             assets, operator.attrgetter('taxonomy')).items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
-        data.append(stats(taxo, val, val.sum()))
+        data.append(stats(taxonomies[taxo], val, val.sum()))
     if len(num_assets) > 1:  # more than one taxonomy, add a summary
         n_assets = numpy.array([len(assets) for assets in assets_by_site])
         data.append(stats('*ALL*', n_assets, n_assets.sum()))

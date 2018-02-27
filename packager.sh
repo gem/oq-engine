@@ -42,7 +42,7 @@ set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
 GEM_DEPENDS="oq-libs|deb oq-libs-extra|sub"
-GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
+GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
@@ -86,7 +86,7 @@ NL="
 "
 TB="	"
 
-OPT_LIBS_PATH=/opt/openquake/lib/python2.7/site-packages
+OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages:/opt/openquake/lib/python3.5/dist-packages
 #
 #  functions
 
@@ -213,6 +213,19 @@ _wait_ssh () {
     fi
 }
 
+add_custom_pkg_repo () {
+    # install package to manage repository properly
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties software-properties-common"
+
+    # add custom packages
+    if ! ssh $lxc_ip ls repo/custom_pkgs >/dev/null ; then
+        ssh $lxc_ip mkdir "repo"
+        scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    fi
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    ssh $lxc_ip "sudo apt-get update"
+}
+
 add_local_pkg_repo () {
     local dep="$1"
 
@@ -236,10 +249,10 @@ add_local_pkg_repo () {
     else
         GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
     fi
-    from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}.${!var_commit:0:7}"
+    from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python3-${dep}.${!var_commit:0:7}"
     time_start="$(date +%s)"
     while true; do
-        if scp -r "$from_dir" $lxc_ip:repo/python-${dep}; then
+        if scp -r "$from_dir" $lxc_ip:repo/python3-${dep}; then
             break
         fi
         if [ "$dep_branch" = "$branch" ]; then
@@ -254,12 +267,12 @@ add_local_pkg_repo () {
             # NOTE: in the other case dep branch is 'master' and package branch isn't
             #       so we try to get the correct commit package and if it isn't yet built
             #       it fallback to the latest builded
-            from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}* | tail -n 1)"
-            scp -r "$from_dir" $lxc_ip:repo/python-${dep}
+            from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python3-${dep}* | tail -n 1)"
+            scp -r "$from_dir" $lxc_ip:repo/python3-${dep}
             break
         fi
     done
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python3-${dep} ./\""
     ssh $lxc_ip "sudo apt-get update"
 }
 
@@ -274,6 +287,9 @@ _pkgbuild_innervm_run () {
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     ssh $lxc_ip sudo apt-get update
     ssh $lxc_ip sudo apt-get -y upgrade
+
+    add_custom_pkg_repo
+
     ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
@@ -310,15 +326,9 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
-    # install package to manage repository properly
-    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
-    # add custom packages
-    ssh $lxc_ip mkdir -p "repo"
-    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    add_custom_pkg_repo
 
-    ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
     if [ -f _jenkins_deps_info ]; then
@@ -341,12 +351,13 @@ _devtest_innervm_run () {
             git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
             cd -
         elif [ "$dep_type" = "deb" ]; then
-            # cd _jenkins_deps/$dep
-
             add_local_pkg_repo "$dep"
-            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
+        elif [ "$dep_type" = "cust" ]; then
+            add_custom_pkg_repo
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         elif [ "$dep_type" = "sub" ]; then
-            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -370,9 +381,9 @@ _devtest_innervm_run () {
         fi
 
         ssh $lxc_ip "set -e
-                 export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
+                 export PYTHONPATH=\"\$PWD/oq-engine\"
                  echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
-                 cd oq-engine; nohup bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
+                 cd oq-engine; nohup /opt/openquake/bin/python3 bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
 
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
@@ -380,6 +391,8 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
+                 sudo /opt/openquake/bin/pip install coverage
+
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine
@@ -395,10 +408,8 @@ _devtest_innervm_run () {
 
                  export MPLBACKEND=Agg; /opt/openquake/bin/nosetests -a '${skip_tests}' -v  --with-xunit --with-doctest --with-coverage --cover-package=openquake.hazardlib openquake/hazardlib
 
-
-
-                 python-coverage xml --include=\"openquake/*\"
-        bin/oq dbserver stop"
+                 /opt/openquake/bin/coverage xml --include=\"openquake/*\"
+                 /opt/openquake/bin/python3 bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
@@ -423,8 +434,10 @@ _builddoc_innervm_run () {
 
     ssh $lxc_ip "rm -f ssh.log"
 
-    ssh $lxc_ip "sudo apt-get update"
+    add_custom_pkg_repo
+
     ssh $lxc_ip "sudo apt-get -y upgrade"
+
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
     # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
@@ -451,12 +464,13 @@ _builddoc_innervm_run () {
             git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
             cd -
         elif [ "$dep_type" = "deb" ]; then
-            # cd _jenkins_deps/$dep
-
             add_local_pkg_repo "$dep"
-            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
+        elif [ "$dep_type" = "cust" ]; then
+            add_custom_pkg_repo
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         elif [ "$dep_type" = "sub" ]; then
-            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python3-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -471,7 +485,8 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\" ; cd oq-engine/doc/sphinx ; MPLBACKEND=Agg make html"
+    ssh $lxc_ip "set -e ; sudo /opt/openquake/bin/pip install sphinx ; cd oq-engine; export PYTHONPATH=\$PWD ; cd doc/sphinx ; MPLBACKEND=Agg make html"
+
     scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
@@ -526,17 +541,16 @@ _pkgtest_innervm_run () {
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
         # if the deb is a subpackage we skip source check
-        if [ "$dep_type" == "sub" ]; then
+        if [ "$dep_type" == "cust" -o "$dep_type" == "sub" ]; then
             continue
+        else
+            add_local_pkg_repo "$dep"
         fi
-
-        add_local_pkg_repo "$dep"
     done
     IFS="$old_ifs"
 
     # add custom packages
-    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
+    add_custom_pkg_repo
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
@@ -571,9 +585,11 @@ _pkgtest_innervm_run () {
         fi
 
         cd /usr/share/openquake/engine/demos
-        OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
+        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
 
-        sudo apt-get install -y python-oq-engine-master python-oq-engine-worker
+        sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
+        # Switch to celery mode
+        sudo sed -i 's/oq_distribute = futures/oq_distribute = celery/g' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 # FIXME: the big sleep below is a temporary workaround to avoid races.
@@ -608,7 +624,7 @@ sudo supervisorctl start openquake-celery
 celery_wait $GEM_MAXLOOP
 
         /usr/share/openquake/engine/utils/celery-status
-        OQ_DISTRIBUTE=celery oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
+        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
 
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
@@ -691,7 +707,7 @@ deps_list() {
             if [ "$d_type" != "src" ]; then
                 continue
             fi
-            if [ "$pkg_name" = "python-${d}" ]; then
+            if [ "$pkg_name" = "python3-${d}" ]; then
                 skip=1
                 break
             fi
@@ -708,7 +724,10 @@ deps_list() {
     done
     IFS="$old_ifs"
 
-    echo "$out_list" | sed "s/\b$GEM_DEB_PACKAGE\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g"
+    echo "$out_list" | \
+        sed "s/\b${GEM_DEB_PACKAGE}-master\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g" | \
+        sed "s/\b${GEM_DEB_PACKAGE}-worker\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g" | \
+        sed "s/\b${GEM_DEB_PACKAGE}\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g"
 
     return 0
 }
@@ -1261,9 +1280,9 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         if [ "$dep" = "oq-libs" ]; then
-            sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
+            sed -i "s/\(python3-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
         else
-            sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
+            sed -i "s/\(python3-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
         fi
     done
 
@@ -1279,7 +1298,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
         pkg_bfx="$ini_bfx"
-        pkg_deb="-0"
+        pkg_deb="-1"
     fi
 
     (
@@ -1361,7 +1380,7 @@ mksafedir "$GEM_BUILD_EXTR"
 cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
     ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb $GEM_BUILD_PKG
 cd "$GEM_BUILD_EXTR"
-for pkg in python-oq-engine python-oq-engine-master python-oq-engine-worker; do
+for pkg in python3-oq-engine python3-oq-engine-master python3-oq-engine-worker; do
     mksafedir "$pkg"
     cd "$pkg"
     dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .

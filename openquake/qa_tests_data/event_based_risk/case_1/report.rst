@@ -3,8 +3,8 @@ Event Based Risk QA Test 1
 
 ============== ===================
 checksum32     261,398,150        
-date           2018-02-02T16:03:11
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-25T06:42:45
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 3, num_levels = 25
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      5.0
 width_of_mfd_bin                0.3               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     23                
 master_seed                     42                
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -77,19 +79,19 @@ source_model.xml 0      Active Shallow Crust 18           18
 
 Informational data
 ------------------
-========================= ============================================================================
-compute_ruptures.received tot 12.07 KB, max_per_task 12.07 KB                                         
-compute_ruptures.sent     sources 2.17 KB, param 1.01 KB, src_filter 830 B, monitor 323 B, gsims 216 B
-hazard.input_weight       1.8000000000000003                                                          
-hazard.n_imts             5                                                                           
-hazard.n_levels           25                                                                          
-hazard.n_realizations     2                                                                           
-hazard.n_sites            3                                                                           
-hazard.n_sources          3                                                                           
-hazard.output_weight      75.0                                                                        
-hostname                  tstation.gem.lan                                                            
-require_epsilons          True                                                                        
-========================= ============================================================================
+========================= ==============================================================================
+compute_ruptures.received tot 16.12 KB, max_per_task 5.4 KB                                             
+compute_ruptures.sent     sources 4.04 KB, param 3.04 KB, src_filter 2.43 KB, monitor 990 B, gsims 648 B
+hazard.input_weight       1.8000000000000003                                                            
+hazard.n_imts             5                                                                             
+hazard.n_levels           25                                                                            
+hazard.n_realizations     2                                                                             
+hazard.n_sites            3                                                                             
+hazard.n_sources          3                                                                             
+hazard.output_weight      75.0                                                                          
+hostname                  tstation.gem.lan                                                              
+require_epsilons          True                                                                          
+========================= ==============================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -106,9 +108,9 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   2         2         
-2        1.000 NaN    1   1   1         1         
-3        1.000 NaN    1   1   1         1         
+RM       1.000 0.0    1   1   2         2         
+RC       1.000 NaN    1   1   1         1         
+W        1.000 NaN    1   1   1         1         
 *ALL*    1.333 0.577  1   2   3         4         
 ======== ===== ====== === === ========= ==========
 
@@ -118,8 +120,8 @@ Slowest sources
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
 3         PointSource  6            0.0       1         0        
-2         PointSource  6            0.0       1         0        
 1         PointSource  6            0.0       1         0        
+2         PointSource  6            0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -138,7 +140,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.028 NaN    0.028 0.028 1        
+compute_ruptures   0.012 0.001  0.010 0.013 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -146,14 +148,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.043     0.0       1     
-total compute_ruptures         0.028     0.0       1     
+managing sources               0.035     0.0       1     
+total compute_ruptures         0.035     0.0       3     
 making contexts                0.012     0.0       9     
+saving ruptures                0.007     0.0       3     
 store source_info              0.004     0.0       1     
-reading exposure               0.003     0.0       1     
-saving ruptures                0.003     0.0       1     
 reading composite source model 0.003     0.0       1     
-assoc_assets_sites             0.002     0.0       1     
+reading exposure               0.001     0.0       1     
 setting event years            0.001     0.0       1     
-reading site collection        6.557E-05 0.0       1     
+reading site collection        5.889E-05 0.0       1     
 ============================== ========= ========= ======
