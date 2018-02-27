@@ -171,7 +171,6 @@ def decimal_time(year, month, day, hour, minute, second):
         tse = second
 
     tmonth = tmo - 1
-    tmonth = np.array([int(t) if not np.isnan(t) else 0 for t in tmonth])
     day_count = MARKER_NORMAL[tmonth] + tda - 1
     id_leap = leap_check(year)
     leap_loc = np.where(id_leap)[0]
