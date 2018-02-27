@@ -21,6 +21,7 @@ import copy
 import numpy
 
 from openquake.baselib.python3compat import range
+from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -178,6 +179,35 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.edges = edges
         self.rupture_mesh_spacing = spacing
 
+    def __iter__(self):
+        if self.num_ruptures <= MINWEIGHT:
+            yield self  # not splittable
+            return
+
+        mag_rates = [(mag, rate) for (mag, rate) in
+                     self.mfd.get_annual_occurrence_rates() if rate]
+        if len(mag_rates) > 1:
+            # split by magnitude
+            for i, (mag, rate) in enumerate(mag_rates):
+                src = copy.copy(self)
+                src.source_id = '%s:%s' % (self.source_id, i)
+                src.mfd = mfd.ArbitraryMFD([mag], [rate])
+                src.src_group_id = self.src_group_id
+                src.num_ruptures = src.count_ruptures()
+                yield src
+            return
+        # split by slice of ruptures
+        i = 0
+        for start, stop in _split_start_stop(self.num_ruptures, MINWEIGHT):
+            src = copy.copy(self)
+            src.start = start
+            src.stop = stop
+            src.num_ruptures = stop - start
+            src.source_id = '%s:%s' % (self.source_id, i)
+            src.src_group_id = self.src_group_id
+            i += 1
+            yield src
+
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     """
@@ -273,19 +303,3 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
             rupture_slices.append((slice(row, last_row + 1),
                                    slice(col, last_col + 1)))
     return rupture_slices
-
-    def __iter__(self):
-        if self.num_ruptures <= MINWEIGHT:
-            yield self  # not splittable
-            return
-        i = 0
-        # split by slice of ruptures, see ClassicalTestCase.test_case_20
-        for start, stop in _split_start_stop(self.num_ruptures, MINWEIGHT):
-            src = copy.copy(self)
-            src.start = start
-            src.stop = stop
-            src.num_ruptures = stop - start
-            src.source_id = '%s:%s' % (self.source_id, i)
-            src.src_group_id = self.src_group_id
-            i += 1
-            yield src
