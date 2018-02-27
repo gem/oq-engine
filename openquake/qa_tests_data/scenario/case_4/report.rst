@@ -3,8 +3,8 @@ Scenario QA Test, Case 1
 
 ============== ===================
 checksum32     3,130,447,207      
-date           2018-02-19T09:58:11
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:41:59
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      1.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     3                 
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -55,8 +57,8 @@ Realizations per (TRT, GSIM)
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading site collection 4.745E-04 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+reading site collection 0.001    0.0       1     
+======================= ======== ========= ======

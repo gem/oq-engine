@@ -3,8 +3,8 @@ Scenario QA Test with AtkinsonBoore2003SInter
 
 ============== ===================
 checksum32     157,390,023        
-date           2018-02-19T09:58:11
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:41:59
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      1.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     3                 
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -57,5 +59,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 5.031E-05 0.0       1     
+reading site collection 5.007E-05 0.0       1     
 ======================= ========= ========= ======
