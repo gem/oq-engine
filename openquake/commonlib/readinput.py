@@ -713,7 +713,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     asset_refs = []
     exp = Exposure(
         exposure['id'], exposure['category'],
-        ~description, cost_types, occupancy_periods.split(),
+        description.text, cost_types, occupancy_periods.split(),
         insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
         area.attrib, assets, asset_refs, cc, asset.TagCollection(tagnames))
     return exp, exposure.assets
