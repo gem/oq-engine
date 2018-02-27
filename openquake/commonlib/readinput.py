@@ -260,6 +260,7 @@ def get_mesh(oqparam):
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif oqparam.hazard_calculation_id:
+        # return the mesh corresponding to the complete site collection
         with datastore.read(oqparam.hazard_calculation_id) as dstore:
             sitecol = dstore['sitecol'].complete
         return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
@@ -617,6 +618,7 @@ def get_risk_model(oqparam):
         retro = {}
     return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
 
+
 # ########################### exposure ############################ #
 
 cost_type_dt = numpy.dtype([('name', hdf5.vstr),
@@ -711,7 +713,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     asset_refs = []
     exp = Exposure(
         exposure['id'], exposure['category'],
-        ~description, cost_types, occupancy_periods.split(),
+        description.text, cost_types, occupancy_periods.split(),
         insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
         area.attrib, assets, asset_refs, cc, asset.TagCollection(tagnames))
     return exp, exposure.assets
@@ -734,12 +736,12 @@ def get_exposure(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        an :class:`Exposure` instance
+        an :class:`Exposure` instance or a compatible AssetCollection
     """
     return Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.insured_losses, oqparam.region_constraint,
-        oqparam.all_cost_types, oqparam.ignore_missing_costs)
+        oqparam.region_constraint, oqparam.all_cost_types,
+        oqparam.ignore_missing_costs)
 
 
 class Exposure(object):
@@ -753,9 +755,8 @@ class Exposure(object):
               'cost_calculator', 'tagcol']
 
     @classmethod
-    def read(cls, fname, calculation_mode='', insured_losses=False,
-             region_constraint='', all_cost_types=(), ignore_missing_costs=(),
-             asset_nodes=False):
+    def read(cls, fname, calculation_mode='', region_constraint='',
+             all_cost_types=(), ignore_missing_costs=(), asset_nodes=False):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
@@ -764,7 +765,6 @@ class Exposure(object):
         """
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
-        param['insured_losses'] = insured_losses
         if region_constraint:
             param['region'] = wkt.loads(region_constraint)
         else:
@@ -913,9 +913,14 @@ class Exposure(object):
                     retrofitted = cost.get('retrofitted')
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = cost['value']
-                    if param['insured_losses']:
+                    try:
                         deductibles[cost_type] = cost['deductible']
+                    except KeyError:
+                        pass
+                    try:
                         insurance_limits[cost_type] = cost['insuranceLimit']
+                    except KeyError:
+                        pass
 
         # check we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
@@ -945,6 +950,9 @@ class Exposure(object):
                           self.cost_calculator)
         self.assets.append(ass)
 
+    def __iter__(self):
+        return iter(self.assets)
+
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
                                         len(self.assets))
@@ -954,10 +962,12 @@ def get_mesh_assets_by_site(oqparam, exposure):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param exposure:
+        an Exposure instance
     :returns:
         the exposure `mesh` and a list `assets_by_site` with the same length
     """
-    assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
+    assets_by_loc = groupby(exposure, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     assets_by_site = []
