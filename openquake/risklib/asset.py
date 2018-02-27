@@ -373,7 +373,7 @@ class AssetCollection(object):
 
     def get_aids_by_tag(self):
         """
-        :returns: dict idx -> aid
+        :returns: dict tag -> asset ordinals
         """
         aids_by_tag = general.AccumDict(accum=set())
         for aid, ass in enumerate(self):
