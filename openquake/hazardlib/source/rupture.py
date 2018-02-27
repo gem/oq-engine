@@ -222,6 +222,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
             [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
         )
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
+        prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
         return prob_no_exceed
 
     def sample_number_of_occurrences(self):
