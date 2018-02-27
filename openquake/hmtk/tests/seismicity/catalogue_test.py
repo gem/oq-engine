@@ -54,6 +54,7 @@ Tests for the catalogue module
 import unittest
 import numpy as np
 import filecmp
+import os
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
@@ -61,6 +62,8 @@ from openquake.hmtk.seismicity.catalogue import Catalogue
 from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import CsvCatalogueParser
 from openquake.hmtk.seismicity.utils import decimal_time
 
+
+CURRENT_DIR = os.path.dirname(__file__)
 
 class CatalogueTestCase(unittest.TestCase):
     """
@@ -86,8 +89,8 @@ class CatalogueTestCase(unittest.TestCase):
 
     def write_catalogue(self):
         # Test the export of a catalogue in csv format
-        inp_file = 'data/test_write_input.csv'
-        out_file = 'data/test_write_output.csv'
+        inp_file = os.path.join(CURRENT_DIR, 'data/test_write_input.csv')
+        out_file = os.path.join(CURRENT_DIR, 'data/test_write_output.csv')
         parser = CsvCatalogueParser(inp_file)
         cat = parser.read_file()
         cat.write_catalogue(out_file)
