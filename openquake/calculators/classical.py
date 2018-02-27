@@ -191,7 +191,6 @@ class PSHACalculator(base.HazardCalculator):
                     num_sources += len(sg.sources)
             # NB: csm.get_sources_by_trt discards the mutex sources
             for trt, sources in csm.get_sources_by_trt(opt).items():
-                import pdb; pdb.set_trace()
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
                 for block in block_splitter(sources, maxweight, weight):
                     yield block, src_filter, gsims, param, monitor
