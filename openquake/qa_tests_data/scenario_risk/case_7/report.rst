@@ -3,8 +3,8 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2018-02-02T16:04:44
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-25T06:44:28
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 27, num_levels = 8
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      None
 width_of_mfd_bin                None           
 area_source_discretization      None           
 ground_motion_correlation_model None           
+minimum_intensity               {}             
 random_seed                     42             
 master_seed                     0              
+ses_seed                        42             
 avg_losses                      True           
 =============================== ===============
 
@@ -66,10 +68,10 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   4         4         
-2        1.000 0.0    1   1   16        16        
+2        1.000 0.0    1   1   4         4         
+4        1.000 0.0    1   1   16        16        
 3        1.000 0.0    1   1   5         5         
-4        1.000 0.0    1   1   2         2         
+1        1.000 0.0    1   1   2         2         
 *ALL*    1.000 0.0    1   1   27        27        
 ======== ===== ====== === === ========= ==========
 
@@ -78,9 +80,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.040     0.0       1     
-assoc_assets_sites      0.009     0.0       2     
-reading exposure        0.005     0.0       1     
-building epsilons       6.690E-04 0.0       1     
-reading site collection 5.555E-05 0.0       1     
+building riskinputs     0.042     0.0       1     
+reading exposure        0.003     0.0       1     
+building epsilons       6.225E-04 0.0       1     
+reading site collection 5.126E-05 0.0       1     
 ======================= ========= ========= ======

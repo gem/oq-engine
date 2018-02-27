@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     4,062,010,034      
-date           2018-02-02T16:02:37
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-25T06:41:59
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 28
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      1.0
 width_of_mfd_bin                0.1               
 area_source_discretization      20.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -75,8 +77,8 @@ source_model.xml 0      Active Shallow Crust 1,694        1,694
 Informational data
 ------------------
 ======================= ==================================================================================
-count_ruptures.received tot 5.91 KB, max_per_task 712 B                                                   
-count_ruptures.sent     sources 11.26 KB, srcfilter 7.05 KB, param 6.05 KB, monitor 3.12 KB, gsims 1.17 KB
+count_ruptures.received tot 10.47 KB, max_per_task 825 B                                                  
+count_ruptures.sent     sources 13.88 KB, srcfilter 9.17 KB, param 7.87 KB, monitor 4.19 KB, gsims 1.52 KB
 hazard.input_weight     1694.0                                                                            
 hazard.n_imts           1                                                                                 
 hazard.n_levels         28                                                                                
@@ -99,7 +101,7 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 NaN    1   1   1         1         
+Wood     1.000 NaN    1   1   1         1         
 ======== ===== ====== === === ========= ==========
 
 Slowest sources
@@ -107,7 +109,7 @@ Slowest sources
 ========= ================= ============ ========= ========= =========
 source_id source_class      num_ruptures calc_time num_sites num_split
 ========= ================= ============ ========= ========= =========
-1         SimpleFaultSource 1,694        0.035     210       15       
+1         SimpleFaultSource 1,694        0.076     16        15       
 ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -115,7 +117,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.035     1     
+SimpleFaultSource 0.076     1     
 ================= ========= ======
 
 Duplicated sources
@@ -126,7 +128,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.004 0.002  0.002 0.008 10       
+count_ruptures     0.011 0.005  0.003 0.020 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -134,12 +136,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.108     0.0       1     
-total count_ruptures           0.042     0.074     10    
-reading composite source model 0.012     0.0       1     
-store source_info              0.006     0.0       1     
-reading exposure               0.002     0.0       1     
-aggregate curves               2.363E-04 0.0       10    
-saving probability maps        5.031E-05 0.0       1     
-reading site collection        6.676E-06 0.0       1     
+total count_ruptures           0.137     1.746     13    
+managing sources               0.086     0.0       1     
+reading composite source model 0.010     0.0       1     
+store source_info              0.003     0.0       1     
+reading exposure               4.828E-04 0.0       1     
+aggregate curves               1.822E-04 0.0       13    
+saving probability maps        2.694E-05 0.0       1     
+reading site collection        5.722E-06 0.0       1     
 ============================== ========= ========= ======

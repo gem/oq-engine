@@ -20,7 +20,7 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
-
+from shapely import geometry
 from openquake.baselib.python3compat import range
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.mesh import Mesh
@@ -302,10 +302,20 @@ class SiteCollection(object):
             return None
         # extract indices of Trues from the mask
         if self.indices is None:
-            indices = mask.nonzero()[0]
+            indices, = mask.nonzero()
         else:
             indices = self.indices.take(mask.nonzero()[0])
         return SiteCollection.filtered(indices, self.array)
+
+    def within(self, region):
+        """
+        :param region: a shapely polygon
+        :returns: a filtered SiteCollection of sites within the region
+        """
+        mask = numpy.array([
+            geometry.Point(rec['lons'], rec['lats']).within(region)
+            for rec in self.array])
+        return self.complete.filter(mask)
 
     def __getstate__(self):
         return dict(array=self.array, indices=self.indices)

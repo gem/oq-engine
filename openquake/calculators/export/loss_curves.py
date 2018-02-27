@@ -51,7 +51,7 @@ class LossCurveExporter(object):
     mean/sid-42   # export mean loss curves of site #42
     quantile-0.1/sid-42   # export quantile loss curves of site #42
 
-    rlzs/ref-a1          # export loss curves of asset a1 for all realizations
+    rlzs/ref-a1         # export loss curves of asset a1 for all realizations
     rlz-003/ref-a1      # export loss curves of asset a1, realization 3
     stats/ref-a1        # export statistical loss curves of asset a1
     mean/ref-a1         # export mean loss curves of asset a1
@@ -64,9 +64,9 @@ class LossCurveExporter(object):
         except KeyError:  # no 'agg_loss_table' for non event_based_risk
             pass
         self.assetcol = dstore['assetcol']
-        arefs = [decode(aref) for aref in self.dstore['asset_refs']]
-        self.str2asset = {arefs[asset.idx]: asset for asset in self.assetcol}
-        self.asset_refs = self.dstore['asset_refs'].value
+        arefs = [decode(aref) for aref in self.assetcol.asset_refs]
+        self.str2asset = dict(zip(arefs, self.assetcol))
+        self.asset_refs = arefs
         self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
         self.R = dstore['csm_info'].get_num_rlzs()
 
@@ -86,7 +86,7 @@ class LossCurveExporter(object):
             arefs = []
             for aid, rec in enumerate(self.assetcol.array):
                 aids.append(aid)
-                arefs.append(self.asset_refs[rec['idx']])
+                arefs.append(self.asset_refs[aid])
         elif spec.startswith('sid-'):  # passed the site ID
             sid = int(spec[4:])
             aids = []
@@ -94,7 +94,7 @@ class LossCurveExporter(object):
             for aid, rec in enumerate(self.assetcol.array):
                 if rec['site_id'] == sid:
                     aids.append(aid)
-                    arefs.append(self.asset_refs[rec['idx']])
+                    arefs.append(self.asset_refs[aid])
         elif spec.startswith('ref-'):  # passed the asset name
             arefs = [spec[4:]]
             aids = [self.str2asset[arefs[0]].ordinal]

@@ -32,16 +32,7 @@ class ValidationError(Exception):
 U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
-aids_dt = numpy.dtype([('aids', hdf5.vuint32)])
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
-
-
-def get_refs(assets, hdf5path):
-    """
-    Debugging method returning the string IDs of the assets from the datastore
-    """
-    with hdf5.File(hdf5path, 'r') as f:
-        return f['asset_refs'][[a.idx for a in assets]]
 
 
 def read_composite_risk_model(dstore):
@@ -320,15 +311,15 @@ class RiskInput(object):
             return
         eid2idx = self.hazard_getter.eid2idx
         idx = [eid2idx[eid] for eid in eids]
-        try:
+        try:  # from ruptures
             return self.eps[aid, idx]
-        except TypeError:  # for gmf_ebrisk
+        except TypeError:  # from GMFs
             return self.eps[aid][idx]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__,
-            ', '.join(self.taxonomies), len(self.aids))
+            ' '.join(map(str, self.taxonomies)), len(self.aids))
 
 
 class EpsilonMatrix0(object):
@@ -354,10 +345,10 @@ class EpsilonMatrix0(object):
             eps[:, i] = numpy.random.normal(size=self.num_assets)
         return eps
 
-    def __getitem__(self, item):
+    def __getitem__(self, aid):
         if self.eps is None:
             self.eps = self.make_eps()
-        return self.eps[item]
+        return self.eps[aid]
 
     def __len__(self):
         return self.num_assets
@@ -368,19 +359,29 @@ class EpsilonMatrix1(object):
     Mock-up for a matrix of epsilons of size N x E,
     used when asset_correlation=1.
 
+    :param num_assets: number of assets
     :param num_events: number of events
     :param seed: seed used to generate E epsilons
     """
-    def __init__(self, num_events, seed):
+    def __init__(self, num_assets, num_events, seed):
+        self.num_assets = num_assets
         self.num_events = num_events
         self.seed = seed
         numpy.random.seed(seed)
         self.eps = numpy.random.normal(size=num_events)
 
     def __getitem__(self, item):
-        # item[0] is the asset index, item[1] the event index
-        # the epsilons are equal for all assets since asset_correlation=1
-        return self.eps[item[1]]
+        if isinstance(item, tuple):
+            # item[0] is the asset index, item[1] the event index
+            # the epsilons are equal for all assets since asset_correlation=1
+            return self.eps[item[1]]
+        elif isinstance(item, int):  # item is an asset index
+            return self.eps
+        else:
+            raise TypeError('Invalid item %r' % item)
+
+    def __len__(self):
+        return self.num_assets
 
 
 def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
@@ -398,7 +399,7 @@ def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
         if no_eps:
             eps = None
         elif correlation:
-            eps = EpsilonMatrix1(stop - start, master_seed)
+            eps = EpsilonMatrix1(n_assets, stop - start, master_seed)
         else:
             eps = EpsilonMatrix0(n_assets, seeds[start:stop])
         return eps
@@ -406,6 +407,7 @@ def make_epsilon_getter(n_assets, n_events, correlation, master_seed, no_eps):
     return get_eps
 
 
+# used in scenario_risk
 def make_eps(assetcol, num_samples, seed, correlation):
     """
     :param assetcol: an AssetCollection instance

@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     733,853,885        
-date           2018-02-02T16:03:04
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-25T06:42:39
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     24                
 master_seed                     0                 
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -87,9 +89,9 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 482          482         
-source_model_1.xml 1      Stable Shallow Crust 4            4           
+source_model_1.xml 1      Stable Shallow Crust 4.000        4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
-source_model_2.xml 3      Stable Shallow Crust 1            1           
+source_model_2.xml 3      Stable Shallow Crust 1.000        1           
 ================== ====== ==================== ============ ============
 
 ============= ===
@@ -102,8 +104,8 @@ source_model_2.xml 3      Stable Shallow Crust 1            1
 Informational data
 ------------------
 ========================= =====================================================================================
-compute_ruptures.received tot 21.51 KB, max_per_task 3.22 KB                                                   
-compute_ruptures.sent     sources 43.88 KB, param 26.77 KB, src_filter 24.59 KB, monitor 7.57 KB, gsims 5.15 KB
+compute_ruptures.received tot 21.75 KB, max_per_task 3.23 KB                                                   
+compute_ruptures.sent     sources 43.88 KB, param 26.77 KB, src_filter 24.59 KB, monitor 7.73 KB, gsims 5.15 KB
 hazard.input_weight       969.0                                                                                
 hazard.n_imts             4                                                                                    
 hazard.n_levels           46                                                                                   
@@ -130,9 +132,9 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 0.0    1   1   4         4         
-2        1.000 0.0    1   1   2         2         
-3        1.000 NaN    1   1   1         1         
+tax1     1.000 0.0    1   1   4         4         
+tax2     1.000 0.0    1   1   2         2         
+tax3     1.000 NaN    1   1   1         1         
 *ALL*    1.000 0.0    1   1   7         7         
 ======== ===== ====== === === ========= ==========
 
@@ -141,8 +143,8 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-2         CharacteristicFaultSource 1            0.0       1         0        
 1         SimpleFaultSource         482          0.0       1         0        
+2         CharacteristicFaultSource 1            0.0       1         0        
 ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -162,7 +164,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.018 0.009  0.004 0.035 24       
+compute_ruptures   0.030 0.014  0.007 0.057 24       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -170,13 +172,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.429     0.250     24    
-managing sources               0.264     0.0       1     
-reading composite source model 0.018     0.0       1     
-making contexts                0.008     0.0       2     
-saving ruptures                0.008     0.0       24    
-store source_info              0.005     0.0       1     
-reading exposure               0.004     0.0       1     
-setting event years            0.002     0.0       1     
-reading site collection        6.199E-06 0.0       1     
+total compute_ruptures         0.729     0.129     24    
+managing sources               0.212     0.0       1     
+reading composite source model 0.023     0.0       1     
+making contexts                0.010     0.0       2     
+saving ruptures                0.005     0.0       24    
+store source_info              0.004     0.0       1     
+reading exposure               0.003     0.0       1     
+setting event years            0.001     0.0       1     
+reading site collection        7.629E-06 0.0       1     
 ============================== ========= ========= ======
