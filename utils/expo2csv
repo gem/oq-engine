@@ -1,4 +1,4 @@
-#!/user/bin/env python
+#!/usr/bin/env python
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -30,6 +30,7 @@ def expo2csv(job_ini):
     """
     Convert an exposure in XML format into CSV format
     """
+    assert job_ini.endswith('.ini'), job_ini
     oq = readinput.get_oqparam(job_ini)
     exposure = readinput.get_exposure(oq)
     rows = []
