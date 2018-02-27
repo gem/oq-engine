@@ -15,8 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import time
+import math
 import os.path
 import operator
 import itertools
@@ -36,7 +37,7 @@ from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
-from openquake.calculators.getters import GmfGetter
+from openquake.calculators.getters import GmfGetter, EBRupture, RuptureGetter
 from openquake.calculators.classical import (
     ClassicalCalculator, saving_sources_by_task)
 
@@ -172,8 +173,8 @@ def _build_eb_ruptures(
                 # set a bit later, in set_eids
                 events.append((0, src.src_group_id, ses_idx, sampleid))
         if events:
-            yield calc.EBRupture(
-                rup, indices, numpy.array(events, calc.event_dt), serial)
+            yield EBRupture(rup, indices, numpy.array(events, calc.event_dt),
+                            serial)
 
 
 def get_events(ebruptures):
@@ -259,9 +260,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm.filter(src_filter)
-        maxweight = csm.get_maxweight(oq.concurrent_tasks)
-        numheavy = len(csm.get_sources('heavy', maxweight))
-        logging.info('Using maxweight=%d, numheavy=%d', maxweight, numheavy)
+
+        def weight(src):
+            return src.num_ruptures * src.RUPTURE_WEIGHT
+        maxweight = math.ceil(
+            sum(weight(src) for src in self.csm.get_sources()) /
+            (oq.concurrent_tasks or 1))
+        logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, seed=oq.ses_seed,
@@ -274,7 +279,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                for block in csm.split_in_blocks(maxweight, sg.sources):
+                for block in csm.split_in_blocks(
+                        maxweight, sg.sources, weight):
                     block.samples = sm.samples
                     yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
@@ -285,7 +291,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         mutex_groups = list(self.csm.gen_mutex_groups())
         assert not mutex_groups, 'Mutex sources are not implemented!'
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.csm, self.monitor('pmap_from_trt'))
+            allargs = self.gen_args(self.csm, self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
@@ -397,7 +403,6 @@ def compute_gmfs_and_curves(getters, oq, monitor):
         else:
             gmfdata = None
         res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
-                   taskno=monitor.task_no,
                    indices=numpy.array(indices, (U32, 3)))
         if len(getter.gmdata):
             results.append(res)
@@ -486,6 +491,7 @@ class EventBasedCalculator(base.HazardCalculator):
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
+        sitecol = self.sitecol.complete
         monitor = self.monitor(self.core_task.__name__)
         imts = list(oq.imtls)
         min_iml = self.get_min_iml(oq)
@@ -498,12 +504,14 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs_by_gsim = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
                         for grp_id in samples_by_grp}
         if self.precalc:
+            num_ruptures = sum(len(rs) for rs in self.precalc.result.values())
+            block_size = math.ceil(num_ruptures / (oq.concurrent_tasks or 1))
             for grp_id, ruptures in self.precalc.result.items():
                 if not ruptures:
                     continue
-                for block in block_splitter(ruptures, oq.ruptures_per_block):
+                for block in block_splitter(ruptures, block_size):
                     getter = GmfGetter(
-                        rlzs_by_gsim[grp_id], block, self.sitecol,
+                        rlzs_by_gsim[grp_id], block, sitecol,
                         imts, min_iml, oq.maximum_distance,
                         oq.truncation_level, correl_model,
                         samples_by_grp[grp_id])
@@ -515,13 +523,13 @@ class EventBasedCalculator(base.HazardCalculator):
         for slc in split_in_slices(U, oq.concurrent_tasks or 1):
             getters = []
             for grp_id in rlzs_by_gsim:
-                ruptures = calc.RuptureGetter(parent, slc, grp_id)
+                ruptures = RuptureGetter(parent, slc, grp_id)
                 if parent is self.datastore:  # not accessible parent
                     ruptures = list(ruptures)
                     if not ruptures:
                         continue
                 getters.append(GmfGetter(
-                    rlzs_by_gsim[grp_id], ruptures, self.sitecol,
+                    rlzs_by_gsim[grp_id], ruptures, sitecol,
                     imts, min_iml, oq.maximum_distance, oq.truncation_level,
                     correl_model, samples_by_grp[grp_id]))
             yield getters, oq, monitor
@@ -546,9 +554,12 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
-        acc = parallel.Starmap(
-            self.core_task.__func__, self.gen_args()
-        ).reduce(self.combine_pmaps_and_save_gmfs, {
+        ires = parallel.Starmap(
+            self.core_task.__func__, self.gen_args()).submit_all()
+        if self.precalc and self.precalc.result:
+            # remove the ruptures in memory to save memory
+            self.precalc.result.clear()
+        acc = ires.reduce(self.combine_pmaps_and_save_gmfs, {
             r: ProbabilityMap(L) for r in range(R)})
         save_gmdata(self, R)
         if self.indices:

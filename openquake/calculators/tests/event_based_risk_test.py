@@ -25,14 +25,13 @@ from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
 from openquake.baselib.python3compat import decode
-from openquake.baselib.parallel import Sequential
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
+    case_1, case_2, case_3, case_4, case_4a, case_6c, case_master, case_miriam,
     occupants, case_1g, case_7a)
 
 
@@ -49,7 +48,7 @@ def check_total_losses(calc):
     # test the asset_loss_table exporter; notice that I need to disable
     # the parallelism to avoid reading bogus data: this is the usual
     # heisenbug when reading in parallel an .hdf5 generated in process
-    with mock.patch('openquake.baselib.parallel.Starmap', Sequential):
+    with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
         [fname] = export(('asset_loss_table', 'hdf5'), dstore)
     print('Generating %s' % fname)
     with h5py.File(fname) as f:
@@ -268,6 +267,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):
         # case with  <insuranceLimit isAbsolute="false"/>
+        # this is also a case with preimported exposure
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
@@ -298,3 +298,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             exports='csv')
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
+
+    @attr('qa', 'hazard', 'event_based_risk')
+    def test_case_6c(self):
+        # case with asset_correlation=1
+        self.run_calc(case_6c.__file__, 'job_h.ini')
+        hc = str(self.calc.datastore.calc_id)
+        out = self.run_calc(case_6c.__file__, 'job_r.ini', exports='csv',
+                            hazard_calculation_id=hc, concurrent_tasks='0')
+        [fname] = out['avg_losses-rlzs', 'csv']
+        self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)

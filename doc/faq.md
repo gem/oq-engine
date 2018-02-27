@@ -11,7 +11,7 @@ The OpenQuake Engine has at least three installation methods. To choose the one 
 Binary packages are provided for the following 64bit operating systems:
 - [Windows](installing/windows.md)
 - [macOS](installing/macos.md)
-- Linux [Ubuntu](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux](installing/rhel.md) via _deb_ and _rpm_
+- Linux [Ubuntu](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux/Fedora](installing/rhel.md) via _deb_ and _rpm_
 - Any other generic Linux distribution via a [self-installable binary distribution](installing/linux-generic.md)
 - [Docker](installing/docker.md) hosts
 
@@ -23,8 +23,7 @@ A 64bit operating system **is required**. Please refer to each OS specific page 
 
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
 - **Ubuntu 14.04** (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
-- **Ubuntu 16.04** (Xenial) packages work on **Mint Linux 18** and on **Debian unstable**
-- **RHEL 7** packages generally work on **Fedora**
+- **Ubuntu 16.04** (Xenial) packages work on **Mint Linux 18** and on **Debian 9.0** (Stretch)
 
 These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
 
@@ -55,19 +54,13 @@ MPI support may be added in the future if sponsored by someone. If you would lik
 
 ### Python scripts that import openquake
 
-On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must configure the `PYTHONPATH` first:
+On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must use a virtual environment and install al local copy of the Engine:
 
-```bash
-$ export PYTHONPATH="/opt/openquake/lib/python2.7/site-packages:$PYTHONPATH"
 ```
-
-To make this change permanent, add it at the bottom of `.bashrc` or `.bash_profile` when using `bash` or `.zshrc` if `zsh` is used instead.
-
-***
-
-### Swap partitions
-
-Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
+$ python3 -m venv </path/to/myvenv>
+$ . /path/to/myvenv/bin/activate
+$ pip3 install openquake.engine
+```
 
 ***
 
@@ -88,7 +81,7 @@ $ pip install openquake.engine
 $ pip install -e /path/to/oq-engine/
 ```
 
-If you are using Ubuntu or RedHat packages no extra operations are needed, the package manager will remove the old `python-oq-hazardlib` package and replace it with a fresh copy of `python-oq-engine`.
+If you are using Ubuntu or RedHat packages no extra operations are needed, the package manager will remove the old `python-oq-hazardlib` package and replace it with a fresh copy of `python3-oq-engine`.
 
 On Ubuntu make sure to run `apt dist-upgrade` instead on `apt upgrade` to make a proper upgrade of the OpenQuake packages.
 
@@ -168,6 +161,22 @@ error: [Errno 104] Connection reset by peer
 ```
 
 This means that RabbiMQ _user_ and _vhost_ have not been created or set correctly. Please refer to [cluster documentation](installing/cluster.md#rabbitmq) to fix it.
+
+***
+
+### Swap partitions
+
+Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
+
+***
+
+### System running out of disk space
+
+The OpenQuake Engine may require lot of disk space for the raw results data (`hdf5` files stored in `/home/<user>/oqdata`) and the temporary files used to either generated outputs or load input files via the `API`. On certain cloud configurations the amount of space allocated to the root fs (`/`) is fairly limited and extra 'data' volumes needs to be attached. To make the Engine use these volumes for `oqdata` and the _temporary_ storage you must change the `openquake.cfg` configuration; assuming `/mnt/ext_volume` as the mount point of the extra 'data' volume, it must be changed as follow:
+
+- `shared_dir` must be set to `/mnt/ext_volume`
+- A `tmp` dir must be created in `/mnt/ext_volume`
+- `custom_tmp` must be set to `/mnt/ext_volume/tmp` (the directory must exist)
 
 ***
 

@@ -3,8 +3,8 @@ Classical PSHA QA test with sites_csv
 
 ============== ===================
 checksum32     762,001,888        
-date           2018-02-02T16:03:34
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-25T06:43:07
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 10, num_levels = 13
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.1               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     23                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -74,26 +76,26 @@ simple_fault.xml 0      Active Shallow Crust 447          447
 
 Informational data
 ------------------
-======================= ===================================================================================
-count_ruptures.received tot 7 KB, max_per_task 682 B                                                       
-count_ruptures.sent     srcfilter 14.19 KB, sources 12.91 KB, param 5.86 KB, monitor 3.74 KB, gsims 2.77 KB
-hazard.input_weight     447.0                                                                              
-hazard.n_imts           1                                                                                  
-hazard.n_levels         13                                                                                 
-hazard.n_realizations   2                                                                                  
-hazard.n_sites          10                                                                                 
-hazard.n_sources        1                                                                                  
-hazard.output_weight    130.0                                                                              
-hostname                tstation.gem.lan                                                                   
-require_epsilons        False                                                                              
-======================= ===================================================================================
+======================= ==================================================================================
+count_ruptures.received tot 8.03 KB, max_per_task 825 B                                                   
+count_ruptures.sent     srcfilter 11.83 KB, sources 11.18 KB, param 4.88 KB, monitor 3.22 KB, gsims 2.3 KB
+hazard.input_weight     447.0                                                                             
+hazard.n_imts           1                                                                                 
+hazard.n_levels         13                                                                                
+hazard.n_realizations   2                                                                                 
+hazard.n_sites          10                                                                                
+hazard.n_sources        1                                                                                 
+hazard.output_weight    130.0                                                                             
+hostname                tstation.gem.lan                                                                  
+require_epsilons        False                                                                             
+======================= ==================================================================================
 
 Slowest sources
 ---------------
 ========= ================= ============ ========= ========= =========
 source_id source_class      num_ruptures calc_time num_sites num_split
 ========= ================= ============ ========= ========= =========
-3         SimpleFaultSource 447          0.045     1,100     15       
+3         SimpleFaultSource 447          0.059     151       15       
 ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -101,7 +103,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.045     1     
+SimpleFaultSource 0.059     1     
 ================= ========= ======
 
 Duplicated sources
@@ -112,7 +114,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.004 0.003  0.002 0.014 12       
+count_ruptures     0.010 0.004  0.005 0.020 10       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -120,11 +122,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.076     0.0       1     
-total count_ruptures           0.054     0.0       12    
-reading composite source model 0.008     0.0       1     
-store source_info              0.004     0.0       1     
-reading site collection        2.618E-04 0.0       1     
-aggregate curves               1.636E-04 0.0       12    
-saving probability maps        3.147E-05 0.0       1     
+total count_ruptures           0.097     0.250     10    
+managing sources               0.048     0.0       1     
+reading composite source model 0.005     0.0       1     
+store source_info              0.003     0.0       1     
+reading site collection        1.729E-04 0.0       1     
+aggregate curves               1.357E-04 0.0       10    
+saving probability maps        2.480E-05 0.0       1     
 ============================== ========= ========= ======

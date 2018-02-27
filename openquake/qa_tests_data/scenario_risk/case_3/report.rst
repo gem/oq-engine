@@ -3,8 +3,8 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     3,085,599,105      
-date           2018-02-02T16:04:43
-engine_version 2.9.0-gitd6a3184   
+date           2018-02-25T06:44:27
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 4, num_levels = 15
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      10.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     3                 
 master_seed                     0                 
+ses_seed                        42                
 avg_losses                      True              
 =============================== ==================
 
@@ -73,9 +75,9 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-1        1.000 NaN    1   1   1         1         
-2        1.000 NaN    1   1   1         1         
-3        1.000 0.0    1   1   2         2         
+RM       1.000 NaN    1   1   1         1         
+RC       1.000 NaN    1   1   1         1         
+W        1.000 0.0    1   1   2         2         
 *ALL*    1.000 0.0    1   1   4         4         
 ======== ===== ====== === === ========= ==========
 
@@ -84,10 +86,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-saving gmfs             0.030     0.0       1     
-building riskinputs     0.017     0.0       1     
+saving gmfs             0.032     0.0       1     
+building riskinputs     0.023     0.0       1     
 computing gmfs          0.005     0.0       1     
-reading exposure        0.003     0.0       1     
-building epsilons       6.258E-04 0.0       1     
-reading site collection 4.768E-06 0.0       1     
+reading exposure        0.001     0.0       1     
+building epsilons       6.754E-04 0.0       1     
+reading site collection 5.722E-06 0.0       1     
 ======================= ========= ========= ======

@@ -18,7 +18,7 @@
 from openquake.baselib import sap
 
 
-class OQ(object):
+class OpenQuake(object):
     """
     Singleton object with convenience functions which are aliases over
     engine utilities for work in the interactive interpreter.
@@ -32,6 +32,7 @@ class OQ(object):
         self.read_exposure = readinput.Exposure.read
         self.get_oqparam = readinput.get_oqparam
         self.get_site_collection = readinput.get_site_collection
+        self.get_composite_source_model = readinput.get_composite_source_model
         self.get_exposure = readinput.get_exposure
         self.make_hmap = calc.make_hmap
         # TODO: more utilities when be added when deemed useful
@@ -40,13 +41,13 @@ class OQ(object):
 @sap.Script
 def shell():
     """
-    Start an embedded (i)python instance with a global oq object
+    Start an embedded (i)python instance with a global object "o"
     """
-    oq = OQ()  # noqa
+    o = OpenQuake()  # noqa
     try:
         import IPython
-        IPython.embed(banner1='IPython shell with a global oq object')
+        IPython.embed(banner1='IPython shell with a global object "o"')
     except ImportError:
         import code
-        code.interact(banner='Python shell with a global oq object',
-                      local=dict(oq=oq))
+        code.interact(banner='Python shell with a global object "o"',
+                      local=dict(o=o))

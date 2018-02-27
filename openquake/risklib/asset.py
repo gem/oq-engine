@@ -123,7 +123,7 @@ class Asset(object):
                  area=1,
                  deductibles=None,
                  insurance_limits=None,
-                 retrofitteds=None,
+                 retrofitted=None,
                  calc=costcalculator,
                  ordinal=None):
         """
@@ -143,8 +143,8 @@ class Asset(object):
         :param dict insurance_limits:
             insured limits values (expressed as a percentage relative to
             the value of the asset) keyed by loss types
-        :param dict retrofitteds:
-            asset retrofitting values keyed by loss types
+        :param retrofitted:
+            asset retrofitted value
         :param calc:
             cost calculator instance
         :param ordinal:
@@ -156,7 +156,7 @@ class Asset(object):
         self.location = location
         self.values = values
         self.area = area
-        self.retrofitteds = retrofitteds
+        self._retrofitted = retrofitted
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
         self.calc = calc
@@ -209,13 +209,11 @@ class Asset(object):
         else:
             return val
 
-    def retrofitted(self, loss_type, time_event=None):
+    def retrofitted(self):
         """
-        :returns: the asset retrofitted value for `loss_type`
+        :returns: the asset retrofitted value
         """
-        if loss_type == 'occupants':
-            return self.values['occupants_' + str(time_event)]
-        return self.calc(loss_type, self.retrofitteds,
+        return self.calc('structural', {'structural': self._retrofitted},
                          self.area, self.number)
 
     def tagmask(self, tags):
@@ -345,17 +343,18 @@ class AssetCollection(object):
     # unneeded strings; also we would have to use fixed-length string, since
     # numpy has no concept of variable-lenght strings; unless we associate
     # numbers to each tagvalue, which is possible
-    D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
+    D, I = len('deductible-'), len('insurance_limit-')
 
-    def __init__(self, assets_by_site, tagcol, cost_calculator,
+    def __init__(self, asset_refs, assets_by_site, tagcol, cost_calculator,
                  time_event, occupancy_periods=''):
         self.tagcol = tagcol
-        self.cc = cost_calculator
+        self.cost_calculator = cost_calculator
         self.time_event = time_event
         self.occupancy_periods = occupancy_periods
         self.tot_sites = len(assets_by_site)
-        self.array = self.build_asset_collection(
+        self.array = self.build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
+        self.asset_refs = [asset_refs[rec['idx']] for rec in self.array]
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
@@ -363,22 +362,24 @@ class AssetCollection(object):
         self.loss_types.sort()
         self.deduc = [n for n in fields if n.startswith('deductible-')]
         self.i_lim = [n for n in fields if n.startswith('insurance_limit-')]
-        self.retro = [n for n in fields if n.startswith('retrofitted-')]
+        self.retro = [n for n in fields if n == 'retrofitted']
 
     @property
     def tagnames(self):
+        """
+        :returns: the tagnames
+        """
         return self.tagcol.tagnames
 
     def get_aids_by_tag(self):
         """
         :returns: dict tag -> asset ordinals
         """
-        ordinal = dict(zip(self.array['idx'], range(len(self.array))))
         aids_by_tag = general.AccumDict(accum=set())
-        for ass in self:
+        for aid, ass in enumerate(self):
             for tagname, tagidx in zip(self.tagnames, ass.tagidxs):
                 tag = self.tagcol.get_tag(tagname, tagidx)
-                aids_by_tag[tag].add(ordinal[ass.idx])
+                aids_by_tag[tag].add(aid)
         return aids_by_tag
 
     @property
@@ -393,7 +394,7 @@ class AssetCollection(object):
         :param: a list of loss types
         :returns: an array of units as byte strings, suitable for HDF5
         """
-        units = self.cc.units
+        units = self.cost_calculator.units
         lst = []
         for lt in loss_types:
             if lt.endswith('_ins'):
@@ -409,6 +410,18 @@ class AssetCollection(object):
         for i, ass in enumerate(self.array):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
+
+    def reduce(self, sids):
+        """
+        :returns: a reduced AssetCollection on the given site IDs
+        """
+        ok_indices = numpy.sum([self.array['site_id'] == sid for sid in sids],
+                               axis=0, dtype=bool)
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self))
+        new.array = self.array[ok_indices]
+        new.asset_refs = self.asset_refs[ok_indices]
+        return new
 
     def values(self, aids=None):
         """
@@ -445,8 +458,8 @@ class AssetCollection(object):
             area=a['area'],
             deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
             insurance_limits={lt[self.I:]: a[lt] for lt in self.i_lim},
-            retrofitteds={lt[self.R:]: a[lt] for lt in self.retro},
-            calc=self.cc,
+            retrofitted=a['retrofitted'] if self.retro else None,
+            calc=self.cost_calculator,
             ordinal=aid)
 
     def __len__(self):
@@ -466,8 +479,8 @@ class AssetCollection(object):
                  'tagnames': encode(self.tagnames),
                  'nbytes': self.array.nbytes}
         return dict(
-            array=self.array, cost_calculator=self.cc, tagcol=self.tagcol
-        ), attrs
+            array=self.array, cost_calculator=self.cost_calculator,
+            tagcol=self.tagcol, asset_refs=self.asset_refs), attrs
 
     def __fromh5__(self, dic, attrs):
         for name in ('occupancy_periods', 'loss_types', 'deduc', 'i_lim',
@@ -478,12 +491,16 @@ class AssetCollection(object):
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.tagcol = dic['tagcol']
-        self.cc = dic['cost_calculator']
-        self.cc.tagi = {decode(tagname): i
-                        for i, tagname in enumerate(self.tagnames)}
+        self.cost_calculator = dic['cost_calculator']
+        self.asset_refs = dic['asset_refs'].value
+        self.cost_calculator.tagi = {
+            decode(tagname): i for i, tagname in enumerate(self.tagnames)}
+
+    def __repr__(self):
+        return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
     @staticmethod
-    def build_asset_collection(assets_by_site, tagnames=(), time_event=None):
+    def build_asset_array(assets_by_site, tagnames=(), time_event=None):
         """
         :param assets_by_site: a list of lists of assets
         :param tagnames: a list of tag names
@@ -508,11 +525,10 @@ class AssetCollection(object):
                 loss_types.append('value-' + candidate)
         deductible_d = first_asset.deductibles or {}
         limit_d = first_asset.insurance_limits or {}
-        retrofitting_d = first_asset.retrofitteds or {}
         deductibles = ['deductible-%s' % name for name in deductible_d]
         limits = ['insurance_limit-%s' % name for name in limit_d]
-        retrofittings = ['retrofitted-%s' % n for n in retrofitting_d]
-        float_fields = loss_types + deductibles + limits + retrofittings
+        retro = ['retrofitted'] if first_asset._retrofitted else []
+        float_fields = loss_types + deductibles + limits + retro
         int_fields = [(str(name), U16) for name in tagnames]
         tagi = {str(name): i for i, name in enumerate(tagnames)}
         asset_dt = numpy.dtype(
@@ -543,6 +559,8 @@ class AssetCollection(object):
                         value = asset.location[1]
                     elif field == 'occupants':
                         value = asset.values[the_occupants]
+                    elif field == 'retrofitted':
+                        value = asset._retrofitted
                     elif field in tagnames:
                         value = asset.tagidxs[tagi[field]]
                     else:
@@ -550,8 +568,8 @@ class AssetCollection(object):
                             name, lt = field.split('-')
                         except ValueError:  # no - in field
                             name, lt = 'value', field
-                        # the line below retrieve one of `deductibles`,
-                        # `insurance_limits` or `retrofitteds` ("s" suffix)
+                        # the line below retrieve one of `deductibles` or
+                        # `insurance_limits` ("s" suffix)
                         value = getattr(asset, name + 's')[lt]
                     record[field] = value
         return assetcol

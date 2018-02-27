@@ -19,9 +19,10 @@
 import os
 import logging
 import functools
+import multiprocessing
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, datastore
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats
@@ -52,7 +53,7 @@ class OqParam(valid.ParamSet):
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
-        valid.positiveint, parallel.executor.num_tasks_hint)
+        valid.positiveint, multiprocessing.cpu_count())
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     description = valid.Param(valid.utf8_not_empty)
@@ -181,9 +182,9 @@ class OqParam(valid.ParamSet):
 
         self.check_source_model()
         if self.hazard_precomputed():
-            self.check_missing('site_model', 'error')
-            self.check_missing('gsim_logic_tree', 'error')
-            self.check_missing('source_model_logic_tree', 'error')
+            self.check_missing('site_model', 'warn')
+            self.check_missing('gsim_logic_tree', 'warn')
+            self.check_missing('source_model_logic_tree', 'warn')
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
@@ -207,6 +208,17 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
+
+        # checks for hazard outputs
+        if not self.hazard_stats():
+            if self.uniform_hazard_spectra:
+                raise InvalidFile(
+                    '%(job_ini)s: uniform_hazard_spectra=true is inconsistent '
+                    'with mean_hazard_curves=false' % self.inputs)
+            elif self.hazard_maps:
+                raise InvalidFile(
+                    '%(job_ini)s: hazard_maps=true is inconsistent '
+                    'with mean_hazard_curves=false' % self.inputs)
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -659,5 +671,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: True if the hazard is precomputed
         """
-        return (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs
-                or 'hazard_curves' in self.inputs)
+        if 'gmfs' in self.inputs or 'hazard_curves' in self.inputs:
+            return True
+        elif self.hazard_calculation_id:
+            parent = list(datastore.read(self.hazard_calculation_id))
+            return 'gmf_data' in parent or 'poes' in parent
