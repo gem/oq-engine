@@ -122,15 +122,12 @@ class ComplexFaultSource(ParametricSeismicSource):
 
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
-                mag, self.rake
-            )
+                mag, self.rake)
             rupture_length = numpy.sqrt(
                 rupture_area * self.rupture_aspect_ratio)
             rupture_slices = _float_ruptures(
-                rupture_area, rupture_length, cell_area, cell_length
-            )
+                rupture_area, rupture_length, cell_area, cell_length)
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
-
             for rupture_slice in rupture_slices[self.start:self.stop]:
                 mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
@@ -145,8 +142,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                 yield ParametricProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
                     surface, type(self),
-                    occurrence_rate, self.temporal_occurrence_model
-                )
+                    occurrence_rate, self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """
@@ -154,12 +150,10 @@ class ComplexFaultSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
-            self.edges, self.rupture_mesh_spacing
-        )
+            self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.get_mesh()
         cell_center, cell_length, cell_width, cell_area = (
-            whole_fault_mesh.get_cell_dimensions()
-        )
+            whole_fault_mesh.get_cell_dimensions())
         counts = 0
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
@@ -183,28 +177,23 @@ class ComplexFaultSource(ParametricSeismicSource):
         if self.num_ruptures <= MINWEIGHT:
             yield self  # not splittable
             return
-
+        # split by magnitude
         mag_rates = [(mag, rate) for (mag, rate) in
                      self.mfd.get_annual_occurrence_rates() if rate]
         if len(mag_rates) > 1:
-            # split by magnitude
             for i, (mag, rate) in enumerate(mag_rates):
                 src = copy.copy(self)
-                src.source_id = '%s:%s' % (self.source_id, i)
                 src.mfd = mfd.ArbitraryMFD([mag], [rate])
-                src.src_group_id = self.src_group_id
                 src.num_ruptures = src.count_ruptures()
                 yield src
             return
-        # split by slice of ruptures
+        # if there is a single magnitude split by slice of ruptures
         i = 0
         for start, stop in _split_start_stop(self.num_ruptures, MINWEIGHT):
             src = copy.copy(self)
             src.start = start
             src.stop = stop
             src.num_ruptures = stop - start
-            src.source_id = '%s:%s' % (self.source_id, i)
-            src.src_group_id = self.src_group_id
             i += 1
             yield src
 
