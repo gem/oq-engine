@@ -59,7 +59,8 @@ def split_sources(srcs):
         if len(splits) > 1:
             has_serial = hasattr(src, 'serial')
             start = 0
-            for split in splits:
+            for i, split in enumerate(splits):
+                split.source_id = '%s:%s' % (src.source_id, i)
                 split.src_group_id = src.src_group_id
                 split.num_ruptures = split.count_ruptures()
                 split.ngsims = src.ngsims
@@ -866,7 +867,7 @@ class CompositeSourceModel(collections.Sequence):
         start = 0
         for sg in self.src_groups:
             for src in sg:
-                nr = src.num_ruptures
+                nr = src.count_ruptures()
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
