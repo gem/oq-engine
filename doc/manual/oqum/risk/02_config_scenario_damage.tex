@@ -51,7 +51,7 @@ displayed:
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 Calculation 2680 completed in 13 seconds. Results:
   id | name
-5069 | dmg_by_asset
+5069 | Average Asset Damages
 \end{minted}
 
 Note that one or more of the following parameters can be used in the same job
@@ -196,7 +196,7 @@ will be displayed in the terminal:
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 Calculation 2681 completed in 4 seconds. Results:
   id | name
-5072 | gmf_data
+5072 | Ground Motion Fields
 \end{minted}
 
 In the example above, the calculation~id of the hazard calculation is 2681.
@@ -234,7 +234,7 @@ will produce the following display:
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
   id | name
-5072 | gmf_data
+5072 | Ground Motion Fields
 \end{minted}
 
 
@@ -283,11 +283,13 @@ csv file, which provides the association between the site ids in the
     to the \glspl{acr:gmf} file in the csv format. This file must
     define \glspl{acr:gmf} for all of the intensity measure types used in the
     \gls{fragilitymodel}.
+    (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_gmfs.csv}{Download an example file here}).
 
   \item \Verb+sites_csv+: a parameter used to define the path
     to the sites file in the csv format. This file must
     define site id, longitude, and latitude for all of the sites for the
-    \glspl{acr:gmf} file provided using the \Verb+gmfs_csv+ parameter.
+    \glspl{acr:gmf} file provided using the \Verb+gmfs_csv+ parameter. 
+    (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/risk/verbatim/input_scenario_sites.csv}{Download an example file here}).
 
 \end{itemize}
 
@@ -382,6 +384,6 @@ displayed:
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 Calculation 1579 completed in 37 seconds. Results:
   id | name
-8990 | losses_by_asset
-8993 | dmg_by_asset
+8990 | Average Asset Losses
+8993 | Average Asset Damages
 \end{minted}

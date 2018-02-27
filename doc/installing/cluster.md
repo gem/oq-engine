@@ -11,12 +11,12 @@ Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](
 Note: you have to **restart every celery node** after a configuration change.
 
 ### Master node
-The `python-oq-engine-master` package must be installed on the **master** node. It provides extra functionalities like _RabbitMQ_.
+The `python3-oq-engine-master` package must be installed on the **master** node. It provides extra functionalities like _RabbitMQ_.
 
 On **RHEL/CentOS** [EPEL](https://fedoraproject.org/wiki/EPEL) repository *must be configured and enabled* in the system.
 
 ### Worker nodes
-On **worker** nodes  `python-oq-engine-worker` must be installed **instead**; it adds _celery_ support on top of the standard `python-oq-engine` package.
+On **worker** nodes  `python3-oq-engine-worker` must be installed **instead**; it adds _celery_ support on top of the standard `python3-oq-engine` package.
 
 ## OpenQuake Engine 'master' node configuration File
 
@@ -68,7 +68,7 @@ The required daemons are:
 
 ##### RabbitMQ
 
-A _user_ and _vhost_ are automatically added to the RabbitMQ configuration during the installation on `python-oq-engine`.
+A _user_ and _vhost_ are automatically added to the RabbitMQ configuration during the installation on `python3-oq-engine`.
 
 You can verify that the `openquake` user and vhost exist running:
 
@@ -195,8 +195,9 @@ On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
 - the OpenQuake database (located under `/var/lib/openquake`): it contains only logs and metadata, the expected size is tens of megabyte
 - *RabbitMQ* mnesia dir (usually located under `/var/lib/rabbitmq`)
+- the temporary folder (`/tmp`). A different temporary folder can be customized via the `openquake.cfg`
 
-On large installations we strongly suggest to create separate partition for `/home`, `/var` and *RabbitMQ* (`/var/lib/rabbitmq`).
+On large installations we strongly suggest to create separate partition for `/home`, *RabbitMQ* (`/var/lib/rabbitmq`) and `/tmp` (or any custom temporary folder set in the `openquake.cfg`.
 
 
 ## Swap partitions

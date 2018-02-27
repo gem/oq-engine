@@ -23,7 +23,7 @@ from openquake.baselib.python3compat import configparser
 from openquake.baselib.general import git_suffix
 
 # the version is managed by packager.sh with a sed
-__version__ = '2.9.0'
+__version__ = '2.10.0'
 __version__ += git_suffix(__file__)
 
 
@@ -101,6 +101,9 @@ def boolean(flag):
 
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=boolean)
+
+if config.directory.custom_tmp:
+    os.environ['TMPDIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ep"
+    >
+        <description>
+            Exposure Model for Nepal
+        </description>
+        <conversions>
+            <costTypes>
+                <costType name="structural" retrofittedType="per_asset" retrofittedUnit="USD" type="per_asset" unit="USD"/>
+            </costTypes>
+        </conversions>
+        <occupancyPeriods />
+        <assets>
+            exposure_model.csv
+        </assets>
+    </exposureModel>
+</nrml>

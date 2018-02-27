@@ -31,7 +31,7 @@ from openquake.risklib import scientific
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
-from openquake.commonlib import writers, calc, hazard_writers
+from openquake.commonlib import writers, hazard_writers
 from openquake.commonlib.util import (
     get_assets, compose_arrays, reader)
 
@@ -212,7 +212,7 @@ def export_maxloss_ruptures(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     fnames = []
     for loss_type in oq.loss_dt().names:
-        ebr = calc.get_maxloss_rupture(dstore, loss_type)
+        ebr = getters.get_maxloss_rupture(dstore, loss_type)
         root = hazard_writers.rupture_to_element(ebr.export(mesh))
         dest = dstore.export_path('rupture-%s.xml' % loss_type)
         with open(dest, 'wb') as fh:
@@ -251,7 +251,7 @@ def export_agg_losses_ebr(ekey, dstore):
     rup_data = {}
     event_by_eid = {}  # eid -> event
     # populate rup_data and event_by_eid
-    ruptures_by_grp = calc.get_ruptures_by_grp(dstore)
+    ruptures_by_grp = getters.get_ruptures_by_grp(dstore)
     # TODO: avoid reading the events twice
     for grp_id, events in all_events.items():
         for event in events:
@@ -540,30 +540,27 @@ def get_paths(rlz):
 def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
     assetcol = dstore['assetcol/array'].value
-    aref = dstore['asset_refs'].value
+    arefs = dstore['assetcol/asset_refs'].value
     bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
         tags = ['rlz-%03d' % r for r in range(R)]
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for t, tag in enumerate(tags):
-        for l, loss_type in enumerate(loss_types):
-            rlz_data = bcr_data[loss_type][:, t]
-            path = dstore.build_fname('bcr-%s' % loss_type, tag, 'csv')
-            data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
-                     'average_annual_loss_retrofitted', 'bcr']]
-            for ass, value in zip(assetcol, rlz_data):
-                data.append((ass['lon'], ass['lat'],
-                             decode(aref[ass['idx']]),
-                             value['annual_loss_orig'],
-                             value['annual_loss_retro'],
-                             value['bcr']))
-            writer.save(data, path)
-            fnames.append(path)
+        rlz_data = bcr_data[:, t]
+        path = dstore.build_fname('bcr', tag, 'csv')
+        data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
+                 'average_annual_loss_retrofitted', 'bcr']]
+        for aref, ass, value in zip(arefs, assetcol, rlz_data):
+            data.append((ass['lon'], ass['lat'], aref,
+                         value['annual_loss_orig'],
+                         value['annual_loss_retro'],
+                         value['bcr']))
+        writer.save(data, path)
+        fnames.append(path)
     return writer.getsaved()
 
 
@@ -590,7 +587,7 @@ def export_asset_loss_table(ekey, dstore):
     key, fmt = ekey
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    arefs = dstore['asset_refs'].value
+    arefs = assetcol.asset_refs
     avals = assetcol.values()
     loss_types = dstore.get_attr('all_loss_ratios', 'loss_types').split()
     dtlist = [(lt, F32) for lt in loss_types]
