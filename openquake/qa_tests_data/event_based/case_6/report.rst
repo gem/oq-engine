@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     3,219,914,866      
-date           2018-02-19T09:59:42
-engine_version 2.9.0-gitb536198   
+date           2018-02-25T06:43:29
+engine_version 2.10.0-git1f7c0c0  
 ============== ===================
 
 num_sites = 1, num_levels = 5
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                0.2               
 area_source_discretization      20.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        23                
 =============================== ==================
 
 Input files
@@ -89,8 +91,8 @@ source_model2.xml 1      Active Shallow Crust 2,456        2,456
 Informational data
 ------------------
 ========================= =====================================================================================
-compute_ruptures.received tot 3.73 MB, max_per_task 102.37 KB                                                  
-compute_ruptures.sent     sources 226.6 KB, src_filter 39.48 KB, param 32.7 KB, gsims 17.5 KB, monitor 17.45 KB
+compute_ruptures.received tot 3.66 MB, max_per_task 275.65 KB                                                  
+compute_ruptures.sent     sources 184.73 KB, src_filter 14.1 KB, param 11.68 KB, monitor 6.45 KB, gsims 6.25 KB
 hazard.input_weight       491.20000000000005                                                                   
 hazard.n_imts             1                                                                                    
 hazard.n_levels           5                                                                                    
@@ -126,7 +128,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.159 0.062  0.070 0.271 56       
+compute_ruptures   0.503 0.062  0.407 0.621 20       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -134,12 +136,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         8.878     0.078     56    
-making contexts                3.169     0.0       3,081 
-managing sources               1.348     0.0       1     
-saving ruptures                0.319     0.0       56    
-reading composite source model 0.218     0.0       1     
-setting event years            0.060     0.0       1     
+total compute_ruptures         10        0.0       20    
+making contexts                3.402     0.0       3,081 
+managing sources               1.366     0.0       1     
+saving ruptures                0.212     0.0       20    
+reading composite source model 0.169     0.0       1     
+setting event years            0.056     0.0       1     
 store source_info              0.004     0.0       1     
-reading site collection        5.436E-05 0.0       1     
+reading site collection        4.125E-05 0.0       1     
 ============================== ========= ========= ======

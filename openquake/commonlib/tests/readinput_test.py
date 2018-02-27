@@ -452,22 +452,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
                       "a-zA-Z0-9_-, line 11", str(ctx.exception))
 
-    def test_no_insured_data(self):
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.calculation_mode = 'scenario_risk'
-        oqparam.all_cost_types = ['structural']
-        oqparam.insured_losses = True
-        oqparam.inputs = {'exposure': self.exposure,
-                          'structural_vulnerability': None}
-        oqparam.region_constraint = '''\
-POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
-        oqparam.time_event = None
-        oqparam.ignore_missing_costs = []
-        with self.assertRaises(KeyError) as ctx:
-            readinput.get_exposure(oqparam)
-        self.assertIn("node cost: 'deductible', line 14", str(ctx.exception))
-
     def test_no_assets(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
