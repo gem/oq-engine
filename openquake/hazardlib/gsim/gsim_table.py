@@ -327,8 +327,6 @@ class GMPETable(GMPE):
                     # NB: (hackish) GMPE_DIR must be set externally
                     self.GMPE_TABLE = os.path.abspath(
                         os.path.join(self.GMPE_DIR, gmpe_table))
-                if not os.path.exists(self.GMPE_TABLE):
-                    raise IOError('Missing file %r' % self.GMPE_TABLE)
             else:
                 raise IOError("GMPE Table Not Defined!")
         super(GMPETable, self).__init__()
@@ -338,14 +336,15 @@ class GMPETable(GMPE):
         self.distances = None
         self.distance_type = None
         self.amplification = None
-        self._run_setup()
+        if os.path.exists(self.GMPE_TABLE):
+            with h5py.File(self.GMPE_TABLE, "r") as f:
+                self.init(f)
 
-    def _run_setup(self):
+    def init(self, fle):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        fle = h5py.File(self.GMPE_TABLE, "r")
         self.distance_type = fle["Distances"].attrs["metric"].decode('utf8')
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
@@ -362,7 +361,6 @@ class GMPETable(GMPE):
         self._setup_standard_deviations(fle)
         if "Amplification" in fle:
             self._setup_amplification(fle)
-        fle.close()
 
     def _setup_standard_deviations(self, fle):
         """
