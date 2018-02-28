@@ -1,7 +1,9 @@
   [Michele Simionato]
+  * Added a check to discard results coming from the wrong calculation
+    for the distribution mode `celery_zmq`
   * Removed the long time deprecated commands
     `oq engine --run-hazard` and `oq engine --run-risk`
-  * Added a distribution mode celery_zmq
+  * Added a distribution mode `celery_zmq`
   * Added the ability to use a preimported exposure in risk calculations
   * Substantial cleanup of the parallelization framework
   * Fixed a bug with nonparametric sources producing negative probabilities
