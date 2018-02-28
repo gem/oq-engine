@@ -17,10 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.hazardlib.gsim.gsim_table` defines the
-:class:`openquake.hazardlib.gsim.gsim_table.GMPETable` for defining GMPEs
+Module :mod:`openquake.hazardlib.gsim.gmpe_table` defines the
+:class:`openquake.hazardlib.gsim.gmpe_table.GMPETable` for defining GMPEs
 in the form of binary tables, and
-:class:`openquake.hazardlib.gsim.gsim_table.AmplificationTable` for defining
+:class:`openquake.hazardlib.gsim.gmpe_table.AmplificationTable` for defining
 the corresponding amplification of the IMLs
 """
 
@@ -99,7 +99,7 @@ class AmplificationTable(object):
         self.sigma = None
         self.magnitudes = magnitudes
         self.distances = distances
-        self.parameter = amplification_group.attrs["apply_to"].decode('utf8')
+        self.parameter = amplification_group.attrs["apply_to"].decode('utf-8')
         self.values = numpy.array([float(key) for key in amplification_group])
         self.argidx = numpy.argsort(self.values)
         self.values = self.values[self.argidx]
@@ -351,7 +351,7 @@ class GMPETable(GMPE):
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        self.distance_type = fle["Distances"].attrs["metric"].decode('utf8')
+        self.distance_type = fle["Distances"].attrs["metric"].decode('utf-8')
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
         self.m_w = fle["Mw"][:]
