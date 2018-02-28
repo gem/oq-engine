@@ -377,12 +377,13 @@ class IterResult(object):
          ('duration', numpy.float32)])
 
     def __init__(self, iresults, taskname, num_tasks,
-                 progress=logging.info, sent=0):
+                 progress=logging.info, sent=0, calc_id=None):
         self.iresults = iresults
         self.name = taskname
         self.num_tasks = num_tasks
         self.progress = progress
         self.sent = sent
+        self.calc_id = calc_id
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
@@ -417,6 +418,10 @@ class IterResult(object):
                 # this happens with WorkerLostError with celery
                 raise result
             elif isinstance(result, Result):
+                if self.calc_id and self.calc_id != result.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', result.mon.calc_id, self.calc_id)
+                    continue
                 val = result.get()
                 self.received.append(len(result.pik))
             else:  # this should never happen
@@ -581,11 +586,13 @@ class Starmap(object):
         the arguments by pickling them.
         """
         for task_no, args in enumerate(self.task_args, 1):
-            if isinstance(args[-1], Monitor):
+            mon = args[-1]
+            if isinstance(mon, Monitor):
                 # add incremental task number and task weight
-                args[-1].task_no = task_no
-                args[-1].weight = getattr(args[0], 'weight', 1.)
-                args[-1].backurl = backurl
+                mon.task_no = task_no
+                mon.weight = getattr(args[0], 'weight', 1.)
+                mon.backurl = backurl
+                self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
@@ -609,7 +616,8 @@ class Starmap(object):
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
-        return IterResult(it, self.name, num_tasks, self.progress, self.sent)
+        return IterResult(it, self.name, num_tasks, self.progress,
+                          self.sent, self.calc_id)
 
     def reduce(self, agg=operator.add, acc=None):
         """
