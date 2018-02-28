@@ -53,7 +53,7 @@ class OqParam(valid.ParamSet):
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
-        valid.positiveint, multiprocessing.cpu_count() * 2)
+        valid.positiveint, multiprocessing.cpu_count() * 3)
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     description = valid.Param(valid.utf8_not_empty)
@@ -128,7 +128,7 @@ class OqParam(valid.ParamSet):
     max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
-    sites_per_tile = valid.Param(valid.positiveint, 20000)
+    sites_per_tile = valid.Param(valid.positiveint, 30000)
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
