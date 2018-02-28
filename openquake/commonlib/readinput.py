@@ -373,7 +373,11 @@ def get_rlzs_by_gsim(oqparam):
     gsim logic trees with a single tectonic region type.
     """
     cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
-    return cinfo.get_rlzs_assoc().rlzs_by_gsim[0]
+    ra = cinfo.get_rlzs_assoc()
+    dic = collections.OrderedDict()
+    for rlz, gsim_by_trt in zip(ra.realizations, ra.gsim_by_trt):
+        dic[gsim_by_trt['*']] = [rlz]
+    return dic
 
 
 def get_rupture_sitecol(oqparam, sitecol):
