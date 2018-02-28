@@ -369,14 +369,14 @@ def get_gsims(oqparam):
 
 def get_rlzs_by_gsim(oqparam):
     """
-    Return an ordered dictionary gsim -> [realization]. Work for
+    Return an ordered dictionary gsim -> [realization index]. Work for
     gsim logic trees with a single tectonic region type.
     """
     cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
     ra = cinfo.get_rlzs_assoc()
     dic = collections.OrderedDict()
-    for rlz, gsim_by_trt in zip(ra.realizations, ra.gsim_by_trt):
-        dic[gsim_by_trt['*']] = [rlz]
+    for rlzi, gsim_by_trt in enumerate(ra.gsim_by_trt):
+        dic[gsim_by_trt['*']] = [rlzi]
     return dic
 
 
