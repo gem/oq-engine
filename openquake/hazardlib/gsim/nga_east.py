@@ -68,7 +68,7 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.gsim_table import GMPETable, hdf_arrays_to_dict
+from openquake.hazardlib.gsim.gmpe_table import GMPETable, hdf_arrays_to_dict
 from openquake.hazardlib.imt import PGV
 from openquake.hazardlib import const
 
