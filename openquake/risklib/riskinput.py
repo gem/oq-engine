@@ -307,7 +307,7 @@ class RiskInput(object):
         :param eids: ignored
         :returns: an array of E epsilons
         """
-        if not self.eps:
+        if len(self.eps) == 0:
             return
         eid2idx = self.hazard_getter.eid2idx
         idx = [eid2idx[eid] for eid in eids]
