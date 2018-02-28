@@ -417,13 +417,8 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         with self.assertRaises(IOError) as ioe:
             GMPETable(gmpe_table=None)
-        self.assertEqual(str(ioe.exception),
-                         "GMPE Table Not Defined!")
-
-        with self.assertRaises(IOError) as ioe:
-            GMPETable(gmpe_table='/do/not/exists/table.hdf5')
-        self.assertEqual(str(ioe.exception),
-                         "Missing file '/do/not/exists/table.hdf5'")
+        self.assertEqual(str(ioe.exception), "GMPE Table Not Defined!")
+        GMPETable(gmpe_table='/do/not/exists/table.hdf5')  # no error here
 
     def test_retreival_tables_good_no_interp(self):
         """
