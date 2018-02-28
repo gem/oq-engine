@@ -53,9 +53,14 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 
+Site = collections.namedtuple('Site', 'sid lon lat')
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
     ('ses', U32), ('sample', U32)])
+
+
+class AssetSiteAssociationError(Exception):
+    """Raised when there are no hazard sites close enough to any asset"""
 
 
 class DuplicatedPoint(Exception):
@@ -956,15 +961,7 @@ class Exposure(object):
                                         len(self.assets))
 
 
-def get_mesh_assets_by_site(oqparam, exposure):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param exposure:
-        an Exposure instance
-    :returns:
-        the exposure `mesh` and a list `assets_by_site` with the same length
-    """
+def _get_mesh_assets_by_site(oqparam, exposure):
     assets_by_loc = groupby(exposure, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
@@ -973,6 +970,57 @@ def get_mesh_assets_by_site(oqparam, exposure):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     return mesh, assets_by_site
+
+
+def get_sitecol_assetcol(oqparam, haz_sitecol=None):
+    """
+    :param oqparam: calculation parameters
+    :param haz_sitecol: a pre-existing site collection, if any
+    :returns: (site collection, asset collection) instances
+    """
+    exposure = get_exposure(oqparam)
+    mesh, assets_by_site = _get_mesh_assets_by_site(oqparam, exposure)
+    if haz_sitecol:
+        tot_assets = sum(len(assets) for assets in assets_by_site)
+        all_sids = haz_sitecol.complete.sids
+        sids = set(haz_sitecol.sids)
+        # associate the assets to the hazard sites
+        asset_hazard_distance = oqparam.asset_hazard_distance
+        siteobjects = geo.utils.GeographicObjects(
+            Site(sid, lon, lat) for sid, lon, lat in
+            zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
+        assets_by_sid = AccumDict(accum=[])
+        for assets in assets_by_site:
+            if len(assets):
+                lon, lat = assets[0].location
+                site, distance = siteobjects.get_closest(lon, lat)
+                if site.sid in sids and distance <= asset_hazard_distance:
+                    # keep the assets, otherwise discard them
+                    assets_by_sid += {site.sid: list(assets)}
+        if not assets_by_sid:
+            raise AssetSiteAssociationError(
+                'Could not associate any site to any assets within the '
+                'asset_hazard_distance of %s km' % asset_hazard_distance)
+        mask = numpy.array(
+            [sid in assets_by_sid for sid in all_sids])
+        assets_by_site = [assets_by_sid[sid] for sid in all_sids]
+        num_assets = sum(len(assets) for assets in assets_by_site)
+        logging.info('Associated %d/%d assets to the hazard sites',
+                     num_assets, tot_assets)
+        sitecol = haz_sitecol.complete.filter(mask)
+    else:  # use the exposure sites as hazard sites
+        sitecol = get_site_collection(oqparam, mesh)
+    assetcol = asset.AssetCollection(
+        exposure.asset_refs,
+        assets_by_site,
+        exposure.tagcol,
+        exposure.cost_calculator,
+        oqparam.time_event,
+        occupancy_periods=hdf5.array_of_vstr(
+            sorted(exposure.occupancy_periods)))
+    logging.info('Considering %d assets on %d sites',
+                 len(assetcol), len(sitecol))
+    return sitecol, assetcol
 
 
 def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
