@@ -24,7 +24,6 @@ import logging
 import operator
 import itertools
 import traceback
-import collections
 from functools import partial
 from datetime import datetime
 from shapely import wkt
@@ -47,9 +46,6 @@ get_trt = operator.attrgetter('src_group_id')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
-
-Site = collections.namedtuple('Site', 'sid lon lat')
-
 F32 = numpy.float32
 
 
@@ -58,11 +54,6 @@ class InvalidCalculationID(Exception):
     Raised when running a post-calculation on top of an incompatible
     pre-calculation
     """
-
-
-class AssetSiteAssociationError(Exception):
-    """Raised when there are no hazard sites close enough to any asset"""
-
 
 logversion = True
 
@@ -426,54 +417,13 @@ class HazardCalculator(BaseCalculator):
 
     def read_exposure(self, haz_sitecol=None):
         """
-        Read the exposure, the riskmodel and update the attributes .exposure,
+        Read the exposure, the riskmodel and update the attributes
         .sitecol, .assetcol
         """
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
-            self.exposure = readinput.get_exposure(self.oqparam)
-            mesh, assets_by_site = (
-                readinput.get_mesh_assets_by_site(self.oqparam, self.exposure))
-        if haz_sitecol:
-            tot_assets = sum(len(assets) for assets in assets_by_site)
-            all_sids = haz_sitecol.complete.sids
-            sids = set(haz_sitecol.sids)
-            # associate the assets to the hazard sites
-            asset_hazard_distance = self.oqparam.asset_hazard_distance
-            siteobjects = geo.utils.GeographicObjects(
-                Site(sid, lon, lat) for sid, lon, lat in
-                zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
-            assets_by_sid = general.AccumDict(accum=[])
-            for assets in assets_by_site:
-                if len(assets):
-                    lon, lat = assets[0].location
-                    site, distance = siteobjects.get_closest(lon, lat)
-                    if site.sid in sids and distance <= asset_hazard_distance:
-                        # keep the assets, otherwise discard them
-                        assets_by_sid += {site.sid: list(assets)}
-            if not assets_by_sid:
-                raise AssetSiteAssociationError(
-                    'Could not associate any site to any assets within the '
-                    'asset_hazard_distance of %s km' % asset_hazard_distance)
-            mask = numpy.array(
-                [sid in assets_by_sid for sid in all_sids])
-            assets_by_site = [assets_by_sid[sid] for sid in all_sids]
-            num_assets = sum(len(assets) for assets in assets_by_site)
-            logging.info('Associated %d/%d assets to the hazard sites',
-                         num_assets, tot_assets)
-            self.sitecol = haz_sitecol.complete.filter(mask)
-        else:  # use the exposure sites as hazard sites
-            self.sitecol = readinput.get_site_collection(self.oqparam, mesh)
-        self.assetcol = asset.AssetCollection(
-            self.exposure.asset_refs,
-            assets_by_site,
-            self.exposure.tagcol,
-            self.exposure.cost_calculator,
-            self.oqparam.time_event,
-            occupancy_periods=hdf5.array_of_vstr(
-                sorted(self.exposure.occupancy_periods)))
-        logging.info('Considering %d assets on %d sites',
-                     len(self.assetcol), len(self.sitecol))
+            self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
+                self.oqparam, haz_sitecol)
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
@@ -616,8 +566,8 @@ class HazardCalculator(BaseCalculator):
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
-    attributes .riskmodel, .sitecol, .assets_by_site, .exposure
-    .riskinputs in the pre_execute phase.
+    attributes .riskmodel, .sitecol, .assetcol, .riskinputs in the
+    pre_execute phase.
     """
     def make_eps(self, num_ruptures):
         """
