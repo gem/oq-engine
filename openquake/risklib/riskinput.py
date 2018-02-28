@@ -283,7 +283,7 @@ class RiskInput(object):
     def __init__(self, hazard_getter, assets_by_site, eps_dict=None):
         self.hazard_getter = hazard_getter
         self.assets_by_site = assets_by_site
-        self.eps = eps_dict
+        self.eps = eps_dict or {}
         taxonomies_set = set()
         aids = []
         for assets in self.assets_by_site:
