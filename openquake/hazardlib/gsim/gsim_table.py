@@ -336,6 +336,12 @@ class GMPETable(GMPE):
         self.distances = None
         self.distance_type = None
         self.amplification = None
+        # NB: it must be possible to instantiate a GMPETable even if the
+        # the .hdf5 file (GMPE_TABLE) does not exist; the reason is that
+        # we want to run a calculation on machine 1, copy the datastore
+        # on machine 2 (that misses the .hdf5 files) and still be able to
+        # export the results, i.e. to instantiate the GsimLogicTree object
+        # which is required by the engine to determine the realizations
         if os.path.exists(self.GMPE_TABLE):
             with h5py.File(self.GMPE_TABLE, "r") as f:
                 self.init(f)
