@@ -1218,9 +1218,9 @@ class GsimLogicTree(object):
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
 
-    def store_gmpe_table(self, dstore):
+    def store_gmpe_tables(self, dstore):
         """
-        Store the GMPE table in HDF5 format inside the datastore
+        Store the GMPE tables in HDF5 format inside the datastore
         """
         dest = dstore.hdf5
         dirname = os.path.dirname(self.fname)
@@ -1228,9 +1228,14 @@ class GsimLogicTree(object):
             hdf5path = os.path.join(dirname, gmpe_table)
             with hdf5.File(hdf5path, 'r') as f:
                 for group in f:
-                    grp = dest.require_group(
-                        'gmpe_table/%s/%s' % (gmpe_table, group))
-                    f.copy(group, grp)
+                    name = 'gmpe_table/%s/%s' % (gmpe_table, group)
+                    if hasattr(f[group], 'value'):  # dataset, not group
+                        dstore[name] = f[group].value
+                        for k, v in f[group].attrs.items():
+                            dstore[name].attrs[k] = v
+                    else:
+                        grp = dest.require_group('gmpe_table/%s' % gmpe_table)
+                        f.copy(group, grp)
 
     def __str__(self):
         """
