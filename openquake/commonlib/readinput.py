@@ -536,66 +536,6 @@ def get_composite_source_model(oqparam, in_memory=True):
     return csm
 
 
-def get_job_info(oqparam, csm, sitecol):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param csm:
-        a :class:`openquake.commonlib.source.CompositeSourceModel` instance
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :returns:
-        a dictionary with same parameters of the computation, in particular
-        the input and output weights
-    """
-    info = {}
-    # The input weight is given by the number of ruptures generated
-    # by the sources; for point sources however a corrective factor
-    # given by the parameter `point_source_weight` is applied
-    input_weight = sum((src.weight or 0) * src_model.samples
-                       for src_model in csm
-                       for src_group in src_model.src_groups
-                       for src in src_group)
-    imtls = oqparam.imtls
-    n_sites = len(sitecol) if sitecol else 0
-
-    # the imtls object has values [NaN] when the levels are unknown
-    # (this is a valid case for the event based hazard calculator)
-    n_imts = len(imtls)
-    n_levels = len(oqparam.imtls.array)
-
-    n_realizations = oqparam.number_of_logic_tree_samples or sum(
-        sm.num_gsim_paths for sm in csm)
-    # NB: in the event based case `n_realizations` can be over-estimated,
-    # if the method is called in the pre_execute phase, because
-    # some tectonic region types may have no occurrencies.
-
-    # The output weight is a pure number which is proportional to the size
-    # of the expected output of the calculator. For classical and disagg
-    # calculators it is given by
-    # n_sites * n_imts * n_levels * n_statistics;
-    # for the event based calculator is given by n_sites * n_realizations
-    # * n_levels * n_imts * (n_ses * investigation_time) * NORMALIZATION_FACTOR
-    n_stats = len(oqparam.hazard_stats()) or 1
-    output_weight = n_sites * n_imts * n_stats
-    if oqparam.calculation_mode == 'event_based':
-        total_time = (oqparam.investigation_time *
-                      oqparam.ses_per_logic_tree_path)
-        output_weight *= total_time * NORMALIZATION_FACTOR
-    else:
-        output_weight *= n_levels / n_imts
-
-    n_sources = csm.get_num_sources()
-    info['hazard'] = dict(input_weight=input_weight,
-                          output_weight=output_weight,
-                          n_imts=n_imts,
-                          n_levels=n_levels,
-                          n_sites=n_sites,
-                          n_sources=n_sources,
-                          n_realizations=n_realizations)
-    return info
-
-
 def get_imts(oqparam):
     """
     Return a sorted list of IMTs as hazardlib objects
