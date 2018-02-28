@@ -122,7 +122,7 @@ def extract_asset_values(dstore, sid):
     for assets in assets_by_site:
         vals = numpy.zeros(len(assets), dt)
         for a, asset in enumerate(assets):
-            vals[a]['aref'] = asset_refs[asset.idx]
+            vals[a]['aref'] = asset_refs[a]
             vals[a]['aid'] = asset.ordinal
             for lt in lts:
                 vals[a][lt] = asset.value(lt, time_event)
