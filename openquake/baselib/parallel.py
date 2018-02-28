@@ -377,13 +377,12 @@ class IterResult(object):
          ('duration', numpy.float32)])
 
     def __init__(self, iresults, taskname, num_tasks,
-                 progress=logging.info, sent=0, calc_id=None):
+                 progress=logging.info, sent=0):
         self.iresults = iresults
         self.name = taskname
         self.num_tasks = num_tasks
         self.progress = progress
         self.sent = sent
-        self.calc_id = calc_id
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
@@ -418,10 +417,6 @@ class IterResult(object):
                 # this happens with WorkerLostError with celery
                 raise result
             elif isinstance(result, Result):
-                if self.calc_id and self.calc_id != result.mon.calc_id:
-                    logging.warn('Discarding a result from job %d, since this '
-                                 'is job %d', result.mon.calc_id, self.calc_id)
-                    continue
                 val = result.get()
                 self.received.append(len(result.pik))
             else:  # this should never happen
@@ -502,6 +497,7 @@ def _wakeup(sec):
 class Starmap(object):
     pids = ()  # FIXME: we can probably remove the pids now
     task_ids = []
+    calc_id = None
 
     @classmethod
     def init(cls, poolsize=None):
@@ -616,8 +612,7 @@ class Starmap(object):
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
-        return IterResult(it, self.name, num_tasks, self.progress,
-                          self.sent, self.calc_id)
+        return IterResult(it, self.name, num_tasks, self.progress, self.sent)
 
     def reduce(self, agg=operator.add, acc=None):
         """
@@ -661,10 +656,17 @@ class Starmap(object):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             logging.info('Using receiver %s', socket.backurl)
             it = self._iter_celery(socket.backurl)
-            yield next(it)  # number of results
+            num_results = next(it)
+            yield num_results
             isocket = iter(socket)
-            for _ in it:
-                yield next(isocket)
+            while num_results:
+                res = next(isocket)
+                if self.calc_id and self.calc_id != res.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', res.mon.calc_id, self.calc_id)
+                    continue
+                num_results -= 1
+                yield res
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
