@@ -125,7 +125,7 @@ class Catalogue(object):
             Optional list of attribute keys to be exported
         """
 
-        with open(output_file, 'wt') as of:
+        with open(output_file, 'w') as of:
             writer = csv.DictWriter(of, fieldnames=key_list)
             writer.writeheader()
             for i in range(self.get_number_events()):
