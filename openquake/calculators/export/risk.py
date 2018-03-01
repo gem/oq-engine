@@ -540,7 +540,7 @@ def get_paths(rlz):
 def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
     assetcol = dstore['assetcol/array'].value
-    aref = dstore['assetcol/asset_refs'].value
+    arefs = dstore['assetcol/asset_refs'].value
     bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
@@ -554,9 +554,8 @@ def export_bcr_map(ekey, dstore):
         path = dstore.build_fname('bcr', tag, 'csv')
         data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
                  'average_annual_loss_retrofitted', 'bcr']]
-        for ass, value in zip(assetcol, rlz_data):
-            data.append((ass['lon'], ass['lat'],
-                         decode(aref[ass['idx']]),
+        for aref, ass, value in zip(arefs, assetcol, rlz_data):
+            data.append((ass['lon'], ass['lat'], aref,
                          value['annual_loss_orig'],
                          value['annual_loss_retro'],
                          value['bcr']))
