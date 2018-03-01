@@ -118,7 +118,6 @@ producing too small PoEs.'''
             # the hazard curves, hence the need to run a PSHACalculator here
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
-            cl.split_time = self.split_time
             cl.grp_by_src = oq.disagg_by_src
             cl.run()
             self.csm = cl.csm
