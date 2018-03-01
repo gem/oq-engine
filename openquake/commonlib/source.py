@@ -59,7 +59,7 @@ def split_sources(srcs):
     for src in srcs:
         t0 = time.time()
         splits = list(src)
-        split_time[src.source_id] = t0 - time.time()
+        split_time[src.source_id] = time.time() - t0
         sources.extend(splits)
         if len(splits) > 1:
             has_serial = hasattr(src, 'serial')
@@ -893,9 +893,8 @@ class CompositeSourceModel(collections.Sequence):
         Populate the .infos dictionary src_id -> <SourceInfo>
         """
         for src in sources:
-            srcid = src.source_id.rsplit(':', 1)[0]
-            self.infos[srcid] = SourceInfo(src)
-
+            info = SourceInfo(src)
+            self.infos[info.source_id] = info
 
     def __repr__(self):
         """
@@ -950,14 +949,16 @@ class SourceInfo(object):
         ('source_class', (bytes, 30)),     # 1
         ('num_ruptures', numpy.uint32),    # 2
         ('calc_time', numpy.float32),      # 3
-        ('num_sites', numpy.uint32),       # 4
-        ('num_split',  numpy.uint32),      # 5
+        ('split_time', numpy.float32),     # 4
+        ('num_sites', numpy.uint32),       # 5
+        ('num_split',  numpy.uint32),      # 6
     ])
 
-    def __init__(self, src, calc_time=0, num_split=0):
-        self.source_id = src.source_id
+    def __init__(self, src, calc_time=0, split_time=0, num_split=0):
+        self.source_id = src.source_id.rsplit(':', 1)[0]
         self.source_class = src.__class__.__name__
         self.num_ruptures = src.num_ruptures
         self.num_sites = getattr(src, 'nsites', 0)
         self.calc_time = calc_time
+        self.split_time = split_time
         self.num_split = num_split
