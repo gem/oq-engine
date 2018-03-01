@@ -99,6 +99,7 @@ class PSHACalculator(base.HazardCalculator):
                     pmap_by_grp.calc_times.items():
                 info = self.csm.infos[srcid]
                 info.calc_time += calc_time
+                info.split_time += self.split_time[srcid]
                 info.num_sites += nsites
                 info.num_split += split
         return acc

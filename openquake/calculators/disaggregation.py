@@ -120,6 +120,7 @@ producing too small PoEs.'''
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
             cl.csm = self.csm
+            cl.split_time = self.split_time
             cl.grp_by_src = oq.disagg_by_src
             cl.run(pre_execute=False)
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
