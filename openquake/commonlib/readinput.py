@@ -147,14 +147,16 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        inputs['source'] = sorted(_get_paths(smlt))
+        inputs['source'] = sorted(get_paths(smlt))
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
     return params
 
 
-def _get_paths(smlt):
-    # extract the path names for the source models listed in the smlt file
+def get_paths(smlt):
+    """
+    Extract the path names for the source models listed in the smlt file
+    """
     base_path = os.path.dirname(smlt)
     for model in source.collect_source_model_paths(smlt):
         for name in model.split():
