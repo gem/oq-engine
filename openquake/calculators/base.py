@@ -387,7 +387,6 @@ class HazardCalculator(BaseCalculator):
         the previous calculation; if not, read the inputs directly.
         """
         precalc_id = self.oqparam.hazard_calculation_id
-        job_info = {}
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
@@ -399,12 +398,6 @@ class HazardCalculator(BaseCalculator):
             self.init()
         else:  # we are in a basic calculator
             self.read_inputs()
-            if 'source' in self.oqparam.inputs and precalc_id is None:
-                job_info.update(readinput.get_job_info(
-                    self.oqparam, self.csm, self.sitecol))
-        if hasattr(self, 'riskmodel'):
-            job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        self._monitor.save_info(job_info)
         self.param = {}  # used in the risk calculators
 
     def init(self):

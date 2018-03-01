@@ -25,7 +25,7 @@ from openquake.hazardlib.probability_map import combine
 from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.export import export
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_master)
 
@@ -74,6 +74,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_2(self):
+        # this is a case with disagg_outputs = Mag and 4 realizations
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok([
@@ -84,7 +85,14 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 48)  # number of CSV files
+        self.assertEqual(len(fnames), 6)  # number of CSV files
+
+        # check stats
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)  # 2 sid x 1 key x 1 poe x 1 imt
+        for fname in fnames:
+            self.assertEqualFiles(
+                'expected_output/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_3(self):
@@ -103,6 +111,10 @@ producing too small PoEs.''')
         # this exercise sampling
         self.run_calc(case_4.__file__, 'job.ini')
 
+        # check stats
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 64)  # 2 sid x 8 keys x 2 poe x 2 imt
+
     @attr('qa', 'hazard', 'disagg')
     def test_case_5(self):
         # this exercise gridded nonparametric sources
@@ -116,3 +128,8 @@ producing too small PoEs.''')
         fname = writetmp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
+
+        # check stats
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 192)  # 2 sid x 8 keys x 2 poe x 2 imt
+        # = 64 x 3 for mean, quantile-0.15, quantile-0.85

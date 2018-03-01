@@ -497,6 +497,7 @@ def _wakeup(sec):
 class Starmap(object):
     pids = ()  # FIXME: we can probably remove the pids now
     task_ids = []
+    calc_id = None
 
     @classmethod
     def init(cls, poolsize=None):
@@ -581,11 +582,13 @@ class Starmap(object):
         the arguments by pickling them.
         """
         for task_no, args in enumerate(self.task_args, 1):
-            if isinstance(args[-1], Monitor):
+            mon = args[-1]
+            if isinstance(mon, Monitor):
                 # add incremental task number and task weight
-                args[-1].task_no = task_no
-                args[-1].weight = getattr(args[0], 'weight', 1.)
-                args[-1].backurl = backurl
+                mon.task_no = task_no
+                mon.weight = getattr(args[0], 'weight', 1.)
+                mon.backurl = backurl
+                self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
@@ -653,10 +656,17 @@ class Starmap(object):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             logging.info('Using receiver %s', socket.backurl)
             it = self._iter_celery(socket.backurl)
-            yield next(it)  # number of results
+            num_results = next(it)
+            yield num_results
             isocket = iter(socket)
-            for _ in it:
-                yield next(isocket)
+            while num_results:
+                res = next(isocket)
+                if self.calc_id and self.calc_id != res.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', res.mon.calc_id, self.calc_id)
+                    continue
+                num_results -= 1
+                yield res
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
