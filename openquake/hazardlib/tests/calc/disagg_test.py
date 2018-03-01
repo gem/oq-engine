@@ -146,8 +146,10 @@ class PMFExtractorsTestCase(unittest.TestCase):
         self.aae(pmf, [1.0, 1.0])
 
     def test_trt(self):
-        pmf = disagg.trt_pmf(self.matrix)
-        self.aae(pmf, [1.0, 1.0, 1.0])
+        pmf = disagg.trt_pmf(self.matrix[None])
+        # NB: self.matrix.shape -> (2, 2, 2, 2, 3)
+        # self.matrix[None].shape -> (1, 2, 2, 2, 2, 3)
+        self.aae(pmf, [1.0])
 
     def test_mag_dist(self):
         pmf = disagg.mag_dist_pmf(self.matrix)
