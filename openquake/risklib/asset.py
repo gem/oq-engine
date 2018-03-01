@@ -347,7 +347,6 @@ class AssetCollection(object):
 
     def __init__(self, asset_refs, assets_by_site, tagcol, cost_calculator,
                  time_event, occupancy_periods=''):
-        self.asset_refs = asset_refs
         self.tagcol = tagcol
         self.cost_calculator = cost_calculator
         self.time_event = time_event
@@ -355,6 +354,7 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
+        self.asset_refs = [asset_refs[rec['idx']] for rec in self.array]
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
@@ -366,18 +366,20 @@ class AssetCollection(object):
 
     @property
     def tagnames(self):
+        """
+        :returns: the tagnames
+        """
         return self.tagcol.tagnames
 
     def get_aids_by_tag(self):
         """
         :returns: dict tag -> asset ordinals
         """
-        ordinal = dict(zip(self.array['idx'], range(len(self.array))))
         aids_by_tag = general.AccumDict(accum=set())
-        for ass in self:
+        for aid, ass in enumerate(self):
             for tagname, tagidx in zip(self.tagnames, ass.tagidxs):
                 tag = self.tagcol.get_tag(tagname, tagidx)
-                aids_by_tag[tag].add(ordinal[ass.idx])
+                aids_by_tag[tag].add(aid)
         return aids_by_tag
 
     @property
@@ -418,6 +420,7 @@ class AssetCollection(object):
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.array = self.array[ok_indices]
+        new.asset_refs = self.asset_refs[ok_indices]
         return new
 
     def values(self, aids=None):
