@@ -55,6 +55,7 @@ import unittest
 import numpy as np
 import filecmp
 import os
+import tempfile
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
@@ -89,12 +90,13 @@ class CatalogueTestCase(unittest.TestCase):
 
     def write_catalogue(self):
         # Test the export of a catalogue in csv format
-        inp_file = os.path.join(CURRENT_DIR, 'data/test_write_input.csv')
-        out_file = os.path.join(CURRENT_DIR, 'data/test_write_output.csv')
-        parser = CsvCatalogueParser(inp_file)
+        fi = os.path.join(CURRENT_DIR, 'data/simple.csv')
+        parser = CsvCatalogueParser(fi)
         cat = parser.read_file()
-        cat.write_catalogue(out_file)
-        self.assertTrue(filecmp.cmp(inp_file, out_file))
+        fo = tempfile.NamedTemporaryFile()
+        cat.write_catalogue(fo.name)
+        self.assertTrue(filecmp.cmp(fi, fo.name))
+        fo.close()
 
     def test_load_from_array(self):
         # Tests the creation of a catalogue from an array and a key list
