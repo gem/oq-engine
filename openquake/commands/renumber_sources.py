@@ -33,14 +33,15 @@ def renumber_sources(smlt_file):
     logging.basicConfig(level=logging.INFO)
     number = 1
     for path in readinput.get_paths(smlt_file):
-        smodel = nrml.read(path)
-        if smodel['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+        root = nrml.read(path)
+        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
             raise ObsoleteFormat('Please use oq upgrade_nrml .')
+        [smodel] = root
         for sgroup in smodel:
             for src in sgroup:
                 src['id'] = str(number)
                 number += 1
         with open(path, 'wb') as f:
-            nrml.write(smodel, f)
+            nrml.write(root, f)
 
 renumber_sources.arg('smlt_file', 'source model logic tree file')
