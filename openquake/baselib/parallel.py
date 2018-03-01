@@ -515,7 +515,7 @@ class Starmap(object):
             delattr(cls, 'pool')
 
     @classmethod
-    def apply(cls, task, args, concurrent_tasks=cpu_count * 2,
+    def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified', name=None, distribute=None):
         """
@@ -684,7 +684,7 @@ class Starmap(object):
                 yield obj
 
 
-def sequential_apply(task, args, concurrent_tasks=cpu_count * 2,
+def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
                      weight=lambda item: 1, key=lambda item: 'Unspecified'):
     """
     Apply sequentially task to args by splitting args[0] in blocks
