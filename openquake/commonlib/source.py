@@ -709,6 +709,9 @@ class CompositeSourceModel(collections.Sequence):
                     srcs, stime = split_sources(src_group)
                     src_group.sources = srcs
                     split_time += stime
+                else:
+                    for src in src_group:
+                        split_time[src.source_id] = 0
         return split_time
 
     def grp_by_src(self):
