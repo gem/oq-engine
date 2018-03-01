@@ -6,8 +6,6 @@ usage: oq engine [--help]
                  [--db-version]
                  [--upgrade-db]
                  [--what-if-I-upgrade]
-                 [--run-hazard CONFIG_FILE]
-                 [--run-risk CONFIG_FILE]
                  [--run CONFIG_FILE]
                  [--no-distribute]
                  [--yes]
@@ -47,10 +45,6 @@ optional arguments:
   --what-if-I-upgrade, -w
                         Show what will happen to the openquake database if you
                         upgrade
-  --run-hazard CONFIG_FILE, --rh CONFIG_FILE
-                        Run a hazard job with the specified config file
-  --run-risk CONFIG_FILE, --rr CONFIG_FILE
-                        Run a risk job with the specified config file
   --run CONFIG_FILE     Run a job with the specified config file
   --list-hazard-calculations, --lhc
                         List risk calculation information
