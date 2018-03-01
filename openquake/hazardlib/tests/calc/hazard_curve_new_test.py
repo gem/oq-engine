@@ -208,7 +208,8 @@ class MultiPointTestCase(unittest.TestCase):
     def test(self):
         d = os.path.dirname(os.path.dirname(__file__))
         source_model = os.path.join(d, 'source_model/multi-point-source.xml')
-        groups = nrml.to_python(source_model, SourceConverter())
+        groups = nrml.to_python(source_model, SourceConverter(
+            investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(0.1, 0.1), 800, True, z1pt0=100., z2pt5=1.)
         sitecol = SiteCollection([site])
         imtls = DictArray({'PGA': [0.01, 0.02, 0.04, 0.08, 0.16]})
