@@ -21,6 +21,7 @@ import os
 import re
 import copy
 import math
+import time
 import logging
 import operator
 import collections
@@ -50,11 +51,15 @@ rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
 def split_sources(srcs):
     """
     :param srcs: sources
+    :param mon: a Monitor instance
     :returns: a list of split sources
     """
     sources = []
+    split_time = {}  # src_id -> dt
     for src in srcs:
+        t0 = time.time()
         splits = list(src)
+        split_time[src.source_id] = t0 - time.time()
         sources.extend(splits)
         if len(splits) > 1:
             has_serial = hasattr(src, 'serial')
@@ -68,7 +73,7 @@ def split_sources(srcs):
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
                     start += nr
-    return sources
+    return sources, split_time
 
 
 def gsim_names(rlz):
@@ -696,11 +701,15 @@ class CompositeSourceModel(collections.Sequence):
         """
         Split all sources in the composite source model
         """
+        split_time = AccumDict()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
-                    src_group.sources = split_sources(src_group)
+                    srcs, stime = split_sources(src_group)
+                    src_group.sources = srcs
+                    split_time += stime
+        return split_time
 
     def grp_by_src(self):
         """
