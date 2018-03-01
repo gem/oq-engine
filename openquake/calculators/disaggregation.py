@@ -108,21 +108,26 @@ produces at most probabilities of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
-    def execute(self):
-        """Performs the disaggregation"""
+    def pre_execute(self):
         oq = self.oqparam
         if oq.iml_disagg:
-            # no hazard curves are needed
-            curves = [None] * len(self.sitecol)
+            # read the input data
+            base.HazardCalculator.pre_execute(self)
         else:
             # only the poes_disagg are known, the IMLs are interpolated from
             # the hazard curves, hence the need to run a PSHACalculator here
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
-            cl.csm = self.csm
             cl.grp_by_src = oq.disagg_by_src
-            cl.run(pre_execute=False)
+            cl.run()
+            self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
+
+    def execute(self):
+        """Performs the disaggregation"""
+        if self.oqparam.iml_disagg:
+            curves = [None] * len(self.sitecol)  # no hazard curves are needed
+        else:
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
         return self.full_disaggregation(curves)
