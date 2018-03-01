@@ -119,6 +119,17 @@ def lon_lat_bins(bb, coord_bin_width):
     return lon_bins, lat_bins
 
 
+def get_shape(bin_edges, sid):
+    """
+    :returns:
+        the shape of the disaggregation matrix for the given site, of form
+        (#mags-1, #dists-1, #lons-1, #lats-1, #eps-1)
+    """
+    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
+    return (len(mag_bins) - 1, len(dist_bins) - 1,
+            len(lon_bins[sid]) - 1, len(lat_bins[sid]) - 1, len(eps_bins) - 1)
+
+
 # this is fast
 def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
     """
@@ -130,12 +141,7 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
     """
     with mon('build_disagg_matrix'):
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
-        lon_bins, lat_bins = lon_bins[sid], lat_bins[sid]
-        dim1 = len(mag_bins) - 1
-        dim2 = len(dist_bins) - 1
-        dim3 = len(lon_bins) - 1
-        dim4 = len(lat_bins) - 1
-        shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1)
+        dim1, dim2, dim3, dim4, dim5 = shape = get_shape(bin_edges, sid)
 
         # find bin indexes of rupture attributes; bins are assumed closed
         # on the lower bound, and open on the upper bound, that is [ )
@@ -145,8 +151,8 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
         # index of the upper bound of the bin
         mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
         dists_idx = numpy.digitize(bdata.dists[:, sid], dist_bins) - 1
-        lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins)
-        lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins) - 1
+        lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins[sid])
+        lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins[sid]) - 1
 
         # because of the way numpy.digitize works, values equal to the last bin
         # edge are associated to an index equal to len(bins) which is not a
@@ -340,7 +346,7 @@ def mag_pmf(matrix):
     mag_pmf = numpy.zeros(nmags)
     for i in range(nmags):
         mag_pmf[i] = numpy.prod(
-            [1. - matrix[i][j][k][l][m]
+            [1. - matrix[i, j, k, l, m]
              for j in range(ndists)
              for k in range(nlons)
              for l in range(nlats)
@@ -359,7 +365,7 @@ def dist_pmf(matrix):
     dist_pmf = numpy.zeros(ndists)
     for j in range(ndists):
         dist_pmf[j] = numpy.prod(
-            [1. - matrix[i][j][k][l][m]
+            [1. - matrix[i, j, k, l, m]
              for i in range(nmags)
              for k in range(nlons)
              for l in range(nlats)
@@ -367,21 +373,26 @@ def dist_pmf(matrix):
     return 1. - dist_pmf
 
 
-def trt_pmf(matrix):
+def trt_pmf(matrices):
     """
     Fold full disaggregation matrix to tectonic region type PMF.
 
+    :param matrices:
+        a matrix with T submatrices
     :returns:
-        a scalar
+        an array of T probabilities one per each tectonic region type
     """
-    nmags, ndists, nlons, nlats, neps = matrix.shape
-    return 1. - numpy.prod(
-        [1. - matrix[i][j][k][l][m]
-         for i in range(nmags)
-         for j in range(ndists)
-         for k in range(nlons)
-         for l in range(nlats)
-         for m in range(neps)])
+    ntrts, nmags, ndists, nlons, nlats, neps = matrices.shape
+    pmf = numpy.zeros(ntrts)
+    for t in range(ntrts):
+        pmf[t] = 1. - numpy.prod(
+            [1. - matrices[t, i, j, k, l, m]
+             for i in range(nmags)
+             for j in range(ndists)
+             for k in range(nlons)
+             for l in range(nlats)
+             for m in range(neps)])
+    return pmf
 
 
 def mag_dist_pmf(matrix):
@@ -396,8 +407,8 @@ def mag_dist_pmf(matrix):
     mag_dist_pmf = numpy.zeros((nmags, ndists))
     for i in range(nmags):
         for j in range(ndists):
-            mag_dist_pmf[i][j] = numpy.prod(
-                [1. - matrix[i][j][k][l][m]
+            mag_dist_pmf[i, j] = numpy.prod(
+                [1. - matrix[i, j, k, l, m]
                  for k in range(nlons)
                  for l in range(nlats)
                  for m in range(neps)])
@@ -418,8 +429,8 @@ def mag_dist_eps_pmf(matrix):
     for i in range(nmags):
         for j in range(ndists):
             for m in range(neps):
-                mag_dist_eps_pmf[i][j][m] = numpy.prod(
-                    [1. - matrix[i][j][k][l][m]
+                mag_dist_eps_pmf[i, j, m] = numpy.prod(
+                    [1. - matrix[i, j, k, l, m]
                      for k in range(nlons)
                      for l in range(nlats)])
     return 1. - mag_dist_eps_pmf
@@ -437,12 +448,26 @@ def lon_lat_pmf(matrix):
     lon_lat_pmf = numpy.zeros((nlons, nlats))
     for k in range(nlons):
         for l in range(nlats):
-            lon_lat_pmf[k][l] = numpy.prod(
-                [1. - matrix[i][j][k][l][m]
+            lon_lat_pmf[k, l] = numpy.prod(
+                [1. - matrix[i, j, k, l, m]
                  for i in range(nmags)
                  for j in range(ndists)
                  for m in range(neps)])
     return 1. - lon_lat_pmf
+
+
+def lon_lat_trt_pmf(matrices):
+    """
+    Fold full disaggregation matrices to lon / lat / TRT PMF.
+
+    :param matrices:
+        a matrix with T submatrices
+    :returns:
+        3d array. First dimension represents longitude histogram bins,
+        second one latitude histogram bins, third one trt histogram bins.
+    """
+    res = numpy.array([lon_lat_pmf(mat) for mat in matrices])
+    return res.transpose(1, 2, 0)
 
 
 def mag_lon_lat_pmf(matrix):
@@ -459,8 +484,8 @@ def mag_lon_lat_pmf(matrix):
     for i in range(nmags):
         for k in range(nlons):
             for l in range(nlats):
-                mag_lon_lat_pmf[i][k][l] = numpy.prod(
-                    [1. - matrix[i][j][k][l][m]
+                mag_lon_lat_pmf[i, k, l] = numpy.prod(
+                    [1. - matrix[i, j, k, l, m]
                      for j in range(ndists)
                      for m in range(neps)])
     return 1. - mag_lon_lat_pmf
@@ -476,5 +501,5 @@ pmf_map = collections.OrderedDict([
     (('Mag', 'Dist', 'Eps'), mag_dist_eps_pmf),
     (('Lon', 'Lat'), lon_lat_pmf),
     (('Mag', 'Lon', 'Lat'), mag_lon_lat_pmf),
-    (('Lon', 'Lat', 'TRT'), lon_lat_pmf),
+    (('Lon', 'Lat', 'TRT'), lon_lat_trt_pmf),
 ])
