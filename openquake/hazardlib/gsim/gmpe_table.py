@@ -33,6 +33,7 @@ import h5py
 from scipy.interpolate import interp1d
 import numpy
 
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE, RuptureContext, SitesContext
@@ -99,7 +100,7 @@ class AmplificationTable(object):
         self.sigma = None
         self.magnitudes = magnitudes
         self.distances = distances
-        self.parameter = amplification_group.attrs["apply_to"].decode('utf-8')
+        self.parameter = decode(amplification_group.attrs["apply_to"])
         self.values = numpy.array([float(key) for key in amplification_group])
         self.argidx = numpy.argsort(self.values)
         self.values = self.values[self.argidx]
@@ -351,7 +352,7 @@ class GMPETable(GMPE):
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        self.distance_type = fle["Distances"].attrs["metric"].decode('utf-8')
+        self.distance_type = decode(fle["Distances"].attrs["metric"])
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
         self.m_w = fle["Mw"][:]
