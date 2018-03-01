@@ -39,8 +39,6 @@ SCALEREL = scalerel.get_available_magnitude_scalerel()
 
 GSIM = gsim.get_available_gsims()
 
-disagg_outs = ['_'.join(tup) for tup in sorted(disagg.pmf_map)]
-
 
 def disagg_outputs(value):
     """
@@ -53,7 +51,7 @@ def disagg_outputs(value):
     """
     values = value.replace(',', ' ').split()
     for val in values:
-        if val not in disagg_outs:
+        if val not in disagg.pmf_map:
             raise ValueError('Invalid disagg output: %s' % val)
     return values
 
