@@ -995,12 +995,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
             zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
         assets_by_sid = AccumDict(accum=[])
         for assets in assets_by_site:
-            if len(assets):
-                lon, lat = assets[0].location
-                site, distance = siteobjects.get_closest(lon, lat)
-                if site.sid in sids and distance <= asset_hazard_distance:
-                    # keep the assets, otherwise discard them
-                    assets_by_sid += {site.sid: list(assets)}
+            lon, lat = assets[0].location
+            site, distance = siteobjects.get_closest(lon, lat)
+            if site.sid in sids and distance <= asset_hazard_distance:
+                # keep the assets, otherwise discard them
+                assets_by_sid += {site.sid: list(assets)}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associate any site to any assets within the '
