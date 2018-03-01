@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a small bug: we were reading the source model twice in disaggregation
   * Added a check to discard results coming from the wrong calculation
     for the distribution mode `celery_zmq`
   * Removed the long time deprecated commands
