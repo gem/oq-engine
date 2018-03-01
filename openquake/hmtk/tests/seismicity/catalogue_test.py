@@ -96,7 +96,6 @@ class CatalogueTestCase(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as fo:
             cat.write_catalogue(fo.name)
             self.assertTrue(filecmp.cmp(fi, fo.name))
-            fo.close()
 
     def test_load_from_array(self):
         # Tests the creation of a catalogue from an array and a key list

@@ -145,7 +145,6 @@ class Catalogue(object):
                                 data = float(data)
                     row_dict[key] = data
                 writer.writerow(row_dict)
-            of.close()
 
     def load_to_array(self, keys):
         """
