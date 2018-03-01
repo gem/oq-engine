@@ -93,10 +93,10 @@ class CatalogueTestCase(unittest.TestCase):
         fi = os.path.join(CURRENT_DIR, 'data/simple.csv')
         parser = CsvCatalogueParser(fi)
         cat = parser.read_file()
-        fo = tempfile.NamedTemporaryFile()
-        cat.write_catalogue(fo.name)
-        self.assertTrue(filecmp.cmp(fi, fo.name))
-        fo.close()
+        with tempfile.NamedTemporaryFile() as fo:
+            cat.write_catalogue(fo.name)
+            self.assertTrue(filecmp.cmp(fi, fo.name))
+            fo.close()
 
     def test_load_from_array(self):
         # Tests the creation of a catalogue from an array and a key list
