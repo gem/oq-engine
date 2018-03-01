@@ -1,7 +1,13 @@
   [Michele Simionato]
+  * Now the parameter `disagg_outputs` is honored, i.e. only the specified
+    outputs are extracted from the disaggregation matrix and stored
+  * Implemented statistical disaggregation outputs (experimental)
+  * Fixed a small bug: we were reading the source model twice in disaggregation
+  * Added a check to discard results coming from the wrong calculation
+    for the distribution mode `celery_zmq`
   * Removed the long time deprecated commands
     `oq engine --run-hazard` and `oq engine --run-risk`
-  * Added a distribution mode celery_zmq
+  * Added a distribution mode `celery_zmq`
   * Added the ability to use a preimported exposure in risk calculations
   * Substantial cleanup of the parallelization framework
   * Fixed a bug with nonparametric sources producing negative probabilities
