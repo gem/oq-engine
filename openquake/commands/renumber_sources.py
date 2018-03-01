@@ -33,6 +33,7 @@ def renumber_sources(smlt_file):
     logging.basicConfig(level=logging.INFO)
     number = 1
     for path in readinput.get_paths(smlt_file):
+        logging.info('Renumbering %s', path)
         root = nrml.read(path)
         if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
             raise ObsoleteFormat('Please use oq upgrade_nrml .')
