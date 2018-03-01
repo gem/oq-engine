@@ -254,7 +254,7 @@ producing too small PoEs.'''
         mon = self.monitor('disaggregation')
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
-            R, oq.imtls, oq.iml_disagg, oq.poes_disagg or (None,), curves)
+            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             for r in range(R):
@@ -390,9 +390,10 @@ producing too small PoEs.'''
             poe_agg = []
             aggmatrix = agg_probs(*matrix)
             for key, fn in disagg.pmf_map.items():
-                pmf = fn(matrix if key[-1] == 'TRT' else aggmatrix)
-                self.datastore[disp_name + '_'.join(key)] = pmf
-                poe_agg.append(1. - numpy.prod(1. - pmf))
+                if not disagg_outputs or key in disagg_outputs:
+                    pmf = fn(matrix if key.endswith('TRT') else aggmatrix)
+                    self.datastore[disp_name + key] = pmf
+                    poe_agg.append(1. - numpy.prod(1. - pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
