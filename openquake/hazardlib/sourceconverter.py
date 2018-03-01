@@ -717,7 +717,7 @@ class SourceConverter(RuptureConverter):
         trt = node.attrib.get('tectonicRegion')
         rup_pmf_data = []
         for rupnode in node:
-            probs = pmf.PMF(rupnode['probs_occur'])
+            probs = pmf.PMF(valid.pmf(rupnode['probs_occur']))
             rup = RuptureConverter.convert_node(self, rupnode)
             rup.tectonic_region_type = trt
             rup_pmf_data.append((rup, probs))
