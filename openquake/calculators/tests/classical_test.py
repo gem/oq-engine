@@ -395,7 +395,7 @@ hazard_uhs-mean.csv
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__)
         checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 4227047805)
+        self.assertEqual(checksum, 2061302359)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT
