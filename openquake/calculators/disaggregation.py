@@ -24,7 +24,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.hazardlib.calc import disagg
@@ -271,7 +271,8 @@ producing too small PoEs.'''
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
-                for block in csm.split_in_blocks(maxweight, sources):
+                for block in block_splitter(
+                        sources, maxweight, operator.attrgetter('weight')):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,
                          oq, mon))

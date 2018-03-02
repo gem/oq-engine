@@ -28,8 +28,7 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import (
-    groupby, group_array, block_splitter, writetmp, AccumDict)
+from openquake.baselib.general import groupby, group_array, writetmp, AccumDict
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.hazardlib.gsim.gsim_table import GMPETable
@@ -46,6 +45,30 @@ F32 = numpy.float32
 weight = operator.attrgetter('weight')
 rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
                       ('gsims', 'S100'), ('weight', F32)])
+
+
+def split_sources(srcs):
+    """
+    :param srcs: sources
+    :returns: a list of split sources
+    """
+    sources = []
+    for src in srcs:
+        splits = list(src)
+        sources.extend(splits)
+        if len(splits) > 1:
+            has_serial = hasattr(src, 'serial')
+            start = 0
+            for i, split in enumerate(splits):
+                split.source_id = '%s:%s' % (src.source_id, i)
+                split.src_group_id = src.src_group_id
+                split.num_ruptures = split.count_ruptures()
+                split.ngsims = src.ngsims
+                if has_serial:
+                    nr = split.num_ruptures
+                    split.serial = src.serial[start:start + nr]
+                    start += nr
+    return sources
 
 
 def gsim_names(rlz):
@@ -652,7 +675,6 @@ class CompositeSourceModel(collections.Sequence):
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()
-        self.split_map = {}
         self.weight = 0
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
@@ -669,6 +691,16 @@ class CompositeSourceModel(collections.Sequence):
             self.has_dupl_sources = 0
         else:
             self.has_dupl_sources = len(dupl_sources)
+
+    def split_all(self):
+        """
+        Split all sources in the composite source model
+        """
+        for sm in self.source_models:
+            for src_group in sm.src_groups:
+                if getattr(src_group, 'src_interdep', None) != 'mutex':
+                    # mutex sources cannot be split
+                    src_group.sources = split_sources(src_group)
 
     def grp_by_src(self):
         """
@@ -718,20 +750,10 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
-                mutex = getattr(src_group, 'src_interdep', None) == 'mutex'
-                self.add_infos(src_group.sources)  # unsplit sources
-                sources = []
-                for src in src_group.sources:
-                    if hasattr(src, '__iter__') and not mutex:
-                        # MultiPoint, AreaSource, NonParametric
-                        # NB: source.split_source is cached
-                        sources.extend(source.split_source(src))
-                    else:
-                        # mutex sources cannot be split
-                        sources.append(src)
+                self.add_infos(src_group.sources)
                 sg = copy.copy(src_group)
                 sg.sources = []
-                for src, _sites in src_filter(sources):
+                for src, _sites in src_filter(src_group.sources):
                     sg.sources.append(src)
                     src.ngsims = ngsims[src.tectonic_region_type]
                     weight += src.weight
@@ -845,7 +867,7 @@ class CompositeSourceModel(collections.Sequence):
         start = 0
         for sg in self.src_groups:
             for src in sg:
-                nr = src.num_ruptures
+                nr = src.count_ruptures()
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
@@ -859,35 +881,12 @@ class CompositeSourceModel(collections.Sequence):
 
     def add_infos(self, sources):
         """
-        Populate the .infos dictionary (grp_id, src_id) -> <SourceInfo>
+        Populate the .infos dictionary src_id -> <SourceInfo>
         """
         for src in sources:
-            self.infos[src.source_id] = SourceInfo(src)
+            srcid = src.source_id.rsplit(':', 1)[0]
+            self.infos[srcid] = SourceInfo(src)
 
-    def split_in_blocks(self, maxweight, sources, weight=weight):
-        """
-        Split a set of sources in blocks of weight up to maxweight; heavy
-        sources (i.e. with weight > maxweight) are split.
-
-        :param maxweight: maximum weight of a block
-        :param sources: sources of the same source group
-        :param weight: source weight function
-        :yields: blocks of sources of weight around maxweight
-        """
-        sources.sort(key=weight)
-
-        # yield light sources in blocks
-        light = [src for src in sources if src.weight <= maxweight]
-        for block in block_splitter(light, maxweight, weight):
-            yield block
-
-        # yield heavy sources in blocks
-        heavy = [src for src in sources if src.weight > maxweight]
-        for src in heavy:
-            srcs = [s for s in source.split_source(src)
-                    if self.src_filter.get_close_sites(s) is not None]
-            for block in block_splitter(srcs, maxweight, weight):
-                yield block
 
     def __repr__(self):
         """

@@ -17,14 +17,26 @@
 Module :mod:`openquake.hazardlib.source.complex_fault`
 defines :class:`ComplexFaultSource`.
 """
+import copy
 import numpy
 
 from openquake.baselib.python3compat import range
+from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
+
+MINWEIGHT = 100
+
+
+def _split_start_stop(n, chunksize):
+    start = 0
+    while start < n:
+        stop = start + chunksize
+        yield start, min(stop, n)
+        start = stop
 
 
 @with_slots
@@ -110,15 +122,12 @@ class ComplexFaultSource(ParametricSeismicSource):
 
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
-                mag, self.rake
-            )
+                mag, self.rake)
             rupture_length = numpy.sqrt(
                 rupture_area * self.rupture_aspect_ratio)
             rupture_slices = _float_ruptures(
-                rupture_area, rupture_length, cell_area, cell_length
-            )
+                rupture_area, rupture_length, cell_area, cell_length)
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
-
             for rupture_slice in rupture_slices[self.start:self.stop]:
                 mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
@@ -133,8 +142,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                 yield ParametricProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
                     surface, type(self),
-                    occurrence_rate, self.temporal_occurrence_model
-                )
+                    occurrence_rate, self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """
@@ -142,12 +150,10 @@ class ComplexFaultSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
-            self.edges, self.rupture_mesh_spacing
-        )
+            self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.get_mesh()
         cell_center, cell_length, cell_width, cell_area = (
-            whole_fault_mesh.get_cell_dimensions()
-        )
+            whole_fault_mesh.get_cell_dimensions())
         counts = 0
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
@@ -166,6 +172,30 @@ class ComplexFaultSource(ParametricSeismicSource):
         ComplexFaultSurface.check_fault_data(edges, spacing)
         self.edges = edges
         self.rupture_mesh_spacing = spacing
+
+    def __iter__(self):
+        if self.num_ruptures <= MINWEIGHT:
+            yield self  # not splittable
+            return
+        # split by magnitude
+        mag_rates = [(mag, rate) for (mag, rate) in
+                     self.mfd.get_annual_occurrence_rates() if rate]
+        if len(mag_rates) > 1:
+            for i, (mag, rate) in enumerate(mag_rates):
+                src = copy.copy(self)
+                src.mfd = mfd.ArbitraryMFD([mag], [rate])
+                src.num_ruptures = src.count_ruptures()
+                yield src
+            return
+        # if there is a single magnitude split by slice of ruptures
+        i = 0
+        for start, stop in _split_start_stop(self.num_ruptures, MINWEIGHT):
+            src = copy.copy(self)
+            src.start = start
+            src.stop = stop
+            src.num_ruptures = stop - start
+            i += 1
+            yield src
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
@@ -241,8 +271,8 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
                         # try to extend along length
                         areas_acc = numpy.sum(cell_area[:, col:], axis=0)
                         areas_acc = numpy.add.accumulate(areas_acc, axis=0)
-                        rup_cols = numpy.argmin(numpy.abs(areas_acc
-                                                          - rupture_area))
+                        rup_cols = numpy.argmin(
+                            numpy.abs(areas_acc - rupture_area))
                         last_col = rup_cols + col + 1
                         if last_col == ncols \
                                 and areas_acc[rup_cols] < rupture_area:

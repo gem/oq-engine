@@ -211,5 +211,4 @@ class AreaSource(ParametricSeismicSource):
                 nodal_plane_distribution=self.nodal_plane_distribution,
                 hypocenter_distribution=self.hypocenter_distribution,
                 temporal_occurrence_model=self.temporal_occurrence_model)
-            pt.num_ruptures = pt.count_ruptures()
             yield pt
