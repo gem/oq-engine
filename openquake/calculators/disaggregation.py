@@ -108,21 +108,26 @@ produces at most probabilities of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
-    def execute(self):
-        """Performs the disaggregation"""
+    def pre_execute(self):
         oq = self.oqparam
         if oq.iml_disagg:
-            # no hazard curves are needed
-            curves = [None] * len(self.sitecol)
+            # read the input data
+            base.HazardCalculator.pre_execute(self)
         else:
             # only the poes_disagg are known, the IMLs are interpolated from
             # the hazard curves, hence the need to run a PSHACalculator here
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
-            cl.csm = self.csm
             cl.grp_by_src = oq.disagg_by_src
-            cl.run(pre_execute=False)
+            cl.run()
+            self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
+
+    def execute(self):
+        """Performs the disaggregation"""
+        if self.oqparam.iml_disagg:
+            curves = [None] * len(self.sitecol)  # no hazard curves are needed
+        else:
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
         return self.full_disaggregation(curves)
@@ -254,7 +259,7 @@ producing too small PoEs.'''
         mon = self.monitor('disaggregation')
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
-            R, oq.imtls, oq.iml_disagg, oq.poes_disagg or (None,), curves)
+            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             for r in range(R):
@@ -390,9 +395,10 @@ producing too small PoEs.'''
             poe_agg = []
             aggmatrix = agg_probs(*matrix)
             for key, fn in disagg.pmf_map.items():
-                pmf = fn(matrix if key[-1] == 'TRT' else aggmatrix)
-                self.datastore[disp_name + '_'.join(key)] = pmf
-                poe_agg.append(1. - numpy.prod(1. - pmf))
+                if not disagg_outputs or key in disagg_outputs:
+                    pmf = fn(matrix if key.endswith('TRT') else aggmatrix)
+                    self.datastore[disp_name + key] = pmf
+                    poe_agg.append(1. - numpy.prod(1. - pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
