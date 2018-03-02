@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import shutil
 import logging
 from openquake.baselib import sap
 from openquake.commonlib import readinput
@@ -26,28 +25,38 @@ class ObsoleteFormat(Exception):
     pass
 
 
+def renumber(paths, number):
+    srcs = []
+    roots = []
+    for path in paths:
+        logging.info('Reading %s', path)
+        root = nrml.read(path)
+        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+            raise ObsoleteFormat('Please use oq upgrade_nrml .')
+        srcs.extend(src['id'] for sgroup in root[0] for src in sgroup)
+        roots.append(root)
+    if len(srcs) == len(set(srcs)):
+        # there are no duplicated source IDs
+        return
+    for path, root in zip(paths, roots):
+        logging.info('Renumbering %s', path)
+        for sgroup in root[0]:
+            for src in sgroup:
+                src['id'] = str(number)
+                number += 1
+        with open(path, 'wb') as f:
+            nrml.write(root, f)
+
+
 @sap.Script
 def renumber_sources(smlt_file):
     """
     Renumber the sources belowing to the same source model, even if split
-    in multiple files, to avoid duplicated source IDs.
+    in multiple files, to avoid duplicated source IDs. NB: it changes the
+    XML files in place, without making a backup, so be careful.
     """
     logging.basicConfig(level=logging.INFO)
     for paths in readinput.gen_sm_paths(smlt_file):
-        number = 1
-        for path in paths:
-            # make a backup of the original file
-            shutil.copy(path, path + '~')
-            logging.info('Renumbering %s', path)
-            root = nrml.read(path)
-            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-                raise ObsoleteFormat('Please use oq upgrade_nrml .')
-            [smodel] = root
-            for sgroup in smodel:
-                for src in sgroup:
-                    src['id'] = str(number)
-                    number += 1
-            with open(path, 'wb') as f:
-                nrml.write(root, f)
+        renumber(paths, number=1)
 
 renumber_sources.arg('smlt_file', 'source model logic tree file')
