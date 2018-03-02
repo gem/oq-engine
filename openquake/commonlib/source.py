@@ -51,8 +51,7 @@ rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
 def split_sources(srcs):
     """
     :param srcs: sources
-    :param mon: a Monitor instance
-    :returns: a list of split sources
+    :returns: a pair (split sources, split time)
     """
     sources = []
     split_time = {}  # src_id -> dt
