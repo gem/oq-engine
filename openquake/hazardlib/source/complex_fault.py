@@ -185,6 +185,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         if len(mag_rates) > 1:
             for i, (mag, rate) in enumerate(mag_rates):
                 src = copy.copy(self)
+                del src._nr
                 src.mfd = mfd.ArbitraryMFD([mag], [rate])
                 src.num_ruptures = src._nr[i]
                 yield src
@@ -193,6 +194,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         i = 0
         for start, stop in _split_start_stop(self.num_ruptures, MINWEIGHT):
             src = copy.copy(self)
+            del src._nr
             src.start = start
             src.stop = stop
             src.num_ruptures = stop - start
