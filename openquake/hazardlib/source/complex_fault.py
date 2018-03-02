@@ -39,6 +39,102 @@ def _split_start_stop(n, chunksize):
         start = stop
 
 
+def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
+    """
+    Get all possible unique rupture placements on the fault surface.
+
+    :param rupture_area:
+        The area of the rupture to float on the fault surface, in squared km.
+    :param rupture_length:
+        The target length (spatial extension along fault trace) of the rupture,
+        in km.
+    :param cell_area:
+        2d numpy array representing area of mesh cells in squared km.
+    :param cell_length:
+        2d numpy array of the shape as ``cell_area`` representing cells'
+        length in km.
+    :returns:
+        A list of slice objects. Number of items in the list is equal to number
+        of possible locations of the requested rupture on the fault surface.
+        Each slice can be used to get a portion of the whole fault surface mesh
+        that would represent the location of the rupture.
+    """
+    nrows, ncols = cell_length.shape
+
+    if rupture_area >= numpy.sum(cell_area):
+        # requested rupture area exceeds the total surface area.
+        # return the single slice that doesn't cut anything out.
+        return [slice(None)]
+
+    rupture_slices = []
+
+    dead_ends = set()
+    for row in range(nrows):
+        for col in range(ncols):
+            if col in dead_ends:
+                continue
+            # find the lengths of all possible subsurfaces containing
+            # only the current row and from the current column till
+            # the last one.
+            lengths_acc = numpy.add.accumulate(cell_length[row, col:])
+            # find the "best match" number of columns, the one that gives
+            # the least difference between actual and requested rupture
+            # length (note that we only consider top row here, mainly
+            # for simplicity: it's not yet clear how many rows will we
+            # end up with).
+            rup_cols = numpy.argmin(numpy.abs(lengths_acc - rupture_length))
+            last_col = rup_cols + col + 1
+            if last_col == ncols and lengths_acc[rup_cols] < rupture_length:
+                # rupture doesn't fit along length (the requested rupture
+                # length is greater than the length of the part of current
+                # row that starts from the current column).
+                if col != 0:
+                    # if we are not in the first column, it means that we
+                    # hit the right border, so we need to go to the next
+                    # row.
+                    break
+
+            # now try to find the optimum (the one providing the closest
+            # to requested area) number of rows.
+            areas_acc = numpy.sum(cell_area[row:, col:last_col], axis=1)
+            areas_acc = numpy.add.accumulate(areas_acc, axis=0)
+            rup_rows = numpy.argmin(numpy.abs(areas_acc - rupture_area))
+            last_row = rup_rows + row + 1
+            if last_row == nrows and areas_acc[rup_rows] < rupture_area:
+                # rupture doesn't fit along width.
+                # we can try to extend it along length but only if we are
+                # at the first row
+                if row == 0:
+                    if last_col == ncols:
+                        # there is no place to extend, exiting
+                        return rupture_slices
+                    else:
+                        # try to extend along length
+                        areas_acc = numpy.sum(cell_area[:, col:], axis=0)
+                        areas_acc = numpy.add.accumulate(areas_acc, axis=0)
+                        rup_cols = numpy.argmin(
+                            numpy.abs(areas_acc - rupture_area))
+                        last_col = rup_cols + col + 1
+                        if last_col == ncols \
+                                and areas_acc[rup_cols] < rupture_area:
+                            # still doesn't fit, return
+                            return rupture_slices
+                else:
+                    # row is not the first and the required area exceeds
+                    # available area starting from target row and column.
+                    # mark the column as "dead end" so we don't create
+                    # one more rupture from the same column on all
+                    # subsequent rows.
+                    dead_ends.add(col)
+
+            # here we add 1 to last row and column numbers because we want
+            # to return slices for cutting the mesh of vertices, not the cell
+            # data (like cell_area or cell_length).
+            rupture_slices.append((slice(row, last_row + 1),
+                                   slice(col, last_col + 1)))
+    return rupture_slices
+
+
 @with_slots
 class ComplexFaultSource(ParametricSeismicSource):
     """
@@ -77,9 +173,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         super(ComplexFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
-            temporal_occurrence_model
-        )
-
+            temporal_occurrence_model)
         NodalPlane.check_rake(rake)
         ComplexFaultSurface.check_fault_data(edges, rupture_mesh_spacing)
         self.edges = edges
@@ -187,7 +281,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                 src = copy.copy(self)
                 del src._nr
                 src.mfd = mfd.ArbitraryMFD([mag], [rate])
-                src.num_ruptures = src._nr[i]
+                src.num_ruptures = self._nr[i]
                 yield src
             return
         # if there is a single magnitude split by slice of ruptures
@@ -200,99 +294,3 @@ class ComplexFaultSource(ParametricSeismicSource):
             src.num_ruptures = stop - start
             i += 1
             yield src
-
-
-def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
-    """
-    Get all possible unique rupture placements on the fault surface.
-
-    :param rupture_area:
-        The area of the rupture to float on the fault surface, in squared km.
-    :param rupture_length:
-        The target length (spatial extension along fault trace) of the rupture,
-        in km.
-    :param cell_area:
-        2d numpy array representing area of mesh cells in squared km.
-    :param cell_length:
-        2d numpy array of the shape as ``cell_area`` representing cells'
-        length in km.
-    :returns:
-        A list of slice objects. Number of items in the list is equal to number
-        of possible locations of the requested rupture on the fault surface.
-        Each slice can be used to get a portion of the whole fault surface mesh
-        that would represent the location of the rupture.
-    """
-    nrows, ncols = cell_length.shape
-
-    if rupture_area >= numpy.sum(cell_area):
-        # requested rupture area exceeds the total surface area.
-        # return the single slice that doesn't cut anything out.
-        return [slice(None)]
-
-    rupture_slices = []
-
-    dead_ends = set()
-    for row in range(nrows):
-        for col in range(ncols):
-            if col in dead_ends:
-                continue
-            # find the lengths of all possible subsurfaces containing
-            # only the current row and from the current column till
-            # the last one.
-            lengths_acc = numpy.add.accumulate(cell_length[row, col:])
-            # find the "best match" number of columns, the one that gives
-            # the least difference between actual and requested rupture
-            # length (note that we only consider top row here, mainly
-            # for simplicity: it's not yet clear how many rows will we
-            # end up with).
-            rup_cols = numpy.argmin(numpy.abs(lengths_acc - rupture_length))
-            last_col = rup_cols + col + 1
-            if last_col == ncols and lengths_acc[rup_cols] < rupture_length:
-                # rupture doesn't fit along length (the requested rupture
-                # length is greater than the length of the part of current
-                # row that starts from the current column).
-                if col != 0:
-                    # if we are not in the first column, it means that we
-                    # hit the right border, so we need to go to the next
-                    # row.
-                    break
-
-            # now try to find the optimum (the one providing the closest
-            # to requested area) number of rows.
-            areas_acc = numpy.sum(cell_area[row:, col:last_col], axis=1)
-            areas_acc = numpy.add.accumulate(areas_acc, axis=0)
-            rup_rows = numpy.argmin(numpy.abs(areas_acc - rupture_area))
-            last_row = rup_rows + row + 1
-            if last_row == nrows and areas_acc[rup_rows] < rupture_area:
-                # rupture doesn't fit along width.
-                # we can try to extend it along length but only if we are
-                # at the first row
-                if row == 0:
-                    if last_col == ncols:
-                        # there is no place to extend, exiting
-                        return rupture_slices
-                    else:
-                        # try to extend along length
-                        areas_acc = numpy.sum(cell_area[:, col:], axis=0)
-                        areas_acc = numpy.add.accumulate(areas_acc, axis=0)
-                        rup_cols = numpy.argmin(
-                            numpy.abs(areas_acc - rupture_area))
-                        last_col = rup_cols + col + 1
-                        if last_col == ncols \
-                                and areas_acc[rup_cols] < rupture_area:
-                            # still doesn't fit, return
-                            return rupture_slices
-                else:
-                    # row is not the first and the required area exceeds
-                    # available area starting from target row and column.
-                    # mark the column as "dead end" so we don't create
-                    # one more rupture from the same column on all
-                    # subsequent rows.
-                    dead_ends.add(col)
-
-            # here we add 1 to last row and column numbers because we want
-            # to return slices for cutting the mesh of vertices, not the cell
-            # data (like cell_area or cell_length).
-            rupture_slices.append((slice(row, last_row + 1),
-                                   slice(col, last_col + 1)))
-    return rupture_slices
