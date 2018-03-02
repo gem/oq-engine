@@ -154,16 +154,18 @@ class ComplexFaultSource(ParametricSeismicSource):
         whole_fault_mesh = whole_fault_surface.get_mesh()
         cell_center, cell_length, cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
-        counts = 0
+        self._nr = []
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
+            if mag_occ_rate == 0:
+                continue
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake)
             rupture_length = numpy.sqrt(
                 rupture_area * self.rupture_aspect_ratio)
             rupture_slices = _float_ruptures(
                 rupture_area, rupture_length, cell_area, cell_length)
-            counts += len(rupture_slices[self.start:self.stop])
-        return counts
+            self._nr.append(len(rupture_slices[self.start:self.stop]))
+        return sum(self._nr)
 
     def modify_set_geometry(self, edges, spacing):
         """
@@ -184,7 +186,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             for i, (mag, rate) in enumerate(mag_rates):
                 src = copy.copy(self)
                 src.mfd = mfd.ArbitraryMFD([mag], [rate])
-                src.num_ruptures = src.count_ruptures()
+                src.num_ruptures = src._nr[i]
                 yield src
             return
         # if there is a single magnitude split by slice of ruptures
