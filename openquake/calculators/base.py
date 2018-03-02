@@ -377,6 +377,7 @@ class HazardCalculator(BaseCalculator):
                 # from the site collection; this is ultra-fast
                 self.csm.init_serials()
             self.csm.info.gsim_lt.check_imts(oq.imtls)
+            self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
         self.init()
 
