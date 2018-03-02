@@ -382,6 +382,7 @@ class HazardCalculator(BaseCalculator):
                 for src_id in sorted(self.dupl_ids):
                     logging.info('Found duplicated source_id=%s', src_id)
             self.csm.info.gsim_lt.check_imts(oq.imtls)
+            self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
         self.init()
 
