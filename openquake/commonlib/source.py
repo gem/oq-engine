@@ -59,7 +59,10 @@ def split_sources(srcs):
     for src in srcs:
         t0 = time.time()
         splits = list(src)
-        split_time[src.source_id] = time.time() - t0
+        split_time[src.source_id] = dt = time.time() - t0
+        if dt > 30:
+            logging.warn('Splitting %s took %d seconds, perhaps the mesh '
+                         'spacing/area discretization are too small', src, dt)
         sources.extend(splits)
         if len(splits) > 1:
             has_serial = hasattr(src, 'serial')
@@ -709,6 +712,7 @@ class CompositeSourceModel(collections.Sequence):
         split_time = AccumDict()
         for sm in self.source_models:
             for src_group in sm.src_groups:
+                self.add_infos(src_group)
                 for src in src_group:
                     split_time[src.source_id] = 0
                     counter[src.source_id] += 1
@@ -768,7 +772,6 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
-                self.add_infos(src_group.sources)
                 sg = copy.copy(src_group)
                 sg.sources = []
                 for src, _sites in src_filter(src_group.sources):
