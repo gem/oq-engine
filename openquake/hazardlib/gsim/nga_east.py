@@ -68,12 +68,14 @@ import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
 from openquake.hazardlib.gsim.base import CoeffsTable
-from openquake.hazardlib.gsim.gsim_table import GMPETable, hdf_arrays_to_dict
+from openquake.hazardlib.gsim.gmpe_table import GMPETable, hdf_arrays_to_dict
 from openquake.hazardlib.imt import PGV
 from openquake.hazardlib import const
 
+
 # Common interpolation function
-ITPL = lambda mag, tu, tl, ml, f: tl + (tu - tl) * ((mag - ml) / f)
+def ITPL(mag, tu, tl, ml, f):
+    return tl + (tu - tl) * ((mag - ml) / f)
 
 
 def _scaling(mean_tau, sd_tau2):
@@ -462,16 +464,17 @@ class NGAEastBaseGMPE(GMPETable):
             self.ergodic = True
         else:
             self.ergodic = False
-        self._setup_standard_deviations(tau_quantile,
-                                        phi_ss_quantile,
-                                        phi_s2ss_quantile)
+        self._setup_standard_deviations(
+            tau_quantile, phi_ss_quantile, phi_s2ss_quantile)
+        if os.path.exists(self.GMPE_TABLE):
+            with h5py.File(self.GMPE_TABLE, "r") as f:
+                self.init(f)
 
-    def _run_setup(self):
+    def init(self, fle):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        fle = h5py.File(self.GMPE_TABLE, "r")
         self.distance_type = fle["Distances"].attrs["metric"]
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
@@ -487,7 +490,6 @@ class NGAEastBaseGMPE(GMPETable):
         # Get the standard deviations
         if "Amplification" in fle:
             self._setup_amplification(fle)
-        fle.close()
 
     def _setup_standard_deviations(self, tau_quantile, phi_ss_quantile,
                                    phi_s2ss_quantile):
