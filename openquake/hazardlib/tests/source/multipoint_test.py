@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import numpy
-from openquake.hazardlib.source import split_source
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.source.multi import MultiPointSource
@@ -44,10 +43,8 @@ class MultiPointTestCase(unittest.TestCase):
                                'Active Shallow Crust',
                                mmfd, 2.0, PeerMSR(), 1.0,
                                tom, 10, 20, npd, hd, mesh)
-        mps.src_group_id = 1
-
         # test the splitting
-        splits = list(split_source(mps))
+        splits = list(mps)
         self.assertEqual(len(splits), 2)
         for split in splits:
             self.assertEqual(split.src_group_id, mps.src_group_id)
