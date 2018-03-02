@@ -25,7 +25,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.gsim_table import (
+from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, AmplificationTable, hdf_arrays_to_dict)
 from openquake.hazardlib.gsim.base import (
     RuptureContext, SitesContext, DistancesContext)
