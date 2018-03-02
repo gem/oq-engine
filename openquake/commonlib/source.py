@@ -32,7 +32,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, writetmp, AccumDict
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
-from openquake.hazardlib.gsim.gsim_table import GMPETable
+from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
 
 

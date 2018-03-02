@@ -25,24 +25,38 @@ class ObsoleteFormat(Exception):
     pass
 
 
-@sap.Script
-def renumber_sources(smlt_file):
-    """
-    Renumber all the sources in all XML files.
-    """
-    logging.basicConfig(level=logging.INFO)
-    number = 1
-    for path in readinput.get_paths(smlt_file):
-        logging.info('Renumbering %s', path)
+def renumber(paths, number):
+    srcs = []
+    roots = []
+    for path in paths:
+        logging.info('Reading %s', path)
         root = nrml.read(path)
         if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
             raise ObsoleteFormat('Please use oq upgrade_nrml .')
-        [smodel] = root
-        for sgroup in smodel:
+        srcs.extend(src['id'] for sgroup in root[0] for src in sgroup)
+        roots.append(root)
+    if len(srcs) == len(set(srcs)):
+        # there are no duplicated source IDs
+        return
+    for path, root in zip(paths, roots):
+        logging.info('Renumbering %s', path)
+        for sgroup in root[0]:
             for src in sgroup:
                 src['id'] = str(number)
                 number += 1
         with open(path, 'wb') as f:
             nrml.write(root, f)
+
+
+@sap.Script
+def renumber_sources(smlt_file):
+    """
+    Renumber the sources belonging to the same source model, even if split
+    in multiple files, to avoid duplicated source IDs. NB: it changes the
+    XML files in place, without making a backup, so be careful.
+    """
+    logging.basicConfig(level=logging.INFO)
+    for paths in readinput.gen_sm_paths(smlt_file):
+        renumber(paths, number=1)
 
 renumber_sources.arg('smlt_file', 'source model logic tree file')

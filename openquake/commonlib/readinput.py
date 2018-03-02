@@ -147,25 +147,30 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        inputs['source'] = sorted(get_paths(smlt))
+        inputs['source'] = []
+        for paths in gen_sm_paths(smlt):
+            inputs['source'].extend(paths)
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
     return params
 
 
-def get_paths(smlt):
+def gen_sm_paths(smlt):
     """
-    Extract the path names for the source models listed in the smlt file
+    Yields the path names for the source models listed in the smlt file,
+    a block at the time.
     """
     base_path = os.path.dirname(smlt)
     for model in source.collect_source_model_paths(smlt):
+        paths = []
         for name in model.split():
             if os.path.isabs(name):
                 raise InvalidFile('%s: %s must be a relative path' %
                                   (smlt, name))
             fname = os.path.abspath(os.path.join(base_path, name))
             if os.path.exists(fname):  # consider only real paths
-                yield fname
+                paths.append(fname)
+        yield paths
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
