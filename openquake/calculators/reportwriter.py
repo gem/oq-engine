@@ -171,7 +171,7 @@ def build_report(job_ini, output_dir=None):
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
         calc.pre_execute()
-    if hasattr(calc, '_composite_source_model'):
+    if hasattr(calc, 'csm'):
         calc.datastore['csm_info'] = calc.csm.info
     rw = ReportWriter(calc.datastore)
     rw.make_report()
