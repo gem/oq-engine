@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Added a warning when reading the sources if .count_ruptures() is
+    suspiciously slow
+  * Changed the splitting logic: now all sources are split upfront
+  * Improved the splitting of complex fault sources
   * Added a script to renumber source models with non-unique source IDs
   * Made the datastore of calculations using GMPETables relocatable; in
     practice you can run the Canada model on a cluster, copy the .hdf5 on

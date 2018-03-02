@@ -540,6 +540,14 @@ def get_composite_source_model(oqparam, in_memory=True):
                 raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
+    for sm in csm.source_models:
+        srcs = []
+        for sg in sm.src_groups:
+            srcs.extend(sg)
+        if len(set(srcs)) < len(srcs):
+            raise nrml.DuplicatedID(
+                'Found duplicated source IDs: use oq info %s',
+                sm, source_model_lt.fname)
     return csm
 
 
