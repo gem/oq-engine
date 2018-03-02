@@ -6,8 +6,14 @@ of parameters in the `job.ini` file. There are a few parameters that are really
 important when it comes to the performance of a computation. Here is an
 (incomplete) list of them.
 
+region_grid_spacing:
+  The hazard sites can be specifying by giving a region and a grid step.
+  Clearly the size of the computation is *quadratic with the inverse grid
+  step*: a calculation with `region_grid_spacing=1` will be 100 times slower
+  than a computation with `region_grid_spacing=10`.
+
 area_source_discretization:
-  Before doing any computation, area sources are converted into point sources,
+  Area sources are converted into point sources,
   by splitting the area region into a grid of points. The
   `area_source_discretization` (in km) is the step of the grid.
   The computation time is inversely *proportional to the square of the
@@ -16,7 +22,6 @@ area_source_discretization:
   (approximately) *four times*
   more time than a calculation with `area_source_discretization=5`.
 
-
 rupture_mesh_spacing:
    Fault sources are computed by converting the geometry of the fault into
    a mesh of points; the `rupture_mesh_spacing` is the parameter determining
@@ -24,7 +29,6 @@ rupture_mesh_spacing:
    the inverse mesh spacing. Using a `rupture_mesh_spacing=2` instead of
    `rupture_mesh_spacing=5` will make your calculation (approximately)
    6.25 times slower.
-
 
 complex_fault_mesh_spacing:
    The same as the `rupture_mesh_spacing`, but for complex fault sources.
