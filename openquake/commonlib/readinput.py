@@ -499,6 +499,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             logging.info('%s has been considered %d times', fname, hits)
 
 
+def getid(src):
+    try:
+        return src.source_id
+    except AttributeError:
+        return src['id']
+
+
 def get_composite_source_model(oqparam, in_memory=True):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -511,12 +518,6 @@ def get_composite_source_model(oqparam, in_memory=True):
     smodels = []
     grp_id = 0
     idx = 0
-
-    def getid(src):
-        try:
-            return src.source_id
-        except AttributeError:
-            return src['id']
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
     for source_model in get_source_models(
@@ -543,7 +544,7 @@ def get_composite_source_model(oqparam, in_memory=True):
     for sm in csm.source_models:
         srcs = []
         for sg in sm.src_groups:
-            srcs.extend(sg)
+            srcs.extend(map(getid, sg))
         if len(set(srcs)) < len(srcs):
             raise nrml.DuplicatedID(
                 'Found duplicated source IDs: use oq info %s',
