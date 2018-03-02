@@ -98,6 +98,7 @@ class PSHACalculator(base.HazardCalculator):
             for srcid, (srcweight, nsites, calc_time, split) in \
                     pmap_by_grp.calc_times.items():
                 info = self.csm.infos[srcid]
+                info.nsites += nsites
                 info.calc_time += calc_time
                 if not info.split_time:
                     info.split_time = self.split_time[srcid]
