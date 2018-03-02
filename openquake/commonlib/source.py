@@ -884,7 +884,7 @@ class CompositeSourceModel(collections.Sequence):
         start = 0
         for sg in self.src_groups:
             for src in sg:
-                nr = src.count_ruptures()
+                nr = src.num_ruptures
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
