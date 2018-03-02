@@ -700,25 +700,20 @@ class CompositeSourceModel(collections.Sequence):
         """
         Split all sources in the composite source model.
 
-        :returns:
-            a dictionary source_id -> split_time and a Counter
-            source_id -> number of occurrences in the composite model
+        :returns: a dictionary source_id -> split_time
         """
-        counter = collections.Counter()
         split_time = AccumDict()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
                 for src in src_group:
                     split_time[src.source_id] = 0
-                    counter[src.source_id] += 1
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
                     srcs, stime = split_sources(src_group)
                     src_group.sources = srcs
                     split_time += stime
-        return split_time, {src_id: count for src_id, count in counter.items()
-                            if count > 1}
+        return split_time
 
     def grp_by_src(self):
         """
