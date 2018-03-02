@@ -39,3 +39,11 @@ complex_fault_mesh_spacing:
    `complex_fault_mesh_spacing=10` for complex fault sources, your computation
    can become upt *25 times faster*, assuming the complex fault sources
    are dominating the computation time.
+
+ground_motion_correlation_model:
+   Event based/scenario calculations with a ground motion correlation model
+   are severely limited with the size of the correlation matrix. If you have
+   thousands of hazard sites it will likely be impossible to run the
+   calculation, because you will run out of memory. Just reduce the number
+   of sites or remove the correlation model. If you remove the correlation,
+   the calculation of the GMFs will become *orders of magnitude faster*.
