@@ -31,12 +31,19 @@ from openquake.baselib.slots import with_slots
 MINWEIGHT = 100
 
 
-def _split_start_stop(n, chunksize):
+def split(src, chunksize=MINWEIGHT):
+    """
+    Split a complex fault source in chunks of at most MAXWEIGHT ruptures
+    """
     start = 0
-    while start < n:
-        stop = start + chunksize
-        yield start, min(stop, n)
+    while start < src.num_ruptures:
+        stop = min(start + chunksize, src.num_ruptures)
+        s = copy.copy(src)
+        s.start = start
+        s.stop = stop
+        s.num_ruptures = stop - start
         start = stop
+        yield s
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
@@ -273,24 +280,12 @@ class ComplexFaultSource(ParametricSeismicSource):
         if self.num_ruptures <= MINWEIGHT:
             yield self  # not splittable
             return
-        # split by magnitude
         mag_rates = [(mag, rate) for (mag, rate) in
                      self.mfd.get_annual_occurrence_rates() if rate]
-        if len(mag_rates) > 1:
-            for i, (mag, rate) in enumerate(mag_rates):
-                src = copy.copy(self)
-                del src._nr
-                src.mfd = mfd.ArbitraryMFD([mag], [rate])
-                src.num_ruptures = self._nr[i]
-                yield src
-            return
-        # if there is a single magnitude split by slice of ruptures
-        i = 0
-        for start, stop in _split_start_stop(self.num_ruptures, MINWEIGHT):
+        for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
             del src._nr
-            src.start = start
-            src.stop = stop
-            src.num_ruptures = stop - start
-            i += 1
-            yield src
+            src.mfd = mfd.ArbitraryMFD([mag], [rate])
+            src.num_ruptures = self._nr[i]
+            for s in split(src):
+                yield s
