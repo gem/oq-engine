@@ -740,7 +740,7 @@ def export_disagg_xml(ekey, dstore):
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
-        poe = attrs['poe_agg']
+        poe_agg = attrs['poe_agg']
         iml = attrs['iml']
         imt, sa_period, sa_damping = from_string(attrs['imt'])
         fname = dstore.export_path(key + '.xml')
@@ -757,9 +757,9 @@ def export_disagg_xml(ekey, dstore):
             eps_bin_edges=attrs['eps_bin_edges'],
             tectonic_region_types=trts,
         )
-        data = [
-            DisaggMatrix(poe[i], iml, dim_labels, matrix['_'.join(dim_labels)])
-            for i, dim_labels in enumerate(disagg.pmf_map)]
+        data = []
+        for poe, k in zip(poe_agg, oq.disagg_outputs or disagg.pmf_map):
+            data.append(DisaggMatrix(poe, iml, k.split('_'), matrix[k]))
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
@@ -805,7 +805,7 @@ def save_disagg_to_csv(metadata, matrices):
 @export.add(('disagg', 'csv'), ('disagg-stats', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
-    disagg_outputs = oq.disagg_outputs or valid.disagg_outs
+    disagg_outputs = oq.disagg_outputs or disagg.pmf_map
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     group = dstore[ekey[0]]
     fnames = []
