@@ -51,7 +51,7 @@ def renumber(paths, number):
 @sap.Script
 def renumber_sources(smlt_file):
     """
-    Renumber the sources belowing to the same source model, even if split
+    Renumber the sources belonging to the same source model, even if split
     in multiple files, to avoid duplicated source IDs. NB: it changes the
     XML files in place, without making a backup, so be careful.
     """
