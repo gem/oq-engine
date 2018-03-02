@@ -57,22 +57,9 @@ def split_sources(srcs):
     sources = []
     split_time = {}  # src_id -> dt
     for src in srcs:
-        clsname = src.__class__.__name__
         t0 = time.time()
         splits = list(src)
-        split_time[src.source_id] = dt = time.time() - t0
-        if dt > 30:
-            if 'Area' in clsname:
-                logging.warn('Splitting %s took %d seconds, perhaps the '
-                             'area discretization is too small', src, dt)
-            elif 'ComplexFault' in clsname:
-                logging.warn('Splitting %s took %d seconds, perhaps the compl'
-                             'ex_fault_mesh_spacing is too small', src, dt)
-            elif 'SimpleFault' in clsname:
-                logging.warn('Splitting %s took %d seconds, perhaps the '
-                             'rupture_mesh_spacing is too small', src, dt)
-            else:
-                logging.warn('Splitting %s took %d seconds??', src, dt)
+        split_time[src.source_id] = time.time() - t0
         sources.extend(splits)
         if len(splits) > 1:
             has_serial = hasattr(src, 'serial')
@@ -80,7 +67,6 @@ def split_sources(srcs):
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
                 split.src_group_id = src.src_group_id
-                split.num_ruptures = split.count_ruptures()
                 split.ngsims = src.ngsims
                 if has_serial:
                     nr = split.num_ruptures
