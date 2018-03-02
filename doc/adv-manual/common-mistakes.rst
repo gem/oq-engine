@@ -7,7 +7,6 @@ important when it comes to the performance of a computation. Here is an
 (incomplete) list of them.
 
 area_source_discretization:
-
   Before doing any computation, area sources are converted into point sources,
   by splitting the area region into a grid of points. The
   `area_source_discretization` (in km) is the step of the grid.
@@ -19,7 +18,6 @@ area_source_discretization:
 
 
 rupture_mesh_spacing:
-
    Fault sources are computed by converting the geometry of the fault into
    a mesh of points; the `rupture_mesh_spacing` is the parameter determining
    the size of the mesh. Again, the computation time is *quadratic* with
@@ -29,7 +27,6 @@ rupture_mesh_spacing:
 
 
 complex_fault_mesh_spacing:
-
    The same as the `rupture_mesh_spacing`, but for complex fault sources.
    If not specified, the value of `rupture_mesh_spacing` will be used.
    This is a common cause of problems; if you have performance issue you
