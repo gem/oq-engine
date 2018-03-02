@@ -312,8 +312,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         SimpleFaultSurface.check_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip + increment,
-            self.rupture_mesh_spacing
-        )
+            self.rupture_mesh_spacing)
         self.dip += increment
 
     def modify_set_dip(self, dip):
@@ -325,8 +324,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         SimpleFaultSurface.check_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
-            self.lower_seismogenic_depth, dip, self.rupture_mesh_spacing
-        )
+            self.lower_seismogenic_depth, dip, self.rupture_mesh_spacing)
         self.dip = dip
 
     def __iter__(self):
@@ -337,6 +335,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             return
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
+            del src._nr
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
             yield src
