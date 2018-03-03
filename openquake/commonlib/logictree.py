@@ -1228,13 +1228,13 @@ class GsimLogicTree(object):
             hdf5path = os.path.join(dirname, gmpe_table)
             with hdf5.File(hdf5path, 'r') as f:
                 for group in f:
-                    name = 'gmpe_table/%s/%s' % (gmpe_table, group)
+                    name = '%s/%s' % (gmpe_table, group)
                     if hasattr(f[group], 'value'):  # dataset, not group
                         dstore[name] = f[group].value
                         for k, v in f[group].attrs.items():
                             dstore[name].attrs[k] = v
                     else:
-                        grp = dest.require_group('gmpe_table/%s' % gmpe_table)
+                        grp = dest.require_group(gmpe_table)
                         f.copy(group, grp)
 
     def __str__(self):
