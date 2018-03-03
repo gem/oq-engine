@@ -1,10 +1,16 @@
 Common mistakes: bad configuration parameters
 ========================================================
 
-By far, the most common source of problems with the engine is the choice
-of parameters in the `job.ini` file. There are a few parameters that are really
-important when it comes to the performance of a computation. Here is an
-(incomplete) list of them.
+By far, the most common source of problems with the engine is the
+choice of parameters in the `job.ini` file. It is very easy to make
+mistakes, because the users typically copy the parameters from the
+OpenQuake demos. However, the demos are meant to show off all of the
+features of the engine in simple calculations, they are not recommended
+for getting performance in large calculations.
+
+In large calculations, it is essential to fine tune a few parameters
+that are really important for performance. Here is a list of
+parameters relevant for all calculators:
 
 maximum_distance:
    The larger the maximum_distance, the more sources and ruptures will be 
@@ -44,14 +50,6 @@ complex_fault_mesh_spacing:
   can become up to 25 times faster, assuming the complex fault sources
   are dominating the computation time.
 
-ground_motion_correlation_model:
-  Event based/scenario calculations with a ground motion correlation model
-  are severely limited with the size of the correlation matrix. If you have
-  thousands of hazard sites it will likely be impossible to run the
-  calculation, because you will run out of memory. Just reduce the number
-  of sites or remove the correlation model. If you remove the correlation,
-  the calculation of the GMFs will become orders of magnitude faster.
-
 concurrent_tasks:
    This is a parameter that you should not set, since in most cases the
    engine will figure out the correct value to use automatically. However,
@@ -60,8 +58,15 @@ concurrent_tasks:
    If you run out of memory, increasing this parameter will help, since
    you will produce smaller tasks.
 
+Then there are parameters relevant for specific calculators.
 
-Then there are parameters specific to individual calculators.
+ground_motion_correlation_model:
+  Event based/scenario calculations with a ground motion correlation model
+  are severely limited with the size of the correlation matrix. If you have
+  thousands of hazard sites it will likely be impossible to run the
+  calculation, because you will run out of memory. Just reduce the number
+  of sites or remove the correlation model. If you remove the correlation,
+  the calculation of the GMFs will become orders of magnitude faster.
 
 asset_loss_table:
    Running an event based risk calculation with asset_loss_table=true
