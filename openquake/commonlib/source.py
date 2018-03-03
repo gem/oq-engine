@@ -712,6 +712,9 @@ class CompositeSourceModel(collections.Sequence):
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
                     srcs, stime = split_sources(src_group)
+                    for src in src_group:
+                        s = src.source_id
+                        self.infos[s].split_time = stime[s]
                     src_group.sources = srcs
                     split_time += stime
         return split_time
