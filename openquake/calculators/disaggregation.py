@@ -34,7 +34,7 @@ from openquake.baselib import parallel
 from openquake.calculators import getters
 from openquake.calculators import base, classical
 
-
+weight = operator.attrgetter('weight')
 DISAGG_RES_FMT = '%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
 
 
@@ -215,7 +215,7 @@ producing too small PoEs.'''
         tl = oq.truncation_level
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
                                   use_rtree=False)
-        csm = self.csm.filter(src_filter)  # fine filtering
+        csm = self.csm.filter(src_filter, weight)  # fine filtering
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
@@ -276,8 +276,7 @@ producing too small PoEs.'''
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
-                for block in block_splitter(
-                        sources, maxweight, operator.attrgetter('weight')):
+                for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,
                          oq, mon))

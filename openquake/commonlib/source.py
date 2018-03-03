@@ -748,13 +748,15 @@ class CompositeSourceModel(collections.Sequence):
                          for src in sg.sources)
         return new
 
-    def filter(self, src_filter, weight=weight):  # called once per tile
+    def filter(self, src_filter, weight):  # called once per tile
         """
         Generate a new CompositeSourceModel by filtering the sources on
-        the given site collection.
+        the given site collection. Also sets the .weight attribute of the
+        new model.
 
-        :param sitecol: a SiteCollection instance
-        :para src_filter: a SourceFilter instance
+        :param src_filter: a SourceFilter instance
+        :param weight: source weight function
+        :returns: a new CompositeSourceModel instance
         """
         ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
         source_models = []
