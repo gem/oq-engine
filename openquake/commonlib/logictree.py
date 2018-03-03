@@ -1191,7 +1191,7 @@ class GsimLogicTree(object):
                 ','.join(self.tectonic_region_types))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or node_from_xml(fname).logicTree
-        self.gmpe_tables = []  # populated right below
+        self.gmpe_tables = set() # populated right below
         self.all_trts, self.branches = self._build_trts_branches()
         if tectonic_region_types and not self.branches:
             raise InvalidLogicTree(
@@ -1224,7 +1224,7 @@ class GsimLogicTree(object):
         """
         dest = dstore.hdf5
         dirname = os.path.dirname(self.fname)
-        for gmpe_table in self.gmpe_tables:
+        for gmpe_table in sorted(self.gmpe_tables):
             hdf5path = os.path.join(dirname, gmpe_table)
             with hdf5.File(hdf5path, 'r') as f:
                 for group in f:
@@ -1318,7 +1318,7 @@ class GsimLogicTree(object):
                             # a bit hackish: set the GMPE_DIR equal to the
                             # directory where the gsim_logic_tree file is
                             GMPETable.GMPE_DIR = os.path.dirname(self.fname)
-                            self.gmpe_tables.append(uncertainty['gmpe_table'])
+                            self.gmpe_tables.add(uncertainty['gmpe_table'])
                         try:
                             gsim = valid.gsim(gsim_name, **uncertainty.attrib)
                         except:
