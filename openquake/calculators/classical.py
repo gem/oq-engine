@@ -171,8 +171,11 @@ class PSHACalculator(base.HazardCalculator):
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
-            with self.monitor('prefiltering'):
+            if num_tiles > 1:
                 logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
+            else:
+                logging.info('Prefiltering sources')
+            with self.monitor('prefiltering'):
                 src_filter = SourceFilter(tile, oq.maximum_distance)
                 csm = self.csm.filter(src_filter)
             if tile_i == 1:  # set it only on the first tile
