@@ -215,7 +215,7 @@ producing too small PoEs.'''
         tl = oq.truncation_level
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
                                   use_rtree=False)
-        csm = self.csm.filter(src_filter, weight)  # fine filtering
+        csm = self.csm.filter(src_filter)  # fine filtering
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
@@ -255,7 +255,7 @@ producing too small PoEs.'''
 
         # build all_args
         all_args = []
-        maxweight = csm.get_maxweight(oq.concurrent_tasks)
+        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
         mon = self.monitor('disaggregation')
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
