@@ -174,7 +174,7 @@ class PSHACalculator(base.HazardCalculator):
             with self.monitor('prefiltering'):
                 logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
                 src_filter = SourceFilter(tile, oq.maximum_distance)
-                csm = self.csm.filter(src_filter)
+                csm = self.csm.filter(src_filter, weight)
                 totweight += csm.weight
             if tile_i == 1:  # set it only on the first tile
                 maxweight = csm.get_maxweight(tasks_per_tile, minweight)
