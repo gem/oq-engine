@@ -262,8 +262,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
         def weight(src):
             return src.num_ruptures * src.RUPTURE_WEIGHT
-        csm = self.csm.filter(src_filter, weight)
-        maxweight = csm.get_maxweight(oq.concurrent_tasks or 1)
+        csm = self.csm.filter(src_filter)
+        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks or 1)
         logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
