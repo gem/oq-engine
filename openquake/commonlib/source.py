@@ -748,7 +748,7 @@ class CompositeSourceModel(collections.Sequence):
                          for src in sg.sources)
         return new
 
-    def filter(self, src_filter):  # called once per tile
+    def filter(self, src_filter, weight=weight):  # called once per tile
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
@@ -758,7 +758,7 @@ class CompositeSourceModel(collections.Sequence):
         """
         ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
         source_models = []
-        weight = 0
+        totweight = 0
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
@@ -767,14 +767,14 @@ class CompositeSourceModel(collections.Sequence):
                 for src, _sites in src_filter(src_group.sources):
                     sg.sources.append(src)
                     src.ngsims = ngsims[src.tectonic_region_type]
-                    weight += src.weight
+                    totweight += weight(src)
                 src_groups.append(sg)
             newsm = logictree.SourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
-        new.weight = new.info.tot_weight = weight
+        new.weight = new.info.tot_weight = totweight
         new.src_filter = src_filter
         return new
 
