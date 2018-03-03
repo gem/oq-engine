@@ -9,7 +9,7 @@ features of the engine in simple calculations, they are not recommended
 for getting performance in large calculations.
 
 In large calculations, it is essential to fine tune a few parameters
-that are really important for performance. Here is a list of
+that are really important. Here is a list of
 parameters relevant for all calculators:
 
 maximum_distance:
@@ -19,7 +19,7 @@ maximum_distance:
    calculation with `maximum_distance=200` km.
 
 region_grid_spacing:
-  The hazard sites can be specifying by giving a region and a grid step.
+  The hazard sites can be specified by giving a region and a grid step.
   Clearly the size of the computation is quadratic with the inverse grid
   step: a calculation with `region_grid_spacing=1` will be up to 100 times
   slower than a computation with `region_grid_spacing=10`.
@@ -36,7 +36,7 @@ area_source_discretization:
 rupture_mesh_spacing:
   Fault sources are computed by converting the geometry of the fault into
   a mesh of points; the `rupture_mesh_spacing` is the parameter determining
-  the size of the mesh. Again, the computation time is quadratic with
+  the size of the mesh. The computation time is quadratic with
   the inverse mesh spacing. Using a `rupture_mesh_spacing=2` instead of
   `rupture_mesh_spacing=5` will make your calculation up to 6.25 times slower.
 
@@ -52,7 +52,7 @@ complex_fault_mesh_spacing:
 
 concurrent_tasks:
    This is a parameter that you should not set, since in most cases the
-   engine will figure out the correct value to use automatically. However,
+   engine will figure out the correct value to use. However,
    in some cases, you may be forced to set it. Typically this happens in
    event based calculations, when computing the ground motion fields.
    If you run out of memory, increasing this parameter will help, since
