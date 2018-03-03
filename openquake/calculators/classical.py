@@ -174,14 +174,17 @@ class PSHACalculator(base.HazardCalculator):
             with self.monitor('prefiltering'):
                 logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
                 src_filter = SourceFilter(tile, oq.maximum_distance)
-                csm = self.csm.filter(src_filter, weight)
-                totweight += csm.weight
+                csm = self.csm.filter(src_filter)
             if tile_i == 1:  # set it only on the first tile
-                maxweight = csm.get_maxweight(tasks_per_tile, minweight)
+                maxweight = csm.get_maxweight(
+                    weight, tasks_per_tile, minweight)
                 if maxweight == minweight:
                     logging.info('Using minweight=%d', minweight)
                 else:
                     logging.info('Using maxweight=%d', maxweight)
+                totweight += csm.info.tot_weight
+            else:
+                totweight += csm.get_weight(weight)
             if csm.has_dupl_sources and not opt:
                 logging.warn('Found %d duplicated sources, use oq info',
                              csm.has_dupl_sources)
@@ -192,7 +195,7 @@ class PSHACalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(sg.sources)
             # NB: csm.get_sources_by_trt discards the mutex sources
-            for trt, sources in csm.get_sources_by_trt(opt).items():
+            for trt, sources in csm.get_sources_by_trt().items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
                 for block in block_splitter(sources, maxweight, weight):
                     yield block, src_filter, gsims, param, monitor

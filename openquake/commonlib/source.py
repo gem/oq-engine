@@ -387,7 +387,7 @@ class CompositionInfo(object):
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
                    tot_weight=0)
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models, tot_weight):
+    def __init__(self, gsim_lt, seed, num_samples, source_models, tot_weight=0):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
@@ -673,17 +673,17 @@ class CompositeSourceModel(collections.Sequence):
         a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
-    def __init__(self, gsim_lt, source_model_lt, source_models):
+    def __init__(self, gsim_lt, source_model_lt, source_models,
+                 optimize_same_id):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
+        self.optimize_same_id = optimize_same_id
         self.source_info = ()
-        self.weight = 0
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.source_models],
-            self.weight)
+            [sm.get_skeleton() for sm in self.source_models])
         # dictionary src_group_id, source_id -> SourceInfo,
         # populated by the .split_in_blocks method
         self.infos = {}
@@ -701,12 +701,14 @@ class CompositeSourceModel(collections.Sequence):
 
         :returns: a dictionary source_id -> split_time
         """
+        ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
         split_time = AccumDict()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
                 for src in src_group:
                     split_time[src.source_id] = 0
+                    src.ngsims = ngsims[src.tectonic_region_type]
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
                     srcs, stime = split_sources(src_group)
@@ -742,25 +744,21 @@ class CompositeSourceModel(collections.Sequence):
         sm = self.source_models[sm_id]
         if self.source_model_lt.num_samples:
             self.source_model_lt.num_samples = sm.samples
-        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm])
+        new = self.__class__(self.gsim_lt, self.source_model_lt, [sm],
+                             self.optimize_same_id)
         new.sm_id = sm_id
-        new.weight = sum(src.weight for sg in sm.src_groups
-                         for src in sg.sources)
         return new
 
-    def filter(self, src_filter, weight):  # called once per tile
+    def filter(self, src_filter):  # called once per tile
         """
         Generate a new CompositeSourceModel by filtering the sources on
-        the given site collection. Also sets the .weight attribute of the
-        new model.
+        the given site collection.
 
         :param src_filter: a SourceFilter instance
         :param weight: source weight function
         :returns: a new CompositeSourceModel instance
         """
-        ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
         source_models = []
-        totweight = 0
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
@@ -768,17 +766,28 @@ class CompositeSourceModel(collections.Sequence):
                 sg.sources = []
                 for src, _sites in src_filter(src_group.sources):
                     sg.sources.append(src)
-                    src.ngsims = ngsims[src.tectonic_region_type]
-                    totweight += weight(src)
                 src_groups.append(sg)
             newsm = logictree.SourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
-        new.weight = new.info.tot_weight = totweight
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
+                             self.optimize_same_id)
         new.src_filter = src_filter
         return new
+
+    def get_weight(self, weight):
+        """
+        :param weight: source weight function
+        :returns: total weight of the source model
+        """
+        tot_weight = 0
+        for srcs in self.get_sources_by_trt().values():
+            tot_weight += sum(map(weight, srcs))
+        for grp in self.gen_mutex_groups():
+            tot_weight += sum(map(weight, grp))
+        self.info.tot_weight = tot_weight
+        return tot_weight
 
     @property
     def src_groups(self):
@@ -836,7 +845,7 @@ class CompositeSourceModel(collections.Sequence):
                         sources.append(src)
         return sources
 
-    def get_sources_by_trt(self, optimize_same_id_sources=False):
+    def get_sources_by_trt(self):
         """
         Build a dictionary TRT string -> sources. Sources of kind "mutex"
         (if any) are silently discarded.
@@ -846,22 +855,19 @@ class CompositeSourceModel(collections.Sequence):
             for grp in sm.src_groups:
                 if grp.src_interdep != 'mutex':
                     acc[grp.trt].extend(grp)
-        if optimize_same_id_sources is False:
+        if self.optimize_same_id is False:
             return acc
         # extract a single source from multiple sources with the same ID
         dic = {}
-        weight = 0
         for trt in acc:
             dic[trt] = []
             for grp in groupby(acc[trt], lambda x: x.source_id).values():
                 src = grp[0]
-                weight += src.weight
                 if len(grp) > 1 and not isinstance(src.src_group_id, list):
                     # src.src_group_id could be a list because grouped in a
                     # previous step (this may happen in presence of tiles)
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
-        self.weight = weight
         return dic
 
     def get_num_sources(self):
@@ -884,12 +890,13 @@ class CompositeSourceModel(collections.Sequence):
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
-    def get_maxweight(self, concurrent_tasks, minweight=MINWEIGHT):
+    def get_maxweight(self, weight, concurrent_tasks, minweight=MINWEIGHT):
         """
         Return an appropriate maxweight for use in the block_splitter
         """
+        totweight = self.get_weight(weight)
         ct = concurrent_tasks or 1
-        mw = math.ceil(self.weight / ct)
+        mw = math.ceil(totweight / ct)
         return max(mw, minweight)
 
     def add_infos(self, sources):
