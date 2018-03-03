@@ -100,8 +100,6 @@ class PSHACalculator(base.HazardCalculator):
                 info = self.csm.infos[srcid]
                 info.num_sites += nsites
                 info.calc_time += calc_time
-                if not info.split_time:
-                    info.split_time = self.split_time[srcid]
                 info.num_split += split
         return acc
 
