@@ -136,7 +136,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         # loss curves stats are generated always
         stats = [encode(n) for (n, f) in self.oqparam.risk_stats()]
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
-        avg_losses = numpy.zeros((self.A, self.R, self.L * self.I), F32)
+        avg_losses = numpy.zeros((self.A, self.S, self.L * self.I), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:
             stat_curves_lt = stat_curves[ltypes[l]]
             for s in range(self.S):
