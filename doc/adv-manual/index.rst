@@ -13,5 +13,7 @@ Contents:
 
    introduction
    common-mistakes
+   effective-realizations       
    hazard
    risk
+   event-based-with-large-logic-tree
