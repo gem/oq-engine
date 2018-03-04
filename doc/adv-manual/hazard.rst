@@ -1,5 +1,5 @@
 Tips for running large hazard calculations
-========================================
+==========================================
 
 Running large hazard calculations, especially ones with large logic
 trees, is an art, and there are various techniques that can be used to
