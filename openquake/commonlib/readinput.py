@@ -897,7 +897,7 @@ class Exposure(object):
             with context(param['fname'], occupancy):
                 occupants = 'occupants_%s' % occupancy['period']
                 values[occupants] = occupancy['occupants']
-                tot_occupants += values[occupants]
+                tot_occupants += float(values[occupants])
         if occupancies:  # store average occupants
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset_node.get('area', 1))
