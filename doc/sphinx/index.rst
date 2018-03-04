@@ -13,8 +13,6 @@ Contents:
 
    intro
    architecture
-   effective-realizations
-   event-based-with-large-logic-tree
    how-to-change-the-XML-for-sources
    internals
               
