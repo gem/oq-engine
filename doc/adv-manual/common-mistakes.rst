@@ -8,6 +8,9 @@ OpenQuake demos. However, the demos are meant to show off all of the
 features of the engine in simple calculations, they are not recommended
 for getting performance in large calculations.
 
+The quadratic parameters
+----------------------------
+
 In large calculations, it is essential to fine tune a few parameters
 that are really important. Here is a list of
 parameters relevant for all calculators:
@@ -50,6 +53,44 @@ complex_fault_mesh_spacing:
   can become up to 25 times faster, assuming the complex fault sources
   are dominating the computation time.
 
+event_based/scenario parameters
+--------------------------------
+
+ground_motion_correlation_model:
+  Event based/scenario calculations with a ground motion correlation model
+  are severely limited by the size of the correlation matrix. If you have
+  thousands of hazard sites it will likely be impossible to run the
+  calculation, because you will run out of memory. Just reduce the number
+  of sites or remove the correlation model. If you remove the correlation,
+  the calculation of the GMFs will become orders of magnitude faster.
+
+minimum_intensity:
+  Event based/scenario calculators honors a `minimum_intensity` parameter,
+  i.e. ground motion fields below the minimum intensity are  
+  discarded. For instance, if you add to your `job.ini` file a line
+  ``minimum_intensity={'PGA': 0.05, 'SA(0.1)': 0.05}`` all ground motion
+  fields below the value of 0.05 g will be discarded. This parameter has  
+  a huge effect on memory consumption and data transfer: a calculation
+  which is impossible without specifying it can become possible after specifying
+  a carefully chosen value for it.
+
+event_based_risk parameters
+------------------------------
+
+asset_loss_table:
+   Running an event based risk calculation with asset_loss_table=true
+   will use a lot of memory. Make sure this parameter is false (the default)
+   unless you really need it. At the moment it is needed if you want to
+   compute loss curves and maps for all assets of your exposure.
+
+  
+concurrent_tasks parameter
+---------------------------
+
+There is a last parameter which is worthy of mention, because of its
+effect on the memory occupation in the risk calculators and in the
+event based hazard calculator.
+
 concurrent_tasks:
    This is a parameter that you should not set, since in most cases the
    engine will figure out the correct value to use. However,
@@ -58,20 +99,3 @@ concurrent_tasks:
    If you run out of memory, increasing this parameter will help, since
    you will produce smaller tasks.
 
-Then there are parameters relevant for specific calculators.
-
-ground_motion_correlation_model:
-  Event based/scenario calculations with a ground motion correlation model
-  are severely limited with the size of the correlation matrix. If you have
-  thousands of hazard sites it will likely be impossible to run the
-  calculation, because you will run out of memory. Just reduce the number
-  of sites or remove the correlation model. If you remove the correlation,
-  the calculation of the GMFs will become orders of magnitude faster.
-
-asset_loss_table:
-   Running an event based risk calculation with asset_loss_table=true
-   will use a lot of memory. Make sure this parameter is false (the default)
-   unless you really need it. At the moment it is needed if you want to
-   compute individual loss curves and maps.
-
-  
