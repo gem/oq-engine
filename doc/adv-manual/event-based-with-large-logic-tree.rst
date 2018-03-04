@@ -1,3 +1,12 @@
+Extra tips specific to event based calculations
+===============================================
+
+The event based calculators are the most complex calculators in the engine
+and event based calculations are the ones more in need of performance tips.
+This is why we decided to write a whole chapter on them, explaining the
+logic behind the scenes in order to understand which is the better way
+to run an event based calculations.
+
 The concept of rupture collection
 -----------------------------------------------------------
 
