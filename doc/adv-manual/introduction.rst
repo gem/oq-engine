@@ -3,7 +3,7 @@ Introduction
 
 If you have just started using the OpenQuake engine, and the only thing
 you have tried are the OpenQuake demos, this manual is NOT for you. Beginners
-should study the [official manual](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual). This manual is for advanced users, i.e.
+should study the `official manual <https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual>`_. This manual is for advanced users, i.e.
 people that already know how to use the engine, but are running *large*
 calculations and have trouble performing them.
 
@@ -18,10 +18,10 @@ times the calculation is genuinely large and the only solution is to
 buy a larger machine, or to ask the OpenQuake developers to optimize the
 engine for the specific calculation that is giving issues.
 
-The most common mistakes made the users are the following:
+The most common mistakes are the following:
 
 1. trying to run the calculation directly without a run of
-   `oq info --report job.ini` first. The first things to do when
+   ``oq info --report job.ini`` first. The first things to do when
    do when you have a large calculation is to generate the report,
    that will tell you essential information to estimate the size of the
    full calculation, in particular the number of hazard sites,
@@ -37,7 +37,7 @@ The most common mistakes made the users are the following:
    event based one.
 
 3. Using an exposure which is not aggregated enough. You can easily gain
-   *orders of magnitude* in speed while doing a risk calculation
+   orders of magnitude in speed while doing a risk calculation
    if you aggregate the assets on a small number of hazard sites. For
    instance, an exposure with 1 million assets aggregated on 2000 sites
    is not a problem; but if you do not aggregate, you will have a computation
