@@ -740,7 +740,7 @@ def export_disagg_xml(ekey, dstore):
         matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
-        poe = attrs['poe_agg']
+        poe_agg = attrs['poe_agg']
         iml = attrs['iml']
         imt, sa_period, sa_damping = from_string(attrs['imt'])
         fname = dstore.export_path(key + '.xml')
@@ -757,9 +757,9 @@ def export_disagg_xml(ekey, dstore):
             eps_bin_edges=attrs['eps_bin_edges'],
             tectonic_region_types=trts,
         )
-        data = [
-            DisaggMatrix(poe[i], iml, dim_labels, matrix['_'.join(dim_labels)])
-            for i, dim_labels in enumerate(disagg.pmf_map)]
+        data = []
+        for poe, k in zip(poe_agg, oq.disagg_outputs or disagg.pmf_map):
+            data.append(DisaggMatrix(poe, iml, k.split('_'), matrix[k]))
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
@@ -775,7 +775,7 @@ def save_disagg_to_csv(metadata, matrices):
         '%s=%s' % (key, value) for key, value in metadata.items()
         if value is not None and key not in skip_keys)
     for disag_tup, (poe, iml, matrix, fname) in matrices.items():
-        header = '%s,poe=%s,iml=%.7e\n' % (base_header, poe, iml)
+        header = '%s,poe=%.7f,iml=%.7e\n' % (base_header, poe, iml)
 
         if disag_tup == ('Mag', 'Lon', 'Lat'):
             matrix = numpy.swapaxes(matrix, 0, 1)
@@ -802,29 +802,33 @@ def save_disagg_to_csv(metadata, matrices):
         writers.write_csv(fname, values, comment=header, fmt='%.5E')
 
 
-@export.add(('disagg', 'csv'))
+@export.add(('disagg', 'csv'), ('disagg-stats', 'csv'))
 def export_disagg_csv(ekey, dstore):
     oq = dstore['oqparam']
-    disagg_outputs = oq.disagg_outputs or valid.disagg_outs
+    disagg_outputs = oq.disagg_outputs or disagg.pmf_map
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    group = dstore['disagg']
+    group = dstore[ekey[0]]
     fnames = []
     trts = dstore.get_attr('csm_info', 'trts')
     for key in group:
-        matrix = dstore['disagg/' + key]
+        matrix = dstore[ekey[0] + '/' + key]
         attrs = group[key].attrs
-        rlz = rlzs[attrs['rlzi']]
+        iml = attrs['iml']
+        try:
+            rlz = rlzs[attrs['rlzi']]
+        except TypeError:  # for stats
+            rlz = attrs['rlzi']
         try:
             poes = [attrs['poe']] * len(disagg_outputs)
         except:  # no poes_disagg were given
             poes = attrs['poe_agg']
-        iml = attrs['iml']
         imt, sa_period, sa_damping = from_string(attrs['imt'])
         lon, lat = attrs['location']
         metadata = collections.OrderedDict()
         # Loads "disaggMatrices" nodes
-        metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
-        metadata['gsimlt_path'] = rlz.gsim_rlz.uid
+        if hasattr(rlz, 'sm_lt_path'):
+            metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
+            metadata['gsimlt_path'] = rlz.gsim_rlz.uid
         metadata['imt'] = imt
         metadata['investigation_time'] = oq.investigation_time
         metadata['lon'] = lon
