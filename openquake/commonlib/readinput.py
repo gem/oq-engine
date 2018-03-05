@@ -786,7 +786,7 @@ class Exposure(object):
                     asset = Node('asset', lineno=i)
                     with context(fname, asset):
                         asset['id'] = dic['id']
-                        asset['number'] = float(dic['number'])
+                        asset['number'] = valid.positivefloat(dic['number'])
                         asset['taxonomy'] = dic['taxonomy']
                         if 'area' in dic:  # optional attribute
                             asset['area'] = dic['area']
@@ -896,8 +896,8 @@ class Exposure(object):
         for occupancy in occupancies:
             with context(param['fname'], occupancy):
                 occupants = 'occupants_%s' % occupancy['period']
-                values[occupants] = occupancy['occupants']
-                tot_occupants += float(values[occupants])
+                values[occupants] = float(occupancy['occupants'])
+                tot_occupants += values[occupants]
         if occupancies:  # store average occupants
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset_node.get('area', 1))
