@@ -67,14 +67,14 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         """
         :returns: a list of source group IDs (usually of 1 element)
         """
-        grp_id = self.src_group_id
+        grp_id = getattr(self, 'src_group_id', [0])
         return [grp_id] if isinstance(grp_id, int) else grp_id
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-        self.src_group_id = None  # set by the engine
+        self.src_group_id = 0  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
         self.id = None  # set by the engine
@@ -89,6 +89,12 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
             Generator of instances of sublclass of :class:
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
+
+    def __iter__(self):
+        """
+        Override to implement source splitting
+        """
+        yield self
 
     @abc.abstractmethod
     def count_ruptures(self):

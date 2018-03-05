@@ -152,23 +152,30 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        inputs['source'] = sorted(_get_paths(smlt))
+        inputs['source'] = []
+        for paths in gen_sm_paths(smlt):
+            inputs['source'].extend(paths)
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
     return params
 
 
-def _get_paths(smlt):
-    # extract the path names for the source models listed in the smlt file
+def gen_sm_paths(smlt):
+    """
+    Yields the path names for the source models listed in the smlt file,
+    a block at the time.
+    """
     base_path = os.path.dirname(smlt)
     for model in source.collect_source_model_paths(smlt):
+        paths = []
         for name in model.split():
             if os.path.isabs(name):
                 raise InvalidFile('%s: %s must be a relative path' %
                                   (smlt, name))
             fname = os.path.abspath(os.path.join(base_path, name))
             if os.path.exists(fname):  # consider only real paths
-                yield fname
+                paths.append(fname)
+        yield paths
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
@@ -463,7 +470,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                logging.info('Parsing %s', fname)
+                logging.info('Reading %s', fname)
                 src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
                 smodel = nrml.read(fname).sourceModel
@@ -499,6 +506,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             logging.info('%s has been considered %d times', fname, hits)
 
 
+def getid(src):
+    try:
+        return src.source_id
+    except AttributeError:
+        return src['id']
+
+
 def get_composite_source_model(oqparam, in_memory=True):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -511,12 +525,6 @@ def get_composite_source_model(oqparam, in_memory=True):
     smodels = []
     grp_id = 0
     idx = 0
-
-    def getid(src):
-        try:
-            return src.source_id
-        except AttributeError:
-            return src['id']
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
     for source_model in get_source_models(
@@ -540,67 +548,15 @@ def get_composite_source_model(oqparam, in_memory=True):
                 raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
+    for sm in csm.source_models:
+        srcs = []
+        for sg in sm.src_groups:
+            srcs.extend(map(getid, sg))
+        if len(set(srcs)) < len(srcs):
+            raise nrml.DuplicatedID(
+                'Found duplicated source IDs: use oq info %s',
+                sm, source_model_lt.filename)
     return csm
-
-
-def get_job_info(oqparam, csm, sitecol):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param csm:
-        a :class:`openquake.commonlib.source.CompositeSourceModel` instance
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :returns:
-        a dictionary with same parameters of the computation, in particular
-        the input and output weights
-    """
-    info = {}
-    # The input weight is given by the number of ruptures generated
-    # by the sources; for point sources however a corrective factor
-    # given by the parameter `point_source_weight` is applied
-    input_weight = sum((src.weight or 0) * src_model.samples
-                       for src_model in csm
-                       for src_group in src_model.src_groups
-                       for src in src_group)
-    imtls = oqparam.imtls
-    n_sites = len(sitecol) if sitecol else 0
-
-    # the imtls object has values [NaN] when the levels are unknown
-    # (this is a valid case for the event based hazard calculator)
-    n_imts = len(imtls)
-    n_levels = len(oqparam.imtls.array)
-
-    n_realizations = oqparam.number_of_logic_tree_samples or sum(
-        sm.num_gsim_paths for sm in csm)
-    # NB: in the event based case `n_realizations` can be over-estimated,
-    # if the method is called in the pre_execute phase, because
-    # some tectonic region types may have no occurrencies.
-
-    # The output weight is a pure number which is proportional to the size
-    # of the expected output of the calculator. For classical and disagg
-    # calculators it is given by
-    # n_sites * n_imts * n_levels * n_statistics;
-    # for the event based calculator is given by n_sites * n_realizations
-    # * n_levels * n_imts * (n_ses * investigation_time) * NORMALIZATION_FACTOR
-    n_stats = len(oqparam.hazard_stats()) or 1
-    output_weight = n_sites * n_imts * n_stats
-    if oqparam.calculation_mode == 'event_based':
-        total_time = (oqparam.investigation_time *
-                      oqparam.ses_per_logic_tree_path)
-        output_weight *= total_time * NORMALIZATION_FACTOR
-    else:
-        output_weight *= n_levels / n_imts
-
-    n_sources = csm.get_num_sources()
-    info['hazard'] = dict(input_weight=input_weight,
-                          output_weight=output_weight,
-                          n_imts=n_imts,
-                          n_levels=n_levels,
-                          n_sites=n_sites,
-                          n_sources=n_sources,
-                          n_realizations=n_realizations)
-    return info
 
 
 def get_imts(oqparam):
@@ -837,7 +793,7 @@ class Exposure(object):
                     asset = Node('asset', lineno=i)
                     with context(fname, asset):
                         asset['id'] = dic['id']
-                        asset['number'] = float(dic['number'])
+                        asset['number'] = valid.positivefloat(dic['number'])
                         asset['taxonomy'] = dic['taxonomy']
                         if 'area' in dic:  # optional attribute
                             asset['area'] = dic['area']
@@ -947,7 +903,7 @@ class Exposure(object):
         for occupancy in occupancies:
             with context(param['fname'], occupancy):
                 occupants = 'occupants_%s' % occupancy['period']
-                values[occupants] = occupancy['occupants']
+                values[occupants] = float(occupancy['occupants'])
                 tot_occupants += values[occupants]
         if occupancies:  # store average occupants
             values['occupants_None'] = tot_occupants / len(occupancies)
