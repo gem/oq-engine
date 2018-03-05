@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Bug fix: in some cases the calculator `event_based_rupture` was generating
     too few tasks
+  * Fixed error in classical_risk when num_statistics > num_realizations
   * Fixed a TypeError when reading CSV exposures with occupancy periods
   * Extended the check on duplicated source IDs to models in format NRML 0.5
   * Added a warning when reading the sources if .count_ruptures() is
