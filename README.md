@@ -86,6 +86,10 @@ Current stable version is the **OpenQuake Engine 2.9** 'Jeffreys'. The documenta
 
 ### Visualizing outputs via QGIS
 
+![IRMT Logo](https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png)
+
+
+
 * [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
 * [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
 * [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
