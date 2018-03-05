@@ -20,12 +20,10 @@ from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4, case_5, case_master)
-from openquake.baselib.general import writetmp
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.commonlib.writers import scientificformat
 from openquake.calculators.export import export
-from openquake.calculators.views import view
 
 
 class ClassicalRiskTestCase(CalculatorTestCase):
@@ -78,10 +76,11 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
-        [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/loss_maps-mean.csv', fname)
+        fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 3)  # mean, quantile-0.15, quantile-0.85
+        self.assertEqualFiles('expected/loss_maps-mean.csv', fnames[0])
 
-        [fname] = export(('loss_curves/stats/sid-1', 'csv'),
+        [fname] = export(('loss_curves/mean/sid-1', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-sid-1-mean.csv',
                               fname)

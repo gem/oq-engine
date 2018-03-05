@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
@@ -98,8 +98,10 @@ class PSHACalculator(base.HazardCalculator):
             for srcid, (srcweight, nsites, calc_time, split) in \
                     pmap_by_grp.calc_times.items():
                 info = self.csm.infos[srcid]
-                info.calc_time += calc_time
                 info.num_sites += nsites
+                info.calc_time += calc_time
+                if not info.split_time:
+                    info.split_time = self.split_time[srcid]
                 info.num_split += split
         return acc
 
@@ -192,13 +194,12 @@ class PSHACalculator(base.HazardCalculator):
             # NB: csm.get_sources_by_trt discards the mutex sources
             for trt, sources in csm.get_sources_by_trt(opt).items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
-                for block in csm.split_in_blocks(maxweight, sources):
+                for block in block_splitter(sources, maxweight, weight):
                     yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         self.csm.info.tot_weight = totweight
-        source.split_map.clear()
 
     def post_execute(self, pmap_by_grp_id):
         """

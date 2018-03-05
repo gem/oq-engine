@@ -369,14 +369,18 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
-                if self.grp_by_src:  # set in disaggregation
-                    self.csm = self.csm.grp_by_src()
+            if self.grp_by_src:  # set in disaggregation
+                self.csm = self.csm.grp_by_src()
             if self.is_stochastic:
-                # initialize the rupture serial numbers before the
-                # filtering; in this way the serials are independent
+                # initialize the rupture serial numbers before splitting
+                # and before filtering; in this way the serials are independent
                 # from the site collection; this is ultra-fast
                 self.csm.init_serials()
+            with self.monitor('splitting sources', measuremem=1, autoflush=1):
+                logging.info('Splitting sources')
+                self.split_time = self.csm.split_all()
             self.csm.info.gsim_lt.check_imts(oq.imtls)
+            self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
         self.init()
 
@@ -387,7 +391,6 @@ class HazardCalculator(BaseCalculator):
         the previous calculation; if not, read the inputs directly.
         """
         precalc_id = self.oqparam.hazard_calculation_id
-        job_info = {}
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
@@ -399,12 +402,6 @@ class HazardCalculator(BaseCalculator):
             self.init()
         else:  # we are in a basic calculator
             self.read_inputs()
-            if 'source' in self.oqparam.inputs and precalc_id is None:
-                job_info.update(readinput.get_job_info(
-                    self.oqparam, self.csm, self.sitecol))
-        if hasattr(self, 'riskmodel'):
-            job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        self._monitor.save_info(job_info)
         self.param = {}  # used in the risk calculators
 
     def init(self):
