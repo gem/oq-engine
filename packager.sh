@@ -103,7 +103,7 @@ sig_hand () {
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
-        sudo "$LXC_KILL" -n "$lxc_name"
+        sudo $LXC_KILL -n "$lxc_name"
         sudo lxc-destroy -n "$lxc_name"
     fi
     if [ -f /tmp/packager.eph.$$.log ]; then
@@ -272,8 +272,8 @@ add_local_pkg_repo () {
             break
         fi
     done
-    ssh "$lxc_ip" "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python3-${dep} ./\""
-    ssh "$lxc_ip" "sudo apt-get update"
+    ssh "$lxc_ip" sudo apt-add-repository "deb file:/home/ubuntu/repo/python3-${dep} ./"
+    ssh "$lxc_ip" sudo apt-get update
 }
 
 _pkgbuild_innervm_run () {
