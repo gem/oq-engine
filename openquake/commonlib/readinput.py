@@ -463,7 +463,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                logging.info('Parsing %s', fname)
+                logging.info('Reading %s', fname)
                 src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
                 smodel = nrml.read(fname).sourceModel
@@ -786,7 +786,7 @@ class Exposure(object):
                     asset = Node('asset', lineno=i)
                     with context(fname, asset):
                         asset['id'] = dic['id']
-                        asset['number'] = float(dic['number'])
+                        asset['number'] = valid.positivefloat(dic['number'])
                         asset['taxonomy'] = dic['taxonomy']
                         if 'area' in dic:  # optional attribute
                             asset['area'] = dic['area']
@@ -896,7 +896,7 @@ class Exposure(object):
         for occupancy in occupancies:
             with context(param['fname'], occupancy):
                 occupants = 'occupants_%s' % occupancy['period']
-                values[occupants] = occupancy['occupants']
+                values[occupants] = float(occupancy['occupants'])
                 tot_occupants += values[occupants]
         if occupancies:  # store average occupants
             values['occupants_None'] = tot_occupants / len(occupancies)
