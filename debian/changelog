@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a TypeError when reading CSV exposures with occupancy periods
   * Extended the check on duplicated source IDs to models in format NRML 0.5
   * Added a warning when reading the sources if .count_ruptures() is
     suspiciously slow
