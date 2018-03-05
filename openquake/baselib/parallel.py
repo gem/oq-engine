@@ -665,7 +665,7 @@ class Starmap(object):
                     logging.warn('Discarding a result from job %d, since this '
                                  'is job %d', res.mon.calc_id, self.calc_id)
                     continue
-                num_results -= 1
+                num_results -= next(it)
                 yield res
 
     def _iter_zmq(self):
