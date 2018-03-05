@@ -25,7 +25,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.gsim_table import (
+from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, AmplificationTable, hdf_arrays_to_dict)
 from openquake.hazardlib.gsim.base import (
     RuptureContext, SitesContext, DistancesContext)
@@ -417,13 +417,8 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         with self.assertRaises(IOError) as ioe:
             GMPETable(gmpe_table=None)
-        self.assertEqual(str(ioe.exception),
-                         "GMPE Table Not Defined!")
-
-        with self.assertRaises(IOError) as ioe:
-            GMPETable(gmpe_table='/do/not/exists/table.hdf5')
-        self.assertEqual(str(ioe.exception),
-                         "Missing file '/do/not/exists/table.hdf5'")
+        self.assertEqual(str(ioe.exception), "GMPE Table Not Defined!")
+        GMPETable(gmpe_table='/do/not/exists/table.hdf5')  # no error here
 
     def test_retreival_tables_good_no_interp(self):
         """
