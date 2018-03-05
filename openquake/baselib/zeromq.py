@@ -120,8 +120,7 @@ class Socket(object):
 
         1. the flag .running is set to False
         2. the message 'stop' is sent
-        3. SIGINT is sent
-        4. SIGTERM is sent
+        3. SIGTERM is sent
         """
         # works with zmq.REP and zmq.PULL sockets
         self.running = True
@@ -134,7 +133,7 @@ class Socket(object):
                     if self.socket_type == 'PULL':
                         logging.warn('Timeout in %s', self)
                     continue
-            except (KeyboardInterrupt, zmq.ZMQError):
+            except zmq.ZMQError:
                 # sending SIGTERM raises ZMQError
                 break
             if args == 'stop':
