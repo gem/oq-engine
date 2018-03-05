@@ -222,7 +222,7 @@ add_custom_pkg_repo () {
         ssh "$lxc_ip" mkdir "repo"
         scp -r "${GEM_DEB_REPO}/custom_pkgs" "$lxc_ip:repo/custom_pkgs"
     fi
-    ssh "$lxc_ip" sudo apt-add-repository "deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main"
+    ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\"
     ssh "$lxc_ip" sudo apt-get update
 }
 
@@ -272,7 +272,7 @@ add_local_pkg_repo () {
             break
         fi
     done
-    ssh "$lxc_ip" sudo apt-add-repository "deb file:/home/ubuntu/repo/python3-${dep} ./"
+    ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/python3-${dep} ./\"
     ssh "$lxc_ip" sudo apt-get update
 }
 
@@ -527,7 +527,7 @@ _pkgtest_innervm_run () {
         "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_"*.deb "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.changes \
         "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.dsc "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.tar.gz \
         "${GEM_BUILD_ROOT}/Packages"* "${GEM_BUILD_ROOT}/Sources"*  "${GEM_BUILD_ROOT}/Release"* "$lxc_ip:repo/${GEM_DEB_PACKAGE}"
-    ssh "$lxc_ip" "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
+    ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\"
 
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
