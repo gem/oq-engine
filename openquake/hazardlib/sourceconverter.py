@@ -18,6 +18,8 @@
 from __future__ import division
 import operator
 import collections
+import logging
+import time
 import numpy
 
 from openquake.baselib.general import groupby
@@ -186,7 +188,22 @@ def get_set_num_ruptures(src):
     Extract the number of ruptures and set it
     """
     if not src.num_ruptures:
+        t0 = time.time()
         src.num_ruptures = src.count_ruptures()
+        dt = time.time() - t0
+        clsname = src.__class__.__name__
+        if dt > 10:
+            if 'Area' in clsname:
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                             'area discretization is too small', src, dt)
+            elif 'ComplexFault' in clsname:
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the c'
+                             'omplex_fault_mesh_spacing is too small', src, dt)
+            elif 'SimpleFault' in clsname:
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                             'rupture_mesh_spacing is too small', src, dt)
+            else:
+                logging.warn('count_ruptures %s took %d seconds??', src, dt)
     return src.num_ruptures
 
 
@@ -717,7 +734,7 @@ class SourceConverter(RuptureConverter):
         trt = node.attrib.get('tectonicRegion')
         rup_pmf_data = []
         for rupnode in node:
-            probs = pmf.PMF(rupnode['probs_occur'])
+            probs = pmf.PMF(valid.pmf(rupnode['probs_occur']))
             rup = RuptureConverter.convert_node(self, rupnode)
             rup.tectonic_region_type = trt
             rup_pmf_data.append((rup, probs))

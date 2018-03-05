@@ -231,7 +231,7 @@ class CompositeRiskModel(collections.Mapping):
             riskinput.gmdata = hazard_getter.gmdata
 
     def _gen_outputs(self, hazard_getter, dic, gsim):
-        with self.monitor('building hazard'):
+        with self.monitor('getting hazard'):
             hazard = hazard_getter.get_hazard(gsim)
         imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
         with self.monitor('computing risk'):
