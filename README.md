@@ -84,6 +84,12 @@ Current stable version is the **OpenQuake Engine 2.9** 'Jeffreys'. The documenta
 * [Using the command line](https://github.com/gem/oq-engine/blob/master/doc/running/unix.md)
 * [Using the WebUI](https://github.com/gem/oq-engine/blob/master/doc/running/server.md)
 
+### Visualizing outputs via QGIS
+
+* [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
+* [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
+* [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
+* [Source code](https://github.com/gem/oq-irmt-qgis)
 
 ## License
 
