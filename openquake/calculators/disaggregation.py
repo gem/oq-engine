@@ -24,8 +24,9 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.baselib.python3compat import encode
+from openquake.hazardlib.stats import compute_stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -34,7 +35,16 @@ from openquake.calculators import getters
 from openquake.calculators import base, classical
 
 
-DISAGG_RES_FMT = 'disagg/%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
+DISAGG_RES_FMT = '%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
+
+
+def _to_matrix(matrices, num_trts):
+    # convert a dict trti -> matrix into a single matrix of shape (T, ...)
+    trti = next(iter(matrices))
+    mat = numpy.zeros((num_trts,) + matrices[trti].shape)
+    for trti in matrices:
+        mat[trti] = matrices[trti]
+    return mat
 
 
 def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
@@ -98,12 +108,11 @@ produces at most probabilities of %.7f for rlz=#%d, IMT=%s.
 The disaggregation PoE is too big or your model is wrong,
 producing too small PoEs.'''
 
-    def execute(self):
-        """Performs the disaggregation"""
+    def pre_execute(self):
         oq = self.oqparam
         if oq.iml_disagg:
-            # no hazard curves are needed
-            curves = [None] * len(self.sitecol)
+            # read the input data
+            base.HazardCalculator.pre_execute(self)
         else:
             # only the poes_disagg are known, the IMLs are interpolated from
             # the hazard curves, hence the need to run a PSHACalculator here
@@ -113,6 +122,12 @@ producing too small PoEs.'''
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
+
+    def execute(self):
+        """Performs the disaggregation"""
+        if self.oqparam.iml_disagg:
+            curves = [None] * len(self.sitecol)  # no hazard curves are needed
+        else:
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
         return self.full_disaggregation(curves)
@@ -244,7 +259,7 @@ producing too small PoEs.'''
         mon = self.monitor('disaggregation')
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
-            R, oq.imtls, oq.iml_disagg, oq.poes_disagg or (None,), curves)
+            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             for r in range(R):
@@ -261,7 +276,8 @@ producing too small PoEs.'''
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
-                for block in csm.split_in_blocks(maxweight, sources):
+                for block in block_splitter(
+                        sources, maxweight, operator.attrgetter('weight')):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,
                          oq, mon))
@@ -295,76 +311,103 @@ producing too small PoEs.'''
             self.datastore['disagg-bins/lats/sid-%d' % sid] = b[3][sid]
         self.datastore['disagg-bins/eps'] = b[4]
 
+    def build_stats(self, results, hstats):
+        """
+        :param results: dict key -> 6D disagg_matrix
+        :param hstats: (statname, statfunc) pairs
+        """
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        R = len(weights)
+        T = len(self.trts)
+        dic = {}  # sid, poe, imt -> disagg_matrix
+        for sid in self.sitecol.sids:
+            shape = disagg.get_shape(self.bin_edges, sid)
+            for poe in self.oqparam.poes_disagg or (None,):
+                for imt in self.oqparam.imtls:
+                    dic[sid, poe, imt] = numpy.zeros((R, T) + shape)
+        for (sid, rlzi, poe, imt), matrix in results.items():
+            dic[sid, poe, imt][rlzi] = matrix
+        res = {}  # sid, stat, poe, imt -> disagg_matrix
+        for (sid, poe, imt), array in dic.items():
+            for stat, func in hstats:
+                matrix = compute_stats(array, [func], weights)[0]
+                res[sid, stat, poe, imt] = matrix
+        return res
+
+    def get_NRPM(self):
+        """
+        :returns: (num_sites, num_rlzs, num_poes, num_imts)
+        """
+        N = len(self.sitecol)
+        R = len(self.rlzs_assoc.realizations)
+        P = len(self.oqparam.poes_disagg or (None,))
+        M = len(self.oqparam.imtls)
+        return (N, R, P, M)
+
     def post_execute(self, results):
         """
         Save all the results of the disaggregation. NB: the number of results
         to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
         :param results:
-            a dictionary of probability arrays
+            a dictionary (sid, rlzi, poe, imt) -> trti -> disagg matrix
         """
-        # since an extremely small subset of the full disaggregation matrix
-        # is saved this method can be run sequentially on the controller node
-        logging.info('Extracting and saving the PMFs')
-        for key, matrices in sorted(results.items()):
-            sid, rlzi, poe, imt = key
-            self.save_disagg_result(
-                sid, matrices, rlzi, self.oqparam.investigation_time, imt, poe)
+        T = len(self.trts)
+        # build a dictionary (sid, rlzi, poe, imt) -> 6D matrix
+        results = {k: _to_matrix(v, T) for k, v in results.items()}
+
+        # get the number of outputs
+        shp = self.get_NRPM()
+        logging.info('Extracting and saving the PMFs for %d outputs '
+                     '(N=%s, R=%d, P=%d, M=%d)', numpy.prod(shp), *shp)
+        self.save_disagg_result('disagg', results)
+
+        hstats = self.oqparam.hazard_stats()
+        if len(self.rlzs_assoc.realizations) > 1 and hstats:
+            with self.monitor('computing and saving stats', measuremem=True):
+                res = self.build_stats(results, hstats)
+                self.save_disagg_result('disagg-stats', res)
 
         self.datastore.set_attrs(
             'disagg', trts=encode(self.trts), num_ruptures=self.num_ruptures)
 
-    def save_disagg_result(self, site_id, matrices, rlz_id,
-                           investigation_time, imt_str, poe):
+    def save_disagg_result(self, dskey, results):
         """
-        Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
-        :class:`~openquake.engine.db.models.DisaggResult`).
+        Save the computed PMFs in the datastore
 
-        :param site_id:
-            id of the current site
-        :param bin_edges:
-            The 5-uple mag, dist, lon, lat, eps
-        :param matrices:
-            A dictionary (sid, rlz_id, poe, imt, iml) -> trti -> matrix
-        :param rlz_id:
-            ordinal of the realization to which the results belong.
-        :param float investigation_time:
-            Investigation time (years) for the calculation.
-        :param imt_str:
-            Intensity measure type string (PGA, SA, etc.)
-        :param float poe:
-            Disaggregation probability of exceedance value for this result.
+        :param dskey:
+            dataset key; can be 'disagg' or 'disagg-stats'
+        :param results:
+            a dictionary sid, rlz, poe, imt -> 6D disagg_matrix
         """
+        for (sid, rlz, poe, imt), matrix in sorted(results.items()):
+            self._save_result(dskey, sid, rlz, poe, imt, matrix)
+
+    def _save_result(self, dskey, site_id, rlz_id, poe, imt_str, matrix):
+        disagg_outputs = self.oqparam.disagg_outputs
         lon = self.sitecol.lons[site_id]
         lat = self.sitecol.lats[site_id]
-        disp_name = DISAGG_RES_FMT % dict(
+        disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
             rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
-            matrix = agg_probs(*matrices.values())
             poe_agg = []
-            num_trts = len(self.trts)
+            aggmatrix = agg_probs(*matrix)
             for key, fn in disagg.pmf_map.items():
-                if 'TRT' in key:
-                    trti = next(iter(matrices))
-                    a_pmf = fn(matrices[trti])
-                    pmf = numpy.zeros(a_pmf.shape + (num_trts,))
-                    pmf[..., trti] = a_pmf
-                    for t in matrices:
-                        if t != trti:
-                            pmf[..., t] = fn(matrices[t])
-                else:
-                    pmf = fn(matrix)
-                dname = disp_name + '_'.join(key)
-                self.datastore[dname] = pmf
-                poe_agg.append(1. - numpy.prod(1. - pmf))
+                if not disagg_outputs or key in disagg_outputs:
+                    pmf = fn(matrix if key.endswith('TRT') else aggmatrix)
+                    self.datastore[disp_name + key] = pmf
+                    poe_agg.append(1. - numpy.prod(1. - pmf))
 
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str
-        attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
+        try:
+            attrs['iml'] = self.imldict[site_id, rlz_id, poe, imt_str]
+        except KeyError:  # when saving the stats
+            attrs['iml'] = self.oqparam.iml_disagg.get(imt_str, -1)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
