@@ -878,7 +878,7 @@ devtest_run () {
     IFS="$old_ifs"
 
     sudo echo
-    sudo "${GEM_EPHEM_EXE}" 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh "$lxc_ip"
@@ -983,7 +983,7 @@ builddoc_run () {
     IFS="$old_ifs"
 
     sudo echo
-    sudo "${GEM_EPHEM_EXE}" 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh "$lxc_ip"
@@ -1058,7 +1058,7 @@ EOF
     cd -
 
     sudo echo
-    sudo "${GEM_EPHEM_EXE}" 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh "$lxc_ip"
@@ -1338,7 +1338,7 @@ fi
 sed -i "s/^\([ ${TB}]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
 
 if [ $BUILD_ON_LXC -eq 1 ]; then
-    sudo "${GEM_EPHEM_EXE}" 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
     _wait_ssh "$lxc_ip"
 
