@@ -53,6 +53,7 @@ def read_composite_risk_model(dstore):
             lt = str(lt)  # ensure Python 2-3 compatibility
             rf = dstore['composite_risk_model/%s/%s' % (quotedtaxonomy, lt)]
             if len(rmdict.limit_states):
+                # rf is a FragilityFunctionList
                 rf = rf.build(rmdict.limit_states,
                               oqparam.continuous_fragility_discretization,
                               oqparam.steps_per_interval)
