@@ -575,7 +575,6 @@ class FragilityFunctionList(list):
     def build(self, limit_states, discretization, steps_per_interval):
         # TODO: this is complicated: check with Anirudh
         new = copy.copy(self)
-        # TODO: this is complicated: check with Anirudh
         add_zero = (self.format == 'discrete' and
                     self.nodamage is not None and self.nodamage < self.imls[0])
         new.imls = build_imls(new, discretization)
