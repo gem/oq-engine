@@ -32,8 +32,7 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import geo
-from openquake.risklib import riskinput, asset
+from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, riskmodels, writers
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import with_metaclass
