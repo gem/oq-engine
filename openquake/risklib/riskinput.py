@@ -52,12 +52,15 @@ def read_composite_risk_model(dstore):
         for lt in rm:
             lt = str(lt)  # ensure Python 2-3 compatibility
             rf = dstore['composite_risk_model/%s/%s' % (quotedtaxonomy, lt)]
+            if len(rmdict.limit_states):
+                rf = rf.build(rmdict.limit_states,
+                              oqparam.continuous_fragility_discretization,
+                              oqparam.steps_per_interval)
             if lt.endswith('_retrofitted'):
                 # strip _retrofitted, since len('_retrofitted') = 12
                 retrodict[taxo][lt[:-12]] = rf
             else:
                 rmdict[taxo][lt] = rf
-                import pdb; pdb.set_trace()
     return CompositeRiskModel(oqparam, rmdict, retrodict)
 
 
