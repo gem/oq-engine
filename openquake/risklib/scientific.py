@@ -573,7 +573,12 @@ class FragilityFunctionList(list):
         return fine_graining(self.imls, steps)
 
     def build(self, limit_states, discretization, steps_per_interval):
-        # TODO: this is complicated: check with Anirudh
+        """
+        :param limit_states: a sequence of limit states
+        :param discretization: continouos fragility discretization parameter
+        :param steps_per_interval: steps_per_interval parameter
+        :returns: a populated FragilityFunctionList instance
+        """
         new = copy.copy(self)
         add_zero = (self.format == 'discrete' and
                     self.nodamage is not None and self.nodamage < self.imls[0])
