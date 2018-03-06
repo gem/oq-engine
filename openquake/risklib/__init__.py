@@ -17,3 +17,5 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import __version__
+from openquake.risklib import read_nrml
+read_nrml.update_validators()
