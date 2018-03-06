@@ -37,10 +37,10 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput, read_nrml
+from openquake.risklib.riskmodels import get_risk_models
 from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
-from openquake.commonlib.riskmodels import get_risk_models
 
 read_nrml.update_validators()
 
