@@ -20,12 +20,12 @@
 Reading risk models for risk calculators
 """
 import re
-import collections
 
 import numpy
 
-from openquake.hazardlib import valid, nrml
 from openquake.baselib.node import Node
+from openquake.baselib.general import AccumDict
+from openquake.hazardlib import valid, nrml
 from openquake.hazardlib.sourcewriter import obj_to_node
 
 F64 = numpy.float64
@@ -94,7 +94,8 @@ def get_risk_models(oqparam, kind=None):
         a dictionary taxonomy -> loss_type -> function
     """
     kind = kind or oqparam.file_type
-    rmodels = {}
+    rmodels = AccumDict()
+    rmodels.limit_states = []
     for key in sorted(oqparam.inputs):
         mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
         if mo:
@@ -118,7 +119,8 @@ def get_risk_models(oqparam, kind=None):
                     'Error in the file "%s_file=%s": lossCategory is of type '
                     '"%s", expected "%s"' % (key, oqparam.inputs[key],
                                              rmodel.lossCategory, key_type))
-    rdict = collections.defaultdict(dict)
+    rdict = AccumDict(accum={})
+    rdict.limit_states = []
     if kind == 'fragility':
         limit_states = []
         for loss_type, fm in sorted(rmodels.items()):
@@ -136,7 +138,7 @@ def get_risk_models(oqparam, kind=None):
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
-        oqparam.limit_states = [str(ls) for ls in limit_states]
+        rdict.limit_states = [str(ls) for ls in limit_states]
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
