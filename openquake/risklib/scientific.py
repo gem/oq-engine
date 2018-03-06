@@ -572,6 +572,32 @@ class FragilityFunctionList(list):
         """For compatibility with vulnerability functions"""
         return fine_graining(self.imls, steps)
 
+    def build(self, limit_states, discretization, steps_per_interval):
+        # TODO: this is complicated: check with Anirudh
+        new = copy.copy(self)
+        # TODO: this is complicated: check with Anirudh
+        add_zero = (self.format == 'discrete' and
+                    self.nodamage is not None and self.nodamage < self.imls[0])
+        new.imls = build_imls(new, discretization)
+        if steps_per_interval > 1:
+            new.interp_imls = build_imls(  # passed to classical_damage
+                new, discretization, steps_per_interval)
+        for i, ls in enumerate(limit_states):
+            data = self.array[i]
+            if self.format == 'discrete':
+                if add_zero:
+                    new.append(FragilityFunctionDiscrete(
+                        ls, [self.nodamage] + self.imls,
+                        numpy.concatenate([[0.], data]),
+                        self.nodamage))
+                else:
+                    new.append(FragilityFunctionDiscrete(
+                        ls, self.imls, data, self.nodamage))
+            else:  # continuous
+                new.append(FragilityFunctionContinuous(
+                    ls, data['mean'], data['stddev']))
+        return new
+
     def __toh5__(self):
         return self.array, {k: v for k, v in vars(self).items()
                             if k != 'array' and v is not None}
@@ -681,30 +707,10 @@ class FragilityModel(dict):
             configuration parameter
         """
         newfm = copy.copy(self)
-        for key, ff in self.items():
-            newfm[key] = new = copy.copy(ff)
-            # TODO: this is complicated: check with Anirudh
-            add_zero = (ff.format == 'discrete' and
-                        ff.nodamage is not None and ff.nodamage < ff.imls[0])
-            new.imls = build_imls(new, continuous_fragility_discretization)
-            if steps_per_interval > 1:
-                new.interp_imls = build_imls(  # passed to classical_damage
-                    new, continuous_fragility_discretization,
-                    steps_per_interval)
-            for i, ls in enumerate(self.limitStates):
-                data = ff.array[i]
-                if ff.format == 'discrete':
-                    if add_zero:
-                        new.append(FragilityFunctionDiscrete(
-                            ls, [ff.nodamage] + ff.imls,
-                            numpy.concatenate([[0.], data]),
-                            ff.nodamage))
-                    else:
-                        new.append(FragilityFunctionDiscrete(
-                            ls, ff.imls, data, ff.nodamage))
-                else:  # continuous
-                    new.append(FragilityFunctionContinuous(
-                        ls, data['mean'], data['stddev']))
+        for key, ffl in self.items():
+            newfm[key] = ffl.build(self.limitStates,
+                                   continuous_fragility_discretization,
+                                   steps_per_interval)
         return newfm
 
 
