@@ -501,6 +501,7 @@ class Damage(RiskModel):
         """
         ffs = self.risk_functions[loss_type]
         damages = scientific.scenario_damage(ffs, gmvs_eids[0])  # shape (D, E)
+        damages[damages < 0] = 0  # sanity check
         return [damages.T] * len(assets)
 
 
