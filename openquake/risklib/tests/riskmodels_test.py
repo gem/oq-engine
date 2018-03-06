@@ -24,11 +24,9 @@ import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.commonlib import nrml_examples
 from openquake.risklib import riskmodels
 from openquake.qa_tests_data.scenario_damage import case_4b
 
-EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
 FF_DIR = os.path.dirname(case_4b.__file__)
 
 
@@ -245,6 +243,8 @@ lossCategory="contents">
 """)
 
     def test_ok(self):
+        from openquake.commonlib import nrml_examples
+        EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
         fname = os.path.join(EXAMPLES_DIR, 'consequence-model.xml')
         cmodel = nrml.to_python(fname)
         self.assertEqual(
