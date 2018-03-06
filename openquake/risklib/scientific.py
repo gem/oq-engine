@@ -1118,10 +1118,8 @@ def pairwise_mean(values):
 
 
 def pairwise_diff(values):
-    "Differences between a value and the next value in a monotone sequence"
-    diff = numpy.array([x - y for x, y in utils.pairwise(values)])
-    diff[diff < 0] = 0  # there must be no negative diffs
-    return diff
+    "Differences between a value and the next value in a sequence"
+    return numpy.array([x - y for x, y in utils.pairwise(values)])
 
 
 def mean_std(fractions):
