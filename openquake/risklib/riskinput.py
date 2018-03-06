@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5, performance
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, AccumDict
 from openquake.risklib import scientific, riskmodels
 
 
@@ -42,7 +42,8 @@ def read_composite_risk_model(dstore):
     """
     oqparam = dstore['oqparam']
     crm = dstore.getitem('composite_risk_model')
-    rmdict, retrodict = {}, {}
+    rmdict, retrodict = AccumDict(), AccumDict()
+    rmdict.limit_states = crm.attrs['limit_states']
     for taxo, rm in crm.items():
         rmdict[taxo] = {}
         retrodict[taxo] = {}
@@ -70,7 +71,7 @@ class CompositeRiskModel(collections.Mapping):
         self.damage_states = []
         self._riskmodels = {}
 
-        if getattr(oqparam, 'limit_states', []):
+        if len(rmdict.limit_states):
             # classical_damage/scenario_damage calculator
             if oqparam.calculation_mode in ('classical', 'scenario'):
                 # case when the risk files are in the job_hazard.ini file
@@ -79,8 +80,7 @@ class CompositeRiskModel(collections.Mapping):
                     raise RuntimeError(
                         'There are risk files in %r but not '
                         'an exposure' % oqparam.inputs['job_ini'])
-            self.damage_states = ['no_damage'] + oqparam.limit_states
-            delattr(oqparam, 'limit_states')
+            self.damage_states = ['no_damage'] + rmdict.limit_states
             for taxonomy, ffs_by_lt in rmdict.items():
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam, fragility_functions=ffs_by_lt)
@@ -260,7 +260,10 @@ class CompositeRiskModel(collections.Mapping):
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
-        return self._riskmodels, dict(covs=self.covs, loss_types=loss_types)
+        limit_states = hdf5.array_of_vstr(self.damage_states[1:]
+                                          if self.damage_states else [])
+        return self._riskmodels, dict(
+            covs=self.covs, loss_types=loss_types, limit_states=limit_states)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
