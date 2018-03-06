@@ -19,6 +19,7 @@
 import operator
 import logging
 import collections
+from urllib.parse import unquote_plus
 import numpy
 
 from openquake.baselib import hdf5, performance
@@ -44,12 +45,13 @@ def read_composite_risk_model(dstore):
     crm = dstore.getitem('composite_risk_model')
     rmdict, retrodict = AccumDict(), AccumDict()
     rmdict.limit_states = crm.attrs['limit_states']
-    for taxo, rm in crm.items():
+    for quotedtaxonomy, rm in crm.items():
+        taxo = unquote_plus(quotedtaxonomy)
         rmdict[taxo] = {}
         retrodict[taxo] = {}
         for lt in rm:
             lt = str(lt)  # ensure Python 2-3 compatibility
-            rf = dstore['composite_risk_model/%s/%s' % (taxo, lt)]
+            rf = dstore['composite_risk_model/%s/%s' % (quotedtaxonomy, lt)]
             if lt.endswith('_retrofitted'):
                 # strip _retrofitted, since len('_retrofitted') = 12
                 retrodict[taxo][lt[:-12]] = rf
@@ -80,7 +82,7 @@ class CompositeRiskModel(collections.Mapping):
                     raise RuntimeError(
                         'There are risk files in %r but not '
                         'an exposure' % oqparam.inputs['job_ini'])
-            self.damage_states = ['no_damage'] + rmdict.limit_states
+            self.damage_states = ['no_damage'] + list(rmdict.limit_states)
             for taxonomy, ffs_by_lt in rmdict.items():
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam, fragility_functions=ffs_by_lt)

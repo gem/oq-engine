@@ -400,7 +400,11 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         if not self.oqparam.imtls:
-            raise ValueError('Missing intensity_measure_types!')
+            if self.datastore.parent:
+                self.oqparam.risk_imtls = (
+                    self.datastore.parent['oqparam'].risk_imtls)
+            else:
+                raise ValueError('Missing intensity_measure_types!')
         if self.precalc:
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
@@ -454,9 +458,6 @@ class HazardCalculator(BaseCalculator):
         self.datastore['composite_risk_model'] = rm
         attrs = self.datastore.getitem('composite_risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
-        if rm.damage_states:
-            # best not to save them as bytes, they are used as headers
-            attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)
         self.datastore.set_nbytes('composite_risk_model')
         self.datastore.hdf5.flush()
 
