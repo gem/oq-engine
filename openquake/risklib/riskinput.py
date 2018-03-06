@@ -57,6 +57,7 @@ def read_composite_risk_model(dstore):
                 retrodict[taxo][lt[:-12]] = rf
             else:
                 rmdict[taxo][lt] = rf
+                import pdb; pdb.set_trace()
     return CompositeRiskModel(oqparam, rmdict, retrodict)
 
 
