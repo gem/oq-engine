@@ -563,6 +563,7 @@ class FragilityFunctionList(list):
     A list of fragility functions with common attributes; there is a
     function for each limit state.
     """
+    # NB: the list if populated after instantiation by .append calls
     def __init__(self, array, **attrs):
         self.array = array
         vars(self).update(attrs)
