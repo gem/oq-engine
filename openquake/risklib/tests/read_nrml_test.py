@@ -19,9 +19,6 @@
 import unittest
 from openquake.baselib.general import writetmp
 from openquake.hazardlib import nrml
-from openquake.risklib import read_nrml
-
-read_nrml.update_validators()
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
