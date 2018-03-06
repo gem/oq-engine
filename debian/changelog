@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed an obsolete PickleableSequence class
   * Fixed error in classical_risk when num_statistics > num_realizations
   * Fixed a TypeError when reading CSV exposures with occupancy periods
   * Extended the check on duplicated source IDs to models in format NRML 0.5
