@@ -344,7 +344,7 @@ _devtest_innervm_run () {
         if [ "$dep_type" = "src" ]; then
             # extract dependencies for source dependencies
             pkgs_list="$(deps_list "deprec" "_jenkins_deps/$dep/debian")"
-            ssh "$lxc_ip" "sudo apt-get install -y ${pkgs_list}"
+            ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
 
             # install source dependencies
             pushd "_jenkins_deps/$dep"
@@ -368,7 +368,7 @@ _devtest_innervm_run () {
 
     # extract dependencies for this package
     pkgs_list="$(deps_list "all" debian)"
-    ssh "$lxc_ip" "sudo apt-get install -y ${pkgs_list}"
+    ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
 
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh "$lxc_ip" "tar xv"
@@ -440,7 +440,7 @@ _builddoc_innervm_run () {
 
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
     # install package to manage repository properly
-    # ssh "$lxc_ip" "sudo apt-get install -y python-software-properties"
+    # ssh "$lxc_ip" sudo apt-get install -y python-software-properties
 
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
@@ -457,7 +457,7 @@ _builddoc_innervm_run () {
         if [ "$dep_type" = "src" ]; then
             # extract dependencies for source dependencies
             pkgs_list="$(deps_list "build" "_jenkins_deps/$dep/debian")"
-            ssh "$lxc_ip" "sudo apt-get install -y ${pkgs_list}"
+            ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
 
             # install source dependencies
             pushd "_jenkins_deps/$dep"
@@ -480,7 +480,7 @@ _builddoc_innervm_run () {
 
     # extract dependencies for this package
     pkgs_list="$(deps_list "build" debian)"
-    ssh "$lxc_ip" "sudo apt-get install -y ${pkgs_list}"
+    ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
 
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh "$lxc_ip" "tar xv"
@@ -556,10 +556,10 @@ _pkgtest_innervm_run () {
     ssh "$lxc_ip" "sudo apt-get upgrade -y"
 
     # packaging related tests (install, remove, purge, install, reinstall)
-    ssh "$lxc_ip" "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh "$lxc_ip" "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
-    ssh "$lxc_ip" "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh "$lxc_ip" "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
+    ssh "$lxc_ip" sudo apt-get install -y ${GEM_DEB_PACKAGE}
+    ssh "$lxc_ip" sudo apt-get remove -y ${GEM_DEB_PACKAGE}
+    ssh "$lxc_ip" sudo apt-get install -y ${GEM_DEB_PACKAGE}
+    ssh "$lxc_ip" sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}
 
     celery_bin=/opt/openquake/bin/celery
 
@@ -682,11 +682,11 @@ deps_list() {
     if [ "$listtype" = "all" ]; then
         in_list="$(cat "$control_file" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
     elif [  "$listtype" = "deprec" ]; then
-        in_list="$(cat "$control_file" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
+        in_list="$(cat "$control_file" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ',' | sed 's/,\+/,/g')"
     elif [  "$listtype" = "build" ]; then
-        in_list="$(cat "$control_file" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' ; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
+        in_list="$(cat "$control_file" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' ; echo ", $rules_dep") | tr '\n' ',' | sed 's/,\+/,/g')"
     else
-        in_list="$(cat "$control_file" | egrep "^Depends:" | sed 's/^Depends: //g'; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
+        in_list="$(cat "$control_file" | egrep "^Depends:" | sed 's/^Depends: //g'; echo ", $rules_dep") | tr '\n' ',' | sed 's/,\+/,/g')"
     fi
 
     old_ifs="$IFS"
