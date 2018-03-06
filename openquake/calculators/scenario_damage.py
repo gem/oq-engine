@@ -19,8 +19,7 @@
 import itertools
 import numpy
 
-from openquake.commonlib import riskmodels
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskmodels
 from openquake.calculators import base, event_based
 
 F32 = numpy.float32
