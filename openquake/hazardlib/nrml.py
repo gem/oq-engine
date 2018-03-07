@@ -102,12 +102,13 @@ class DuplicatedID(Exception):
 
 class SourceModel(collections.Sequence):
     """
-    A container of source groups with attributes investigation_time, start_time
+    A container of source groups with attributes name, investigation_time,
+    start_time.
     """
-    def __init__(self, name, src_groups, investigation_time=None,
+    def __init__(self, src_groups, name=None, investigation_time=None,
                  start_time=None):
-        self.name = name
         self.src_groups = src_groups
+        self.name = name
         self.investigation_time = investigation_time
         self.start_time = start_time
 
@@ -165,9 +166,9 @@ def get_source_model_04(node, fname, converter=default):
             logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    return SourceModel(node['name'],
-                       sorted(sourceconverter.SourceGroup(trt, srcs)
-                              for trt, srcs in groups.items()))
+    src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
+                        for trt, srcs in groups.items())
+    return SourceModel(src_groups, node.get('name'))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -181,7 +182,7 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         groups.append(converter.convert_node(src_group))
-    return SourceModel(node['name'], sorted(groups),
+    return SourceModel(sorted(groups), node.get('name'),
                        node.get('investigation_time'), node.get('start_time'))
 
 validators = {
