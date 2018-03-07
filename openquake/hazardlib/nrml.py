@@ -286,30 +286,27 @@ class SourceModelParser(object):
         self.groups = {}  # cache fname -> groups
         self.fname_hits = collections.Counter()  # fname -> number of calls
 
-    def parse_src_groups(self, fname, apply_uncertainties=None):
+    def parse_src_groups(self, fname, apply_uncertainties):
         """
         :param fname:
             the full pathname of the source model file
         :param apply_uncertainties:
-            a function modifying the sources (or None)
+            a function modifying the sources
         """
         try:
             groups = self.groups[fname]
         except KeyError:
-            groups = self.groups[fname] = self.parse_groups(fname)
+            groups = self.groups[fname] = to_python(fname, self.converter)
         # NB: deepcopy is *essential* here
         groups = [copy.deepcopy(g) for g in groups]
         for group in groups:
             nrup = 0
             for src in group:
-                if apply_uncertainties:
-                    apply_uncertainties(src)
+                changed = apply_uncertainties(src)
+                if changed:
+                    # redo count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
-                    nrup += src.num_ruptures
-            # NB: if the user sets a wrong discretization parameter
-            # the call to `.count_ruptures()` can be ultra-slow
-            logging.debug("%s, %s: parsed %d source(s) with %d ruptures",
-                          fname, group.trt, len(group), nrup)
+                nrup += src.num_ruptures
         self.fname_hits[fname] += 1
         return groups
 
