@@ -100,6 +100,24 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
+class SourceModel(collections.Sequence):
+    """
+    A container of source groups with attributes investigation_time, start_time
+    """
+    def __init__(self, name, src_groups, investigation_time=None,
+                 start_time=None):
+        self.name = name
+        self.src_groups = src_groups
+        self.investigation_time = investigation_time
+        self.start_time = start_time
+
+    def __getitem__(self, i):
+        return self.src_groups[i]
+
+    def __len__(self):
+        return len(self.src_groups)
+
+
 def get_tag_version(nrml_node):
     """
     Extract from a node of kind NRML the tag and the version. For instance
@@ -147,8 +165,9 @@ def get_source_model_04(node, fname, converter=default):
             logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    return sorted(sourceconverter.SourceGroup(trt, srcs)
-                  for trt, srcs in groups.items())
+    return SourceModel(node['name'],
+                       sorted(sourceconverter.SourceGroup(trt, srcs)
+                              for trt, srcs in groups.items()))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -162,7 +181,8 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         groups.append(converter.convert_node(src_group))
-    return sorted(groups)
+    return SourceModel(node['name'], sorted(groups),
+                       node.get('investigation_time'), node.get('start_time'))
 
 validators = {
     'strike': valid.strike_range,
