@@ -313,29 +313,6 @@ class SourceModelParser(object):
         self.fname_hits[fname] += 1
         return groups
 
-    def parse_groups(self, fname):
-        """
-        Parse all the groups and return them ordered by number of sources.
-        It does not count the ruptures, so it is relatively fast.
-
-        :param fname:
-            the full pathname of the source model file
-        """
-        try:
-            return to_python(fname, self.converter)
-        except ValueError as e:
-            err = str(e)
-            e1 = 'Surface does not conform with Aki & Richards convention'
-            e2 = 'Edges points are not in the right order'
-            if e1 in err or e2 in err:
-                raise InvalidFile('''\
-        %s: %s. Probably you are using an obsolete model.
-        In that case you can fix the file with the command
-        %s -m openquake.engine.tools.correct_complex_sources %s
-        ''' % (fname, e, sys.executable, fname))
-            else:
-                raise
-
 
 def read(source, chatty=True, stop=None):
     """
