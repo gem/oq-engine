@@ -498,6 +498,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
 
+    # check investigation_time
+    psr.check_nonparametric_sources(oqparam.investigation_time)
+
     # log if some source file is being used more than once
     for fname, hits in psr.fname_hits.items():
         if hits > 1:

@@ -109,6 +109,8 @@ class SourceModel(collections.Sequence):
                  start_time=None):
         self.src_groups = src_groups
         self.name = name
+        if investigation_time is not None:
+            investigation_time = valid.positivefloat(investigation_time)
         self.investigation_time = investigation_time
         self.start_time = start_time
 
@@ -283,7 +285,7 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.groups = {}  # cache fname -> groups
+        self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
 
     def parse_src_groups(self, fname, apply_uncertainties):
@@ -294,21 +296,36 @@ class SourceModelParser(object):
             a function modifying the sources
         """
         try:
-            groups = self.groups[fname]
+            groups = self.sm[fname]
         except KeyError:
-            groups = self.groups[fname] = to_python(fname, self.converter)
+            groups = self.sm[fname] = to_python(fname, self.converter)
         # NB: deepcopy is *essential* here
         groups = [copy.deepcopy(g) for g in groups]
         for group in groups:
-            nrup = 0
             for src in group:
                 changed = apply_uncertainties(src)
                 if changed:
                     # redo count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
-                nrup += src.num_ruptures
         self.fname_hits[fname] += 1
         return groups
+
+    def check_nonparametric_sources(self, investigation_time):
+        """
+        :param investigation_time:
+            investigation_time to compare with in the case of
+            nonparametric sources
+        """
+        for fname, sm in self.sm.items():
+            # NonParametricSeismicSources
+            np = [src for sg in sm.src_groups for src in sg
+                  if hasattr(src, 'data')]
+            if np:
+                if sm.investigation_time != investigation_time:
+                    raise ValueError(
+                        'The source model %s contains an investigation_time '
+                        'of %s, while the job.ini has %s' % (
+                            fname, sm.investigation_time, investigation_time))
 
 
 def read(source, chatty=True, stop=None):
