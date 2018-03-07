@@ -306,9 +306,11 @@ class Result(object):
             val = self.pik.unpickle()
         if self.tb_str:
             etype = val.__class__
-            # raise a RuntimeError to have a nice message in case of KeyError
-            raise RuntimeError(
-                '\n%s%s: %s' % (self.tb_str, etype.__name__, val))
+            msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
+            if issubclass(etype, KeyError):
+                raise RuntimeError(msg)  # nicer message
+            else:
+                raise etype(msg)
         return val
 
 
