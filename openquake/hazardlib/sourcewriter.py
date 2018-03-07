@@ -566,7 +566,9 @@ def build_source_group(source_group):
 
 @obj_to_node.add('SourceModel')
 def build_source_model_node(source_model):
-    attrs = dict(name=source_model.name)
+    attrs = {}
+    if source_model.name:
+        attrs['name'] = source_model.name
     if source_model.investigation_time:
         attrs['investigation_time'] = source_model.investigation_time
     if source_model.start_time:
