@@ -259,13 +259,11 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-        csm = self.csm.filter(src_filter)
 
         def weight(src):
             return src.num_ruptures * src.RUPTURE_WEIGHT
-        maxweight = math.ceil(
-            sum(weight(src) for src in self.csm.get_sources()) /
-            (oq.concurrent_tasks or 1))
+        csm = self.csm.filter(src_filter)
+        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks or 1)
         logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
