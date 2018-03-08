@@ -923,10 +923,8 @@ def _get_mesh_assets_by_site(oqparam, exposure):
     assets_by_loc = groupby(exposure, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    assets_by_site = []
-    for lonlat in zip(mesh.lons, mesh.lats):
-        assets = assets_by_loc[lonlat]
-        assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
+    assets_by_site = [
+        assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
     return mesh, assets_by_site
 
 
