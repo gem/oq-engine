@@ -923,10 +923,8 @@ def _get_mesh_assets_by_site(oqparam, exposure):
     assets_by_loc = groupby(exposure, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    assets_by_site = []
-    for lonlat in zip(mesh.lons, mesh.lats):
-        assets = assets_by_loc[lonlat]
-        assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
+    assets_by_site = [
+        assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
     return mesh, assets_by_site
 
 
@@ -960,15 +958,20 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
                 'asset_hazard_distance of %s km' % asset_hazard_distance)
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
-        assets_by_site = [assets_by_sid[sid] for sid in all_sids]
+        assets_by_site = [
+            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
+            for sid in all_sids]
         num_assets = sum(len(assets) for assets in assets_by_site)
         logging.info('Associated %d/%d assets to the hazard sites',
                      num_assets, tot_assets)
         sitecol = haz_sitecol.complete.filter(mask)
     else:  # use the exposure sites as hazard sites
         sitecol = get_site_collection(oqparam, mesh)
+    asset_refs = [exposure.asset_refs[asset.ordinal]
+                  for assets in assets_by_site
+                  for asset in assets]
     assetcol = asset.AssetCollection(
-        exposure.asset_refs,
+        asset_refs,
         assets_by_site,
         exposure.tagcol,
         exposure.cost_calculator,
