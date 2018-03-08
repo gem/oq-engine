@@ -279,8 +279,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                for block in csm.split_in_blocks(
-                        maxweight, sg.sources, weight):
+                for block in block_splitter(sg.sources, maxweight, weight):
                     block.samples = sm.samples
                     yield block, src_filter, gsims, param, monitor
                     num_tasks += 1
@@ -403,7 +402,6 @@ def compute_gmfs_and_curves(getters, oq, monitor):
         else:
             gmfdata = None
         res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
-                   taskno=monitor.task_no,
                    indices=numpy.array(indices, (U32, 3)))
         if len(getter.gmdata):
             results.append(res)
@@ -492,6 +490,7 @@ class EventBasedCalculator(base.HazardCalculator):
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
+        sitecol = self.sitecol.complete
         monitor = self.monitor(self.core_task.__name__)
         imts = list(oq.imtls)
         min_iml = self.get_min_iml(oq)
@@ -511,7 +510,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     continue
                 for block in block_splitter(ruptures, block_size):
                     getter = GmfGetter(
-                        rlzs_by_gsim[grp_id], block, self.sitecol,
+                        rlzs_by_gsim[grp_id], block, sitecol,
                         imts, min_iml, oq.maximum_distance,
                         oq.truncation_level, correl_model,
                         samples_by_grp[grp_id])
@@ -529,7 +528,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     if not ruptures:
                         continue
                 getters.append(GmfGetter(
-                    rlzs_by_gsim[grp_id], ruptures, self.sitecol,
+                    rlzs_by_gsim[grp_id], ruptures, sitecol,
                     imts, min_iml, oq.maximum_distance, oq.truncation_level,
                     correl_model, samples_by_grp[grp_id]))
             yield getters, oq, monitor
@@ -554,9 +553,12 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
-        acc = parallel.Starmap(
-            self.core_task.__func__, self.gen_args()
-        ).reduce(self.combine_pmaps_and_save_gmfs, {
+        ires = parallel.Starmap(
+            self.core_task.__func__, self.gen_args()).submit_all()
+        if self.precalc and self.precalc.result:
+            # remove the ruptures in memory to save memory
+            self.precalc.result.clear()
+        acc = ires.reduce(self.combine_pmaps_and_save_gmfs, {
             r: ProbabilityMap(L) for r in range(R)})
         save_gmdata(self, R)
         if self.indices:

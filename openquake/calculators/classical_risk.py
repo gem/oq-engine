@@ -98,12 +98,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             raise ValueError(
                 'insured_losses are not supported for classical_risk')
         if 'hazard_curves' in oq.inputs:  # read hazard from file
-            haz_sitecol, pmap = readinput.get_pmap(oq)
-            self.datastore['poes/grp-00'] = pmap
+            haz_sitecol = readinput.get_site_collection(oq)
+            self.datastore['poes/grp-00'] = readinput.pmap
             self.save_params()
-            self.read_exposure()  # define .assets_by_site
+            self.read_exposure(haz_sitecol)  # define .assets_by_site
             self.load_riskmodel()
-            self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
@@ -112,11 +111,10 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             super(ClassicalRiskCalculator, self).pre_execute()
             if 'poes' not in self.datastore:  # when building short report
                 return
-        weights = self.datastore['csm_info'].rlzs['weight']
-        self.R = len(weights)
-        with self.monitor('build riskinputs', measuremem=True, autoflush=True):
-            self.riskinputs = self.build_riskinputs('poe')
-        self.param = dict(stats=oq.risk_stats(), weights=weights)
+        rlzs = self.datastore['csm_info'].rlzs
+        self.param = dict(stats=oq.risk_stats(), weights=rlzs['weight'])
+        self.R = len(rlzs)
+        self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
         self.I = oq.insured_losses + 1
@@ -138,7 +136,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         # loss curves stats are generated always
         stats = [encode(n) for (n, f) in self.oqparam.risk_stats()]
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
-        avg_losses = numpy.zeros((self.A, self.R, self.L * self.I), F32)
+        avg_losses = numpy.zeros((self.A, self.S, self.L * self.I), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:
             stat_curves_lt = stat_curves[ltypes[l]]
             for s in range(self.S):

@@ -359,7 +359,8 @@ def build_damage_dt(dstore, mean_std=True):
        a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
        loss_type -> (ds1, ds2, ...) depending on the flag mean_std
     """
-    damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
+    damage_states = ['no_damage'] + list(
+        dstore.get_attr('composite_risk_model', 'limit_states'))
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
@@ -540,7 +541,7 @@ def get_paths(rlz):
 def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
     assetcol = dstore['assetcol/array'].value
-    aref = dstore['asset_refs'].value
+    arefs = dstore['assetcol/asset_refs'].value
     bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
@@ -554,9 +555,8 @@ def export_bcr_map(ekey, dstore):
         path = dstore.build_fname('bcr', tag, 'csv')
         data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
                  'average_annual_loss_retrofitted', 'bcr']]
-        for ass, value in zip(assetcol, rlz_data):
-            data.append((ass['lon'], ass['lat'],
-                         decode(aref[ass['idx']]),
+        for aref, ass, value in zip(arefs, assetcol, rlz_data):
+            data.append((ass['lon'], ass['lat'], aref,
                          value['annual_loss_orig'],
                          value['annual_loss_retro'],
                          value['bcr']))
@@ -588,7 +588,7 @@ def export_asset_loss_table(ekey, dstore):
     key, fmt = ekey
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    arefs = dstore['asset_refs'].value
+    arefs = assetcol.asset_refs
     avals = assetcol.values()
     loss_types = dstore.get_attr('all_loss_ratios', 'loss_types').split()
     dtlist = [(lt, F32) for lt in loss_types]
@@ -614,7 +614,7 @@ def export_asset_loss_table(ekey, dstore):
                     aval = avalue[lt]
                     for i in range(oq.insured_losses + 1):
                         data['ratios'][:, l + L * i] *= aval
-                aref = arefs[asset.idx]
+                aref = arefs[asset.ordinal]
                 f[b'asset_loss_table/' + aref] = data.view(lrs_dt)
                 total += data['ratios'].sum(axis=0)
                 nbytes += data.nbytes

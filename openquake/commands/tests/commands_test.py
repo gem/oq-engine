@@ -26,6 +26,7 @@ import unittest
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import writetmp
+from openquake.baselib.datastore import read
 from openquake import commonlib
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
@@ -40,6 +41,7 @@ from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands.zip import zip as zip_cmd
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
+from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
@@ -216,7 +218,7 @@ class RunShowExportTestCase(unittest.TestCase):
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
         self.assertIn('source_id source_class num_ruptures calc_time '
-                      'num_sites num_split', str(p))
+                      'split_time num_sites num_split', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -392,5 +394,15 @@ class EngineRunJobTestCase(unittest.TestCase):
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            run_job(job_ini, log_level='error')
+            job_id = run_job(job_ini, log_level='error')
         self.assertIn('id | name', str(p))
+
+        # sanity check on the performance view: make sure that the most
+        # relevant information is stored (it can be lost for instance due
+        # to a wrong refactoring of the safely_call function)
+        with read(job_id) as dstore:
+            perf = view('performance', dstore)
+            self.assertIn('total runtime', perf)
+            self.assertIn('total compute_ruptures', perf)
+            self.assertIn('total event_based_risk', perf)
+            self.assertIn('total build_curves_maps', perf)
