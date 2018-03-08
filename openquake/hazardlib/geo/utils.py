@@ -80,6 +80,19 @@ class GeographicObjects(object):
             idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
         return self.objects[idx], min_dist
 
+    def assoc(self, sitecol, assoc_dist):
+        """
+        :param: a (filtered) site collection
+        :param assoc_dist: the maximum distance for association
+        :returns: a dictionary sid -> object
+        """
+        dic = {}
+        for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
+            obj, distance = self.get_closest(lon, lat)
+            if distance <= assoc_dist:
+                dic[sid] = obj
+        return dic
+
 
 def clean_points(points):
     """
