@@ -20,11 +20,10 @@ from __future__ import division
 import re
 import inspect
 import functools
-import collections
 import numpy
 
 from openquake.baselib.node import Node
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, AccumDict
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.hazardlib import valid, nrml
 from openquake.hazardlib.sourcewriter import obj_to_node
@@ -101,7 +100,8 @@ def get_risk_models(oqparam, kind=None):
         a dictionary taxonomy -> loss_type -> function
     """
     kind = kind or oqparam.file_type
-    rmodels = {}
+    rmodels = AccumDict()
+    rmodels.limit_states = []
     for key in sorted(oqparam.inputs):
         mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
         if mo:
@@ -125,7 +125,8 @@ def get_risk_models(oqparam, kind=None):
                     'Error in the file "%s_file=%s": lossCategory is of type '
                     '"%s", expected "%s"' % (key, oqparam.inputs[key],
                                              rmodel.lossCategory, key_type))
-    rdict = collections.defaultdict(dict)
+    rdict = AccumDict(accum={})
+    rdict.limit_states = []
     if kind == 'fragility':
         limit_states = []
         for loss_type, fm in sorted(rmodels.items()):
@@ -143,7 +144,7 @@ def get_risk_models(oqparam, kind=None):
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
-        oqparam.limit_states = [str(ls) for ls in limit_states]
+        rdict.limit_states = [str(ls) for ls in limit_states]
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
@@ -500,6 +501,7 @@ class Damage(RiskModel):
         """
         ffs = self.risk_functions[loss_type]
         damages = scientific.scenario_damage(ffs, gmvs_eids[0])  # shape (D, E)
+        damages[damages < 1E-7] = 0  # sanity check
         return [damages.T] * len(assets)
 
 
