@@ -959,7 +959,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
         assets_by_site = [
-            sorted(assets_by_sid[sid], key=operator.attrgetter('idx'))
+            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in all_sids]
         num_assets = sum(len(assets) for assets in assets_by_site)
         logging.info('Associated %d/%d assets to the hazard sites',
@@ -967,7 +967,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         sitecol = haz_sitecol.complete.filter(mask)
     else:  # use the exposure sites as hazard sites
         sitecol = get_site_collection(oqparam, mesh)
-    asset_refs = [exposure.asset_refs[asset.idx]
+    asset_refs = [exposure.asset_refs[asset.ordinal]
                   for assets in assets_by_site
                   for asset in assets]
     assetcol = asset.AssetCollection(
