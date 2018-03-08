@@ -354,7 +354,7 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array = self.build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
-        self.asset_refs = [asset_refs[rec['idx']] for rec in self.array]
+        self.asset_refs = asset_refs
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
         if 'occupants' in fields:
