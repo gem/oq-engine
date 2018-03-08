@@ -19,18 +19,18 @@
 import itertools
 import numpy
 
-from openquake.commonlib import riskmodels
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskmodels
 from openquake.calculators import base, event_based
 
 F32 = numpy.float32
 F64 = numpy.float64
 
 
-def dist_by_asset(data, multi_stat_dt):
+def dist_by_asset(data, multi_stat_dt, number):
     """
     :param data: array of shape (N, R, L, 2, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
+    :param number: expected number of units per asset
     :returns: array of shape (N, R) with records of type multi_stat_dt
     """
     N, R, L = data.shape[:3]
@@ -38,7 +38,11 @@ def dist_by_asset(data, multi_stat_dt):
     for l, lt in enumerate(multi_stat_dt.names):
         out_lt = out[lt]
         for n, r in itertools.product(range(N), range(R)):
-            out_lt[n, r] = tuple(data[n, r, l])  # (mean, stddev)
+            mean, stddev = data[n, r, l]
+            out_lt[n, r] = (mean, stddev)
+            # sanity check on the sum over all damage states
+            numpy.testing.assert_almost_equal(
+                mean.sum(), number[n], decimal=2)
     return out
 
 
@@ -143,7 +147,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = dist_by_asset(
-            d_asset, multi_stat_dt)
+            d_asset, multi_stat_dt, self.assetcol.array['number'])
 
         # consequence distributions
         if result['c_asset']:

@@ -52,7 +52,6 @@ from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode, pickle
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
-from openquake.risklib import read_nrml
 
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators.export import export
@@ -75,8 +74,6 @@ try:
 except ImportError:
     from django.core.servers.basehttp import FileWrapper
 
-
-read_nrml.update_validators()  # update risk validators
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
