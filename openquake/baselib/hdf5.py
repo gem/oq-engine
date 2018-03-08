@@ -156,50 +156,6 @@ class LiteralAttrs(object):
         return '<%s %s>' % (self.__class__.__name__, nameval)
 
 
-# the implementation below stores a dataset per each object; it would be nicer
-# to store an array, however I am not able to do that with the current version
-# of h5py; the best I could do is to store an array of variable length ASCII
-# strings, but then I would have to use the ASCII format of pickle, which is
-# the least efficient. The current solution looks like a decent compromise.
-class PickleableSequence(collections.Sequence):
-    """
-    An immutable sequence of pickleable objects that can be serialized
-    in HDF5 format. Here is an example, using the LiteralAttrs class defined
-    in this module, but any pickleable class would do:
-
-    >>> seq = PickleableSequence([LiteralAttrs(), LiteralAttrs()])
-    >>> with File('/tmp/x.h5', 'w') as f:
-    ...     f['data'] = seq
-    >>> with File('/tmp/x.h5') as f:
-    ...     f['data']
-    (<LiteralAttrs >, <LiteralAttrs >)
-    """
-    def __init__(self, objects):
-        self._objects = tuple(objects)
-
-    def __getitem__(self, i):
-        return self._objects[i]
-
-    def __len__(self):
-        return len(self._objects)
-
-    def __repr__(self):
-        return repr(self._objects)
-
-    def __toh5__(self):
-        dic = {}
-        nbytes = 0
-        for i, obj in enumerate(self._objects):
-            pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-            dic['%06d' % i] = numpy.array(pik)
-            nbytes += len(pik)
-        return dic, dict(nbytes=nbytes)
-
-    def __fromh5__(self, dic, attrs):
-        self._objects = tuple(pickle.loads(dic[k].value) for k in sorted(dic))
-        vars(self).update(attrs)
-
-
 def cls2dotname(cls):
     """
     The full Python name (i.e. `pkg.subpkg.mod.cls`) of a class
