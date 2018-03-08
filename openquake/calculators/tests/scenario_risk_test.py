@@ -173,9 +173,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         agglosses = extract(self.calc.datastore, 'agglosses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
         numpy.testing.assert_almost_equal(
-            agglosses, [[1969.55847168, 2363.07958984],
-                        [712.85351562, 924.75616455],
-                        [986.706604, 1344.03710938]])
+            agglosses, [[1981.4678955, 2363.5800781],
+                        [712.8535156, 924.7561646],
+                        [986.706604, 1344.0371094]])
 
         # extract agglosses with a * and a selection
         obj = extract(self.calc.datastore, 'agglosses/structural?'
@@ -183,7 +183,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
         numpy.testing.assert_almost_equal(
-            obj.array, [[1299.3848877, 1561.6965332]])
+            obj.array, [[1316.3723145, 1569.1348877]])
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_7(self):

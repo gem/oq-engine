@@ -46,7 +46,7 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary {
         'agg': array of shape (E, L, R, 2),
-        'avg': list of tuples (lt_idx, rlz_idx, asset_idx, statistics)
+        'avg': list of tuples (lt_idx, rlz_idx, asset_ordinal, statistics)
         }
         where E is the number of simulated events, L the number of loss types,
         R the number of realizations  and statistics is an array of shape
