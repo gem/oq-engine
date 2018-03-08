@@ -84,7 +84,7 @@ class GeographicObjects(object):
         """
         :param: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
-        :returns: a dictionary sid -> object
+        :returns: a dictionary site_id -> associated object
         """
         dic = {}
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
