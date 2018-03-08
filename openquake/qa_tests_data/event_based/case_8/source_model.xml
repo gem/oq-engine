@@ -4,7 +4,8 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
-    name="Test Source Model"
+        name="Test Source Model"
+        investigation_time="50"
     >
         <sourceGroup
         tectonicRegion="Active Shallow Crust"
