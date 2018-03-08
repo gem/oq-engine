@@ -368,7 +368,7 @@ class HazardCalculator(BaseCalculator):
                 self.csm.init_serials()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 logging.info('Splitting sources')
-                self.split_time = self.csm.split_all()
+                self.csm.split_all()
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
