@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Very small result values in scenario_damage (< 1E-7) are clipped to zero,
+    to hide numerical artifacts
   * Removed an obsolete PickleableSequence class
   * Fixed error in classical_risk when num_statistics > num_realizations
   * Fixed a TypeError when reading CSV exposures with occupancy periods
