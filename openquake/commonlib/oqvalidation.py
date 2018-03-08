@@ -618,10 +618,18 @@ class OqParam(valid.ParamSet):
         Invalid calculation_mode="{calculation_mode}" or missing
         fragility_file/vulnerability_file in the .ini file.
         """
+        if self.hazard_calculation_id:
+            parent_datasets = set(datastore.read(self.hazard_calculation_id))
+        else:
+            parent_datasets = set()
         if 'damage' in self.calculation_mode:
-            return any(key.endswith('_fragility') for key in self.inputs)
+            return any(
+                key.endswith('_fragility') for key in self.inputs
+            ) or 'composite_risk_model' in parent_datasets
         elif 'risk' in self.calculation_mode:
-            return any(key.endswith('_vulnerability') for key in self.inputs)
+            return any(
+                key.endswith('_vulnerability') for key in self.inputs
+            ) or 'composite_risk_model' in parent_datasets
         return True
 
     def is_valid_complex_fault_mesh_spacing(self):
