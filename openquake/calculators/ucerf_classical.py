@@ -147,7 +147,6 @@ class UcerfPSHACalculator(PSHACalculator):
                              for sm in self.csm.source_models
                              for grp in sm.src_groups}
         self.rup_data = {}
-        self.split_time = {src.source_id: 0 for src in self.csm.get_sources()}
 
     def execute(self):
         """

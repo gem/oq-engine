@@ -545,7 +545,8 @@ def get_composite_source_model(oqparam, in_memory=True):
                 # the limit is really needed only for event based calculations
                 raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
+    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels,
+                                      oqparam.optimize_same_id_sources)
     for sm in csm.source_models:
         srcs = []
         for sg in sm.src_groups:
