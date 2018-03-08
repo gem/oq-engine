@@ -529,7 +529,7 @@ class AssetCollection(object):
         int_fields = [(str(name), U16) for name in tagnames]
         tagi = {str(name): i for i, name in enumerate(tagnames)}
         asset_dt = numpy.dtype(
-            [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
+            [('lon', F32), ('lat', F32), ('site_id', U32),
              ('number', F32), ('area', F32)] + [
                  (str(name), float) for name in float_fields] + int_fields)
         num_assets = sum(len(assets) for assets in assets_by_site)
@@ -546,8 +546,6 @@ class AssetCollection(object):
                         value = asset.number
                     elif field == 'area':
                         value = asset.area
-                    elif field == 'idx':
-                        value = asset.ordinal
                     elif field == 'site_id':
                         value = sid
                     elif field == 'lon':
