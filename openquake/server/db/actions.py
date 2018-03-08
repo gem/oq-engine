@@ -111,6 +111,22 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
     return job_id
 
 
+def import_job(db, calc_id, calc_mode, description, user_name, status,
+               datadir, hc_id=None):
+    """
+    Insert a calculation inside the database, if calc_id is not taken
+    """
+    job = dict(id=calc_id,
+               calculation_mode=calc_mode,
+               description=description,
+               user_name=user_name,
+               hazard_calculation_id=hc_id,
+               is_running=0,
+               status=status,
+               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
+    db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values())
+
+
 def delete_uncompleted_calculations(db, user):
     """
     Delete the uncompleted calculations of the given user.
