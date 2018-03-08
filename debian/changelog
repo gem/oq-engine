@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Bug fix: in some cases the calculator `event_based_rupture` was generating
-    too few tasks
+    too few tasks and the same happened for classical calculation with
+    `optimize_same_id_sources=true`
   * Changed the ordering of the epsilons in scenario_risk
   * Added the ability to use a pre-imported risk model
   * Very small result values in scenario_damage (< 1E-7) are clipped to zero,
