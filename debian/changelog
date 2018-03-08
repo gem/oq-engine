@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check an investigation time attribute for nonparametric sources
   * Changed the ordering of the epsilons in scenario_risk
   * Added the ability to use a pre-imported risk model
   * Very small result values in scenario_damage (< 1E-7) are clipped to zero,
