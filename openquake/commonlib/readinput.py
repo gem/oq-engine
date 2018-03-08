@@ -1284,7 +1284,7 @@ def get_m(values, stddevs):
 def extract_data(grid_node):
     """
     :param grid_node: a Node for an USGS shakemap file
-    :returns: a dictionary shakemap_field -> vector of values
+    :returns: a dictionary key -> array with key in {lon, lat, val, std}
     """
     fields = grid_node.getnodes('grid_field')
     lines = grid_node.grid_data.text.strip().splitlines()
@@ -1293,7 +1293,6 @@ def extract_data(grid_node):
     # the indices start from 1, hence the -1 below
     idx = {f['name']: int(f['index']) - 1 for f in fields
            if f['name'] in SHAKEMAP_FIELDS}
-    print(idx)
     out = {name: [] for name in idx}
     has_sa = False
     for name in idx:
@@ -1301,10 +1300,10 @@ def extract_data(grid_node):
         if name.startswith('PSA'):
             has_sa = True
         out[name].append([float(row[i]) for row in rows])
-    if has_sa:
+    if has_sa:  # expect SA for 0.3, 1.0 and 3.0
         dt = numpy.dtype([('PGA', F32), ('SA(0.3)', F32), ('SA(1.0)', F32),
                           ('SA(3.0)', F32)])
-    else:
+    else:  # expect only PGA
         dt = numpy.dtype([('PGA', F32)])
     dtlist = [('lon', F32), ('lat', F32), ('val', dt), ('std', dt)]
     data = numpy.zeros(len(rows), dtlist)
