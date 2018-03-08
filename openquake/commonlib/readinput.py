@@ -1269,22 +1269,15 @@ def get_checksum32(oqparam):
 # ########################## get shakemap ############################## #
 
 SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/grid.xml'
-URL2 = 'http://shakemap.rm.ingv.it/shake/{}/download/uncertainty.xml'
 SHAKEMAP_FIELDS = set(
     'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSHA10 STDPSA30'
     .split())
 
 
-def get_m(values, stddevs):
-    m = values / 100.
-    return numpy.log(
-        m ** 2 / numpy.sqrt((m**2 * (numpy.exp(stddevs ** 2) - 1)) + m ** 2))
-
-
-def extract_data(grid_node):
+def get_shakemap_from(grid_node):
     """
     :param grid_node: a Node for an USGS shakemap file
-    :returns: a dictionary key -> array with key in {lon, lat, val, std}
+    :returns: array with fields lon, lat, val, std
     """
     fields = grid_node.getnodes('grid_field')
     lines = grid_node.grid_data.text.strip().splitlines()
@@ -1321,20 +1314,19 @@ def extract_data(grid_node):
     return data
 
 
-def apply_uncertainty(data, grid_node):
-    fields = list(grid_node.getnodes('grid_field'))
-    assert fields[0]['name'] == 'LON', fields[0]
-    assert fields[1]['name'] == 'LAT', fields[1]
-    assert fields[2]['name'] == 'STDPGA', fields[2]
-    return get_m(data, stddevs)
+def get_shakemap_data(shakemap_id_or_fname, sitecol, assoc_dist):
+    """
+    :param shakemap_id_or_fname: shakemap ID or shakemap file
 
-
-def get_shakemap(shakemap_id):
-    with urlopen(URL1.format(shakemap_id)) as f1:
-        data1 = extract_data(node_from_xml(f1))
-
-    #with urlopen(URL2.format(shakemap_id)) as f2:
-    #    data2 = extract_data(node_from_xml(f2))
+    :returns: a dictionary site_id -> shakemap array
+    """
+    if isinstance(shakemap_id_or_fname, int):
+        with urlopen(SHAKEMAP_URL.format(shakemap_id_or_fname)) as f1:
+            node = node_from_xml(f1)
+    else:
+        node = node_from_xml(shakemap_id_or_fname)
+    data = geo.utils.GeographicObjects(get_shakemap_from(node))
+    return data.assoc(sitecol, assoc_dist)
 
 
 """\
