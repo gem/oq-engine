@@ -967,8 +967,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         sitecol = haz_sitecol.complete.filter(mask)
     else:  # use the exposure sites as hazard sites
         sitecol = get_site_collection(oqparam, mesh)
+    asset_refs = [exposure.asset_refs[asset.idx]
+                  for assets in assets_by_site
+                  for asset in assets]
     assetcol = asset.AssetCollection(
-        exposure.asset_refs,
+        asset_refs,
         assets_by_site,
         exposure.tagcol,
         exposure.cost_calculator,
