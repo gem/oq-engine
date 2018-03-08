@@ -193,7 +193,6 @@ validators = {
     'bin_width': valid.positivefloats,
     'probability': valid.probability,
     'occurRates': valid.positivefloats,  # they can be > 1
-    'probs_occur': valid.pmf,
     'weight': valid.probability,
     'uncertaintyWeight': decimal.Decimal,
     'alongStrike': valid.probability,

@@ -76,7 +76,7 @@ RM       4,000
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
         total = extract(self.calc.datastore, 'aggdamages/structural')
-        aae([[0.47999877, 0.35379884, 0.06553464, 0.01844897, 0.08221881]],
+        aae([[0.4799988, 0.3537988, 0.0655346, 0.018449, 0.0822188]],
             total)  # shape (R, D) = (1, 5)
 
     @attr('qa', 'risk', 'scenario_damage')
@@ -112,7 +112,9 @@ RM       4,000
     def test_case_5(self):
         # this is a test for the rupture filtering
         # NB: the exposure file is imported twice on purpose, to make
-        # sure that nothing changes; TODO: document the issue (MS)
+        # sure that nothing changes; the case is very tricky since the
+        # hazard site collection is filtered by the maximum_distance,
+        # there is no region_constraint in hazard and there is in risk
         self.assert_ok(case_5, 'job_haz.ini,job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')
