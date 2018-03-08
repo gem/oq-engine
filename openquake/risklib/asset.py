@@ -540,7 +540,7 @@ class AssetCollection(object):
         asset_ordinal = 0
         fields = set(asset_dt.fields)
         for sid, assets_ in enumerate(assets_by_site):
-            for asset in sorted(assets_, key=operator.attrgetter('idx')):
+            for asset in assets_:
                 asset.ordinal = asset_ordinal
                 record = assetcol[asset_ordinal]
                 asset_ordinal += 1
