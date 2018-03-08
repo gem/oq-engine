@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -497,6 +497,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
+
+    # check investigation_time
+    psr.check_nonparametric_sources(oqparam.investigation_time)
 
     # log if some source file is being used more than once
     for fname, hits in psr.fname_hits.items():
