@@ -613,7 +613,7 @@ def export_asset_loss_table(ekey, dstore):
                     aval = avalue[lt]
                     for i in range(oq.insured_losses + 1):
                         data['ratios'][:, l + L * i] *= aval
-                aref = arefs[asset.idx]
+                aref = arefs[asset.ordinal]
                 f[b'asset_loss_table/' + aref] = data.view(lrs_dt)
                 total += data['ratios'].sum(axis=0)
                 nbytes += data.nbytes
