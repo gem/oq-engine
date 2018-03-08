@@ -59,9 +59,8 @@ import operator
 import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
+from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
-from openquake.baselib.parallel import Sequential
-from openquake.hazardlib.source import split_source
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
@@ -83,10 +82,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     if getattr(group, 'src_interdep', None) == 'mutex':
         mutex_weight = {src.source_id: weight for src, weight in
                         zip(group.sources, group.srcs_weights)}
-        srcs = group.sources
     else:
         mutex_weight = None
-        srcs = sum([split_source(src) for src in group], [])
     grp_ids = set()
     for src in group:
         grp_ids.update(src.src_group_ids)
@@ -102,7 +99,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
         pmap.calc_times = AccumDict(accum=numpy.zeros(4))
         pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
-        for src, s_sites in src_filter(srcs):  # filter now
+        for src, s_sites in src_filter(group):  # filter now
             t0 = time.time()
             indep = group.rup_interdep == 'indep' if mutex_weight else True
             poemap = cmaker.poe_map(
@@ -128,7 +125,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
 def calc_hazard_curves(
         groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
-        apply=Sequential.apply):
+        apply=sequential_apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per

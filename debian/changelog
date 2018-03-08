@@ -1,3 +1,47 @@
+  [Michele Simionato]
+  * Changed the ordering of the epsilons in scenario_risk
+  * Added the ability to use a pre-imported risk model
+  * Very small result values in scenario_damage (< 1E-7) are clipped to zero,
+    to hide numerical artifacts
+  * Removed an obsolete PickleableSequence class
+  * Fixed error in classical_risk when num_statistics > num_realizations
+  * Fixed a TypeError when reading CSV exposures with occupancy periods
+  * Extended the check on duplicated source IDs to models in format NRML 0.5
+  * Added a warning when reading the sources if .count_ruptures() is
+    suspiciously slow
+  * Changed the splitting logic: now all sources are split upfront
+  * Improved the splitting of complex fault sources
+  * Added a script to renumber source models with non-unique source IDs
+  * Made the datastore of calculations using GMPETables relocatable; in
+    practice you can run the Canada model on a cluster, copy the .hdf5 on
+    a laptop and do the postprocessing there, a feat previously impossible.
+
+  [Valerio Poggi]
+  * Included a method to export data directly from the Catalogue() object into
+    standard HMTK format.
+
+  [Michele Simionato]
+  * Now the parameter `disagg_outputs` is honored, i.e. only the specified
+    outputs are extracted from the disaggregation matrix and stored
+  * Implemented statistical disaggregation outputs (experimental)
+  * Fixed a small bug: we were reading the source model twice in disaggregation
+  * Added a check to discard results coming from the wrong calculation
+    for the distribution mode `celery_zmq`
+  * Removed the long time deprecated commands
+    `oq engine --run-hazard` and `oq engine --run-risk`
+  * Added a distribution mode `celery_zmq`
+  * Added the ability to use a preimported exposure in risk calculations
+  * Substantial cleanup of the parallelization framework
+  * Fixed a bug with nonparametric sources producing negative probabilities
+
+python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Deprecated the NRML format for the GMFs
+
+  [Matteo Nastasi]
+  * Debian package moved to Python 3.5
+
   [Graeme Weatherill]
   * Small bug fix for Derras et al (2014) GMPE when Rjb = 0.0
 
@@ -134,7 +178,9 @@
   * Minor modification of check_gsim functions to permit instantiated classes
     to be passed
 
-python-oq-engine (2.8.0-0~precise01) precise; urgency=low
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 26 Feb 2018 08:53:58 +0100
+
+python3-oq-engine (2.8.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
   * `iml_disagg` and `poes_disagg` cannot coexist in the job.ini file

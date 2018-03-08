@@ -17,10 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.hazardlib.gsim.gsim_table` defines the
-:class:`openquake.hazardlib.gsim.gsim_table.GMPETable` for defining GMPEs
+Module :mod:`openquake.hazardlib.gsim.gmpe_table` defines the
+:class:`openquake.hazardlib.gsim.gmpe_table.GMPETable` for defining GMPEs
 in the form of binary tables, and
-:class:`openquake.hazardlib.gsim.gsim_table.AmplificationTable` for defining
+:class:`openquake.hazardlib.gsim.gmpe_table.AmplificationTable` for defining
 the corresponding amplification of the IMLs
 """
 
@@ -33,6 +33,7 @@ import h5py
 from scipy.interpolate import interp1d
 import numpy
 
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE, RuptureContext, SitesContext
@@ -99,7 +100,7 @@ class AmplificationTable(object):
         self.sigma = None
         self.magnitudes = magnitudes
         self.distances = distances
-        self.parameter = amplification_group.attrs["apply_to"].decode('utf8')
+        self.parameter = decode(amplification_group.attrs["apply_to"])
         self.values = numpy.array([float(key) for key in amplification_group])
         self.argidx = numpy.argsort(self.values)
         self.values = self.values[self.argidx]
@@ -306,7 +307,6 @@ class GMPETable(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
 
     GMPE_TABLE = None
-    GMPE_DIR = '.'
 
     def __init__(self, gmpe_table=None):
         """
@@ -325,10 +325,9 @@ class GMPETable(GMPE):
                 if os.path.isabs(gmpe_table):
                     self.GMPE_TABLE = gmpe_table
                 else:
+                    # NB: (hackish) GMPE_DIR must be set externally
                     self.GMPE_TABLE = os.path.abspath(
                         os.path.join(self.GMPE_DIR, gmpe_table))
-                if not os.path.exists(self.GMPE_TABLE):
-                    raise IOError('Missing file %r' % self.GMPE_TABLE)
             else:
                 raise IOError("GMPE Table Not Defined!")
         super(GMPETable, self).__init__()
@@ -338,15 +337,22 @@ class GMPETable(GMPE):
         self.distances = None
         self.distance_type = None
         self.amplification = None
-        self._run_setup()
+        # NB: it must be possible to instantiate a GMPETable even if the
+        # the .hdf5 file (GMPE_TABLE) does not exist; the reason is that
+        # we want to run a calculation on machine 1, copy the datastore
+        # on machine 2 (that misses the .hdf5 files) and still be able to
+        # export the results, i.e. to instantiate the GsimLogicTree object
+        # which is required by the engine to determine the realizations
+        if os.path.exists(self.GMPE_TABLE):
+            with h5py.File(self.GMPE_TABLE, "r") as f:
+                self.init(f)
 
-    def _run_setup(self):
+    def init(self, fle):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        fle = h5py.File(self.GMPE_TABLE, "r")
-        self.distance_type = fle["Distances"].attrs["metric"].decode('utf8')
+        self.distance_type = decode(fle["Distances"].attrs["metric"])
         self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
         self.m_w = fle["Mw"][:]
@@ -362,7 +368,6 @@ class GMPETable(GMPE):
         self._setup_standard_deviations(fle)
         if "Amplification" in fle:
             self._setup_amplification(fle)
-        fle.close()
 
     def _setup_standard_deviations(self, fle):
         """

@@ -52,7 +52,6 @@ from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode, pickle
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
-from openquake.risklib import read_nrml
 
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators.export import export
@@ -75,8 +74,6 @@ try:
 except ImportError:
     from django.core.servers.basehttp import FileWrapper
 
-
-read_nrml.update_validators()  # update risk validators
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -474,11 +471,12 @@ def run_calc(request):
         candidates = ("job_risk.ini", "job.ini")
     else:
         candidates = ("job_hazard.ini", "job_haz.ini", "job.ini")
-    einfo, exctype, monitor = safely_call(_prepare_job, (request, candidates))
-    if exctype:
-        return HttpResponse(json.dumps(einfo.splitlines()),
+    result = safely_call(_prepare_job, (request, candidates))
+    if result.tb_str:
+        return HttpResponse(json.dumps(result.tb_str.splitlines()),
                             content_type=JSON, status=500)
-    if not einfo:
+    inifiles = result.get()
+    if not inifiles:
         msg = 'Could not find any file of the form %s' % str(candidates)
         logging.error(msg)
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
@@ -486,7 +484,7 @@ def run_calc(request):
 
     user = utils.get_user_data(request)
     try:
-        job_id, pid = submit_job(einfo[0], user['name'], hazard_job_id)
+        job_id, pid = submit_job(inifiles[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
