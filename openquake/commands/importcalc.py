@@ -36,12 +36,13 @@ import sys
 import logging
 from openquake.baselib import sap, datastore
 from openquake.commonlib import logs
+from openquake.engine import engine
 from openquake.server import dbserver
 from requests import Session
 
+
 # NB: it is really difficult to test this automatically, so it is only
 # tested manually
-
 def login(host, username, password):
     session = Session()
     login_url = host + '/accounts/ajax_login/'
@@ -67,7 +68,7 @@ def importcalc(calc_url, username, password):
     dbserver.ensure_on()
     job = logs.dbcmd('get_job', calc_id)
     if job is not None:
-        sys.exit('There is already a calculation #%d in the local db', calc_id)
+        sys.exit('There is already a job #%d in the local db' % calc_id)
 
     datadir = datastore.get_datadir()
     session = login(host, username, password)
@@ -79,8 +80,11 @@ def importcalc(calc_url, username, password):
         logging.info('%s -> %s', calc_url, fname)
         for chunk in resp:
             f.write(chunk)
-    logs.dbcmd('create_job', json['calculation_mode'], json['description'],
-               json['owner'], datadir)
+    logs.dbcmd('import_job', calc_id, json['calculation_mode'],
+               json['description'], json['owner'], json['status'], datadir)
+    with datastore.read(calc_id) as dstore:
+        engine.expose_outputs(dstore)
+    logging.info('Imported calculation %d successfully', calc_id)
 
 importcalc.arg('calc_url', 'calculation URL')
 importcalc.arg('username', 'user name')
