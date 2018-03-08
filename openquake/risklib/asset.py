@@ -115,7 +115,7 @@ class Asset(object):
     calculations.
     """
     def __init__(self,
-                 asset_id,
+                 ordinal,
                  tagidxs,
                  number,
                  location,
@@ -124,11 +124,10 @@ class Asset(object):
                  deductibles=None,
                  insurance_limits=None,
                  retrofitted=None,
-                 calc=costcalculator,
-                 ordinal=None):
+                 calc=costcalculator):
         """
-        :param asset_id:
-            an unique identifier of the assets within the given exposure
+        :param ordinal:
+            an integer identifier for the asset, used to order them
         :param tagidxs:
             a list of indices for the taxonomy and other tags
         :param number:
@@ -150,7 +149,7 @@ class Asset(object):
         :param ordinal:
             asset collection ordinal
         """
-        self.idx = asset_id
+        self.ordinal = ordinal
         self.tagidxs = tagidxs
         self.number = number
         self.location = location
@@ -160,7 +159,6 @@ class Asset(object):
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
         self.calc = calc
-        self.ordinal = ordinal
         self._cost = {}  # cache for the costs
 
     def value(self, loss_type, time_event=None):
@@ -227,7 +225,7 @@ class Asset(object):
         return mask
 
     def __lt__(self, other):
-        return self.idx < other.idx
+        return self.ordinal < other.ordinal
 
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal
@@ -449,7 +447,7 @@ class AssetCollection(object):
         if 'occupants' in self.array.dtype.names:
             values['occupants_' + str(self.time_event)] = a['occupants']
         return Asset(
-            a['idx'],
+            aid,
             [a[decode(name)] for name in self.tagnames],
             number=a['number'],
             location=(valid.longitude(a['lon']),  # round coordinates
@@ -459,8 +457,7 @@ class AssetCollection(object):
             deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
             insurance_limits={lt[self.I:]: a[lt] for lt in self.i_lim},
             retrofitted=a['retrofitted'] if self.retro else None,
-            calc=self.cost_calculator,
-            ordinal=aid)
+            calc=self.cost_calculator)
 
     def __len__(self):
         return len(self.array)
@@ -550,7 +547,7 @@ class AssetCollection(object):
                     elif field == 'area':
                         value = asset.area
                     elif field == 'idx':
-                        value = asset.idx
+                        value = asset.ordinal
                     elif field == 'site_id':
                         value = sid
                     elif field == 'lon':
