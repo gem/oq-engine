@@ -24,7 +24,6 @@ import logging
 import operator
 import itertools
 import traceback
-import collections
 from functools import partial
 from datetime import datetime
 from shapely import wkt
@@ -33,9 +32,8 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import geo
-from openquake.risklib import riskinput, asset
-from openquake.commonlib import readinput, source, calc, riskmodels, writers
+from openquake.risklib import riskinput, riskmodels
+from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
@@ -47,9 +45,6 @@ get_trt = operator.attrgetter('src_group_id')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
-
-Site = collections.namedtuple('Site', 'sid lon lat')
-
 F32 = numpy.float32
 
 
@@ -58,11 +53,6 @@ class InvalidCalculationID(Exception):
     Raised when running a post-calculation on top of an incompatible
     pre-calculation
     """
-
-
-class AssetSiteAssociationError(Exception):
-    """Raised when there are no hazard sites close enough to any asset"""
-
 
 logversion = True
 
@@ -409,7 +399,11 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         if not self.oqparam.imtls:
-            raise ValueError('Missing intensity_measure_types!')
+            if self.datastore.parent:
+                self.oqparam.risk_imtls = (
+                    self.datastore.parent['oqparam'].risk_imtls)
+            else:
+                raise ValueError('Missing intensity_measure_types!')
         if self.precalc:
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
@@ -423,54 +417,13 @@ class HazardCalculator(BaseCalculator):
 
     def read_exposure(self, haz_sitecol=None):
         """
-        Read the exposure, the riskmodel and update the attributes .exposure,
+        Read the exposure, the riskmodel and update the attributes
         .sitecol, .assetcol
         """
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
-            self.exposure = readinput.get_exposure(self.oqparam)
-            mesh, assets_by_site = (
-                readinput.get_mesh_assets_by_site(self.oqparam, self.exposure))
-        if haz_sitecol:
-            tot_assets = sum(len(assets) for assets in assets_by_site)
-            all_sids = haz_sitecol.complete.sids
-            sids = set(haz_sitecol.sids)
-            # associate the assets to the hazard sites
-            asset_hazard_distance = self.oqparam.asset_hazard_distance
-            siteobjects = geo.utils.GeographicObjects(
-                Site(sid, lon, lat) for sid, lon, lat in
-                zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
-            assets_by_sid = general.AccumDict(accum=[])
-            for assets in assets_by_site:
-                if len(assets):
-                    lon, lat = assets[0].location
-                    site, distance = siteobjects.get_closest(lon, lat)
-                    if site.sid in sids and distance <= asset_hazard_distance:
-                        # keep the assets, otherwise discard them
-                        assets_by_sid += {site.sid: list(assets)}
-            if not assets_by_sid:
-                raise AssetSiteAssociationError(
-                    'Could not associate any site to any assets within the '
-                    'asset_hazard_distance of %s km' % asset_hazard_distance)
-            mask = numpy.array(
-                [sid in assets_by_sid for sid in all_sids])
-            assets_by_site = [assets_by_sid[sid] for sid in all_sids]
-            num_assets = sum(len(assets) for assets in assets_by_site)
-            logging.info('Associated %d/%d assets to the hazard sites',
-                         num_assets, tot_assets)
-            self.sitecol = haz_sitecol.complete.filter(mask)
-        else:  # use the exposure sites as hazard sites
-            self.sitecol = readinput.get_site_collection(self.oqparam, mesh)
-        self.assetcol = asset.AssetCollection(
-            self.exposure.asset_refs,
-            assets_by_site,
-            self.exposure.tagcol,
-            self.exposure.cost_calculator,
-            self.oqparam.time_event,
-            occupancy_periods=hdf5.array_of_vstr(
-                sorted(self.exposure.occupancy_periods)))
-        logging.info('Considering %d assets on %d sites',
-                     len(self.assetcol), len(self.sitecol))
+            self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
+                self.oqparam, haz_sitecol)
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
@@ -494,16 +447,16 @@ class HazardCalculator(BaseCalculator):
         """
         logging.info('Reading the risk model if present')
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
-        if not self.riskmodel:  # can happen only in a hazard calculation
+        if not self.riskmodel:
+            parent = self.datastore.parent
+            if 'composite_risk_model' in parent:
+                self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         self.save_params()  # re-save oqparam
         # save the risk models and loss_ratios in the datastore
         self.datastore['composite_risk_model'] = rm
         attrs = self.datastore.getitem('composite_risk_model').attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
-        if rm.damage_states:
-            # best not to save them as bytes, they are used as headers
-            attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)
         self.datastore.set_nbytes('composite_risk_model')
         self.datastore.hdf5.flush()
 
@@ -613,8 +566,8 @@ class HazardCalculator(BaseCalculator):
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
-    attributes .riskmodel, .sitecol, .assets_by_site, .exposure
-    .riskinputs in the pre_execute phase.
+    attributes .riskmodel, .sitecol, .assetcol, .riskinputs in the
+    pre_execute phase.
     """
     def make_eps(self, num_ruptures):
         """
