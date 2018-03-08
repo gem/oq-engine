@@ -244,7 +244,6 @@ class EbriskCalculator(base.RiskCalculator):
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
-        self.vals = self.assetcol.values()
         self.num_losses = numpy.zeros((self.A, self.R), U32)
         if oq.asset_loss_table:
             # save all_loss_ratios
@@ -307,7 +306,6 @@ class EbriskCalculator(base.RiskCalculator):
                 ri = riskinput.RiskInput(getter, self.assets_by_site, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
-        self.vals = self.assetcol.values()
         if self.datastore.parent:  # avoid hdf5 fork issues
             self.datastore.parent.close()
         ires = parallel.Starmap(
@@ -491,6 +489,8 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend('all_loss_ratios/data', assratios)
                 self.alr_nbytes += assratios.nbytes
 
+        if not hasattr(self, 'vals'):
+            self.vals = self.assetcol.values()
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
