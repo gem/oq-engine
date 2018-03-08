@@ -37,13 +37,11 @@ from openquake.hazardlib import (
     calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.risklib import asset, riskinput, read_nrml
+from openquake.risklib import asset, riskinput
+from openquake.risklib.riskmodels import get_risk_models
 from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
-from openquake.commonlib.riskmodels import get_risk_models
-
-read_nrml.update_validators()
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
@@ -53,9 +51,14 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 
+Site = collections.namedtuple('Site', 'sid lon lat')
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
     ('ses', U32), ('sample', U32)])
+
+
+class AssetSiteAssociationError(Exception):
+    """Raised when there are no hazard sites close enough to any asset"""
 
 
 class DuplicatedPoint(Exception):
@@ -147,23 +150,30 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        inputs['source'] = sorted(_get_paths(smlt))
+        inputs['source'] = []
+        for paths in gen_sm_paths(smlt):
+            inputs['source'].extend(paths)
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
     return params
 
 
-def _get_paths(smlt):
-    # extract the path names for the source models listed in the smlt file
+def gen_sm_paths(smlt):
+    """
+    Yields the path names for the source models listed in the smlt file,
+    a block at the time.
+    """
     base_path = os.path.dirname(smlt)
     for model in source.collect_source_model_paths(smlt):
+        paths = []
         for name in model.split():
             if os.path.isabs(name):
                 raise InvalidFile('%s: %s must be a relative path' %
                                   (smlt, name))
             fname = os.path.abspath(os.path.join(base_path, name))
             if os.path.exists(fname):  # consider only real paths
-                yield fname
+                paths.append(fname)
+        yield paths
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
@@ -200,6 +210,11 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     oqparam.validate()
     return oqparam
 
+pmap = None  # set as side effect when the user reads hazard_curves from a file
+# the hazard curves format does not split the site locations from the data (an
+# unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
+# this hack is necessary, otherwise we would have to parse the file twice
+
 
 def get_mesh(oqparam):
     """
@@ -209,6 +224,7 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    global pmap
     if oqparam.sites:
         return geo.Mesh.from_coords(sorted(oqparam.sites))
     elif 'sites' in oqparam.inputs:
@@ -231,6 +247,15 @@ def get_mesh(oqparam):
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
         return geo.Mesh.from_coords(c)
+    elif 'hazard_curves' in oqparam.inputs:
+        fname = oqparam.inputs['hazard_curves']
+        if fname.endswith('.csv'):
+            mesh, pmap = get_pmap_from_csv(oqparam, fname)
+        elif fname.endswith('.xml'):
+            mesh, pmap = get_pmap_from_nrml(oqparam, fname)
+        else:
+            raise NotImplementedError('Reading from %s' % fname)
+        return mesh
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -244,11 +269,8 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
-    elif oqparam.hazard_calculation_id:
-        sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
-        return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
     elif 'exposure' in oqparam.inputs:
-        # the mesh is extracted from get_sitecol_assetcol
+        # the mesh will be extracted from the exposure later
         return
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
@@ -283,7 +305,10 @@ def get_site_collection(oqparam, mesh=None):
     """
     if mesh is None:
         mesh = get_mesh(oqparam)
-    if mesh is None:
+    if mesh is None and oqparam.hazard_calculation_id:
+        with datastore.read(oqparam.hazard_calculation_id) as dstore:
+            return dstore['sitecol'].complete
+    elif mesh is None:
         return
     if oqparam.inputs.get('site_model'):
         sitecol = []
@@ -349,11 +374,15 @@ def get_gsims(oqparam):
 
 def get_rlzs_by_gsim(oqparam):
     """
-    Return an ordered dictionary gsim -> [realization]. Work for
+    Return an ordered dictionary gsim -> [realization index]. Work for
     gsim logic trees with a single tectonic region type.
     """
     cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
-    return cinfo.get_rlzs_assoc().rlzs_by_gsim[0]
+    ra = cinfo.get_rlzs_assoc()
+    dic = collections.OrderedDict()
+    for rlzi, gsim_by_trt in enumerate(ra.gsim_by_trt):
+        dic[gsim_by_trt['*']] = [rlzi]
+    return dic
 
 
 def get_rupture_sitecol(oqparam, sitecol):
@@ -439,7 +468,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                logging.info('Parsing %s', fname)
+                logging.info('Reading %s', fname)
                 src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
                 smodel = nrml.read(fname).sourceModel
@@ -475,6 +504,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             logging.info('%s has been considered %d times', fname, hits)
 
 
+def getid(src):
+    try:
+        return src.source_id
+    except AttributeError:
+        return src['id']
+
+
 def get_composite_source_model(oqparam, in_memory=True):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -487,12 +523,6 @@ def get_composite_source_model(oqparam, in_memory=True):
     smodels = []
     grp_id = 0
     idx = 0
-
-    def getid(src):
-        try:
-            return src.source_id
-        except AttributeError:
-            return src['id']
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
     for source_model in get_source_models(
@@ -516,67 +546,15 @@ def get_composite_source_model(oqparam, in_memory=True):
                 raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
+    for sm in csm.source_models:
+        srcs = []
+        for sg in sm.src_groups:
+            srcs.extend(map(getid, sg))
+        if len(set(srcs)) < len(srcs):
+            raise nrml.DuplicatedID(
+                'Found duplicated source IDs: use oq info %s',
+                sm, source_model_lt.filename)
     return csm
-
-
-def get_job_info(oqparam, csm, sitecol):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param csm:
-        a :class:`openquake.commonlib.source.CompositeSourceModel` instance
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :returns:
-        a dictionary with same parameters of the computation, in particular
-        the input and output weights
-    """
-    info = {}
-    # The input weight is given by the number of ruptures generated
-    # by the sources; for point sources however a corrective factor
-    # given by the parameter `point_source_weight` is applied
-    input_weight = sum((src.weight or 0) * src_model.samples
-                       for src_model in csm
-                       for src_group in src_model.src_groups
-                       for src in src_group)
-    imtls = oqparam.imtls
-    n_sites = len(sitecol) if sitecol else 0
-
-    # the imtls object has values [NaN] when the levels are unknown
-    # (this is a valid case for the event based hazard calculator)
-    n_imts = len(imtls)
-    n_levels = len(oqparam.imtls.array)
-
-    n_realizations = oqparam.number_of_logic_tree_samples or sum(
-        sm.num_gsim_paths for sm in csm)
-    # NB: in the event based case `n_realizations` can be over-estimated,
-    # if the method is called in the pre_execute phase, because
-    # some tectonic region types may have no occurrencies.
-
-    # The output weight is a pure number which is proportional to the size
-    # of the expected output of the calculator. For classical and disagg
-    # calculators it is given by
-    # n_sites * n_imts * n_levels * n_statistics;
-    # for the event based calculator is given by n_sites * n_realizations
-    # * n_levels * n_imts * (n_ses * investigation_time) * NORMALIZATION_FACTOR
-    n_stats = len(oqparam.hazard_stats()) or 1
-    output_weight = n_sites * n_imts * n_stats
-    if oqparam.calculation_mode == 'event_based':
-        total_time = (oqparam.investigation_time *
-                      oqparam.ses_per_logic_tree_path)
-        output_weight *= total_time * NORMALIZATION_FACTOR
-    else:
-        output_weight *= n_levels / n_imts
-
-    n_sources = csm.get_num_sources()
-    info['hazard'] = dict(input_weight=input_weight,
-                          output_weight=output_weight,
-                          n_imts=n_imts,
-                          n_levels=n_levels,
-                          n_sites=n_sites,
-                          n_sources=n_sources,
-                          n_realizations=n_realizations)
-    return info
 
 
 def get_imts(oqparam):
@@ -600,6 +578,7 @@ def get_risk_model(oqparam):
     else:
         retro = {}
     return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
+
 
 # ########################### exposure ############################ #
 
@@ -695,7 +674,7 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     asset_refs = []
     exp = Exposure(
         exposure['id'], exposure['category'],
-        ~description, cost_types, occupancy_periods.split(),
+        description.text, cost_types, occupancy_periods.split(),
         insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
         area.attrib, assets, asset_refs, cc, asset.TagCollection(tagnames))
     return exp, exposure.assets
@@ -718,12 +697,12 @@ def get_exposure(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        an :class:`Exposure` instance
+        an :class:`Exposure` instance or a compatible AssetCollection
     """
     return Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.insured_losses, oqparam.region_constraint,
-        oqparam.all_cost_types, oqparam.ignore_missing_costs)
+        oqparam.region_constraint, oqparam.all_cost_types,
+        oqparam.ignore_missing_costs)
 
 
 class Exposure(object):
@@ -737,9 +716,8 @@ class Exposure(object):
               'cost_calculator', 'tagcol']
 
     @classmethod
-    def read(cls, fname, calculation_mode='', insured_losses=False,
-             region_constraint='', all_cost_types=(), ignore_missing_costs=(),
-             asset_nodes=False):
+    def read(cls, fname, calculation_mode='', region_constraint='',
+             all_cost_types=(), ignore_missing_costs=(), asset_nodes=False):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
@@ -748,7 +726,6 @@ class Exposure(object):
         """
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
-        param['insured_losses'] = insured_losses
         if region_constraint:
             param['region'] = wkt.loads(region_constraint)
         else:
@@ -814,7 +791,7 @@ class Exposure(object):
                     asset = Node('asset', lineno=i)
                     with context(fname, asset):
                         asset['id'] = dic['id']
-                        asset['number'] = float(dic['number'])
+                        asset['number'] = valid.positivefloat(dic['number'])
                         asset['taxonomy'] = dic['taxonomy']
                         if 'area' in dic:  # optional attribute
                             asset['area'] = dic['area']
@@ -897,9 +874,14 @@ class Exposure(object):
                     retrofitted = cost.get('retrofitted')
                 if cost_type in param['relevant_cost_types']:
                     values[cost_type] = cost['value']
-                    if param['insured_losses']:
+                    try:
                         deductibles[cost_type] = cost['deductible']
+                    except KeyError:
+                        pass
+                    try:
                         insurance_limits[cost_type] = cost['insuranceLimit']
+                    except KeyError:
+                        pass
 
         # check we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
@@ -919,7 +901,7 @@ class Exposure(object):
         for occupancy in occupancies:
             with context(param['fname'], occupancy):
                 occupants = 'occupants_%s' % occupancy['period']
-                values[occupants] = occupancy['occupants']
+                values[occupants] = float(occupancy['occupants'])
                 tot_occupants += values[occupants]
         if occupancies:  # store average occupants
             values['occupants_None'] = tot_occupants / len(occupancies)
@@ -929,30 +911,75 @@ class Exposure(object):
                           self.cost_calculator)
         self.assets.append(ass)
 
+    def __iter__(self):
+        return iter(self.assets)
+
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
                                         len(self.assets))
 
 
-def get_sitecol_assetcol(oqparam, exposure):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        the site collection and the asset collection
-    """
-    assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
+def _get_mesh_assets_by_site(oqparam, exposure):
+    assets_by_loc = groupby(exposure, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    sitecol = get_site_collection(oqparam, mesh)
-    assets_by_site = []
-    for lonlat in zip(sitecol.lons, sitecol.lats):
-        assets = assets_by_loc[lonlat]
-        assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
+    assets_by_site = [
+        assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
+    return mesh, assets_by_site
+
+
+def get_sitecol_assetcol(oqparam, haz_sitecol=None):
+    """
+    :param oqparam: calculation parameters
+    :param haz_sitecol: a pre-existing site collection, if any
+    :returns: (site collection, asset collection) instances
+    """
+    exposure = get_exposure(oqparam)
+    mesh, assets_by_site = _get_mesh_assets_by_site(oqparam, exposure)
+    if haz_sitecol:
+        tot_assets = sum(len(assets) for assets in assets_by_site)
+        all_sids = haz_sitecol.complete.sids
+        sids = set(haz_sitecol.sids)
+        # associate the assets to the hazard sites
+        asset_hazard_distance = oqparam.asset_hazard_distance
+        siteobjects = geo.utils.GeographicObjects(
+            Site(sid, lon, lat) for sid, lon, lat in
+            zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
+        assets_by_sid = AccumDict(accum=[])
+        for assets in assets_by_site:
+            lon, lat = assets[0].location
+            site, distance = siteobjects.get_closest(lon, lat)
+            if site.sid in sids and distance <= asset_hazard_distance:
+                # keep the assets, otherwise discard them
+                assets_by_sid += {site.sid: list(assets)}
+        if not assets_by_sid:
+            raise AssetSiteAssociationError(
+                'Could not associate any site to any assets within the '
+                'asset_hazard_distance of %s km' % asset_hazard_distance)
+        mask = numpy.array(
+            [sid in assets_by_sid for sid in all_sids])
+        assets_by_site = [
+            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
+            for sid in all_sids]
+        num_assets = sum(len(assets) for assets in assets_by_site)
+        logging.info('Associated %d/%d assets to the hazard sites',
+                     num_assets, tot_assets)
+        sitecol = haz_sitecol.complete.filter(mask)
+    else:  # use the exposure sites as hazard sites
+        sitecol = get_site_collection(oqparam, mesh)
+    asset_refs = [exposure.asset_refs[asset.ordinal]
+                  for assets in assets_by_site
+                  for asset in assets]
     assetcol = asset.AssetCollection(
-        assets_by_site, exposure.tagcol, exposure.cost_calculator,
-        oqparam.time_event, occupancy_periods=hdf5.array_of_vstr(
+        asset_refs,
+        assets_by_site,
+        exposure.tagcol,
+        exposure.cost_calculator,
+        oqparam.time_event,
+        occupancy_periods=hdf5.array_of_vstr(
             sorted(exposure.occupancy_periods)))
+    logging.info('Considering %d assets on %d sites',
+                 len(assetcol), len(sitecol))
     return sitecol, assetcol
 
 
@@ -1057,22 +1084,6 @@ def get_gmfs(oqparam):
     return eids, gmfs
 
 
-def get_pmap(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        sitecol, probability map
-    """
-    fname = oqparam.inputs['hazard_curves']
-    if fname.endswith('.csv'):
-        return get_pmap_from_csv(oqparam, fname)
-    elif fname.endswith('.xml'):
-        return get_pmap_from_nrml(oqparam, fname)
-    else:
-        raise NotImplementedError('Reading from %s' % fname)
-
-
 @deprecated('Reading hazard curves from CSV may change in the future')
 def get_pmap_from_csv(oqparam, fname):
     """
@@ -1081,7 +1092,7 @@ def get_pmap_from_csv(oqparam, fname):
     :param fname:
         a .txt file with format `IMT lon lat poe1 ... poeN`
     :returns:
-        the site collection and the hazard curves read by the .txt file
+        the site mesh and the hazard curves read by the .txt file
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
@@ -1093,11 +1104,10 @@ def get_pmap_from_csv(oqparam, fname):
         mesh, hcurves = get_mesh_csvdata(
             csvfile, list(oqparam.imtls), num_values,
             valid.decreasing_probabilities)
-    sitecol = get_site_collection(oqparam, mesh)
-    array = numpy.zeros((len(sitecol), sum(num_values)))
+    array = numpy.zeros((len(mesh), sum(num_values)))
     for imt_ in hcurves:
         array[:, oqparam.imtls.slicedic[imt_]] = hcurves[imt_]
-    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
+    return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
 def get_pmap_from_nrml(oqparam, fname):
@@ -1107,7 +1117,7 @@ def get_pmap_from_nrml(oqparam, fname):
     :param fname:
         an XML file containing hazard curves
     :returns:
-        sitecol, curve array
+        site mesh, curve array
     """
     hcurves_by_imt = {}
     oqparam.hazard_imtls = imtls = collections.OrderedDict()
@@ -1124,13 +1134,12 @@ def get_pmap_from_nrml(oqparam, fname):
         lons.append(xy[0])
         lats.append(xy[1])
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    sitecol = get_site_collection(oqparam, mesh)
     num_levels = sum(len(v) for v in imtls.values())
-    array = numpy.zeros((len(sitecol), num_levels))
+    array = numpy.zeros((len(mesh), num_levels))
     imtls = DictArray(imtls)
     for imt_ in hcurves_by_imt:
         array[:, imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
-    return sitecol, ProbabilityMap.from_array(array, sitecol.sids)
+    return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
 # used in get_scenario_from_nrml
@@ -1144,6 +1153,7 @@ def _extract_eids_sitecounts(gmfset):
     return numpy.array(sorted(eids), numpy.uint64), counter
 
 
+@deprecated('Use the .csv format for the GMFs instead')
 def get_scenario_from_nrml(oqparam, fname):
     """
     :param oqparam:

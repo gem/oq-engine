@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
-import io
 import ast
 import math
 import os.path
@@ -38,7 +37,7 @@ from openquake.hazardlib import valid, stats as hstats
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv, FIVEDIGITS)
+    build_header, scientificformat, FIVEDIGITS)
 from openquake.calculators import getters
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
@@ -283,7 +282,8 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'ground_motion_correlation_model', 'random_seed', 'master_seed']
+              'ground_motion_correlation_model', 'minimum_intensity',
+              'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
     return rst_table([(param, repr(getattr(oq, param, None)))

@@ -25,7 +25,6 @@ from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
 from openquake.baselib.python3compat import decode
-from openquake.baselib.parallel import Sequential
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
@@ -49,7 +48,7 @@ def check_total_losses(calc):
     # test the asset_loss_table exporter; notice that I need to disable
     # the parallelism to avoid reading bogus data: this is the usual
     # heisenbug when reading in parallel an .hdf5 generated in process
-    with mock.patch('openquake.baselib.parallel.Starmap', Sequential):
+    with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
         [fname] = export(('asset_loss_table', 'hdf5'), dstore)
     print('Generating %s' % fname)
     with h5py.File(fname) as f:
@@ -268,6 +267,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):
         # case with  <insuranceLimit isAbsolute="false"/>
+        # this is also a case with preimported exposure
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))

@@ -147,6 +147,7 @@ class UcerfPSHACalculator(PSHACalculator):
                              for sm in self.csm.source_models
                              for grp in sm.src_groups}
         self.rup_data = {}
+        self.split_time = {src.source_id: 0 for src in self.csm.get_sources()}
 
     def execute(self):
         """
@@ -186,7 +187,7 @@ class UcerfPSHACalculator(PSHACalculator):
             args = (bckgnd_sources, self.src_filter, gsims, param, monitor)
             bg_res = parallel.Starmap.apply(
                 classical, args, name='background_sources_%d' % grp_id,
-                concurrent_tasks=ct2).submit_all()
+                concurrent_tasks=ct2)
 
             # parallelize by rupture subsets
             rup_sets = numpy.arange(ucerf_source.num_ruptures)
