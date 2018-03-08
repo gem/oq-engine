@@ -84,14 +84,14 @@ class GeographicObjects(object):
         """
         :param: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
-        :returns: a dictionary site_id -> associated object
+        :returns: a dictionary site_id -> array of associated objects
         """
-        dic = {}
+        dic = collections.defaultdict(list)
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
             if distance <= assoc_dist:
-                dic[sid] = obj
-        return dic
+                dic[sid].append(obj)
+        return {sid: numpy.array(dic[sid]) for sid in dic}
 
 
 def clean_points(points):
@@ -492,4 +492,3 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
-
