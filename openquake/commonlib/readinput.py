@@ -960,7 +960,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
                 'asset_hazard_distance of %s km' % asset_hazard_distance)
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
-        assets_by_site = [assets_by_sid[sid] for sid in all_sids]
+        assets_by_site = [
+            sorted(assets_by_sid[sid], key=operator.attrgetter('idx'))
+            for sid in all_sids]
         num_assets = sum(len(assets) for assets in assets_by_site)
         logging.info('Associated %d/%d assets to the hazard sites',
                      num_assets, tot_assets)
