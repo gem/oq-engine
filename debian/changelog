@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Stored avg_losses-stats in event based risk if there are multiple
+    realizations
   * Better error message in case of overlapping sites in sites.csv
   * Added a an investigation time attribute to source models with
     nonparametric sources
