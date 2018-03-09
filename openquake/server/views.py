@@ -692,6 +692,9 @@ def extract(request, calc_id, what):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
             array, attrs = obj, {}
+        for key, value in attrs.items():
+            if isinstance(value, numpy.ndarray):
+                attrs[key] = list(value)
         numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
