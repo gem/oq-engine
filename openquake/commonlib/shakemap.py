@@ -60,11 +60,12 @@ SHAKEMAP_FIELDS = set(
     .split())
 
 
-def get_shakemap_array(grid_node):
+def get_shakemap_array(grid_file):
     """
-    :param grid_node: a Node for an USGS shakemap file
+    :param grid_file: an shakemap file
     :returns: array with fields lon, lat, val, std
     """
+    grid_node = node_from_xml(grid_file)
     fields = grid_node.getnodes('grid_field')
     lines = grid_node.grid_data.text.strip().splitlines()
     rows = [line.split() for line in lines]
@@ -84,21 +85,21 @@ def get_shakemap_array(grid_node):
                           ('SA(3.0)', F32)])
     else:  # expect only PGA
         dt = numpy.dtype([('PGA', F32)])
-    dtlist = [('lon', F32), ('lat', F32), ('val', dt), ('std', dt)]
+    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
+              ('val', dt), ('std', dt)]
     data = numpy.zeros(len(rows), dtlist)
     data['lon'] = F32(out['LON'])
     data['lat'] = F32(out['LAT'])
     data['val']['PGA'] = F32(out['PGA'])
     data['std']['PGA'] = F32(out['STDPGA'])
-    data['val']['VS30'] = F32(out['SVEL'])
-    data['std']['VS30'] = numpy.zeros_like(data['val']['VS30'])
+    data['vs30'] = F32(out['SVEL'])
     if has_sa:
         data['val']['SA(0.3)'] = F32(out['PSA03'])
         data['val']['SA(1.0)'] = F32(out['PSA10'])
         data['val']['SA(3.0)'] = F32(out['PSA30'])
-        data['std']['SA(0.3)'] = F32(out['STDPSA03'])
-        data['std']['SA(1.0)'] = F32(out['STDPSA10'])
-        data['std']['SA(3.0)'] = F32(out['STDPSA30'])
+        data['std']['SA(0.3)'] = F32(out.get('STDPSA03', 0))
+        data['std']['SA(1.0)'] = F32(out.get('STDPSA10', 0))
+        data['std']['SA(3.0)'] = F32(out.get('STDPSA30', 0))
     return data
 
 
@@ -110,10 +111,9 @@ def get_shakemap(shakemap_id_or_fname, sitecol, assoc_dist):
     """
     if isinstance(shakemap_id_or_fname, int):
         with urlopen(SHAKEMAP_URL.format(shakemap_id_or_fname)) as f1:
-            node = node_from_xml(f1)
+            array = get_shakemap_array(f1)
     else:
-        node = node_from_xml(shakemap_id_or_fname)
-    array = get_shakemap_array(node)
+        array = get_shakemap_array(shakemap_id_or_fname)
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
     sitecol = sitecol.within_bb(bbox)
@@ -297,3 +297,8 @@ def amplify_ground_shaking(T, Vs30, IMLs):
             [-1, 0.1, 0.2, 0.3, 0.4, 100], ampFactorsMid, kind='linear')
 
     return interpolator(IMLs) * IMLs
+
+"""
+here is an example for Tanzania:
+https://earthquake.usgs.gov/archive/product/shakemap/us10006nkx/us/1480920466172/download/grid.xml
+"""
