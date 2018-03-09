@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an extract API for losses_by_asset
   * Stored avg_losses-stats in event based risk if there are multiple
     realizations
   * Better error message in case of overlapping sites in sites.csv
