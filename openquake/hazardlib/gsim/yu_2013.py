@@ -131,7 +131,6 @@ def get_ras(repi, theta, mag, coeff):
     rx = 150.
     ras = 300.
     dff = 1.e0
-    cnt = 0
     while abs(dff) > 1e-5:
         #
         # calculate the difference between epicentral distances
