@@ -21,9 +21,6 @@ Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
 from __future__ import division
-
-import operator
-
 import numpy
 try:
     import rtree
@@ -224,6 +221,24 @@ def pure_distances(mlons, mlats, slons, slats):
             result[:, j] = numpy.arcsin(
                 numpy.sqrt(a * a + cos_mlats * cos_slats[j] * b * b))
     return result
+
+
+def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
+    """
+    :param lons: array of m longitudes
+    :param lats: array of m latitudes
+    :returns: array of (m, m) distances
+    """
+    m = len(lons)
+    assert m == len(lats), (m, len(lats))
+    cos_lats = numpy.cos(lats)
+    result = numpy.zeros((m, m))
+    for i in range(len(lons)):
+        a = numpy.sin((lats[i] - lats) / 2.0)
+        b = numpy.sin((lons[i] - lons) / 2.0)
+        result[i, :] = numpy.arcsin(
+            numpy.sqrt(a * a + cos_lats[i] * cos_lats * b * b))
+    return result * diameter
 
 
 def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
