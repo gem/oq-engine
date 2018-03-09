@@ -28,6 +28,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
+from openquake.calculators.extract import extract
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
@@ -161,18 +162,8 @@ def export_losses_by_asset_npz(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    loss_dt = dstore['oqparam'].loss_dt()
-    losses_by_asset = dstore[ekey[0]].value
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    assets = get_assets(dstore)
-    dic = {}
-    for rlz in rlzs:
-        # I am exporting the 'mean' and ignoring the 'stddev'
-        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
-        data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
-        dic['rlz-%03d' % rlz.ordinal] = data
     fname = dstore.export_path('%s.%s' % ekey)
-    savez(fname, **dic)
+    savez(fname, **extract(dstore, 'losses_by_asset'))
     return [fname]
 
 
