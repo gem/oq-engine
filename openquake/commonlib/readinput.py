@@ -1043,6 +1043,9 @@ def get_gmfs(oqparam):
     if fname.endswith('.csv'):
         array = writers.read_composite_array(fname)
         R = len(numpy.unique(array['rlzi']))
+        if R > 1:
+            raise InvalidFile('%s: found %d realizations, this case is not '
+                              'supported yet' % (fname, R))
         # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
         num_gmv = len(array.dtype.names[3:])
