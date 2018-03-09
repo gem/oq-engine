@@ -459,14 +459,18 @@ def coordinates(value):
     >>> coordinates('0 0 0, 0 0 -1')
     Traceback (most recent call last):
     ...
-    ValueError: There are overlapping points in 0 0 0, 0 0 -1
+    ValueError: Found overlapping site #2,  0 0 -1
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    points = list(map(point, value.split(',')))
-    num_distinct = len(set(pnt[:2] for pnt in points))
-    if num_distinct < len(points):
-        raise ValueError("There are overlapping points in %s" % value)
+    points = []
+    pointset = set()
+    for i, line in enumerate(value.split(','), 1):
+        pnt = point(line)
+        if pnt[:2] in pointset:
+            raise ValueError("Found overlapping site #%d, %s" % (i, line))
+        pointset.add(pnt[:2])
+        points.append(pnt)
     return points
 
 
