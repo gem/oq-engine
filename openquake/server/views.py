@@ -49,7 +49,7 @@ from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode, pickle
+from openquake.baselib.python3compat import unicode, pickle, encode
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -692,6 +692,11 @@ def extract(request, calc_id, what):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
             array, attrs = obj, {}
+        # sanitize array of strings
+        for key, value in attrs.items():
+            if isinstance(value, numpy.ndarray) and len(value) and isinstance(
+                    value[0], str):
+                attrs[key] = numpy.array(encode(value))
         numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
