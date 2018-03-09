@@ -114,13 +114,11 @@ def fnc(ra, *args):
     # coefficients
     coeff = args[3]
     #
-    #
+    # compute the difference between epicentral distances
     rb = rbf(ra, coeff, mag)
     t1 = ra**2 * (np.sin(np.radians(theta)))**2
     t2 = rb**2 * (np.cos(np.radians(theta)))**2
     xx = ra * rb / (t1+t2)**0.5
-    # return abs(repi-xx)
-    #return abs(repi-xx)
     return xx-repi
 
 
@@ -130,27 +128,21 @@ def get_ras(repi, theta, mag, coeff):
     :param mag:
     :param C:
     """
-    rx = 250.
-    ras = 500.
+    rx = 150.
+    ras = 300.
     dff = 1.e0
     cnt = 0
-    while abs(dff) > 1e-6:
-
-        #print(rx, ras, dff)
-
+    while abs(dff) > 1e-5:
+        #
+        # calculate the difference between epicentral distances
         dff = fnc(ras, repi, theta, mag, coeff)
+        #
+        # update the value of distance computed
         if dff > 0.:
             ras = ras - rx
         else:
             ras = ras + rx
         rx = rx / 2.
-
-        """
-        cnt += 1
-        if cnt > 3:
-            break
-        """
-
     return ras
 
 
@@ -213,9 +205,6 @@ class YuEtAl2013Ms(GMPE):
         # the geometry of the ellipses
         ras = []
         for epi, theta in zip(dists.repi, dists.azimuth):
-            #res = minimize(fnc, epi, args=(epi, theta, mag, coeff),
-            #                method='Nelder-Mead', tol=0.1)
-            #ras.append(res.x[0])
             res = get_ras(epi, theta, mag, coeff)
             ras.append(res)
         ras = np.array(ras)
