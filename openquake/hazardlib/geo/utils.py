@@ -37,6 +37,10 @@ from openquake.baselib.slots import with_slots
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 
 
+class SiteAssociationError(Exception):
+    """Raised when there are no sites close enough"""
+
+
 class GeographicObjects(object):
     """
     Store a collection of geographic objects, i.e. objects with longitudes
@@ -80,18 +84,26 @@ class GeographicObjects(object):
             idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
         return self.objects[idx], min_dist
 
-    def assoc(self, sitecol, assoc_dist):
+    def assoc(self, sitecol, assoc_dist, mode='error'):
         """
         :param: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
+        :param mode: 'strict', 'error' or 'ignore'
         :returns: a dictionary site_id -> array of associated objects
         """
-        dic = collections.defaultdict(list)
+        dic = {}
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
             if distance <= assoc_dist:
-                dic[sid].append(obj)
-        return {sid: numpy.array(dic[sid]) for sid in dic}
+                dic[sid] = obj
+            elif mode == 'strict':
+                raise SiteAssociationError(
+                    'There is nothing closer than %s km '
+                    'to site (%s %s)' % (assoc_dist, lon, lat))
+        if not dic and mode == 'error':
+            raise SiteAssociationError(
+                'No sites could be associated within %s km' % assoc_dist)
+        return dic
 
 
 def clean_points(points):

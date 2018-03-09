@@ -23,6 +23,7 @@ import numpy
 from shapely import geometry
 from openquake.baselib.python3compat import range
 from openquake.baselib.general import split_in_blocks
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
 
 
@@ -315,6 +316,20 @@ class SiteCollection(object):
         mask = numpy.array([
             geometry.Point(rec['lons'], rec['lats']).within(region)
             for rec in self.array])
+        return self.complete.filter(mask)
+
+    def within_bbox(self, bbox):
+        """
+        :param bbox: a quartet (min_lon, min_lat, max_lon, max_lat)
+        :returns: a filtered SiteCollection within the bounding box
+        """
+        min_lon, min_lat, max_lon, max_lat = bbox
+        if cross_idl(min_lon, max_lon):
+            raise ValueError('Crossing the International Date Line is '
+                             'not supported yet')
+        mask = numpy.array([min_lon < rec['lons'] < max_lon and
+                            min_lat < rec['lats'] < max_lat
+                            for rec in self.array])
         return self.complete.filter(mask)
 
     def __getstate__(self):
