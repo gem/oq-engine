@@ -1132,6 +1132,7 @@ class SourceModelLogicTree(object):
         def apply_uncertainties(source):
             for branchset, value in branchsets_and_uncertainties:
                 branchset.apply_uncertainty(value, source)
+            return True  # sentinel that the source was changed
         return apply_uncertainties
 
     def samples_by_lt_path(self):

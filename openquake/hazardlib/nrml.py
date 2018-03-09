@@ -100,6 +100,27 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
+class SourceModel(collections.Sequence):
+    """
+    A container of source groups with attributes name, investigation_time,
+    start_time.
+    """
+    def __init__(self, src_groups, name=None, investigation_time=None,
+                 start_time=None):
+        self.src_groups = src_groups
+        self.name = name
+        if investigation_time is not None:
+            investigation_time = valid.positivefloat(investigation_time)
+        self.investigation_time = investigation_time
+        self.start_time = start_time
+
+    def __getitem__(self, i):
+        return self.src_groups[i]
+
+    def __len__(self):
+        return len(self.src_groups)
+
+
 def get_tag_version(nrml_node):
     """
     Extract from a node of kind NRML the tag and the version. For instance
@@ -147,8 +168,9 @@ def get_source_model_04(node, fname, converter=default):
             logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    return sorted(sourceconverter.SourceGroup(trt, srcs)
-                  for trt, srcs in groups.items())
+    src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
+                        for trt, srcs in groups.items())
+    return SourceModel(src_groups, node.get('name'))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -162,7 +184,8 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         groups.append(converter.convert_node(src_group))
-    return sorted(groups)
+    return SourceModel(sorted(groups), node.get('name'),
+                       node.get('investigation_time'), node.get('start_time'))
 
 validators = {
     'strike': valid.strike_range,
@@ -262,58 +285,47 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.groups = {}  # cache fname -> groups
+        self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
 
-    def parse_src_groups(self, fname, apply_uncertainties=None):
+    def parse_src_groups(self, fname, apply_uncertainties):
         """
         :param fname:
             the full pathname of the source model file
         :param apply_uncertainties:
-            a function modifying the sources (or None)
+            a function modifying the sources
         """
         try:
-            groups = self.groups[fname]
+            groups = self.sm[fname]
         except KeyError:
-            groups = self.groups[fname] = self.parse_groups(fname)
+            groups = self.sm[fname] = to_python(fname, self.converter)
         # NB: deepcopy is *essential* here
         groups = [copy.deepcopy(g) for g in groups]
         for group in groups:
-            nrup = 0
             for src in group:
-                if apply_uncertainties:
-                    apply_uncertainties(src)
+                changed = apply_uncertainties(src)
+                if changed:
+                    # redo count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
-                    nrup += src.num_ruptures
-            # NB: if the user sets a wrong discretization parameter
-            # the call to `.count_ruptures()` can be ultra-slow
-            logging.debug("%s, %s: parsed %d source(s) with %d ruptures",
-                          fname, group.trt, len(group), nrup)
         self.fname_hits[fname] += 1
         return groups
 
-    def parse_groups(self, fname):
+    def check_nonparametric_sources(self, investigation_time):
         """
-        Parse all the groups and return them ordered by number of sources.
-        It does not count the ruptures, so it is relatively fast.
-
-        :param fname:
-            the full pathname of the source model file
+        :param investigation_time:
+            investigation_time to compare with in the case of
+            nonparametric sources
         """
-        try:
-            return to_python(fname, self.converter)
-        except ValueError as e:
-            err = str(e)
-            e1 = 'Surface does not conform with Aki & Richards convention'
-            e2 = 'Edges points are not in the right order'
-            if e1 in err or e2 in err:
-                raise InvalidFile('''\
-        %s: %s. Probably you are using an obsolete model.
-        In that case you can fix the file with the command
-        %s -m openquake.engine.tools.correct_complex_sources %s
-        ''' % (fname, e, sys.executable, fname))
-            else:
-                raise
+        for fname, sm in self.sm.items():
+            # NonParametricSeismicSources
+            np = [src for sg in sm.src_groups for src in sg
+                  if hasattr(src, 'data')]
+            if np:
+                if sm.investigation_time != investigation_time:
+                    raise ValueError(
+                        'The source model %s contains an investigation_time '
+                        'of %s, while the job.ini has %s' % (
+                            fname, sm.investigation_time, investigation_time))
 
 
 def read(source, chatty=True, stop=None):

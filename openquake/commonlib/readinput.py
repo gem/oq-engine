@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -498,6 +498,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
 
+    # check investigation_time
+    psr.check_nonparametric_sources(oqparam.investigation_time)
+
     # log if some source file is being used more than once
     for fname, hits in psr.fname_hits.items():
         if hits > 1:
@@ -545,7 +548,8 @@ def get_composite_source_model(oqparam, in_memory=True):
                 # the limit is really needed only for event based calculations
                 raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
-    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels)
+    csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels,
+                                      oqparam.optimize_same_id_sources)
     for sm in csm.source_models:
         srcs = []
         for sg in sm.src_groups:
@@ -923,10 +927,8 @@ def _get_mesh_assets_by_site(oqparam, exposure):
     assets_by_loc = groupby(exposure, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    assets_by_site = []
-    for lonlat in zip(mesh.lons, mesh.lats):
-        assets = assets_by_loc[lonlat]
-        assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
+    assets_by_site = [
+        assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
     return mesh, assets_by_site
 
 
@@ -960,15 +962,20 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
                 'asset_hazard_distance of %s km' % asset_hazard_distance)
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
-        assets_by_site = [assets_by_sid[sid] for sid in all_sids]
+        assets_by_site = [
+            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
+            for sid in all_sids]
         num_assets = sum(len(assets) for assets in assets_by_site)
         logging.info('Associated %d/%d assets to the hazard sites',
                      num_assets, tot_assets)
         sitecol = haz_sitecol.complete.filter(mask)
     else:  # use the exposure sites as hazard sites
         sitecol = get_site_collection(oqparam, mesh)
+    asset_refs = [exposure.asset_refs[asset.ordinal]
+                  for assets in assets_by_site
+                  for asset in assets]
     assetcol = asset.AssetCollection(
-        exposure.asset_refs,
+        asset_refs,
         assets_by_site,
         exposure.tagcol,
         exposure.cost_calculator,
