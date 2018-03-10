@@ -322,8 +322,8 @@ def calc_list(request, id=None):
                            allowed_users, user['acl_on'], id)
 
     response_data = []
-    for hc_id, owner, status, calculation_mode, is_running, desc, pid \
-            in calc_data:
+    for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
+         parent_id) in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
@@ -337,7 +337,7 @@ def calc_list(request, id=None):
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
-                 abortable=abortable))
+                 parent_id=parent_id, abortable=abortable))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:

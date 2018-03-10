@@ -38,7 +38,9 @@ Response:
       "is_running": false,
       "owner: "armando",
       "url": "http://localhost:8800/v1/calc/3"]
-      "abortable": false]
+      "abortable": false,
+      "parent_id": null
+      ]
 
 
 #### POST /v1/calc/:calc_id/abort
@@ -68,6 +70,7 @@ Response:
       "calculation_mode": "classical",
       "is_running": true,
       "owner: "michele",
+      "parent_id": "42",
       "url": "http://localhost:8800/v1/calc/1"}
 
 
