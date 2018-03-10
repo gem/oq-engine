@@ -112,7 +112,7 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
 
 
 def import_job(db, calc_id, calc_mode, description, user_name, status,
-               datadir, hc_id=None):
+               hc_id, datadir):
     """
     Insert a calculation inside the database, if calc_id is not taken
     """
@@ -557,7 +557,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               ' ORDER BY id DESC LIMIT %d'
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
-             job.is_running, job.description, job.pid) for job in jobs]
+             job.is_running, job.description, job.pid,
+             job.hazard_calculation_id) for job in jobs]
 
 
 def update_job(db, job_id, dic):
