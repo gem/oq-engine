@@ -56,6 +56,9 @@ def importcalc(calc_url, username, password):
     datadir = datastore.get_datadir()
     session = login(host, username, password)
     json = session.get('%s/status' % calc_url).json()
+    if json["parent_id"]:
+        sys.exit('The job has a parent (#%(parent_id)d) and cannot be '
+                 'downloaded' % json)
     resp = session.get('%s/datastore' % calc_url, stream=True)
     assert resp.status_code == 200, resp.status_code
     fname = '%s/calc_%d.hdf5' % (datadir, calc_id)
@@ -64,7 +67,8 @@ def importcalc(calc_url, username, password):
         for chunk in resp:
             f.write(chunk)
     logs.dbcmd('import_job', calc_id, json['calculation_mode'],
-               json['description'], json['owner'], json['status'], datadir)
+               json['description'], json['owner'], json['status'],
+               json['parent_id'], datadir)
     with datastore.read(calc_id) as dstore:
         engine.expose_outputs(dstore)
     logging.info('Imported calculation %d successfully', calc_id)
