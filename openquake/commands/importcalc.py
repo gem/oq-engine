@@ -17,11 +17,13 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import logging
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap, datastore, general
 from openquake.commonlib import logs
 from openquake.engine import engine
 from openquake.server import dbserver
 from requests import Session
+
+CHUNKSIZE = 1024**2  # 1 MB
 
 
 # NB: it is really difficult to test this automatically, so it is only
@@ -62,10 +64,14 @@ def importcalc(calc_url, username, password):
     resp = session.get('%s/datastore' % calc_url, stream=True)
     assert resp.status_code == 200, resp.status_code
     fname = '%s/calc_%d.hdf5' % (datadir, calc_id)
+    down = 0
     with open(fname, 'wb') as f:
         logging.info('%s -> %s', calc_url, fname)
-        for chunk in resp:
+        for chunk in resp.iter_content(CHUNKSIZE):
             f.write(chunk)
+            down += len(chunk)
+            general.println('Downloaded {:,} bytes'.format(down))
+    print()
     logs.dbcmd('import_job', calc_id, json['calculation_mode'],
                json['description'], json['owner'], json['status'],
                json['parent_id'], datadir)
