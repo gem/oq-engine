@@ -30,6 +30,8 @@ def get_loss_builder(dstore):
     oq = dstore['oqparam']
     weights = dstore['csm_info'].rlzs['weight']
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+    if oq.number_of_logic_tree_samples:
+        eff_time *= oq.number_of_logic_tree_samples
     num_events = dstore['gmdata']['events']
     periods = oq.return_periods or scientific.return_periods(
         eff_time, num_events.max())
