@@ -73,7 +73,7 @@ def gc(coeff, mag):
 
 def rbf(ra, coeff, mag):
     """
-    Calculate the meadian ground motion for a given magnitude and distance
+    Calculate the median ground motion for a given magnitude and distance
 
     :param ra:
         Distance value [km]
@@ -114,12 +114,41 @@ def fnc(ra, *args):
     # coefficients
     coeff = args[3]
     #
-    #
+    # compute the difference between epicentral distances
     rb = rbf(ra, coeff, mag)
     t1 = ra**2 * (np.sin(np.radians(theta)))**2
     t2 = rb**2 * (np.cos(np.radians(theta)))**2
     xx = ra * rb / (t1+t2)**0.5
-    return abs(repi-xx)
+    return xx-repi
+
+
+def get_ras(repi, theta, mag, coeff):
+    """
+    Computes equivalent distance
+
+    :param repi:
+        Epicentral distance
+    :param theta:
+        Azimuth value
+    :param mag:
+        Magnitude
+    :param coeff:
+        GMPE coefficients
+    """
+    rx = 150.
+    ras = 300.
+    dff = 1.e0
+    while abs(dff) > 1e-5:
+        #
+        # calculate the difference between epicentral distances
+        dff = fnc(ras, repi, theta, mag, coeff)
+        #
+        # update the value of distance computed
+        ras -= np.sign(dff) * rx
+        rx = rx / 2.
+        if rx < 1e-3:
+            break
+    return ras
 
 
 class YuEtAl2013Ms(GMPE):
@@ -181,9 +210,8 @@ class YuEtAl2013Ms(GMPE):
         # the geometry of the ellipses
         ras = []
         for epi, theta in zip(dists.repi, dists.azimuth):
-            res = minimize(fnc, epi, args=(epi, theta, mag, coeff),
-                            method='Nelder-Mead', tol=0.1)
-            ras.append(res.x[0])
+            res = get_ras(epi, theta, mag, coeff)
+            ras.append(res)
         ras = np.array(ras)
         rbs = rbf(ras, coeff, mag)
         #
