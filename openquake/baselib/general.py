@@ -944,3 +944,13 @@ def detach_process():
     fork_then_exit_parent()
     os.setsid()
     fork_then_exit_parent()
+
+
+def println(msg):
+    """
+    Convenience function to print messages on a single line in the terminal
+    """
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+    sys.stdout.write('\x08' * len(msg))
+    sys.stdout.flush()
