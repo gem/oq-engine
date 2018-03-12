@@ -29,6 +29,7 @@ from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.calculators.extract import extract
 from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
@@ -300,6 +301,9 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
+        events = extract(self.calc.datastore, 'events')
+        years = numpy.unique(events['year'])
+        numpy.testing.assert_equal(years, [328, 587, 692, 830, 898, 989])
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
