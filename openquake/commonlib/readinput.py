@@ -587,9 +587,8 @@ def get_cost_calculator(oqparam):
     """
     Read the first lines of the exposure file and infers the cost calculator
     """
-    return asset._get_exposure(oqparam.inputs['exposure'],
-                               set(oqparam.all_cost_types),
-                               stop='assets')[0].cost_calculator
+    exposure = asset._get_exposure(oqparam.inputs['exposure'], stop='assets')
+    return exposure[0].cost_calculator
 
 
 def get_exposure(oqparam):
