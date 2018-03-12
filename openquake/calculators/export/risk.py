@@ -163,7 +163,7 @@ def export_losses_by_asset_npz(ekey, dstore):
     :param dstore: datastore object
     """
     fname = dstore.export_path('%s.%s' % ekey)
-    savez(fname, **extract(dstore, 'losses_by_asset'))
+    savez(fname, **dict(extract(dstore, 'losses_by_asset')))
     return [fname]
 
 
