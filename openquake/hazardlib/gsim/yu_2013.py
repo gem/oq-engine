@@ -142,6 +142,8 @@ def get_ras(repi, theta, mag, coeff):
         else:
             ras = ras + rx
         rx = rx / 2.
+        if rx < 1e-3:
+            break
     return ras
 
 
