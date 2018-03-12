@@ -41,8 +41,7 @@ def dist_by_asset(data, multi_stat_dt, number):
             mean, stddev = data[n, r, l]
             out_lt[n, r] = (mean, stddev)
             # sanity check on the sum over all damage states
-            numpy.testing.assert_almost_equal(
-                mean.sum(), number[n], decimal=2)
+            numpy.testing.assert_almost_equal(mean.sum(), number[n], decimal=1)
     return out
 
 
