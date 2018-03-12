@@ -124,9 +124,16 @@ def fnc(ra, *args):
 
 def get_ras(repi, theta, mag, coeff):
     """
+    Computes equivalent distance
+
+    :param repi:
+        Epicentral distance
     :param theta:
+        Azimuth value
     :param mag:
+        Magnitude
     :param C:
+        GMPE coefficients
     """
     rx = 150.
     ras = 300.
