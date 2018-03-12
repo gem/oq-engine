@@ -144,10 +144,7 @@ def get_ras(repi, theta, mag, coeff):
         dff = fnc(ras, repi, theta, mag, coeff)
         #
         # update the value of distance computed
-        if dff > 0.:
-            ras = ras - rx
-        else:
-            ras = ras + rx
+        ras -= np.sign(dff) * rx
         rx = rx / 2.
         if rx < 1e-3:
             break
