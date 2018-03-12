@@ -132,7 +132,7 @@ def get_ras(repi, theta, mag, coeff):
         Azimuth value
     :param mag:
         Magnitude
-    :param C:
+    :param coeff:
         GMPE coefficients
     """
     rx = 150.
