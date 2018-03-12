@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check against GMF csv files with more than one realization
   * Fixed the algorithm setting the event year for event based with sampling
   * Added a command `oq importcalc` to import a remote calculation in the
     local database
