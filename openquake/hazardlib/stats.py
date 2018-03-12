@@ -188,8 +188,10 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
     :param arrayNR: an array of shape (N, R, ...)
     """
     if arrayNR is None:
+        # assume the -rlzs array is already stored
         arrayNR = dstore[prefix + '-rlzs'].value
     else:
+        # store passed the -rlzs array
         dstore[prefix + '-rlzs'] = arrayNR
     R = arrayNR.shape[1]
     if R > 1:
