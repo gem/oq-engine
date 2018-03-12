@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Fixed the algorithm setting the event year for event based with sampling
+  * Added a command `oq importcalc` to import a remote calculation in the
+    local database
+  * Stored avg_losses-stats in event based risk if there are multiple
+    realizations
+  * Better error message in case of overlapping sites in sites.csv
   * Added a an investigation time attribute to source models with
     nonparametric sources
   * Bug fix: in some cases the calculator `event_based_rupture` was generating

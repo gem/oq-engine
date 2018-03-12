@@ -319,7 +319,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                           autoflush=True):
             numpy.random.seed(self.oqparam.ses_seed)
             set_random_years(self.datastore, 'events',
-                             int(self.oqparam.investigation_time))
+                             int(self.oqparam.investigation_time),
+                             self.oqparam.ses_per_logic_tree_path)
 
 
 def set_counts(dstore, dsetname):
@@ -335,7 +336,7 @@ def set_counts(dstore, dsetname):
     return dic
 
 
-def set_random_years(dstore, name, investigation_time):
+def set_random_years(dstore, name, investigation_time, num_ses):
     """
     Set on the `events` dataset year labels sensitive to the
     SES ordinal and the investigation time.
@@ -344,8 +345,10 @@ def set_random_years(dstore, name, investigation_time):
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
     for event in events:
-        idx = event['ses'] - 1  # starts from 0
-        event['year'] = idx * investigation_time + year_of[event['eid']]
+        ses_idx = event['ses'] - 1  # starts from 0
+        offset = num_ses * event['sample'] * investigation_time
+        event['year'] = (offset + ses_idx * investigation_time +
+                         year_of[event['eid']])
     dstore[name] = events
 
 
