@@ -1,18 +1,35 @@
 import unittest
 import numpy
 from openquake.baselib.general import writetmp
-from openquake.hazardlib.shakemapconverter import get_shakemap_array, example
+from openquake.hazardlib.shakemapconverter import (
+    get_shakemap_array, example_pga, example_sa)
 
 aae = numpy.testing.assert_almost_equal
 F32 = numpy.float32
 
-imt_dt = numpy.dtype(
-    [('PGA', F32), ('SA(0.3)', F32), ('SA(1.0)', F32), ('SA(3.0)', F32)])
-
 
 class ShakemapConverterTestCase(unittest.TestCase):
-    def test_nepal(self):
-        array = get_shakemap_array(writetmp(example))
+    def test_pga(self):
+        imt_dt = numpy.dtype([('PGA', F32)])
+        array = get_shakemap_array(writetmp(example_pga))
+        n = 3  # number of sites
+        self.assertEqual(len(array), n)
+        self.assertEqual(array.dtype.names,
+                         ('lon', 'lat', 'vs30', 'val', 'std'))
+        dec = 4  # four digits
+        aae(array['lon'], [13.580, 13.5883, 13.5967], dec)
+        aae(array['lat'], [39.3103, 39.3103, 39.3103], dec)
+        aae(array['vs30'], [603, 603, 603], dec)
+        val = numpy.zeros(n, imt_dt)
+        std = numpy.array([(0.51,), (0.51,), (0.51,)], imt_dt)
+        for imt in imt_dt.names:
+            aae(array['val'][imt], val[imt])
+            aae(array['std'][imt], std[imt])
+
+    def test_sa(self):
+        imt_dt = numpy.dtype([('PGA', F32), ('SA(0.3)', F32),
+                              ('SA(1.0)', F32), ('SA(3.0)', F32)])
+        array = get_shakemap_array(writetmp(example_sa))
         n = 4  # number of sites
         self.assertEqual(len(array), n)
         self.assertEqual(array.dtype.names,
