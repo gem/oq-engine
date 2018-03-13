@@ -100,8 +100,6 @@ class PSHACalculator(base.HazardCalculator):
                 info = self.csm.infos[srcid]
                 info.num_sites += nsites
                 info.calc_time += calc_time
-                if not info.split_time:
-                    info.split_time = self.split_time[srcid]
                 info.num_split += split
         return acc
 
@@ -171,17 +169,23 @@ class PSHACalculator(base.HazardCalculator):
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
-            with self.monitor('prefiltering'):
+            if num_tiles > 1:
                 logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
+            else:
+                logging.info('Prefiltering sources')
+            with self.monitor('prefiltering'):
                 src_filter = SourceFilter(tile, oq.maximum_distance)
                 csm = self.csm.filter(src_filter)
-                totweight += csm.weight
             if tile_i == 1:  # set it only on the first tile
-                maxweight = csm.get_maxweight(tasks_per_tile, minweight)
+                maxweight = csm.get_maxweight(
+                    weight, tasks_per_tile, minweight)
                 if maxweight == minweight:
                     logging.info('Using minweight=%d', minweight)
                 else:
                     logging.info('Using maxweight=%d', maxweight)
+                totweight += csm.info.tot_weight
+            else:
+                totweight += csm.get_weight(weight)
             if csm.has_dupl_sources and not opt:
                 logging.warn('Found %d duplicated sources, use oq info',
                              csm.has_dupl_sources)
@@ -192,7 +196,7 @@ class PSHACalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(sg.sources)
             # NB: csm.get_sources_by_trt discards the mutex sources
-            for trt, sources in csm.get_sources_by_trt(opt).items():
+            for trt, sources in csm.get_sources_by_trt().items():
                 gsims = self.csm.info.gsim_lt.get_gsims(trt)
                 for block in block_splitter(sources, maxweight, weight):
                     yield block, src_filter, gsims, param, monitor
