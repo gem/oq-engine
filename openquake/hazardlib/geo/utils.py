@@ -94,7 +94,9 @@ class GeographicObjects(object):
         dic = {}
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
-            if distance <= assoc_dist:
+            if assoc_dist is None:
+                dic[sid] = obj
+            elif distance <= assoc_dist:
                 dic[sid] = obj
             elif mode == 'strict':
                 raise SiteAssociationError(
