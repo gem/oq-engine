@@ -233,7 +233,6 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     M = cross_corr.shape[0]
     LLT = []
     Z = []
-    import pdb; pdb.set_trace()
     L = numpy.array([numpy.linalg.cholesky(spatial_cov[i])
                      for i in range(M)])
     for i in range(M):
