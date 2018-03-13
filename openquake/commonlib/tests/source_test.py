@@ -69,14 +69,14 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = nrml.SourceModelParser(s.SourceConverter(
+        cls.conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
-        ))
-        groups = cls.parser.parse_groups(MIXED_SRC_MODEL)
+        )
+        groups = nrml.to_python(MIXED_SRC_MODEL, cls.conv)
         ([cls.point], [cls.cmplx], [cls.area, cls.simple],
          [cls.char_simple, cls.char_complex, cls.char_multi]) = groups
 
@@ -345,15 +345,15 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
-        parser = nrml.SourceModelParser(s.SourceConverter(
+        conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,
             complex_fault_mesh_spacing=1,
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
-        ))
+        )
         with self.assertRaises(nrml.DuplicatedID):
-            parser.parse_groups(DUPLICATE_ID_SRC_MODEL)
+            nrml.to_python(DUPLICATE_ID_SRC_MODEL, conv)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\
@@ -449,7 +449,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 """)
         [area] = nrml.read(area_file).sourceModel
         with self.assertRaises(AttributeError) as ctx:
-            self.parser.converter.convert_node(area)
+            self.conv.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
             " found in 'areaSource', line 5 of", str(ctx.exception))
@@ -510,7 +510,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
         with self.assertRaises(ValueError) as ctx:
-            self.parser.parse_groups(simple_file)
+            nrml.to_python(simple_file, self.conv)
         self.assertIn(msg, str(ctx.exception))
 
     def test_nonparametric_source_ok(self):
@@ -635,14 +635,14 @@ class SourceGroupTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = nrml.SourceModelParser(s.SourceConverter(
+        conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
-            area_source_discretization=1.))
+            area_source_discretization=1.)
         cls.source_collector = {
-            sc.trt: sc for sc in cls.parser.parse_src_groups(MIXED_SRC_MODEL)}
+            sc.trt: sc for sc in nrml.to_python(MIXED_SRC_MODEL, conv)}
         cls.sitecol = site.SiteCollection(cls.SITES)
 
     def check(self, trt, attr, value):
@@ -882,14 +882,7 @@ xmlns:gml="http://www.opengis.net/gml"
             reference_backarc=False)
         sitecol = site.SiteCollection.from_points(
             [102.32], [-2.9107], [0], mod)
-        parser = nrml.SourceModelParser(s.SourceConverter(
-            investigation_time=50.,
-            rupture_mesh_spacing=1,  # km
-            complex_fault_mesh_spacing=1,  # km
-            width_of_mfd_bin=1.,  # for Truncated GR MFDs
-            area_source_discretization=1.,  # km
-        ))
-        [[src]] = parser.parse_groups(self.bad_source)
+        [[src]] = nrml.to_python(self.bad_source)
         with self.assertRaises(AttributeError) as ctx, context(src):
             max_dist = 250
             # NB: with a distance of 200 km the error does not happen
