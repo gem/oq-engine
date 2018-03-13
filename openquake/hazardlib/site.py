@@ -145,6 +145,23 @@ class SiteCollection(object):
     ])
 
     @classmethod
+    def from_shakemap(cls, shakemap_array):
+        """
+        Build a site collection from a shakemap array
+        """
+        self = object.__new__(cls)
+        self.indices = None
+        n = len(shakemap_array)
+        self.array = arr = numpy.zeros(n, self.dtype)
+        arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
+        arr['lons'] = shakemap_array['lon']
+        arr['lats'] = shakemap_array['lat']
+        arr['depths'] = numpy.zeros(n)
+        arr['vs30'] = shakemap_array['vs30']
+        arr.flags.writeable = False
+        return self
+
+    @classmethod
     def from_points(cls, lons, lats, depths, sitemodel):
         """
         Build the site collection from
@@ -182,15 +199,14 @@ class SiteCollection(object):
         arr.flags.writeable = False
         return self
 
-    @classmethod
-    def filtered(cls, indices, array):
+    def filtered(self, indices):
         """
         :returns: a filtered SiteCollection instance
         """
-        self = object.__new__(cls)
-        self.indices = indices
-        self.array = array
-        return self
+        new = object.__new__(self.__class__)
+        new.indices = numpy.uint32(sorted(indices))
+        new.array = self.array
+        return new
 
     def __init__(self, sites):
         """
@@ -306,7 +322,7 @@ class SiteCollection(object):
             indices, = mask.nonzero()
         else:
             indices = self.indices.take(mask.nonzero()[0])
-        return SiteCollection.filtered(indices, self.array)
+        return self.filtered(indices)
 
     def within(self, region):
         """
