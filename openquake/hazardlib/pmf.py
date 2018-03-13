@@ -82,3 +82,11 @@ class PMF(object):
         probs = np.cumsum([val[0] for val in self.data])
         sampler = np.random.uniform(0., 1., number_samples)
         return [self.data[ival] for ival in np.searchsorted(probs, sampler)]
+
+    def reduce1(self):
+        """
+        Reduce the probability distribution to the first element
+        """
+        if len(self.data) == 1:  # do nothing
+            return self
+        return self.__class__([(1, self.data[0][1])])
