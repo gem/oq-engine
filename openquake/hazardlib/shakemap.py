@@ -15,94 +15,16 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-"""\
-See https://earthquake.usgs.gov/scenario/product/shakemap-scenario/sclegacyshakeout2full_se/us/1465655085705/about_formats.html
-Here is an example of the format
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="us20002926" shakemap_id="us20002926" shakemap_version="9" code_version="3.5.1440" process_timestamp="2015-07-02T22:50:42Z" shakemap_originator="us" map_status="RELEASED" shakemap_event_type="ACTUAL">
-<event event_id="us20002926" magnitude="7.8" depth="8.22" lat="28.230500" lon="84.731400" event_timestamp="2015-04-25T06:11:25UTC" event_network="us" event_description="NEPAL" />
-<grid_specification lon_min="81.731400" lat_min="25.587500" lon_max="87.731400" lat_max="30.873500" nominal_lon_spacing="0.016667" nominal_lat_spacing="0.016675" nlon="361" nlat="318" />
-<event_specific_uncertainty name="pga" value="0.000000" numsta="" />
-<event_specific_uncertainty name="pgv" value="0.000000" numsta="" />
-<event_specific_uncertainty name="mi" value="0.000000" numsta="" />
-<event_specific_uncertainty name="psa03" value="0.000000" numsta="" />
-<event_specific_uncertainty name="psa10" value="0.000000" numsta="" />
-<event_specific_uncertainty name="psa30" value="0.000000" numsta="" />
-<grid_field index="1" name="LON" units="dd" />
-<grid_field index="2" name="LAT" units="dd" />
-<grid_field index="3" name="PGA" units="pctg" />
-<grid_field index="4" name="PGV" units="cms" />
-<grid_field index="5" name="MMI" units="intensity" />
-<grid_field index="6" name="PSA03" units="pctg" />
-<grid_field index="7" name="PSA10" units="pctg" />
-<grid_field index="8" name="PSA30" units="pctg" />
-<grid_field index="9" name="STDPGA" units="ln(pctg)" />
-<grid_field index="10" name="URAT" units="" />
-<grid_field index="11" name="SVEL" units="ms" />
-<grid_data>
-81.7314 30.8735 0.44 2.21 3.83 1.82 2.8 1.26 0.53 1 400.758
-81.7481 30.8735 0.47 2.45 3.88 1.99 3.09 1.41 0.52 1 352.659
-81.7647 30.8735 0.47 2.4 3.88 1.97 3.04 1.38 0.52 1 363.687
-81.7814 30.8735 0.52 2.78 3.96 2.23 3.51 1.64 0.5 1 301.17
-</grid_data>
-</shakemap_grid>
-"""
 from urllib.request import urlopen
 import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
-from openquake.baselib.node import node_from_xml
-from openquake.hazardlib import geo
 
+from openquake.hazardlib import geo
+from openquake.hazardlib.shapemapconverter import get_shakemap_array
 
 F32 = numpy.float32
 SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/grid.xml'
-SHAKEMAP_FIELDS = set(
-    'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSHA10 STDPSA30'
-    .split())
-
-
-def get_shakemap_array(grid_file):
-    """
-    :param grid_file: a shakemap file
-    :returns: array with fields lon, lat, val, std
-    """
-    grid_node = node_from_xml(grid_file)
-    fields = grid_node.getnodes('grid_field')
-    lines = grid_node.grid_data.text.strip().splitlines()
-    rows = [line.split() for line in lines]
-
-    # the indices start from 1, hence the -1 below
-    idx = {f['name']: int(f['index']) - 1 for f in fields
-           if f['name'] in SHAKEMAP_FIELDS}
-    out = {name: [] for name in idx}
-    has_sa = False
-    for name in idx:
-        i = idx[name]
-        if name.startswith('PSA'):
-            has_sa = True
-        out[name].append([float(row[i]) for row in rows])
-    if has_sa:  # expect SA for 0.3, 1.0 and 3.0
-        dt = numpy.dtype([('PGA', F32), ('SA(0.3)', F32), ('SA(1.0)', F32),
-                          ('SA(3.0)', F32)])
-    else:  # expect only PGA
-        dt = numpy.dtype([('PGA', F32)])
-    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
-              ('val', dt), ('std', dt)]
-    data = numpy.zeros(len(rows), dtlist)
-    data['lon'] = F32(out['LON'])
-    data['lat'] = F32(out['LAT'])
-    data['val']['PGA'] = F32(out['PGA'])
-    data['std']['PGA'] = F32(out['STDPGA'])
-    data['vs30'] = F32(out['SVEL'])
-    if has_sa:
-        data['val']['SA(0.3)'] = F32(out['PSA03'])
-        data['val']['SA(1.0)'] = F32(out['PSA10'])
-        data['val']['SA(3.0)'] = F32(out['PSA30'])
-        data['std']['SA(0.3)'] = F32(out.get('STDPSA03', 0))
-        data['std']['SA(1.0)'] = F32(out.get('STDPSA10', 0))
-        data['std']['SA(3.0)'] = F32(out.get('STDPSA30', 0))
-    return data
 
 
 def get_shakemap(shakemap_id_or_fname, sitecol, assoc_dist):
