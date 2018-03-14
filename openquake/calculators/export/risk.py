@@ -28,7 +28,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
-from openquake.calculators.extract import extract
+from openquake.calculators.extract import (
+    extract, build_damage_dt, build_damage_array)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
@@ -237,18 +238,17 @@ def export_agg_losses_ebr(ekey, dstore):
     elt_dt = numpy.dtype(dtlist)
     elt = numpy.zeros(len(agg_losses), elt_dt)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    the_events = dstore['events'].value
-    all_events = group_array(the_events, 'grp_id')
+    events_by_rupid = group_array(dstore['events'].value, 'rup_id')
     rup_data = {}
     event_by_eid = {}  # eid -> event
     # populate rup_data and event_by_eid
     ruptures_by_grp = getters.get_ruptures_by_grp(dstore)
     # TODO: avoid reading the events twice
-    for grp_id, events in all_events.items():
-        for event in events:
-            event_by_eid[event['eid']] = event
+    for grp_id, ruptures in ruptures_by_grp.items():
+        for ebr in ruptures:
+            for event in events_by_rupid[ebr.serial]:
+                event_by_eid[event['eid']] = event
         if has_rup_data:
-            ruptures = ruptures_by_grp.get(grp_id, [])
             rup_data.update(get_rup_data(ruptures))
     for r, row in enumerate(agg_losses):
         rec = elt[r]
@@ -342,50 +342,6 @@ def export_damages_csv(ekey, dstore):
     return writer.getsaved()
 
 
-def build_damage_dt(dstore, mean_std=True):
-    """
-    :param dstore: a datastore instance
-    :param mean_std: a flag (default True)
-    :returns:
-       a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
-       loss_type -> (ds1, ds2, ...) depending on the flag mean_std
-    """
-    damage_states = ['no_damage'] + list(
-        dstore.get_attr('composite_risk_model', 'limit_states'))
-    dt_list = []
-    for ds in damage_states:
-        ds = str(ds)
-        if mean_std:
-            dt_list.append(('%s_mean' % ds, F32))
-            dt_list.append(('%s_stdv' % ds, F32))
-        else:
-            dt_list.append((ds, F32))
-    damage_dt = numpy.dtype(dt_list)
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
-
-
-def build_damage_array(data, damage_dt):
-    """
-    :param data: an array of length N with fields 'mean' and 'stddev'
-    :param damage_dt: a damage composite data type loss_type -> states
-    :returns: a composite array of length N and dtype damage_dt
-    """
-    L = len(data) if data.shape else 1
-    dmg = numpy.zeros(L, damage_dt)
-    for lt in damage_dt.names:
-        for i, ms in numpy.ndenumerate(data[lt]):
-            if damage_dt[lt].names[0].endswith('_mean'):
-                lst = []
-                for m, s in zip(ms['mean'], ms['stddev']):
-                    lst.append(m)
-                    lst.append(s)
-                dmg[lt][i] = tuple(lst)
-            else:
-                dmg[lt][i] = ms['mean']
-    return dmg
-
-
 @export.add(('dmg_by_asset', 'csv'))
 def export_dmg_by_asset_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
@@ -402,16 +358,8 @@ def export_dmg_by_asset_csv(ekey, dstore):
 
 @export.add(('dmg_by_asset', 'npz'))
 def export_dmg_by_asset_npz(ekey, dstore):
-    damage_dt = build_damage_dt(dstore)
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    data = dstore[ekey[0]]
-    assets = get_assets(dstore)
-    dic = {}
-    for rlz in rlzs:
-        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        dic['rlz-%03d' % rlz.ordinal] = compose_arrays(assets, dmg_by_asset)
     fname = dstore.export_path('%s.%s' % ekey)
-    savez(fname, **dic)
+    savez(fname, **dict(extract(dstore, 'dmg_by_asset')))
     return [fname]
 
 
