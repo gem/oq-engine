@@ -221,7 +221,7 @@ def amplify_ground_shaking(T, vs30, imls):
 
 def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     """
-    :returns: an array of GMFs of shape (G, N, M)
+    :returns: an array of GMFs of shape (N, G, M)
     """
     imts = shakemap['val'].dtype.names
     val = shakemap['val']
@@ -232,19 +232,17 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     N = spatial_cov.shape[1]
     M = cross_corr.shape[0]
     LLT = []
-    Z = []
     L = numpy.array([numpy.linalg.cholesky(spatial_cov[i])
                      for i in range(M)])
     for i in range(M):
-        LLTrow = [numpy.dot(L[i], numpy.transpose(L[j])) * cross_corr[i, j]
-                  for j in range(M)]
-        for irow in range(len(LLTrow[0])):
-            singleLLTrow = numpy.zeros((int(len(LLTrow) * len(LLTrow[0]))))
-            for iL in range(len(LLTrow)):
-                singleLLTrow[
-                    iL * len(LLTrow[0]):(iL + 1) * len(LLTrow[0])
-                ] = LLTrow[iL][irow]
-            LLT.append(singleLLTrow)
+        row = [numpy.dot(L[i], numpy.transpose(L[j])) * cross_corr[i, j]
+               for j in range(M)]
+        n = len(row[0])
+        for j in range(n):
+            singlerow = numpy.zeros(len(row) * n)
+            for i in range(len(row)):
+                singlerow[i * n:(i + 1) * n] = row[i][j]
+            LLT.append(singlerow)
     LLT = numpy.array(LLT)
 
     mu = numpy.array(
@@ -255,10 +253,8 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
                       size=(N * M, num_gmfs), random_state=seed)
 
     gmfs = numpy.exp(numpy.dot(L, Z) + mu)
-
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-
     return gmfs
 
 """
