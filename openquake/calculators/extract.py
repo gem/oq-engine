@@ -381,3 +381,16 @@ def extract_aggcurves(dstore, what):
     curves = _filter_agg(dstore['assetcol'], losses, tags)
     vars(curves).update(dstore.get_attrs('curves-stats'))
     return curves
+
+
+@extract.add('losses_by_asset')
+def extract_losses_by_asset(dstore, what):
+    loss_dt = dstore['oqparam'].loss_dt()
+    losses_by_asset = dstore['losses_by_asset'].value
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = util.get_assets(dstore)
+    for rlz in rlzs:
+        # I am exporting the 'mean' and ignoring the 'stddev'
+        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
+        data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+        yield 'rlz-%03d' % rlz.ordinal, data
