@@ -603,8 +603,7 @@ def get_exposure(oqparam):
     """
     return asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.region_constraint, oqparam.all_cost_types,
-        oqparam.ignore_missing_costs)
+        oqparam.region_constraint, oqparam.ignore_missing_costs)
 
 
 def _get_mesh_assets_by_site(oqparam, exposure):
