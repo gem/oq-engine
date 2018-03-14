@@ -402,7 +402,11 @@ class AssetCollection(object):
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]
-            lst.append(encode(units[lt]))
+            if lt == 'occupants':
+                unit = 'people'
+            else:
+                unit = units[lt]
+            lst.append(encode(unit))
         return numpy.array(lst)
 
     def assets_by_site(self):
