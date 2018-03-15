@@ -184,10 +184,12 @@ def _sample_ruptures(src, prob, num_ses, num_samples, seed):
         numpy.random.seed(rup.seed)
         for sam_idx in range(num_samples):
             for ses_idx in range(1, num_ses + 1):
-                num_occ = rup.sample_number_of_occurrences()
-                ok_occ = numpy.random.random() < prob if prob < 1 else True
-                if num_occ and ok_occ:
-                    num_occ_by_rup[rup] += {(sam_idx, ses_idx): num_occ}
+                # sampling of mutex sources if prob < 1
+                ok = numpy.random.random() < prob if prob < 1 else True
+                if ok:
+                    num_occ = rup.sample_number_of_occurrences()
+                    if num_occ:
+                        num_occ_by_rup[rup] += {(sam_idx, ses_idx): num_occ}
         rup.rup_no = rup_no + 1
     return num_occ_by_rup
 
