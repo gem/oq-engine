@@ -1,8 +1,8 @@
-Index: oq-engine/openquake/engine/openquake.cfg
-===================================================================
---- oq-engine.orig/openquake/engine/openquake.cfg	2017-10-13 07:49:34.110383342 +0200
-+++ oq-engine/openquake/engine/openquake.cfg	2017-10-13 08:24:07.242368866 +0200
-@@ -40,9 +40,9 @@
+diff --git a/openquake/engine/openquake.cfg b/openquake/engine/openquake.cfg
+index 818f6882e9..a6329a3905 100644
+--- a/openquake/engine/openquake.cfg
++++ b/openquake/engine/openquake.cfg
+@@ -40,13 +40,15 @@ celery_queue = celery
  
  [dbserver]
  # enable multi_user if you have a multiple user installation
@@ -13,5 +13,13 @@ Index: oq-engine/openquake/engine/openquake.cfg
 +file = /var/lib/openquake/db.sqlite3
 +log = /var/lib/openquake/dbserver.log
  host = 127.0.0.1
- # port 1908 has a good reputation:
- # https://isc.sans.edu/port.html?port=1908
+-# port 1908 has a good reputation:
+-# https://isc.sans.edu/port.html?port=1908
+-port = 1908
++# for packages we use port 1907 to avoid conflicts
++# with local development installations
++# https://isc.sans.edu/port.html?port=1907
++port = 1907
+ authkey = changeme
+ 
+ [zworkers]
