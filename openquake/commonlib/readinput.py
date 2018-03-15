@@ -582,9 +582,8 @@ def get_cost_calculator(oqparam):
     """
     Read the first lines of the exposure file and infers the cost calculator
     """
-    return asset._get_exposure(oqparam.inputs['exposure'],
-                               set(oqparam.all_cost_types),
-                               stop='assets')[0].cost_calculator
+    exposure = asset._get_exposure(oqparam.inputs['exposure'], stop='assets')
+    return exposure[0].cost_calculator
 
 
 def get_exposure(oqparam):
@@ -599,8 +598,7 @@ def get_exposure(oqparam):
     """
     return asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.region_constraint, oqparam.all_cost_types,
-        oqparam.ignore_missing_costs)
+        oqparam.region_constraint, oqparam.ignore_missing_costs)
 
 
 def _get_mesh_assets_by_site(oqparam, exposure):
@@ -728,9 +726,12 @@ def get_gmfs(oqparam):
                               'realization is supported' % (fname, R))
         # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
-        num_gmv = len(array.dtype.names[3:])
-        assert num_gmv == M, (num_gmv, M)
-        dtlist.append(('gmv', (F32, num_gmv)))
+        required_imts = list(oqparam.imtls)
+        imts = [name[4:] for name in array.dtype.names[3:]]
+        if imts != required_imts:
+            raise ValueError('Required %s, but %s contains %s' % (
+                required_imts, fname, imts))
+        dtlist.append(('gmv', (F32, M)))
         eids = numpy.unique(array['eid'])
         E = len(eids)
         found_eids = set(eids)
