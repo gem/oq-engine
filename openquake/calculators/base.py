@@ -369,6 +369,11 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 logging.info('Splitting sources')
                 self.csm.split_all()
+            f, s = self.csm.get_floating_spinning_factors()
+            if f != 1:
+                logging.info('Rupture floating factor=%s', f)
+            if s != 1:
+                logging.info('Rupture spinning factor=%s', s)
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
