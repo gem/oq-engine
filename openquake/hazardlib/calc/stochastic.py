@@ -136,9 +136,9 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
     if getattr(group, 'src_interdep', None) == 'mutex':
-        weight = {src: w for src, w in zip(group, group.srcs_weights)}
+        prob = {src: sw for src, sw in zip(group, group.srcs_weights)}
     else:
-        weight = {src: 1 for src in group}
+        prob = {src: 1 for src in group}
     eb_ruptures = []
     calc_times = []
     rup_mon = monitor('making contexts', measuremem=False)
@@ -149,7 +149,7 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
         t0 = time.time()
         num_ruptures += src.num_ruptures
         num_occ_by_rup = _sample_ruptures(
-            src, weight[src], param['ses_per_logic_tree_path'], group.samples,
+            src, prob[src], param['ses_per_logic_tree_path'], group.samples,
             param['seed'])
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
@@ -164,12 +164,12 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
     return dic
 
 
-def _sample_ruptures(src, weight, num_ses, num_samples, seed):
+def _sample_ruptures(src, prob, num_ses, num_samples, seed):
     """
     Sample the ruptures contained in the given source.
 
     :param src: a hazardlib source object
-    :param weight: source weight (1 for indep sources, < 1 for mutex sources)
+    :param prob: a probability (1 for indep sources, < 1 for mutex sources)
     :param num_ses: the number of Stochastic Event Sets to generate
     :param num_samples: how many samples for the given source
     :param seed: master seed from the job.ini file
@@ -185,7 +185,7 @@ def _sample_ruptures(src, weight, num_ses, num_samples, seed):
         for sam_idx in range(num_samples):
             for ses_idx in range(1, num_ses + 1):
                 num_occ = rup.sample_number_of_occurrences()
-                ok_occ = numpy.random.random() < weight if weight < 1 else True
+                ok_occ = numpy.random.random() < prob if prob < 1 else True
                 if num_occ and ok_occ:
                     num_occ_by_rup[rup] += {(sam_idx, ses_idx): num_occ}
         rup.rup_no = rup_no + 1
