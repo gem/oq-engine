@@ -26,6 +26,7 @@ import operator
 import collections
 import numpy
 from openquake.baselib.general import AccumDict
+from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import range, raise_
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.source.rupture import EBRupture
@@ -101,20 +102,6 @@ def stochastic_event_set(
 
 # ######################## rupture calculator ############################ #
 
-def sample(elements, prob, seed=None):
-    """
-    Sample elements with a given probability.
-
-    >>> sample(numpy.array(list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')), 0.1, seed=42)
-    array(['G', 'T', 'O'], 
-          dtype='<U1')
-    """
-    numpy.random.seed(seed)
-    if prob in (1, None):
-        return elements
-    return numpy.random.choice(elements, round(prob * len(elements)))
-
-
 def set_eids(ebruptures):
     """
     Set event IDs on the given list of ebruptures.
@@ -133,7 +120,7 @@ def set_eids(ebruptures):
     return num_events
 
 
-def sample_ruptures(group, src_filter, gsims, param, monitor):
+def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
     """
     :param group:
         a SourceGroup or a sequence of sources of the same group
@@ -149,8 +136,7 @@ def sample_ruptures(group, src_filter, gsims, param, monitor):
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
     if getattr(group, 'src_interdep', None) == 'mutex':
-        weight = {src: weight for src, weight in
-                  zip(group.sources, group.srcs_weights)}
+        weight = {src: w for src, w in zip(group, group.srcs_weights)}
     else:
         weight = {src: 1 for src in group}
     eb_ruptures = []
