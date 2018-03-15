@@ -16,10 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
-import time
 import math
 import os.path
-import operator
 import itertools
 import logging
 import collections
@@ -29,15 +27,15 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, block_splitter, humansize, split_in_slices)
-from openquake.hazardlib.calc.filters import FarAwayRupture, SourceFilter
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
-from openquake.calculators.getters import GmfGetter, EBRupture, RuptureGetter
+from openquake.calculators.getters import GmfGetter, RuptureGetter
 from openquake.calculators.classical import (
     ClassicalCalculator, saving_sources_by_task)
 
@@ -52,31 +50,10 @@ TWO32 = 2 ** 32  # 4,294,967,296
 TWO48 = 2 ** 48  # 281,474,976,710,656
 
 
-# ######################## rupture calculator ############################ #
-
-
-def set_eids(ebruptures):
-    """
-    Set event IDs on the given list of ebruptures.
-
-    :param ebruptures: a non-empty list of ruptures with the same grp_id
-    :returns: the total number of events set
-    """
-    if not ebruptures:
-        return 0
-    num_events = sum(ebr.multiplicity for ebr in ebruptures)
-    for ebr in ebruptures:
-        assert ebr.multiplicity < TWO32, ebr.multiplicity
-        eids = U64(TWO32 * ebr.serial) + numpy.arange(
-            ebr.multiplicity, dtype=U64)
-        ebr.events['eid'] = eids
-    return num_events
-
-
 def compute_ruptures(sources, src_filter, gsims, param, monitor):
     """
     :param sources:
-        List of commonlib.source.Source tuples
+        a sequence of sources of the same group
     :param src_filter:
         a source site filter
     :param gsims:
@@ -91,90 +68,12 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     # NB: by construction each block is a non-empty list with
     # sources of the same src_group_id
     grp_id = sources[0].src_group_id
-    eb_ruptures = []
-    calc_times = []
-    rup_mon = monitor('making contexts', measuremem=False)
-    # Compute and save stochastic event sets
-    num_ruptures = 0
-    cmaker = ContextMaker(gsims, src_filter.integration_distance)
-    for src, s_sites in src_filter(sources):
-        t0 = time.time()
-        if s_sites is None:
-            continue
-        num_ruptures += src.num_ruptures
-        num_occ_by_rup = sample_ruptures(
-            src, param['ses_per_logic_tree_path'], sources.samples,
-            param['seed'])
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur, i.e.
-        # to call sample_ruptures *before* the filtering
-        for ebr in _build_eb_ruptures(
-                src, num_occ_by_rup, cmaker, s_sites, param['seed'], rup_mon):
-            eb_ruptures.append(ebr)
-        dt = time.time() - t0
-        calc_times.append((src.id, dt))
-    res = AccumDict({grp_id: eb_ruptures})
-    res.num_events = set_eids(eb_ruptures)
-    res.calc_times = calc_times
-    res.eff_ruptures = {grp_id: num_ruptures}
+    dic = sample_ruptures(sources, src_filter, gsims, param, monitor)
+    res = AccumDict({grp_id: dic['eb_ruptures']})
+    res.num_events = dic['num_events']
+    res.calc_times = dic['calc_times']
+    res.eff_ruptures = {grp_id: dic['num_ruptures']}
     return res
-
-
-def sample_ruptures(src, num_ses, num_samples, seed):
-    """
-    Sample the ruptures contained in the given source.
-
-    :param src: a hazardlib source object
-    :param num_ses: the number of Stochastic Event Sets to generate
-    :param num_samples: how many samples for the given source
-    :param seed: master seed from the job.ini file
-    :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
-    """
-    # the dictionary `num_occ_by_rup` contains a dictionary
-    # ses_id -> num_occurrences for each occurring rupture
-    num_occ_by_rup = collections.defaultdict(AccumDict)
-    # generating ruptures for the given source
-    for rup_no, rup in enumerate(src.iter_ruptures()):
-        rup.seed = src.serial[rup_no] + seed
-        numpy.random.seed(rup.seed)
-        for sampleid in range(num_samples):
-            for ses_idx in range(1, num_ses + 1):
-                num_occurrences = rup.sample_number_of_occurrences()
-                if num_occurrences:
-                    num_occ_by_rup[rup] += {
-                        (sampleid, ses_idx): num_occurrences}
-        rup.rup_no = rup_no + 1
-    return num_occ_by_rup
-
-
-def _build_eb_ruptures(
-        src, num_occ_by_rup, cmaker, s_sites, random_seed, rup_mon):
-    """
-    Filter the ruptures stored in the dictionary num_occ_by_rup and
-    yield pairs (rupture, <list of associated EBRuptures>)
-    """
-    for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
-        with rup_mon:
-            try:
-                rup.ctx = cmaker.make_contexts(s_sites, rup)
-                indices = rup.ctx[0].sids
-            except FarAwayRupture:
-                # ignore ruptures which are far away
-                del num_occ_by_rup[rup]  # save memory
-                continue
-
-        # creating EBRuptures
-        serial = rup.seed - random_seed + 1
-        events = []
-        for (sampleid, ses_idx), num_occ in sorted(
-                num_occ_by_rup[rup].items()):
-            for _ in range(num_occ):
-                # NB: the 0 below is a placeholder; the right eid will be
-                # set a bit later, in set_eids
-                events.append((0, src.src_group_id, ses_idx, sampleid))
-        if events:
-            yield EBRupture(rup, indices, numpy.array(events, calc.event_dt),
-                            serial)
 
 
 def get_events(ebruptures):

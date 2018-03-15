@@ -30,6 +30,7 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib import nrml
+from openquake.hazardlib.calc import stochastic
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, util
 from openquake.calculators import base, event_based, getters
@@ -723,7 +724,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         ebruptures.append(
                             EBRupture(rup, indices, evs, serial))
                         serial += 1
-    res.num_events = event_based.set_eids(ebruptures)
+    res.num_events = stochastic.set_eids(ebruptures)
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = {
         src.source_id:
