@@ -455,7 +455,7 @@ class RuptureConverter(object):
                 for sesnode in sesnodes:
                     with context(self.fname, sesnode):
                         ses = sesnode['id']
-                        for eid in (~sesnode).split():
+                        for eid in sesnode.text.split():
                             events.append((eid, ses, 0))
                 ebr = source.rupture.EBRupture(
                     rup, (), numpy.array(events, event_dt), rupid)
