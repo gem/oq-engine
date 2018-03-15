@@ -25,7 +25,6 @@ import collections
 import numpy
 
 from openquake.baselib.general import humansize, group_array, DictArray
-from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
