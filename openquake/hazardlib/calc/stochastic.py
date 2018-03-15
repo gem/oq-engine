@@ -132,7 +132,7 @@ def sample_ruptures(sources, src_filter, gsims, param, monitor):
     :param monitor:
         monitor instance
     :returns:
-        a dictionary src_group_id -> [Rupture instances]
+        a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
     eb_ruptures = []
     calc_times = []
