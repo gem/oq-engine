@@ -45,9 +45,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-TWO16 = 2 ** 16  # 65,536
-TWO32 = 2 ** 32  # 4,294,967,296
-TWO48 = 2 ** 48  # 281,474,976,710,656
 
 
 def compute_ruptures(sources, src_filter, gsims, param, monitor):
