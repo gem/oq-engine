@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added a check on IMTs for GMFs read from CSV
+
   [Daniele Viganò]
   * Changed the default DbServer port in Linux packages from 1908 to 1907
 
