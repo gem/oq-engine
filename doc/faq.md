@@ -87,6 +87,12 @@ On Ubuntu make sure to run `apt dist-upgrade` instead on `apt upgrade` to make a
 
 ***
 
+### DbServer ports
+
+The default port for the DbServer (configured via the `openquake.cfg` configuration file) is `1908` and `1907`.
+
+***
+
 ### error: [Errno 111] Connection refused
 
 A more detailed stack trace:
