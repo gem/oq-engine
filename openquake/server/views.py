@@ -693,10 +693,10 @@ def extract(request, calc_id, what):
         else:  # assume obj is an array
             array, attrs = obj, {}
         # sanitize array of strings
-        for key, value in attrs.items():
-            if isinstance(value, numpy.ndarray) and len(value) and isinstance(
-                    value[0], str):
-                attrs[key] = numpy.array(encode(value))
+        #for key, value in attrs.items():
+        #    if isinstance(value, numpy.ndarray) and len(value) and isinstance(
+        #            value[0], str):
+        #        attrs[key] = numpy.array(encode(value))
         numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
