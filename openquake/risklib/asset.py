@@ -18,11 +18,16 @@
 
 from __future__ import division
 import operator
+import logging
+import csv
+import os
 import numpy
+from shapely import wkt, geometry
 
 from openquake.baselib import hdf5, general
+from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, nrml, InvalidFile
 
 
 class CostCalculator(object):
@@ -397,7 +402,11 @@ class AssetCollection(object):
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]
-            lst.append(encode(units[lt]))
+            if lt == 'occupants':
+                unit = 'people'
+            else:
+                unit = units[lt]
+            lst.append(encode(unit))
         return numpy.array(lst)
 
     def assets_by_site(self):
@@ -568,3 +577,311 @@ class AssetCollection(object):
                         value = getattr(asset, name + 's')[lt]
                     record[field] = value
         return assetcol
+
+# ########################### exposure ############################ #
+
+cost_type_dt = numpy.dtype([('name', hdf5.vstr),
+                            ('type', hdf5.vstr),
+                            ('unit', hdf5.vstr)])
+
+
+def _get_exposure(fname, stop=None):
+    """
+    :param fname:
+        path of the XML file containing the exposure
+    :param stop:
+        node at which to stop parsing (or None)
+    :returns:
+        a pair (Exposure instance, list of asset nodes)
+    """
+    [exposure] = nrml.read(fname, stop=stop)
+    if not exposure.tag.endswith('exposureModel'):
+        raise InvalidFile('%s: expected exposureModel, got %s' %
+                          (fname, exposure.tag))
+    description = exposure.description
+    try:
+        conversions = exposure.conversions
+    except AttributeError:
+        conversions = Node('conversions', nodes=[Node('costTypes', [])])
+    try:
+        inslimit = conversions.insuranceLimit
+    except AttributeError:
+        inslimit = Node('insuranceLimit', text=True)
+    try:
+        deductible = conversions.deductible
+    except AttributeError:
+        deductible = Node('deductible', text=True)
+    try:
+        area = conversions.area
+    except AttributeError:
+        # NB: the area type cannot be an empty string because when sending
+        # around the CostCalculator object we would run into this numpy bug
+        # about pickling dictionaries with empty strings:
+        # https://github.com/numpy/numpy/pull/5475
+        area = Node('area', dict(type='?'))
+    try:
+        occupancy_periods = ~exposure.occupancyPeriods or ''
+    except AttributeError:
+        occupancy_periods = 'day night transit'
+    try:
+        tagNames = exposure.tagNames
+    except AttributeError:
+        tagNames = Node('tagNames', text='')
+    tagnames = ~tagNames or []
+    tagnames.insert(0, 'taxonomy')
+
+    # read the cost types and make some check
+    cost_types = []
+    retrofitted = False
+    for ct in conversions.costTypes:
+        with context(fname, ct):
+            ctname = ct['name']
+            if ctname == 'structural' and 'retrofittedType' in ct.attrib:
+                if ct['retrofittedType'] != ct['type']:
+                    raise ValueError(
+                        'The retrofittedType %s is different from the type'
+                        '%s' % (ct['retrofittedType'], ct['type']))
+                if ct['retrofittedUnit'] != ct['unit']:
+                    raise ValueError(
+                        'The retrofittedUnit %s is different from the unit'
+                        '%s' % (ct['retrofittedUnit'], ct['unit']))
+                retrofitted = True
+            cost_types.append(
+                (ctname, valid.cost_type_type(ct['type']), ct['unit']))
+    if 'occupants' in cost_types:
+        cost_types.append(('occupants', 'per_area', 'people'))
+    cost_types.sort(key=operator.itemgetter(0))
+    cost_types = numpy.array(cost_types, cost_type_dt)
+    insurance_limit_is_absolute = il = inslimit.get('isAbsolute')
+    deductible_is_absolute = de = deductible.get('isAbsolute')
+    cc = CostCalculator(
+        {}, {}, {},
+        True if de is None else de,
+        True if il is None else il,
+        {name: i for i, name in enumerate(tagnames)},
+    )
+    for ct in cost_types:
+        name = ct['name']  # structural, nonstructural, ...
+        cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
+        cc.area_types[name] = area['type']
+        cc.units[name] = ct['unit']
+    assets = []
+    asset_refs = []
+    exp = Exposure(
+        exposure['id'], exposure['category'],
+        description.text, cost_types, occupancy_periods.split(),
+        insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
+        area.attrib, assets, asset_refs, cc, TagCollection(tagnames))
+    return exp, exposure.assets
+
+
+class Exposure(object):
+    """
+    A class to read the exposure from XML/CSV files
+    """
+    fields = ['id', 'category', 'description', 'cost_types',
+              'occupancy_periods', 'insurance_limit_is_absolute',
+              'deductible_is_absolute', 'retrofitted',
+              'area', 'assets', 'asset_refs',
+              'cost_calculator', 'tagcol']
+
+    @classmethod
+    def read(cls, fname, calculation_mode='', region_constraint='',
+             ignore_missing_costs=(), asset_nodes=False):
+        """
+        Call `Exposure.read(fname)` to get an :class:`Exposure` instance
+        keeping all the assets in memory or
+        `Exposure.read(fname, asset_nodes=True)` to get an iterator over
+        Node objects (one Node for each asset).
+        """
+        param = {'calculation_mode': calculation_mode}
+        param['out_of_region'] = 0
+        if region_constraint:
+            param['region'] = wkt.loads(region_constraint)
+        else:
+            param['region'] = None
+        param['fname'] = fname
+        param['ignore_missing_costs'] = set(ignore_missing_costs)
+        exposure, assets = _get_exposure(param['fname'])
+        param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
+            ['occupants'])
+        nodes = assets if assets else exposure._read_csv(
+            assets.text, os.path.dirname(param['fname']))
+        if asset_nodes:  # this is useful for the GED4ALL import script
+            return nodes
+        exposure._populate_from(nodes, param)
+        if param['region'] and param['out_of_region']:
+            logging.info('Discarded %d assets outside the region',
+                         param['out_of_region'])
+        if len(exposure.assets) == 0:
+            raise RuntimeError('Could not find any asset within the region!')
+        # sanity checks
+        values = any(len(ass.values) + ass.number for ass in exposure.assets)
+        assert values, 'Could not find any value??'
+        return exposure
+
+    def __init__(self, *values):
+        assert len(values) == len(self.fields)
+        for field, value in zip(self.fields, values):
+            setattr(self, field, value)
+
+    def _csv_header(self):
+        """
+        Extract the expected CSV header from the exposure metadata
+        """
+        fields = ['id', 'number', 'taxonomy', 'lon', 'lat']
+        for name in self.cost_types['name']:
+            fields.append(name)
+        if 'per_area' in self.cost_types['type']:
+            fields.append('area')
+        fields.extend(self.occupancy_periods)
+        fields.extend(self.tagcol.tagnames)
+        return set(fields)
+
+    def _read_csv(self, csvnames, dirname):
+        """
+        :param csvnames: names of csv files, space separated
+        :param dirname: the directory where the csv files are
+        :yields: asset nodes
+        """
+        expected_header = self._csv_header()
+        fnames = [os.path.join(dirname, f) for f in csvnames.split()]
+        for fname in fnames:
+            with open(fname) as f:
+                header = set(next(csv.reader(f)))
+                if expected_header - header:
+                    raise InvalidFile(
+                        'Unexpected header in %s\nExpected: %s\nGot: %s' %
+                        (fname, sorted(expected_header), sorted(header)))
+        for fname in fnames:
+            with open(fname) as f:
+                for i, dic in enumerate(csv.DictReader(f), 1):
+                    asset = Node('asset', lineno=i)
+                    with context(fname, asset):
+                        asset['id'] = dic['id']
+                        asset['number'] = valid.positivefloat(dic['number'])
+                        asset['taxonomy'] = dic['taxonomy']
+                        if 'area' in dic:  # optional attribute
+                            asset['area'] = dic['area']
+                        loc = Node('location',
+                                   dict(lon=valid.longitude(dic['lon']),
+                                        lat=valid.latitude(dic['lat'])))
+                        costs = Node('costs')
+                        for cost in self.cost_types['name']:
+                            a = dict(type=cost, value=dic[cost])
+                            costs.append(Node('cost', a))
+                        occupancies = Node('occupancies')
+                        for period in self.occupancy_periods:
+                            a = dict(occupants=dic[period], period=period)
+                            occupancies.append(Node('occupancy', a))
+                        tags = Node('tags')
+                        for tagname in self.tagcol.tagnames:
+                            if tagname != 'taxonomy':
+                                tags.attrib[tagname] = dic[tagname]
+                        asset.nodes.extend([loc, costs, occupancies, tags])
+                        if i % 100000 == 0:
+                            logging.info('Read %d assets', i)
+                    yield asset
+
+    def _populate_from(self, asset_nodes, param):
+        asset_refs = set()
+        for idx, asset_node in enumerate(asset_nodes):
+            asset_id = asset_node['id']
+            if asset_id in asset_refs:
+                raise nrml.DuplicatedID(asset_id)
+            asset_refs.add(asset_id)
+            self._add_asset(idx, asset_node, param)
+
+    def _add_asset(self, idx, asset_node, param):
+        values = {}
+        deductibles = {}
+        insurance_limits = {}
+        retrofitted = None
+        asset_id = asset_node['id'].encode('utf8')
+        with context(param['fname'], asset_node):
+            self.asset_refs.append(asset_id)
+            taxonomy = asset_node['taxonomy']
+            if 'damage' in param['calculation_mode']:
+                # calculators of 'damage' kind require the 'number'
+                # if it is missing a KeyError is raised
+                number = asset_node['number']
+            else:
+                # some calculators ignore the 'number' attribute;
+                # if it is missing it is considered 1, since we are going
+                # to multiply by it
+                try:
+                    number = asset_node['number']
+                except KeyError:
+                    number = 1
+                else:
+                    if 'occupants' in self.cost_types['name']:
+                        values['occupants_None'] = number
+            location = asset_node.location['lon'], asset_node.location['lat']
+            if param['region'] and not geometry.Point(*location).within(
+                    param['region']):
+                param['out_of_region'] += 1
+                return
+            tagnode = getattr(asset_node, 'tags', None)
+            dic = {} if tagnode is None else tagnode.attrib.copy()
+            with context(param['fname'], tagnode):
+                dic['taxonomy'] = taxonomy
+                idxs = self.tagcol.add_tags(dic)
+        try:
+            costs = asset_node.costs
+        except AttributeError:
+            costs = Node('costs', [])
+        try:
+            occupancies = asset_node.occupancies
+        except AttributeError:
+            occupancies = Node('occupancies', [])
+        for cost in costs:
+            with context(param['fname'], cost):
+                cost_type = cost['type']
+                if cost_type == 'structural':
+                    # retrofitted is defined only for structural
+                    retrofitted = cost.get('retrofitted')
+                if cost_type in param['relevant_cost_types']:
+                    values[cost_type] = cost['value']
+                    try:
+                        deductibles[cost_type] = cost['deductible']
+                    except KeyError:
+                        pass
+                    try:
+                        insurance_limits[cost_type] = cost['insuranceLimit']
+                    except KeyError:
+                        pass
+
+        # check we are not missing a cost type
+        missing = param['relevant_cost_types'] - set(values)
+        if missing and missing <= param['ignore_missing_costs']:
+            logging.warn(
+                'Ignoring asset %s, missing cost type(s): %s',
+                asset_id, ', '.join(missing))
+            for cost_type in missing:
+                values[cost_type] = None
+        elif missing and 'damage' not in param['calculation_mode']:
+            # missing the costs is okay for damage calculators
+            with context(param['fname'], asset_node):
+                raise ValueError("Invalid Exposure. "
+                                 "Missing cost %s for asset %s" % (
+                                     missing, asset_id))
+        tot_occupants = 0
+        for occupancy in occupancies:
+            with context(param['fname'], occupancy):
+                occupants = 'occupants_%s' % occupancy['period']
+                values[occupants] = float(occupancy['occupants'])
+                tot_occupants += values[occupants]
+        if occupancies:  # store average occupants
+            values['occupants_None'] = tot_occupants / len(occupancies)
+        area = float(asset_node.get('area', 1))
+        ass = Asset(idx, idxs, number, location, values, area,
+                    deductibles, insurance_limits, retrofitted,
+                    self.cost_calculator)
+        self.assets.append(ass)
+
+    def __iter__(self):
+        return iter(self.assets)
+
+    def __repr__(self):
+        return '<%s with %s assets>' % (self.__class__.__name__,
+                                        len(self.assets))
