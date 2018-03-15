@@ -59,6 +59,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
+TWO16 = 2 ** 16
 
 # DEFAULT VALUES FOR UCERF BACKGROUND MODELS
 DEFAULT_MESH_SPACING = 1.0
@@ -703,7 +704,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     idist = src_filter.integration_distance
     for sample in range(param['samples']):
         for ses_idx, ses_seed in param['ses_seeds']:
-            seed = sample * event_based.TWO16 + ses_seed
+            seed = sample * TWO16 + ses_seed
             with sampl_mon:
                 rups, n_occs = src.generate_event_set(
                     background_sids, src_filter, seed)
@@ -720,7 +721,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     for _ in range(n_occ):
                         events.append((0, src.src_group_id, ses_idx, sample))
                     if events:
-                        evs = numpy.array(events, calc.event_dt)
+                        evs = numpy.array(events, stochastic.event_dt)
                         ebruptures.append(
                             EBRupture(rup, indices, evs, serial))
                         serial += 1
