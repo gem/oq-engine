@@ -2,7 +2,8 @@ import unittest
 import numpy
 from openquake.baselib.general import writetmp
 from openquake.hazardlib.shakemapconverter import example_pga, example_sa
-from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
+from openquake.hazardlib.shakemap import (
+    get_sitecol_shakemap, to_gmfs, amplify_ground_shaking)
 
 aae = numpy.testing.assert_almost_equal
 F32 = numpy.float32
@@ -29,3 +30,10 @@ class ShakemapTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), n)
         gmf = mean_gmf(shakemap)
         aae(gmf, [])
+
+    def test_amplify(self):
+        res = amplify_ground_shaking(T=3.0, vs30=780, imls=[0.1, 0.2, 0.3])
+        aae(res, [0.09832577, 0.19690711, 0.2958982])
+
+        res = amplify_ground_shaking(T=0.3, vs30=780, imls=[0.1, 0.2, 0.3])
+        aae(res, [0.09909498, 0.19870543, 0.29922175])
