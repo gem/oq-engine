@@ -45,9 +45,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-TWO16 = 2 ** 16  # 65,536
-TWO32 = 2 ** 32  # 4,294,967,296
-TWO48 = 2 ** 48  # 281,474,976,710,656
 
 
 def compute_ruptures(sources, src_filter, gsims, param, monitor):
@@ -176,6 +173,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
+                if sg.src_interdep == 'mutex':
+                    sg.samples = sm.samples
+                    yield sg, src_filter, gsims, param, monitor
+                    num_tasks += 1
+                    num_sources += len(sg.sources)
+                    continue
                 for block in block_splitter(sg.sources, maxweight, weight):
                     block.samples = sm.samples
                     yield block, src_filter, gsims, param, monitor
@@ -184,8 +187,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def execute(self):
-        mutex_groups = list(self.csm.gen_mutex_groups())
-        assert not mutex_groups, 'Mutex sources are not implemented!'
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
