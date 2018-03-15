@@ -731,9 +731,12 @@ def get_gmfs(oqparam):
                               'realization is supported' % (fname, R))
         # the array has the structure rlzi, sid, eid, gmv_PGA, gmv_...
         dtlist = [(name, array.dtype[name]) for name in array.dtype.names[:3]]
-        num_gmv = len(array.dtype.names[3:])
-        assert num_gmv == M, (num_gmv, M)
-        dtlist.append(('gmv', (F32, num_gmv)))
+        required_imts = list(oqparam.imtls)
+        imts = [name[4:] for name in array.dtype.names[3:]]
+        if imts != required_imts:
+            raise ValueError('Required %s, but %s contains %s' % (
+                required_imts, fname, imts))
+        dtlist.append(('gmv', (F32, M)))
         eids = numpy.unique(array['eid'])
         E = len(eids)
         found_eids = set(eids)
