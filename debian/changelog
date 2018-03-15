@@ -1,4 +1,14 @@
   [Michele Simionato]
+  * Add an utility to read XML shakemap files in hazardlib
+  * Added a check on IMTs for GMFs read from CSV
+
+  [Daniele Viganò]
+  * Changed the default DbServer port in Linux packages from 1908 to 1907
+
+  [Michele Simionato]
+  * Logged rupture floating factor and rupture spinning factor
+  * Added an extract API for losses_by_asset
+  * Added a check against GMF csv files with more than one realization
   * Fixed the algorithm setting the event year for event based with sampling
   * Added a command `oq importcalc` to import a remote calculation in the
     local database

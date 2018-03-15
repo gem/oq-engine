@@ -203,7 +203,8 @@ def get_set_num_ruptures(src):
                 logging.warn('%s.count_ruptures took %d seconds, perhaps the '
                              'rupture_mesh_spacing is too small', src, dt)
             else:
-                logging.warn('count_ruptures %s took %d seconds??', src, dt)
+                # multiPointSource
+                logging.warn('count_ruptures %s took %d seconds', src, dt)
     return src.num_ruptures
 
 
@@ -454,7 +455,7 @@ class RuptureConverter(object):
                 for sesnode in sesnodes:
                     with context(self.fname, sesnode):
                         ses = sesnode['id']
-                        for eid in (~sesnode).split():
+                        for eid in sesnode.text.split():
                             events.append((eid, ses, 0))
                 ebr = source.rupture.EBRupture(
                     rup, (), numpy.array(events, event_dt), rupid)

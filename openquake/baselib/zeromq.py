@@ -136,12 +136,7 @@ class Socket(object):
             except zmq.ZMQError:
                 # sending SIGTERM raises ZMQError
                 break
-            if args == 'stop':
-                if self.socket_type == zmq.REP:
-                    self.send((None, None, None))
-                break
-            else:
-                yield args
+            yield args
 
     def send(self, obj):
         """
