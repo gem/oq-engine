@@ -721,7 +721,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     for _ in range(n_occ):
                         events.append((0, src.src_group_id, ses_idx, sample))
                     if events:
-                        evs = numpy.array(events, calc.event_dt)
+                        evs = numpy.array(events, stochastic.event_dt)
                         ebruptures.append(
                             EBRupture(rup, indices, evs, serial))
                         serial += 1
