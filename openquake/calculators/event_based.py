@@ -173,6 +173,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
+                if sg.src_interdep == 'mutex':
+                    sg.samples = sm.samples
+                    yield sg, src_filter, gsims, param, monitor
+                    num_tasks += 1
+                    num_sources += len(sg.sources)
+                    continue
                 for block in block_splitter(sg.sources, maxweight, weight):
                     block.samples = sm.samples
                     yield block, src_filter, gsims, param, monitor
@@ -181,8 +187,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def execute(self):
-        mutex_groups = list(self.csm.gen_mutex_groups())
-        assert not mutex_groups, 'Mutex sources are not implemented!'
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
