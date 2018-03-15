@@ -25,7 +25,6 @@ import collections
 import numpy
 
 from openquake.baselib.general import humansize, group_array, DictArray
-from openquake.hazardlib import valid
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
@@ -690,37 +689,10 @@ def export_gmf_scenario_csv(ekey, dstore):
     return writer.getsaved()
 
 
-def _gmf_scenario(data, num_sites, imts):
-    # convert data into the composite array expected by QGIS
-    eids = sorted(numpy.unique(data['eid']))
-    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
-    E = len(eid2idx)
-    gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
-    gmfa = numpy.zeros(num_sites, gmf_dt)
-    for rec in data:
-        arr = gmfa[rec['sid']]
-        for imt, gmv in zip(imts, rec['gmv']):
-            arr[imt][eid2idx[rec['eid']]] = gmv
-    return gmfa, E
-
-
 @export.add(('gmf_data', 'npz'))
 def export_gmf_scenario_npz(ekey, dstore):
-    dic = {}
-    oq = dstore['oqparam']
-    mesh = get_mesh(dstore['sitecol'])
-    n = len(mesh)
     fname = dstore.export_path('%s.%s' % ekey)
-    if 'gmf_data' in dstore:
-        data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
-        for rlzi in data_by_rlzi:
-            gmfa, e = _gmf_scenario(data_by_rlzi[rlzi], n, oq.imtls)
-            logging.info('Exporting array of shape %s for rlz %d',
-                         (n, e), rlzi)
-            dic['rlz-%03d' % rlzi] = util.compose_arrays(mesh, gmfa)
-    else:  # nothing to export
-        return []
-    savez(fname, **dic)
+    savez(fname, **dict(extract(dstore, 'gmf_data')))
     return [fname]
 
 
@@ -755,8 +727,7 @@ def export_disagg_xml(ekey, dstore):
             lon_bin_edges=attrs['lon_bin_edges'],
             lat_bin_edges=attrs['lat_bin_edges'],
             eps_bin_edges=attrs['eps_bin_edges'],
-            tectonic_region_types=trts,
-        )
+            tectonic_region_types=trts)
         data = []
         for poe, k in zip(poe_agg, oq.disagg_outputs or disagg.pmf_map):
             data.append(DisaggMatrix(poe, iml, k.split('_'), matrix[k]))
