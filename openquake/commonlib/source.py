@@ -387,12 +387,12 @@ class CompositionInfo(object):
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
                    tot_weight=0)
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models, tot_weight=0):
+    def __init__(self, gsim_lt, seed, num_samples, source_models, totweight=0):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
-        self.tot_weight = tot_weight
+        self.tot_weight = totweight
         self.init()
 
     def init(self):
@@ -734,10 +734,11 @@ class CompositeSourceModel(collections.Sequence):
                     src.src_group_id = grp_id
                     src_groups.append(
                         sourceconverter.SourceGroup(
-                            sg.trt, [src], name=src.name, id=grp_id))
+                            sg.trt, [src], name=src.source_id, id=grp_id))
                     grp_id += 1
             smodels.append(smodel)
-        return self.__class__(self.gsim_lt, self.source_model_lt, smodels)
+        return self.__class__(self.gsim_lt, self.source_model_lt, smodels,
+                              self.optimize_same_id)
 
     def get_model(self, sm_id):
         """
