@@ -1,6 +1,6 @@
 import unittest
 import numpy
-from openquake.baselib.general import writetmp, removetmp
+from openquake.baselib.general import writetmp
 from openquake.hazardlib.shakemapconverter import (
     get_shakemap_array, example_pga, example_sa)
 
@@ -56,9 +56,6 @@ class ShakemapConverterTestCase(unittest.TestCase):
         uncertainty_file = writetmp(ghorka_uncertainty)
         array = get_shakemap_array(grid_file, uncertainty_file)
         aae(array['std']['SA(0.3)'], [0.57, 0.55, 0.56, 0.52])
-
-    def tearDown(self):
-        removetmp()
 
 
 ghorka_grid = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
