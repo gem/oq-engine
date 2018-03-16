@@ -79,6 +79,10 @@ def get_shakemap_array(grid_file, uncertainty_file=None):
     data = _get_shakemap_array(grid_file)
     if uncertainty_file:
         data2 = _get_shakemap_array(uncertainty_file)
+        # sanity check: lons and lats must be the same
+        for coord in ('lon', 'lat'):
+            numpy.testing.assert_equal(data[coord], data2[coord])
+        # copy the stddevs from the uncertainty array
         for imt in data2['std'].dtype.names:
             data['std'][imt] = data2['std'][imt]
     return data
