@@ -26,6 +26,7 @@ from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_blocks)
 from openquake.baselib import parallel
+from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import riskinput
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -243,7 +244,6 @@ class EbriskCalculator(base.RiskCalculator):
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
-        self.vals = self.assetcol.values()
         self.num_losses = numpy.zeros((self.A, self.R), U32)
         if oq.asset_loss_table:
             # save all_loss_ratios
@@ -306,7 +306,6 @@ class EbriskCalculator(base.RiskCalculator):
                 ri = riskinput.RiskInput(getter, self.assets_by_site, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
-        self.vals = self.assetcol.values()
         if self.datastore.parent:  # avoid hdf5 fork issues
             self.datastore.parent.close()
         ires = parallel.Starmap(
@@ -490,6 +489,8 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend('all_loss_ratios/data', assratios)
                 self.alr_nbytes += assratios.nbytes
 
+        if not hasattr(self, 'vals'):
+            self.vals = self.assetcol.values()
         with self.monitor('saving avg_losses-rlzs'):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
@@ -556,6 +557,14 @@ class EbriskCalculator(base.RiskCalculator):
             logging.warn('eff_time=%s is too small to compute agg_curves',
                          eff_time)
             return
+        # store avg_losses-stats
+        stats = oq.risk_stats()
+        if stats and oq.avg_losses and self.R > 1:
+            weights = dstore['csm_info'].rlzs['weight']
+            stat_funcs = [func for name, func in stats]
+            dstore['avg_losses-stats'] = compute_stats2(
+                dstore['avg_losses-rlzs'].value, stat_funcs, weights)
+
         b = get_loss_builder(dstore)
         if 'ruptures' in dstore:
             logging.info('Building rup_loss_table')
@@ -563,7 +572,6 @@ class EbriskCalculator(base.RiskCalculator):
                 dstore['rup_loss_table'] = rlt = build_rup_loss_table(dstore)
                 ridx = [rlt[lt].argmax() for lt in oq.loss_dt().names]
                 dstore.set_attrs('rup_loss_table', ridx=ridx)
-        stats = oq.risk_stats()
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
             array, array_stats = b.build(dstore['agg_loss_table'].value, stats)

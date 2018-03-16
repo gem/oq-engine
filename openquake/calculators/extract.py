@@ -27,7 +27,7 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.commonlib import calc, util
@@ -334,6 +334,8 @@ def extract_agglosses(dstore, what):
     l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         losses = dstore['losses_by_asset'][:, :, l]['mean']
+    elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
+        losses = dstore['avg_losses-stats'][:, :, l]
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
@@ -379,3 +381,99 @@ def extract_aggcurves(dstore, what):
     curves = _filter_agg(dstore['assetcol'], losses, tags)
     vars(curves).update(dstore.get_attrs('curves-stats'))
     return curves
+
+
+@extract.add('losses_by_asset')
+def extract_losses_by_asset(dstore, what):
+    loss_dt = dstore['oqparam'].loss_dt()
+    losses_by_asset = dstore['losses_by_asset'].value
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = util.get_assets(dstore)
+    for rlz in rlzs:
+        # I am exporting the 'mean' and ignoring the 'stddev'
+        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
+        data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+        yield 'rlz-%03d' % rlz.ordinal, data
+
+
+def _gmf_scenario(data, num_sites, imts):
+    # convert data into the composite array expected by QGIS
+    eids = sorted(numpy.unique(data['eid']))
+    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+    E = len(eid2idx)
+    gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
+    gmfa = numpy.zeros(num_sites, gmf_dt)
+    for rec in data:
+        arr = gmfa[rec['sid']]
+        for imt, gmv in zip(imts, rec['gmv']):
+            arr[imt][eid2idx[rec['eid']]] = gmv
+    return gmfa, E
+
+
+@extract.add('gmf_data')
+def extract_gmf_scenario_npz(dstore, what):
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    n = len(mesh)
+    data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
+    for rlzi in data_by_rlzi:
+        gmfa, e = _gmf_scenario(data_by_rlzi[rlzi], n, oq.imtls)
+        logging.info('Exporting array of shape %s for rlz %d',
+                     (n, e), rlzi)
+        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
+
+
+def build_damage_dt(dstore, mean_std=True):
+    """
+    :param dstore: a datastore instance
+    :param mean_std: a flag (default True)
+    :returns:
+       a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
+       loss_type -> (ds1, ds2, ...) depending on the flag mean_std
+    """
+    damage_states = ['no_damage'] + list(
+        dstore.get_attr('composite_risk_model', 'limit_states'))
+    dt_list = []
+    for ds in damage_states:
+        ds = str(ds)
+        if mean_std:
+            dt_list.append(('%s_mean' % ds, F32))
+            dt_list.append(('%s_stdv' % ds, F32))
+        else:
+            dt_list.append((ds, F32))
+    damage_dt = numpy.dtype(dt_list)
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
+
+
+def build_damage_array(data, damage_dt):
+    """
+    :param data: an array of length N with fields 'mean' and 'stddev'
+    :param damage_dt: a damage composite data type loss_type -> states
+    :returns: a composite array of length N and dtype damage_dt
+    """
+    L = len(data) if data.shape else 1
+    dmg = numpy.zeros(L, damage_dt)
+    for lt in damage_dt.names:
+        for i, ms in numpy.ndenumerate(data[lt]):
+            if damage_dt[lt].names[0].endswith('_mean'):
+                lst = []
+                for m, s in zip(ms['mean'], ms['stddev']):
+                    lst.append(m)
+                    lst.append(s)
+                dmg[lt][i] = tuple(lst)
+            else:
+                dmg[lt][i] = ms['mean']
+    return dmg
+
+
+@extract.add('dmg_by_asset')
+def extract_dmg_by_asset_npz(dstore, what):
+    damage_dt = build_damage_dt(dstore)
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    data = dstore['dmg_by_asset']
+    assets = util.get_assets(dstore)
+    for rlz in rlzs:
+        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
+            assets, dmg_by_asset)

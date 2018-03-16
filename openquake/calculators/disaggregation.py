@@ -35,7 +35,7 @@ from openquake.commonlib import calc, util
 from openquake.calculators import getters
 from openquake.calculators import base, classical
 
-
+weight = operator.attrgetter('weight')
 DISAGG_RES_FMT = '%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
 
 
@@ -256,7 +256,7 @@ producing too small PoEs.'''
 
         # build all_args
         all_args = []
-        maxweight = csm.get_maxweight(oq.concurrent_tasks)
+        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
         mon = self.monitor('disaggregation')
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
@@ -277,8 +277,7 @@ producing too small PoEs.'''
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance)
-                for block in block_splitter(
-                        sources, maxweight, operator.attrgetter('weight')):
+                for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,
                          oq, mon))
