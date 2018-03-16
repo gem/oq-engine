@@ -60,13 +60,15 @@ def _get_shakemap_array(xml_file):
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(rows), dtlist)
-    for name, key in sorted(FIELDMAP.items()):
+    for name, field in sorted(FIELDMAP.items()):
         if name not in out:
             continue
-        if isinstance(key, tuple):  # for IMTs
-            data[key[0]][key[1]] = F32(out[name])
-        else:  # for lon, lat, vs30
-            data[key] = F32(out[name])
+        if isinstance(field, tuple):
+            # for ('val', IMT) or ('std', IMT)
+            data[field[0]][field[1]] = F32(out[name])
+        else:
+            # for lon, lat, vs30
+            data[field] = F32(out[name])
     return data
 
 
