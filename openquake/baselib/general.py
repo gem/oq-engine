@@ -28,6 +28,7 @@ import copy
 import math
 import socket
 import random
+import atexit
 import zipfile
 import operator
 import warnings
@@ -343,12 +344,14 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     return path
 
 
+@atexit.register
 def removetmp():
     """
     Remove the temporary files created by writetmp
     """
     for path in _tmp_paths:
-        os.remove(path)
+        if os.path.exists(path):  # not removed yet
+            os.remove(path)
 
 
 def git_suffix(fname):
