@@ -22,7 +22,6 @@ Tests for python logic tree processor.
 
 import os
 import codecs
-import random
 import unittest
 import collections
 
