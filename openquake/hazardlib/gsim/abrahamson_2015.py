@@ -185,7 +185,6 @@ class AbrahamsonEtAl2015SInter(GMPE):
         Walling et al (2008) as implemented in the Abrahamson & Silva (2008)
         GMPE. The functional form is retained here.
         """
-
         vs_star = sites.vs30.copy()
         vs_star[vs_star > 1000.0] = 1000.
         arg = vs_star / C["vlin"]

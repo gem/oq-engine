@@ -28,7 +28,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
-from openquake.commonlib.riskmodels import get_risk_files
+from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
@@ -332,7 +332,13 @@ class OqParam(valid.ParamSet):
         Return the cost types of the computation (including `occupants`
         if it is there) in order.
         """
-        return sorted(self.risk_files)
+        costtypes = sorted(self.risk_files)
+        if not costtypes and self.hazard_calculation_id:
+            with datastore.read(self.hazard_calculation_id) as ds:
+                parent = ds['oqparam']
+            self._file_type, self._risk_files = get_risk_files(parent.inputs)
+            costtypes = sorted(self.risk_files)
+        return costtypes
 
     def set_risk_imtls(self, risk_models):
         """
@@ -618,10 +624,18 @@ class OqParam(valid.ParamSet):
         Invalid calculation_mode="{calculation_mode}" or missing
         fragility_file/vulnerability_file in the .ini file.
         """
+        if self.hazard_calculation_id:
+            parent_datasets = set(datastore.read(self.hazard_calculation_id))
+        else:
+            parent_datasets = set()
         if 'damage' in self.calculation_mode:
-            return any(key.endswith('_fragility') for key in self.inputs)
+            return any(
+                key.endswith('_fragility') for key in self.inputs
+            ) or 'composite_risk_model' in parent_datasets
         elif 'risk' in self.calculation_mode:
-            return any(key.endswith('_vulnerability') for key in self.inputs)
+            return any(
+                key.endswith('_vulnerability') for key in self.inputs
+            ) or 'composite_risk_model' in parent_datasets
         return True
 
     def is_valid_complex_fault_mesh_spacing(self):

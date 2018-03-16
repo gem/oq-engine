@@ -23,7 +23,7 @@ from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
+from openquake.calculators.tests import CalculatorTestCase
 
 celery = os.environ.get(
     'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'celery'
