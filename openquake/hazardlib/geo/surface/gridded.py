@@ -163,7 +163,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             Float value, the azimuth (in degrees) of the surface top edge
         """
-        # raise NotImplementedError
+        raise NotImplementedError
 
     def get_dip(self):
         """
@@ -175,7 +175,7 @@ class GriddedSurface(BaseSurface):
             Float value, the inclination (in degrees) of the surface with
             respect to the Earth surface
         """
-        # raise NotImplementedError
+        raise NotImplementedError
 
     def get_width(self):
         """
@@ -209,12 +209,13 @@ class GriddedSurface(BaseSurface):
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
         """
-        lon_bar = np.mean(self.mesh.lons)
-        lat_bar = np.mean(self.mesh.lats)
-        idx = np.argmin((self.mesh.lons - lon_bar)**2 +
-                        (self.mesh.lats - lat_bar)**2)
-        return Point(self.mesh.lons[idx], self.mesh.lats[idx],
-                     self.mesh.depths[idx])
+        # the mesh has shape (1, N)
+        lon_bar = np.mean(self.mesh.lons[0])
+        lat_bar = np.mean(self.mesh.lats[0])
+        idx = np.argmin((self.mesh.lons[0] - lon_bar)**2 +
+                        (self.mesh.lats[0] - lat_bar)**2)
+        return Point(self.mesh.lons[0, idx], self.mesh.lats[0, idx],
+                     self.mesh.depths[0, idx])
 
     def get_ry0_distance(self, mesh):
         """

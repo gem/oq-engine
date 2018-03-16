@@ -322,4 +322,4 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_mutex(self):
-        self.run_calc(mutex.__file__, 'job.ini')
+        self.run_calc(mutex.__file__, 'job.ini', exports='csv')
