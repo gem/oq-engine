@@ -385,7 +385,7 @@ class CompositionInfo(object):
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
-                   tot_weight=0)
+                   totweight=0)
 
     def __init__(self, gsim_lt, seed, num_samples, source_models, totweight=0):
         self.gsim_lt = gsim_lt
