@@ -33,6 +33,7 @@ from openquake.risklib.riskmodels import get_risk_files
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
 F32 = numpy.float32
+F64 = numpy.float64
 
 
 class OqParam(valid.ParamSet):
@@ -379,6 +380,15 @@ class OqParam(valid.ParamSet):
         Dictionary extended_loss_type -> extended_loss_type index
         """
         return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
+
+    def poes_dt(self, dtype=F64):
+        """
+        Return a composite dtype based on poes_disagg, if any
+        """
+        if not self.poes_disagg:
+            return dtype
+        return numpy.dtype([
+            ('poe-%s' % poe, dtype) for poe in self.poes_disagg])
 
     def loss_dt(self, dtype=F32):
         """
