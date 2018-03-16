@@ -315,6 +315,8 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     ctx = '' if context is None else 'in context ' + repr(context)
     raise AssertionError('%r != %r %s' % (a, b, ctx))
 
+_tmp_paths = []
+
 
 def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
@@ -331,6 +333,7 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
+    _tmp_paths.append(path)
     if content:
         fh = os.fdopen(fh, "wb")
         if hasattr(content, 'encode'):
@@ -338,6 +341,14 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         fh.write(content)
         fh.close()
     return path
+
+
+def removetmp():
+    """
+    Remove the temporary files created by writetmp
+    """
+    for path in _tmp_paths:
+        os.remove(path)
 
 
 def git_suffix(fname):
