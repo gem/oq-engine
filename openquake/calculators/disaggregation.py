@@ -31,7 +31,6 @@ from openquake.hazardlib.stats import compute_stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import calc, util
 from openquake.calculators import getters
 from openquake.calculators import base, classical
 
@@ -125,13 +124,18 @@ producing too small PoEs.'''
 
     def execute(self):
         """Performs the disaggregation"""
-        if self.oqparam.iml_disagg:
+        oq = self.oqparam
+        if oq.iml_disagg:
             curves = [None] * len(self.sitecol)  # no hazard curves are needed
         else:
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
             self.check_poes_disagg(curves)
-            build_disagg_by_src(self.datastore)
-        return self.full_disaggregation(curves)
+        R = len(self.rlzs_assoc.realizations)
+        iml4 = disagg.make_iml4(
+            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
+        if R == 1 and not oq.iml_disagg:
+            self.build_disagg_by_src(iml4)
+        return self.full_disaggregation(iml4)
 
     def agg_result(self, acc, result):
         """
@@ -204,7 +208,7 @@ producing too small PoEs.'''
                             raise ValueError(self.POE_TOO_BIG % (
                                 poe, sm_id, smodel.names, min_poe, rlzi, imt))
 
-    def full_disaggregation(self, curves):
+    def full_disaggregation(self, iml4):
         """
         Run the disaggregation phase.
 
@@ -258,9 +262,7 @@ producing too small PoEs.'''
         all_args = []
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
         mon = self.monitor('disaggregation')
-        R = len(self.rlzs_assoc.realizations)
-        iml4 = disagg.make_iml4(
-            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
+        R = iml4.shape[1]
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             for r in range(R):
@@ -424,25 +426,29 @@ producing too small PoEs.'''
                              ' poe=%s; perhaps the number of intensity measure'
                              ' levels is too small?', poe_agg, poe)
 
-
-def build_disagg_by_src(dstore):
-    """
-    :param dstore: a datastore
-    """
-    oq = dstore['oqparam']
-    sitecol = dstore['sitecol']
-    pdic = {imt: oq.poes_disagg for imt in oq.imtls}
-    data = []
-    grp_ids = []
-    for grp in dstore['poes']:
-        grp_ids.append(int(grp[4:]))
-        hmap = calc.make_hmap(dstore['poes/' + grp], oq.imtls, oq.poes_disagg)
-        data.append(calc.convert_to_array(hmap, len(sitecol), pdic))
-    data = numpy.array(data)  # shape (num_sources, num_sites)
-    for i, site in enumerate(sitecol):
-        loc = site.location
-        array = data[:, i]
-        if any(array[field].sum() for field in array.dtype.names):
-            name = 'disagg_by_src/rlz-0-%s-%s' % (loc.longitude, loc.latitude)
-            dstore[name] = util.compose_arrays(
-                numpy.uint16(grp_ids), array, 'grp_id')
+    def build_disagg_by_src(self, iml4):
+        """
+        :param dstore: a datastore
+        :param iml4: 4D array of IMLs with shape (N, 1, M, P)
+        """
+        oq = self.oqparam
+        pmap_by_grp = getters.PmapGetter(self.datastore).pmap_by_grp
+        grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
+        G = len(pmap_by_grp)
+        P = len(oq.poes_disagg)
+        for rec in self.sitecol.array:
+            sid = rec['sids']
+            for imti, imt in enumerate(oq.imtls):
+                xs = oq.imtls[imt]
+                poes = numpy.zeros((G, P))
+                for g, grp in enumerate(pmap_by_grp):
+                    pmap = pmap_by_grp[grp]
+                    if sid in pmap:
+                        ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                        poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
+                name = 'disagg_by_src/rlz-0-%s-%s-%s' % (
+                    imt, rec['lons'], rec['lats'])
+                if poes.sum():  # nonzero contribution
+                    self.datastore[name] = poes
+                    self.datastore.set_attrs(name, poes_disagg=oq.poes_disagg,
+                                             grp_ids=grp_ids)
