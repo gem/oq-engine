@@ -436,6 +436,7 @@ producing too small PoEs.'''
         grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
         G = len(pmap_by_grp)
         P = len(oq.poes_disagg)
+        poes_dt = oq.poes_dt()
         for rec in self.sitecol.array:
             sid = rec['sids']
             for imti, imt in enumerate(oq.imtls):
@@ -449,6 +450,5 @@ producing too small PoEs.'''
                 name = 'disagg_by_src/rlz-0-%s-%s-%s' % (
                     imt, rec['lons'], rec['lats'])
                 if poes.sum():  # nonzero contribution
-                    self.datastore[name] = poes
-                    self.datastore.set_attrs(name, poes_disagg=oq.poes_disagg,
-                                             grp_ids=grp_ids)
+                    self.datastore[name] = poes.view(poes_dt).squeeze()
+                    self.datastore.set_attrs(name, grp_ids=grp_ids)
