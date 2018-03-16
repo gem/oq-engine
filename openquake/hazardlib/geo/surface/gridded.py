@@ -163,7 +163,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             Float value, the azimuth (in degrees) of the surface top edge
         """
-        raise NotImplementedError
+        # raise NotImplementedError
 
     def get_dip(self):
         """
@@ -175,7 +175,7 @@ class GriddedSurface(BaseSurface):
             Float value, the inclination (in degrees) of the surface with
             respect to the Earth surface
         """
-        raise NotImplementedError
+        # raise NotImplementedError
 
     def get_width(self):
         """
