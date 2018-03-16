@@ -21,8 +21,6 @@ import io
 from openquake.baselib.general import writetmp
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import read, parse, node_to_xml, get_tag_version
-from openquake.risklib import read_nrml
-read_nrml.update_validators()
 
 
 class NrmlTestCase(unittest.TestCase):
