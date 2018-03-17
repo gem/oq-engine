@@ -110,12 +110,11 @@ producing too small PoEs.'''
 
     def pre_execute(self):
         oq = self.oqparam
-        if oq.iml_disagg:
-            # read the input data
+        if oq.iml_disagg and not oq.disagg_by_src:
+            # no need to run a PSHACalculator
             base.HazardCalculator.pre_execute(self)
         else:
-            # only the poes_disagg are known, the IMLs are interpolated from
-            # the hazard curves, hence the need to run a PSHACalculator here
+            # we need to run a PSHACalculator
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
             cl.run()
@@ -218,11 +217,11 @@ producing too small PoEs.'''
         csm = self.csm.filter(src_filter)  # fine filtering
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
-        
+
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
             R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
-        if R == 1 and not oq.iml_disagg:
+        if R == 1:
             self.build_disagg_by_src(iml4)
 
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
@@ -435,10 +434,11 @@ producing too small PoEs.'''
         :param iml4: 4D array of IMLs with shape (N, 1, M, P)
         """
         oq = self.oqparam
+        poes_disagg = oq.poes_disagg or (None,)
         pmap_by_grp = getters.PmapGetter(self.datastore).pmap_by_grp
         grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
         G = len(pmap_by_grp)
-        P = len(oq.poes_disagg)
+        P = len(poes_disagg)
         for rec in self.sitecol.array:
             sid = rec['sids']
             for imti, imt in enumerate(oq.imtls):
@@ -449,9 +449,10 @@ producing too small PoEs.'''
                     if sid in pmap:
                         ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
-                for p, poe in enumerate(oq.poes_disagg):
-                    name = 'disagg_by_src/poe-%s-rlz-0-%s-%s-%s' % (
-                        poe, imt, rec['lons'], rec['lats'])
+                for p, poe in enumerate(poes_disagg):
+                    poestr = '' if poe is None else 'poe-%s-' % poe
+                    name = 'disagg_by_src/%srlz-0-%s-%s-%s' % (
+                        poestr, imt, rec['lons'], rec['lats'])
                     if poes[:, p].sum():  # nonzero contribution
                         self.datastore[name] = poes[:, p]
                         self.datastore.set_attrs(name, grp_ids=grp_ids)
