@@ -444,8 +444,8 @@ producing too small PoEs.'''
             for imti, imt in enumerate(oq.imtls):
                 xs = oq.imtls[imt]
                 poes = numpy.zeros((G, P))
-                for g, grp in enumerate(pmap_by_grp):
-                    pmap = pmap_by_grp[grp]
+                for g, grp_id in enumerate(grp_ids):
+                    pmap = pmap_by_grp['grp-%02d' % grp_id]
                     if sid in pmap:
                         ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
