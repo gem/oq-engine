@@ -381,15 +381,6 @@ class OqParam(valid.ParamSet):
         """
         return {lt: i for i, (lt, dt) in enumerate(self.loss_dt_list())}
 
-    def poes_dt(self, dtype=F64):
-        """
-        Return a composite dtype based on poes_disagg, if any
-        """
-        if not self.poes_disagg:
-            return dtype
-        return numpy.dtype([
-            ('poe-%s' % poe, dtype) for poe in self.poes_disagg])
-
     def loss_dt(self, dtype=F32):
         """
         Return a composite dtype based on the loss types, including occupants
