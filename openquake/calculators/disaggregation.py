@@ -455,4 +455,4 @@ producing too small PoEs.'''
                         poestr, imt, rec['lons'], rec['lats'])
                     if poes[:, p].sum():  # nonzero contribution
                         self.datastore[name] = poes[:, p]
-                        self.datastore.set_attrs(name, grp_ids=grp_ids)
+                        self.datastore.set_attrs(name)
