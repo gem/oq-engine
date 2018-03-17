@@ -227,7 +227,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore.set_nbytes('poes')
                 if self.oqparam.disagg_by_src:
                     self.datastore['disagg_by_src/source_id'] = numpy.array(
-                        data, grp_source_dt)
+                        sorted(data), grp_source_dt)
 
 
 def fix_ones(pmap):
